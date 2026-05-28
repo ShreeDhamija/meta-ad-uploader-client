@@ -21,6 +21,23 @@ import { Bell, Clock, LogOutIcon, Settings } from "lucide-react"
 import { useState } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
 
+// High-fidelity Platform Switcher Icons
+function MetaIcon({ className, active }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="18" height="18">
+      <path d="M16.2 6.5c-1.3 0-2.5.5-3.5 1.4-.6.6-1.1 1.4-1.5 2.2-.4-.8-.9-1.6-1.5-2.2-1-.9-2.2-1.4-3.5-1.4C4.1 6.5 2 8.7 2 11.5S4.1 16.5 6.2 16.5c1.3 0 2.5-.5 3.5-1.4.6-.6 1.1-1.4 1.5-2.2.4.8.9 1.6 1.5 2.2 1 .9 2.2 1.4 3.5 1.4 2.1 0 4.2-2.2 4.2-5s-2.1-5-4.2-5zm0 8c-1 0-1.8-.4-2.5-1-.5-.5-.9-1.2-1.2-2 .3-.8.7-1.5 1.2-2 .7-.6 1.5-1 2.5-1 1.2 0 2.2 1.1 2.2 3s-1 3-2.2 3zm-10 0c-1.2 0-2.2-1.1-2.2-3s1-3 2.2-3c1 0 1.8.4 2.5 1 .5.5.9 1.2 1.2 2-.3.8-.7 1.5-1.2 2-.7.6-1.5 1-2.5 1z" fill={active ? "#1877F2" : "#71717A"} />
+    </svg>
+  )
+}
+
+function TikTokIcon({ className, active }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="16" height="16">
+      <path d="M12.525 2c.063 4.238 2.664 7.234 6.786 7.426v3.743c-2.433-.122-4.526-1.04-5.918-2.61v7.625C13.393 21.94 10.378 24 6.946 24 3.111 24 0 20.73 0 16.71c0-4.022 3.111-7.29 6.946-7.29.566 0 1.107.07 1.626.196v3.746c-.519-.175-1.066-.27-1.626-.27-2.029 0-3.673 1.71-3.673 3.82 0 2.106 1.644 3.82 3.673 3.82 2.052 0 3.738-1.584 3.738-3.693V2h1.865z" fill={active ? "#000000" : "#71717A"} />
+    </svg>
+  )
+}
+
 export default function Header({ showMessenger, hideMessenger }) {
   const { isLoggedIn, userName, profilePicUrl, handleLogout } = useAuth()
   const { isTikTokLoggedIn, tiktokUser, logoutTikTok } = useTikTokAuth()
@@ -28,6 +45,19 @@ export default function Header({ showMessenger, hideMessenger }) {
   const location = useLocation()
 
   const isTikTokPage = location.pathname.includes('tiktok')
+  const handleSwitchPlatform = (platform) => {
+    if (platform === 'meta') {
+      if (location.pathname !== '/') {
+        navigate('/')
+      }
+    } else if (platform === 'tiktok') {
+      if (!location.pathname.includes('tiktok')) {
+        navigate(isTikTokLoggedIn ? '/tiktok-ads' : '/tiktok-login')
+      }
+    }
+  }
+
+  const isTikTokActive = location.pathname.includes('tiktok') || (location.pathname === '/settings' && new URLSearchParams(location.search).get('tab') === 'tiktok')
   const {
     subscriptionData,
     isOnTrial,
@@ -135,6 +165,45 @@ export default function Header({ showMessenger, hideMessenger }) {
         )
       })()}
 
+      {/* Platform Switcher (Center) */}
+      <div className="hidden md:flex bg-zinc-100/80 backdrop-blur-md p-1 rounded-full border border-black/5 shadow-inner select-none transition-all duration-300 gap-1">
+        <button
+          onClick={() => handleSwitchPlatform('meta')}
+          className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-[13px] font-semibold transition-all duration-200 active:scale-95 ${!isTikTokActive
+            ? "bg-white text-zinc-900 shadow-sm border border-black/5"
+            : "text-zinc-500 hover:text-zinc-800 hover:bg-zinc-200/50"
+            }`}
+        >
+          <MetaIcon active={!isTikTokActive} />
+          <span>Meta Ads</span>
+          <span
+            className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${isLoggedIn
+              ? "bg-emerald-500 animate-pulse shadow-[0_0_6px_rgba(16,185,129,0.6)]"
+              : "bg-zinc-300"
+              }`}
+            title={isLoggedIn ? "Meta Connected" : "Meta Disconnected"}
+          />
+        </button>
+
+        <button
+          onClick={() => handleSwitchPlatform('tiktok')}
+          className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-[13px] font-semibold transition-all duration-200 active:scale-95 ${isTikTokActive
+            ? "bg-white text-zinc-900 shadow-sm border border-black/5"
+            : "text-zinc-500 hover:text-zinc-800 hover:bg-zinc-200/50"
+            }`}
+        >
+          <TikTokIcon active={isTikTokActive} />
+          <span>TikTok Ads</span>
+          <span
+            className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${isTikTokLoggedIn
+              ? "bg-emerald-500 animate-pulse shadow-[0_0_6px_rgba(16,185,129,0.6)]"
+              : "bg-zinc-300"
+              }`}
+            title={isTikTokLoggedIn ? "TikTok Connected" : "TikTok Disconnected"}
+          />
+        </button>
+      </div>
+
       {/* Action Buttons (Right) */}
       <div className={`flex items-center gap-3 bg-white border border-black/10 rounded-[20px] px-3 py-2 ml-2 ${headerCardShadow}`}>
 
@@ -221,20 +290,6 @@ export default function Header({ showMessenger, hideMessenger }) {
           <span className="hidden md:inline text-gray-900 text-[14px] font-medium">Preferences</span>
         </button>
         <div className="h-8 w-px bg-gray-300" />
-        {/* TikTok Nav */}
-        <button
-          onClick={() => navigate(isTikTokLoggedIn ? '/tiktok-ads' : '/tiktok-login')}
-          title="TikTok Ads"
-          className="hidden md:flex items-center gap-1.5 rounded-full transition-colors px-3 py-2 bg-transparent hover:bg-gray-100"
-        >
-          <svg width="18" height="18" viewBox="0 0 48 48" fill="none">
-            <path d="M34.1 6C34.7 9.5 36.7 12.5 39.7 14.3V20.3C37.2 20.3 34.9 19.5 32.9 18.2V30.4C32.9 37.4 27.2 43 20.1 43C13 43 7.3 37.4 7.3 30.4C7.3 23.4 13 17.8 20.1 17.8C20.7 17.8 21.3 17.8 21.9 17.9V23.9C21.3 23.8 20.7 23.7 20.1 23.7C16.2 23.7 13.1 26.7 13.1 30.5C13.1 34.3 16.2 37.3 20.1 37.3C24 37.3 27.3 34.2 27.3 30.4V6H34.1Z" fill="#010101" />
-          </svg>
-          <span className="inline text-[14px] text-gray-900 font-medium">TikTok Ads</span>
-          {isTikTokLoggedIn && (
-            <span className="w-2 h-2 rounded-full" style={{ background: '#25F4EE' }} title="TikTok Connected" />
-          )}
-        </button>
         {showAnalyticsNav && (
           <>
             <button
