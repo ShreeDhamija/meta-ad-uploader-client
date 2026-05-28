@@ -74,7 +74,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
 
         return null;
     });
-    const { settings, setSettings, loading, refetch } = useTikTokAdvertiserSettings(selectedAdvertiser);
+    const { settings, setSettings, loading } = useTikTokAdvertiserSettings(selectedAdvertiser);
     const { isTikTokLoggedIn, refreshTikTokUser } = useTikTokAuth();
     const [refreshingAdvertisers, setRefreshingAdvertisers] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -85,10 +85,15 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
     const [openCta, setOpenCta] = useState(false);
     const [openAdvertiser, setOpenAdvertiser] = useState(false);
     const [initialSettings, setInitialSettings] = useState(null);
-    const [hasChanges, setHasChanges] = useState(false);
     // Ref to prevent initialSettings from being clobbered when a template/default
     // save triggers a settings cache update (mirrors Meta's skipFormResetRef)
     const skipSettingsResetRef = useRef(false);
+
+    // Derived — computed every render so there's never a stale-state race
+    const hasChanges = Boolean(
+        settings && initialSettings &&
+        JSON.stringify(settings) !== JSON.stringify(initialSettings)
+    );
     const [editingProduct, setEditingProduct] = useState(null);
     const [newSellingPoint, setNewSellingPoint] = useState("");
 
@@ -128,14 +133,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
         }
     }, [settings, initialSettings]);
 
-    // Detect changes
-    useEffect(() => {
-        if (!settings || !initialSettings) {
-            setHasChanges(false);
-            return;
-        }
-        setHasChanges(JSON.stringify(settings) !== JSON.stringify(initialSettings));
-    }, [settings, initialSettings]);
+
 
     // Fetch identities when advertiser changes
     useEffect(() => {
@@ -175,13 +173,9 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
         try {
             await saveTikTokSettings(selectedAdvertiser, updatedSettings);
             toast.success("Settings saved successfully");
+            // Sync initialSettings to exactly what we saved — hasChanges will
+            // immediately compute to false on the next render (no effect lag).
             setInitialSettings(JSON.parse(JSON.stringify(updatedSettings)));
-            setHasChanges(false);
-            // Mark so the next settings cache update (from AppContext) only
-            // syncs initialSettings, instead of treating data as a new baseline
-            // that would incorrectly clear or re-show the save bar.
-            skipSettingsResetRef.current = true;
-            refetch();
         } catch (err) {
             toast.error("Failed to save settings");
             console.error(err);
