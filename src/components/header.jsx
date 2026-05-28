@@ -18,14 +18,22 @@ import { useTikTokAuth } from "@/lib/TikTokAuthContext"
 import useNotifications from "@/lib/useNotifications"
 import useSubscription from "@/lib/useSubscriptionSettings"
 import { Bell, Clock, LogOutIcon, Settings } from "lucide-react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
 
 export default function Header({ showMessenger, hideMessenger }) {
   const { isLoggedIn, userName, profilePicUrl, handleLogout } = useAuth()
-  const { isTikTokLoggedIn, logoutTikTok } = useTikTokAuth()
+  const { isTikTokLoggedIn, tiktokUser, logoutTikTok } = useTikTokAuth()
   const navigate = useNavigate()
   const location = useLocation()
+  
+  const [avatarError, setAvatarError] = useState(false)
+  const isTikTokPage = location.pathname.includes('tiktok')
+
+  // Reset avatar error state on page navigation or login change
+  useEffect(() => {
+    setAvatarError(false)
+  }, [location.pathname, isTikTokLoggedIn])
   const {
     subscriptionData,
     isOnTrial,
@@ -116,16 +124,30 @@ export default function Header({ showMessenger, hideMessenger }) {
           />
           <span className="text-[14px] font-medium text-gray-700 whitespace-nowrap">Go To Launcher</span>
         </button>
-      ) : (
-        <div className={`flex items-center gap-3 bg-white border border-black/10 rounded-[20px] px-3 py-2 ${headerCardShadow}`}>
-          <img
-            src={profilePicUrl}
-            alt="Profile"
-            className="w-9 h-9 rounded-full border border-zinc-300 object-cover"
-          />
-          <span className="text-[14px] font-medium text-gray-700 whitespace-nowrap">{userName}</span>
-        </div>
-      )}
+      ) : (() => {
+        const showTikTokUser = isTikTokPage && isTikTokLoggedIn && tiktokUser
+        const displayUserName = showTikTokUser ? (tiktokUser.name || tiktokUser.displayName || "TikTok User") : userName
+        const displayProfilePic = showTikTokUser ? (tiktokUser.picture || tiktokUser.avatarUrl || tiktokUser.avatar_url) : profilePicUrl
+        const initial = (displayUserName ? displayUserName.charAt(0) : "U").toUpperCase()
+
+        return (
+          <div className={`flex items-center gap-3 bg-white border border-black/10 rounded-[20px] px-3 py-2 ${headerCardShadow}`}>
+            {displayProfilePic && !avatarError ? (
+              <img
+                src={displayProfilePic}
+                alt="Profile"
+                className="w-9 h-9 rounded-full border border-zinc-300 object-cover flex-shrink-0"
+                onError={() => setAvatarError(true)}
+              />
+            ) : (
+              <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-600 text-white flex items-center justify-center font-bold text-[14px] border border-blue-400 shadow-sm flex-shrink-0">
+                {initial}
+              </div>
+            )}
+            <span className="text-[14px] font-medium text-gray-700 whitespace-nowrap">{displayUserName}</span>
+          </div>
+        )
+      })()}
 
       {/* Action Buttons (Right) */}
       <div className={`flex items-center gap-3 bg-white border border-black/10 rounded-[20px] px-3 py-2 ml-2 ${headerCardShadow}`}>
