@@ -1794,6 +1794,27 @@ export default function TikTokAdCreationForm({
     const selectedFiles = Array.from(e.target.files)
     if (selectedFiles.length === 0) return
 
+    selectedFiles.forEach((file) => {
+      if (file.type.startsWith("video/") || /\.(mp4|mov|webm)$/i.test(file.name)) {
+        const url = URL.createObjectURL(file);
+        const tempVideo = document.createElement("video");
+        tempVideo.src = url;
+        tempVideo.onloadedmetadata = () => {
+          const width = tempVideo.videoWidth;
+          const height = tempVideo.videoHeight;
+          const ratio = width / height;
+          const targetRatio = 9 / 16;
+          const diff = Math.abs(ratio - targetRatio);
+          if (diff > 0.05) {
+            toast.warning(`"${file.name}" has an aspect ratio of ${width}x${height} (${ratio.toFixed(2)}). TikTok strongly recommends a vertical 9:16 ratio (0.56) for optimal delivery.`, {
+              duration: 8000
+            });
+          }
+          URL.revokeObjectURL(url);
+        };
+      }
+    });
+
     const taggedFiles = selectedFiles.map(file => {
       if (file.uniqueId) return file;
       file.uniqueId = `${file.name}-${file.lastModified || Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
@@ -4349,7 +4370,6 @@ export default function TikTokAdCreationForm({
                           </div>
                           <div>
                             <p className="text-sm font-medium text-gray-700">Click to upload video or image</p>
-                            <p className="text-xs text-gray-400 mt-1">Recommended ratio: 9:16 for TikTok videos</p>
                           </div>
                         </div>
                       </div>
