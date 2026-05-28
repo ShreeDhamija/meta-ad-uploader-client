@@ -18,7 +18,7 @@ import { useTikTokAuth } from "@/lib/TikTokAuthContext"
 import useNotifications from "@/lib/useNotifications"
 import useSubscription from "@/lib/useSubscriptionSettings"
 import { Bell, Clock, LogOutIcon, Settings } from "lucide-react"
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
 
 export default function Header({ showMessenger, hideMessenger }) {
@@ -26,14 +26,8 @@ export default function Header({ showMessenger, hideMessenger }) {
   const { isTikTokLoggedIn, tiktokUser, logoutTikTok } = useTikTokAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  
-  const [avatarError, setAvatarError] = useState(false)
-  const isTikTokPage = location.pathname.includes('tiktok')
 
-  // Reset avatar error state on page navigation or login change
-  useEffect(() => {
-    setAvatarError(false)
-  }, [location.pathname, isTikTokLoggedIn])
+  const isTikTokPage = location.pathname.includes('tiktok')
   const {
     subscriptionData,
     isOnTrial,
@@ -128,22 +122,14 @@ export default function Header({ showMessenger, hideMessenger }) {
         const showTikTokUser = isTikTokPage && isTikTokLoggedIn && tiktokUser
         const displayUserName = showTikTokUser ? (tiktokUser.name || tiktokUser.displayName || "TikTok User") : userName
         const displayProfilePic = showTikTokUser ? (tiktokUser.picture || tiktokUser.avatarUrl || tiktokUser.avatar_url) : profilePicUrl
-        const initial = (displayUserName ? displayUserName.charAt(0) : "U").toUpperCase()
 
         return (
           <div className={`flex items-center gap-3 bg-white border border-black/10 rounded-[20px] px-3 py-2 ${headerCardShadow}`}>
-            {displayProfilePic && !avatarError ? (
-              <img
-                src={displayProfilePic}
-                alt="Profile"
-                className="w-9 h-9 rounded-full border border-zinc-300 object-cover flex-shrink-0"
-                onError={() => setAvatarError(true)}
-              />
-            ) : (
-              <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-600 text-white flex items-center justify-center font-bold text-[14px] border border-blue-400 shadow-sm flex-shrink-0">
-                {initial}
-              </div>
-            )}
+            <img
+              src={displayProfilePic}
+              alt="Profile"
+              className="w-9 h-9 rounded-full border border-zinc-300 object-cover"
+            />
             <span className="text-[14px] font-medium text-gray-700 whitespace-nowrap">{displayUserName}</span>
           </div>
         )
@@ -242,7 +228,7 @@ export default function Header({ showMessenger, hideMessenger }) {
           className="hidden md:flex items-center gap-1.5 rounded-full transition-colors px-3 py-2 bg-transparent hover:bg-gray-100"
         >
           <svg width="18" height="18" viewBox="0 0 48 48" fill="none">
-            <path d="M34.1 6C34.7 9.5 36.7 12.5 39.7 14.3V20.3C37.2 20.3 34.9 19.5 32.9 18.2V30.4C32.9 37.4 27.2 43 20.1 43C13 43 7.3 37.4 7.3 30.4C7.3 23.4 13 17.8 20.1 17.8C20.7 17.8 21.3 17.8 21.9 17.9V23.9C21.3 23.8 20.7 23.7 20.1 23.7C16.2 23.7 13.1 26.7 13.1 30.5C13.1 34.3 16.2 37.3 20.1 37.3C24 37.3 27.3 34.2 27.3 30.4V6H34.1Z" fill="#010101"/>
+            <path d="M34.1 6C34.7 9.5 36.7 12.5 39.7 14.3V20.3C37.2 20.3 34.9 19.5 32.9 18.2V30.4C32.9 37.4 27.2 43 20.1 43C13 43 7.3 37.4 7.3 30.4C7.3 23.4 13 17.8 20.1 17.8C20.7 17.8 21.3 17.8 21.9 17.9V23.9C21.3 23.8 20.7 23.7 20.1 23.7C16.2 23.7 13.1 26.7 13.1 30.5C13.1 34.3 16.2 37.3 20.1 37.3C24 37.3 27.3 34.2 27.3 30.4V6H34.1Z" fill="#010101" />
           </svg>
           <span className="inline text-[14px] text-gray-900 font-medium">TikTok Ads</span>
           {isTikTokLoggedIn && (
