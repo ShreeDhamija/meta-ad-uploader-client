@@ -2320,6 +2320,9 @@ export default function TikTokAdCreationForm({
 
     try {
       setJobQueue((prev) => [...prev, ...queuedJobs]);
+      if (!preserveMedia) {
+        clearQueuedMedia();
+      }
     } finally {
       setIsQueueingJobs(false);
     }
@@ -4431,48 +4434,47 @@ export default function TikTokAdCreationForm({
               </div>
 
               {/* Submit Button */}
-              <div className="pt-6 border-t border-gray-100 space-y-4">
-                <Button
-                  type="submit"
-                  disabled={isSubmitting || !isFormValid}
-                  className={cn(
-                    "w-full h-14 rounded-2xl font-bold text-base transition-all shadow-lg bg-black hover:bg-zinc-800 text-white hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50",
-                    (isSubmitting || !isFormValid) && "opacity-50 cursor-not-allowed"
-                  )}
-                >
-                  {isSubmitting ? (
-                    <div className="flex items-center justify-center gap-2">
-                      <Loader className="w-5 h-5 animate-spin" />
-                      {(isUploading || videoUploading) ? 'Uploading Media...' : 'Creating TikTok Ad...'}
+              <div className="space-y-4">
+                <div className="space-y-1">
+                  <Button
+                    type="submit"
+                    disabled={isSubmitting || !isFormValid}
+                    className="w-full h-12 bg-neutral-950 hover:bg-blue-700 text-white rounded-2xl font-semibold transition-all duration-150"
+                  >
+                    {isSubmitting ? (
+                      <div className="flex items-center justify-center gap-2">
+                        <Loader className="w-5 h-5 animate-spin" />
+                        {(isUploading || videoUploading) ? 'Uploading Media...' : 'Creating TikTok Ad...'}
+                      </div>
+                    ) : (
+                      'Publish Ads'
+                    )}
+                  </Button>
+
+                  {urlMode === 'WEBSITE' && !landingUrl?.trim() && (
+                    <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                      Please provide a link URL
                     </div>
-                  ) : (
-                    'Publish Ads'
                   )}
-                </Button>
 
-                {urlMode === 'WEBSITE' && !landingUrl?.trim() && (
-                  <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl mt-2">
-                    Please provide a link URL
-                  </div>
-                )}
-
-                {urlMode === 'WEBSITE' && landingUrl?.trim() && !(() => {
-                  try {
-                    const urlString = landingUrl.trim();
-                    if (/^https?:\/\//i.test(urlString)) {
-                      new URL(urlString);
-                      return true;
-                    }
-                  } catch (_) { }
-                  return false;
-                })() && (
-                    <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl mt-2">
+                  {urlMode === 'WEBSITE' && landingUrl?.trim() && !(() => {
+                    try {
+                      const urlString = landingUrl.trim();
+                      if (/^https?:\/\//i.test(urlString)) {
+                        new URL(urlString);
+                        return true;
+                      }
+                    } catch (_) { }
+                    return false;
+                  })() && (
+                    <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
                       Landing Page URL must be a valid URL starting with http:// or https://
                     </div>
                   )}
+                </div>
 
                 <div className="flex flex-col gap-2">
-                  <div className="flex items-center justify-between mt-2 mb-2">
+                  <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
                       <Label className="text-sm font-medium inline-flex items-center gap-1">
                         {renderDiffMark("launchPaused")}
@@ -4535,21 +4537,21 @@ export default function TikTokAdCreationForm({
                       </RadioGroup>
                     </div>
                   </div>
+                </div>
 
-                  <div className="flex items-center space-x-2 rounded-xl transition-colors duration-150">
-                    <Checkbox
-                      id="preserveMedia"
-                      checked={preserveMedia}
-                      onCheckedChange={setPreserveMedia}
-                      className="rounded-md focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
-                    />
-                    <Label
-                      htmlFor="preserveMedia"
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                    >
-                      Don't clear media after publishing ads
-                    </Label>
-                  </div>
+                <div className="flex items-center space-x-2 rounded-xl transition-colors duration-150">
+                  <Checkbox
+                    id="preserveMedia"
+                    checked={preserveMedia}
+                    onCheckedChange={setPreserveMedia}
+                    className="rounded-md focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                  />
+                  <Label
+                    htmlFor="preserveMedia"
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                  >
+                    Don't clear media after publishing ads
+                  </Label>
                 </div>
               </div>
             </div>
