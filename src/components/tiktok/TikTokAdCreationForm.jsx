@@ -4560,7 +4560,7 @@ function FolderPickerOverlay({ show, linkValue, setLinkValue, onImport, onCancel
     <div
       className="fixed left-1/2 transform -translate-x-1/2 z-[2147483647] bg-white rounded-lg shadow-lg border border-gray-200 p-4 w-[500px]"
       style={{
-        top: 'calc(50vh - 500px)' // Positions it above center where picker usually appears
+        top: 'max(20px, calc(50vh - 380px))' // Positions it above center where picker usually appears, capped at 20px from top
       }}
     >
       <div className="flex flex-col gap-3">
