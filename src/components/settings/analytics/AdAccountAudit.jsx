@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils"
 import Audit from "@/assets/icons/analytics/Audit.svg"
 import slackColor from "@/assets/icons/analytics/slack-color.svg"
 
-const SLACK_PURPLE = "#4A154B"
+const SLACK_BORDER_LIGHT = "rgba(74,21,75,0.35)"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "https://api.withblip.com"
 
@@ -1199,8 +1199,8 @@ export default function AdAccountAudit({
                         <div className="flex items-center gap-2 flex-shrink-0">
                             {slackConnected ? (
                                 <div
-                                    className="inline-flex items-center gap-1.5 rounded-2xl border bg-white px-3 h-9 text-xs font-medium text-gray-600"
-                                    style={{ borderColor: SLACK_PURPLE }}
+                                    className="inline-flex items-center gap-1.5 rounded-2xl border bg-white px-3 h-9 text-xs font-medium text-gray-600 shadow-[0_2px_10px_rgba(74,21,75,0.18)]"
+                                    style={{ borderColor: SLACK_BORDER_LIGHT }}
                                 >
                                     <img src={slackColor} alt="Slack" className="w-3.5 h-3.5" />
                                     Type <code className="bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded text-[11px] font-mono">/blip-audit</code> to run audit in Slack
@@ -1210,7 +1210,7 @@ export default function AdAccountAudit({
                                     type="button"
                                     onClick={onConnectSlack}
                                     className="inline-flex items-center gap-1.5 rounded-2xl border bg-white px-3 h-9 text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors shadow-[0_2px_10px_rgba(74,21,75,0.18)]"
-                                    style={{ borderColor: SLACK_PURPLE }}
+                                    style={{ borderColor: SLACK_BORDER_LIGHT }}
                                 >
                                     <img src={slackColor} alt="Slack" className="w-3.5 h-3.5" />
                                     Get Audit in Slack

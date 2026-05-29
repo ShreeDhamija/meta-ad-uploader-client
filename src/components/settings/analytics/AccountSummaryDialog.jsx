@@ -7,7 +7,7 @@ import { RefreshCw, FileDiff, FileText } from "lucide-react"
 import slackColor from "@/assets/icons/analytics/slack-color.svg"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com'
-const SLACK_PURPLE = '#4A154B'
+const SLACK_BORDER_LIGHT = 'rgba(74,21,75,0.35)'
 
 // ── Inline bold renderer ──
 function renderInlineBold(text) {
@@ -117,7 +117,7 @@ export default function AccountSummaryDialog({ open, onClose, adAccountId, slack
                 onClick={onClose}
             >
                 <div
-                    className="bg-white rounded-[40px] shadow-2xl w-full max-w-[610px] max-h-[85vh] flex flex-col overflow-hidden"
+                    className="bg-white rounded-[40px] shadow-2xl w-full max-w-[1080px] max-h-[85vh] flex flex-col overflow-hidden"
                     onClick={(e) => e.stopPropagation()}
                 >
                     {/* Header */}
@@ -145,8 +145,8 @@ export default function AccountSummaryDialog({ open, onClose, adAccountId, slack
                         <div className="flex items-center gap-2">
                             {slackConnected ? (
                                 <div
-                                    className="inline-flex items-center gap-1.5 rounded-2xl border bg-white px-3 h-9 text-xs font-medium text-gray-600"
-                                    style={{ borderColor: SLACK_PURPLE }}
+                                    className="inline-flex items-center gap-1.5 rounded-2xl border bg-white px-3 h-9 text-xs font-medium text-gray-600 shadow-[0_2px_10px_rgba(74,21,75,0.18)]"
+                                    style={{ borderColor: SLACK_BORDER_LIGHT }}
                                 >
                                     <img src={slackColor} alt="Slack" className="w-3.5 h-3.5" />
                                     Type <code className="bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded text-[11px] font-mono">/blip-summary</code> to run summary in Slack
@@ -156,7 +156,7 @@ export default function AccountSummaryDialog({ open, onClose, adAccountId, slack
                                     type="button"
                                     onClick={onConnectSlack}
                                     className="inline-flex items-center gap-1.5 rounded-2xl border bg-white px-3 h-9 text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors shadow-[0_2px_10px_rgba(74,21,75,0.18)]"
-                                    style={{ borderColor: SLACK_PURPLE }}
+                                    style={{ borderColor: SLACK_BORDER_LIGHT }}
                                 >
                                     <img src={slackColor} alt="Slack" className="w-3.5 h-3.5" />
                                     Get Summary in Slack

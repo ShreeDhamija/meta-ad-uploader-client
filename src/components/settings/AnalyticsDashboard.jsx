@@ -1566,8 +1566,8 @@ export default function AnalyticsDashboard() {
                                             <button
                                                 type="button"
                                                 onClick={startSlackConnect}
-                                                style={{ borderColor: "#4A154B" }}
-                                                className="inline-flex h-7 items-center gap-1.5 rounded-lg border bg-white px-2.5 text-xs font-medium text-gray-700 shadow-[0_2px_10px_rgba(74,21,75,0.18)] transition-colors hover:bg-gray-50"
+                                                style={{ borderColor: "rgba(74,21,75,0.35)" }}
+                                                className="inline-flex h-7 items-center gap-1.5 rounded-xl border bg-white px-2.5 text-xs font-medium text-gray-700 shadow-[0_2px_10px_rgba(74,21,75,0.18)] transition-colors hover:bg-gray-50"
                                             >
                                                 <img src={slackColor} alt="Slack" className="h-3 w-3" />
                                                 Connect to Slack
@@ -1816,11 +1816,11 @@ export default function AnalyticsDashboard() {
                                                         <button
                                                             type="button"
                                                             onClick={startSlackConnect}
-                                                            style={{ borderColor: "#4A154B" }}
+                                                            style={{ borderColor: "rgba(74,21,75,0.35)" }}
                                                             className="inline-flex h-8 items-center gap-1.5 rounded-xl border bg-white px-3 text-xs font-medium text-gray-700 shadow-[0_2px_10px_rgba(74,21,75,0.18)] transition-colors hover:bg-gray-50"
                                                         >
                                                             <img src={slackColor} alt="Slack" className="h-3.5 w-3.5" />
-                                                            Get Alerts in Slack
+                                                            Get Anomaly Alerts in Slack
                                                         </button>
                                                     )}
                                                 </div>
