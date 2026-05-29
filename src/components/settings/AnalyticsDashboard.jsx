@@ -20,7 +20,7 @@ import useGlobalSettings from "@/lib/useGlobalSettings"
 import { saveSettings } from "@/lib/saveSettings"
 import { cn } from "@/lib/utils"
 import { Switch } from "@/components/ui/switch"
-import slackWhite from "@/assets/icons/analytics/slackwhite.svg"
+import slackColor from "@/assets/icons/analytics/slack-color.svg"
 import KPIChart from "./analytics/KPIChart"
 import WeeklyChart from "./analytics/WeeklyChart"
 import AnalyticsDateRangePicker from "./analytics/AnalyticsDateRangePicker"
@@ -1153,13 +1153,13 @@ export default function AnalyticsDashboard() {
                                 <ChevronDown className="w-4 h-4 ml-2 text-gray-400" />
                             </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-[240px] rounded-2xl bg-white p-2 shadow-lg">
+                        <DropdownMenuContent align="end" className="w-auto min-w-[240px] rounded-2xl bg-white p-2 shadow-lg">
                             <TooltipProvider delayDuration={150}>
                                 <Tooltip>
                                     <TooltipTrigger asChild>
                                         <DropdownMenuItem
                                             onClick={() => setAuditOpen(true)}
-                                            className="cursor-pointer rounded-xl px-3 py-2 text-sm focus:bg-gray-100"
+                                            className="cursor-pointer rounded-xl px-3 py-2 text-sm focus:bg-gray-100 whitespace-nowrap"
                                         >
                                             <FileBarChart2 className="w-4 h-4 text-gray-500" />
                                             Audit Account Health
@@ -1173,7 +1173,7 @@ export default function AnalyticsDashboard() {
                                     <TooltipTrigger asChild>
                                         <DropdownMenuItem
                                             onClick={() => setDiagnosticOpen(true)}
-                                            className="cursor-pointer rounded-xl px-3 py-2 text-sm focus:bg-gray-100"
+                                            className="cursor-pointer rounded-xl px-3 py-2 text-sm focus:bg-gray-100 whitespace-nowrap"
                                         >
                                             <Stethoscope className="w-4 h-4 text-gray-500" />
                                             Diagnose Poor Performance
@@ -1187,7 +1187,7 @@ export default function AnalyticsDashboard() {
                                     <TooltipTrigger asChild>
                                         <DropdownMenuItem
                                             onClick={() => setShowSummaryDialog(true)}
-                                            className="cursor-pointer rounded-xl px-3 py-2 text-sm focus:bg-gray-100"
+                                            className="cursor-pointer rounded-xl px-3 py-2 text-sm focus:bg-gray-100 whitespace-nowrap"
                                         >
                                             <FileText className="w-4 h-4 text-gray-500" />
                                             Summarize Recent Changes
@@ -1207,7 +1207,8 @@ export default function AnalyticsDashboard() {
 
             {/* ── Charts Row  */}
             {selectedAdAccount && (
-                <Card className="rounded-3xl border-gray-200 overflow-visible">
+                /* marginTop: 24px base (space-y-6) + 8px extra breathing room below the header row */
+                <Card className="rounded-3xl border-gray-200 overflow-visible" style={{ marginTop: "2rem" }}>
                     <CardContent className="p-0 lg:relative">
                         {/* Desktop: floating date + breakdown + refresh, anchored to top edge of the Card
                             (was previously anchored to the chart grid; moved to CardContent so the
@@ -1544,7 +1545,7 @@ export default function AnalyticsDashboard() {
 
                                 {/* ── Slack Commands ── */}
                                 <div>
-                                    <div className="flex items-center justify-between gap-2 flex-wrap mb-2">
+                                    <div className="flex items-center gap-3 flex-wrap mb-2">
                                         <strong className="text-gray-600">Slack Commands</strong>
                                         {slackConnected ? (
                                             <div className="flex items-center gap-2">
@@ -1565,9 +1566,10 @@ export default function AnalyticsDashboard() {
                                             <button
                                                 type="button"
                                                 onClick={startSlackConnect}
-                                                className="inline-flex h-7 items-center gap-1.5 rounded-lg bg-[#611f69] px-2.5 text-xs font-medium text-white shadow-xs transition-colors hover:bg-[#4A154B]"
+                                                style={{ borderColor: "#4A154B" }}
+                                                className="inline-flex h-7 items-center gap-1.5 rounded-lg border bg-white px-2.5 text-xs font-medium text-gray-700 shadow-[0_2px_10px_rgba(74,21,75,0.18)] transition-colors hover:bg-gray-50"
                                             >
-                                                <img src={slackWhite} alt="Slack" className="h-3 w-3" />
+                                                <img src={slackColor} alt="Slack" className="h-3 w-3" />
                                                 Connect to Slack
                                             </button>
                                         )}
@@ -1814,9 +1816,10 @@ export default function AnalyticsDashboard() {
                                                         <button
                                                             type="button"
                                                             onClick={startSlackConnect}
-                                                            className="inline-flex h-8 items-center gap-1.5 rounded-xl bg-[#611f69] px-3 text-xs font-medium text-white shadow-xs transition-colors hover:bg-[#4A154B]"
+                                                            style={{ borderColor: "#4A154B" }}
+                                                            className="inline-flex h-8 items-center gap-1.5 rounded-xl border bg-white px-3 text-xs font-medium text-gray-700 shadow-[0_2px_10px_rgba(74,21,75,0.18)] transition-colors hover:bg-gray-50"
                                                         >
-                                                            <img src={slackWhite} alt="Slack" className="h-3.5 w-3.5" />
+                                                            <img src={slackColor} alt="Slack" className="h-3.5 w-3.5" />
                                                             Get Alerts in Slack
                                                         </button>
                                                     )}
@@ -1842,14 +1845,10 @@ export default function AnalyticsDashboard() {
                                                             {slackDisconnecting ? 'Disconnecting...' : 'Disconnect'}
                                                         </button>
                                                     </div>
-                                                    <div className="border-t border-gray-100" />
                                                     <div className="flex items-center justify-between gap-3">
-                                                        <div>
-                                                            <p className="text-sm text-gray-700">Anomaly Alerts</p>
-                                                            <p className="text-xs text-gray-500">
-                                                                Get notified in <span className="font-semibold text-gray-700">{slackChannelName || 'your channel'}</span> when CPA spikes or overspend is detected.
-                                                            </p>
-                                                        </div>
+                                                        <p className="text-xs text-gray-500">
+                                                            Get notified in <span className="font-semibold text-gray-700">{slackChannelName || 'your channel'}</span> when CPA spikes or overspend is detected.
+                                                        </p>
                                                         <Switch
                                                             checked={tempSlackAlertsEnabled}
                                                             onCheckedChange={setTempSlackAlertsEnabled}

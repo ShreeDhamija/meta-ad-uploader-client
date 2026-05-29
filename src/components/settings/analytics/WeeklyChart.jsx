@@ -187,7 +187,7 @@ export default function WeeklyChart({ data, loading, className, granularity = 'w
                             paddingRight: `${WEEKLY_CHART_SIDE_INSET}px`,
                         }}
                     >
-                        <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-1.5 px-1 w-full">
+                        <div className="flex flex-wrap items-center justify-start gap-x-12 gap-y-1.5 px-1 w-full sm:pr-[180px]">
                             {selectedMetricConfigs.map((metric) => (
                                 <div key={metric.key} className="flex items-center gap-2">
                                     <span

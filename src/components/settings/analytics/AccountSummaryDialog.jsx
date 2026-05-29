@@ -112,9 +112,12 @@ export default function AccountSummaryDialog({ open, onClose, adAccountId, slack
                 }}
                 onClick={onClose}
             />
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div
+                className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                onClick={onClose}
+            >
                 <div
-                    className="bg-white rounded-[40px] shadow-2xl w-full max-w-[560px] max-h-[85vh] flex flex-col overflow-hidden"
+                    className="bg-white rounded-[40px] shadow-2xl w-full max-w-[610px] max-h-[85vh] flex flex-col overflow-hidden"
                     onClick={(e) => e.stopPropagation()}
                 >
                     {/* Header */}
@@ -152,7 +155,7 @@ export default function AccountSummaryDialog({ open, onClose, adAccountId, slack
                                 <button
                                     type="button"
                                     onClick={onConnectSlack}
-                                    className="inline-flex items-center gap-1.5 rounded-2xl border bg-white px-3 h-9 text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                                    className="inline-flex items-center gap-1.5 rounded-2xl border bg-white px-3 h-9 text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors shadow-[0_2px_10px_rgba(74,21,75,0.18)]"
                                     style={{ borderColor: SLACK_PURPLE }}
                                 >
                                     <img src={slackColor} alt="Slack" className="w-3.5 h-3.5" />

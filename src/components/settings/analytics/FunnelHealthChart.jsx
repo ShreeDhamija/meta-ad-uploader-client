@@ -100,16 +100,16 @@ export default function FunnelHealthChart({ data, loading, className, granularit
             </div>
 
             {loading ? (
-                <div className="flex items-center justify-center h-[200px]">
+                <div className="flex items-center justify-center h-[260px]">
                     <Helix size="36" speed="2.5" color="#3b82f6" />
                 </div>
             ) : chartData.length === 0 ? (
-                <div className="flex items-center justify-center h-[200px] text-sm text-gray-400">
+                <div className="flex items-center justify-center h-[260px] text-sm text-gray-400">
                     No funnel data available
                 </div>
             ) : (
                 <>
-                    <ResponsiveContainer width="100%" height={200}>
+                    <ResponsiveContainer width="100%" height={260}>
                         <LineChart data={chartData} margin={{ top: 5, right: 0, left: -10, bottom: 5 }}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                             <XAxis
@@ -157,7 +157,7 @@ export default function FunnelHealthChart({ data, loading, className, granularit
                             paddingRight: `${FUNNEL_CHART_SIDE_INSET}px`,
                         }}
                     >
-                        <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-1.5 px-1 w-full">
+                        <div className="flex flex-wrap items-center justify-start gap-x-12 gap-y-1.5 px-1 w-full">
                             {selectedMetricConfigs.map((metric) => (
                                 <div key={metric.key} className="flex items-center gap-2">
                                     <span
