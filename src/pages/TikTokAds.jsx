@@ -3,6 +3,8 @@ import Header from '@/components/header'
 import MediaPreview from '@/components/media-preview'
 import TikTokAdCreationForm from '@/components/tiktok/TikTokAdCreationForm'
 import { useTikTokAuth } from '@/lib/TikTokAuthContext'
+import { useAuth } from '@/lib/AuthContext'
+import useSubscription from '@/lib/useSubscriptionSettings'
 import { useIntercom } from '@/lib/useIntercom'
 import useTikTokAdvertiserSettings from '@/lib/useTikTokAdvertiserSettings'
 import { saveTikTokSettings } from '@/lib/saveTikTokSettings'
@@ -67,6 +69,9 @@ const getFileId = (file) => {
 export default function TikTokAds() {
   const navigate = useNavigate()
   const { isTikTokLoggedIn, tiktokAdvertisers, refreshTikTokUser, isLoading: authLoading } = useTikTokAuth()
+  const { isLoggedIn, authLoading: metaAuthLoading } = useAuth()
+  const { hasActiveAccess, loading: subscriptionLoading } = useSubscription()
+  const userHasActiveAccess = hasActiveAccess ? hasActiveAccess() : true
   const { showMessenger, hideMessenger } = useIntercom()
 
   const [selectedAdvertiser, setSelectedAdvertiser] = useState(() => {
@@ -428,10 +433,10 @@ export default function TikTokAds() {
 
   // Auth guard
   useEffect(() => {
-    if (!authLoading && !isTikTokLoggedIn) {
+    if (!authLoading && !metaAuthLoading && !isTikTokLoggedIn && !isLoggedIn) {
       navigate('/tiktok-login')
     }
-  }, [isTikTokLoggedIn, authLoading, navigate])
+  }, [isTikTokLoggedIn, isLoggedIn, authLoading, metaAuthLoading, navigate])
 
   // Auto-select first advertiser account
   useEffect(() => {
@@ -767,7 +772,7 @@ export default function TikTokAds() {
     })
   }, [files, driveFiles, dropboxFiles])
 
-  if (!isTikTokLoggedIn) return null
+  if (authLoading || metaAuthLoading || subscriptionLoading) return null
 
   return (
     <>
@@ -797,7 +802,7 @@ export default function TikTokAds() {
         <main className="pt-4 pb-20">
           <div className="flex flex-col lg:flex-row gap-6 min-w-0">
             {/* Left Column: Form and Duplicator (55% width) */}
-            <div className="flex-1 lg:flex-[55] min-w-0 space-y-6">
+            <div className={`flex-1 lg:flex-[55] min-w-0 space-y-6 ${(!userHasActiveAccess || !isTikTokLoggedIn) ? 'pointer-events-none opacity-40 cursor-not-allowed select-none' : ''}`}>
               <TikTokAdCreationForm
                 advertiserId={selectedAdvertiser}
                 advertisers={tiktokAdvertisers}
@@ -853,7 +858,7 @@ export default function TikTokAds() {
             </div>
 
             {/* Right Column: Media Preview (45% width) */}
-            <div className="flex-1 lg:flex-[45] min-w-0">
+            <div className={`flex-1 lg:flex-[45] min-w-0 ${(!userHasActiveAccess || !isTikTokLoggedIn) ? 'pointer-events-none opacity-40 cursor-not-allowed select-none' : ''}`}>
               <div className="sticky top-6">
                 <ErrorBoundary>
                   <MediaPreview

@@ -312,12 +312,8 @@ export default function Home() {
 
 
     useEffect(() => {
-        if (!authLoading && !tiktokAuthLoading && !isLoggedIn) {
-            if (isTikTokLoggedIn) {
-                navigate("/tiktok-ads");
-            } else {
-                navigate("/login");
-            }
+        if (!authLoading && !tiktokAuthLoading && !isLoggedIn && !isTikTokLoggedIn) {
+            navigate("/login");
         }
     }, [authLoading, tiktokAuthLoading, isLoggedIn, isTikTokLoggedIn]);
 

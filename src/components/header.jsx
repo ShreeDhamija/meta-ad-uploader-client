@@ -54,7 +54,7 @@ export default function Header({ showMessenger, hideMessenger, metaNotLinked = f
       }
     } else if (platform === 'tiktok') {
       if (!location.pathname.includes('tiktok')) {
-        navigate(isTikTokLoggedIn ? '/tiktok-ads' : '/tiktok-login')
+        navigate('/tiktok-ads')
       }
     }
   }
