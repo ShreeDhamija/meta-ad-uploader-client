@@ -38,13 +38,15 @@ function TikTokIcon({ className, active }) {
   )
 }
 
-export default function Header({ showMessenger, hideMessenger }) {
+export default function Header({ showMessenger, hideMessenger, metaNotLinked = false }) {
   const { isLoggedIn, userName, profilePicUrl, handleLogout } = useAuth()
   const { isTikTokLoggedIn, tiktokUser, logoutTikTok } = useTikTokAuth()
   const navigate = useNavigate()
   const location = useLocation()
 
   const isTikTokPage = location.pathname.includes('tiktok')
+  // Show the "connect" CTA in the left slot when the active platform has no auth
+  const tiktokNotLinked = isTikTokPage && !isTikTokLoggedIn
   const handleSwitchPlatform = (platform) => {
     if (platform === 'meta') {
       if (location.pathname !== '/') {
@@ -147,6 +149,24 @@ export default function Header({ showMessenger, hideMessenger }) {
             className="w-9 h-9 object-contain"
           />
           <span className="text-[14px] font-medium text-gray-700 whitespace-nowrap">Go To Launcher</span>
+        </button>
+      ) : tiktokNotLinked ? (
+        // TikTok page but not logged in → show "Connect TikTok" CTA
+        <button
+          onClick={() => navigate('/tiktok-login')}
+          className={`flex items-center gap-2.5 bg-black text-white border border-black/10 rounded-[20px] px-4 py-2 ${headerCardShadow} hover:bg-zinc-800 transition-all duration-200 active:scale-95`}
+        >
+          <TikTokIcon active />
+          <span className="text-[13px] font-semibold whitespace-nowrap">Connect TikTok</span>
+        </button>
+      ) : metaNotLinked ? (
+        // Meta page but not logged in → show "Connect Meta" CTA
+        <button
+          onClick={() => navigate('/login')}
+          className={`flex items-center gap-2.5 bg-[#1877F2] text-white border border-[#1877F2]/10 rounded-[20px] px-4 py-2 ${headerCardShadow} hover:bg-[#166fe5] transition-all duration-200 active:scale-95`}
+        >
+          <MetaIcon active />
+          <span className="text-[13px] font-semibold whitespace-nowrap">Connect Meta</span>
         </button>
       ) : (() => {
         const showTikTokUser = isTikTokPage && isTikTokLoggedIn && tiktokUser
