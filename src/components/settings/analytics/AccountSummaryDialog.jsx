@@ -4,8 +4,10 @@ import { useState, useEffect, useCallback } from "react"
 import { Helix } from "ldrs/react"
 import "ldrs/react/Helix.css"
 import { RefreshCw, FileDiff, FileText } from "lucide-react"
+import slackColor from "@/assets/icons/analytics/slack-color.svg"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com'
+const SLACK_PURPLE = '#4A154B'
 
 // ── Inline bold renderer ──
 function renderInlineBold(text) {
@@ -52,7 +54,7 @@ function parseSections(summary) {
  *  - onClose: () => void
  *  - adAccountId: string
  */
-export default function AccountSummaryDialog({ open, onClose, adAccountId }) {
+export default function AccountSummaryDialog({ open, onClose, adAccountId, slackConnected = false, onConnectSlack }) {
     const [summary, setSummary] = useState(null)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState(null)
@@ -138,6 +140,25 @@ export default function AccountSummaryDialog({ open, onClose, adAccountId }) {
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
+                            {slackConnected ? (
+                                <div
+                                    className="inline-flex items-center gap-1.5 rounded-2xl border bg-white px-3 h-9 text-xs font-medium text-gray-600"
+                                    style={{ borderColor: SLACK_PURPLE }}
+                                >
+                                    <img src={slackColor} alt="Slack" className="w-3.5 h-3.5" />
+                                    Type <code className="bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded text-[11px] font-mono">/blip-summary</code> to run summary in Slack
+                                </div>
+                            ) : (
+                                <button
+                                    type="button"
+                                    onClick={onConnectSlack}
+                                    className="inline-flex items-center gap-1.5 rounded-2xl border bg-white px-3 h-9 text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                                    style={{ borderColor: SLACK_PURPLE }}
+                                >
+                                    <img src={slackColor} alt="Slack" className="w-3.5 h-3.5" />
+                                    Get Summary in Slack
+                                </button>
+                            )}
                             {summary && !loading && (
                                 <button
                                     onClick={fetchSummary}

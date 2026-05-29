@@ -8,6 +8,7 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 import { Command, CommandInput, CommandList, CommandItem, CommandGroup } from "@/components/ui/command"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip"
 import {
     AlertTriangle, Loader2, ChevronsUpDown, RefreshCw,
     Target, Settings2, Activity, Zap, CheckCircle2, BarChart3, FileBarChart2, FileText, ChevronDown, Stethoscope
@@ -32,11 +33,10 @@ import WeeklyPlacementChart from "./analytics/WeeklyPlacementChart"
 import FunnelHealthChart from "./analytics/FunnelHealthChart"
 import CreativeHitRateChart from "./analytics/CreativeHitRateChart"
 import TrendingCreative from "./analytics/TrendingCreative"
-import FlexAdsLauncher from "./analytics/FlexAdsLauncher"
+// import FlexAdsLauncher from "./analytics/FlexAdsLauncher" // Hidden — see Flex Ads Launcher block below
 // FEATURE START: PERIOD METRICS SUMMARY (added 2026-05-19)
 import PeriodMetricsSummary from "./analytics/PeriodMetricsSummary"
 // FEATURE END: PERIOD METRICS SUMMARY
-import SlackAlertsDialog from "./analytics/SlackAlertsDialog"
 import AccountSummaryDialog from "./analytics/AccountSummaryDialog"
 import {
     buildAnalyticsDateQueryParams,
@@ -124,7 +124,6 @@ export default function AnalyticsDashboard() {
     // const [slackAlertsEnabled, setSlackAlertsEnabled] = useState(false)
     const [tempSlackAlertsEnabled, setTempSlackAlertsEnabled] = useState(false)
     const [slackDisconnecting, setSlackDisconnecting] = useState(false)
-    const [showSlackDialog, setShowSlackDialog] = useState(false)
     const [showSummaryDialog, setShowSummaryDialog] = useState(false)
     // ── Data state 
     const [recommendations, setRecommendations] = useState(null)
@@ -987,6 +986,11 @@ export default function AnalyticsDashboard() {
     }
 
 
+    // Kick off the Slack OAuth install flow (redirects to Slack, then back to the app).
+    const startSlackConnect = () => {
+        window.location.href = `${API_BASE_URL}/api/analytics/slack/install`
+    }
+
     const handleSlackDisconnect = async () => {
         setSlackDisconnecting(true)
         try {
@@ -1149,38 +1153,53 @@ export default function AnalyticsDashboard() {
                                 <ChevronDown className="w-4 h-4 ml-2 text-gray-400" />
                             </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-[220px] rounded-2xl bg-white p-2 shadow-lg">
-                            <DropdownMenuItem
-                                onClick={() => setAuditOpen(true)}
-                                className="cursor-pointer rounded-xl px-3 py-2 text-sm focus:bg-gray-100"
-                            >
-                                <FileBarChart2 className="w-4 h-4 text-gray-500" />
-                                Audit Account
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                                onClick={() => setDiagnosticOpen(true)}
-                                className="cursor-pointer rounded-xl px-3 py-2 text-sm focus:bg-gray-100"
-                            >
-                                <Stethoscope className="w-4 h-4 text-gray-500" />
-                                Diagnostic Report
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                                onClick={() => setShowSummaryDialog(true)}
-                                className="cursor-pointer rounded-xl px-3 py-2 text-sm focus:bg-gray-100"
-                            >
-                                <FileText className="w-4 h-4 text-gray-500" />
-                                Account Summary
-                            </DropdownMenuItem>
+                        <DropdownMenuContent align="end" className="w-[240px] rounded-2xl bg-white p-2 shadow-lg">
+                            <TooltipProvider delayDuration={150}>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <DropdownMenuItem
+                                            onClick={() => setAuditOpen(true)}
+                                            className="cursor-pointer rounded-xl px-3 py-2 text-sm focus:bg-gray-100"
+                                        >
+                                            <FileBarChart2 className="w-4 h-4 text-gray-500" />
+                                            Audit Account Health
+                                        </DropdownMenuItem>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="left" className="max-w-[240px]">
+                                        Full account health check — traffic, funnel, spend, audiences, learning phase, and creative copy.
+                                    </TooltipContent>
+                                </Tooltip>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <DropdownMenuItem
+                                            onClick={() => setDiagnosticOpen(true)}
+                                            className="cursor-pointer rounded-xl px-3 py-2 text-sm focus:bg-gray-100"
+                                        >
+                                            <Stethoscope className="w-4 h-4 text-gray-500" />
+                                            Diagnose Poor Performance
+                                        </DropdownMenuItem>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="left" className="max-w-[240px]">
+                                        Pinpoints performance anomalies and the campaigns, ad sets, changes, and event health driving them.
+                                    </TooltipContent>
+                                </Tooltip>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <DropdownMenuItem
+                                            onClick={() => setShowSummaryDialog(true)}
+                                            className="cursor-pointer rounded-xl px-3 py-2 text-sm focus:bg-gray-100"
+                                        >
+                                            <FileText className="w-4 h-4 text-gray-500" />
+                                            Summarize Recent Changes
+                                        </DropdownMenuItem>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="left" className="max-w-[240px]">
+                                        A plain-English recap of what changed in your account over the last 7 days.
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
                         </DropdownMenuContent>
                     </DropdownMenu>
-                    <Button
-                        variant="outline" size="sm"
-                        onClick={() => setShowSlackDialog(true)}
-                        className="rounded-2xl h-11 w-11 p-0 flex items-center justify-center hover:bg-[#4A154B] bg-[#611f69] shadow-xs transition-colors"
-                        title="Slack Alerts"
-                    >
-                        <img src={slackWhite} alt="Slack" className="w-5 h-5" />
-                    </Button>
 
 
                 </div>
@@ -1462,6 +1481,7 @@ export default function AnalyticsDashboard() {
             )}
 
             {/* ── Flex Ads Launcher (full-width; bottom) ── */}
+            {/* Hidden for now — commented out, not deleted.
             {selectedAdAccount && (
                 <FlexAdsLauncher
                     adAccountId={selectedAdAccount}
@@ -1470,6 +1490,7 @@ export default function AnalyticsDashboard() {
                     refreshKey={chartsRefreshKey}
                 />
             )}
+            */}
 
             {/* ── Info Footer ── */}
             <Card className="rounded-2xl bg-gray-50 border-gray-200">
@@ -1518,6 +1539,67 @@ export default function AnalyticsDashboard() {
                                     </span>
                                 </div>
 
+                                {/* ── Short separator before Slack Commands ── */}
+                                <div className="border-t border-gray-200 w-2/5" />
+
+                                {/* ── Slack Commands ── */}
+                                <div>
+                                    <div className="flex items-center justify-between gap-2 flex-wrap mb-2">
+                                        <strong className="text-gray-600">Slack Commands</strong>
+                                        {slackConnected ? (
+                                            <div className="flex items-center gap-2">
+                                                <span className="inline-flex items-center gap-1 text-green-600 font-medium">
+                                                    <CheckCircle2 className="w-3.5 h-3.5" />
+                                                    Slack app connected
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    onClick={handleSlackDisconnect}
+                                                    disabled={slackDisconnecting}
+                                                    className="text-red-500 hover:text-red-600 font-medium transition-colors disabled:opacity-70"
+                                                >
+                                                    {slackDisconnecting ? 'Disconnecting…' : 'Disconnect'}
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <button
+                                                type="button"
+                                                onClick={startSlackConnect}
+                                                className="inline-flex h-7 items-center gap-1.5 rounded-lg bg-[#611f69] px-2.5 text-xs font-medium text-white shadow-xs transition-colors hover:bg-[#4A154B]"
+                                            >
+                                                <img src={slackWhite} alt="Slack" className="h-3 w-3" />
+                                                Connect to Slack
+                                            </button>
+                                        )}
+                                    </div>
+                                    <div className="space-y-2">
+                                        <div className="flex items-start gap-2.5">
+                                            <div className="w-6 h-6 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                                <FileBarChart2 className="w-3 h-3 text-blue-600" />
+                                            </div>
+                                            <div>
+                                                <p className="font-medium text-gray-700">Account Audit</p>
+                                                <span>
+                                                    Type <code className="bg-gray-200/70 text-gray-700 px-1.5 py-0.5 rounded text-[11px] font-mono">/blip-audit</code> in
+                                                    Slack to generate a full PDF audit for any ad account.
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-start gap-2.5">
+                                            <div className="w-6 h-6 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                                <FileText className="w-3 h-3 text-amber-600" />
+                                            </div>
+                                            <div>
+                                                <p className="font-medium text-gray-700">Account Summary</p>
+                                                <span>
+                                                    Type <code className="bg-gray-200/70 text-gray-700 px-1.5 py-0.5 rounded text-[11px] font-mono">/blip-summary</code> in
+                                                    Slack to get a recap of recent changes for any ad account.
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
                             </div>
                         </div>
                     </div>
@@ -1532,6 +1614,8 @@ export default function AnalyticsDashboard() {
                 conversionEvent={adAccountSettings?.conversionEvent}
                 targetCPA={adAccountSettings?.targetCPA}
                 targetROAS={adAccountSettings?.targetROAS}
+                slackConnected={slackConnected}
+                onConnectSlack={startSlackConnect}
             />
             <AdAccountDiagnostic
                 open={diagnosticOpen}
@@ -1541,20 +1625,12 @@ export default function AnalyticsDashboard() {
                 kpiType={metricMode === 'roas' ? 'roas' : 'cpa'}
                 conversionEvent={adAccountSettings?.conversionEvent}
             />
-            <SlackAlertsDialog
-                open={showSlackDialog}
-                onClose={() => setShowSlackDialog(false)}
-                slackConnected={slackConnected}
-                slackChannelName={slackChannelName}
-                slackAlertsEnabled={slackAlertsEnabled}
-                onSlackAlertsEnabledChange={(val) => setAdAccountSettings(prev => ({ ...prev, slackAlertsEnabled: val }))}
-                onSlackDisconnect={handleSlackDisconnect}
-                slackDisconnecting={slackDisconnecting}
-            />
             <AccountSummaryDialog
                 open={showSummaryDialog}
                 onClose={() => setShowSummaryDialog(false)}
                 adAccountId={selectedAdAccount}
+                slackConnected={slackConnected}
+                onConnectSlack={startSlackConnect}
             />
             {/* ── Custom Settings Popup ── */}
             {showSettingsDialog && (
@@ -1734,19 +1810,53 @@ export default function AnalyticsDashboard() {
                                                         <AlertTriangle className="w-4 h-4 text-orange-500" />
                                                         Anomaly Thresholds
                                                     </h3>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            setShowSettingsDialog(false)
-                                                            setShowSlackDialog(true)
-                                                        }}
-                                                        className="inline-flex h-8 items-center gap-1.5 rounded-xl bg-[#611f69] px-3 text-xs font-medium text-white shadow-xs transition-colors hover:bg-[#4A154B]"
-                                                    >
-                                                        <img src={slackWhite} alt="Slack" className="h-3.5 w-3.5" />
-                                                        {slackConnected ? 'Disable Slack Alerts' : 'Get Slack Alerts'}
-                                                    </button>
+                                                    {!slackConnected && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={startSlackConnect}
+                                                            className="inline-flex h-8 items-center gap-1.5 rounded-xl bg-[#611f69] px-3 text-xs font-medium text-white shadow-xs transition-colors hover:bg-[#4A154B]"
+                                                        >
+                                                            <img src={slackWhite} alt="Slack" className="h-3.5 w-3.5" />
+                                                            Get Alerts in Slack
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </div>
+
+                                            {/* Connected state — channel info, disconnect, and anomaly-alerts toggle */}
+                                            {slackConnected && (
+                                                <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4 space-y-3">
+                                                    <div className="flex items-center justify-between gap-3">
+                                                        <div className="flex items-center gap-2 min-w-0">
+                                                            <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
+                                                            <p className="text-sm text-gray-700 truncate">
+                                                                Connected to <span className="font-medium">{slackChannelName || 'Slack'}</span>
+                                                            </p>
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            onClick={handleSlackDisconnect}
+                                                            disabled={slackDisconnecting}
+                                                            className="flex-shrink-0 text-xs text-white bg-red-500 hover:bg-red-600 font-medium px-3 py-1 rounded-lg transition-colors disabled:opacity-70"
+                                                        >
+                                                            {slackDisconnecting ? 'Disconnecting...' : 'Disconnect'}
+                                                        </button>
+                                                    </div>
+                                                    <div className="border-t border-gray-100" />
+                                                    <div className="flex items-center justify-between gap-3">
+                                                        <div>
+                                                            <p className="text-sm text-gray-700">Anomaly Alerts</p>
+                                                            <p className="text-xs text-gray-500">
+                                                                Get notified in <span className="font-semibold text-gray-700">{slackChannelName || 'your channel'}</span> when CPA spikes or overspend is detected.
+                                                            </p>
+                                                        </div>
+                                                        <Switch
+                                                            checked={tempSlackAlertsEnabled}
+                                                            onCheckedChange={setTempSlackAlertsEnabled}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            )}
 
                                             <div className="space-y-4 pl-6">
                                                 <div className="space-y-2">

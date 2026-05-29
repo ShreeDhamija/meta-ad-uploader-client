@@ -11,6 +11,9 @@ import {
 } from "recharts"
 import { cn } from "@/lib/utils"
 import Audit from "@/assets/icons/analytics/Audit.svg"
+import slackColor from "@/assets/icons/analytics/slack-color.svg"
+
+const SLACK_PURPLE = "#4A154B"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "https://api.withblip.com"
 
@@ -1092,6 +1095,7 @@ function OpportunitiesSection({ text, isLoading, error }) {
 export default function AdAccountAudit({
     open, onOpenChange, adAccountId, adAccountName,
     kpiType = "cpa", conversionEvent = null, targetCPA = null, targetROAS = null,
+    slackConnected = false, onConnectSlack,
 }) {
     const [report, setReport] = useState(null)
     const [isGenerating, setIsGenerating] = useState(false)
@@ -1193,6 +1197,27 @@ export default function AdAccountAudit({
                             </div>
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
+                            {!isGenerating && (
+                                slackConnected ? (
+                                    <div
+                                        className="inline-flex items-center gap-1.5 rounded-2xl border bg-white px-3 h-9 text-xs font-medium text-gray-600"
+                                        style={{ borderColor: SLACK_PURPLE }}
+                                    >
+                                        <img src={slackColor} alt="Slack" className="w-3.5 h-3.5" />
+                                        Type <code className="bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded text-[11px] font-mono">/blip-audit</code> to run audit in Slack
+                                    </div>
+                                ) : (
+                                    <button
+                                        type="button"
+                                        onClick={onConnectSlack}
+                                        className="inline-flex items-center gap-1.5 rounded-2xl border bg-white px-3 h-9 text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                                        style={{ borderColor: SLACK_PURPLE }}
+                                    >
+                                        <img src={slackColor} alt="Slack" className="w-3.5 h-3.5" />
+                                        Get Audit in Slack
+                                    </button>
+                                )
+                            )}
                             {report && !isGenerating && (
                                 <Button variant="outline" size="sm" onClick={generateReport} className="rounded-2xl text-xs gap-1.5 h-9">
                                     <FileBarChart2 className="w-3.5 h-3.5" />

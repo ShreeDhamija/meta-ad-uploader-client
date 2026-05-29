@@ -260,7 +260,7 @@ export default function KPIChart({ data, loading, mode, granularity = 'daily' })
                                                 key={name}
                                                 onClick={() => handleToggleCampaign(name)}
                                                 title={name}
-                                                className="flex items-center gap-2 text-left min-w-0 py-0.5 group"
+                                                className="flex items-center gap-2 text-left min-w-0 py-0.5 group cursor-pointer"
                                             >
                                                 <span
                                                     className="w-3 h-[3px] rounded-full flex-shrink-0 transition-opacity"

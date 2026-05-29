@@ -181,13 +181,13 @@ export default function WeeklyChart({ data, loading, className, granularity = 'w
                     </ResponsiveContainer>
 
                     <div
-                        className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"
+                        className="relative mt-3"
                         style={{
                             paddingLeft: `${WEEKLY_CHART_SIDE_INSET}px`,
                             paddingRight: `${WEEKLY_CHART_SIDE_INSET}px`,
                         }}
                     >
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+                        <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-1.5 px-1 w-full">
                             {selectedMetricConfigs.map((metric) => (
                                 <div key={metric.key} className="flex items-center gap-2">
                                     <span
@@ -201,6 +201,7 @@ export default function WeeklyChart({ data, loading, className, granularity = 'w
                             ))}
                         </div>
 
+                        <div className="mt-3 flex justify-center sm:mt-0 sm:absolute sm:right-0 sm:top-0">
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button
@@ -233,6 +234,7 @@ export default function WeeklyChart({ data, loading, className, granularity = 'w
                                 ))}
                             </DropdownMenuContent>
                         </DropdownMenu>
+                        </div>
                     </div>
                 </>
             )}
