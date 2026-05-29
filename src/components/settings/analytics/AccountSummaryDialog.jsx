@@ -117,7 +117,7 @@ export default function AccountSummaryDialog({ open, onClose, adAccountId, slack
                 onClick={onClose}
             >
                 <div
-                    className="bg-white rounded-[40px] shadow-2xl w-full max-w-[1080px] max-h-[85vh] flex flex-col overflow-hidden"
+                    className="bg-white rounded-[40px] shadow-2xl w-full max-w-[800px] max-h-[85vh] flex flex-col overflow-hidden"
                     onClick={(e) => e.stopPropagation()}
                 >
                     {/* Header */}

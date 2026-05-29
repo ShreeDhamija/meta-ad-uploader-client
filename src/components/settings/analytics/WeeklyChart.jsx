@@ -40,6 +40,14 @@ const METRIC_OPTIONS = {
         subtitle: 'Traffic link CTR',
         yAxisWidth: 52,
     },
+    conversionRate: {
+        label: 'Conversion Rate',
+        color: '#a855f7',
+        tickFormatter: (value) => `${value.toFixed(1)}%`,
+        valueFormatter: (value) => value !== null && value !== undefined ? `${value.toFixed(2)}%` : 'N/A',
+        subtitle: 'Conversions / link clicks',
+        yAxisWidth: 52,
+    },
 }
 
 const WEEKLY_CHART_SIDE_INSET = 0
@@ -61,6 +69,8 @@ export default function WeeklyChart({ data, loading, className, granularity = 'w
                 costPerLinkClick: w.costPerLinkClick,
                 cpm: impressions > 0 ? (spend / impressions) * 1000 : null,
                 linkCtr: impressions > 0 ? (linkClicks / impressions) * 100 : null,
+                conversionRate: w.conversionRate ?? null,
+                conversions: w.conversions ?? 0,
                 spend,
                 impressions,
                 linkClicks,
@@ -114,6 +124,7 @@ export default function WeeklyChart({ data, loading, className, granularity = 'w
                         <p className="text-gray-600">Spend: <span className="font-medium">${row.spend?.toFixed(2)}</span></p>
                         <p className="text-gray-600">Impressions: <span className="font-medium">{(row.impressions || 0).toLocaleString()}</span></p>
                         <p className="text-gray-600">Link Clicks: <span className="font-medium">{(row.linkClicks || 0).toLocaleString()}</span></p>
+                        <p className="text-gray-600">Conversions: <span className="font-medium">{(row.conversions || 0).toLocaleString()}</span></p>
                     </div>
                 </div>
             </div>

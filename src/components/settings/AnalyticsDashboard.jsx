@@ -458,8 +458,8 @@ export default function AnalyticsDashboard() {
         return `${accountId}::${getAnalyticsDateRangeCacheKey(dateRange)}::${conversionEvent || "__auto__"}::${granularity || DEFAULT_ANALYTICS_GRANULARITY}`
     }, [])
 
-    const getWeeklyInsightsCacheKey = useCallback((accountId, dateRange, granularity) => {
-        return `${accountId}::${getAnalyticsDateRangeCacheKey(dateRange)}::${granularity || DEFAULT_ANALYTICS_GRANULARITY}`
+    const getWeeklyInsightsCacheKey = useCallback((accountId, dateRange, conversionEvent, granularity) => {
+        return `${accountId}::${getAnalyticsDateRangeCacheKey(dateRange)}::${conversionEvent || "__auto__"}::${granularity || DEFAULT_ANALYTICS_GRANULARITY}`
     }, [])
 
     const clearDailyInsightsCache = useCallback((accountId = null) => {
@@ -554,6 +554,7 @@ export default function AnalyticsDashboard() {
         accountId = selectedAdAccount,
         dateRange = analyticsDateRange,
         granularity = analyticsGranularity,
+        conversionEvent = adAccountSettings?.conversionEvent || null,
         force = false,
     } = {}) => {
         if (!accountId) return
@@ -563,7 +564,7 @@ export default function AnalyticsDashboard() {
             weeklyInsightsAbortRef.current = null
         }
 
-        const cacheKey = getWeeklyInsightsCacheKey(accountId, dateRange, granularity)
+        const cacheKey = getWeeklyInsightsCacheKey(accountId, dateRange, conversionEvent, granularity)
         const cachedPayload = weeklyInsightsCacheRef.current[cacheKey]
 
         if (!force && cachedPayload) {
@@ -578,7 +579,7 @@ export default function AnalyticsDashboard() {
         setWeeklyInsights(null)
         setWeeklyLoading(true)
         try {
-            const query = buildAnalyticsQueryString(accountId, dateRange, { granularity })
+            const query = buildAnalyticsQueryString(accountId, dateRange, { conversionEvent, granularity })
             const res = await fetch(`${API_BASE_URL}/api/analytics/weekly-insights?${query}`, {
                 credentials: 'include',
                 signal: controller.signal,
@@ -605,6 +606,7 @@ export default function AnalyticsDashboard() {
         selectedAdAccount,
         analyticsDateRange,
         analyticsGranularity,
+        adAccountSettings?.conversionEvent,
         buildAnalyticsQueryString,
         getWeeklyInsightsCacheKey,
     ])
@@ -713,7 +715,8 @@ export default function AnalyticsDashboard() {
 
 
 
-    // Traffic metrics don't depend on settings, fetch immediately.
+    // Traffic metrics fetch immediately; they also refetch when the selected
+    // conversion event changes (Conversion Rate metric depends on it).
     useEffect(() => {
         if (selectedAdAccount) {
             fetchWeeklyInsights()
@@ -858,7 +861,7 @@ export default function AnalyticsDashboard() {
         setPoorAdsLoading(!poorCache)
 
         const dailyKey = getDailyInsightsCacheKey(accountId, analyticsDateRange, adAccountSettings?.conversionEvent, analyticsGranularity)
-        const weeklyKey = getWeeklyInsightsCacheKey(accountId, analyticsDateRange, analyticsGranularity)
+        const weeklyKey = getWeeklyInsightsCacheKey(accountId, analyticsDateRange, adAccountSettings?.conversionEvent, analyticsGranularity)
         const cachedDaily = dailyInsightsCacheRef.current[dailyKey]
         const cachedWeekly = weeklyInsightsCacheRef.current[weeklyKey]
         setDailyInsights(cachedDaily ?? null)
