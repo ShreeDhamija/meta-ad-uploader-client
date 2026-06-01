@@ -8244,11 +8244,7 @@ export default function AdCreationForm({
                           flexible ad type. Opens a modal that fetches the same
                           flex-ad candidates as the analytics dashboard and imports
                           the selected assets directly into importedFiles. */}
-                      {/* Staging-only for now — feature is not ready for production.
-                          Mirrors the env+URL gate pattern from pages/Login.jsx so
-                          it stays visible even if env vars are misconfigured on a
-                          staging deploy. Remove the IS_STAGING guard when shipping. */}
-                      {adType === 'flexible' && IS_STAGING && (
+                      {adType === 'flexible' && (
                         <Button
                           type="button"
                           size="sm"
