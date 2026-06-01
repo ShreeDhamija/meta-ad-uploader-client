@@ -151,7 +151,7 @@ export default function Header({ showMessenger, hideMessenger }) {
                 }`}
             >
               <ZapIcon className="w-3.5 h-3.5" />
-              <span className="hidden min-[1000px]:inline">{!hasActiveAccess() ? 'Subscribe' : 'Upgrade'}</span>
+              <span>{!hasActiveAccess() ? 'Subscribe' : 'Upgrade'}</span>
             </Button>
             <div className="block h-8 w-px bg-gray-300  " />
           </>
@@ -191,7 +191,7 @@ export default function Header({ showMessenger, hideMessenger }) {
             </DropdownMenu>
 
             {/* Divider after bell */}
-            <div className="h-8 w-px bg-gray-300  " />
+            <div className="hidden min-[1000px]:block h-8 w-px bg-gray-300  " />
           </>
         )}
 
@@ -208,7 +208,7 @@ export default function Header({ showMessenger, hideMessenger }) {
           <Settings className="w-5 h-5 text-black" />
           <span className="hidden min-[1000px]:inline text-gray-900 text-[14px] font-medium">Preferences</span>
         </button>
-        <div className="h-8 w-px bg-gray-300" />
+        <div className="hidden min-[1000px]:block h-8 w-px bg-gray-300" />
         {showAnalyticsNav && (
           <>
             <button
@@ -219,7 +219,7 @@ export default function Header({ showMessenger, hideMessenger }) {
               <AnalyticsIcon className="size-5" />
               <span className="hidden min-[1000px]:inline text-[14px] text-gray-900 font-medium">Analytics</span>
             </button>
-            <div className="h-8 w-px bg-gray-300  " />
+            <div className="hidden min-[1000px]:block h-8 w-px bg-gray-300  " />
           </>
         )}
         {/* Chat Support Button */}
@@ -232,7 +232,7 @@ export default function Header({ showMessenger, hideMessenger }) {
           <span className="hidden min-[1000px]:inline text-[14px] text-gray-900 font-medium">Chat With Us</span>
         </button>
 
-        <div className="h-8 w-px bg-gray-300  " />
+        <div className="hidden min-[1000px]:block h-8 w-px bg-gray-300  " />
 
         <button
           onClick={handleLogout}
