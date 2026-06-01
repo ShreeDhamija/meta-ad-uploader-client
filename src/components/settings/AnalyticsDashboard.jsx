@@ -210,11 +210,11 @@ export default function AnalyticsDashboard() {
         ? Number(targetROAS) > 0
         : Number(targetCPA) > 0
 
-    // ── KPI Chart default conversion event ──────────────────
-    // The KPI chart (daily-insights) is the only consumer of this. When a CPA
-    // account has no saved conversionEvent, default to the auto-detected top event
-    // (the event the most ad sets optimize for — the popup's #1 row) and pass it
-    // as if the user had selected it explicitly. Everything else keeps the saved
+    // ── Default conversion event (KPI chart + Trending Creatives) ──
+    // Consumed only by the KPI chart (daily-insights) and Trending Creatives. When
+    // a CPA account has no saved conversionEvent, default to the auto-detected top
+    // event (the event the most ad sets optimize for — the popup's #1 row) and pass
+    // it as if the user had selected it explicitly. Everything else keeps the saved
     // value / server auto-detect.
     const savedConversionEvent = adAccountSettings?.conversionEvent || null
     // Only applies in CPA mode — ROAS keeps its existing behavior (no event passed).
@@ -1649,10 +1649,12 @@ export default function AnalyticsDashboard() {
             )}
 
             {/* ── Trending Creative (full-width) ── */}
-            {selectedAdAccount && (
+            {/* Wait for the auto event to resolve (CPA, no saved pref) so it fetches
+                once with the right event instead of refetching — same as the KPI chart. */}
+            {selectedAdAccount && !autoEventPending && (
                 <TrendingCreative
                     adAccountId={selectedAdAccount}
-                    conversionEvent={adAccountSettings?.conversionEvent}
+                    conversionEvent={effectiveConversionEvent}
                     refreshKey={chartsRefreshKey}
                 />
             )}

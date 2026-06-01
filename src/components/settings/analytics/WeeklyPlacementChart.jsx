@@ -6,6 +6,7 @@ import "ldrs/react/Helix.css"
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts"
+import { ChevronDown } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { formatBucketLabel, formatBucketTooltipTitle } from "./dateRangeUtils"
 
@@ -238,9 +239,19 @@ export default function WeeklyPlacementChart({ adAccountId, dateRange, refreshKe
                                         <button
                                             key={name}
                                             onClick={() => handleToggleSeries(name)}
-                                            title={name}
-                                            className="flex items-center gap-2 text-left min-w-0 py-0.5 group"
+                                            title={`${isHidden ? "Show" : "Hide"} ${name}`}
+                                            aria-pressed={!isHidden}
+                                            className={cn(
+                                                "group flex min-w-0 cursor-pointer items-center gap-1.5 rounded-lg px-1.5 py-1 text-left transition-colors hover:bg-gray-50",
+                                                isHidden && "opacity-70",
+                                            )}
                                         >
+                                            <ChevronDown
+                                                className={cn(
+                                                    "h-3 w-3 flex-shrink-0 text-gray-400 transition-transform group-hover:text-gray-700",
+                                                    isHidden && "-rotate-90",
+                                                )}
+                                            />
                                             <span
                                                 className="w-3 h-[3px] rounded-full flex-shrink-0 transition-opacity"
                                                 style={{

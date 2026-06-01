@@ -207,11 +207,11 @@ export default function AnalyticsOnboarding({ open, onComplete, adAccounts }) {
                 onClick={markSeenAndClose}
             />
 
-            {/* Card is itself position:fixed + centered (not a flex item) so the
-                ScrollArea's flex-1/min-h-0 height resolves and the list scrolls.
-                Matches the FrameioPickerModal pattern. */}
+            {/* The card needs a definite height, not just max-height, so the
+                flex ScrollArea gets a real viewport instead of being measured
+                at full content height and clipped by overflow-hidden. */}
             <div
-                className="fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] max-w-[560px] max-h-[90vh] bg-white rounded-[28px] shadow-2xl flex flex-col overflow-hidden"
+                className="fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] max-w-[560px] h-[min(90dvh,760px)] max-h-[calc(100dvh-2rem)] bg-white rounded-[28px] shadow-2xl flex flex-col overflow-hidden"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header (fixed) */}
@@ -237,8 +237,8 @@ export default function AnalyticsOnboarding({ open, onComplete, adAccounts }) {
                     </div>
 
                     {/* Ad accounts list (scrollable) */}
-                    <ScrollArea className="flex-1 min-h-0">
-                        <div className="px-8 pb-4 space-y-3">
+                    <ScrollArea className="min-h-0 flex-1 overflow-hidden">
+                        <div className="px-8 pb-6 space-y-3">
                             {adAccounts.map((acct) => {
                                 const config = accountConfigs[acct.id] || { mode: 'roas', conversionEvent: null, targetCPA: '', targetROAS: '' }
                                 const isExpanded = expandedAccount === acct.id
