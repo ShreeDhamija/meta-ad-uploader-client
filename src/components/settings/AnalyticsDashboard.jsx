@@ -1455,14 +1455,6 @@ export default function AnalyticsDashboard() {
                         />
                         {/* FEATURE END: PERIOD METRICS SUMMARY */}
 
-                        {metricMode === "roas" && (
-                            <TrailingSixWeeksSnapshot
-                                adAccountId={selectedAdAccount}
-                                enabled={metricMode === "roas"}
-                                refreshKey={chartsRefreshKey}
-                            />
-                        )}
-
                         <div className="grid grid-cols-1 lg:relative lg:min-h-[360px] lg:grid-cols-2 lg:pt-4 [&_*:focus]:outline-none [&_*:focus-visible]:outline-none">
                             <div>
                                 <KPIChart
@@ -1655,6 +1647,14 @@ export default function AnalyticsDashboard() {
                         />
                     )}
                 </>
+            )}
+
+            {metricMode === "roas" && selectedAdAccount && (
+                <TrailingSixWeeksSnapshot
+                    adAccountId={selectedAdAccount}
+                    enabled={metricMode === "roas"}
+                    refreshKey={chartsRefreshKey}
+                />
             )}
 
             {/* ── Trending Creative (full-width) ── */}

@@ -145,13 +145,11 @@ export default function TrailingSixWeeksSnapshot({ adAccountId, enabled, refresh
     if (!enabled) return null
 
     return (
-        <div className={cn("px-4 pt-4", className)}>
+        <div className={cn(className)}>
             <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
                 <div className="flex items-center justify-between gap-3 border-b border-gray-100 px-4 py-3">
                     <div className="flex min-w-0 items-center gap-2">
-                        <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-red-50">
-                            <Camera className="h-4 w-4 text-red-500" strokeWidth={2.4} />
-                        </div>
+                        <Camera className="h-4 w-4 flex-shrink-0 text-red-500" strokeWidth={2.4} />
                         <p className="truncate text-sm font-semibold text-gray-900">Trailing 6 Weeks Snapshot</p>
                     </div>
                 </div>
@@ -172,12 +170,12 @@ export default function TrailingSixWeeksSnapshot({ adAccountId, enabled, refresh
                     <div className="overflow-x-auto">
                         <table className="w-full min-w-[860px] border-collapse text-sm">
                             <thead>
-                                <tr className="bg-gray-50/80">
-                                    <th className="w-[150px] px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                                <tr>
+                                    <th className="w-[150px] border border-gray-200 bg-gray-50 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-400">
                                         Week
                                     </th>
                                     {COLUMNS.map(col => (
-                                        <th key={col.key} className="px-3 py-3 text-right text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                                        <th key={col.key} className="border border-gray-200 bg-gray-50 px-3 py-3 text-right text-[11px] font-semibold uppercase tracking-wide text-gray-400">
                                             {col.label}
                                         </th>
                                     ))}
@@ -185,19 +183,18 @@ export default function TrailingSixWeeksSnapshot({ adAccountId, enabled, refresh
                             </thead>
                             <tbody>
                                 {rows.map(row => (
-                                    <tr key={`${row.since}-${row.until}`} className="border-t border-gray-100">
-                                        <td className="px-4 py-3 text-left">
+                                    <tr key={`${row.since}-${row.until}`}>
+                                        <td className="border border-gray-200 bg-white px-4 py-3 text-left">
                                             <div className="font-medium text-gray-900">{row.week}</div>
                                             <div className="mt-0.5 text-xs text-gray-400">{formatWeekRange(row)}</div>
                                         </td>
                                         {COLUMNS.map(col => (
-                                            <td key={col.key} className="px-2 py-2 text-right">
-                                                <div
-                                                    className="ml-auto min-w-[92px] rounded-lg px-2.5 py-2 text-sm font-semibold tabular-nums transition-colors"
-                                                    style={getHeatStyle(row[col.key], domains[col.key])}
-                                                >
-                                                    {col.format(row[col.key])}
-                                                </div>
+                                            <td
+                                                key={col.key}
+                                                className="border border-gray-200 px-3 py-3 text-right text-sm font-semibold tabular-nums transition-colors"
+                                                style={getHeatStyle(row[col.key], domains[col.key])}
+                                            >
+                                                {col.format(row[col.key])}
                                             </td>
                                         ))}
                                     </tr>
