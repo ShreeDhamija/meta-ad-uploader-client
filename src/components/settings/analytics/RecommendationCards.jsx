@@ -1119,7 +1119,7 @@ export default function RecommendationCards({
                             <div>
                                 <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                                     <AlertTriangle className="w-5 h-5 text-red-500" />
-                                    Poor Performers {ads.length > 0 && <span className="text-base font-normal text-gray-400">({ads.length})</span>}
+                                    Poor Performering Ads {ads.length > 0 && <span className="text-base font-normal text-gray-400">({ads.length})</span>}
                                 </h2>
                                 <p className="text-sm text-gray-500 mt-1">
                                     Ads with spend {'>'} 0.5X account average CPA, running 14+ days, and performing below account baseline.

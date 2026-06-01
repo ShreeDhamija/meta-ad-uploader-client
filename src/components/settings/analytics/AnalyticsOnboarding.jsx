@@ -1,16 +1,15 @@
 "use client"
 
+/* eslint-disable react/prop-types */
+
 import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
-import { Loader2, ChevronDown, ChevronUp, Check } from "lucide-react"
+import { Loader2, ChevronDown, ChevronUp, Check, Target } from "lucide-react"
 import { toast } from "sonner"
-import {
-    Dialog, DialogContent, DialogDescription, DialogFooter,
-    DialogHeader, DialogTitle, DialogOverlay,
-} from "@/components/ui/dialog"
 import { saveSettings } from "@/lib/saveSettings"
 import { cn } from "@/lib/utils"
 
@@ -20,16 +19,21 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
  * AnalyticsOnboarding
  *
  * Shows on first login (when hasSeenAnalyticsOnboarding is false).
- * Lets user configure each ad account as CPA or ROAS focused.
- * When CPA is selected, shows a list of conversion events to pick from.
+ * Lets user configure each ad account as CPA or ROAS focused, pick a conversion
+ * event (CPA), and set a benchmark Target KPI — all saved per ad account.
+ *
+ * Rendered as a plain centered overlay (no shadcn Dialog) to avoid the slide-in
+ * animation and centering offset; matches the Optimization Focus popup style.
  *
  * Props:
  *  - open: boolean
- *  - onComplete: () => void  — called after saving, marks global setting
+ *  - onComplete: () => void  — called after saving/dismissing
  *  - adAccounts: array of { id, name }
  */
 export default function AnalyticsOnboarding({ open, onComplete, adAccounts }) {
-    // Per-account config: { [accountId]: { mode: 'roas' | 'cpa', conversionEvent: string | null } }
+    // Per-account config:
+    //   { [accountId]: { mode: 'roas' | 'cpa', conversionEvent: string|null,
+    //                    targetCPA: string, targetROAS: string } }
     const [accountConfigs, setAccountConfigs] = useState({})
     const [expandedAccount, setExpandedAccount] = useState(null)
 
@@ -43,7 +47,7 @@ export default function AnalyticsOnboarding({ open, onComplete, adAccounts }) {
         if (open && adAccounts?.length > 0) {
             const initial = {}
             for (const acct of adAccounts) {
-                initial[acct.id] = { mode: 'roas', conversionEvent: null }
+                initial[acct.id] = { mode: 'roas', conversionEvent: null, targetCPA: '', targetROAS: '' }
             }
             setAccountConfigs(initial)
             // Auto-expand first account
@@ -126,6 +130,14 @@ export default function AnalyticsOnboarding({ open, onComplete, adAccounts }) {
         }))
     }
 
+    const handleSetTarget = (accountId, value) => {
+        setAccountConfigs(prev => {
+            const current = prev[accountId]
+            const key = current.mode === 'roas' ? 'targetROAS' : 'targetCPA'
+            return { ...prev, [accountId]: { ...current, [key]: value } }
+        })
+    }
+
     const handleExpandAccount = (accountId) => {
         const isExpanding = expandedAccount !== accountId
         setExpandedAccount(isExpanding ? accountId : null)
@@ -136,19 +148,33 @@ export default function AnalyticsOnboarding({ open, onComplete, adAccounts }) {
         }
     }
 
+    // Mark onboarding seen + close (used by X, click-outside, and Skip).
+    const markSeenAndClose = useCallback(async () => {
+        try {
+            await saveSettings({ globalSettings: { hasSeenAnalyticsOnboarding: true } })
+            window.dispatchEvent(new Event('globalSettingsUpdated'))
+        } catch (err) {
+            console.error('Failed to mark onboarding as seen:', err)
+        }
+        onComplete()
+    }, [onComplete])
+
     const handleSave = async () => {
         setSaving(true)
         try {
-            // Save mode + conversion event to each ad account's settings
-            const savePromises = Object.entries(accountConfigs).map(([accountId, config]) =>
-                saveSettings({
+            // Save mode + conversion event + target KPI to each ad account's settings
+            const savePromises = Object.entries(accountConfigs).map(([accountId, config]) => {
+                const isCpa = config.mode === 'cpa'
+                return saveSettings({
                     adAccountId: accountId,
                     adAccountSettings: {
                         analyticsMode: config.mode,
-                        conversionEvent: config.mode === 'cpa' ? config.conversionEvent : null,
+                        conversionEvent: isCpa ? config.conversionEvent : null,
+                        targetCPA: isCpa && config.targetCPA ? parseFloat(config.targetCPA) : null,
+                        targetROAS: !isCpa && config.targetROAS ? parseFloat(config.targetROAS) : null,
                     },
                 })
-            )
+            })
             await Promise.all(savePromises)
 
             // Mark onboarding as seen via /settings/save globalSettings path
@@ -169,195 +195,238 @@ export default function AnalyticsOnboarding({ open, onComplete, adAccounts }) {
         }
     }
 
-    if (!adAccounts?.length) return null
+    if (!open || !adAccounts?.length) return null
 
     return (
-        <Dialog open={open} onOpenChange={async (isOpen) => {
-            if (!isOpen) {
-                try {
-                    await saveSettings({ globalSettings: { hasSeenAnalyticsOnboarding: true } })
-                    window.dispatchEvent(new Event('globalSettingsUpdated'))
-                } catch (err) {
-                    console.error('Failed to mark onboarding as seen:', err)
-                }
-                onComplete()
-            }
-        }}>
-            <DialogOverlay className="bg-black/50" />
-            <DialogContent
-                className="sm:max-w-[560px] !rounded-[30px] !p-0 flex flex-col max-h-[90vh] overflow-hidden !gap-0"
-                onOpenAutoFocus={(e) => e.preventDefault()}
+        <>
+            {/* Overlay — explicit inline sizing so it always covers the viewport
+                and centers the card without the shadcn slide-in animation. */}
+            <div
+                className="fixed bg-black/50 z-50"
+                style={{ position: "fixed", top: 0, left: 0, width: "100vw", height: "100dvh" }}
+                onClick={markSeenAndClose}
+            />
 
+            <div
+                className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                onClick={markSeenAndClose}
             >
-                {/* Scrollable area: header + cards */}
-                <div className="p-8 pb-4 space-y-5 flex-1 overflow-y-auto min-h-0">
-                    <DialogHeader className="space-y-2">
-                        <DialogTitle className="text-xl">
-                            Set Up Your Analytics
-                        </DialogTitle>
-                        <DialogDescription className="space-y-1">
-                            <span>
-                                Choose whether each ad account is optimized for CPA (cost per action) or ROAS (return on ad spend).
-                            </span>
-                            <span className="block font-semibold text-gray-700">
-                                You can change this later in settings.
-                            </span>
-                        </DialogDescription>
-                    </DialogHeader>
+                <div
+                    className="bg-white rounded-[28px] shadow-2xl w-full max-w-[560px] max-h-[90vh] flex flex-col overflow-hidden"
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    {/* Header (fixed) */}
+                    <div className="flex items-start justify-between p-8 pb-4 flex-shrink-0">
+                        <div className="space-y-2">
+                            <h2 className="text-xl font-semibold text-gray-900">
+                                Set Up Your Analytics
+                            </h2>
+                            <ul className="text-sm text-gray-500 space-y-1 list-disc pl-5">
+                                <li>Select your Optimization Focus for each ad account : CPA or ROAS</li>
+                                <li>Set benchmark KPIs</li>
+                                <li>You can change this later in Optimization Focus</li>
+                            </ul>
+                        </div>
+                        <button
+                            onClick={markSeenAndClose}
+                            className="text-gray-400 hover:text-gray-600 transition-colors p-1 flex-shrink-0"
+                        >
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
 
-                    <div className="space-y-3">
-                        {adAccounts.map((acct) => {
-                            const config = accountConfigs[acct.id] || { mode: 'roas', conversionEvent: null }
-                            const isExpanded = expandedAccount === acct.id
-                            const cache = eventsCache[acct.id]
-                            const isRoas = config.mode === 'roas'
+                    {/* Ad accounts list (scrollable) */}
+                    <ScrollArea className="flex-1 min-h-0">
+                        <div className="px-8 pb-4 space-y-3">
+                            {adAccounts.map((acct) => {
+                                const config = accountConfigs[acct.id] || { mode: 'roas', conversionEvent: null, targetCPA: '', targetROAS: '' }
+                                const isExpanded = expandedAccount === acct.id
+                                const cache = eventsCache[acct.id]
+                                const isRoas = config.mode === 'roas'
 
-                            return (
-                                <Card key={acct.id} className="rounded-2xl border-gray-200 overflow-hidden">
-                                    <CardContent className="p-0">
-                                        {/* Account header row */}
-                                        <button
-                                            onClick={() => handleExpandAccount(acct.id)}
-                                            className="w-full flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition-colors"
-                                        >
-                                            <div className="text-left">
-                                                <p className="text-sm font-medium text-gray-900 truncate max-w-[280px]">
-                                                    {acct.name || acct.id}
-                                                </p>
-                                                <p className="text-xs text-gray-400 mt-0.5">
-                                                    {isRoas ? 'ROAS focused' : `CPA focused${config.conversionEvent ? ` · ${config.conversionEvent.replace(/_/g, ' ')}` : ''}`}
-                                                </p>
-                                            </div>
-                                            <div className="flex items-center gap-3">
-                                                <div className={cn(
-                                                    "px-2.5 py-1 rounded-lg text-xs font-medium",
-                                                    isRoas
-                                                        ? "bg-blue-50 text-blue-700"
-                                                        : "bg-green-50 text-green-700"
-                                                )}>
-                                                    {isRoas ? 'ROAS' : 'CPA'}
+                                return (
+                                    <Card key={acct.id} className="rounded-2xl border-gray-200 overflow-hidden">
+                                        <CardContent className="p-0">
+                                            {/* Account header row */}
+                                            <button
+                                                onClick={() => handleExpandAccount(acct.id)}
+                                                className="w-full flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition-colors"
+                                            >
+                                                <div className="text-left">
+                                                    <p className="text-sm font-medium text-gray-900 truncate max-w-[280px]">
+                                                        {acct.name || acct.id}
+                                                    </p>
+                                                    <p className="text-xs text-gray-400 mt-0.5">
+                                                        {isRoas ? 'ROAS focused' : `CPA focused${config.conversionEvent ? ` · ${config.conversionEvent.replace(/_/g, ' ')}` : ''}`}
+                                                    </p>
                                                 </div>
-                                                {isExpanded ? (
-                                                    <ChevronUp className="w-4 h-4 text-gray-400" />
-                                                ) : (
-                                                    <ChevronDown className="w-4 h-4 text-gray-400" />
-                                                )}
-                                            </div>
-                                        </button>
-
-                                        {/* Expanded config */}
-                                        {isExpanded && (
-                                            <div className="px-5 pb-4 pt-1 border-t border-gray-100 space-y-4">
-                                                {/* Mode toggle */}
-                                                <div className="flex items-center justify-between">
-                                                    <div>
-                                                        <Label className="text-sm text-gray-700">Optimization Focus</Label>
-                                                        <p className="text-xs text-gray-400 mt-0.5">
-                                                            {isRoas
-                                                                ? 'Analyzing return on ad spend'
-                                                                : 'Analyzing cost per conversion action'}
-                                                        </p>
+                                                <div className="flex items-center gap-3">
+                                                    <div className={cn(
+                                                        "px-2.5 py-1 rounded-lg text-xs font-medium",
+                                                        isRoas
+                                                            ? "bg-blue-50 text-blue-700"
+                                                            : "bg-green-50 text-green-700"
+                                                    )}>
+                                                        {isRoas ? 'ROAS' : 'CPA'}
                                                     </div>
-                                                    <div className="flex items-center gap-2">
-                                                        <span className={cn("text-xs font-medium", !isRoas ? "text-green-600" : "text-gray-400")}>CPA</span>
-                                                        {/* Change 1: custom unchecked color so CPA doesn't look like "off" */}
-                                                        <Switch
-                                                            checked={isRoas}
-                                                            onCheckedChange={(checked) => handleToggleMode(acct.id, checked)}
-                                                            className="data-[state=unchecked]:bg-green-500"
-                                                        />
-                                                        <span className={cn("text-xs font-medium", isRoas ? "text-blue-600" : "text-gray-400")}>ROAS</span>
-                                                    </div>
+                                                    {isExpanded ? (
+                                                        <ChevronUp className="w-4 h-4 text-gray-400" />
+                                                    ) : (
+                                                        <ChevronDown className="w-4 h-4 text-gray-400" />
+                                                    )}
                                                 </div>
+                                            </button>
 
-                                                {/* Conversion event picker (only for CPA) */}
-                                                {!isRoas && (
-                                                    <div className="space-y-2">
-                                                        <Label className="text-sm text-gray-700">Conversion Event</Label>
-                                                        {cache?.loading ? (
-                                                            <div className="flex items-center gap-2 py-3">
-                                                                <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
-                                                                <span className="text-xs text-gray-400">Loading events from ad sets...</span>
-                                                            </div>
-                                                        ) : cache?.events?.length > 0 ? (
-                                                            <div className="max-h-[180px] overflow-y-auto rounded-xl border border-gray-200 divide-y divide-gray-100 custom-scrollbar">
-                                                                {cache.events.map((evt) => {
-                                                                    const isSelected = config.conversionEvent === evt.event
-                                                                    return (
-                                                                        <button
-                                                                            key={evt.event}
-                                                                            onClick={() => handleSelectEvent(acct.id, evt.event)}
-                                                                            className={cn(
-                                                                                "w-full flex items-center justify-between px-3.5 py-2.5 text-left transition-colors",
-                                                                                isSelected
-                                                                                    ? "bg-blue-50"
-                                                                                    : "hover:bg-gray-50"
-                                                                            )}
-                                                                        >
-                                                                            <div>
-                                                                                <p className={cn(
-                                                                                    "text-sm",
-                                                                                    isSelected ? "font-medium text-blue-700" : "text-gray-700"
-                                                                                )}>
-                                                                                    {evt.label}
-                                                                                </p>
-                                                                                {evt.activeAdsets > 0 && (
-                                                                                    <p className="text-[10px] text-gray-400 mt-0.5">
-                                                                                        {evt.activeAdsets} active ad set{evt.activeAdsets !== 1 ? 's' : ''}
-                                                                                    </p>
+                                            {/* Expanded config */}
+                                            {isExpanded && (
+                                                <div className="px-5 pb-4 pt-1 border-t border-gray-100 space-y-4">
+                                                    {/* Mode toggle */}
+                                                    <div className="flex items-center justify-between">
+                                                        <div>
+                                                            <Label className="text-sm text-gray-700">Optimization Focus</Label>
+                                                            <p className="text-xs text-gray-400 mt-0.5">
+                                                                {isRoas
+                                                                    ? 'Analyzing return on ad spend'
+                                                                    : 'Analyzing cost per conversion action'}
+                                                            </p>
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className={cn("text-xs font-medium", !isRoas ? "text-green-600" : "text-gray-400")}>CPA</span>
+                                                            {/* Custom unchecked color so CPA doesn't look like "off" */}
+                                                            <Switch
+                                                                checked={isRoas}
+                                                                onCheckedChange={(checked) => handleToggleMode(acct.id, checked)}
+                                                                className="data-[state=unchecked]:bg-green-500"
+                                                            />
+                                                            <span className={cn("text-xs font-medium", isRoas ? "text-blue-600" : "text-gray-400")}>ROAS</span>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Conversion event picker (only for CPA) */}
+                                                    {!isRoas && (
+                                                        <div className="space-y-2">
+                                                            <Label className="text-sm text-gray-700">Conversion Event</Label>
+                                                            {cache?.loading ? (
+                                                                <div className="flex items-center gap-2 py-3">
+                                                                    <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                                                                    <span className="text-xs text-gray-400">Loading events from ad sets...</span>
+                                                                </div>
+                                                            ) : cache?.events?.length > 0 ? (
+                                                                <div className="max-h-[180px] overflow-y-auto rounded-xl border border-gray-200 divide-y divide-gray-100 custom-scrollbar">
+                                                                    {cache.events.map((evt) => {
+                                                                        const isSelected = config.conversionEvent === evt.event
+                                                                        return (
+                                                                            <button
+                                                                                key={evt.event}
+                                                                                onClick={() => handleSelectEvent(acct.id, evt.event)}
+                                                                                className={cn(
+                                                                                    "w-full flex items-center justify-between px-3.5 py-2.5 text-left transition-colors",
+                                                                                    isSelected
+                                                                                        ? "bg-blue-50"
+                                                                                        : "hover:bg-gray-50"
                                                                                 )}
-                                                                            </div>
-                                                                            {isSelected && (
-                                                                                <Check className="w-4 h-4 text-blue-600 flex-shrink-0" />
-                                                                            )}
-                                                                        </button>
-                                                                    )
-                                                                })}
+                                                                            >
+                                                                                <div>
+                                                                                    <p className={cn(
+                                                                                        "text-sm",
+                                                                                        isSelected ? "font-medium text-blue-700" : "text-gray-700"
+                                                                                    )}>
+                                                                                        {evt.label}
+                                                                                    </p>
+                                                                                    {evt.activeAdsets > 0 && (
+                                                                                        <p className="text-[10px] text-gray-400 mt-0.5">
+                                                                                            {evt.activeAdsets} active ad set{evt.activeAdsets !== 1 ? 's' : ''}
+                                                                                        </p>
+                                                                                    )}
+                                                                                </div>
+                                                                                {isSelected && (
+                                                                                    <Check className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                                                                                )}
+                                                                            </button>
+                                                                        )
+                                                                    })}
+                                                                </div>
+                                                            ) : (
+                                                                <p className="text-xs text-gray-400 py-2">
+                                                                    No conversion events found. Standard events will be auto-detected.
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                    )}
+
+                                                    {/* Target KPI (benchmark) */}
+                                                    <div className="space-y-2">
+                                                        <div className="flex items-center gap-2">
+                                                            <Target className="w-4 h-4 text-blue-500" />
+                                                            <Label className="text-sm text-gray-700">
+                                                                Target {isRoas ? 'ROAS' : 'CPA'}
+                                                            </Label>
+                                                        </div>
+                                                        <p className="text-xs text-gray-400">
+                                                            Sets a benchmark for budget recommendations.
+                                                        </p>
+                                                        {isRoas ? (
+                                                            <div className="relative w-32">
+                                                                <input
+                                                                    type="number"
+                                                                    step="0.1"
+                                                                    value={config.targetROAS}
+                                                                    onChange={(e) => handleSetTarget(acct.id, e.target.value)}
+                                                                    placeholder="e.g. 3.0"
+                                                                    className="w-32 px-3 pr-7 py-2.5 border border-gray-300 rounded-2xl bg-white text-sm shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                                />
+                                                                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">x</span>
                                                             </div>
                                                         ) : (
-                                                            <p className="text-xs text-gray-400 py-2">
-                                                                No conversion events found. Standard events will be auto-detected.
-                                                            </p>
+                                                            <div className="relative w-32">
+                                                                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">$</span>
+                                                                <input
+                                                                    type="number"
+                                                                    value={config.targetCPA}
+                                                                    onChange={(e) => handleSetTarget(acct.id, e.target.value)}
+                                                                    placeholder="e.g. 30"
+                                                                    className="w-32 pl-7 pr-3 py-2.5 border border-gray-300 rounded-2xl bg-white text-sm shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                                />
+                                                            </div>
                                                         )}
                                                     </div>
-                                                )}
-                                            </div>
-                                        )}
-                                    </CardContent>
-                                </Card>
-                            )
-                        })}
+                                                </div>
+                                            )}
+                                        </CardContent>
+                                    </Card>
+                                )
+                            })}
+                        </div>
+                    </ScrollArea>
+
+                    {/* Sticky blue bottom bar */}
+                    <div className="flex-shrink-0 bg-blue-600 px-8 py-2.5 flex items-center justify-center gap-6 rounded-b-[28px]">
+                        <Button
+                            onClick={handleSave}
+                            disabled={saving}
+                            className="rounded-xl bg-white text-blue-600 hover:bg-gray-100 px-6 h-9 font-medium"
+                        >
+                            {saving ? (
+                                <>
+                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                    Saving...
+                                </>
+                            ) : (
+                                'Save Preferences'
+                            )}
+                        </Button>
+                        <button
+                            onClick={markSeenAndClose}
+                            disabled={saving}
+                            className="text-white text-sm font-medium hover:underline disabled:opacity-50"
+                        >
+                            Skip For Now
+                        </button>
                     </div>
                 </div>
-
-                {/* Change 3: sticky blue bottom bar */}
-                <div className="flex-shrink-0 bg-blue-600 px-8 py-2.5 flex items-center justify-center gap-6 rounded-b-[30px]">
-                    <Button
-                        onClick={handleSave}
-                        disabled={saving}
-                        className="rounded-xl bg-white text-blue-600 hover:bg-gray-100 px-6 h-9 font-medium"
-
-                    >
-                        {saving ? (
-                            <>
-                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                Saving...
-                            </>
-                        ) : (
-                            'Save Preferences'
-                        )}
-                    </Button>
-                    <button
-                        onClick={onComplete}
-                        disabled={saving}
-                        className="text-white text-sm font-medium hover:underline disabled:opacity-50"
-                    >
-                        Skip For Now
-                    </button>
-
-                </div>
-            </DialogContent>
-        </Dialog>
+            </div>
+        </>
     )
-
 }

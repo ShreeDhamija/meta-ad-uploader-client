@@ -78,8 +78,12 @@ export default function AnalyticsDashboard() {
     const { adAccounts, adAccountsLoading } = useAppData()
     const { loading: globalSettingsLoading, hasSeenAnalyticsOnboarding } = useGlobalSettings()
 
-    // ── Onboarding state 
+    // ── Onboarding state
     const [showOnboarding, setShowOnboarding] = useState(false)
+    // True once the user has saved or dismissed onboarding this session. Bridges
+    // the gap until useGlobalSettings refetches hasSeenAnalyticsOnboarding, so we
+    // don't kick off background fetches while the popup is still up (or in flight).
+    const [onboardingResolved, setOnboardingResolved] = useState(false)
 
     // ── Core state
     const [selectedAdAccount, setSelectedAdAccount] = useState(() => {
@@ -107,9 +111,14 @@ export default function AnalyticsDashboard() {
     // const [anomalyThresholds, setAnomalyThresholds] = useState(DEFAULT_THRESHOLDS)
     const [tempThresholds, setTempThresholds] = useState(DEFAULT_THRESHOLDS)
 
-    // ── Target KPI (lives in settings dialog, feeds recommendations) 
+    // ── Target KPI (lives in settings dialog, feeds recommendations)
     const [tempTargetCPA, setTempTargetCPA] = useState("")
     const [tempTargetROAS, setTempTargetROAS] = useState("")
+
+    // ── Inline "set target KPI" prompt shown in the Budget tab when the account
+    //    has no saved target yet (gates budget recommendations).
+    const [budgetTargetInput, setBudgetTargetInput] = useState("")
+    const [savingBudgetTarget, setSavingBudgetTarget] = useState(false)
 
     // ── Mode/Event preferences in settings dialog 
     const [tempAnalyticsMode, setTempAnalyticsMode] = useState("roas")
@@ -183,6 +192,17 @@ export default function AnalyticsDashboard() {
     const anomalyThresholds = adAccountSettings?.anomalyThresholds ?? DEFAULT_THRESHOLDS
     const slackAlertsEnabled = adAccountSettings?.slackAlertsEnabled ?? false
     const preferencesLoading = Boolean(selectedAdAccount) && adAccountSettingsLoading
+
+    // Block all background data loading until first-time onboarding is resolved
+    // (saved or dismissed). Returning users (hasSeenAnalyticsOnboarding) are only
+    // gated during the brief global-settings load.
+    const blockForOnboarding = globalSettingsLoading || (!hasSeenAnalyticsOnboarding && !onboardingResolved)
+
+    // Budget recommendations require an explicit Target KPI for the active mode —
+    // we no longer silently fall back to the account average.
+    const hasTargetKPI = metricMode === 'roas'
+        ? Number(targetROAS) > 0
+        : Number(targetCPA) > 0
 
     useEffect(() => {
         if (adAccountSettingsLoading) return
@@ -362,6 +382,15 @@ export default function AnalyticsDashboard() {
     const fetchRecommendations = useCallback(async (force = false) => {
         if (!selectedAdAccount) return
         const accountAtStart = selectedAdAccount
+
+        // Require an explicit Target KPI for the active mode — the Budget tab shows
+        // a "set a target" prompt instead of fetching against the account average.
+        const hasTarget = metricMode === 'roas' ? Number(targetROAS) > 0 : Number(targetCPA) > 0
+        if (!hasTarget) {
+            setRecsLoading(false)
+            setRecommendations(null)
+            return
+        }
 
         // Return cached data unless forced
         if (!force && recsCacheRef.current[accountAtStart]) {
@@ -718,18 +747,20 @@ export default function AnalyticsDashboard() {
     // Traffic metrics fetch immediately; they also refetch when the selected
     // conversion event changes (Conversion Rate metric depends on it).
     useEffect(() => {
+        if (blockForOnboarding) return
         if (selectedAdAccount) {
             fetchWeeklyInsights()
         }
-    }, [selectedAdAccount, analyticsDateRange, fetchWeeklyInsights])
+    }, [selectedAdAccount, analyticsDateRange, fetchWeeklyInsights, blockForOnboarding])
 
     // Account info auto-detection should only run AFTER settings have loaded,
     // so modeCache is already populated if the user has a saved preference
     useEffect(() => {
+        if (blockForOnboarding) return
         if (selectedAdAccount && !adAccountSettingsLoading) {
             fetchAccountInfo(selectedAdAccount)
         }
-    }, [selectedAdAccount, adAccountSettingsLoading, fetchAccountInfo])
+    }, [selectedAdAccount, adAccountSettingsLoading, fetchAccountInfo, blockForOnboarding])
 
 
 
@@ -737,10 +768,18 @@ export default function AnalyticsDashboard() {
     useEffect(() => {
         if (!selectedAdAccount) return
         if (adAccountSettingsLoading) return
+        if (blockForOnboarding) return
 
-        fetchRecommendations()
+        // Budget recommendations only fetch once a Target KPI exists for the
+        // current mode; otherwise we render the "set a target" prompt instead.
+        if (hasTargetKPI) {
+            fetchRecommendations()
+        } else {
+            setRecsLoading(false)
+            setRecommendations(null)
+        }
         fetchPoorAds()
-    }, [selectedAdAccount, adAccountSettingsLoading, fetchRecommendations, fetchPoorAds])
+    }, [selectedAdAccount, adAccountSettingsLoading, blockForOnboarding, hasTargetKPI, fetchRecommendations, fetchPoorAds])
 
     useEffect(() => {
         if (!showSettingsDialog || !selectedAdAccount || adAccountSettingsLoading) return
@@ -779,6 +818,7 @@ export default function AnalyticsDashboard() {
         if (adAccountSettingsLoading || pendingDailySettingsRef.current === selectedAdAccount) {
             return
         }
+        if (blockForOnboarding) return
 
         loadDailyInsights()
     }, [
@@ -787,6 +827,7 @@ export default function AnalyticsDashboard() {
         adAccountSettingsLoading,
         adAccountSettings?.conversionEvent,
         loadDailyInsights,
+        blockForOnboarding,
     ])
 
     useEffect(() => {
@@ -814,6 +855,7 @@ export default function AnalyticsDashboard() {
             return
         }
         if (adAccountSettingsLoading || pendingDailySettingsRef.current === selectedAdAccount) return
+        if (blockForOnboarding) return
         loadPeriodSummary()
     }, [
         selectedAdAccount,
@@ -822,6 +864,7 @@ export default function AnalyticsDashboard() {
         adAccountSettings?.conversionEvent,
         metricMode,
         loadPeriodSummary,
+        blockForOnboarding,
     ])
 
     useEffect(() => {
@@ -1023,6 +1066,35 @@ export default function AnalyticsDashboard() {
 
     const handleOnboardingComplete = () => {
         setShowOnboarding(false)
+        setOnboardingResolved(true)
+    }
+
+    // Clear the inline budget-target input whenever the account or mode changes.
+    useEffect(() => {
+        setBudgetTargetInput("")
+    }, [selectedAdAccount, metricMode])
+
+    // Save a Target KPI straight from the Budget-tab prompt. Once persisted,
+    // hasTargetKPI flips true and the recommendations effect fetches automatically.
+    const handleSetBudgetTarget = async () => {
+        const num = parseFloat(budgetTargetInput)
+        if (!num || num <= 0) {
+            toast.error(metricMode === 'roas' ? 'Enter a valid Target ROAS' : 'Enter a valid Target CPA')
+            return
+        }
+        setSavingBudgetTarget(true)
+        try {
+            const patch = metricMode === 'roas' ? { targetROAS: num } : { targetCPA: num }
+            await saveSettings({ adAccountId: selectedAdAccount, adAccountSettings: patch })
+            setAdAccountSettings(prev => ({ ...prev, ...patch }))
+            setBudgetTargetInput("")
+            toast.success('Target saved')
+        } catch (err) {
+            console.error('Failed to save target KPI:', err)
+            toast.error('Failed to save target')
+        } finally {
+            setSavingBudgetTarget(false)
+        }
     }
 
     // ── Loading / Empty states ──────────────────────────────
@@ -1431,20 +1503,78 @@ export default function AnalyticsDashboard() {
             ) : (
                 <>
                     {activeTab === 'budget' && (
-                        <RecommendationCards
-                            section="budget"
-                            data={recommendations}
-                            loading={recsLoading}
-                            mode={metricMode}
-                            adAccountId={selectedAdAccount}
-                            adAccounts={adAccounts}
-                            poorAdsData={poorAds}
-                            poorAdsLoading={poorAdsLoading}
-                            onRefreshBudgetRecommendations={handleRefreshBudgetRecommendations}
-                            onRefreshPoorAds={handleRefreshPoorAds}
-                            budgetRefreshing={recsLoading}
-                            budgetRefreshToken={budgetRefreshSignal}
-                        />
+                        !hasTargetKPI ? (
+                            <Card className="rounded-2xl border-gray-200">
+                                <CardContent className="py-10 px-6">
+                                    <div className="mx-auto flex max-w-md flex-col items-center text-center">
+                                        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50">
+                                            <Target className="h-6 w-6 text-blue-500" />
+                                        </div>
+                                        <h3 className="text-base font-semibold text-gray-900">
+                                            Set a Target {metricMode === 'roas' ? 'ROAS' : 'CPA'} to see budget recommendations
+                                        </h3>
+                                        <p className="mt-1.5 text-sm text-gray-500">
+                                            Budget recommendations compare each campaign against your benchmark.
+                                            Set a target {metricMode === 'roas' ? 'ROAS' : 'CPA'} to get started.
+                                        </p>
+
+                                        <div className="mt-5 flex w-full items-center justify-center gap-2">
+                                            <div className="relative">
+                                                {metricMode !== 'roas' && (
+                                                    <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">$</span>
+                                                )}
+                                                <input
+                                                    type="number"
+                                                    step={metricMode === 'roas' ? '0.1' : '1'}
+                                                    value={budgetTargetInput}
+                                                    onChange={(e) => setBudgetTargetInput(e.target.value)}
+                                                    onKeyDown={(e) => { if (e.key === 'Enter') handleSetBudgetTarget() }}
+                                                    placeholder={metricMode === 'roas' ? 'e.g. 3.0' : 'e.g. 30'}
+                                                    className={cn(
+                                                        "w-36 py-2.5 border border-gray-300 rounded-2xl bg-white text-sm shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent",
+                                                        metricMode === 'roas' ? 'px-3 pr-7' : 'pl-7 pr-3'
+                                                    )}
+                                                />
+                                                {metricMode === 'roas' && (
+                                                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">x</span>
+                                                )}
+                                            </div>
+                                            <button
+                                                onClick={handleSetBudgetTarget}
+                                                disabled={savingBudgetTarget}
+                                                className="flex h-[42px] items-center gap-2 rounded-2xl bg-blue-600 px-5 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-70"
+                                            >
+                                                {savingBudgetTarget && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                                                {savingBudgetTarget ? 'Saving...' : 'Set Target'}
+                                            </button>
+                                        </div>
+
+                                        <button
+                                            onClick={() => setShowSettingsDialog(true)}
+                                            className="mt-4 inline-flex items-center gap-1.5 text-xs font-medium text-gray-500 transition-colors hover:text-gray-700"
+                                        >
+                                            <Settings2 className="h-3.5 w-3.5" />
+                                            Open Optimization Configuration
+                                        </button>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        ) : (
+                            <RecommendationCards
+                                section="budget"
+                                data={recommendations}
+                                loading={recsLoading}
+                                mode={metricMode}
+                                adAccountId={selectedAdAccount}
+                                adAccounts={adAccounts}
+                                poorAdsData={poorAds}
+                                poorAdsLoading={poorAdsLoading}
+                                onRefreshBudgetRecommendations={handleRefreshBudgetRecommendations}
+                                onRefreshPoorAds={handleRefreshPoorAds}
+                                budgetRefreshing={recsLoading}
+                                budgetRefreshToken={budgetRefreshSignal}
+                            />
+                        )
                     )}
 
                     {activeTab === 'poor-performers' && (
@@ -1667,7 +1797,7 @@ export default function AnalyticsDashboard() {
                                     <div className="space-y-1">
                                         <h2 className="text-xl font-semibold flex items-center gap-2">
                                             <Settings2 className="w-5 h-5" />
-                                            Analytics Settings
+                                            Optimization Focus
                                         </h2>
                                         <p className="text-sm text-gray-500">
                                             Configure optimization mode, recommendations, anomaly detection, and alerts
@@ -1774,7 +1904,7 @@ export default function AnalyticsDashboard() {
                                                     Target KPI
                                                 </h3>
                                                 <p className="text-xs text-gray-500 pl-6">
-                                                    Sets a benchmark for recommendations. If your target is stricter than <br></br>the account average, recommendations will use the target instead.
+                                                    Sets a benchmark for budget recommendations.
                                                 </p>
                                             </div>
                                             <div className="space-y-4 pl-6">
