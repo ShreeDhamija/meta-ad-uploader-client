@@ -6203,6 +6203,9 @@ export default function AdCreationForm({
   };
 
   const isPageMissing = !pageId && !useExistingPosts;
+  // Missing ad set is pulled out of the bundled blocking flag below so we can
+  // surface a dedicated message only when it's the sole remaining issue.
+  const isAdSetMissing = variants.length <= 1 && selectedAdSets.length === 0 && !duplicateAdSet;
   const hasPublishBlockingIssueBeforePage = variants.length > 1
     ? (
       !isLoggedIn ||
@@ -6212,7 +6215,6 @@ export default function AdCreationForm({
     )
     : (
       !isLoggedIn ||
-      (selectedAdSets.length === 0 && !duplicateAdSet) ||
       (files.length === 0 && driveFiles.length === 0 && dropboxFiles.length === 0 && frameioFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0 && selectedIgOrganicPosts.length === 0) ||
       (duplicateAdSet && (!newAdSetName || newAdSetName.trim() === "")) ||
       (adType === 'carousel' && (files.length + driveFiles.length + importedFiles.length + dropboxFiles.length + frameioFiles.length) < 2) ||
@@ -6223,7 +6225,7 @@ export default function AdCreationForm({
       (shouldShowLeadFormSelector && !selectedForm) ||
       (!isCarouselAd && hasDuplicates)
     );
-  const publishDisabled = hasPublishBlockingIssueBeforePage || isPageMissing;
+  const publishDisabled = hasPublishBlockingIssueBeforePage || isAdSetMissing || isPageMissing;
 
   const showImportedPostMode = useExistingPosts && importedPosts.length > 0;
   const importedSafeIndex = showImportedPostMode
@@ -8574,6 +8576,12 @@ export default function AdCreationForm({
             {!useExistingPosts && !hasPublishBlockingIssueBeforePage && isPageMissing && (
               <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
                 Please select a Facebook page to publish ads
+              </div>
+            )}
+
+            {!hasPublishBlockingIssueBeforePage && !isPageMissing && isAdSetMissing && (
+              <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                Please select an ad set to post to
               </div>
             )}
 
