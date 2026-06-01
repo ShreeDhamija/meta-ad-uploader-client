@@ -127,6 +127,12 @@ export default function AnalyticsDashboard() {
     const [conversionEventsLoading, setConversionEventsLoading] = useState(false)
     const [stableMetricMode, setStableMetricMode] = useState("cpr")
 
+    // Auto-detected default conversion event per account (the popup's top row,
+    // i.e. the event the most ad sets optimize for) used when the account has no
+    // saved conversionEvent preference. Resolved on demand; { [accountId]: event|null }.
+    // `null` value = resolved, no events found (fall back to server spend-detect).
+    const [autoEvents, setAutoEvents] = useState({})
+
     // ── Slack state 
     const [slackConnected, setSlackConnected] = useState(false)
     const [slackChannelName, setSlackChannelName] = useState(null)
@@ -203,6 +209,24 @@ export default function AnalyticsDashboard() {
     const hasTargetKPI = metricMode === 'roas'
         ? Number(targetROAS) > 0
         : Number(targetCPA) > 0
+
+    // ── KPI Chart default conversion event ──────────────────
+    // The KPI chart (daily-insights) is the only consumer of this. When a CPA
+    // account has no saved conversionEvent, default to the auto-detected top event
+    // (the event the most ad sets optimize for — the popup's #1 row) and pass it
+    // as if the user had selected it explicitly. Everything else keeps the saved
+    // value / server auto-detect.
+    const savedConversionEvent = adAccountSettings?.conversionEvent || null
+    // Only applies in CPA mode — ROAS keeps its existing behavior (no event passed).
+    const autoEventApplies = metricMode === 'cpr' && !savedConversionEvent
+    const autoEventResolved = Boolean(selectedAdAccount) &&
+        Object.prototype.hasOwnProperty.call(autoEvents, selectedAdAccount)
+    const effectiveConversionEvent = savedConversionEvent ||
+        (autoEventApplies && autoEventResolved ? autoEvents[selectedAdAccount] : null)
+    // True while we still need to resolve the auto event — the KPI chart fetch
+    // waits so it doesn't fire with the wrong event and then refetch.
+    const autoEventPending = Boolean(selectedAdAccount) && !adAccountSettingsLoading &&
+        autoEventApplies && !autoEventResolved
 
     useEffect(() => {
         if (adAccountSettingsLoading) return
@@ -518,7 +542,7 @@ export default function AnalyticsDashboard() {
     const loadDailyInsights = useCallback(async ({
         accountId = selectedAdAccount,
         dateRange = analyticsDateRange,
-        conversionEvent = adAccountSettings?.conversionEvent || null,
+        conversionEvent = effectiveConversionEvent || null,
         granularity = analyticsGranularity,
         force = false,
     } = {}) => {
@@ -574,7 +598,7 @@ export default function AnalyticsDashboard() {
         selectedAdAccount,
         analyticsDateRange,
         analyticsGranularity,
-        adAccountSettings?.conversionEvent,
+        effectiveConversionEvent,
         buildAnalyticsQueryString,
         getDailyInsightsCacheKey,
     ])
@@ -720,6 +744,33 @@ export default function AnalyticsDashboard() {
     // FEATURE END: PERIOD METRICS SUMMARY — fetcher
     // ──────────────────────────────────────────────────────────────────────
 
+    // Resolve the auto-detected default event (popup's top row) for accounts with
+    // no saved preference, so every fetch can pass it like an explicit selection.
+    useEffect(() => {
+        if (!selectedAdAccount || adAccountSettingsLoading || blockForOnboarding) return
+        if (!autoEventApplies) return
+        if (Object.prototype.hasOwnProperty.call(autoEvents, selectedAdAccount)) return
+
+        const accountAtStart = selectedAdAccount
+        let cancelled = false
+        ;(async () => {
+            try {
+                const res = await fetch(
+                    `${API_BASE_URL}/api/analytics/conversion-events?adAccountId=${accountAtStart}`,
+                    { credentials: 'include' }
+                )
+                const data = await res.json()
+                // Events come back sorted by ad-set count desc — [0] is the popup's top row.
+                const top = res.ok && data.events?.length ? data.events[0].event : null
+                if (!cancelled) setAutoEvents(prev => ({ ...prev, [accountAtStart]: top }))
+            } catch (err) {
+                console.error('Failed to resolve default conversion event:', err)
+                if (!cancelled) setAutoEvents(prev => ({ ...prev, [accountAtStart]: null }))
+            }
+        })()
+        return () => { cancelled = true }
+    }, [selectedAdAccount, adAccountSettingsLoading, blockForOnboarding, autoEventApplies, autoEvents])
+
     // ── Data fetching triggers ──────────────────────────────
     useEffect(() => {
         if (adAccountsLoading || !adAccounts?.length) return
@@ -818,16 +869,17 @@ export default function AnalyticsDashboard() {
         if (adAccountSettingsLoading || pendingDailySettingsRef.current === selectedAdAccount) {
             return
         }
-        if (blockForOnboarding) return
+        if (blockForOnboarding || autoEventPending) return
 
         loadDailyInsights()
     }, [
         selectedAdAccount,
         analyticsDateRange,
         adAccountSettingsLoading,
-        adAccountSettings?.conversionEvent,
+        effectiveConversionEvent,
         loadDailyInsights,
         blockForOnboarding,
+        autoEventPending,
     ])
 
     useEffect(() => {
@@ -903,7 +955,7 @@ export default function AnalyticsDashboard() {
         setRecsLoading(!recsCache)
         setPoorAdsLoading(!poorCache)
 
-        const dailyKey = getDailyInsightsCacheKey(accountId, analyticsDateRange, adAccountSettings?.conversionEvent, analyticsGranularity)
+        const dailyKey = getDailyInsightsCacheKey(accountId, analyticsDateRange, effectiveConversionEvent, analyticsGranularity)
         const weeklyKey = getWeeklyInsightsCacheKey(accountId, analyticsDateRange, adAccountSettings?.conversionEvent, analyticsGranularity)
         const cachedDaily = dailyInsightsCacheRef.current[dailyKey]
         const cachedWeekly = weeklyInsightsCacheRef.current[weeklyKey]

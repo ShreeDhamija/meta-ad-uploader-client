@@ -207,15 +207,14 @@ export default function AnalyticsOnboarding({ open, onComplete, adAccounts }) {
                 onClick={markSeenAndClose}
             />
 
+            {/* Card is itself position:fixed + centered (not a flex item) so the
+                ScrollArea's flex-1/min-h-0 height resolves and the list scrolls.
+                Matches the FrameioPickerModal pattern. */}
             <div
-                className="fixed inset-0 z-50 flex items-center justify-center p-4"
-                onClick={markSeenAndClose}
+                className="fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] max-w-[560px] max-h-[90vh] bg-white rounded-[28px] shadow-2xl flex flex-col overflow-hidden"
+                onClick={(e) => e.stopPropagation()}
             >
-                <div
-                    className="bg-white rounded-[28px] shadow-2xl w-full max-w-[560px] max-h-[90vh] flex flex-col overflow-hidden"
-                    onClick={(e) => e.stopPropagation()}
-                >
-                    {/* Header (fixed) */}
+                {/* Header (fixed) */}
                     <div className="flex items-start justify-between p-8 pb-4 flex-shrink-0">
                         <div className="space-y-2">
                             <h2 className="text-xl font-semibold text-gray-900">
@@ -224,7 +223,7 @@ export default function AnalyticsOnboarding({ open, onComplete, adAccounts }) {
                             <ul className="text-sm text-gray-500 space-y-1 list-disc pl-5">
                                 <li>Select your Optimization Focus for each ad account : CPA or ROAS</li>
                                 <li>Set benchmark KPIs</li>
-                                <li>You can change this later in Optimization Focus</li>
+                                <li className="font-bold text-black">You can change this later in Optimization Focus</li>
                             </ul>
                         </div>
                         <button
@@ -424,7 +423,6 @@ export default function AnalyticsOnboarding({ open, onComplete, adAccounts }) {
                         >
                             Skip For Now
                         </button>
-                    </div>
                 </div>
             </div>
         </>
