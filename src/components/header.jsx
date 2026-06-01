@@ -133,7 +133,7 @@ export default function Header({ showMessenger, hideMessenger }) {
           <>
             <button
               onClick={handleUpgrade}
-              className={`hidden md:flex items-center gap-2 px-3 py-1 rounded-full transition text-sm font-medium cursor-pointer ${getTrialButtonStyle()}`}
+              className={`flex items-center gap-2 px-3 py-1 rounded-full transition text-sm font-medium cursor-pointer ${getTrialButtonStyle()}`}
               title={
                 isSubscriptionExpired() ? "Your subscription has expired" :
                   isTrialExpired() ? "Your trial has expired" :
@@ -141,18 +141,19 @@ export default function Header({ showMessenger, hideMessenger }) {
               }
             >
               <Clock className="w-4 h-4" />
+              {/* Trial status text — the one label kept below 1000px */}
               <span>{getTrialText()}</span>
             </button>
             <Button
               onClick={handleUpgrade}
               size="sm"
-              className={`hidden md:flex h-7 px-3 py-4 text-[13px] text-white font-medium rounded-full cursor-pointer ${!hasActiveAccess() ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'
+              className={`flex h-7 px-3 py-4 text-[13px] text-white font-medium rounded-full cursor-pointer ${!hasActiveAccess() ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'
                 }`}
             >
               <ZapIcon className="w-3.5 h-3.5" />
-              {!hasActiveAccess() ? 'Subscribe' : 'Upgrade'}
+              <span className="hidden min-[1000px]:inline">{!hasActiveAccess() ? 'Subscribe' : 'Upgrade'}</span>
             </Button>
-            <div className="hidden md:block h-8 w-px bg-gray-300  " />
+            <div className="block h-8 w-px bg-gray-300  " />
           </>
         )}
 
@@ -197,7 +198,7 @@ export default function Header({ showMessenger, hideMessenger }) {
         <button
           onClick={() => navigate("/settings")}
           title="Settings"
-          className="hidden md:flex items-center gap-1.5 rounded-full transition bg-transparent hover:bg-gray-100 focus:bg-transparent active:bg-transparent !focus:outline-none !focus:ring-0 !active:ring-0 px-4 py-2 cursor-pointer"
+          className="flex items-center gap-1.5 rounded-full transition bg-transparent hover:bg-gray-100 focus:bg-transparent active:bg-transparent !focus:outline-none !focus:ring-0 !active:ring-0 px-4 py-2 cursor-pointer"
           style={{
             outline: "none",
             boxShadow: "none",
@@ -205,7 +206,7 @@ export default function Header({ showMessenger, hideMessenger }) {
           }}
         >
           <Settings className="w-5 h-5 text-black" />
-          <span className="hidden md:inline text-gray-900 text-[14px] font-medium">Preferences</span>
+          <span className="hidden min-[1000px]:inline text-gray-900 text-[14px] font-medium">Preferences</span>
         </button>
         <div className="h-8 w-px bg-gray-300" />
         {showAnalyticsNav && (
@@ -213,10 +214,10 @@ export default function Header({ showMessenger, hideMessenger }) {
             <button
               onClick={() => navigate("/analytics")}
               title="Analytics"
-              className="hidden md:flex items-center gap-1.5 rounded-full transition-colors px-2 py-2   bg-transparent hover:bg-gray-100 focus:bg-transparent active:bg-transparent cursor-pointer"
+              className="flex items-center gap-1.5 rounded-full transition-colors px-2 py-2   bg-transparent hover:bg-gray-100 focus:bg-transparent active:bg-transparent cursor-pointer"
             >
               <AnalyticsIcon className="size-5" />
-              <span className="inline text-[14px] text-gray-900 font-medium">Analytics</span>
+              <span className="hidden min-[1000px]:inline text-[14px] text-gray-900 font-medium">Analytics</span>
             </button>
             <div className="h-8 w-px bg-gray-300  " />
           </>
@@ -228,7 +229,7 @@ export default function Header({ showMessenger, hideMessenger }) {
           className="py-2 bg-transparent hover:bg-gray-100 text-gray-700 rounded-full flex items-center justify-center transition-colors px-3 gap-1.5 cursor-pointer"
         >
           <ChatIcon className="size-5" />
-          <span className="inline text-[14px] text-gray-900 font-medium">Chat With Us</span>
+          <span className="hidden min-[1000px]:inline text-[14px] text-gray-900 font-medium">Chat With Us</span>
         </button>
 
         <div className="h-8 w-px bg-gray-300  " />

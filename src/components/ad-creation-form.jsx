@@ -572,8 +572,8 @@ const ErrorFileName = ({ name }) => {
 // endpoint and caches the fastest. `no-cors` HEAD requests measure round-trip
 // without needing CORS config; opaque responses are fine — we only need timing.
 const S3_REGION_BUCKETS = {
-  'us-east-1':      'withblip',
-  'eu-west-1':      'withblip-eu',
+  'us-east-1': 'withblip',
+  'eu-west-1': 'withblip-eu',
   'ap-southeast-1': 'withblip-as',
   'ap-southeast-2': 'withblip-au',
 };
@@ -5854,7 +5854,7 @@ export default function AdCreationForm({
 
       if (promises.length === 0) {
         setIsLoading(false);
-        throw new Error("Form data failed to compile. You ran into our sneakiest bug. We're trying to fix it.");
+        throw new Error("All your files failed to upload. This usually means a network bandwidth issue. Try again with less data or a more stable connection.");
       }
 
 
@@ -7712,42 +7712,43 @@ export default function AdCreationForm({
                                 const isInactivePlacementDescription = isPlacementCustomizedSingleDescription && index > 0;
 
                                 return (
-                                <div key={index} className={`flex items-center gap-2 ${isInactivePlacementDescription ? "opacity-60" : ""}`}>
-                                  <div className="flex flex-col w-full">
-                                    <TextareaAutosize
-                                      value={value}
-                                      onChange={(e) => updateField(setDescriptions, descriptions, index, e.target.value)}
-                                      minRows={1}
-                                      maxRows={10}
-                                      className={`${formTextareaChrome} ${duplicateIndices.descriptions.has(index)
-                                        ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]"
-                                        : ""
-                                        } ${isInactivePlacementDescription ? "!bg-gray-100 text-gray-500 cursor-not-allowed" : ""}`}
-                                      style={{
-                                        scrollbarWidth: 'thin',
-                                        scrollbarColor: '#c7c7c7 transparent'
-                                      }}
-                                      placeholder="Enter description"
-                                      disabled={!isLoggedIn || isInactivePlacementDescription}
-                                    />
-                                    {duplicateIndices.descriptions.has(index) && (
-                                      <p className="text-xs text-red-500 mt-1">Duplicate values can cause errors when making ads</p>
+                                  <div key={index} className={`flex items-center gap-2 ${isInactivePlacementDescription ? "opacity-60" : ""}`}>
+                                    <div className="flex flex-col w-full">
+                                      <TextareaAutosize
+                                        value={value}
+                                        onChange={(e) => updateField(setDescriptions, descriptions, index, e.target.value)}
+                                        minRows={1}
+                                        maxRows={10}
+                                        className={`${formTextareaChrome} ${duplicateIndices.descriptions.has(index)
+                                          ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]"
+                                          : ""
+                                          } ${isInactivePlacementDescription ? "!bg-gray-100 text-gray-500 cursor-not-allowed" : ""}`}
+                                        style={{
+                                          scrollbarWidth: 'thin',
+                                          scrollbarColor: '#c7c7c7 transparent'
+                                        }}
+                                        placeholder="Enter description"
+                                        disabled={!isLoggedIn || isInactivePlacementDescription}
+                                      />
+                                      {duplicateIndices.descriptions.has(index) && (
+                                        <p className="text-xs text-red-500 mt-1">Duplicate values can cause errors when making ads</p>
+                                      )}
+                                    </div>
+                                    {descriptions.length > 1 && (
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        className="border border-gray-400 rounded-xl bg-white shadow-xs"
+                                        size="icon"
+                                        onClick={() => removeField(setDescriptions, descriptions, index)}
+                                      >
+                                        <Trash2 className="w-4 h-4 text-gray-600 cursor-pointer hover:text-red-500" />
+                                        <span className="sr-only">Remove</span>
+                                      </Button>
                                     )}
                                   </div>
-                                  {descriptions.length > 1 && (
-                                    <Button
-                                      type="button"
-                                      variant="ghost"
-                                      className="border border-gray-400 rounded-xl bg-white shadow-xs"
-                                      size="icon"
-                                      onClick={() => removeField(setDescriptions, descriptions, index)}
-                                    >
-                                      <Trash2 className="w-4 h-4 text-gray-600 cursor-pointer hover:text-red-500" />
-                                      <span className="sr-only">Remove</span>
-                                    </Button>
-                                  )}
-                                </div>
-                              )})}
+                                )
+                              })}
                               {descriptions.length < 5 && (
                                 isPlacementCustomizedSingleDescription ? (
                                   descriptions.length <= 1 ? (
@@ -8284,31 +8285,31 @@ export default function AdCreationForm({
                             Manage Upload Sources
                           </Button>
                         </PopoverTrigger>
-                      <PopoverContent align="end" className="bg-white rounded-xl p-2 w-72 border border-gray-200 shadow-lg">
-                        <div className="flex flex-col">
-                          {UPLOAD_SOURCE_OPTIONS.map((src) => {
-                            const checked = uploadSources.includes(src.id);
-                            return (
-                              <label
-                                key={src.id}
-                                className="flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer hover:bg-gray-100"
-                              >
-                                <Checkbox
-                                  checked={checked}
-                                  onCheckedChange={() => toggleUploadSource(src.id)}
-                                />
-                                <img
-                                  src={src.icon}
-                                  alt=""
-                                  className={src.dropdownIconClass || 'h-4 w-4 object-contain'}
-                                />
-                                <span className="text-sm text-gray-800">{src.name}</span>
-                              </label>
-                            );
-                          })}
-                        </div>
-                      </PopoverContent>
-                    </Popover>
+                        <PopoverContent align="end" className="bg-white rounded-xl p-2 w-72 border border-gray-200 shadow-lg">
+                          <div className="flex flex-col">
+                            {UPLOAD_SOURCE_OPTIONS.map((src) => {
+                              const checked = uploadSources.includes(src.id);
+                              return (
+                                <label
+                                  key={src.id}
+                                  className="flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer hover:bg-gray-100"
+                                >
+                                  <Checkbox
+                                    checked={checked}
+                                    onCheckedChange={() => toggleUploadSource(src.id)}
+                                  />
+                                  <img
+                                    src={src.icon}
+                                    alt=""
+                                    className={src.dropdownIconClass || 'h-4 w-4 object-contain'}
+                                  />
+                                  <span className="text-sm text-gray-800">{src.name}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
                     </div>
                   </div>
 
