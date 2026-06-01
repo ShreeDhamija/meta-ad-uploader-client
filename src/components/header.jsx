@@ -20,8 +20,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
+const ANALYTICS_BETA_USER_IDS = new Set([
+  "10236978990363167",
+  "10237054023877830",
+  "122174111168371589",
+  "10237991305022107",
+])
+const ANALYTICS_OPEN_TO_ALL = false
+
 export default function Header({ showMessenger, hideMessenger }) {
-  const { isLoggedIn, userName, profilePicUrl, handleLogout } = useAuth()
+  const { isLoggedIn, userName, profilePicUrl, handleLogout, userId } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const {
@@ -36,7 +44,7 @@ export default function Header({ showMessenger, hideMessenger }) {
   const { notifications, hasUnread, loading: notificationsLoading, markAsRead } = useNotifications()
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const isAnalyticsPage = location.pathname === "/analytics"
-  const showAnalyticsNav = import.meta.env.VITE_APP_ENV === "staging"
+  const showAnalyticsNav = ANALYTICS_OPEN_TO_ALL || ANALYTICS_BETA_USER_IDS.has(String(userId))
   const headerCardShadow = "shadow-[0px_1px_2px_rgba(0,0,0,0.06)]"
 
   const handleDropdownClose = (open) => {
