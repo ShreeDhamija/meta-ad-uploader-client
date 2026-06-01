@@ -162,6 +162,7 @@ export function isGranularityAllowed(granularityKey, rangeValue) {
 }
 
 export function resolveAllowedGranularity(granularityKey, rangeValue) {
+    if (getAnalyticsRangeDays(rangeValue) <= 7) return "daily"
     if (isGranularityAllowed(granularityKey, rangeValue)) return granularityKey
     return DEFAULT_ANALYTICS_GRANULARITY
 }

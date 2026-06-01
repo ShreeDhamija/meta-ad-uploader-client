@@ -98,7 +98,8 @@ export default function AnalyticsDashboard() {
     const [analyticsDateRange, setAnalyticsDateRange] = useState(() => createAnalyticsDateRangeFromPreset("last_30d"))
     const [analyticsGranularity, setAnalyticsGranularity] = useState(DEFAULT_ANALYTICS_GRANULARITY)
 
-    // Auto-fall back to weekly if the active granularity becomes invalid for the new range
+    // Keep short ranges readable: 7 days or fewer always use daily buckets.
+    // Longer ranges only change when the active granularity is invalid.
     useEffect(() => {
         const next = resolveAllowedGranularity(analyticsGranularity, analyticsDateRange)
         if (next !== analyticsGranularity) setAnalyticsGranularity(next)

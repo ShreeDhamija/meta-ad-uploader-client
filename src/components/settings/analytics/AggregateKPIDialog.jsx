@@ -1,7 +1,9 @@
 "use client"
 
 import { useState, useEffect, useCallback, useMemo } from "react"
-import { Loader2, BarChart3, X } from "lucide-react"
+import { Loader2, X } from "lucide-react"
+import { Helix } from "ldrs/react"
+import "ldrs/react/Helix.css"
 import {
     ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
     ResponsiveContainer,
@@ -174,8 +176,11 @@ export default function AggregateKPIDialog({ open, onOpenChange, adAccounts }) {
                     {/* Body */}
                     <div className="px-8 pb-8 overflow-y-auto space-y-5">
                         {loading ? (
-                            <div className="flex items-center justify-center h-[300px]">
-                                <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                            <div className="flex h-[300px] flex-col items-center justify-center gap-3 text-center">
+                                <Helix size="38" speed="2.5" color="#3b82f6" />
+                                <p className="text-sm font-medium text-gray-500">
+                                    Fetching data for all accounts can take up to 10 seconds
+                                </p>
                             </div>
                         ) : (
                             <>

@@ -14,9 +14,9 @@ const COLUMNS = [
     { key: "spend", label: "Amount Spend", format: formatCurrency },
     { key: "purchases", label: "Purchases", format: formatInteger },
     { key: "roas", label: "ROAS", format: formatRoas },
-    { key: "costPerAddToCart", label: "Cost / Add to Cart", format: formatCurrency },
-    { key: "costPerInitiateCheckout", label: "Cost / Initiate Checkout", format: formatCurrency },
-    { key: "costPerPurchase", label: "Cost / Purchase", format: formatCurrency },
+    { key: "costPerAddToCart", label: "Cost / Add to Cart", format: formatCurrency, lowerIsBetter: true },
+    { key: "costPerInitiateCheckout", label: "Cost / Initiate Checkout", format: formatCurrency, lowerIsBetter: true },
+    { key: "costPerPurchase", label: "Cost / Purchase", format: formatCurrency, lowerIsBetter: true },
 ]
 
 function parseDate(value) {
@@ -70,7 +70,7 @@ function getColumnDomains(rows) {
     return domains
 }
 
-function getHeatStyle(value, domain) {
+function getHeatStyle(value, domain, lowerIsBetter = false) {
     if (value === null || value === undefined || !domain || domain.min === null || domain.max === null) {
         return { backgroundColor: "#ffffff", color: "#111827" }
     }
@@ -78,7 +78,8 @@ function getHeatStyle(value, domain) {
         return { backgroundColor: "#ffffff", color: "#111827" }
     }
 
-    const pct = Math.max(0, Math.min(1, (Number(value) - domain.min) / (domain.max - domain.min)))
+    const rawPct = Math.max(0, Math.min(1, (Number(value) - domain.min) / (domain.max - domain.min)))
+    const pct = lowerIsBetter ? 1 - rawPct : rawPct
     if (pct <= 0.02) return { backgroundColor: "#ffffff", color: "#111827" }
 
     const alpha = 0.12 + pct * 0.78
@@ -168,10 +169,16 @@ export default function TrailingSixWeeksSnapshot({ adAccountId, enabled, refresh
                     </div>
                 ) : (
                     <div className="overflow-x-auto">
-                        <table className="w-full min-w-[860px] border-collapse text-sm">
+                        <table className="w-full min-w-[980px] table-fixed border-collapse text-sm">
+                            <colgroup>
+                                <col className="w-[150px]" />
+                                {COLUMNS.map(col => (
+                                    <col key={col.key} />
+                                ))}
+                            </colgroup>
                             <thead>
                                 <tr>
-                                    <th className="w-[150px] border border-gray-200 bg-gray-50 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                                    <th className="border border-gray-200 bg-gray-50 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-400">
                                         Week
                                     </th>
                                     {COLUMNS.map(col => (
@@ -192,7 +199,7 @@ export default function TrailingSixWeeksSnapshot({ adAccountId, enabled, refresh
                                             <td
                                                 key={col.key}
                                                 className="border border-gray-200 px-3 py-3 text-right text-sm font-semibold tabular-nums transition-colors"
-                                                style={getHeatStyle(row[col.key], domains[col.key])}
+                                                style={getHeatStyle(row[col.key], domains[col.key], col.lowerIsBetter)}
                                             >
                                                 {col.format(row[col.key])}
                                             </td>
