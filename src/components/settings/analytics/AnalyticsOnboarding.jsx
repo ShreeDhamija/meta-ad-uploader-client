@@ -211,7 +211,7 @@ export default function AnalyticsOnboarding({ open, onComplete, adAccounts }) {
                 flex ScrollArea gets a real viewport instead of being measured
                 at full content height and clipped by overflow-hidden. */}
             <div
-                className="fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] max-w-[560px] h-[min(90dvh,760px)] max-h-[calc(100dvh-2rem)] bg-white rounded-[28px] shadow-2xl flex flex-col overflow-hidden"
+                className="fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] max-w-[560px] h-[min(96dvh,912px)] max-h-[calc(100dvh-2rem)] bg-white rounded-[28px] shadow-2xl flex flex-col overflow-hidden"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header (fixed) */}
@@ -220,11 +220,11 @@ export default function AnalyticsOnboarding({ open, onComplete, adAccounts }) {
                             <h2 className="text-xl font-semibold text-gray-900">
                                 Set Up Your Analytics
                             </h2>
-                            <ul className="text-sm text-gray-500 space-y-1 list-disc pl-5">
+                            <ol className="text-sm text-gray-500 space-y-1 list-decimal pl-5">
                                 <li>Select your Optimization Focus for each ad account : CPA or ROAS</li>
                                 <li>Set benchmark KPIs</li>
                                 <li className="font-bold text-black">You can change this later in Optimization Focus</li>
-                            </ul>
+                            </ol>
                         </div>
                         <button
                             onClick={markSeenAndClose}

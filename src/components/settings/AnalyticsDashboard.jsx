@@ -33,6 +33,7 @@ import WeeklyPlacementChart from "./analytics/WeeklyPlacementChart"
 import FunnelHealthChart from "./analytics/FunnelHealthChart"
 import CreativeHitRateChart from "./analytics/CreativeHitRateChart"
 import TrendingCreative from "./analytics/TrendingCreative"
+import TrailingSixWeeksSnapshot from "./analytics/TrailingSixWeeksSnapshot"
 // import FlexAdsLauncher from "./analytics/FlexAdsLauncher" // Hidden — see Flex Ads Launcher block below
 // FEATURE START: PERIOD METRICS SUMMARY (added 2026-05-19)
 import PeriodMetricsSummary from "./analytics/PeriodMetricsSummary"
@@ -1453,6 +1454,14 @@ export default function AnalyticsDashboard() {
                             mode={metricMode}
                         />
                         {/* FEATURE END: PERIOD METRICS SUMMARY */}
+
+                        {metricMode === "roas" && (
+                            <TrailingSixWeeksSnapshot
+                                adAccountId={selectedAdAccount}
+                                enabled={metricMode === "roas"}
+                                refreshKey={chartsRefreshKey}
+                            />
+                        )}
 
                         <div className="grid grid-cols-1 lg:relative lg:min-h-[360px] lg:grid-cols-2 lg:pt-4 [&_*:focus]:outline-none [&_*:focus-visible]:outline-none">
                             <div>

@@ -270,7 +270,7 @@ export default function CreativeHitRateChart({ adAccountId, conversionEvent, ref
                         <div className="flex flex-col items-center justify-center gap-3 py-16">
                             <Helix size="36" speed="2.5" color="#3b82f6" />
                             <p className="text-sm text-gray-500">
-                                Analyzing creative history — this can take up to 30 seconds…
+                                Analyzing creative history — this can take up to 60 seconds depending on ad volume…
                             </p>
                         </div>
                     ) : error ? (
