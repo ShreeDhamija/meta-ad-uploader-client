@@ -206,7 +206,7 @@ export default function OnboardingWizard({
     const headerText = isNewUser
         ? `Hey ${userName || "there"}`
         : isSingleCard
-            ? activeCard.heading
+            ? `Introducing ${activeCard.heading}`
             : `Hey ${userName || "there"}`
     const subText = isNewUser
         ? "Lets give you a really quick tour of how to get the most out of Blip!"
