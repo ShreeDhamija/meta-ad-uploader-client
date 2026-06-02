@@ -999,7 +999,7 @@ export default function ReorderAdNameParts({
 
       {hasCustomDatePlaceholder && (
         <p className="text-xs text-gray-500 mt-1">
-          Replace custom with your date format. Hover i for tokens.
+          Replace &apos;custom&apos; with your date format. Hover i for tokens.
         </p>
       )}
 

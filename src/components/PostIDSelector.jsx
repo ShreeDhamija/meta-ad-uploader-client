@@ -824,14 +824,12 @@ function PostSelectorInline({
                                 viewMode === 'adset'
                                     ? "grid-cols-[20px_48px_1fr_110px_110px]"
                                     : viewMode === 'search'
-                                        ? "grid-cols-[20px_48px_minmax(0,0.75fr)_minmax(0,1fr)_90px_90px]"
+                                        ? "grid-cols-[20px_48px_minmax(0,1fr)_minmax(0,0.72fr)_90px_90px]"
                                     : "grid-cols-[20px_48px_1fr_120px_110px]"
                             )}>
                                 <div></div>
                                 <div className="-ml-4">Thumbnail</div>
-                                <div>
-                                    Ad Name{viewMode === 'search' && <span className="font-normal"> (hover to view full name)</span>}
-                                </div>
+                                <div>Ad Name</div>
                                 {viewMode === 'adset' ? (
                                     <>
                                         <div className="text-right whitespace-nowrap">
@@ -939,7 +937,7 @@ function PostSelectorInline({
                                                 viewMode === 'adset'
                                                     ? "grid-cols-[auto_48px_1fr_110px_110px]"
                                                     : viewMode === 'search'
-                                                        ? "grid-cols-[auto_48px_minmax(0,0.75fr)_minmax(0,1fr)_90px_90px]"
+                                                        ? "grid-cols-[auto_48px_minmax(0,1fr)_minmax(0,0.72fr)_90px_90px]"
                                                         : "grid-cols-[auto_48px_1fr_120px_110px]",
                                                 selectedAdIds.has(ad.id)
                                                     ? 'border-blue-500 bg-blue-50'
