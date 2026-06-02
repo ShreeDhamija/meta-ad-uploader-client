@@ -331,6 +331,11 @@ export default function ReorderAdNameParts({
     return [...new Set(warnings)]
   }, [inputValue, customVariables, variant])
 
+  const hasCustomDatePlaceholder = useMemo(
+    () => /\{\{Date\(custom\)\}\}/i.test(inputValue),
+    [inputValue]
+  )
+
   // ── Helpers ──
 
   const getCursorPosition = useCallback((input, cursorIndex) => {
@@ -991,6 +996,12 @@ export default function ReorderAdNameParts({
           </div>
         )}
       </div>
+
+      {hasCustomDatePlaceholder && (
+        <p className="text-xs text-gray-500 mt-1">
+          Replace custom with your date format. Hover i for tokens.
+        </p>
+      )}
 
       {/* Date format error */}
       {dateFormatError && (

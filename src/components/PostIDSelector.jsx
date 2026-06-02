@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
@@ -31,6 +32,12 @@ const DATE_PRESETS = [
     { label: '7 Days', value: 'last_7d' },
     { label: '30 Days', value: 'last_30d' },
 ]
+
+const truncateText = (text, maxLength = 40) => {
+    if (!text) return "—"
+    if (text.length <= maxLength) return text
+    return text.substring(0, maxLength) + "..."
+}
 
 function PostSelectorInline({
     adAccountId,
@@ -417,10 +424,21 @@ function PostSelectorInline({
         return `$${amount.toFixed(2)}`
     }
 
-    const truncateText = (text, maxLength = 40) => {
-        if (!text) return "—"
-        if (text.length <= maxLength) return text
-        return text.substring(0, maxLength) + "..."
+    const renderNameTooltip = (value, maxLength = 75) => {
+        const displayValue = value || ""
+
+        return (
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <span className="block text-xs text-gray-900 truncate">
+                        {truncateText(displayValue, maxLength)}
+                    </span>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-[360px] break-words text-xs">
+                    {displayValue || "Unknown"}
+                </TooltipContent>
+            </Tooltip>
+        )
     }
 
     const extractPostId = (objectStoryId) => {
@@ -805,11 +823,15 @@ function PostSelectorInline({
                                 "grid gap-2 px-2 py-2 text-xs font-medium text-white bg-blue-500 rounded-xl items-center",
                                 viewMode === 'adset'
                                     ? "grid-cols-[20px_48px_1fr_110px_110px]"
+                                    : viewMode === 'search'
+                                        ? "grid-cols-[20px_48px_minmax(0,0.75fr)_minmax(0,1fr)_90px_90px]"
                                     : "grid-cols-[20px_48px_1fr_120px_110px]"
                             )}>
                                 <div></div>
                                 <div className="-ml-4">Thumbnail</div>
-                                <div>Ad Name</div>
+                                <div>
+                                    Ad Name{viewMode === 'search' && <span className="font-normal"> (hover to view full name)</span>}
+                                </div>
                                 {viewMode === 'adset' ? (
                                     <>
                                         <div className="text-right whitespace-nowrap">
@@ -872,6 +894,7 @@ function PostSelectorInline({
                                 ) : viewMode === 'search' ? (
                                     <>
                                         <div>Ad Set</div>
+                                        <div className="text-right">Spend</div>
                                         <div className="text-right">Status</div>
                                     </>
                                 ) : (
@@ -906,140 +929,138 @@ function PostSelectorInline({
 
                     {ads.length > 0 && (
                         <ScrollArea className="h-[550px] outline-none focus:outline-none">
-                            <div className="space-y-1.5">
-                                {(viewMode === 'adset' ? displayedAdsetAds : ads).map((ad) => (
-                                    <label
-                                        key={ad.id}
-                                        className={cn(
-                                            "grid gap-2 items-center p-3 rounded-xl border cursor-pointer transition-colors",
-                                            viewMode === 'adset'
-                                                ? "grid-cols-[auto_48px_1fr_110px_110px]"
-                                                : "grid-cols-[auto_48px_1fr_120px_110px]",
-                                            selectedAdIds.has(ad.id)
-                                                ? 'border-blue-500 bg-blue-50'
-                                                : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                                        )}
-                                    >
-                                        <Checkbox
-                                            checked={selectedAdIds.has(ad.id)}
-                                            onCheckedChange={() => toggleAdSelection(ad.id)}
-                                        />
-
-                                        {/* Thumbnail */}
-                                        <div className="w-12 h-12 rounded-md overflow-hidden bg-gray-100 flex-shrink-0">
-                                            {ad.image_url ? (
-                                                <img
-                                                    src={ad.image_url}
-                                                    alt="Ad thumbnail"
-                                                    className="w-full h-full object-cover"
-                                                    onError={(e) => {
-                                                        e.target.style.display = 'none'
-                                                        e.target.nextSibling.style.display = 'flex'
-                                                    }}
-                                                />
-                                            ) : null}
-                                            <div
-                                                className={`w-full h-full items-center justify-center ${ad.image_url ? 'hidden' : 'flex'}`}
-                                            >
-                                                <ImageOff className="h-5 w-5 text-gray-400" />
-                                            </div>
-                                        </div>
-
-                                        {/* Ad Name */}
-                                        <div className="min-w-0">
-                                            <p className="text-xs text-gray-900 truncate" title={ad.ad_name}>
-                                                {truncateText(ad.ad_name, 75)}
-                                            </p>
-                                        </div>
-
-                                        {/* Adset view: Spend + Status columns (no adset name column) */}
-                                        {viewMode === 'adset' ? (
-                                            <>
-                                                <div className="text-right">
-                                                    <span className="text-sm font-medium text-gray-900">
-                                                        {formatSpend(ad.spend)}
-                                                    </span>
-                                                </div>
-                                                <div className="text-right">
-                                                    <span className={`text-xs font-medium px-2 py-1 rounded-full ${ad.effective_status === 'ACTIVE'
-                                                        ? 'bg-green-100 text-green-700'
-                                                        : ad.effective_status === 'PAUSED'
-                                                            ? 'bg-yellow-100 text-yellow-700'
-                                                            : 'bg-gray-100 text-gray-600'
-                                                        }`}>
-                                                        {formatStatus(ad.effective_status || ad.status)}
-                                                    </span>
-                                                </div>
-                                            </>
-                                        ) : viewMode === 'search' ? (
-                                            <>
-                                                {/* Ad Set Name */}
-                                                <div className="flex items-center gap-1">
-                                                    <span
-                                                        className="text-xs text-gray-900 truncate"
-                                                        title={ad.adset_name}
-                                                    >
-                                                        {truncateText(ad.adset_name, 75)}
-                                                    </span>
-                                                </div>
-                                                {/* Status */}
-                                                <div className="text-right">
-                                                    <span className={`text-xs font-medium px-2 py-1 rounded-full ${ad.effective_status === 'ACTIVE'
-                                                        ? 'bg-green-100 text-green-700'
-                                                        : ad.effective_status === 'PAUSED'
-                                                            ? 'bg-yellow-100 text-yellow-700'
-                                                            : 'bg-gray-100 text-gray-600'
-                                                        }`}>
-                                                        {formatStatus(ad.effective_status || ad.status)}
-                                                    </span>
-                                                </div>
-                                            </>
-                                        ) : (
-                                            <>
-                                                {/* Ad Set Name */}
-                                                <div className="flex items-center gap-1">
-                                                    <span
-                                                        className="text-xs text-gray-900 truncate"
-                                                        title={ad.adset_name}
-                                                    >
-                                                        {truncateText(ad.adset_name, 75)}
-                                                    </span>
-                                                </div>
-                                                {/* Spend */}
-                                                <div className="text-right">
-                                                    <span className="text-sm font-medium text-gray-900">
-                                                        {formatSpend(ad.spend)}
-                                                    </span>
-                                                </div>
-                                            </>
-                                        )}
-                                    </label>
-                                ))}
-
-                                {/* Load More Button - Only in list mode */}
-                                {viewMode === 'list' && hasMore && (
-                                    <div className="pt-2 pb-4">
-                                        <Button
-                                            variant="outline"
-                                            className="w-full"
-                                            onClick={loadMore}
-                                            disabled={isLoadingMore}
+                            <TooltipProvider delayDuration={150}>
+                                <div className="space-y-1.5">
+                                    {(viewMode === 'adset' ? displayedAdsetAds : ads).map((ad) => (
+                                        <label
+                                            key={ad.id}
+                                            className={cn(
+                                                "grid gap-2 items-center p-3 rounded-xl border cursor-pointer transition-colors",
+                                                viewMode === 'adset'
+                                                    ? "grid-cols-[auto_48px_1fr_110px_110px]"
+                                                    : viewMode === 'search'
+                                                        ? "grid-cols-[auto_48px_minmax(0,0.75fr)_minmax(0,1fr)_90px_90px]"
+                                                        : "grid-cols-[auto_48px_1fr_120px_110px]",
+                                                selectedAdIds.has(ad.id)
+                                                    ? 'border-blue-500 bg-blue-50'
+                                                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                                            )}
                                         >
-                                            {isLoadingMore ? (
+                                            <Checkbox
+                                                checked={selectedAdIds.has(ad.id)}
+                                                onCheckedChange={() => toggleAdSelection(ad.id)}
+                                            />
+
+                                            {/* Thumbnail */}
+                                            <div className="w-12 h-12 rounded-md overflow-hidden bg-gray-100 flex-shrink-0">
+                                                {ad.image_url ? (
+                                                    <img
+                                                        src={ad.image_url}
+                                                        alt="Ad thumbnail"
+                                                        className="w-full h-full object-cover"
+                                                        onError={(e) => {
+                                                            e.target.style.display = 'none'
+                                                            e.target.nextSibling.style.display = 'flex'
+                                                        }}
+                                                    />
+                                                ) : null}
+                                                <div
+                                                    className={`w-full h-full items-center justify-center ${ad.image_url ? 'hidden' : 'flex'}`}
+                                                >
+                                                    <ImageOff className="h-5 w-5 text-gray-400" />
+                                                </div>
+                                            </div>
+
+                                            {/* Ad Name */}
+                                            <div className="min-w-0">
+                                                {renderNameTooltip(ad.ad_name)}
+                                            </div>
+
+                                            {/* Adset view: Spend + Status columns (no adset name column) */}
+                                            {viewMode === 'adset' ? (
                                                 <>
-                                                    <Loader className="h-4 w-4 mr-2 animate-spin" />
-                                                    Loading...
+                                                    <div className="text-right">
+                                                        <span className="text-sm font-medium text-gray-900">
+                                                            {formatSpend(ad.spend)}
+                                                        </span>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <span className={`text-xs font-medium px-2 py-1 rounded-full ${ad.effective_status === 'ACTIVE'
+                                                            ? 'bg-green-100 text-green-700'
+                                                            : ad.effective_status === 'PAUSED'
+                                                                ? 'bg-yellow-100 text-yellow-700'
+                                                                : 'bg-gray-100 text-gray-600'
+                                                            }`}>
+                                                            {formatStatus(ad.effective_status || ad.status)}
+                                                        </span>
+                                                    </div>
+                                                </>
+                                            ) : viewMode === 'search' ? (
+                                                <>
+                                                    {/* Ad Set Name */}
+                                                    <div className="min-w-0">
+                                                        {renderNameTooltip(ad.adset_name)}
+                                                    </div>
+                                                    {/* Spend */}
+                                                    <div className="text-right">
+                                                        <span className="text-sm font-medium text-gray-900">
+                                                            {formatSpend(ad.spend)}
+                                                        </span>
+                                                    </div>
+                                                    {/* Status */}
+                                                    <div className="text-right">
+                                                        <span className={`text-xs font-medium px-2 py-1 rounded-full ${ad.effective_status === 'ACTIVE'
+                                                            ? 'bg-green-100 text-green-700'
+                                                            : ad.effective_status === 'PAUSED'
+                                                                ? 'bg-yellow-100 text-yellow-700'
+                                                                : 'bg-gray-100 text-gray-600'
+                                                            }`}>
+                                                            {formatStatus(ad.effective_status || ad.status)}
+                                                        </span>
+                                                    </div>
                                                 </>
                                             ) : (
                                                 <>
-                                                    <ChevronDown className="h-4 w-4 mr-2" />
-                                                    Load More Ads
+                                                    {/* Ad Set Name */}
+                                                    <div className="min-w-0">
+                                                        {renderNameTooltip(ad.adset_name)}
+                                                    </div>
+                                                    {/* Spend */}
+                                                    <div className="text-right">
+                                                        <span className="text-sm font-medium text-gray-900">
+                                                            {formatSpend(ad.spend)}
+                                                        </span>
+                                                    </div>
                                                 </>
                                             )}
-                                        </Button>
-                                    </div>
-                                )}
-                            </div>
+                                        </label>
+                                    ))}
+
+                                    {/* Load More Button - Only in list mode */}
+                                    {viewMode === 'list' && hasMore && (
+                                        <div className="pt-2 pb-4">
+                                            <Button
+                                                variant="outline"
+                                                className="w-full"
+                                                onClick={loadMore}
+                                                disabled={isLoadingMore}
+                                            >
+                                                {isLoadingMore ? (
+                                                    <>
+                                                        <Loader className="h-4 w-4 mr-2 animate-spin" />
+                                                        Loading...
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <ChevronDown className="h-4 w-4 mr-2" />
+                                                        Load More Ads
+                                                    </>
+                                                )}
+                                            </Button>
+                                        </div>
+                                    )}
+                                </div>
+                            </TooltipProvider>
                         </ScrollArea>
                     )}
                 </div>

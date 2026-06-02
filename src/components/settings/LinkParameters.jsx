@@ -27,6 +27,24 @@ const DEFAULT_PREFILL_PAIRS = [
     { key: "utm_term", value: "{{adset.name}}" }
 ];
 
+const normalizeLink = (link) => link.trim().toLowerCase();
+
+const mergeUniqueLinks = (...groups) => {
+    const seen = new Set();
+    const merged = [];
+
+    groups.flat().forEach((link) => {
+        const trimmed = link?.trim();
+        if (!trimmed) return;
+        const key = normalizeLink(trimmed);
+        if (seen.has(key)) return;
+        seen.add(key);
+        merged.push(trimmed);
+    });
+
+    return merged;
+};
+
 function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAccount, displayLink, setDisplayLink }) {
     const [inputValue, setInputValue] = useState("")
     const [openIndex, setOpenIndex] = useState(null)
@@ -37,7 +55,9 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
 
     // Data/Fetching States
     const [linkImportPreview, setLinkImportPreview] = useState([])
+    const [linkPaginationCursor, setLinkPaginationCursor] = useState(null)
     const [isFetchingLinks, setIsFetchingLinks] = useState(false)
+    const [isLoadingMoreLinks, setIsLoadingMoreLinks] = useState(false)
     const [isFetchingUtms, setIsFetchingUtms] = useState(false)
     const [utmFetchError, setUtmFetchError] = useState(false)
 
@@ -196,6 +216,31 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
 
 
     // --- API: Import Links Only ---
+    const fetchRecentLinks = useCallback(async ({ after = null, excludeLinks = [] } = {}) => {
+        const res = await fetch(`${API_BASE_URL}/auth/fetch-recent-links`, {
+            method: "POST",
+            credentials: "include",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                adAccountId: selectedAdAccount,
+                after,
+                excludeLinks
+            })
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+            throw new Error(data.error || "Failed to fetch recent links");
+        }
+
+        return {
+            links: mergeUniqueLinks(data.links || []),
+            nextCursor: data.nextCursor || null
+        };
+    }, [selectedAdAccount]);
+
     const handleOpenLinkImport = useCallback(async () => {
         if (!selectedAdAccount) {
             toast.error("No ad account selected");
@@ -203,24 +248,46 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
         }
         setIsFetchingLinks(true);
         setShowLinkImportModal(true);
+        setLinkImportPreview([]);
+        setLinkPaginationCursor(null);
         try {
-            const res = await fetch(
-                `${API_BASE_URL}/auth/fetch-recent-links?adAccountId=${selectedAdAccount}`,
-                { credentials: "include" }
-            );
-            const data = await res.json();
-            if (data.links) {
-                setLinkImportPreview(data.links);
-            } else {
-                setLinkImportPreview([]);
-            }
+            const data = await fetchRecentLinks();
+            setLinkImportPreview(data.links);
+            setLinkPaginationCursor(data.nextCursor);
         } catch (err) {
             toast.error("Failed to fetch recent links");
             console.error("Link import error:", err);
         } finally {
             setIsFetchingLinks(false);
         }
-    }, [selectedAdAccount]);
+    }, [fetchRecentLinks, selectedAdAccount]);
+
+    const handleLoadMoreLinks = useCallback(async () => {
+        if (!linkPaginationCursor) {
+            toast.info("No more links available");
+            return;
+        }
+
+        setIsLoadingMoreLinks(true);
+        try {
+            const data = await fetchRecentLinks({
+                after: linkPaginationCursor,
+                excludeLinks: linkImportPreview
+            });
+            setLinkPaginationCursor(data.nextCursor);
+
+            const mergedLinks = mergeUniqueLinks(linkImportPreview, data.links);
+            if (mergedLinks.length === linkImportPreview.length) {
+                toast.info("No more unique links found");
+            }
+            setLinkImportPreview(mergedLinks);
+        } catch (err) {
+            toast.error("Failed to load more links");
+            console.error("Load more links error:", err);
+        } finally {
+            setIsLoadingMoreLinks(false);
+        }
+    }, [fetchRecentLinks, linkImportPreview, linkPaginationCursor]);
 
 
 
@@ -542,7 +609,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                                 <>
                                     <div className="flex items-center justify-between mb-3">
                                         <p className="text-sm text-gray-500">
-                                            Found {linkImportPreview.length} recent link{linkImportPreview.length > 1 ? 's' : ''}.
+                                            Found {linkImportPreview.length} unique recent link{linkImportPreview.length > 1 ? 's' : ''}.
                                         </p>
                                         <Button
                                             className="rounded-2xl bg-zinc-800 px-4 text-white hover:bg-black"
@@ -574,6 +641,21 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                                             );
                                         })}
                                     </div>
+                                    <Button
+                                        type="button"
+                                        className="mt-4 h-11 w-full rounded-2xl bg-zinc-700 text-white hover:bg-black"
+                                        onClick={handleLoadMoreLinks}
+                                        disabled={isFetchingLinks || isLoadingMoreLinks}
+                                    >
+                                        {isLoadingMoreLinks ? (
+                                            <>
+                                                <Loader className="w-4 h-4 animate-spin mr-2" />
+                                                Fetching More Links...
+                                            </>
+                                        ) : (
+                                            "Fetch More Links"
+                                        )}
+                                    </Button>
                                 </>
                             ) : (
                                 <div className="py-10 text-center">
