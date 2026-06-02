@@ -3,6 +3,7 @@ import InstagramImage from "@/assets/onboarding/Instagram.webp"
 import SplitAdDataImage from "@/assets/onboarding/SplitAdData.webp"
 import AIGroupingImage from "@/assets/onboarding/AIGrouping.webp"
 import JobQueueingImage from "@/assets/onboarding/JobQueueing.webp"
+import AnalyticsPopup from "@/assets/onboarding/AnalyticsPopup.webp"
 
 // Cards added on/before this date are treated as already-seen for users who
 // completed legacy onboarding (hasSeenOnboarding=true). Only future cards
@@ -59,15 +60,18 @@ export const ONBOARDING_CARDS = [
         addedAt: "2026-05-06",
         existingUsersOnly: false,
     },
-    // {
-    //     id: "analytics",
-    //     title: "Analytics",
-    //     image: AnalyticsPopup,
-    //     heading: "Introducing Analytics",
-    //     body: "We took the playbook behind $3M/month in ad spend and put it in your hands. Review recommendations and apply them in one click.",
-    //     addedAt: "2026-05-08",
-    //     existingUsersOnly: false,
-    // },
+    {
+        id: "analytics",
+        title: "Analytics",
+        image: AnalyticsPopup,
+        heading: "Introducing Analytics",
+        body: "We took the playbook behind $3M/month in ad spend and put it in your hands. Review recommendations and apply them in one click.",
+        addedAt: "2026-06-02",
+        existingUsersOnly: false,
+        imageHeight: 580,
+        imageFit: "contain",
+        modalMaxHeight: 940,
+    },
 ]
 
 export const ONBOARDING_CARD_IDS = ONBOARDING_CARDS.map((c) => c.id)
