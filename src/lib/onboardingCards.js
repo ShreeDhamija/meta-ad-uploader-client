@@ -64,13 +64,10 @@ export const ONBOARDING_CARDS = [
         id: "analytics",
         title: "Analytics",
         image: AnalyticsPopup,
-        heading: "Introducing Analytics",
-        body: "We took the playbook behind $3M/month in ad spend and put it in your hands. Review recommendations and apply them in one click.",
+        heading: "Analytics & Recommendations",
+        body: "Idenity Winning Creatives, Spend and CPA Anomaly Detection, Smart Budget Recommendations, Account Audits in Slack and more!",
         addedAt: "2026-06-02",
         existingUsersOnly: false,
-        imageHeight: 580,
-        imageFit: "contain",
-        modalMaxHeight: 940,
     },
 ]
 

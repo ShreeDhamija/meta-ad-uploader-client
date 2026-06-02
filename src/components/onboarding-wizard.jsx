@@ -17,9 +17,6 @@ import ZapIcon from "@/assets/Zap.webp"
 import { ONBOARDING_CARDS } from "@/lib/onboardingCards"
 
 const CURSOR_KEY = "onboardingCursor"
-const DEFAULT_CARD_IMAGE_HEIGHT = 290
-const DEFAULT_CARD_IMAGE_FIT = "cover"
-const DEFAULT_CARD_MODAL_MAX_HEIGHT = 640
 
 // Minimum padding (px) reserved on each side of the dot row.
 const PROGRESS_DOTS_MIN_PADDING = 8
@@ -205,9 +202,6 @@ export default function OnboardingWizard({
 
     const activeCard = cards[Math.min(cardIndex, cards.length - 1)]
     const isSingleCard = cards.length === 1
-    const cardImageHeight = activeCard?.imageHeight || DEFAULT_CARD_IMAGE_HEIGHT
-    const cardImageFit = activeCard?.imageFit || DEFAULT_CARD_IMAGE_FIT
-    const cardModalMaxHeight = activeCard?.modalMaxHeight || DEFAULT_CARD_MODAL_MAX_HEIGHT
     const headerIcon = isNewUser ? HelloIcon : ZapIcon
     const headerText = isNewUser
         ? `Hey ${userName || "there"}`
@@ -227,7 +221,7 @@ export default function OnboardingWizard({
         >
             <div
                 className="relative bg-[#FAF9F7] rounded-[24px] shadow-2xl overflow-hidden"
-                style={{ minWidth: 620, maxHeight: cardModalMaxHeight }}
+                style={{ minWidth: 620, maxHeight: 640 }}
                 onClick={(e) => e.stopPropagation()}
             >
                 {phase === "cards" && (
@@ -251,8 +245,7 @@ export default function OnboardingWizard({
                             <img
                                 src={activeCard.image}
                                 alt={activeCard.title}
-                                className="w-full object-cover border-2 border-black rounded-[20px] shadow-xs transition-[height] duration-300 ease-in-out"
-                                style={{ height: cardImageHeight, objectFit: cardImageFit }}
+                                className="w-full h-[290px] object-cover border-2 border-black rounded-[20px] shadow-xs"
                             />
                         </div>
 
