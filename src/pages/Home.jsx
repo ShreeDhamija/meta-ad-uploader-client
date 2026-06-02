@@ -1566,6 +1566,7 @@ export default function Home() {
                     adAccounts={adAccounts}
                     onImport={handleOnboardingImport}
                     onGoToSettings={() => navigate("/settings")}
+                    onNavigate={(path) => navigate(path)}
                     onFinish={handleWizardFinish}
                     onClose={handleWizardClose}
                 />

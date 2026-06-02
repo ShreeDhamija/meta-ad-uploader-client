@@ -119,6 +119,7 @@ export default function OnboardingWizard({
     adAccounts,
     onImport,
     onGoToSettings,
+    onNavigate,
     onFinish,
     onClose,
 }) {
@@ -155,6 +156,13 @@ export default function OnboardingWizard({
             setPhase("choice")
         } else {
             finishWithIds()
+        }
+    }
+
+    const handleSingleCardAction = () => {
+        finishWithIds()
+        if (activeCard?.singleCardAction?.path) {
+            onNavigate?.(activeCard.singleCardAction.path)
         }
     }
 
@@ -202,6 +210,7 @@ export default function OnboardingWizard({
 
     const activeCard = cards[Math.min(cardIndex, cards.length - 1)]
     const isSingleCard = cards.length === 1
+    const singleCardAction = !isNewUser && isSingleCard ? activeCard?.singleCardAction : null
     const headerIcon = isNewUser ? HelloIcon : ZapIcon
     const headerText = isNewUser
         ? `Hey ${userName || "there"}`
@@ -249,7 +258,7 @@ export default function OnboardingWizard({
                             />
                         </div>
 
-                        <div className={`mt-5 flex items-center ${cardIndex === cards.length - 1 ? "justify-end" : "justify-between"}`}>
+                        <div className={`mt-5 flex items-center gap-3 ${cardIndex === cards.length - 1 ? "justify-end" : "justify-between"}`}>
                             {cardIndex !== cards.length - 1 && (
                                 <button
                                     onClick={handleSkip}
@@ -258,12 +267,29 @@ export default function OnboardingWizard({
                                     {isNewUser ? "Skip Onboarding" : "Skip"}
                                 </button>
                             )}
-                            <Button
-                                onClick={handleNext}
-                                className={`rounded-full bg-black hover:bg-black/85 text-white text-[14px] font-semibold py-5 w-full ${isSingleCard ? "w-full" : "px-6"}`}
-                            >
-                                {cardIndex === cards.length - 1 && !isNewUser ? "Got it" : "Next →"}
-                            </Button>
+                            {singleCardAction ? (
+                                <>
+                                    <Button
+                                        onClick={finishWithIds}
+                                        className="h-11 rounded-full bg-transparent hover:bg-black/5 text-[#374151] hover:text-[#111827] text-[14px] font-semibold shadow-none w-full border border-transparent"
+                                    >
+                                        Got it
+                                    </Button>
+                                    <Button
+                                        onClick={handleSingleCardAction}
+                                        className="h-11 rounded-full bg-black hover:bg-black/85 text-white text-[14px] font-semibold w-full"
+                                    >
+                                        {singleCardAction.label}
+                                    </Button>
+                                </>
+                            ) : (
+                                <Button
+                                    onClick={handleNext}
+                                    className={`h-11 rounded-full bg-black hover:bg-black/85 text-white text-[14px] font-semibold w-full ${isSingleCard ? "w-full" : "px-6"}`}
+                                >
+                                    {cardIndex === cards.length - 1 && !isNewUser ? "Got it" : "Next →"}
+                                </Button>
+                            )}
                         </div>
                     </div>
                 )}

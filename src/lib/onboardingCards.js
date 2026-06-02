@@ -68,6 +68,10 @@ export const ONBOARDING_CARDS = [
         body: "Idenity Winning Creatives, Spend and CPA Anomaly Detection, Smart Budget Recommendations, Account Audits in Slack and more!",
         addedAt: "2026-06-02",
         existingUsersOnly: false,
+        singleCardAction: {
+            label: "Go to Analytics",
+            path: "/analytics",
+        },
     },
 ]
 
