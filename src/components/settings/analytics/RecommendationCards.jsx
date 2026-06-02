@@ -884,7 +884,7 @@ export default function RecommendationCards({
                     {loading ? (
                         <Card className="rounded-2xl">
                             <CardContent className="py-10">
-                                <HelixLoader color="#3b82f6" size="36" label="Generating recommendations can take about 10 seconds..." />
+                                <HelixLoader color="#3b82f6" size="36" label="Generating recommendations can take about 20 seconds..." />
                             </CardContent>
                         </Card>
                     ) : (
