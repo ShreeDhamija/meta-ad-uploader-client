@@ -791,7 +791,7 @@ export default function AnalyticsDashboard() {
         pendingDailySettingsRef.current = fallback
         currentAccountRef.current = fallback
         setSelectedAdAccount(fallback)
-        try { localStorage.setItem(SELECTED_ACCOUNT_KEY, fallback) } catch { }
+        try { localStorage.setItem(SELECTED_ACCOUNT_KEY, fallback) } catch { /* ignore storage errors */ }
     }, [adAccountsLoading, adAccounts, selectedAdAccount])
 
 
@@ -937,7 +937,7 @@ export default function AnalyticsDashboard() {
         pendingDailySettingsRef.current = accountId
         setSelectedAdAccount(accountId)
         setOpenAdAccount(false)
-        try { localStorage.setItem(SELECTED_ACCOUNT_KEY, accountId) } catch { }
+        try { localStorage.setItem(SELECTED_ACCOUNT_KEY, accountId) } catch { /* ignore storage errors */ }
 
         // Abort any in-flight fetches
         if (dailyInsightsAbortRef.current) {
@@ -1118,7 +1118,32 @@ export default function AnalyticsDashboard() {
         setShowSettingsDialog(true)
     }
 
-    const handleOnboardingComplete = () => {
+    const handleOnboardingComplete = (savedSettingsByAccount = null) => {
+        if (savedSettingsByAccount) {
+            Object.keys(savedSettingsByAccount).forEach(accountId => {
+                delete recsCacheRef.current[accountId]
+                delete poorAdsCacheRef.current[accountId]
+            })
+
+            const activeAccountId = selectedAdAccount || currentAccountRef.current || adAccounts?.[0]?.id
+            const activeSettings = activeAccountId ? savedSettingsByAccount[activeAccountId] : null
+
+            if (activeSettings) {
+                setAdAccountSettings(prev => ({
+                    ...prev,
+                    ...activeSettings,
+                }))
+                setRecommendations(null)
+                setPoorAds(null)
+
+                const hasSavedTarget = activeSettings.analyticsMode === 'roas'
+                    ? Number(activeSettings.targetROAS) > 0
+                    : Number(activeSettings.targetCPA) > 0
+                setRecsLoading(hasSavedTarget)
+                setPoorAdsLoading(true)
+            }
+        }
+
         setShowOnboarding(false)
         setOnboardingResolved(true)
     }

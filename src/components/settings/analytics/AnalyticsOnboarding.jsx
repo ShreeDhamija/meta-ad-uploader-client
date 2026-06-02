@@ -27,7 +27,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
  *
  * Props:
  *  - open: boolean
- *  - onComplete: () => void  — called after saving/dismissing
+ *  - onComplete: (savedSettingsByAccount?: object) => void  — called after saving/dismissing
  *  - adAccounts: array of { id, name }
  */
 export default function AnalyticsOnboarding({ open, onComplete, adAccounts }) {
@@ -159,20 +159,31 @@ export default function AnalyticsOnboarding({ open, onComplete, adAccounts }) {
         onComplete()
     }, [onComplete])
 
+    const getSettingsForAccount = (config) => {
+        const isCpa = config.mode === 'cpa'
+        return {
+            analyticsMode: config.mode,
+            conversionEvent: isCpa ? config.conversionEvent : null,
+            targetCPA: isCpa && config.targetCPA ? parseFloat(config.targetCPA) : null,
+            targetROAS: !isCpa && config.targetROAS ? parseFloat(config.targetROAS) : null,
+        }
+    }
+
     const handleSave = async () => {
         setSaving(true)
         try {
+            const savedSettingsByAccount = Object.fromEntries(
+                Object.entries(accountConfigs).map(([accountId, config]) => [
+                    accountId,
+                    getSettingsForAccount(config),
+                ])
+            )
+
             // Save mode + conversion event + target KPI to each ad account's settings
-            const savePromises = Object.entries(accountConfigs).map(([accountId, config]) => {
-                const isCpa = config.mode === 'cpa'
+            const savePromises = Object.entries(savedSettingsByAccount).map(([accountId, adAccountSettings]) => {
                 return saveSettings({
                     adAccountId: accountId,
-                    adAccountSettings: {
-                        analyticsMode: config.mode,
-                        conversionEvent: isCpa ? config.conversionEvent : null,
-                        targetCPA: isCpa && config.targetCPA ? parseFloat(config.targetCPA) : null,
-                        targetROAS: !isCpa && config.targetROAS ? parseFloat(config.targetROAS) : null,
-                    },
+                    adAccountSettings,
                 })
             })
             await Promise.all(savePromises)
@@ -186,7 +197,7 @@ export default function AnalyticsOnboarding({ open, onComplete, adAccounts }) {
             window.dispatchEvent(new Event('globalSettingsUpdated'))
 
             toast.success('Analytics preferences saved')
-            onComplete()
+            onComplete(savedSettingsByAccount)
         } catch (err) {
             console.error('Failed to save onboarding settings:', err)
             toast.error('Failed to save preferences')
@@ -204,7 +215,7 @@ export default function AnalyticsOnboarding({ open, onComplete, adAccounts }) {
             <div
                 className="fixed bg-black/50 z-50"
                 style={{ position: "fixed", top: 0, left: 0, width: "100vw", height: "100dvh" }}
-                onClick={markSeenAndClose}
+                onClick={saving ? undefined : markSeenAndClose}
             />
 
             {/* The card needs a definite height, not just max-height, so the
@@ -228,6 +239,7 @@ export default function AnalyticsOnboarding({ open, onComplete, adAccounts }) {
                         </div>
                         <button
                             onClick={markSeenAndClose}
+                            disabled={saving}
                             className="text-gray-400 hover:text-gray-600 transition-colors p-1 flex-shrink-0"
                         >
                             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
