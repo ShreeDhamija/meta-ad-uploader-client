@@ -20,14 +20,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
-const ANALYTICS_BETA_USER_IDS = new Set([
-  "10236978990363167",
-  "122174111168371589",
-  "10237991305022107",
-])
-
 export default function Header({ showMessenger, hideMessenger }) {
-  const { isLoggedIn, userName, profilePicUrl, handleLogout, userId } = useAuth()
+  const { isLoggedIn, userName, profilePicUrl, handleLogout } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const {
@@ -42,7 +36,6 @@ export default function Header({ showMessenger, hideMessenger }) {
   const { notifications, hasUnread, loading: notificationsLoading, markAsRead } = useNotifications()
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const isAnalyticsPage = location.pathname === "/analytics"
-  const showAnalyticsNav = ANALYTICS_BETA_USER_IDS.has(String(userId))
   const headerCardShadow = "shadow-[0px_1px_2px_rgba(0,0,0,0.06)]"
 
   const handleDropdownClose = (open) => {
@@ -215,19 +208,15 @@ export default function Header({ showMessenger, hideMessenger }) {
           <span className="hidden min-[1000px]:inline text-gray-900 text-[14px] font-medium">Preferences</span>
         </button>
         <div className="hidden min-[1000px]:block h-8 w-px bg-gray-300" />
-        {showAnalyticsNav && (
-          <>
-            <button
-              onClick={() => navigate("/analytics")}
-              title="Analytics"
-              className="flex items-center gap-1.5 rounded-full transition-colors px-2 py-2   bg-transparent hover:bg-gray-100 focus:bg-transparent active:bg-transparent cursor-pointer"
-            >
-              <AnalyticsIcon className="size-5" />
-              <span className="hidden min-[1000px]:inline text-[14px] text-gray-900 font-medium">Analytics</span>
-            </button>
-            <div className="hidden min-[1000px]:block h-8 w-px bg-gray-300  " />
-          </>
-        )}
+        <button
+          onClick={() => navigate("/analytics")}
+          title="Analytics"
+          className="flex items-center gap-1.5 rounded-full transition-colors px-2 py-2   bg-transparent hover:bg-gray-100 focus:bg-transparent active:bg-transparent cursor-pointer"
+        >
+          <AnalyticsIcon className="size-5" />
+          <span className="hidden min-[1000px]:inline text-[14px] text-gray-900 font-medium">Analytics</span>
+        </button>
+        <div className="hidden min-[1000px]:block h-8 w-px bg-gray-300  " />
         {/* Chat Support Button */}
         <button
           onClick={handleChatToggle}
