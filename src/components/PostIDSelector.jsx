@@ -478,7 +478,7 @@ function PostSelectorInline({
                                     size="sm"
                                     onClick={() => fetchAds(null, datePreset)}
                                     disabled={isLoading}
-                                    className="px-3 py-5 bg-white text-black border border-gray-300 rounded-xl hover:bg-white"
+                                    className="px-3 py-3 bg-white text-black border border-gray-300 rounded-[14px] hover:bg-white"
                                 >
                                     <RefreshCw className={`h-3 w-3 mr-1 ${isLoading ? 'animate-spin' : ''}`} />
                                     Refresh Ads
@@ -892,7 +892,7 @@ function PostSelectorInline({
                                 ) : viewMode === 'search' ? (
                                     <>
                                         <div>Ad Set</div>
-                                        <div className="text-right">Spend</div>
+                                        <div className="text-right">Spend (30D)</div>
                                         <div className="text-right">Status</div>
                                     </>
                                 ) : (
