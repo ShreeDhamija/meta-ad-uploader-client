@@ -46,6 +46,49 @@ function HelixLoader({ color = "black", size = "45", label }) {
     )
 }
 
+function RecommendationCardSkeleton() {
+    return (
+        <Card className="rounded-3xl border-gray-200 bg-white overflow-hidden">
+            <CardContent className="p-4">
+                <div className="flex items-start justify-between gap-3 animate-pulse">
+                    <div className="flex items-start gap-3 flex-1 min-w-0">
+                        <div className="h-[38px] w-[38px] flex-shrink-0 rounded-xl bg-gray-200" />
+                        <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                                <div className="h-4 w-40 rounded-full bg-gray-200" />
+                                <div className="h-5 w-16 rounded-full bg-gray-100" />
+                            </div>
+                            <div className="mt-3 h-3.5 w-full max-w-xl rounded-full bg-gray-100" />
+                            <div className="mt-2 h-3.5 w-4/5 rounded-full bg-gray-100" />
+                            <div className="mt-3 h-3 w-52 rounded-full bg-gray-100" />
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                        <div className="h-8 w-16 rounded-xl bg-gray-200" />
+                        <div className="h-8 w-8 rounded-lg bg-gray-100" />
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
+    )
+}
+
+function FetchingMoreRecommendations() {
+    return (
+        <div className="space-y-3 pt-2">
+            <div className="flex items-center gap-3 text-gray-400">
+                <div className="h-px flex-1 bg-gray-200" />
+                <div className="flex items-center gap-2 whitespace-nowrap text-xs font-medium text-gray-500">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-500" />
+                    <span>Fetching more recommendations</span>
+                </div>
+                <div className="h-px flex-1 bg-gray-200" />
+            </div>
+            <RecommendationCardSkeleton />
+        </div>
+    )
+}
+
 // ── Bold figures in recommendation messages ──────────────
 // Wraps $amounts, percentages, and multiplier values in <strong> tags
 function BoldedMessage({ text, emphasisClassName = "text-gray-900" }) {
@@ -348,6 +391,9 @@ export default function RecommendationCards({
         if (!data?.recommendations) return []
         return data.recommendations.filter(r => dismissed.has(recKey(r)))
     }, [data, dismissed])
+
+    const showInitialBudgetLoader = section === "budget" && loading && recs.length === 0 && dismissedRecs.length === 0
+    const showFetchingMoreBudgetRecs = section === "budget" && loading && (recs.length > 0 || dismissedRecs.length > 0)
 
     const persistDismissed = (nextSet) => {
         try {
@@ -881,7 +927,7 @@ export default function RecommendationCards({
                         </div>
                     </div>
 
-                    {loading ? (
+                    {showInitialBudgetLoader ? (
                         <Card className="rounded-2xl">
                             <CardContent className="py-10">
                                 <HelixLoader color="#3b82f6" size="36" label="Generating recommendations can take about 20 seconds..." />
@@ -1105,6 +1151,7 @@ export default function RecommendationCards({
                                             )}
                                         </div>
                                     )}
+                                    {showFetchingMoreBudgetRecs && <FetchingMoreRecommendations />}
                                 </div>
                             )}
                         </>

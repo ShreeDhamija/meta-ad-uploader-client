@@ -58,6 +58,77 @@ const DEFAULT_THRESHOLDS = {
     overspend: 150,
 };
 
+function getRecommendationIdentity(rec) {
+    if (!rec) return ""
+    return [
+        rec.adId || rec.ad_id || rec.adsetId || rec.campaignId || rec.id || rec.message || "",
+        rec.type || "",
+        rec.level || "",
+    ].join(":")
+}
+
+function mergeRecommendationPayload(previousPayload, nextPayload) {
+    const previousRecommendations = previousPayload?.recommendations || []
+    const incomingRecommendations = nextPayload?.recommendations || []
+    const seen = new Set()
+    const recommendations = []
+
+    for (const rec of [...previousRecommendations, ...incomingRecommendations]) {
+        const key = getRecommendationIdentity(rec)
+        if (seen.has(key)) continue
+        seen.add(key)
+        recommendations.push(rec)
+    }
+
+    return {
+        ...(previousPayload || {}),
+        ...(nextPayload || {}),
+        recommendations,
+    }
+}
+
+async function readRecommendationStream(res, onChunk) {
+    if (!res.body) return null
+
+    const reader = res.body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ""
+    let finalPayload = null
+
+    while (true) {
+        const { value, done } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split("\n")
+        buffer = lines.pop() || ""
+
+        for (const line of lines) {
+            if (!line.trim()) continue
+            const event = JSON.parse(line)
+            if (event.type === "partial" && event.payload) {
+                onChunk(event.payload)
+            } else if (event.type === "complete" && event.payload) {
+                finalPayload = event.payload
+                onChunk(event.payload)
+            } else if (event.type === "error") {
+                throw new Error(event.error || "Failed to fetch recommendations")
+            }
+        }
+    }
+
+    const trailing = buffer.trim()
+    if (trailing) {
+        const event = JSON.parse(trailing)
+        if (event.type === "complete" && event.payload) {
+            finalPayload = event.payload
+            onChunk(event.payload)
+        }
+    }
+
+    return finalPayload
+}
+
 function formatEventName(actionType) {
     if (!actionType) return 'Auto-detected event'
     if (actionType.startsWith('offsite_conversion.fb_pixel_custom.')) {
@@ -434,15 +505,26 @@ export default function AnalyticsDashboard() {
                 url += `&conversionEvent=${encodeURIComponent(adAccountSettings.conversionEvent)}`
             }
             const res = await fetch(url, { credentials: 'include' })
-            const data = await res.json()
 
             // Discard if user switched accounts while we were fetching
             if (currentAccountRef.current !== accountAtStart) return
 
             if (res.ok) {
-                recsCacheRef.current[accountAtStart] = data
-                setRecommendations(data)
+                let latestPayload = null
+                const finalData = await readRecommendationStream(res, (chunk) => {
+                    if (currentAccountRef.current !== accountAtStart) return
+                    latestPayload = mergeRecommendationPayload(latestPayload, chunk)
+                    setRecommendations(prev => mergeRecommendationPayload(prev, chunk))
+                })
+
+                if (currentAccountRef.current !== accountAtStart) return
+                const completedData = finalData || latestPayload
+                if (completedData) {
+                    recsCacheRef.current[accountAtStart] = completedData
+                    setRecommendations(completedData)
+                }
             } else {
+                const data = await res.json()
                 toast.error(data.error || 'Failed to fetch recommendations')
             }
         } catch (err) {

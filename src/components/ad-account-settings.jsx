@@ -122,6 +122,7 @@ export default function AdAccountSettings({
     ADVANTAGE_PLUS_TYPES.includes(selectedDuplicateCampaignData?.smart_promotion_type),
     [selectedDuplicateCampaignData]
   );
+  const isAdSetSelectionBlockedByCampaignCreation = showDuplicateCampaignBlock;
 
 
   const filteredAccounts = useMemo(() =>
@@ -737,7 +738,12 @@ export default function AdAccountSettings({
                     <Button
                       onClick={() => {
                         setShowDuplicateCampaignBlock(true);
+                        setSelectedAdSets([]);
+                        setShowDuplicateBlock(false);
+                        setDuplicateAdSet("");
+                        setNewAdSetName("");
                         setOpenCampaign(false);
+                        setOpenAdSet(false);
                       }}
                       // className="w-full justify-start text-left font-normal bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 rounded-xl"
                       className={`
@@ -926,17 +932,29 @@ transition-all duration-150 hover:!bg-black
               />
 
             </div>
-            <Popover open={openAdSet} onOpenChange={setOpenAdSet}>
+            <Popover
+              open={isAdSetSelectionBlockedByCampaignCreation ? false : openAdSet}
+              onOpenChange={(nextOpen) => {
+                if (!isAdSetSelectionBlockedByCampaignCreation) setOpenAdSet(nextOpen)
+              }}
+            >
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
                   role="combobox"
                   aria-expanded={openAdSet}
-                  disabled={!isLoggedIn || selectedCampaign.length === 0 || isLoadingAdSetsLocal || (selectedCampaign.length > 0 && adSets.length === 0)}
-                  className="w-full justify-between border border-gray-300 rounded-2xl py-4.5 bg-white shadow group-data-[state=open]:border-blue-500 transition-colors duration-150 hover:bg-white"
+                  disabled={isAdSetSelectionBlockedByCampaignCreation || !isLoggedIn || selectedCampaign.length === 0 || isLoadingAdSetsLocal || (selectedCampaign.length > 0 && adSets.length === 0)}
+                  className={cn(
+                    "w-full justify-between border border-gray-300 rounded-2xl py-4.5 bg-white shadow group-data-[state=open]:border-blue-500 transition-colors duration-150 hover:bg-white",
+                    isAdSetSelectionBlockedByCampaignCreation && "cursor-not-allowed bg-gray-50 text-gray-400 hover:bg-gray-50"
+                  )}
                 >
                   <div className="w-full overflow-hidden flex items-center gap-2">
-                    {isLoadingAdSetsLocal ? (
+                    {isAdSetSelectionBlockedByCampaignCreation ? (
+                      <span className="block truncate flex-1 text-left text-gray-400">
+                        Finish Creating Campaign to select an ad set
+                      </span>
+                    ) : isLoadingAdSetsLocal ? (
                       <>
                         <Loader className="h-4 w-4 animate-spin" />
                         <span className="block truncate flex-1 text-left text-gray-500">Fetching ad sets...</span>
