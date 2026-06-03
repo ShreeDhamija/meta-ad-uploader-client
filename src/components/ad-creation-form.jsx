@@ -1822,6 +1822,7 @@ export default function AdCreationForm({
     { value: "APPLY_NOW", label: "Apply Now" },
     { value: "INSTALL_MOBILE_APP", label: "Install Now" },
     { value: "CALL_NOW", label: "Call Now" },
+    { value: "SEE_DETAILS", label: "See Details" },
   ]
 
   const availableLinks = adAccountSettings?.links || [];
