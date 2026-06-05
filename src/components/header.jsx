@@ -23,7 +23,7 @@ import {
 
 export default function Header({ showMessenger, hideMessenger }) {
   const { isLoggedIn, userName, profilePicUrl, handleLogout } = useAuth()
-  const { logoutTikTok, isTikTokLoggedIn } = useTikTokAuth()
+  const { logoutTikTok, isTikTokLoggedIn, tiktokUser } = useTikTokAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const {
