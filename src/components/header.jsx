@@ -8,6 +8,7 @@ import ChatIcon from "@/assets/icons/chat.svg?react"
 import AnalyticsIcon from "@/assets/icons/Analytics.svg?react"
 import RocketBtn from "@/assets/rocket2.webp"
 import { useAuth } from "@/lib/AuthContext"
+import { useTikTokAuth } from "@/lib/TikTokAuthContext"
 import { useLocation, useNavigate } from "react-router-dom"
 import useSubscription from "@/lib/useSubscriptionSettings"
 import useNotifications from "@/lib/useNotifications"
@@ -22,6 +23,7 @@ import {
 
 export default function Header({ showMessenger, hideMessenger }) {
   const { isLoggedIn, userName, profilePicUrl, handleLogout } = useAuth()
+  const { logoutTikTok, isTikTokLoggedIn } = useTikTokAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const {
@@ -36,6 +38,7 @@ export default function Header({ showMessenger, hideMessenger }) {
   const { notifications, hasUnread, loading: notificationsLoading, markAsRead } = useNotifications()
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const isAnalyticsPage = location.pathname === "/analytics"
+  const isTikTokPage = location.pathname === "/tiktok-ads"
   const headerCardShadow = "shadow-[0px_1px_2px_rgba(0,0,0,0.06)]"
 
   const handleDropdownClose = (open) => {
@@ -230,8 +233,8 @@ export default function Header({ showMessenger, hideMessenger }) {
         <div className="hidden min-[1000px]:block h-8 w-px bg-gray-300  " />
 
         <button
-          onClick={handleLogout}
-          title="Logout"
+          onClick={isTikTokPage ? logoutTikTok : handleLogout}
+          title={isTikTokPage ? "Logout of TikTok" : "Logout"}
           className="p-1 rounded-full transition !bg-transparent hover:!bg-transparent focus:outline-none focus:ring-0 active:ring-0 cursor-pointer"
           style={{
             backgroundColor: "transparent",
