@@ -36,8 +36,10 @@ export default function TikTokLinkParameters({
     utmPairs = [],
     setUtmPairs,
     advertiserId,
-    thirdPartyTrackingUrl = "",
-    setThirdPartyTrackingUrl
+    clickTrackingUrl = "",
+    setClickTrackingUrl,
+    impressionTrackingUrl = "",
+    setImpressionTrackingUrl
 }) {
     const [inputValue, setInputValue] = useState("")
     const [openIndex, setOpenIndex] = useState(null)
@@ -478,20 +480,31 @@ export default function TikTokLinkParameters({
                 </Button>
             </div>
 
-            {/* 3rd Party Tracking */}
-            <div className="pt-4 border-t border-gray-200">
-                <div className="space-y-1 mb-2">
-                    <label className="text-sm font-semibold">3rd Party Tracking</label>
-                    <p className="text-xs text-gray-500">
-                        Add a Pixel ID or 3rd party tracking URL.
-                    </p>
+            {/* Third-party tracking settings */}
+            <div className="pt-4 border-t border-gray-200 space-y-4">
+                <div className="space-y-1">
+                    <label className="text-sm font-semibold text-zinc-900 block">Third-party tracking settings</label>
                 </div>
-                <Input
-                    placeholder="Pixel ID or Tracking URL"
-                    value={thirdPartyTrackingUrl}
-                    onChange={(e) => setThirdPartyTrackingUrl(e.target.value)}
-                    className="rounded-2xl border-gray-300 py-4.5 bg-white shadow"
-                />
+                
+                <div className="space-y-1">
+                    <label className="text-xs font-medium text-gray-600 block">Impression tracking URL</label>
+                    <Input
+                        placeholder="Enter URL"
+                        value={impressionTrackingUrl}
+                        onChange={(e) => setImpressionTrackingUrl(e.target.value)}
+                        className="rounded-2xl border-gray-300 py-4.5 bg-white shadow"
+                    />
+                </div>
+
+                <div className="space-y-1">
+                    <label className="text-xs font-medium text-gray-600 block">Click tracking URL</label>
+                    <Input
+                        placeholder="Enter URL"
+                        value={clickTrackingUrl}
+                        onChange={(e) => setClickTrackingUrl(e.target.value)}
+                        className="rounded-2xl border-gray-300 py-4.5 bg-white shadow"
+                    />
+                </div>
             </div>
 
             {/* --- MODAL 1: IMPORT LINKS --- */}

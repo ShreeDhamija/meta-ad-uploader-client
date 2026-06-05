@@ -560,8 +560,10 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                             const evaluated = typeof nextVal === 'function' ? nextVal(currentUTMs) : nextVal;
                             setSettings({ ...currentSettings, defaultUTMs: evaluated });
                         }}
-                        thirdPartyTrackingUrl={currentSettings.thirdPartyTrackingUrl || ""}
-                        setThirdPartyTrackingUrl={(thirdPartyTrackingUrl) => setSettings({ ...currentSettings, thirdPartyTrackingUrl })}
+                        clickTrackingUrl={currentSettings.clickTrackingUrl || currentSettings.thirdPartyTrackingUrl || ""}
+                        setClickTrackingUrl={(clickTrackingUrl) => setSettings({ ...currentSettings, clickTrackingUrl, thirdPartyTrackingUrl: clickTrackingUrl })}
+                        impressionTrackingUrl={currentSettings.impressionTrackingUrl || ""}
+                        setImpressionTrackingUrl={(impressionTrackingUrl) => setSettings({ ...currentSettings, impressionTrackingUrl })}
                     />
 
                     {/* Default CTAs — flat section like Meta */}
