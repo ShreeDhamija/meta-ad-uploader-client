@@ -485,7 +485,7 @@ export default function TikTokLinkParameters({
                 <div className="space-y-1">
                     <label className="text-sm font-semibold text-zinc-900 block">Third-party tracking settings</label>
                 </div>
-                
+
                 <div className="space-y-1">
                     <label className="text-xs font-medium text-gray-600 block">Impression tracking URL</label>
                     <Input
@@ -493,6 +493,7 @@ export default function TikTokLinkParameters({
                         value={impressionTrackingUrl}
                         onChange={(e) => setImpressionTrackingUrl(e.target.value)}
                         className="rounded-2xl border-gray-300 py-4.5 bg-white shadow"
+                        autoComplete="off"
                     />
                 </div>
 
@@ -503,6 +504,7 @@ export default function TikTokLinkParameters({
                         value={clickTrackingUrl}
                         onChange={(e) => setClickTrackingUrl(e.target.value)}
                         className="rounded-2xl border-gray-300 py-4.5 bg-white shadow"
+                        autoComplete="off"
                     />
                 </div>
             </div>
