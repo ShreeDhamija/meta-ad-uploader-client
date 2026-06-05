@@ -39,6 +39,14 @@ export default function Header({ showMessenger, hideMessenger }) {
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const isAnalyticsPage = location.pathname === "/analytics"
   const isTikTokPage = location.pathname === "/tiktok-ads"
+
+  // On the TikTok page, show TikTok user info; otherwise fall back to Meta auth
+  const displayName = isTikTokPage
+    ? (tiktokUser?.display_name || tiktokUser?.name || userName)
+    : userName
+  const displayPic = isTikTokPage
+    ? (tiktokUser?.avatar_url || tiktokUser?.profile_image_url || profilePicUrl)
+    : profilePicUrl
   const headerCardShadow = "shadow-[0px_1px_2px_rgba(0,0,0,0.06)]"
 
   const handleDropdownClose = (open) => {
@@ -119,11 +127,11 @@ export default function Header({ showMessenger, hideMessenger }) {
       ) : (
         <div className={`flex items-center gap-3 bg-white border border-black/10 rounded-[20px] px-3 py-2 ${headerCardShadow}`}>
           <img
-            src={profilePicUrl}
+            src={displayPic}
             alt="Profile"
             className="w-9 h-9 rounded-full border border-zinc-300 object-cover"
           />
-          <span className="text-[14px] font-medium text-gray-700 whitespace-nowrap">{userName}</span>
+          <span className="text-[14px] font-medium text-gray-700 whitespace-nowrap">{displayName}</span>
         </div>
       )}
 

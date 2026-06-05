@@ -1421,23 +1421,16 @@ export default function TikTokAdCreationForm({
     }
   }, [selectedCampaign, selectedAdvertiser, campaigns, tiktokFetch, setAdGroups, setSelectedAdGroup])
 
-  // Fetch Instant Pages on Advertiser change
+  // Fetch Instant Pages when advertiser changes or urlMode switches to INSTANT_PAGE
   useEffect(() => {
     if (!selectedAdvertiser) return
     setLoadingPages(true)
-    const uid = localStorage.getItem('tiktok_uid')
-    const token = localStorage.getItem('tiktok_token')
-    fetch(`${API_BASE_URL}/api/tiktok/fetch-pages?advertiserId=${selectedAdvertiser}`, {
-      headers: {
-        ...(uid && { 'x-tiktok-user-id': uid }),
-        ...(token && { 'x-tiktok-token': token }),
-      }
-    })
+    tiktokFetch(`${API_BASE_URL}/api/tiktok/instant-pages?advertiserId=${selectedAdvertiser}`)
       .then(r => r.json())
       .then(d => setInstantPages(d.pages || []))
       .catch(() => { })
       .finally(() => setLoadingPages(false))
-  }, [selectedAdvertiser])
+  }, [selectedAdvertiser, tiktokFetch])
 
   // Sync advertiser preferences for Ad Name Formula
   useEffect(() => {
@@ -4171,7 +4164,7 @@ export default function TikTokAdCreationForm({
                               <div className="flex items-center gap-2 overflow-hidden">
                                 <Zap className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                                 <div className="flex flex-col text-left">
-                                  <span className="text-xs font-bold truncate">{pageObj.page_name}</span>
+                                  <span className="text-xs font-bold truncate">{pageObj.title}</span>
                                   <span className="text-[10px] text-gray-400 truncate">{pageObj.page_id}</span>
                                 </div>
                               </div>
