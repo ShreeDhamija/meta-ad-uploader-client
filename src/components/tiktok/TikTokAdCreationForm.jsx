@@ -2256,20 +2256,12 @@ export default function TikTokAdCreationForm({
   }
 
   const clearQueuedMedia = () => {
-    setAdName('')
-    setAdTexts([''])
-    setLandingUrl('')
-    setCta(['SHOP_NOW'])
     setVideoFile(null)
     setVideoPreview(null)
     if (setFiles) setFiles([])
     setDriveFiles([])
     setDropboxFiles([])
     setUploadProgress(0)
-    if (setSparkAuthCode) setSparkAuthCode('')
-    setDuplicateAdGroup('')
-    setNewAdGroupName('')
-    setShowDuplicateAdGroupBlock(false)
     setFileVariantMap({})
     setGroupVariantMap({})
     setPostVariantMap({})

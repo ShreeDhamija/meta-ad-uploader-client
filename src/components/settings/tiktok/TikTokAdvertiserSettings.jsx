@@ -306,9 +306,9 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                 </div>
 
                 {selectedAdvertiser && loading && (
-                    <div className="flex items-center gap-2 mb-2 text-zinc-500 font-semibold animate-pulse text-sm mt-2">
-                        <Loader2 className="w-4 h-4 animate-spin text-zinc-500" />
-                        Loading Account settings...
+                    <div className="flex items-center gap-2 text-xs text-gray-500 mt-2">
+                        <Loader className="h-3 w-3 animate-spin" />
+                        Loading Ad Account Preferences...
                     </div>
                 )}
             </div>
