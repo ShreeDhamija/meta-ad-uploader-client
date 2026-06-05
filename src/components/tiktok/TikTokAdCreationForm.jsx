@@ -598,7 +598,7 @@ export default function TikTokAdCreationForm({
   const [openAdGroup, setOpenAdGroup] = useState(false)
   const [openIdentity, setOpenIdentity] = useState(false)
   const [openCta, setOpenCta] = useState(false)
-  const [openUrlPicker, setOpenUrlPicker] = useState(false)
+  const [showCustomLink, setShowCustomLink] = useState(false)
   const [templateDropdownOpen, setTemplateDropdownOpen] = useState(false)
 
   // Copy template state
@@ -1449,6 +1449,21 @@ export default function TikTokAdCreationForm({
       }
     }
   }, [advertiserPrefs]);
+
+  // Sync showCustomLink depending on selected landingUrl
+  useEffect(() => {
+    if (urlMode === 'WEBSITE') {
+      const availableLinks = advertiserPrefs?.links || [];
+      if (landingUrl && availableLinks.length > 0) {
+        const exists = availableLinks.some(l => l.url === landingUrl);
+        setShowCustomLink(!exists);
+      } else if (availableLinks.length === 0) {
+        setShowCustomLink(true);
+      }
+    } else {
+      setShowCustomLink(false);
+    }
+  }, [landingUrl, advertiserPrefs?.links, urlMode]);
 
   // Sync copy templates — use defaultTemplateName if set, otherwise fall back to first template
   useEffect(() => {
@@ -4071,78 +4086,114 @@ export default function TikTokAdCreationForm({
                     Your UTMs will be auto applied from Preferences
                   </p>
 
-                  <div className="relative group mt-1">
-                    <Input
-                      type="text"
-                      placeholder={urlMode === 'WEBSITE' ? "https://myshop.com/product" : "Select an Instant Page"}
-                      value={landingUrl}
-                      onChange={e => setLandingUrl(e.target.value)}
-                      className={cn(formInputChrome, "pr-10")}
-                    />
-                    <Popover open={openUrlPicker} onOpenChange={setOpenUrlPicker}>
-                      <PopoverTrigger asChild>
-                        <Button type="button" variant="ghost" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 text-gray-300 hover:text-gray-600">
-                          <ChevronDown className="w-4 h-4" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-80 p-1 bg-white rounded-2xl shadow-xl border-gray-100" align="end" side="bottom" avoidCollisions={false}>
-                        <Command>
-                          <CommandInput placeholder="Search links..." className="h-8" />
-                          <CommandList className="max-h-[300px]">
-                            <CommandEmpty>No results found.</CommandEmpty>
-                            {urlMode === 'WEBSITE' ? (
-                              <CommandGroup heading="Saved Links (Preferences)">
-                                {advertiserPrefs?.links?.map(l => (
-                                  <CommandItem
-                                    key={l.url}
-                                    onSelect={() => { setLandingUrl(l.url); setOpenUrlPicker(false); }}
-                                    className="p-2 rounded-xl hover:bg-gray-50 cursor-pointer"
-                                  >
-                                    <div className="flex items-center gap-2 overflow-hidden">
-                                      <Globe className="w-3 h-3 text-gray-400 shrink-0" />
-                                      <span className="text-xs truncate">{l.url}</span>
-                                      {l.isDefault && <span className="ml-auto text-[8px] font-bold bg-blue-50 text-blue-500 px-1 py-0.5 rounded">Default</span>}
-                                    </div>
-                                  </CommandItem>
-                                ))}
-                                {(!advertiserPrefs?.links || advertiserPrefs.links.length === 0) && (
-                                  <div className="p-4 text-center">
-                                    <p className="text-[10px] text-gray-400 font-medium italic">No saved links in settings</p>
-                                  </div>
-                                )}
-                              </CommandGroup>
-                            ) : (
-                              <CommandGroup heading="Instant Pages (TikTok)">
-                                {loadingPages ? (
-                                  <div className="p-4 flex justify-center"><Loader className="w-4 h-4 animate-spin text-gray-300" /></div>
-                                ) : instantPages.length > 0 ? (
-                                  instantPages.map(p => (
-                                    <CommandItem
-                                      key={p.page_id}
-                                      onSelect={() => { setLandingUrl(p.page_id); setOpenUrlPicker(false); }}
-                                      className="p-2 rounded-xl hover:bg-gray-50 cursor-pointer"
-                                    >
-                                      <div className="flex items-center gap-2 overflow-hidden">
-                                        <Zap className="w-3 h-3 text-emerald-400 shrink-0" />
-                                        <div className="flex flex-col min-w-0">
-                                          <span className="text-xs font-bold truncate">{p.page_name}</span>
-                                          <span className="text-[10px] text-gray-400 truncate">{p.page_id}</span>
-                                        </div>
-                                      </div>
-                                    </CommandItem>
-                                  ))
-                                ) : (
-                                  <div className="p-4 text-center">
-                                    <p className="text-[10px] text-gray-400 font-medium italic">No instant pages found</p>
-                                  </div>
-                                )}
-                              </CommandGroup>
-                            )}
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                  </div>
+                  {urlMode === 'WEBSITE' ? (
+                    <div className="space-y-3">
+                      {!showCustomLink && advertiserPrefs?.links?.length > 0 && (
+                        <Select
+                          value={landingUrl || ""}
+                          onValueChange={(value) => setLandingUrl(value)}
+                          disabled={!advertiserId || advertiserPrefs?.links?.length === 0}
+                        >
+                          <SelectTrigger className={cn("w-full", formFieldChrome)}>
+                            <SelectValue placeholder="Select a link" />
+                          </SelectTrigger>
+
+                          <SelectContent className="bg-white shadow-lg rounded-xl w-auto">
+                            {advertiserPrefs.links.map((linkObj, index) => (
+                              <SelectItem
+                                key={index}
+                                value={linkObj.url}
+                                className="cursor-pointer px-3 py-2 hover:bg-gray-100 rounded-xl mx-2 my-1 ml-4"
+                              >
+                                <div className="flex items-center justify-between w-full">
+                                  <span className="truncate max-w-[650px]">{linkObj.url}</span>
+
+                                  {linkObj.isDefault && (
+                                    <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-lg flex-shrink-0">
+                                      Default
+                                    </span>
+                                  )}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+
+                      <div className="flex items-center space-x-2">
+                        <div className="space-y-2 w-full">
+                          {(showCustomLink || !advertiserPrefs?.links || advertiserPrefs.links.length === 0) && (
+                            <div className="w-full">
+                              <Input
+                                type="text"
+                                value={landingUrl}
+                                onChange={(e) => setLandingUrl(e.target.value)}
+                                className={cn("w-full", formInputChrome)}
+                                placeholder="https://myshop.com/product"
+                                disabled={!advertiserId}
+                                required
+                              />
+                            </div>
+                          )}
+
+                          {advertiserPrefs?.links?.length > 0 && (
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="tiktok-custom-link-toggle"
+                                checked={showCustomLink}
+                                onCheckedChange={(checked) => {
+                                  setShowCustomLink(checked);
+                                  if (!checked) {
+                                    const defaultLink = advertiserPrefs.links.find(l => l.isDefault) || advertiserPrefs.links[0];
+                                    setLandingUrl(defaultLink?.url || "");
+                                  }
+                                }}
+                                className="border-gray-300 w-4 h-4 rounded-md"
+                              />
+                              <label htmlFor="tiktok-custom-link-toggle" className="text-xs font-medium text-gray-600">
+                                Enter custom link
+                              </label>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <Select
+                        value={landingUrl || ""}
+                        onValueChange={(value) => setLandingUrl(value)}
+                        disabled={!advertiserId || loadingPages}
+                      >
+                        <SelectTrigger className={cn("w-full", formFieldChrome)}>
+                          <SelectValue placeholder={loadingPages ? "Loading Instant Pages..." : "Select an Instant Page"} />
+                        </SelectTrigger>
+
+                        <SelectContent className="bg-white shadow-lg rounded-xl w-auto">
+                          {instantPages.map((pageObj) => (
+                            <SelectItem
+                              key={pageObj.page_id}
+                              value={pageObj.page_id}
+                              className="cursor-pointer px-3 py-2 hover:bg-gray-100 rounded-xl mx-2 my-1 ml-4"
+                            >
+                              <div className="flex items-center gap-2 overflow-hidden">
+                                <Zap className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                                <div className="flex flex-col text-left">
+                                  <span className="text-xs font-bold truncate">{pageObj.page_name}</span>
+                                  <span className="text-[10px] text-gray-400 truncate">{pageObj.page_id}</span>
+                                </div>
+                              </div>
+                            </SelectItem>
+                          ))}
+                          {instantPages.length === 0 && !loadingPages && (
+                            <div className="p-4 text-center">
+                              <p className="text-xs text-gray-400 italic">No instant pages found</p>
+                            </div>
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
 
                 </div>
               </div>
