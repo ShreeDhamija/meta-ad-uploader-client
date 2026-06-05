@@ -586,7 +586,7 @@ export default function TikTokCopyTemplates({
                 </div>
                 <div className="flex flex-col w-full">
                     <TextareaAutosize
-                        placeholder="Enter text..."
+                        placeholder="Enter Caption"
                         value={texts[0] || ""}
                         onChange={(e) => handleChange(0, e.target.value)}
                         className={`${settingsTextareaChrome} w-full text-sm resize-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0`}

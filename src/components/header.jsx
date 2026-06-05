@@ -113,7 +113,10 @@ export default function Header({ showMessenger, hideMessenger, metaNotLinked = f
       {/* Profile Section (Left) */}
       {isAnalyticsPage ? (
         <button
-          onClick={() => navigate("/")}
+          onClick={() => {
+            const lastLauncher = localStorage.getItem('last_active_launcher') || '/';
+            navigate(lastLauncher);
+          }}
           className={`flex items-center gap-3 bg-white border border-black/10 rounded-[20px] px-3 py-2 ${headerCardShadow} hover:shadow-md transition`}
         >
           <img

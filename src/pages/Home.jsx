@@ -309,6 +309,9 @@ export default function Home() {
         importedFiles.length,
         selectedIgOrganicPosts.length,
     ]);
+    useEffect(() => {
+        localStorage.setItem('last_active_launcher', '/');
+    }, []);
 
 
     useEffect(() => {

@@ -3469,7 +3469,7 @@ export default function TikTokAdCreationForm({
                               value="NORMAL"
                               className="rounded-xl data-[highlighted]:bg-gray-100 data-[state=checked]:bg-gray-100 transition-all my-0.5"
                             >
-                              Normal Ad
+                              Video/Image Ad
                             </SelectItem>
                             <SelectItem
                               value="SPARK"
@@ -3521,7 +3521,7 @@ export default function TikTokAdCreationForm({
                     variant="outline"
                     role="combobox"
                     disabled={!selectedAdvertiser || loadingIdentities}
-                    className="w-full justify-between border border-gray-300 rounded-2xl py-2.5 bg-white shadow transition-colors duration-150 hover:bg-white disabled:opacity-60 disabled:bg-gray-50 disabled:cursor-not-allowed"
+                    className="w-full justify-between border border-gray-300 rounded-2xl py-4.5 bg-white shadow transition-colors duration-150 hover:bg-white disabled:opacity-60 disabled:bg-gray-50 disabled:cursor-not-allowed"
                   >
                     <span className="truncate text-sm font-medium flex items-center gap-1.5">
                       {selectedIdentity && selectedIdentity !== 'CUSTOMIZED_USER'
@@ -3915,7 +3915,7 @@ export default function TikTokAdCreationForm({
                     onChange={(e) => {
                       setAdTexts([e.target.value]);
                     }}
-                    placeholder="Write catchy ad text... ✍️"
+                    placeholder="Enter Caption"
                     minRows={3}
                     maxRows={8}
                     className={formTextareaChrome}
@@ -3942,7 +3942,7 @@ export default function TikTokAdCreationForm({
                       <Button
                         type="button"
                         variant="outline"
-                        className="w-full justify-between border border-gray-300 rounded-2xl bg-white shadow hover:bg-white px-3 py-2.5"
+                        className="w-full justify-between border border-gray-300 rounded-2xl bg-white shadow hover:bg-white px-3 py-4.5"
                       >
                         <span className="text-sm truncate">
                           {Array.isArray(cta) && cta.length > 0
@@ -4133,7 +4133,7 @@ export default function TikTokAdCreationForm({
                         }
                       }}
                     >
-                      <SelectTrigger className={cn("w-full h-11 py-2 font-medium", formFieldChrome)}>
+                      <SelectTrigger className={cn("w-full font-medium", formFieldChrome)}>
                         <SelectValue placeholder="Select a saved product to auto-fill..." />
                       </SelectTrigger>
                       <SelectContent className="bg-white rounded-xl gap-4">

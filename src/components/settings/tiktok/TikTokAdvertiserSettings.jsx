@@ -341,7 +341,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                     <Button
                                         variant="outline"
                                         disabled={loadingIdentities}
-                                        className="w-full justify-between border border-gray-300 rounded-2xl bg-white shadow flex items-center hover:bg-white px-3 py-6"
+                                        className="w-full justify-between border border-gray-300 rounded-2xl bg-white shadow flex items-center hover:bg-white px-3 py-4.5"
                                     >
                                         {loadingIdentities ? (
                                             <div className="flex items-center gap-2">
@@ -574,7 +574,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                 <PopoverTrigger asChild>
                                     <Button
                                         variant="outline"
-                                        className="w-full justify-between border border-gray-300 rounded-2xl bg-white shadow hover:bg-white px-3 py-2.5"
+                                        className="w-full justify-between border border-gray-300 rounded-2xl bg-white shadow hover:bg-white px-3 py-4.5"
                                     >
                                         <span className="text-sm truncate">
                                             {currentSettings.defaultCTAs?.length > 0

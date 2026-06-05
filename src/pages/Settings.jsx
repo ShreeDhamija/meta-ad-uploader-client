@@ -154,7 +154,10 @@ export default function Settings() {
                         <div className="flex-1 flex flex-col">
                             {/* Back to Home Button */}
                             <Button
-                                onClick={() => navigate("/")}
+                                onClick={() => {
+                                    const lastLauncher = localStorage.getItem('last_active_launcher') || '/';
+                                    navigate(lastLauncher);
+                                }}
                                 className="flex items-center pl-3 justify-start gap-1 bg-white hover:bg-white border border-neutral-200 shadow-xs hover:shadow-sm rounded-[20px] py-7 font-medium w-full mb-4 text-neutral-700"
                                 variant="ghost"
                             >

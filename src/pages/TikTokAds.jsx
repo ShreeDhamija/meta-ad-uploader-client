@@ -442,6 +442,10 @@ export default function TikTokAds() {
     }
   }, [files])
 
+  useEffect(() => {
+    localStorage.setItem('last_active_launcher', '/tiktok-ads');
+  }, []);
+
   // Handle OAuth callback
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
