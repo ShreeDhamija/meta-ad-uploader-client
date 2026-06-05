@@ -4161,13 +4161,7 @@ export default function TikTokAdCreationForm({
                               value={pageObj.page_id}
                               className="cursor-pointer px-3 py-2 hover:bg-gray-100 rounded-xl mx-2 my-1 ml-4"
                             >
-                              <div className="flex items-center gap-2 overflow-hidden">
-                                <Zap className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                                <div className="flex flex-col text-left">
-                                  <span className="text-xs font-bold truncate">{pageObj.title}</span>
-                                  <span className="text-[10px] text-gray-400 truncate">{pageObj.page_id}</span>
-                                </div>
-                              </div>
+                              <span className="text-xs font-bold truncate">{pageObj.title}</span>
                             </SelectItem>
                           ))}
                           {instantPages.length === 0 && !loadingPages && (
@@ -4406,19 +4400,7 @@ export default function TikTokAdCreationForm({
 
               {/* 6. Media Section or Spark Info Card */}
               <div className="border-t border-gray-100 pt-6">
-                {adType === 'SPARK' ? (
-                  <div className="rounded-3xl border border-blue-100 bg-blue-50/20 p-6 flex flex-col md:flex-row items-start gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center shrink-0 shadow-sm border border-blue-100">
-                      <Video className="w-6 h-6 text-blue-500" />
-                    </div>
-                    <div className="space-y-1">
-                      <h4 className="text-sm font-semibold text-gray-900">Organic Video Selected</h4>
-                      <p className="text-xs text-gray-500 leading-relaxed">
-                        You have selected a <strong>Spark Ad</strong>. The video and caption from the authorized organic TikTok post will be used directly. Local and cloud file uploads are automatically bypassed.
-                      </p>
-                    </div>
-                  </div>
-                ) : (
+                {adType !== 'SPARK' && (
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <Label className="flex items-center gap-2">
