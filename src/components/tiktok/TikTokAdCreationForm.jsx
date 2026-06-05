@@ -1432,10 +1432,13 @@ export default function TikTokAdCreationForm({
     }
   }, [advertiserPrefs]);
 
-  // Sync copy templates
+  // Sync copy templates — use defaultTemplateName if set, otherwise fall back to first template
   useEffect(() => {
     if (advertiserPrefs?.defaultTemplateName) {
       setSelectedTemplate(advertiserPrefs.defaultTemplateName);
+    } else if (advertiserPrefs?.copyTemplates) {
+      const firstKey = Object.keys(advertiserPrefs.copyTemplates)[0];
+      setSelectedTemplate(firstKey || "");
     } else {
       setSelectedTemplate("");
     }
@@ -1930,10 +1933,8 @@ export default function TikTokAdCreationForm({
           })
           setDriveFiles(selected)
           if (selected.length > 0) {
-            const file = selected[0]
             setVideoFile(null)
             setDropboxFiles([])
-            toast.success(`Selected ${file.name} from Google Drive`)
           }
         }
         if (data.action === "picked" || data.action === "cancel") {
@@ -2023,7 +2024,6 @@ export default function TikTokAdCreationForm({
         setDropboxFiles([])
         setShowFolderInput(false)
         setFolderLinkValue("")
-        toast.success(`Imported: ${data.name}`)
       } catch (error) {
         toast.error("Failed to import file.")
       } finally {
@@ -2065,7 +2065,6 @@ export default function TikTokAdCreationForm({
         if (dropboxFilesData.length > 0) {
           setVideoFile(null)
           setDriveFiles([])
-          toast.success(`Selected ${dropboxFilesData[0].name} from Dropbox`)
         }
       },
       linkType: 'direct',
@@ -2891,15 +2890,25 @@ export default function TikTokAdCreationForm({
                     type="button"
                     variant="outline"
                     role="combobox"
-                    className="w-full justify-between border border-gray-300 rounded-2xl py-4.5 bg-white shadow group-data-[state=open]:border-blue-500 transition-colors duration-150 hover:bg-white"
+                    disabled={loadingCampaigns || !selectedAdvertiser}
+                    className="w-full justify-between border border-gray-300 rounded-2xl py-4.5 bg-white shadow group-data-[state=open]:border-blue-500 transition-colors duration-150 hover:bg-white disabled:opacity-60 disabled:bg-gray-50 disabled:cursor-not-allowed"
                   >
-                    <span className="truncate text-sm font-medium">
-                      {selectedCampaign.length === 0
-                        ? "Select Campaigns"
-                        : selectedCampaign.length === 1
-                          ? campaigns.find(c => c.campaign_id === selectedCampaign[0])?.campaign_name || selectedCampaign[0]
-                          : `${selectedCampaign.length} campaigns selected`}
-                    </span>
+                    <div className="w-full overflow-hidden flex items-center gap-2">
+                      {loadingCampaigns ? (
+                        <>
+                          <Loader className="h-4 w-4 animate-spin shrink-0" />
+                          <span className="block truncate flex-1 text-left text-gray-500">Fetching campaigns...</span>
+                        </>
+                      ) : (
+                        <span className="truncate text-sm font-medium flex-1 text-left">
+                          {selectedCampaign.length === 0
+                            ? "Select Campaigns"
+                            : selectedCampaign.length === 1
+                              ? campaigns.find(c => c.campaign_id === selectedCampaign[0])?.campaign_name || selectedCampaign[0]
+                              : `${selectedCampaign.length} campaigns selected`}
+                        </span>
+                      )}
+                    </div>
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
@@ -3140,16 +3149,25 @@ export default function TikTokAdCreationForm({
                     type="button"
                     variant="outline"
                     role="combobox"
-                    disabled={selectedCampaign.length === 0}
-                    className="w-full justify-between border border-gray-300 rounded-2xl py-4.5 bg-white shadow group-data-[state=open]:border-blue-500 transition-colors duration-150 hover:bg-white"
+                    disabled={selectedCampaign.length === 0 || loadingAdGroups}
+                    className="w-full justify-between border border-gray-300 rounded-2xl py-4.5 bg-white shadow group-data-[state=open]:border-blue-500 transition-colors duration-150 hover:bg-white disabled:opacity-60 disabled:bg-gray-50 disabled:cursor-not-allowed"
                   >
-                    <span className="truncate text-sm font-medium">
-                      {selectedAdGroup.length === 0
-                        ? "Select Ad Groups"
-                        : selectedAdGroup.length === 1
-                          ? adGroups.find(ag => ag.adgroup_id === selectedAdGroup[0])?.adgroup_name || selectedAdGroup[0]
-                          : `${selectedAdGroup.length} ad groups selected`}
-                    </span>
+                    <div className="w-full overflow-hidden flex items-center gap-2">
+                      {loadingAdGroups ? (
+                        <>
+                          <Loader className="h-4 w-4 animate-spin shrink-0" />
+                          <span className="block truncate flex-1 text-left text-gray-500">Fetching ad groups...</span>
+                        </>
+                      ) : (
+                        <span className="truncate text-sm font-medium flex-1 text-left">
+                          {selectedAdGroup.length === 0
+                            ? "Select Ad Groups"
+                            : selectedAdGroup.length === 1
+                              ? adGroups.find(ag => ag.adgroup_id === selectedAdGroup[0])?.adgroup_name || selectedAdGroup[0]
+                              : `${selectedAdGroup.length} ad groups selected`}
+                        </span>
+                      )}
+                    </div>
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
@@ -3486,7 +3504,7 @@ export default function TikTokAdCreationForm({
                     variant="outline"
                     role="combobox"
                     disabled={!selectedAdvertiser || loadingIdentities}
-                    className="w-full justify-between border border-gray-300 rounded-2xl py-4.5 bg-white shadow transition-colors duration-150 hover:bg-white disabled:opacity-60 disabled:bg-gray-50 disabled:cursor-not-allowed"
+                    className="w-full justify-between border border-gray-300 rounded-2xl py-2.5 bg-white shadow transition-colors duration-150 hover:bg-white disabled:opacity-60 disabled:bg-gray-50 disabled:cursor-not-allowed"
                   >
                     <span className="truncate text-sm font-medium flex items-center gap-1.5">
                       {selectedIdentity && selectedIdentity !== 'CUSTOMIZED_USER'
@@ -3907,7 +3925,7 @@ export default function TikTokAdCreationForm({
                       <Button
                         type="button"
                         variant="outline"
-                        className="w-full justify-between border border-gray-300 rounded-2xl bg-white shadow hover:bg-white px-3 py-6"
+                        className="w-full justify-between border border-gray-300 rounded-2xl bg-white shadow hover:bg-white px-3 py-2.5"
                       >
                         <span className="text-sm truncate">
                           {Array.isArray(cta) && cta.length > 0
@@ -4356,8 +4374,8 @@ export default function TikTokAdCreationForm({
                           onChange={handleVideoSelect}
                         />
                         <div className="flex flex-col items-center gap-3">
-                          <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center group-hover:scale-110 transition-transform">
-                            <Upload className="w-6 h-6 text-gray-400 group-hover:text-gray-600" />
+                          <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center">
+                            <Upload className="w-6 h-6 text-gray-400" />
                           </div>
                           <div>
                             <p className="text-sm font-medium text-gray-700">Click to upload video or image</p>

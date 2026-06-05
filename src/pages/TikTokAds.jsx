@@ -478,9 +478,12 @@ export default function TikTokAds() {
         setLandingUrl(defaultLink.url);
       }
 
-      // 4. Default Ad Text (from default template)
-      if (adTexts.length === 1 && adTexts[0] === '' && advertiserPrefs.copyTemplates && advertiserPrefs.defaultTemplateName) {
-        const template = advertiserPrefs.copyTemplates[advertiserPrefs.defaultTemplateName];
+      // 4. Default Ad Text — use default template if set, otherwise fall back to first available template
+      if (adTexts.length === 1 && adTexts[0] === '' && advertiserPrefs.copyTemplates) {
+        const templateName = advertiserPrefs.defaultTemplateName
+          || Object.keys(advertiserPrefs.copyTemplates)[0]
+          || '';
+        const template = templateName ? advertiserPrefs.copyTemplates[templateName] : null;
         if (template && template.texts?.length > 0) {
           setAdTexts(template.texts);
         }

@@ -70,7 +70,6 @@ export function useTikTokVideoUpload(advertiserId) {
           }
 
           if (data.success && data.videoId) {
-            toast.success(`Video uploaded! ID: ${data.videoId}`);
             return resolve(data); // { videoId, s3Url, fileName, data: { video_id, … } }
           }
 
@@ -167,7 +166,6 @@ export function useTikTokVideoUpload(advertiserId) {
         throw new Error(data.error || "URL upload failed");
       }
 
-      toast.success(`Video uploaded! ID: ${data.videoId}`);
       return data; // { videoId, s3Url, fileName, data: { video_id, … } }
     } catch (err) {
       toast.error(err.message || "URL upload failed");
