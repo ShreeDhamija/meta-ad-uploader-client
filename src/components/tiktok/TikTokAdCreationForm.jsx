@@ -572,6 +572,13 @@ export default function TikTokAdCreationForm({
   const [adNameFormulaV2, setAdNameFormulaV2] = useState({ rawInput: "" })
   const [newSellingPoint, setNewSellingPoint] = useState("")
 
+  const campaignsLoadedForAdvertiserRef = useRef(campaigns.length > 0 ? selectedAdvertiser : null)
+  const adGroupsLoadedForSelectionRef = useRef(
+    (adGroups.length > 0 && selectedCampaign.length > 0)
+      ? `${selectedAdvertiser}:${JSON.stringify([...selectedCampaign].sort())}`
+      : ""
+  )
+
 
   useEffect(() => {
     if (advertiserId) setSelectedAdvertiser(advertiserId)
@@ -1280,8 +1287,13 @@ export default function TikTokAdCreationForm({
   // Fetch Campaigns & Identities on Advertiser change
   useEffect(() => {
     if (!selectedAdvertiser) {
+      campaignsLoadedForAdvertiserRef.current = null
       setCampaigns([])
       setSelectedCampaign([])
+      return
+    }
+
+    if (campaignsLoadedForAdvertiserRef.current === selectedAdvertiser) {
       return
     }
 
@@ -1289,8 +1301,7 @@ export default function TikTokAdCreationForm({
     const cached = readCache(cacheKey)
     if (cached) {
       setCampaigns(cached)
-      setSelectedCampaign([])
-      setAdGroups([])
+      campaignsLoadedForAdvertiserRef.current = selectedAdvertiser
     } else {
       setLoadingCampaigns(true)
       const params = new URLSearchParams({ advertiserId: selectedAdvertiser, page: '1', pageSize: '100' })
@@ -1300,8 +1311,7 @@ export default function TikTokAdCreationForm({
           const list = d.campaigns || []
           setCampaigns(list)
           writeCache(cacheKey, list)
-          setSelectedCampaign([])
-          setAdGroups([])
+          campaignsLoadedForAdvertiserRef.current = selectedAdvertiser
         })
         .catch(() => toast.error('Failed to load campaigns'))
         .finally(() => setLoadingCampaigns(false))
@@ -1339,8 +1349,14 @@ export default function TikTokAdCreationForm({
     let active = true
 
     if (!selectedCampaign || selectedCampaign.length === 0) {
+      adGroupsLoadedForSelectionRef.current = ""
       setAdGroups([])
       setSelectedAdGroup([])
+      return
+    }
+
+    const selectionKey = `${selectedAdvertiser}:${JSON.stringify([...selectedCampaign].sort())}`
+    if (adGroupsLoadedForSelectionRef.current === selectionKey) {
       return
     }
 
@@ -1385,6 +1401,7 @@ export default function TikTokAdCreationForm({
           }
         }
         setAdGroups(unique)
+        adGroupsLoadedForSelectionRef.current = selectionKey
         setSelectedAdGroup(prevSelected => {
           // Keep any currently selected ad groups that are actually present in the newly fetched ad groups
           return prevSelected.filter(id => unique.some(g => g.adgroup_id === id))
@@ -1401,7 +1418,7 @@ export default function TikTokAdCreationForm({
     return () => {
       active = false
     }
-  }, [selectedCampaign, selectedAdvertiser, setAdGroups, setSelectedAdGroup, tiktokFetch, campaigns])
+  }, [selectedCampaign, selectedAdvertiser, campaigns, tiktokFetch, setAdGroups, setSelectedAdGroup])
 
   // Fetch Instant Pages on Advertiser change
   useEffect(() => {
@@ -3143,7 +3160,7 @@ export default function TikTokAdCreationForm({
                   </button>
                 </div>
               </div>
-              <Popover open={openAdGroup} onOpenChange={setOpenAdGroup}>
+              <Popover open={openAdGroup} onOpenChange={(v) => { if (!v || (!loadingAdGroups && selectedCampaign.length > 0)) setOpenAdGroup(v) }}>
                 <PopoverTrigger asChild>
                   <Button
                     type="button"

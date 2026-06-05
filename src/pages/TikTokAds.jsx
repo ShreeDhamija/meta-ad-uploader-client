@@ -14,6 +14,8 @@ import { useNavigate } from 'react-router-dom'
 import { toast, Toaster } from 'sonner'
 import { v4 as uuidv4 } from "uuid"
 
+const TIKTOK_CACHE_KEY = 'tiktok_ads_cache';
+
 // Error boundary to catch component preview failures and prevent crashes
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -114,11 +116,30 @@ export default function TikTokAds() {
   const [selectedSavedProductId, setSelectedSavedProductId] = useState("")
 
 
+  // Read the 24-hour cache once at component creation (mirrors Meta's Home.jsx pattern).
+  // Defined as a plain function — not a hook — so it's safe to call here before useState.
+  const _readTikTokCache = () => {
+    try {
+      const raw = localStorage.getItem(TIKTOK_CACHE_KEY);
+      if (!raw) return null;
+      const data = JSON.parse(raw);
+      if (Date.now() - data.timestamp < 24 * 60 * 60 * 1000) return data;
+    } catch (e) {
+      console.error('Failed to parse TikTok ads cache:', e);
+    }
+    return null;
+  };
+  const _tiktokCache = _readTikTokCache();
+
+  // Only restore campaign/ad-group cache if it belongs to the same advertiser
+  const _cacheMatchesAdvertiser = _tiktokCache?.selectedAdvertiser === (_tiktokCache?.selectedAdvertiser && selectedAdvertiser
+    ? selectedAdvertiser : _tiktokCache?.selectedAdvertiser);
+
   // Lifted form fetching states (to snapshot campaign & ad group selections)
-  const [campaigns, setCampaigns] = useState([])
-  const [adGroups, setAdGroups] = useState([])
-  const [selectedCampaign, setSelectedCampaign] = useState([])
-  const [selectedAdGroup, setSelectedAdGroup] = useState([])
+  const [campaigns, setCampaigns] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.campaigns : null) || [])
+  const [adGroups, setAdGroups] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.adGroups : null) || [])
+  const [selectedCampaign, setSelectedCampaign] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.selectedCampaign : null) || [])
+  const [selectedAdGroup, setSelectedAdGroup] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.selectedAdGroup : null) || [])
   const [identities, setIdentities] = useState([])
 
   // Mocked state arrays & variables for MediaPreview integration compatibility
@@ -454,6 +475,25 @@ export default function TikTokAds() {
       } catch (e) { }
     }
   }, [selectedAdvertiser])
+
+  // Cache TikTok ads form state (mirrors Meta's Home.jsx caching pattern)
+  useEffect(() => {
+    if (!selectedAdvertiser) {
+      localStorage.removeItem(TIKTOK_CACHE_KEY);
+      return;
+    }
+    const cacheData = {
+      selectedAdvertiser,
+      campaigns,
+      selectedCampaign,
+      adGroups,
+      selectedAdGroup,
+      timestamp: Date.now(),
+    };
+    try {
+      localStorage.setItem(TIKTOK_CACHE_KEY, JSON.stringify(cacheData));
+    } catch (e) { }
+  }, [selectedAdvertiser, campaigns, selectedCampaign, adGroups, selectedAdGroup]);
 
   // Sync state with preferences when they load
   const restoredDefaultsRef = useRef({});

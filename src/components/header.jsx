@@ -20,23 +20,9 @@ import useSubscription from "@/lib/useSubscriptionSettings"
 import { Bell, Clock, LogOutIcon, Settings } from "lucide-react"
 import { useState } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
+import MetaIcon from '@/assets/icons/meta.svg?react'
+import TikTokIcon from '@/assets/icons/tiktok.svg?react'
 
-// High-fidelity Platform Switcher Icons
-function MetaIcon({ className, active }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="18" height="18">
-      <path d="M16.2 6.5c-1.3 0-2.5.5-3.5 1.4-.6.6-1.1 1.4-1.5 2.2-.4-.8-.9-1.6-1.5-2.2-1-.9-2.2-1.4-3.5-1.4C4.1 6.5 2 8.7 2 11.5S4.1 16.5 6.2 16.5c1.3 0 2.5-.5 3.5-1.4.6-.6 1.1-1.4 1.5-2.2.4.8.9 1.6 1.5 2.2 1 .9 2.2 1.4 3.5 1.4 2.1 0 4.2-2.2 4.2-5s-2.1-5-4.2-5zm0 8c-1 0-1.8-.4-2.5-1-.5-.5-.9-1.2-1.2-2 .3-.8.7-1.5 1.2-2 .7-.6 1.5-1 2.5-1 1.2 0 2.2 1.1 2.2 3s-1 3-2.2 3zm-10 0c-1.2 0-2.2-1.1-2.2-3s1-3 2.2-3c1 0 1.8.4 2.5 1 .5.5.9 1.2 1.2 2-.3.8-.7 1.5-1.2 2-.7.6-1.5 1-2.5 1z" fill={active ? "#1877F2" : "#71717A"} />
-    </svg>
-  )
-}
-
-function TikTokIcon({ className, active }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="16" height="16">
-      <path d="M12.525 2c.063 4.238 2.664 7.234 6.786 7.426v3.743c-2.433-.122-4.526-1.04-5.918-2.61v7.625C13.393 21.94 10.378 24 6.946 24 3.111 24 0 20.73 0 16.71c0-4.022 3.111-7.29 6.946-7.29.566 0 1.107.07 1.626.196v3.746c-.519-.175-1.066-.27-1.626-.27-2.029 0-3.673 1.71-3.673 3.82 0 2.106 1.644 3.82 3.673 3.82 2.052 0 3.738-1.584 3.738-3.693V2h1.865z" fill={active ? "#000000" : "#71717A"} />
-    </svg>
-  )
-}
 
 export default function Header({ showMessenger, hideMessenger, metaNotLinked = false }) {
   const { isLoggedIn, userName, profilePicUrl, handleLogout } = useAuth()
@@ -47,19 +33,6 @@ export default function Header({ showMessenger, hideMessenger, metaNotLinked = f
   const isTikTokPage = location.pathname.includes('tiktok')
   // Show the "connect" CTA in the left slot when the active platform has no auth
   const tiktokNotLinked = isTikTokPage && !isTikTokLoggedIn
-  const handleSwitchPlatform = (platform) => {
-    if (platform === 'meta') {
-      if (location.pathname !== '/') {
-        navigate('/')
-      }
-    } else if (platform === 'tiktok') {
-      if (!location.pathname.includes('tiktok')) {
-        navigate('/tiktok-ads')
-      }
-    }
-  }
-
-  const isTikTokActive = location.pathname.includes('tiktok') || (location.pathname === '/settings' && new URLSearchParams(location.search).get('tab') === 'tiktok')
   const {
     subscriptionData,
     isOnTrial,
@@ -185,44 +158,6 @@ export default function Header({ showMessenger, hideMessenger, metaNotLinked = f
         )
       })()}
 
-      {/* Platform Switcher (Center) */}
-      <div className="hidden md:flex bg-zinc-100/80 backdrop-blur-md p-1 rounded-full border border-black/5 shadow-inner select-none transition-all duration-300 gap-1">
-        <button
-          onClick={() => handleSwitchPlatform('meta')}
-          className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-[13px] font-semibold transition-all duration-200 active:scale-95 ${!isTikTokActive
-            ? "bg-white text-zinc-900 shadow-sm border border-black/5"
-            : "text-zinc-500 hover:text-zinc-800 hover:bg-zinc-200/50"
-            }`}
-        >
-          <MetaIcon active={!isTikTokActive} />
-          <span>Meta Ads</span>
-          <span
-            className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${isLoggedIn
-              ? "bg-emerald-500 animate-pulse shadow-[0_0_6px_rgba(16,185,129,0.6)]"
-              : "bg-zinc-300"
-              }`}
-            title={isLoggedIn ? "Meta Connected" : "Meta Disconnected"}
-          />
-        </button>
-
-        <button
-          onClick={() => handleSwitchPlatform('tiktok')}
-          className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-[13px] font-semibold transition-all duration-200 active:scale-95 ${isTikTokActive
-            ? "bg-white text-zinc-900 shadow-sm border border-black/5"
-            : "text-zinc-500 hover:text-zinc-800 hover:bg-zinc-200/50"
-            }`}
-        >
-          <TikTokIcon active={isTikTokActive} />
-          <span>TikTok Ads</span>
-          <span
-            className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${isTikTokLoggedIn
-              ? "bg-emerald-500 animate-pulse shadow-[0_0_6px_rgba(16,185,129,0.6)]"
-              : "bg-zinc-300"
-              }`}
-            title={isTikTokLoggedIn ? "TikTok Connected" : "TikTok Disconnected"}
-          />
-        </button>
-      </div>
 
       {/* Action Buttons (Right) */}
       <div className={`flex items-center gap-3 bg-white border border-black/10 rounded-[20px] px-3 py-2 ml-2 ${headerCardShadow}`}>
