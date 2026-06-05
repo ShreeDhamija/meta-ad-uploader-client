@@ -1,10 +1,16 @@
 "use client"
 
-import AnalyticsIcon from "@/assets/icons/Analytics.svg?react"
+import { useState } from "react"
+import { Button } from "@/components/ui/button"
+import { LogOutIcon, Settings, Clock, Bell } from "lucide-react"
 import ZapIcon from "@/assets/icons/Zap.svg?react"
 import ChatIcon from "@/assets/icons/chat.svg?react"
+import AnalyticsIcon from "@/assets/icons/Analytics.svg?react"
 import RocketBtn from "@/assets/rocket2.webp"
-import { Button } from "@/components/ui/button"
+import { useAuth } from "@/lib/AuthContext"
+import { useLocation, useNavigate } from "react-router-dom"
+import useSubscription from "@/lib/useSubscriptionSettings"
+import useNotifications from "@/lib/useNotifications"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,26 +19,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { useAuth } from "@/lib/AuthContext"
-import { useTikTokAuth } from "@/lib/TikTokAuthContext"
-import useNotifications from "@/lib/useNotifications"
-import useSubscription from "@/lib/useSubscriptionSettings"
-import { Bell, Clock, LogOutIcon, Settings } from "lucide-react"
-import { useState } from "react"
-import { useLocation, useNavigate } from "react-router-dom"
-import MetaIcon from '@/assets/icons/meta.svg?react'
-import TikTokIcon from '@/assets/icons/tiktok.svg?react'
 
-
-export default function Header({ showMessenger, hideMessenger, metaNotLinked = false }) {
+export default function Header({ showMessenger, hideMessenger }) {
   const { isLoggedIn, userName, profilePicUrl, handleLogout } = useAuth()
-  const { isTikTokLoggedIn, tiktokUser, logoutTikTok } = useTikTokAuth()
   const navigate = useNavigate()
   const location = useLocation()
-
-  const isTikTokPage = location.pathname.includes('tiktok')
-  // Show the "connect" CTA in the left slot when the active platform has no auth
-  const tiktokNotLinked = isTikTokPage && !isTikTokLoggedIn
   const {
     subscriptionData,
     isOnTrial,
@@ -45,7 +36,6 @@ export default function Header({ showMessenger, hideMessenger, metaNotLinked = f
   const { notifications, hasUnread, loading: notificationsLoading, markAsRead } = useNotifications()
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const isAnalyticsPage = location.pathname === "/analytics"
-  const showAnalyticsNav = import.meta.env.VITE_APP_ENV === "staging"
   const headerCardShadow = "shadow-[0px_1px_2px_rgba(0,0,0,0.06)]"
 
   const handleDropdownClose = (open) => {
@@ -113,11 +103,8 @@ export default function Header({ showMessenger, hideMessenger, metaNotLinked = f
       {/* Profile Section (Left) */}
       {isAnalyticsPage ? (
         <button
-          onClick={() => {
-            const lastLauncher = localStorage.getItem('last_active_launcher') || '/';
-            navigate(lastLauncher);
-          }}
-          className={`flex items-center gap-3 bg-white border border-black/10 rounded-[20px] px-3 py-2 ${headerCardShadow} hover:shadow-md transition`}
+          onClick={() => navigate("/")}
+          className={`flex items-center gap-3 bg-white border border-black/10 rounded-[20px] px-3 py-2 ${headerCardShadow} hover:shadow-md transition cursor-pointer`}
         >
           <img
             src={RocketBtn}
@@ -126,41 +113,16 @@ export default function Header({ showMessenger, hideMessenger, metaNotLinked = f
           />
           <span className="text-[14px] font-medium text-gray-700 whitespace-nowrap">Go To Launcher</span>
         </button>
-      ) : tiktokNotLinked ? (
-        // TikTok page but not logged in → show "Connect TikTok" CTA
-        <button
-          onClick={() => navigate('/tiktok-login')}
-          className={`flex items-center gap-2.5 bg-black text-white border border-black/10 rounded-[20px] px-4 py-2 ${headerCardShadow} hover:bg-zinc-800 transition-all duration-200 active:scale-95`}
-        >
-          <TikTokIcon active />
-          <span className="text-[13px] font-semibold whitespace-nowrap">Connect TikTok</span>
-        </button>
-      ) : metaNotLinked ? (
-        // Meta page but not logged in → show "Connect Meta" CTA
-        <button
-          onClick={() => navigate('/login')}
-          className={`flex items-center gap-2.5 bg-[#1877F2] text-white border border-[#1877F2]/10 rounded-[20px] px-4 py-2 ${headerCardShadow} hover:bg-[#166fe5] transition-all duration-200 active:scale-95`}
-        >
-          <MetaIcon active />
-          <span className="text-[13px] font-semibold whitespace-nowrap">Connect Meta</span>
-        </button>
-      ) : (() => {
-        const showTikTokUser = isTikTokPage && isTikTokLoggedIn && tiktokUser
-        const displayUserName = showTikTokUser ? (tiktokUser.name || tiktokUser.displayName || "TikTok User") : userName
-        const displayProfilePic = showTikTokUser ? (tiktokUser.picture || tiktokUser.avatarUrl || tiktokUser.avatar_url) : profilePicUrl
-
-        return (
-          <div className={`flex items-center gap-3 bg-white border border-black/10 rounded-[20px] px-3 py-2 ${headerCardShadow}`}>
-            <img
-              src={displayProfilePic}
-              alt="Profile"
-              className="w-9 h-9 rounded-full border border-zinc-300 object-cover"
-            />
-            <span className="text-[14px] font-medium text-gray-700 whitespace-nowrap">{displayUserName}</span>
-          </div>
-        )
-      })()}
-
+      ) : (
+        <div className={`flex items-center gap-3 bg-white border border-black/10 rounded-[20px] px-3 py-2 ${headerCardShadow}`}>
+          <img
+            src={profilePicUrl}
+            alt="Profile"
+            className="w-9 h-9 rounded-full border border-zinc-300 object-cover"
+          />
+          <span className="text-[14px] font-medium text-gray-700 whitespace-nowrap">{userName}</span>
+        </div>
+      )}
 
       {/* Action Buttons (Right) */}
       <div className={`flex items-center gap-3 bg-white border border-black/10 rounded-[20px] px-3 py-2 ml-2 ${headerCardShadow}`}>
@@ -170,7 +132,7 @@ export default function Header({ showMessenger, hideMessenger, metaNotLinked = f
           <>
             <button
               onClick={handleUpgrade}
-              className={`hidden md:flex items-center gap-2 px-3 py-1 rounded-full transition text-sm font-medium ${getTrialButtonStyle()}`}
+              className={`flex items-center gap-2 px-3 py-1 rounded-full transition text-sm font-medium cursor-pointer ${getTrialButtonStyle()}`}
               title={
                 isSubscriptionExpired() ? "Your subscription has expired" :
                   isTrialExpired() ? "Your trial has expired" :
@@ -178,18 +140,19 @@ export default function Header({ showMessenger, hideMessenger, metaNotLinked = f
               }
             >
               <Clock className="w-4 h-4" />
+              {/* Trial status text — the one label kept below 1000px */}
               <span>{getTrialText()}</span>
             </button>
             <Button
               onClick={handleUpgrade}
               size="sm"
-              className={`hidden md:flex h-7 px-3 py-4 text-[13px] text-white font-medium rounded-full ${!hasActiveAccess() ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'
+              className={`flex h-7 px-3 py-4 text-[13px] text-white font-medium rounded-full cursor-pointer ${!hasActiveAccess() ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'
                 }`}
             >
               <ZapIcon className="w-3.5 h-3.5" />
-              {!hasActiveAccess() ? 'Subscribe' : 'Upgrade'}
+              <span>{!hasActiveAccess() ? 'Subscribe' : 'Upgrade'}</span>
             </Button>
-            <div className="hidden md:block h-8 w-px bg-gray-300  " />
+            <div className="block h-8 w-px bg-gray-300  " />
           </>
         )}
 
@@ -200,7 +163,7 @@ export default function Header({ showMessenger, hideMessenger, metaNotLinked = f
               <DropdownMenuTrigger asChild>
                 <button
                   title="Notifications"
-                  className="relative p-1.5 rounded-full hover:bg-gray-100 transition focus:outline-none"
+                  className="relative p-1.5 rounded-full hover:bg-gray-100 transition focus:outline-none cursor-pointer"
                 >
                   <Bell className="w-5 h-5 text-gray-700" />
                   <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-red-500 rounded-full" />
@@ -227,17 +190,14 @@ export default function Header({ showMessenger, hideMessenger, metaNotLinked = f
             </DropdownMenu>
 
             {/* Divider after bell */}
-            <div className="h-8 w-px bg-gray-300  " />
+            <div className="hidden min-[1000px]:block h-8 w-px bg-gray-300  " />
           </>
         )}
 
         <button
-          onClick={() => {
-            const tab = location.pathname.includes('tiktok') ? 'tiktok' : 'adaccount';
-            navigate(`/settings?tab=${tab}`);
-          }}
+          onClick={() => navigate("/settings")}
           title="Settings"
-          className="hidden md:flex items-center gap-1.5 rounded-full transition bg-transparent hover:bg-gray-100 focus:bg-transparent active:bg-transparent !focus:outline-none !focus:ring-0 !active:ring-0 px-4 py-2"
+          className="flex items-center gap-1.5 rounded-full transition bg-transparent hover:bg-gray-100 focus:bg-transparent active:bg-transparent !focus:outline-none !focus:ring-0 !active:ring-0 px-4 py-2 cursor-pointer"
           style={{
             outline: "none",
             boxShadow: "none",
@@ -245,45 +205,34 @@ export default function Header({ showMessenger, hideMessenger, metaNotLinked = f
           }}
         >
           <Settings className="w-5 h-5 text-black" />
-          <span className="hidden md:inline text-gray-900 text-[14px] font-medium">Preferences</span>
+          <span className="hidden min-[1000px]:inline text-gray-900 text-[14px] font-medium">Preferences</span>
         </button>
-        <div className="h-8 w-px bg-gray-300" />
-        {showAnalyticsNav && (
-          <>
-            <button
-              onClick={() => navigate("/analytics")}
-              title="Analytics"
-              className="hidden md:flex items-center gap-1.5 rounded-full transition-colors px-2 py-2   bg-transparent hover:bg-gray-100 focus:bg-transparent active:bg-transparent"
-            >
-              <AnalyticsIcon className="size-5" />
-              <span className="inline text-[14px] text-gray-900 font-medium">Analytics</span>
-            </button>
-            <div className="h-8 w-px bg-gray-300  " />
-          </>
-        )}
+        <div className="hidden min-[1000px]:block h-8 w-px bg-gray-300" />
+        <button
+          onClick={() => navigate("/analytics")}
+          title="Analytics"
+          className="flex items-center gap-1.5 rounded-full transition-colors px-2 py-2   bg-transparent hover:bg-gray-100 focus:bg-transparent active:bg-transparent cursor-pointer"
+        >
+          <AnalyticsIcon className="size-5" />
+          <span className="hidden min-[1000px]:inline text-[14px] text-gray-900 font-medium">Analytics</span>
+        </button>
+        <div className="hidden min-[1000px]:block h-8 w-px bg-gray-300  " />
         {/* Chat Support Button */}
         <button
           onClick={handleChatToggle}
           title="Support Chat"
-          className="py-2 bg-transparent hover:bg-gray-100 text-gray-700 rounded-full flex items-center justify-center transition-colors px-3 gap-1.5"
+          className="py-2 bg-transparent hover:bg-gray-100 text-gray-700 rounded-full flex items-center justify-center transition-colors px-3 gap-1.5 cursor-pointer"
         >
           <ChatIcon className="size-5" />
-          <span className="inline text-[14px] text-gray-900 font-medium">Chat With Us</span>
+          <span className="hidden min-[1000px]:inline text-[14px] text-gray-900 font-medium">Chat With Us</span>
         </button>
 
-        <div className="h-8 w-px bg-gray-300  " />
+        <div className="hidden min-[1000px]:block h-8 w-px bg-gray-300  " />
 
         <button
-          onClick={async () => {
-            if (location.pathname.includes('tiktok')) {
-              await logoutTikTok();
-            } else {
-              await handleLogout();
-              window.location.href = '/';
-            }
-          }}
+          onClick={handleLogout}
           title="Logout"
-          className="p-1 rounded-full transition !bg-transparent hover:!bg-transparent focus:outline-none focus:ring-0 active:ring-0"
+          className="p-1 rounded-full transition !bg-transparent hover:!bg-transparent focus:outline-none focus:ring-0 active:ring-0 cursor-pointer"
           style={{
             backgroundColor: "transparent",
             outline: "none",
