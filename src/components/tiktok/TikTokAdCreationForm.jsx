@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import TikTokPostSelectorInline from "./TikTokPostSelectorInline"
 import ReorderAdNameParts from "@/components/ui/ReorderAdNameParts"
 import { useNavigate } from "react-router-dom"
 
@@ -518,6 +519,7 @@ export default function TikTokAdCreationForm({
   sparkAuthCode, setSparkAuthCode,
   urlMode, setUrlMode,
   adType, setAdType,
+  importedPosts, setImportedPosts,
 
   // Form Fetching States
   campaigns, setCampaigns,
@@ -611,6 +613,10 @@ export default function TikTokAdCreationForm({
   const [isDeletingTemplates, setIsDeletingTemplates] = useState(false)
   const [isSavingNew, setIsSavingNew] = useState(false)
   const [isUpdatingTemplate, setIsUpdatingTemplate] = useState(false)
+  const [sparkSourceTab, setSparkSourceTab] = useState("auth_codes") // "auth_codes" | "video_list"
+  const [rawAuthCodes, setRawAuthCodes] = useState("")
+  const [isResolvingCodes, setIsResolvingCodes] = useState(false)
+  const [resolvedCodes, setResolvedCodes] = useState([])
   const [showSaveNewDialog, setShowSaveNewDialog] = useState(false)
   const [newTemplateNameInput, setNewTemplateNameInput] = useState("")
 
@@ -738,10 +744,16 @@ export default function TikTokAdCreationForm({
       return (fileVariantMap[fileId] || 'default') === variantId
     })
 
+    const filterPosts = (items) => items.filter((post) => {
+      const postKey = `post:${post.id}`
+      return (postVariantMap[postKey] || 'default') === variantId
+    })
+
     const variantFiles = filterFiles(files || [])
     const variantDriveFiles = filterFiles(driveFiles || []).map(f => ({ ...f, isDrive: true }))
     const variantDropboxFiles = filterFiles(dropboxFiles || []).map(f => ({ ...f, isDropbox: true }))
     const variantLibraryFiles = filterFiles(tiktokLibraryFiles || [])
+    const variantImportedPosts = filterPosts(importedPosts || [])
 
     const formData = {
       adName: variantState.adName || adName || '',
@@ -756,6 +768,7 @@ export default function TikTokAdCreationForm({
       driveFiles: [...variantDriveFiles],
       dropboxFiles: [...variantDropboxFiles],
       tiktokLibraryFiles: [...variantLibraryFiles],
+      importedPosts: [...variantImportedPosts],
 
       selectedAdvertiser,
       selectedCampaign,
@@ -774,7 +787,7 @@ export default function TikTokAdCreationForm({
 
     let fileCount = formData.files.length + formData.driveFiles.length + formData.dropboxFiles.length + formData.tiktokLibraryFiles.length
     if (formData.adType === 'SPARK') {
-      fileCount = 1
+      fileCount = formData.importedPosts.length
     }
 
     return {
@@ -786,9 +799,9 @@ export default function TikTokAdCreationForm({
     }
   }, [
     variants, adName, adTexts, cta, landingUrl, sparkAuthCode, urlMode, adType,
-    files, driveFiles, dropboxFiles, tiktokLibraryFiles, selectedAdvertiser,
+    files, driveFiles, dropboxFiles, tiktokLibraryFiles, importedPosts, selectedAdvertiser,
     selectedCampaign, selectedAdGroup, showDuplicateAdGroupBlock, duplicateAdGroup,
-    newAdGroupName, selectedIdentity, fileVariantMap, launchPaused,
+    newAdGroupName, selectedIdentity, fileVariantMap, postVariantMap, launchPaused,
     productName, productImageUrl, sellingPoints
   ])
 
@@ -853,6 +866,7 @@ export default function TikTokAdCreationForm({
       driveFiles,
       dropboxFiles,
       tiktokLibraryFiles,
+      importedPosts,
       selectedAdvertiser,
       selectedCampaign,
       selectedAdGroup,
@@ -870,7 +884,18 @@ export default function TikTokAdCreationForm({
 
     const itemsToUpload = []
     if (adType === 'SPARK') {
-      itemsToUpload.push({ type: 'spark', file: { name: 'Spark Ad' } })
+      (importedPosts || []).forEach(post => {
+        itemsToUpload.push({
+          type: 'spark',
+          file: {
+            name: post.ad_name || 'Spark Ad',
+            id: post.id,
+            authCode: post.auth_code,
+            identityId: post.identity_id,
+            identityType: post.identity_type
+          }
+        })
+      })
     } else {
       (files || []).forEach(f => itemsToUpload.push({ type: 'local', file: f }));
       (driveFiles || []).forEach(f => itemsToUpload.push({ type: 'drive', file: f }));
@@ -896,41 +921,7 @@ export default function TikTokAdCreationForm({
       setProgressMessage(msg)
     }
 
-
-
     try {
-      let sparkVideoId = null
-      if (adType === 'SPARK') {
-        updateProgress(5, 'Authorizing organic TikTok post...')
-        if (signal.aborted) throw new DOMException('Job cancelled.', 'AbortError')
-        const authRes = await tiktokFetch(`${API_BASE_URL}/api/tiktok/spark-authorize`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            advertiserId: selectedAdvertiser,
-            authCode: sparkAuthCode.trim()
-          }),
-          signal
-        })
-        const authData = await authRes.json()
-        if (!authRes.ok || !authData.success) {
-          throw new Error(authData.error || 'Failed to authorize organic post')
-        }
-
-        updateProgress(10, 'Fetching organic video information...')
-        if (signal.aborted) throw new DOMException('Job cancelled.', 'AbortError')
-        const infoParams = new URLSearchParams({
-          advertiserId: selectedAdvertiser,
-          authCode: sparkAuthCode.trim()
-        })
-        const infoRes = await tiktokFetch(`${API_BASE_URL}/api/tiktok/spark-video-info?${infoParams}`, { signal })
-        const infoData = await infoRes.json()
-        if (!infoRes.ok || !infoData.success) {
-          throw new Error(infoData.error || 'Failed to retrieve organic video information')
-        }
-        sparkVideoId = infoData.videoId
-      }
-
       for (let i = 0; i < itemsToUpload.length; i++) {
         if (signal.aborted) throw new DOMException('Job cancelled.', 'AbortError')
         const item = itemsToUpload[i]
@@ -943,7 +934,7 @@ export default function TikTokAdCreationForm({
         updateProgress(progressBase + 5, `Uploading and processing media ${i + 1}/${itemsToUpload.length}: ${item.file.name}...`)
 
         if (adType === 'SPARK') {
-          videoId = sparkVideoId
+          videoId = item.file.id
         } else if (item.type === 'local') {
           const uploadResult = await uploadVideoToTikTok(item.file)
           if (!uploadResult?.videoId) {
@@ -977,8 +968,8 @@ export default function TikTokAdCreationForm({
 
         const selectedIdentityObj = identities.find(i => i.identity_id === selectedIdentity)
         const isCustomized = !selectedIdentity || selectedIdentity === 'CUSTOMIZED_USER'
-        const currentIdentityId = isCustomized ? undefined : selectedIdentity
-        const currentIdentityType = isCustomized ? 'CUSTOMIZED_USER' : (selectedIdentityObj?.identity_type || 'TT_USER')
+        const currentIdentityId = adType === 'SPARK' ? item.file.identityId : (isCustomized ? undefined : selectedIdentity)
+        const currentIdentityType = adType === 'SPARK' ? item.file.identityType : (isCustomized ? 'CUSTOMIZED_USER' : (selectedIdentityObj?.identity_type || 'TT_USER'))
 
         const finalUrl = urlMode === 'WEBSITE'
           ? applyUtmsToUrl(landingUrl, advertiserPrefs?.defaultUTMs || [])
@@ -1046,7 +1037,8 @@ export default function TikTokAdCreationForm({
                 ),
                 ...(adType === 'SPARK' ? {
                   is_spark_ad: true,
-                  spark_ad_auth_code: sparkAuthCode.trim(),
+                  spark_ad_auth_code: item.file.authCode,
+                  tiktok_item_id: videoId,
                   adType: 'SPARK'
                 } : {})
               }
@@ -1081,7 +1073,8 @@ export default function TikTokAdCreationForm({
                   ),
                   ...(adType === 'SPARK' ? {
                     is_spark_ad: true,
-                    spark_ad_auth_code: sparkAuthCode.trim(),
+                    spark_ad_auth_code: item.file.authCode,
+                    tiktok_item_id: videoId,
                     adType: 'SPARK'
                   } : {})
                 }
@@ -1139,6 +1132,9 @@ export default function TikTokAdCreationForm({
               }
             })
           }
+
+          // Rate-limiting delay (1000ms) between creations
+          await new Promise(resolve => setTimeout(resolve, 1000));
         }
       }
 
@@ -2307,8 +2303,8 @@ export default function TikTokAdCreationForm({
       }
 
       if (fd.adType === 'SPARK') {
-        if (!fd.sparkAuthCode || !fd.sparkAuthCode.trim()) {
-          toast.error(`${variant.name}: Spark Ads require an Organic Post Authorization Code or link.`);
+        if (!fd.importedPosts || fd.importedPosts.length === 0) {
+          toast.error(`${variant.name}: Spark Ads require at least one selected organic post.`);
           return;
         }
       }
@@ -2417,6 +2413,206 @@ export default function TikTokAdCreationForm({
 
   const hasDuplicateCaptions = duplicateCaptionIndices.size > 0;
 
+  const handleResolveAuthCodes = async () => {
+    if (!rawAuthCodes.trim()) {
+      toast.error("Please enter at least one authorization code.");
+      return;
+    }
+
+    setIsResolvingCodes(true);
+    const lines = rawAuthCodes.split("\n").map(l => l.trim()).filter(Boolean);
+    const newResolved = [];
+
+    for (let index = 0; index < lines.length; index++) {
+      const line = lines[index];
+      let authCode = line;
+      let originalPostAuthCode = "";
+      if (line.includes(",")) {
+        const parts = line.split(",").map(p => p.trim());
+        authCode = parts[0];
+        originalPostAuthCode = parts[1] || "";
+      }
+
+      // Skip if already in resolved/imported posts
+      const isAlreadyResolved = importedPosts.some(p => p.auth_code === authCode);
+      if (isAlreadyResolved) {
+        continue;
+      }
+
+      try {
+        // Step 1: Authorize Spark Ad post
+        const authRes = await tiktokFetch(`${API_BASE_URL}/api/tiktok/spark-authorize`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            advertiserId: selectedAdvertiser,
+            authCode,
+            originalPostAuthCode
+          })
+        });
+        const authData = await authRes.json();
+        if (!authRes.ok || !authData.success) {
+          throw new Error(authData.error || authData.message || 'Failed to authorize organic post');
+        }
+
+        // Step 2: Fetch video info
+        const infoParams = new URLSearchParams({
+          advertiserId: selectedAdvertiser,
+          authCode
+        });
+        const infoRes = await tiktokFetch(`${API_BASE_URL}/api/tiktok/spark-video-info?${infoParams}`);
+        const infoData = await infoRes.json();
+        if (!infoRes.ok || !infoData.success) {
+          throw new Error(infoData.error || infoData.message || 'Failed to retrieve organic video information');
+        }
+
+        const videoObj = infoData.video || {};
+        const itemId = videoObj.item_id || videoObj.video_id || infoData.videoId || authCode;
+        const caption = videoObj.text || videoObj.title || videoObj.caption || `Spark Post ${itemId}`;
+        const posterUrl = videoObj.poster_url || videoObj.cover_image_url || videoObj.preview_url || "";
+        const likes = videoObj.like_count || 0;
+        const views = videoObj.view_count || 0;
+        const tiktokName = videoObj.user_info?.tiktok_name || videoObj.display_name || "TikTok Creator";
+        const postIdentityId = videoObj.user_info?.identity_id || selectedIdentity;
+        const postIdentityType = videoObj.user_info?.identity_type || "BC_AUTH_TT";
+
+        const newPost = {
+          id: itemId,
+          image_url: posterUrl,
+          ad_name: caption,
+          tiktok_name: tiktokName,
+          auth_code: authCode,
+          original_post_auth_code: originalPostAuthCode,
+          identity_id: postIdentityId,
+          identity_type: postIdentityType,
+          likes: likes,
+          views: views,
+          auth_end_time: videoObj.auth_info?.auth_end_time || null,
+          status: 'success'
+        };
+
+        newResolved.push(newPost);
+      } catch (err) {
+        console.error("Error resolving auth code:", authCode, err);
+        newResolved.push({
+          id: `error-${Date.now()}-${index}`,
+          ad_name: `Error resolving: ${line}`,
+          auth_code: authCode,
+          original_post_auth_code: originalPostAuthCode,
+          status: 'error',
+          error: err.message || "Failed to resolve post"
+        });
+      }
+    }
+
+    setIsResolvingCodes(false);
+    // Append successful ones to importedPosts
+    const successfulPosts = newResolved.filter(p => p.status === 'success');
+    if (successfulPosts.length > 0) {
+      setImportedPosts(prev => {
+        const existingIds = new Set(prev.map(p => p.id));
+        const uniqueNew = successfulPosts.filter(p => !existingIds.has(p.id));
+        return [...prev, ...uniqueNew];
+      });
+      toast.success(`Successfully resolved ${successfulPosts.length} posts.`);
+    }
+
+    setResolvedCodes(prev => {
+      const existing = [...prev];
+      newResolved.forEach(p => {
+        const idx = existing.findIndex(e => e.auth_code === p.auth_code);
+        if (idx > -1) {
+          existing[idx] = p;
+        } else {
+          existing.push(p);
+        }
+      });
+      return existing;
+    });
+
+    if (newResolved.some(p => p.status === 'error')) {
+      toast.error("Some auth codes could not be resolved. See details below.");
+    }
+  };
+
+  const handleRetryResolve = async (failedItem) => {
+    setIsResolvingCodes(true);
+    try {
+      const authRes = await tiktokFetch(`${API_BASE_URL}/api/tiktok/spark-authorize`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          advertiserId: selectedAdvertiser,
+          authCode: failedItem.auth_code,
+          originalPostAuthCode: failedItem.original_post_auth_code
+        })
+      });
+      const authData = await authRes.json();
+      if (!authRes.ok || !authData.success) {
+        throw new Error(authData.error || authData.message || 'Failed to authorize organic post');
+      }
+
+      const infoParams = new URLSearchParams({
+        advertiserId: selectedAdvertiser,
+        authCode: failedItem.auth_code
+      });
+      const infoRes = await tiktokFetch(`${API_BASE_URL}/api/tiktok/spark-video-info?${infoParams}`);
+      const infoData = await infoRes.json();
+      if (!infoRes.ok || !infoData.success) {
+        throw new Error(infoData.error || infoData.message || 'Failed to retrieve organic video information');
+      }
+
+      const videoObj = infoData.video || {};
+      const itemId = videoObj.item_id || videoObj.video_id || infoData.videoId || failedItem.auth_code;
+      const caption = videoObj.text || videoObj.title || videoObj.caption || `Spark Post ${itemId}`;
+      const posterUrl = videoObj.poster_url || videoObj.cover_image_url || videoObj.preview_url || "";
+      const likes = videoObj.like_count || 0;
+      const views = videoObj.view_count || 0;
+      const tiktokName = videoObj.user_info?.tiktok_name || videoObj.display_name || "TikTok Creator";
+      const postIdentityId = videoObj.user_info?.identity_id || selectedIdentity;
+      const postIdentityType = videoObj.user_info?.identity_type || "BC_AUTH_TT";
+
+      const updatedPost = {
+        id: itemId,
+        image_url: posterUrl,
+        ad_name: caption,
+        tiktok_name: tiktokName,
+        auth_code: failedItem.auth_code,
+        original_post_auth_code: failedItem.original_post_auth_code,
+        identity_id: postIdentityId,
+        identity_type: postIdentityType,
+        likes: likes,
+        views: views,
+        auth_end_time: videoObj.auth_info?.auth_end_time || null,
+        status: 'success'
+      };
+
+      setResolvedCodes(prev =>
+        prev.map(p => p.auth_code === failedItem.auth_code ? updatedPost : p)
+      );
+
+      setImportedPosts(prev => {
+        const existingIds = new Set(prev.map(p => p.id));
+        if (existingIds.has(updatedPost.id)) return prev;
+        return [...prev, updatedPost];
+      });
+
+      toast.success(`Successfully resolved code ${failedItem.auth_code}!`);
+    } catch (err) {
+      console.error("Retry failed:", err);
+      setResolvedCodes(prev =>
+        prev.map(p =>
+          p.auth_code === failedItem.auth_code
+            ? { ...p, error: err.message || "Failed to resolve post", status: 'error' }
+            : p
+        )
+      );
+      toast.error(`Retry failed: ${err.message}`);
+    } finally {
+      setIsResolvingCodes(false);
+    }
+  };
+
   const getValidationErrors = useCallback(() => {
     const errors = []
 
@@ -2442,8 +2638,8 @@ export default function TikTokAdCreationForm({
     }
 
     if (adType === 'SPARK') {
-      if (!sparkAuthCode || !sparkAuthCode.trim()) {
-        errors.push("Organic Post Authorization Code is required")
+      if (!importedPosts || importedPosts.length === 0) {
+        errors.push("At least one selected organic post is required")
       }
     } else {
       const activeTexts = adTexts ? adTexts.filter(t => t.trim() !== '') : []
@@ -2487,7 +2683,7 @@ export default function TikTokAdCreationForm({
     return errors
   }, [
     selectedAdvertiser, selectedCampaign, showDuplicateAdGroupBlock, duplicateAdGroup,
-    selectedAdGroup, newAdGroupName, selectedIdentity, adType, sparkAuthCode,
+    selectedAdGroup, newAdGroupName, selectedIdentity, adType, importedPosts,
     adTexts, adNameFormulaV2, adName, cta, urlMode, landingUrl
   ])
 
@@ -3629,25 +3825,165 @@ export default function TikTokAdCreationForm({
 
             {/* Organic Post to Boost for Spark Ads */}
             {adType === 'SPARK' && (
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  {renderDiffMark("sparkAuthCode")}
+              <div className="space-y-4">
+                <Label className="flex items-center gap-2 font-semibold">
                   <Zap className="w-4 h-4 text-gray-500" />
-                  Organic Post Authorization Code / Link
+                  Spark Ads Video Sourcing
                 </Label>
-                <Input
-                  type="text"
-                  placeholder="e.g. 5zcX8aB9 or copy-paste the authorized video link"
-                  value={sparkAuthCode || ''}
-                  onChange={e => setSparkAuthCode(e.target.value)}
-                  className={formInputChrome}
-                />
-                {(!sparkAuthCode || !sparkAuthCode.trim()) && (
-                  <p className="text-xs text-red-500 font-medium mt-1">Organic Post Authorization Code is required</p>
+                
+                <div className="flex bg-gray-100 p-1 rounded-2xl w-fit border border-gray-200">
+                  <button
+                    type="button"
+                    onClick={() => setSparkSourceTab("auth_codes")}
+                    className={`px-4 py-2 text-xs font-semibold rounded-xl transition-all ${
+                      sparkSourceTab === "auth_codes"
+                        ? "bg-white text-black shadow-sm"
+                        : "text-gray-500 hover:text-black"
+                    }`}
+                  >
+                    Paste Auth Codes
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSparkSourceTab("video_list")}
+                    className={`px-4 py-2 text-xs font-semibold rounded-xl transition-all ${
+                      sparkSourceTab === "video_list"
+                        ? "bg-white text-black shadow-sm"
+                        : "text-gray-500 hover:text-black"
+                    }`}
+                  >
+                    Choose from Video List
+                  </button>
+                </div>
+
+                {sparkSourceTab === "auth_codes" ? (
+                  <div className="space-y-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-medium text-gray-400">
+                        Authorization Codes
+                      </Label>
+                      <TextareaAutosize
+                        minRows={3}
+                        maxRows={6}
+                        placeholder="Paste auth codes here (one per line)&#10;For duets/stitches, format as: auth_code,original_post_auth_code"
+                        value={rawAuthCodes}
+                        onChange={e => setRawAuthCodes(e.target.value)}
+                        className={formTextareaChrome}
+                      />
+                      <p className="text-[10px] text-gray-400 leading-normal pl-1">
+                        Enter the organic post video codes generated from the creator's TikTok app. For stitch or duet videos, enter both codes separated by a comma.
+                      </p>
+                    </div>
+
+                    <Button
+                      type="button"
+                      onClick={handleResolveAuthCodes}
+                      disabled={isResolvingCodes || !rawAuthCodes.trim()}
+                      className="w-full rounded-2xl py-5 font-semibold transition-all bg-black hover:bg-zinc-800 text-white shadow-md disabled:bg-zinc-300"
+                    >
+                      {isResolvingCodes ? (
+                        <>
+                          <Loader className="mr-2 h-4 w-4 animate-spin" />
+                          Resolving Codes...
+                        </>
+                      ) : (
+                        "Resolve Posts"
+                      )}
+                    </Button>
+
+                    {resolvedCodes.length > 0 && (
+                      <div className="space-y-2.5 mt-4">
+                        <Label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
+                          Resolution Results ({resolvedCodes.length})
+                        </Label>
+                        <div className="grid gap-2.5 max-h-[300px] overflow-y-auto pr-1">
+                          {resolvedCodes.map((item, idx) => {
+                            const isSuccess = item.status === 'success';
+                            return (
+                              <div
+                                key={item.id || idx}
+                                className={`flex gap-3 items-center p-3 rounded-2xl border transition-all ${
+                                  isSuccess
+                                    ? 'bg-zinc-50/70 border-zinc-200 shadow-xs'
+                                    : 'bg-red-50/50 border-red-200'
+                                }`}
+                              >
+                                {isSuccess ? (
+                                  <>
+                                    <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 border border-gray-200">
+                                      {item.image_url ? (
+                                        <img src={item.image_url} alt="" className="w-full h-full object-cover" />
+                                      ) : (
+                                        <div className="w-full h-full flex items-center justify-center bg-gray-150">
+                                          <Image className="h-4 w-4 text-gray-400" />
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-xs font-semibold text-gray-800 line-clamp-2 leading-relaxed" title={item.ad_name}>
+                                        {item.ad_name}
+                                      </p>
+                                      <div className="flex items-center gap-2 mt-1 text-[10px] text-gray-400 font-medium">
+                                        <span className="font-mono">Code: {item.auth_code}</span>
+                                        <span>•</span>
+                                        <span>by {item.tiktok_name}</span>
+                                      </div>
+                                    </div>
+                                    <div className="text-right flex shrink-0 flex-col justify-center text-[10px] text-gray-500 font-medium">
+                                      <div>Likes: {item.likes >= 1000 ? (item.likes / 1000).toFixed(1) + 'k' : item.likes}</div>
+                                      <div>Views: {item.views >= 1000 ? (item.views / 1000).toFixed(1) + 'k' : item.views}</div>
+                                    </div>
+                                  </>
+                                ) : (
+                                  <>
+                                    <div className="p-2 bg-red-100 text-red-650 rounded-lg shrink-0">
+                                      <AlertTriangle className="h-4 w-4" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-xs font-semibold text-red-700 truncate">
+                                        Failed to resolve: {item.auth_code}
+                                      </p>
+                                      <p className="text-[10px] text-red-500 mt-0.5 leading-relaxed">
+                                        {item.error}
+                                      </p>
+                                    </div>
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-8 rounded-xl px-3 bg-white border-red-300 text-red-600 hover:bg-red-50 text-[11px] font-semibold"
+                                      onClick={() => handleRetryResolve(item)}
+                                      disabled={isResolvingCodes}
+                                    >
+                                      Retry
+                                    </Button>
+                                  </>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="border border-gray-200 rounded-2xl p-4 bg-white min-h-[300px] max-h-[500px] overflow-hidden flex flex-col shadow-xs">
+                    {(!selectedIdentity || selectedIdentity === 'CUSTOMIZED_USER') ? (
+                      <div className="flex flex-col items-center justify-center text-center p-8 flex-1 text-gray-500">
+                        <AlertTriangle className="h-8 w-8 text-amber-500 mb-2" />
+                        <p className="text-sm font-semibold">Promote From Account Required</p>
+                        <p className="text-xs text-gray-400 mt-1">Please select an account in the field above to browse its video list.</p>
+                      </div>
+                    ) : (
+                      <TikTokPostSelectorInline
+                        advertiserId={selectedAdvertiser}
+                        identityId={selectedIdentity}
+                        onImport={setImportedPosts}
+                        importedPosts={importedPosts}
+                      />
+                    )}
+                  </div>
                 )}
-                <p className="text-xs text-gray-400 leading-relaxed pl-1">
-                  Enter the organic post video code (authorized from the TikTok app) or the post link to boost it as a Spark Ad.
-                </p>
               </div>
             )}
 

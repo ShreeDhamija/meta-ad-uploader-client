@@ -874,6 +874,7 @@ export default function TikTokAds() {
                 sparkAuthCode={sparkAuthCode} setSparkAuthCode={setSparkAuthCode}
                 urlMode={urlMode} setUrlMode={setUrlMode}
                 adType={adType} setAdType={setAdType}
+                importedPosts={importedPosts} setImportedPosts={setImportedPosts}
 
                 // Form Fetching States
                 campaigns={campaigns} setCampaigns={setCampaigns}
