@@ -43,6 +43,7 @@ import {
   Info
 } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useDropzone } from "react-dropzone"
 import TextareaAutosize from 'react-textarea-autosize'
 import { toast } from "sonner"
 import CTAIcon from '@/assets/icons/cta.svg?react';
@@ -1838,6 +1839,58 @@ export default function TikTokAdCreationForm({
     setUploadProgress(0)
     e.target.value = ""
   }
+
+  const onDrop = useCallback((acceptedFiles) => {
+    if (acceptedFiles.length === 0) return
+
+    acceptedFiles.forEach((file) => {
+      if (file.type.startsWith("video/") || /\.(mp4|mov|webm)$/i.test(file.name)) {
+        const url = URL.createObjectURL(file);
+        const tempVideo = document.createElement("video");
+        tempVideo.src = url;
+        tempVideo.onloadedmetadata = () => {
+          const width = tempVideo.videoWidth;
+          const height = tempVideo.videoHeight;
+          const ratio = width / height;
+          const targetRatio = 9 / 16;
+          const diff = Math.abs(ratio - targetRatio);
+          if (diff > 0.05) {
+            toast.warning(`"${file.name}" has an aspect ratio of ${width}x${height} (${ratio.toFixed(2)}). TikTok strongly recommends a vertical 9:16 ratio (0.56) for optimal delivery.`, {
+              duration: 8000
+            });
+          }
+          URL.revokeObjectURL(url);
+        };
+      }
+    });
+
+    const taggedFiles = acceptedFiles.map(file => {
+      if (file.uniqueId) return file;
+      file.uniqueId = `${file.name}-${file.lastModified || Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+      return file;
+    });
+
+    if (setFiles) {
+      setFiles(prev => [...(prev || []), ...taggedFiles])
+    } else {
+      setVideoFile(taggedFiles[0])
+      setVideoPreview(URL.createObjectURL(taggedFiles[0]))
+    }
+    setUploadProgress(0)
+  }, [setFiles, setVideoFile, setVideoPreview, setUploadProgress])
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    multiple: true,
+    accept: {
+      'video/mp4': ['.mp4'],
+      'video/quicktime': ['.mov'],
+      'video/webm': ['.webm'],
+      'image/jpeg': ['.jpeg', '.jpg'],
+      'image/png': ['.png'],
+      'image/gif': ['.gif']
+    }
+  })
 
   const applyUtmsToUrl = (url, pairs = []) => {
     if (!url || !pairs || pairs.length === 0) return url
@@ -4379,24 +4432,20 @@ export default function TikTokAdCreationForm({
 
                     {uploadSources.includes('local') && !driveFiles.length && !dropboxFiles.length && (
                       <div
-                        onClick={() => fileRef.current?.click()}
-                        className="group cursor-pointer border-2 border-dashed border-gray-300 rounded-3xl p-8 text-center transition-all hover:border-gray-400 hover:bg-gray-50"
+                        {...getRootProps()}
+                        className={`group cursor-pointer border-2 border-dashed rounded-2xl p-6 text-center transition-colors ${isDragActive ? "border-primary bg-primary/5" : "border-gray-300 hover:border-primary/50"
+                          }`}
                       >
-                        <input
-                          ref={fileRef}
-                          type="file"
-                          accept="video/mp4,video/quicktime,video/webm,image/jpeg,image/png,image/gif"
-                          multiple
-                          className="hidden"
-                          onChange={handleVideoSelect}
-                        />
-                        <div className="flex flex-col items-center gap-3">
-                          <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center">
-                            <Upload className="w-6 h-6 text-gray-400" />
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-gray-700">Click to upload video or image</p>
-                          </div>
+                        <input {...getInputProps()} />
+                        <div className="flex flex-col items-center gap-2">
+                          <Upload className="h-6 w-6 text-gray-500 group-hover:text-black" />
+                          {isDragActive ? (
+                            <p className="text-sm text-gray-500 group-hover:text-black">Drop files here ...</p>
+                          ) : (
+                            <p className="text-sm text-gray-500 group-hover:text-black">
+                              Drag & drop files here, or click to select files
+                            </p>
+                          )}
                         </div>
                       </div>
                     )}
