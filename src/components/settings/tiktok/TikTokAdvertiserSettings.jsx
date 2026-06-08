@@ -114,6 +114,12 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
     const [openProduct, setOpenProduct] = useState(false);
     const [savingCatalogSelection, setSavingCatalogSelection] = useState(false);
 
+    // Search query states for manual dropdown filtering
+    const [advertiserSearch, setAdvertiserSearch] = useState("");
+    const [identitySearch, setIdentitySearch] = useState("");
+    const [catalogSearch, setCatalogSearch] = useState("");
+    const [productSearch, setProductSearch] = useState("");
+
     const tiktokHeaders = useCallback(() => {
         const uid = localStorage.getItem('tiktok_uid');
         const token = localStorage.getItem('tiktok_token');
@@ -402,7 +408,10 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                     <label className="text-md font-medium text-gray-800">Select Advertiser Account</label>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Popover open={openAdvertiser} onOpenChange={setOpenAdvertiser}>
+                    <Popover open={openAdvertiser} onOpenChange={(open) => {
+                        setOpenAdvertiser(open);
+                        if (!open) setAdvertiserSearch("");
+                    }}>
                         <PopoverTrigger asChild>
                             <Button
                                 variant="outline"
@@ -424,33 +433,50 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                 width: "auto",
                             }}
                         >
-                            <Command key={advertisers.length} loop={false} value="">
+                            <Command loop={false} shouldFilter={false} value="">
                                 <CommandInput
                                     placeholder="Search advertiser accounts..."
+                                    value={advertiserSearch}
+                                    onValueChange={setAdvertiserSearch}
                                     className="bg-transparent"
                                     wrapperClassName="bg-gray-50 border-gray-200 rounded-[20px]"
                                 />
                                 <CommandList className="max-h-[500px] overflow-y-auto rounded-2xl custom-scrollbar" selectOnFocus={false}>
-                                    <CommandEmpty>No accounts found.</CommandEmpty>
-                                    <CommandGroup>
-                                        {advertisers.map(a => {
-                                            const id = a.advertiser_id || a.id;
-                                            return (
-                                                <CommandItem
-                                                    key={id}
-                                                    value={`${a.name || ""} ${id}`.toLowerCase()}
-                                                    onSelect={() => handleAdvertiserChange(id)}
-                                                    className={cn(
-                                                        "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150 hover:bg-gray-100",
-                                                        selectedAdvertiser === id ? "bg-gray-100 font-semibold" : ""
-                                                    )}
-                                                >
-                                                    <span className="text-sm">{a.name}</span>
-                                                    {selectedAdvertiser === id && <Check className="ml-auto w-4 h-4" />}
-                                                </CommandItem>
-                                            );
-                                        })}
-                                    </CommandGroup>
+                                    {(() => {
+                                        const filtered = advertisers.filter(a => {
+                                            const name = (a.name || "").toLowerCase();
+                                            const id = String(a.advertiser_id || a.id || "").toLowerCase();
+                                            const q = advertiserSearch.toLowerCase();
+                                            return name.includes(q) || id.includes(q);
+                                        });
+                                        if (filtered.length === 0) {
+                                            return <CommandEmpty>No accounts found.</CommandEmpty>;
+                                        }
+                                        return (
+                                            <CommandGroup>
+                                                {filtered.map(a => {
+                                                    const id = a.advertiser_id || a.id;
+                                                    return (
+                                                        <CommandItem
+                                                            key={id}
+                                                            value={`${a.name || ""} ${id}`.toLowerCase()}
+                                                            onSelect={() => {
+                                                                handleAdvertiserChange(id);
+                                                                setAdvertiserSearch("");
+                                                            }}
+                                                            className={cn(
+                                                                "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150 hover:bg-gray-100",
+                                                                selectedAdvertiser === id ? "bg-gray-100 font-semibold" : ""
+                                                            )}
+                                                        >
+                                                            <span className="text-sm">{a.name}</span>
+                                                            {selectedAdvertiser === id && <Check className="ml-auto w-4 h-4" />}
+                                                        </CommandItem>
+                                                    );
+                                                })}
+                                            </CommandGroup>
+                                        );
+                                    })()}
                                 </CommandList>
                             </Command>
                         </PopoverContent>
@@ -496,7 +522,10 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                         </div>
 
                         <div>
-                            <Popover open={openIdentity} onOpenChange={setOpenIdentity}>
+                            <Popover open={openIdentity} onOpenChange={(open) => {
+                                setOpenIdentity(open);
+                                if (!open) setIdentitySearch("");
+                            }}>
                                 <PopoverTrigger asChild>
                                     <Button
                                         variant="outline"
@@ -534,30 +563,47 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                         width: "auto",
                                     }}
                                 >
-                                    <Command key={identities.length} loop={false}>
+                                    <Command loop={false} shouldFilter={false}>
                                         <CommandInput
                                             placeholder="Search identities..."
+                                            value={identitySearch}
+                                            onValueChange={setIdentitySearch}
                                             wrapperClassName="bg-gray-50 border-gray-100"
                                         />
                                         <CommandList className="max-h-[300px] overflow-y-auto rounded-xl">
-                                            <CommandEmpty className="p-4 text-center text-xs text-gray-500">No identities found.</CommandEmpty>
-                                            {identities.map((i) => (
-                                                <CommandItem
-                                                    key={i.identity_id}
-                                                    value={`${i.display_name || ""} ${i.identity_id}`.toLowerCase()}
-                                                    onSelect={() => {
-                                                        setSettings({ ...currentSettings, defaultIdentityId: i.identity_id });
-                                                        setOpenIdentity(false);
-                                                    }}
-                                                    className="px-3 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150 hover:bg-gray-100 flex items-center gap-3"
-                                                >
-                                                    <div className="flex items-center gap-1.5">
-                                                        <span className="text-sm font-semibold text-gray-900">{i.display_name}</span>
-                                                        <span className="text-xs text-gray-400 font-normal">{i.identity_id}</span>
-                                                    </div>
-                                                    {currentSettings.defaultIdentityId === i.identity_id && <Check className="ml-auto w-4 h-4 text-black" />}
-                                                </CommandItem>
-                                            ))}
+                                            {(() => {
+                                                const filtered = identities.filter(i => {
+                                                    const name = (i.display_name || "").toLowerCase();
+                                                    const id = String(i.identity_id || "").toLowerCase();
+                                                    const q = identitySearch.toLowerCase();
+                                                    return name.includes(q) || id.includes(q);
+                                                });
+                                                if (filtered.length === 0) {
+                                                    return <CommandEmpty className="p-4 text-center text-xs text-gray-500">No identities found.</CommandEmpty>;
+                                                }
+                                                return (
+                                                    <CommandGroup>
+                                                        {filtered.map((i) => (
+                                                            <CommandItem
+                                                                key={i.identity_id}
+                                                                value={`${i.display_name || ""} ${i.identity_id}`.toLowerCase()}
+                                                                onSelect={() => {
+                                                                    setSettings({ ...currentSettings, defaultIdentityId: i.identity_id });
+                                                                    setOpenIdentity(false);
+                                                                    setIdentitySearch("");
+                                                                }}
+                                                                className="px-3 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150 hover:bg-gray-100 flex items-center gap-3"
+                                                            >
+                                                                <div className="flex items-center gap-1.5">
+                                                                    <span className="text-sm font-semibold text-gray-900">{i.display_name}</span>
+                                                                    <span className="text-xs text-gray-400 font-normal">{i.identity_id}</span>
+                                                                </div>
+                                                                {currentSettings.defaultIdentityId === i.identity_id && <Check className="ml-auto w-4 h-4 text-black" />}
+                                                            </CommandItem>
+                                                        ))}
+                                                    </CommandGroup>
+                                                );
+                                            })()}
                                         </CommandList>
                                     </Command>
                                 </PopoverContent>
@@ -818,7 +864,10 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                         {/* Catalog Dropdown */}
                         <div className="space-y-1">
                             <label className="text-xs font-semibold text-gray-700">Catalog</label>
-                            <Popover open={openCatalog} onOpenChange={setOpenCatalog}>
+                            <Popover open={openCatalog} onOpenChange={(open) => {
+                                setOpenCatalog(open);
+                                if (!open) setCatalogSearch("");
+                            }}>
                                 <PopoverTrigger asChild>
                                     <Button
                                         variant="outline"
@@ -846,64 +895,83 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                     avoidCollisions={false}
                                     style={{ minWidth: "var(--radix-popover-trigger-width)", width: "auto" }}
                                 >
-                                    <Command key={catalogs.length} loop={false}>
-                                        <CommandInput placeholder="Search catalogs..." wrapperClassName="bg-gray-50 border-gray-100" />
+                                    <Command loop={false} shouldFilter={false}>
+                                        <CommandInput
+                                            placeholder="Search catalogs..."
+                                            value={catalogSearch}
+                                            onValueChange={setCatalogSearch}
+                                            wrapperClassName="bg-gray-50 border-gray-100"
+                                        />
                                         <CommandList className="max-h-[300px] overflow-y-auto rounded-xl">
-                                            <CommandEmpty className="p-4 text-center text-xs text-gray-500">
-                                                {catalogs.length === 0 ? 'No catalogs found for this advertiser.' : 'No results.'}
-                                            </CommandEmpty>
-                                            {catalogs.length > 0 && (
-                                                <CommandGroup>
-                                                    {/* Clear option */}
-                                                    <CommandItem
-                                                        value="none clear selection"
-                                                        onSelect={() => {
-                                                            setSelectedCatalogId(null);
-                                                            setSelectedCatalogName(null);
-                                                            setSelectedProductId(null);
-                                                            setSelectedProductName(null);
-                                                            setSelectedProductImage(null);
-                                                            setCatalogProducts([]);
-                                                            setOpenCatalog(false);
-                                                            saveCatalogSelection(selectedAdvertiser, {
-                                                                catalog_id: null, catalog_name: null,
-                                                                product_id: null, product_name: null, product_image_url: null,
-                                                            });
-                                                        }}
-                                                        className="px-3 py-2 cursor-pointer m-1 rounded-xl text-gray-400 hover:bg-gray-50 italic text-xs"
-                                                    >
-                                                        None (clear selection)
-                                                    </CommandItem>
-                                                    {catalogs.map((cat) => (
+                                            {(() => {
+                                                const filtered = catalogs.filter(cat => {
+                                                    const name = (cat.catalog_name || "").toLowerCase();
+                                                    const id = String(cat.catalog_id || "").toLowerCase();
+                                                    const q = catalogSearch.toLowerCase();
+                                                    return name.includes(q) || id.includes(q);
+                                                });
+                                                if (filtered.length === 0) {
+                                                    return (
+                                                        <CommandEmpty className="p-4 text-center text-xs text-gray-500">
+                                                            {catalogs.length === 0 ? 'No catalogs found for this advertiser.' : 'No results.'}
+                                                        </CommandEmpty>
+                                                    );
+                                                }
+                                                return (
+                                                    <CommandGroup>
+                                                        {/* Clear option */}
                                                         <CommandItem
-                                                            key={cat.catalog_id}
-                                                            value={`${cat.catalog_name || ""} ${cat.catalog_id}`.toLowerCase()}
+                                                            value="none clear selection"
                                                             onSelect={() => {
-                                                                setSelectedCatalogId(cat.catalog_id);
-                                                                setSelectedCatalogName(cat.catalog_name);
+                                                                setSelectedCatalogId(null);
+                                                                setSelectedCatalogName(null);
                                                                 setSelectedProductId(null);
                                                                 setSelectedProductName(null);
                                                                 setSelectedProductImage(null);
                                                                 setCatalogProducts([]);
                                                                 setOpenCatalog(false);
-                                                                fetchCatalogProducts(selectedAdvertiser, cat.catalog_id);
+                                                                setCatalogSearch("");
                                                                 saveCatalogSelection(selectedAdvertiser, {
-                                                                    catalog_id: cat.catalog_id,
-                                                                    catalog_name: cat.catalog_name,
+                                                                    catalog_id: null, catalog_name: null,
                                                                     product_id: null, product_name: null, product_image_url: null,
                                                                 });
                                                             }}
-                                                            className="px-3 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150 hover:bg-gray-100 flex items-center gap-2"
+                                                            className="px-3 py-2 cursor-pointer m-1 rounded-xl text-gray-400 hover:bg-gray-50 italic text-xs"
                                                         >
-                                                            <div className="flex-1 min-w-0">
-                                                                <p className="text-sm font-semibold text-gray-900 truncate">{cat.catalog_name}</p>
-                                                                <p className="text-xs text-gray-400 font-mono">{cat.catalog_id}</p>
-                                                            </div>
-                                                            {selectedCatalogId === cat.catalog_id && <Check className="w-4 h-4 text-black shrink-0" />}
+                                                            None (clear selection)
                                                         </CommandItem>
-                                                    ))}
-                                                </CommandGroup>
-                                            )}
+                                                        {filtered.map((cat) => (
+                                                            <CommandItem
+                                                                key={cat.catalog_id}
+                                                                value={`${cat.catalog_name || ""} ${cat.catalog_id}`.toLowerCase()}
+                                                                onSelect={() => {
+                                                                    setSelectedCatalogId(cat.catalog_id);
+                                                                    setSelectedCatalogName(cat.catalog_name);
+                                                                    setSelectedProductId(null);
+                                                                    setSelectedProductName(null);
+                                                                    setSelectedProductImage(null);
+                                                                    setCatalogProducts([]);
+                                                                    setOpenCatalog(false);
+                                                                    setCatalogSearch("");
+                                                                    fetchCatalogProducts(selectedAdvertiser, cat.catalog_id);
+                                                                    saveCatalogSelection(selectedAdvertiser, {
+                                                                        catalog_id: cat.catalog_id,
+                                                                        catalog_name: cat.catalog_name,
+                                                                        product_id: null, product_name: null, product_image_url: null,
+                                                                    });
+                                                                }}
+                                                                className="px-3 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150 hover:bg-gray-100 flex items-center gap-2"
+                                                            >
+                                                                <div className="flex-1 min-w-0">
+                                                                    <p className="text-sm font-semibold text-gray-900 truncate">{cat.catalog_name}</p>
+                                                                    <p className="text-xs text-gray-400 font-mono">{cat.catalog_id}</p>
+                                                                </div>
+                                                                {selectedCatalogId === cat.catalog_id && <Check className="w-4 h-4 text-black shrink-0" />}
+                                                            </CommandItem>
+                                                        ))}
+                                                    </CommandGroup>
+                                                );
+                                            })()}
                                         </CommandList>
                                     </Command>
                                 </PopoverContent>
@@ -917,7 +985,10 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                 {productError && (
                                     <p className="text-xs text-red-500 mb-1">{productError}</p>
                                 )}
-                                <Popover open={openProduct} onOpenChange={setOpenProduct}>
+                                <Popover open={openProduct} onOpenChange={(open) => {
+                                    setOpenProduct(open);
+                                    if (!open) setProductSearch("");
+                                }}>
                                     <PopoverTrigger asChild>
                                         <Button
                                             variant="outline"
@@ -950,70 +1021,89 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                         avoidCollisions={false}
                                         style={{ minWidth: "var(--radix-popover-trigger-width)", width: "auto" }}
                                     >
-                                        <Command key={catalogProducts.length} loop={false}>
-                                            <CommandInput placeholder="Search products..." wrapperClassName="bg-gray-50 border-gray-100" />
+                                        <Command loop={false} shouldFilter={false}>
+                                            <CommandInput
+                                                placeholder="Search products..."
+                                                value={productSearch}
+                                                onValueChange={setProductSearch}
+                                                wrapperClassName="bg-gray-50 border-gray-100"
+                                            />
                                             <CommandList className="max-h-[360px] overflow-y-auto rounded-xl">
-                                                <CommandEmpty className="p-4 text-center text-xs text-gray-500">
-                                                    {catalogProducts.length === 0 ? 'No products in this catalog.' : 'No results.'}
-                                                </CommandEmpty>
-                                                {catalogProducts.length > 0 && (
-                                                    <CommandGroup>
-                                                        {/* Clear option */}
-                                                        <CommandItem
-                                                            value="none clear product"
-                                                            onSelect={() => {
-                                                                setSelectedProductId(null);
-                                                                setSelectedProductName(null);
-                                                                setSelectedProductImage(null);
-                                                                setOpenProduct(false);
-                                                                saveCatalogSelection(selectedAdvertiser, {
-                                                                    catalog_id: selectedCatalogId,
-                                                                    catalog_name: selectedCatalogName,
-                                                                    product_id: null, product_name: null, product_image_url: null,
-                                                                });
-                                                            }}
-                                                            className="px-3 py-2 cursor-pointer m-1 rounded-xl text-gray-400 hover:bg-gray-50 italic text-xs"
-                                                        >
-                                                            None (clear product)
-                                                        </CommandItem>
-                                                        {catalogProducts.map((prod) => (
+                                                {(() => {
+                                                    const filtered = catalogProducts.filter(prod => {
+                                                        const name = (prod.product_name || "").toLowerCase();
+                                                        const id = String(prod.product_id || "").toLowerCase();
+                                                        const q = productSearch.toLowerCase();
+                                                        return name.includes(q) || id.includes(q);
+                                                    });
+                                                    if (filtered.length === 0) {
+                                                        return (
+                                                            <CommandEmpty className="p-4 text-center text-xs text-gray-500">
+                                                                {catalogProducts.length === 0 ? 'No products in this catalog.' : 'No results.'}
+                                                            </CommandEmpty>
+                                                        );
+                                                    }
+                                                    return (
+                                                        <CommandGroup>
+                                                            {/* Clear option */}
                                                             <CommandItem
-                                                                key={prod.product_id}
-                                                                value={`${prod.product_name || ""} ${prod.product_id}`.toLowerCase()}
+                                                                value="none clear product"
                                                                 onSelect={() => {
-                                                                    setSelectedProductId(prod.product_id);
-                                                                    setSelectedProductName(prod.product_name);
-                                                                    setSelectedProductImage(prod.image_url || null);
+                                                                    setSelectedProductId(null);
+                                                                    setSelectedProductName(null);
+                                                                    setSelectedProductImage(null);
                                                                     setOpenProduct(false);
+                                                                    setProductSearch("");
                                                                     saveCatalogSelection(selectedAdvertiser, {
                                                                         catalog_id: selectedCatalogId,
                                                                         catalog_name: selectedCatalogName,
-                                                                        product_id: prod.product_id,
-                                                                        product_name: prod.product_name,
-                                                                        product_image_url: prod.image_url || null,
+                                                                        product_id: null, product_name: null, product_image_url: null,
                                                                     });
-                                                                    toast.success(`Product saved: ${prod.product_name}`);
                                                                 }}
-                                                                className="px-3 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150 hover:bg-gray-100 flex items-center gap-3"
+                                                                className="px-3 py-2 cursor-pointer m-1 rounded-xl text-gray-400 hover:bg-gray-50 italic text-xs"
                                                             >
-                                                                {prod.image_url ? (
-                                                                    <img src={prod.image_url} alt="" className="w-10 h-10 rounded-lg object-cover shrink-0 border border-gray-100" />
-                                                                ) : (
-                                                                    <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
-                                                                        <Info className="w-4 h-4 text-gray-300" />
-                                                                    </div>
-                                                                )}
-                                                                <div className="flex-1 min-w-0">
-                                                                    <p className="text-sm font-semibold text-gray-900 truncate">{prod.product_name}</p>
-                                                                    {prod.price && (
-                                                                        <p className="text-xs text-gray-400">{prod.price} {prod.currency}</p>
-                                                                    )}
-                                                                </div>
-                                                                {selectedProductId === prod.product_id && <Check className="w-4 h-4 text-black shrink-0" />}
+                                                                None (clear product)
                                                             </CommandItem>
-                                                        ))}
-                                                    </CommandGroup>
-                                                )}
+                                                            {filtered.map((prod) => (
+                                                                <CommandItem
+                                                                    key={prod.product_id}
+                                                                    value={`${prod.product_name || ""} ${prod.product_id}`.toLowerCase()}
+                                                                    onSelect={() => {
+                                                                        setSelectedProductId(prod.product_id);
+                                                                        setSelectedProductName(prod.product_name);
+                                                                        setSelectedProductImage(prod.image_url || null);
+                                                                        setOpenProduct(false);
+                                                                        setProductSearch("");
+                                                                        saveCatalogSelection(selectedAdvertiser, {
+                                                                            catalog_id: selectedCatalogId,
+                                                                            catalog_name: selectedCatalogName,
+                                                                            product_id: prod.product_id,
+                                                                            product_name: prod.product_name,
+                                                                            product_image_url: prod.image_url || null,
+                                                                        });
+                                                                        toast.success(`Product saved: ${prod.product_name}`);
+                                                                    }}
+                                                                    className="px-3 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150 hover:bg-gray-100 flex items-center gap-3"
+                                                                >
+                                                                    {prod.image_url ? (
+                                                                        <img src={prod.image_url} alt="" className="w-10 h-10 rounded-lg object-cover shrink-0 border border-gray-100" />
+                                                                    ) : (
+                                                                        <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
+                                                                            <Info className="w-4 h-4 text-gray-300" />
+                                                                        </div>
+                                                                    )}
+                                                                    <div className="flex-1 min-w-0">
+                                                                        <p className="text-sm font-semibold text-gray-900 truncate">{prod.product_name}</p>
+                                                                        {prod.price && (
+                                                                            <p className="text-xs text-gray-400">{prod.price} {prod.currency}</p>
+                                                                        )}
+                                                                    </div>
+                                                                    {selectedProductId === prod.product_id && <Check className="w-4 h-4 text-black shrink-0" />}
+                                                                </CommandItem>
+                                                            ))}
+                                                        </CommandGroup>
+                                                    );
+                                                })()}
                                             </CommandList>
                                         </Command>
                                     </PopoverContent>
