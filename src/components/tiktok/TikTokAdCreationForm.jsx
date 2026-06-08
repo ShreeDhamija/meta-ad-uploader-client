@@ -1443,11 +1443,15 @@ export default function TikTokAdCreationForm({
   useEffect(() => {
     if (urlMode === 'WEBSITE') {
       const availableLinks = advertiserPrefs?.links || [];
-      if (landingUrl && availableLinks.length > 0) {
-        const exists = availableLinks.some(l => l.url === landingUrl);
-        setShowCustomLink(!exists);
-      } else if (availableLinks.length === 0) {
+      if (availableLinks.length === 0) {
         setShowCustomLink(true);
+      } else {
+        if (!landingUrl) {
+          setShowCustomLink(false);
+        } else {
+          const exists = availableLinks.some(l => l.url === landingUrl);
+          setShowCustomLink(!exists);
+        }
       }
     } else {
       setShowCustomLink(false);
@@ -3830,27 +3834,25 @@ export default function TikTokAdCreationForm({
                   <Zap className="w-4 h-4 text-gray-500" />
                   Spark Ads Video Sourcing
                 </Label>
-                
+
                 <div className="flex bg-gray-100 p-1 rounded-2xl w-fit border border-gray-200">
                   <button
                     type="button"
                     onClick={() => setSparkSourceTab("auth_codes")}
-                    className={`px-4 py-2 text-xs font-semibold rounded-xl transition-all ${
-                      sparkSourceTab === "auth_codes"
-                        ? "bg-white text-black shadow-sm"
-                        : "text-gray-500 hover:text-black"
-                    }`}
+                    className={`px-4 py-2 text-xs font-semibold rounded-xl transition-all ${sparkSourceTab === "auth_codes"
+                      ? "bg-white text-black shadow-sm"
+                      : "text-gray-500 hover:text-black"
+                      }`}
                   >
                     Paste Auth Codes
                   </button>
                   <button
                     type="button"
                     onClick={() => setSparkSourceTab("video_list")}
-                    className={`px-4 py-2 text-xs font-semibold rounded-xl transition-all ${
-                      sparkSourceTab === "video_list"
-                        ? "bg-white text-black shadow-sm"
-                        : "text-gray-500 hover:text-black"
-                    }`}
+                    className={`px-4 py-2 text-xs font-semibold rounded-xl transition-all ${sparkSourceTab === "video_list"
+                      ? "bg-white text-black shadow-sm"
+                      : "text-gray-500 hover:text-black"
+                      }`}
                   >
                     Choose from Video List
                   </button>
@@ -3865,7 +3867,7 @@ export default function TikTokAdCreationForm({
                       <TextareaAutosize
                         minRows={3}
                         maxRows={6}
-                        placeholder="Paste auth codes here (one per line)&#10;For duets/stitches, format as: auth_code,original_post_auth_code"
+                        placeholder="Paste auth codes here (one per line)"
                         value={rawAuthCodes}
                         onChange={e => setRawAuthCodes(e.target.value)}
                         className={formTextareaChrome}
@@ -3902,11 +3904,10 @@ export default function TikTokAdCreationForm({
                             return (
                               <div
                                 key={item.id || idx}
-                                className={`flex gap-3 items-center p-3 rounded-2xl border transition-all ${
-                                  isSuccess
-                                    ? 'bg-zinc-50/70 border-zinc-200 shadow-xs'
-                                    : 'bg-red-50/50 border-red-200'
-                                }`}
+                                className={`flex gap-3 items-center p-3 rounded-2xl border transition-all ${isSuccess
+                                  ? 'bg-zinc-50/70 border-zinc-200 shadow-xs'
+                                  : 'bg-red-50/50 border-red-200'
+                                  }`}
                               >
                                 {isSuccess ? (
                                   <>
@@ -4031,290 +4032,292 @@ export default function TikTokAdCreationForm({
               </div>
 
               {/* 4. Ad Copy / Caption with template picker */}
-              <div className="space-y-4">
-                <div className="space-y-3">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Label className="flex items-center gap-2 mb-0">
-                        <TemplateIcon className="w-4 h-4 text-zinc-600" />
-                        Select a Copy Template
-                      </Label>
+              {!(adType === 'SPARK' && sparkSourceTab === 'video_list') && (
+                <div className="space-y-4">
+                  <div className="space-y-3">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Label className="flex items-center gap-2 mb-0">
+                          <TemplateIcon className="w-4 h-4 text-zinc-600" />
+                          Select a Copy Template
+                        </Label>
 
-                      {/* No templates + no content → Setup button */}
-                      {Object.keys(copyTemplates).length === 0 && !hasAnyContent && selectedAdvertiser && (
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          onClick={() => navigate(`/settings?tab=tiktok&adsaccount=${selectedAdvertiser}`)}
-                          className="text-xs px-3 pl-2 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900 ml-auto h-7 flex items-center gap-1 font-medium"
-                        >
-                          <CogIcon className="w-3 h-3 text-white mr-1" />
-                          Set Up Templates
-                        </Button>
-                      )}
-
-                      {/* No templates + content typed → Save as New only */}
-                      {Object.keys(copyTemplates).length === 0 && hasAnyContent && (
-                        <div className="ml-auto animate-in fade-in slide-in-from-bottom-1 duration-500 ease-out fill-mode-both">
+                        {/* No templates + no content → Setup button */}
+                        {Object.keys(copyTemplates).length === 0 && !hasAnyContent && selectedAdvertiser && (
                           <Button
                             type="button"
                             size="sm"
                             variant="outline"
-                            disabled={isSavingNew || isUpdatingTemplate || !!existingDuplicateTemplate}
-                            onClick={() => setShowSaveNewDialog(true)}
-                            className="text-xs px-3 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900 h-7 flex items-center gap-1 font-medium"
+                            onClick={() => navigate(`/settings?tab=tiktok&adsaccount=${selectedAdvertiser}`)}
+                            className="text-xs px-3 pl-2 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900 ml-auto h-7 flex items-center gap-1 font-medium"
                           >
-                            {isSavingNew ? (
-                              <Loader className="w-3 h-3 animate-spin" />
-                            ) : existingDuplicateTemplate ? (
-                              `Already exists as "${existingDuplicateTemplate}"`
-                            ) : (
-                              "Save as New Template"
-                            )}
+                            <CogIcon className="w-3 h-3 text-white mr-1" />
+                            Set Up Templates
                           </Button>
-                        </div>
-                      )}
+                        )}
 
-                      {/* Has templates + changes detected → both buttons */}
-                      {Object.keys(copyTemplates).length > 0 && hasUnsavedTemplateChanges && (
-                        <div className="flex items-center gap-2 ml-auto animate-in fade-in slide-in-from-bottom-1 duration-500 ease-out fill-mode-both">
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            disabled={isSavingNew || isUpdatingTemplate || !!existingDuplicateTemplate}
-                            onClick={() => setShowSaveNewDialog(true)}
-                            className="text-xs px-3 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900 h-7 flex items-center gap-1 font-medium"
-                          >
-                            {isSavingNew ? (
-                              <Loader className="w-3 h-3 animate-spin" />
-                            ) : existingDuplicateTemplate ? (
-                              `Already exists as "${existingDuplicateTemplate}"`
-                            ) : (
-                              "Save as New Template"
-                            )}
-                          </Button>
-                          {selectedTemplate && copyTemplates[selectedTemplate] && (
+                        {/* No templates + content typed → Save as New only */}
+                        {Object.keys(copyTemplates).length === 0 && hasAnyContent && (
+                          <div className="ml-auto animate-in fade-in slide-in-from-bottom-1 duration-500 ease-out fill-mode-both">
                             <Button
                               type="button"
                               size="sm"
                               variant="outline"
-                              disabled={isUpdatingTemplate || isSavingNew || !!existingDuplicateTemplate}
-                              onClick={handleUpdateSelectedTemplate}
-                              className="text-xs px-3 py-0.5 border-gray-300 text-white bg-blue-600 rounded-xl hover:text-white hover:bg-blue-700 animate-in fade-in slide-in-from-bottom-1 duration-500 ease-out fill-mode-both delay-200 h-7 flex items-center gap-1 font-medium"
+                              disabled={isSavingNew || isUpdatingTemplate || !!existingDuplicateTemplate}
+                              onClick={() => setShowSaveNewDialog(true)}
+                              className="text-xs px-3 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900 h-7 flex items-center gap-1 font-medium"
                             >
-                              {isUpdatingTemplate ? (
-                                <>
-                                  <Loader className="w-3 h-3 animate-spin mr-1" />
-                                  Updating Template...
-                                </>
+                              {isSavingNew ? (
+                                <Loader className="w-3 h-3 animate-spin" />
+                              ) : existingDuplicateTemplate ? (
+                                `Already exists as "${existingDuplicateTemplate}"`
                               ) : (
-                                "Update Selected Template"
+                                "Save as New Template"
                               )}
                             </Button>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Popover Template Dropdown - Meta styled */}
-                    <Popover open={templateDropdownOpen} onOpenChange={(open) => {
-                      setTemplateDropdownOpen(open);
-                      if (!open) {
-                        setTemplateSearch("");
-                        setShowSortMenu(false);
-                        if (bulkDeleteMode && selectedForDelete.size === 0) {
-                          setBulkDeleteMode(false);
-                        }
-                      }
-                    }}>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className={`w-full justify-between ${formFieldChrome} hover:bg-white text-sm px-3 text-zinc-700`}
-                          disabled={Object.keys(copyTemplates).length === 0}
-                        >
-                          <span className="truncate">
-                            {Object.keys(copyTemplates).length === 0
-                              ? "No templates available for selected advertiser"
-                              : selectedTemplate || "Choose a Template"}
-                          </span>
-                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent
-                        className="min-w-[--radix-popover-trigger-width] w-auto !max-w-none p-0 rounded-xl bg-white border border-gray-100 shadow-xl"
-                        align="start"
-                        side="bottom"
-                        avoidCollisions={false}
-                        style={{
-                          minWidth: "var(--radix-popover-trigger-width)",
-                          width: "auto",
-                        }}
-                      >
-                        <Command filter={() => 1} loop={false} className="overflow-visible">
-                          <div className="flex items-center gap-1.5 mx-2 mt-2 mb-1">
-                            <CommandInput
-                              placeholder="Search templates..."
-                              value={templateSearch}
-                              onValueChange={setTemplateSearch}
-                              wrapperClassName="flex-1 border-gray-200 bg-gray-50 mx-0 mt-0 mb-0"
-                            />
-                            <div className="flex items-center gap-1">
-                              {/* Sort Menu */}
-                              <div className="relative">
-                                <button
-                                  type="button"
-                                  className={`p-1.5 rounded-lg transition-colors ${showSortMenu ? 'bg-gray-100' : 'hover:bg-gray-100'}`}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setShowSortMenu(!showSortMenu);
-                                  }}
-                                  title="Sort templates"
-                                >
-                                  <ArrowUpDown className="h-3.5 w-3.5 text-gray-500" />
-                                </button>
-                                {showSortMenu && (
-                                  <>
-                                    <div className="fixed inset-0 z-[99]" onClick={() => setShowSortMenu(false)} />
-                                    <div className="absolute right-0 top-full mt-1 z-[100] bg-white rounded-xl border border-gray-200 shadow-lg py-1 min-w-[150px]">
-                                      {[
-                                        { value: "default", label: "Recently Made" },
-                                        { value: "oldest", label: "Oldest First" },
-                                      ].map((option) => (
-                                        <button
-                                          key={option.value}
-                                          type="button"
-                                          className="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 flex items-center justify-between"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setSortMode(option.value);
-                                            localStorage.setItem("tiktokHomeTemplateSortMode", option.value);
-                                            setShowSortMenu(false);
-                                          }}
-                                        >
-                                          <span className="flex items-center gap-1.5">
-                                            {option.label}
-                                          </span>
-                                          {sortMode === option.value && (
-                                            <Check className="h-3.5 w-3.5 text-blue-500" />
-                                          )}
-                                        </button>
-                                      ))}
-                                    </div>
-                                  </>
-                                )}
-                              </div>
-                              {/* Bulk Delete Button */}
-                              {bulkDeleteMode && selectedForDelete.size > 0 ? (
-                                <button
-                                  type="button"
-                                  className="flex items-center gap-1 px-2 py-1 rounded-lg bg-red-500 text-white text-xs font-medium hover:bg-red-600 transition-colors disabled:opacity-70 animate-in zoom-in-95 duration-150"
-                                  disabled={isDeletingTemplates}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleBulkDeleteTemplates();
-                                  }}
-                                >
-                                  {isDeletingTemplates ? <Loader className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
-                                  {isDeletingTemplates ? "Deleting..." : `Delete (${selectedForDelete.size})`}
-                                </button>
-                              ) : (
-                                <button
-                                  type="button"
-                                  className={`p-1.5 rounded-lg transition-colors ${bulkDeleteMode ? 'bg-red-50 text-red-500' : 'hover:bg-gray-100'}`}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (bulkDeleteMode) {
-                                      setBulkDeleteMode(false);
-                                      setSelectedForDelete(new Set());
-                                    } else {
-                                      setBulkDeleteMode(true);
-                                    }
-                                  }}
-                                  title={bulkDeleteMode ? "Cancel delete" : "Delete templates"}
-                                >
-                                  {bulkDeleteMode ? (
-                                    <X className="h-3.5 w-3.5" />
-                                  ) : (
-                                    <Trash2 className="h-3.5 w-3.5 text-gray-500" />
-                                  )}
-                                </button>
-                              )}
-                            </div>
                           </div>
-                          <CommandList className="max-h-[300px] overflow-y-auto rounded-xl">
-                            {sortedFilteredTemplates.map(([name, data]) => (
-                              <CommandItem
-                                key={name}
-                                value={name}
-                                onSelect={() => {
-                                  if (bulkDeleteMode) {
-                                    toggleDeleteSelection(name);
-                                  } else {
-                                    setSelectedTemplate(name);
-                                    if (data.texts && data.texts.length > 0) {
-                                      setAdTexts([data.texts[0] || ""]);
-                                    }
-                                    setTemplateDropdownOpen(false);
-                                    setTemplateSearch("");
-                                  }
-                                }}
-                                className="px-3 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150 hover:bg-gray-100"
+                        )}
+
+                        {/* Has templates + changes detected → both buttons */}
+                        {Object.keys(copyTemplates).length > 0 && hasUnsavedTemplateChanges && (
+                          <div className="flex items-center gap-2 ml-auto animate-in fade-in slide-in-from-bottom-1 duration-500 ease-out fill-mode-both">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              disabled={isSavingNew || isUpdatingTemplate || !!existingDuplicateTemplate}
+                              onClick={() => setShowSaveNewDialog(true)}
+                              className="text-xs px-3 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900 h-7 flex items-center gap-1 font-medium"
+                            >
+                              {isSavingNew ? (
+                                <Loader className="w-3 h-3 animate-spin" />
+                              ) : existingDuplicateTemplate ? (
+                                `Already exists as "${existingDuplicateTemplate}"`
+                              ) : (
+                                "Save as New Template"
+                              )}
+                            </Button>
+                            {selectedTemplate && copyTemplates[selectedTemplate] && (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                disabled={isUpdatingTemplate || isSavingNew || !!existingDuplicateTemplate}
+                                onClick={handleUpdateSelectedTemplate}
+                                className="text-xs px-3 py-0.5 border-gray-300 text-white bg-blue-600 rounded-xl hover:text-white hover:bg-blue-700 animate-in fade-in slide-in-from-bottom-1 duration-500 ease-out fill-mode-both delay-200 h-7 flex items-center gap-1 font-medium"
                               >
-                                <div className="flex items-center gap-2 w-full">
-                                  {bulkDeleteMode && (
-                                    <Checkbox
-                                      checked={selectedForDelete.has(name)}
-                                      className="border-gray-300 w-4 h-4 rounded-md pointer-events-none"
-                                    />
-                                  )}
-                                  <span className="text-sm truncate flex-1">{name}</span>
-                                  {name === defaultTemplateName && (
-                                    <span className="ml-2 text-[10px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded-lg shrink-0">
-                                      Default
-                                    </span>
-                                  )}
-                                  {!bulkDeleteMode && name === selectedTemplate && (
-                                    <Check className="h-4 w-4 text-blue-500 shrink-0" />
+                                {isUpdatingTemplate ? (
+                                  <>
+                                    <Loader className="w-3 h-3 animate-spin mr-1" />
+                                    Updating Template...
+                                  </>
+                                ) : (
+                                  "Update Selected Template"
+                                )}
+                              </Button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Popover Template Dropdown - Meta styled */}
+                      <Popover open={templateDropdownOpen} onOpenChange={(open) => {
+                        setTemplateDropdownOpen(open);
+                        if (!open) {
+                          setTemplateSearch("");
+                          setShowSortMenu(false);
+                          if (bulkDeleteMode && selectedForDelete.size === 0) {
+                            setBulkDeleteMode(false);
+                          }
+                        }
+                      }}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={`w-full justify-between ${formFieldChrome} hover:bg-white text-sm px-3 text-zinc-700`}
+                            disabled={Object.keys(copyTemplates).length === 0}
+                          >
+                            <span className="truncate">
+                              {Object.keys(copyTemplates).length === 0
+                                ? "No templates available for selected advertiser"
+                                : selectedTemplate || "Choose a Template"}
+                            </span>
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent
+                          className="min-w-[--radix-popover-trigger-width] w-auto !max-w-none p-0 rounded-xl bg-white border border-gray-100 shadow-xl"
+                          align="start"
+                          side="bottom"
+                          avoidCollisions={false}
+                          style={{
+                            minWidth: "var(--radix-popover-trigger-width)",
+                            width: "auto",
+                          }}
+                        >
+                          <Command filter={() => 1} loop={false} className="overflow-visible">
+                            <div className="flex items-center gap-1.5 mx-2 mt-2 mb-1">
+                              <CommandInput
+                                placeholder="Search templates..."
+                                value={templateSearch}
+                                onValueChange={setTemplateSearch}
+                                wrapperClassName="flex-1 border-gray-200 bg-gray-50 mx-0 mt-0 mb-0"
+                              />
+                              <div className="flex items-center gap-1">
+                                {/* Sort Menu */}
+                                <div className="relative">
+                                  <button
+                                    type="button"
+                                    className={`p-1.5 rounded-lg transition-colors ${showSortMenu ? 'bg-gray-100' : 'hover:bg-gray-100'}`}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setShowSortMenu(!showSortMenu);
+                                    }}
+                                    title="Sort templates"
+                                  >
+                                    <ArrowUpDown className="h-3.5 w-3.5 text-gray-500" />
+                                  </button>
+                                  {showSortMenu && (
+                                    <>
+                                      <div className="fixed inset-0 z-[99]" onClick={() => setShowSortMenu(false)} />
+                                      <div className="absolute right-0 top-full mt-1 z-[100] bg-white rounded-xl border border-gray-200 shadow-lg py-1 min-w-[150px]">
+                                        {[
+                                          { value: "default", label: "Recently Made" },
+                                          { value: "oldest", label: "Oldest First" },
+                                        ].map((option) => (
+                                          <button
+                                            key={option.value}
+                                            type="button"
+                                            className="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 flex items-center justify-between"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setSortMode(option.value);
+                                              localStorage.setItem("tiktokHomeTemplateSortMode", option.value);
+                                              setShowSortMenu(false);
+                                            }}
+                                          >
+                                            <span className="flex items-center gap-1.5">
+                                              {option.label}
+                                            </span>
+                                            {sortMode === option.value && (
+                                              <Check className="h-3.5 w-3.5 text-blue-500" />
+                                            )}
+                                          </button>
+                                        ))}
+                                      </div>
+                                    </>
                                   )}
                                 </div>
-                              </CommandItem>
-                            ))}
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
+                                {/* Bulk Delete Button */}
+                                {bulkDeleteMode && selectedForDelete.size > 0 ? (
+                                  <button
+                                    type="button"
+                                    className="flex items-center gap-1 px-2 py-1 rounded-lg bg-red-500 text-white text-xs font-medium hover:bg-red-600 transition-colors disabled:opacity-70 animate-in zoom-in-95 duration-150"
+                                    disabled={isDeletingTemplates}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleBulkDeleteTemplates();
+                                    }}
+                                  >
+                                    {isDeletingTemplates ? <Loader className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
+                                    {isDeletingTemplates ? "Deleting..." : `Delete (${selectedForDelete.size})`}
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    className={`p-1.5 rounded-lg transition-colors ${bulkDeleteMode ? 'bg-red-50 text-red-500' : 'hover:bg-gray-100'}`}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (bulkDeleteMode) {
+                                        setBulkDeleteMode(false);
+                                        setSelectedForDelete(new Set());
+                                      } else {
+                                        setBulkDeleteMode(true);
+                                      }
+                                    }}
+                                    title={bulkDeleteMode ? "Cancel delete" : "Delete templates"}
+                                  >
+                                    {bulkDeleteMode ? (
+                                      <X className="h-3.5 w-3.5" />
+                                    ) : (
+                                      <Trash2 className="h-3.5 w-3.5 text-gray-500" />
+                                    )}
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                            <CommandList className="max-h-[300px] overflow-y-auto rounded-xl">
+                              {sortedFilteredTemplates.map(([name, data]) => (
+                                <CommandItem
+                                  key={name}
+                                  value={name}
+                                  onSelect={() => {
+                                    if (bulkDeleteMode) {
+                                      toggleDeleteSelection(name);
+                                    } else {
+                                      setSelectedTemplate(name);
+                                      if (data.texts && data.texts.length > 0) {
+                                        setAdTexts([data.texts[0] || ""]);
+                                      }
+                                      setTemplateDropdownOpen(false);
+                                      setTemplateSearch("");
+                                    }
+                                  }}
+                                  className="px-3 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150 hover:bg-gray-100"
+                                >
+                                  <div className="flex items-center gap-2 w-full">
+                                    {bulkDeleteMode && (
+                                      <Checkbox
+                                        checked={selectedForDelete.has(name)}
+                                        className="border-gray-300 w-4 h-4 rounded-md pointer-events-none"
+                                      />
+                                    )}
+                                    <span className="text-sm truncate flex-1">{name}</span>
+                                    {name === defaultTemplateName && (
+                                      <span className="ml-2 text-[10px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded-lg shrink-0">
+                                        Default
+                                      </span>
+                                    )}
+                                    {!bulkDeleteMode && name === selectedTemplate && (
+                                      <Check className="h-4 w-4 text-blue-500 shrink-0" />
+                                    )}
+                                  </div>
+                                </CommandItem>
+                              ))}
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
                   </div>
-                </div>
 
-                {/* Single Caption Textarea */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label className="flex items-center gap-1.5">
-                      {renderDiffMark("adTexts")}
-                      <span className="font-semibold text-sm">Text</span>
-                      {adType === 'SPARK' && <span className="text-gray-400 font-normal text-xs">(Optional)</span>}
-                    </Label>
-                    <span className="text-[10px] text-zinc-400 font-medium">{(adTexts[0] || "").length}/100</span>
+                  {/* Single Caption Textarea */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="flex items-center gap-1.5">
+                        {renderDiffMark("adTexts")}
+                        <span className="font-semibold text-sm">Text</span>
+                        {adType === 'SPARK' && <span className="text-gray-400 font-normal text-xs">(Optional)</span>}
+                      </Label>
+                      <span className="text-[10px] text-zinc-400 font-medium">{(adTexts[0] || "").length}/100</span>
+                    </div>
+                    <TextareaAutosize
+                      value={adTexts[0] || ""}
+                      onChange={(e) => {
+                        setAdTexts([e.target.value]);
+                      }}
+                      placeholder="Enter Caption"
+                      minRows={3}
+                      maxRows={8}
+                      className={formTextareaChrome}
+                      style={{ scrollbarWidth: 'thin', scrollbarColor: '#e5e7eb transparent' }}
+                    />
+                    {(adTexts[0] || "").length > 100 && (
+                      <p className="text-xs text-red-500 font-medium mt-1">Text cannot exceed 100 characters</p>
+                    )}
                   </div>
-                  <TextareaAutosize
-                    value={adTexts[0] || ""}
-                    onChange={(e) => {
-                      setAdTexts([e.target.value]);
-                    }}
-                    placeholder="Enter Caption"
-                    minRows={3}
-                    maxRows={8}
-                    className={formTextareaChrome}
-                    style={{ scrollbarWidth: 'thin', scrollbarColor: '#e5e7eb transparent' }}
-                  />
-                  {(adTexts[0] || "").length > 100 && (
-                    <p className="text-xs text-red-500 font-medium mt-1">Text cannot exceed 100 characters</p>
-                  )}
                 </div>
-              </div>
+              )}
 
               {/* 5. Call to Action & Landing Page URL Stacked */}
               <div className="space-y-6">
@@ -4464,7 +4467,9 @@ export default function TikTokAdCreationForm({
                                 checked={showCustomLink}
                                 onCheckedChange={(checked) => {
                                   setShowCustomLink(checked);
-                                  if (!checked) {
+                                  if (checked) {
+                                    setLandingUrl("");
+                                  } else {
                                     const defaultLink = advertiserPrefs.links.find(l => l.isDefault) || advertiserPrefs.links[0];
                                     setLandingUrl(defaultLink?.url || "");
                                   }
