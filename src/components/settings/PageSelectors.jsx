@@ -16,6 +16,7 @@ import { useAppData } from "@/lib/AppContext"
 import { toast } from "sonner";
 import { cn } from "@/lib/utils"
 import MetaIcon from '@/assets/icons/meta.svg?react';
+import LinkPagesEmptyState from "@/components/LinkPagesEmptyState"
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 function PageSelectors({
@@ -23,6 +24,7 @@ function PageSelectors({
   setSelectedPage,
   selectedInstagram,
   setSelectedInstagram,
+  onLinkMorePages,
 }) {
   const { pages, setPages, pagesLoading } = useAppData()
 
@@ -103,6 +105,12 @@ function PageSelectors({
     setOpenInstagramDropdown(false);
   }, [setSelectedInstagram]);
 
+  const handleLinkMorePages = useCallback(() => {
+    setOpenPageDropdown(false);
+    setOpenInstagramDropdown(false);
+    onLinkMorePages?.();
+  }, [onLinkMorePages]);
+
   return (
     <div className="bg-[#f5f5f5] rounded-2xl p-4 space-y-4">
       <div className="flex items-center justify-between mb-1">
@@ -176,25 +184,29 @@ function PageSelectors({
                   wrapperClassName="bg-gray-50 border-gray-200"
                 />
                 <CommandList className="max-h-[300px] overflow-y-auto rounded-xl">
-                  {filteredPages.map((page) => (
-                    <CommandItem
-                      key={page.id}
-                      value={page.id}
-                      onSelect={() => handlePageSelect(page)}
-                      className="px-3 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150 hover:bg-gray-100"
-                    >
-                      <div className="flex items-center gap-2">
-                        <img
-                          src={page.profilePicture}
-                          alt={page.name}
-                          className="w-5 h-5 rounded-full object-cover"
-                        />
-                        <span>{page.name}</span>
-                        <span className="text-xs text-gray-400 ml-2">{page.id}</span> {/* 👈 Gray ID on same line */}
+                  {filteredPages.length > 0 ? (
+                    filteredPages.map((page) => (
+                      <CommandItem
+                        key={page.id}
+                        value={page.id}
+                        onSelect={() => handlePageSelect(page)}
+                        className="px-3 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150 hover:bg-gray-100"
+                      >
+                        <div className="flex items-center gap-2">
+                          <img
+                            src={page.profilePicture}
+                            alt={page.name}
+                            className="w-5 h-5 rounded-full object-cover"
+                          />
+                          <span>{page.name}</span>
+                          <span className="text-xs text-gray-400 ml-2">{page.id}</span> {/* 👈 Gray ID on same line */}
 
-                      </div>
-                    </CommandItem>
-                  ))}
+                        </div>
+                      </CommandItem>
+                    ))
+                  ) : (
+                    <LinkPagesEmptyState label="pages" onClick={handleLinkMorePages} />
+                  )}
                 </CommandList>
               </Command>
             </PopoverContent>
@@ -242,26 +254,30 @@ function PageSelectors({
                   wrapperClassName="bg-gray-50 border-gray-200"
                 />
                 <CommandList className="max-h-[300px] overflow-y-auto rounded-xl">
-                  {filteredInstagramAccounts.map((page) => (
-                    <CommandItem
-                      key={page.instagramAccount.id}
-                      value={page.instagramAccount.id}
-                      onSelect={() => handleInstagramSelect(page.instagramAccount)}
-                      className="px-3 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150 hover:bg-gray-100"
-                    >
-                      <div className="flex items-center gap-2">
-                        <img
-                          src={
-                            page.instagramAccount.profilePictureUrl ||
-                            "https://api.withblip.com/backup_page_image.png"
-                          }
-                          alt={page.instagramAccount.username}
-                          className="w-5 h-5 rounded-full object-cover"
-                        />
-                        <span>{page.instagramAccount.username}</span>
-                      </div>
-                    </CommandItem>
-                  ))}
+                  {filteredInstagramAccounts.length > 0 ? (
+                    filteredInstagramAccounts.map((page) => (
+                      <CommandItem
+                        key={page.instagramAccount.id}
+                        value={page.instagramAccount.id}
+                        onSelect={() => handleInstagramSelect(page.instagramAccount)}
+                        className="px-3 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150 hover:bg-gray-100"
+                      >
+                        <div className="flex items-center gap-2">
+                          <img
+                            src={
+                              page.instagramAccount.profilePictureUrl ||
+                              "https://api.withblip.com/backup_page_image.png"
+                            }
+                            alt={page.instagramAccount.username}
+                            className="w-5 h-5 rounded-full object-cover"
+                          />
+                          <span>{page.instagramAccount.username}</span>
+                        </div>
+                      </CommandItem>
+                    ))
+                  ) : (
+                    <LinkPagesEmptyState label="Instagram accounts" onClick={handleLinkMorePages} />
+                  )}
                 </CommandList>
               </Command>
             </PopoverContent>

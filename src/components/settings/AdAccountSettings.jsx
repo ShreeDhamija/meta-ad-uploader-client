@@ -3,7 +3,6 @@
 import { useEffect, useState, useMemo, useCallback, useRef } from "react"
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
 import { Command, CommandInput, CommandList, CommandItem, CommandGroup } from "@/components/ui/command"
-import { Dialog, DialogContent, DialogOverlay } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { ChevronsUpDown, Loader, CirclePlus, Info, RefreshCw, ChevronDown, CircleX, Folder, Pencil, CloudSync } from "lucide-react"
@@ -23,6 +22,7 @@ import ReorderAdNameParts from "@/components/ui/ReorderAdNameParts"
 import LabelIcon from '@/assets/icons/label.svg?react';
 import confetti from 'canvas-confetti'
 import { createPortal } from "react-dom"
+import FacebookReauthDialog from "@/components/FacebookReauthDialog"
 
 
 // Constants moved outside component to prevent recreation
@@ -104,8 +104,6 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
   const [initialSettings, setInitialSettings] = useState({})
   const [isReauthOpen, setIsReauthOpen] = useState(false)
 
-
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
   // Add a ref to track template-only updates
   const skipFormResetRef = useRef(false);
   // Ref to track if we've already restored from cache for this account
@@ -116,13 +114,6 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
   const handleTemplateUpdate = useCallback(() => {
     skipFormResetRef.current = true;
   }, []);
-
-
-  // Memoized Facebook reauth handler
-  const handleFacebookReauth = useCallback(() => {
-    setIsReauthOpen(false)
-    window.location.href = `${API_BASE_URL}/auth/facebook?state=settings`
-  }, [])
 
   const handleRefreshAdAccounts = async () => {
     try {
@@ -644,38 +635,11 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
             )}
 
             {/* Reauth dialog (opened from dropdown) */}
-            <Dialog open={isReauthOpen} onOpenChange={setIsReauthOpen}>
-              <DialogOverlay className="bg-black/20" />
-              <DialogContent className="sm:max-w-md !rounded-[28px] !duration-150 data-[state=open]:!slide-in-from-left-0 data-[state=closed]:!slide-out-to-left-0 data-[state=open]:!slide-in-from-top-0 data-[state=closed]:!slide-out-to-top-0 data-[state=open]:!zoom-in-100 data-[state=closed]:!zoom-out-100">
-                <div className="text-left space-y-4 p-6 !rounded-[28px]">
-                  <div className="space-y-2">
-                    <img
-                      src="https://api.withblip.com/logo.webp"
-                      alt="Logo"
-                      className="w-12 h-12 rounded-md mb-4"
-                    />
-                    <h3 className="text-sm font-semibold">Link New Ad Accounts</h3>
-                  </div>
-
-                  <div className="space-y-3 text-sm text-gray-600">
-                    <p>1. You will have to reauthenticate to add new ad accounts</p>
-                    <p>2. Click on "Edit previous settings" in the Login dialog to add new business portfolios</p>
-                  </div>
-
-                  <Button
-                    onClick={handleFacebookReauth}
-                    className="w-full bg-[#1877F2] hover:bg-[#0866FF] text-white rounded-xl shadow-md flex items-center justify-center gap-2 h-[40px]"
-                  >
-                    <img
-                      src="https://api.withblip.com/facebooklogo.png"
-                      alt="Facebook"
-                      className="w-5 h-5"
-                    />
-                    Login with Facebook
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
+            <FacebookReauthDialog
+              open={isReauthOpen}
+              onOpenChange={setIsReauthOpen}
+              redirectState="settings"
+            />
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -776,6 +740,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
             setSelectedPage={setSelectedPage}
             selectedInstagram={selectedInstagram}
             setSelectedInstagram={setSelectedInstagram}
+            onLinkMorePages={() => setIsReauthOpen(true)}
           />
 
           <CopyTemplates

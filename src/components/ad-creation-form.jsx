@@ -33,6 +33,8 @@ import PostSelectorInline from "@/components/PostIDSelector"
 import MetaMediaLibraryModal from "@/components/MetaMediaLibraryModal";
 import FrameioPickerModal from "@/components/FrameioPickerModal";
 import FlexAdsImportModal from "@/components/FlexAdsImportModal";
+import FacebookReauthDialog from "@/components/FacebookReauthDialog";
+import LinkPagesEmptyState from "@/components/LinkPagesEmptyState";
 import { v4 as uuidv4 } from 'uuid';
 import ConfigIcon from '@/assets/icons/plus.svg?react';
 import FacebookIcon from '@/assets/icons/fb.svg?react';
@@ -773,6 +775,7 @@ export default function AdCreationForm({
   const { showMessenger } = useIntercom()
   const [openInstagram, setOpenInstagram] = useState(false)
   const [instagramSearchValue, setInstagramSearchValue] = useState("")
+  const [isLinkPagesOpen, setIsLinkPagesOpen] = useState(false)
   const [publishPending, setPublishPending] = useState(false);
   const [isQueueingJobs, setIsQueueingJobs] = useState(false);
   const [isPagesLoading, setIsPagesLoading] = useState(false);
@@ -799,6 +802,19 @@ export default function AdCreationForm({
   const [isCancelling, setIsCancelling] = useState(false);
 
   const [preserveMedia, setPreserveMedia] = useState(false);
+  const handleLinkMorePages = useCallback(() => {
+    setOpenPage(false)
+    setOpenInstagram(false)
+    setIsLinkPagesOpen(true)
+  }, [])
+  const handleAddDescriptionsToggle = useCallback((checked) => {
+    setAddDescriptions(Boolean(checked));
+    if (checked) {
+      if (!descriptions.length) setDescriptions([""]);
+      return;
+    }
+    setDescriptions([""]);
+  }, [descriptions.length, setDescriptions]);
   const renderErrorSupportLink = () => (
     <p className="mt-2 text-xs font-medium text-red-800">
       Confused by the error?{" "}
@@ -866,6 +882,10 @@ export default function AdCreationForm({
   // const [isCarouselAd, setIsCarouselAd] = useState(false);
   const [applyTextToAllCards, setApplyTextToAllCards] = useState(false);
   const [applyHeadlinesToAllCards, setApplyHeadlinesToAllCards] = useState(false);
+  const [addDescriptions, setAddDescriptions] = useState(() =>
+    (descriptions || []).some((description) => description !== "")
+  );
+  const showDescriptions = isCarouselAd || addDescriptions;
   const S3_UPLOAD_THRESHOLD = 1 * 1024 * 1024; // 40 MB
   const [leadgenForms, setLeadgenForms] = useState([]);
   const [loadingForms, setLoadingForms] = useState(false);
@@ -1350,6 +1370,7 @@ export default function AdCreationForm({
 
     setHeadlines(d.headlines || ['']);
     setDescriptions(d.descriptions || ['']);
+    setAddDescriptions((d.descriptions || []).some((description) => description !== ""));
     setMessages(d.messages || ['']);
     setLink(d.link || ['']);
     setPhoneNumber(d.phoneNumber || '');
@@ -2075,6 +2096,7 @@ export default function AdCreationForm({
     setMessages(tpl.primaryTexts || [""]);
     setHeadlines(tpl.headlines || [""]);
     setDescriptions(tpl.descriptions || [""]);
+    setAddDescriptions((tpl.descriptions || []).some((description) => description !== ""));
   }, [selectedTemplate, copyTemplates]);
 
   useEffect(() => {
@@ -6701,6 +6723,10 @@ export default function AdCreationForm({
                               setMessages(tpl.primaryTexts || [""]);
                               setHeadlines(tpl.headlines || [""]);
                               setDescriptions(tpl.descriptions || [""]);
+                              setAddDescriptions((tpl.descriptions || []).some((description) => description !== ""));
+                            } else {
+                              setAddDescriptions(false);
+                              setDescriptions([""]);
                             }
                           }
                         }}
@@ -6800,6 +6826,11 @@ export default function AdCreationForm({
             ) : (
               // Show regular form content when toggle is OFF
               <>
+                <FacebookReauthDialog
+                  open={isLinkPagesOpen}
+                  onOpenChange={setIsLinkPagesOpen}
+                  redirectState="home"
+                />
                 <div className="space-y-3">
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
@@ -6874,7 +6905,6 @@ export default function AdCreationForm({
                             className="bg-transparent"
                             wrapperClassName="bg-gray-50 border-gray-200 rounded-[20px]"
                           />
-                          <CommandEmpty>No page found.</CommandEmpty>
                           <CommandList className="max-h-[500px] overflow-y-auto rounded-2xl custom-scrollbar" selectOnFocus={false}>
                             <CommandGroup>
                               {filteredPages.length > 0 ? (
@@ -6915,9 +6945,7 @@ export default function AdCreationForm({
 
                                 ))
                               ) : (
-                                <CommandItem disabled className="opacity-50 cursor-not-allowed">
-                                  No page found.
-                                </CommandItem>
+                                <LinkPagesEmptyState label="pages" onClick={handleLinkMorePages} />
                               )}
                             </CommandGroup>
                           </CommandList>
@@ -6939,7 +6967,6 @@ export default function AdCreationForm({
                           role="combobox"
                           aria-expanded={openInstagram}
                           className={cn("w-full justify-between", formDropdownTriggerChrome)}
-                          disabled={filteredInstagramAccounts.length === 0}
                         >
                           {instagramAccountId ? (
                             <div className="flex items-center gap-2">
@@ -6975,7 +7002,7 @@ export default function AdCreationForm({
 
                         }}
                       >
-                        <Command loop={false}>
+                        <Command filter={() => 1} loop={false}>
                           <CommandInput
                             placeholder="Search Instagram usernames..."
                             value={instagramSearchValue}
@@ -6983,31 +7010,34 @@ export default function AdCreationForm({
                             className="bg-transparent"
                             wrapperClassName="bg-gray-50 border-gray-200 rounded-[20px]"
                           />
-                          <CommandEmpty>No Instagram accounts found.</CommandEmpty>
                           <CommandList className="max-h-[300px] overflow-y-auto rounded-2xl custom-scrollbar" selectOnFocus={false}>
                             <CommandGroup>
-                              {filteredInstagramAccounts.map((page) => (
-                                <CommandItem
-                                  key={page.instagramAccount.id}
-                                  value={page.instagramAccount.id}
-                                  onSelect={() => {
-                                    setInstagramAccountId(page.instagramAccount.id)
-                                    setOpenInstagram(false)
-                                  }}
-                                  className={cn(
-                                    "px-3 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
-                                    instagramAccountId === page.instagramAccount.id && "bg-gray-100 font-semibold",
-                                    "hover:bg-gray-100 flex items-center gap-2"
-                                  )}
-                                >
-                                  <img
-                                    src={page.instagramAccount.profilePictureUrl || "https://api.withblip.com/backup_page_image.png"}
-                                    alt={`${page.instagramAccount.username} profile`}
-                                    className="w-6 h-6 rounded-full object-cover border border-gray-300"
-                                  />
-                                  <span>{page.instagramAccount.username}</span>
-                                </CommandItem>
-                              ))}
+                              {filteredInstagramAccounts.length > 0 ? (
+                                filteredInstagramAccounts.map((page) => (
+                                  <CommandItem
+                                    key={page.instagramAccount.id}
+                                    value={page.instagramAccount.id}
+                                    onSelect={() => {
+                                      setInstagramAccountId(page.instagramAccount.id)
+                                      setOpenInstagram(false)
+                                    }}
+                                    className={cn(
+                                      "px-3 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
+                                      instagramAccountId === page.instagramAccount.id && "bg-gray-100 font-semibold",
+                                      "hover:bg-gray-100 flex items-center gap-2"
+                                    )}
+                                  >
+                                    <img
+                                      src={page.instagramAccount.profilePictureUrl || "https://api.withblip.com/backup_page_image.png"}
+                                      alt={`${page.instagramAccount.username} profile`}
+                                      className="w-6 h-6 rounded-full object-cover border border-gray-300"
+                                    />
+                                    <span>{page.instagramAccount.username}</span>
+                                  </CommandItem>
+                                ))
+                              ) : (
+                                <LinkPagesEmptyState label="Instagram accounts" onClick={handleLinkMorePages} />
+                              )}
                             </CommandGroup>
                           </CommandList>
                         </Command>
@@ -7678,10 +7708,25 @@ export default function AdCreationForm({
                       </div>
                     </div>
 
-                    {/* Descriptions Section - only show if template has descriptions */}
+                    {!isCarouselAd && (
+                      <div className="flex items-center space-x-2 pt-1">
+                        <Checkbox
+                          id="addDescriptions"
+                          checked={addDescriptions}
+                          onCheckedChange={handleAddDescriptionsToggle}
+                          className="border-gray-300 w-4 h-4 rounded-md"
+                          disabled={!isLoggedIn}
+                        />
+                        <label htmlFor="addDescriptions" className="text-xs text-gray-600 cursor-pointer">
+                          Add Descriptions
+                        </label>
+                      </div>
+                    )}
+
+                    {/* Descriptions Section */}
 
 
-                    {(isCarouselAd || descriptions.some(d => d !== "")) && (
+                    {showDescriptions && (
                       <div className="space-y-2">
                         <Label className="inline-flex items-center gap-1">
                           {renderDiffMark("descriptions")}
