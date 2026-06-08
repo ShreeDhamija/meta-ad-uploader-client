@@ -74,16 +74,16 @@ function TikTokPostSelectorInline({
         throw new Error(resData.error || "Failed to fetch posts")
       }
 
-      // Format response structure from TikTok API: resData.data.list
+      // Format response structure from TikTok API: resData.data.videos or resData.data.list
       const data = resData.data
-      const list = data?.list || []
+      const list = data?.videos || data?.list || []
       const pageInfo = data?.page_info || {}
 
       const formattedList = list.map(item => {
-        const itemId = item.item_info?.item_id;
-        const posterUrl = item.video_info?.poster_url || item.video_info?.preview_url || "";
-        const caption = item.item_info?.text || "No caption";
-        const tiktokName = item.user_info?.tiktok_name || "TikTok Creator";
+        const itemId = item.item_info?.item_id || item.item_id;
+        const posterUrl = item.video_info?.poster_url || item.video_info?.preview_url || item.thumbnail_url || "";
+        const caption = item.item_info?.text || (item.recommendation_level ? `Recommendation: ${item.recommendation_level} (${item.item_id})` : `Recommended Video (${item.item_id})`);
+        const tiktokName = item.user_info?.tiktok_name || "Recommended Video";
         const authEndTime = item.auth_info?.auth_end_time || null;
 
         return {
@@ -94,8 +94,8 @@ function TikTokPostSelectorInline({
           auth_code: item.item_info?.auth_code || "",
           identity_id: item.user_info?.identity_id || identityId,
           identity_type: item.user_info?.identity_type || identityType,
-          likes: item.video_info?.like_count || 0,
-          views: item.video_info?.view_count || 0,
+          likes: item.video_info?.like_count || item.likes || 0,
+          views: item.video_info?.view_count || item.video_views || 0,
           auth_end_time: authEndTime,
           raw: item
         }
@@ -115,7 +115,7 @@ function TikTokPostSelectorInline({
       const totalPage = pageInfo.total_page || 1
       const currentPage = pageInfo.page || targetPage
       setPage(currentPage)
-      setHasMore(currentPage < totalPage)
+      setHasMore(data?.page_info ? (currentPage < totalPage) : false)
     } catch (err) {
       console.error("Error fetching TikTok posts:", err)
       const errMsg = err.message || "Failed to fetch organic posts"

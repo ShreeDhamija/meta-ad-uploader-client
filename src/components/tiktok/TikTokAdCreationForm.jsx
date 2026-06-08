@@ -4180,7 +4180,7 @@ export default function TikTokAdCreationForm({
               </div>
 
               {/* 4. Ad Copy / Caption with template picker */}
-              {!(adType === 'SPARK' && sparkSourceTab === 'video_list') && (
+              {adType !== 'SPARK' && (
                 <div className="space-y-4">
                   <div className="space-y-3">
                     <div className="space-y-2">
