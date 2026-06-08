@@ -7,6 +7,7 @@ import ZapIcon from "@/assets/icons/Zap.svg?react"
 import ChatIcon from "@/assets/icons/chat.svg?react"
 import AnalyticsIcon from "@/assets/icons/Analytics.svg?react"
 import RocketBtn from "@/assets/rocket2.webp"
+import TikTokUserPlaceholder from "@/assets/TikTokUser.jpg"
 import { useAuth } from "@/lib/AuthContext"
 import { useTikTokAuth } from "@/lib/TikTokAuthContext"
 import { useLocation, useNavigate } from "react-router-dom"
@@ -45,8 +46,8 @@ export default function Header({ showMessenger, hideMessenger }) {
     ? (tiktokUser?.display_name || tiktokUser?.name || userName)
     : userName
   const displayPic = isTikTokPage
-    ? (tiktokUser?.avatar_url || tiktokUser?.profile_image_url || profilePicUrl)
-    : profilePicUrl
+    ? (tiktokUser?.avatar_url || tiktokUser?.profile_image_url || TikTokUserPlaceholder)
+    : (profilePicUrl || TikTokUserPlaceholder)
   const headerCardShadow = "shadow-[0px_1px_2px_rgba(0,0,0,0.06)]"
 
   const handleDropdownClose = (open) => {

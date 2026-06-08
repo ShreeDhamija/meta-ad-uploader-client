@@ -6,6 +6,7 @@ import Folder from '@/assets/icons/cog-three.svg?react'
 import TikTokIcon from "@/assets/icons/tiktok.svg?react"
 import UsersIcon from "@/assets/icons/users.svg?react"
 import RocketBtn from '@/assets/rocket2.webp'
+import TikTokUserPlaceholder from '@/assets/TikTokUser.jpg'
 import AdAccountSelectionPopup from "@/components/AdAccountSelectionPopup"
 import AdAccountSettings from "@/components/settings/AdAccountSettings"
 import BillingSettings from "@/components/settings/Billing"
@@ -204,12 +205,16 @@ export default function Settings() {
                             <div className="w-full flex items-center bg-neutral-50 border border-neutral-200 shadow-xs rounded-[20px] pl-3 pr-3 py-2 max-lg:justify-center max-lg:p-2">
                                 <div className="flex items-center gap-2 flex-grow max-lg:hidden">
                                     <img
-                                        src={profilePicUrl || tiktokUser?.avatar_url || tiktokUser?.profile_image_url || "/placeholder.svg"}
+                                        src={activeTab === "tiktok"
+                                            ? (tiktokUser?.avatar_url || tiktokUser?.profile_image_url || TikTokUserPlaceholder)
+                                            : (profilePicUrl || TikTokUserPlaceholder)}
                                         alt="Profile"
                                         className="w-8 h-8 rounded-full object-cover"
                                     />
                                     <span className="text-sm font-medium text-neutral-800 truncate max-w-[120px]">
-                                        {userName || tiktokUser?.display_name || tiktokUser?.name || "User"}
+                                        {activeTab === "tiktok"
+                                            ? (tiktokUser?.display_name || tiktokUser?.name || "TikTok User")
+                                            : (userName || "User")}
                                     </span>
                                 </div>
                                 <div className="flex items-center">
@@ -244,8 +249,8 @@ export default function Settings() {
                                         />
                                     )}
                                     {activeTab === "tiktok" && (
-                                        <TikTokAdvertiserSettings 
-                                            advertisers={tiktokAdvertisers} 
+                                        <TikTokAdvertiserSettings
+                                            advertisers={tiktokAdvertisers}
                                         />
                                     )}
                                     {activeTab === "billing" && <BillingSettings />}

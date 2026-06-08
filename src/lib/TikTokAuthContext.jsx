@@ -32,6 +32,7 @@ export function TikTokAuthProvider({ children }) {
   // Called directly by TikTokCallback after the exchange endpoint succeeds
   const setTikTokSession = (user, advertisers = [], accessToken = null) => {
     console.log('✅ [TikTokAuthContext] setTikTokSession called with user:', user?.name)
+    console.log('🔑 [TikTokAuthContext] User openId:', user?.openId)
     setIsTikTokLoggedIn(true)
     setTikTokUser(user)
     if (user) {
@@ -86,28 +87,24 @@ export function TikTokAuthProvider({ children }) {
       res.headers.forEach((value, key) => console.log(`    ${key}: ${value}`))
 
       const rawText = await res.text()
-      console.log('  Raw Response Body :', rawText)
-
       let data
       try {
         data = JSON.parse(rawText)
       } catch (parseErr) {
-        console.error('❌ [TikTok Auth] Failed to parse JSON response:', parseErr)
+        console.error('❌ [TikTok Auth] Failed to parse JSON response:', parseErr, '\nRaw body:', rawText)
         setIsTikTokLoggedIn(false)
         setTikTokUser(null)
         setTikTokAdvertisers([])
         return
       }
 
-      console.log('  Parsed data.connected :', data.connected)
-      console.log('  Parsed data.user      :', JSON.stringify(data.user || null))
-      console.log('  Parsed data.error     :', data.error || 'none')
-      console.log('  Advertiser count      :', data.advertisers?.length ?? 0)
+      console.log('✅ [TikTok Auth] Full refresh user response data:', data)
       console.log('==============================\n')
 
       if (res.ok) {
         if (data.connected && data.user) {
           console.log('✅ [TikTok Auth] User IS connected:', data.user.name)
+          console.log('🔑 [TikTok Auth] User openId:', data.user.openId)
           setIsTikTokLoggedIn(true)
           setTikTokUser(data.user)
           try { localStorage.setItem('tiktok_user', JSON.stringify(data.user)) } catch (_) {}

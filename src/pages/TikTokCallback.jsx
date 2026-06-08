@@ -76,17 +76,18 @@ export default function TikTokCallback() {
         fetch(exchangeUrl, { credentials: 'include' })
           .then(async (res) => {
             const body = await res.text()
-            console.log('  Exchange response   :', body)
-
             let data
             try {
               data = JSON.parse(body)
             } catch (e) {
+              console.error('❌ [TikTokCallback] Failed to parse backend response:', body)
               throw new Error('Invalid response from server')
             }
+            console.log('✅ [TikTokCallback] Full exchange response:', data)
 
             if (data.connected && data.user) {
               console.log('✅ [TikTokCallback] Exchange success! User:', data.user.name)
+              console.log('🔑 [TikTokCallback] User openId:', data.user.openId)
               setStatus('success')
               toast.success('Successfully connected to TikTok Ads!')
               setTikTokSession(data.user, data.advertisers || [], data.accessToken || null)
