@@ -454,7 +454,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                             align="start"
                             sideOffset={4}
                             side="bottom"
-                            avoidCollisions={false}
+                            avoidCollisions={true}
                             style={{
                                 minWidth: "var(--radix-popover-trigger-width)",
                                 width: "auto",
@@ -587,7 +587,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                     align="start"
                                     sideOffset={4}
                                     side="bottom"
-                                    avoidCollisions={false}
+                                    avoidCollisions={true}
                                     style={{
                                         minWidth: "var(--radix-popover-trigger-width)",
                                         width: "auto",
@@ -826,7 +826,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                         <ChevronsUpDown className="w-4 h-4 opacity-50" />
                                     </Button>
                                 </PopoverTrigger>
-                                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-1 bg-white rounded-2xl shadow-xl border-gray-100" side="bottom" avoidCollisions={false}>
+                                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-1 bg-white rounded-2xl shadow-xl border-gray-100" side="bottom" avoidCollisions={true}>
                                     <div className="flex flex-col overflow-hidden rounded-2xl bg-white text-gray-900">
                                         <div className="max-h-[300px] overflow-y-auto rounded-2xl p-1">
                                             <div className="space-y-0.5">
@@ -927,7 +927,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                     align="start"
                                     sideOffset={4}
                                     side="bottom"
-                                    avoidCollisions={false}
+                                    avoidCollisions={true}
                                     style={{ minWidth: "var(--radix-popover-trigger-width)", width: "auto" }}
                                 >
                                     <div className="flex flex-col overflow-hidden rounded-xl bg-white text-gray-900">
@@ -958,13 +958,8 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                                     );
                                                 }
                                                 return (
-                                                    <div className="space-y-1 p-2">
-                                                        <div className="text-[10px] font-bold text-red-500 bg-red-50 p-1 rounded">
-                                                            DEBUG: filtered.length = {filtered.length}
-                                                        </div>
-                                                        <pre className="text-[10px] bg-yellow-100 p-2 text-black block rounded overflow-auto max-h-[100px] font-mono">
-                                                            {JSON.stringify(filtered, null, 2)}
-                                                        </pre>
+                                                    <div className="space-y-0.5">
+                                                        {/* Clear option */}
                                                         <button
                                                             type="button"
                                                             onClick={() => {
@@ -981,9 +976,9 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                                                     product_id: null, product_name: null, product_image_url: null,
                                                                 });
                                                             }}
-                                                            className="w-full text-left px-3 py-2 cursor-pointer rounded-xl text-gray-500 hover:bg-gray-50 italic text-xs block border border-dashed border-gray-200"
+                                                            className="w-full text-left px-3 py-2 cursor-pointer rounded-xl text-gray-400 hover:bg-gray-50 italic text-xs block transition-colors"
                                                         >
-                                                            None (clear selection) - debug
+                                                            None (clear selection)
                                                         </button>
                                                         {filtered.map((cat) => (
                                                             <button
@@ -1005,15 +1000,21 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                                                         product_id: null, product_name: null, product_image_url: null,
                                                                     });
                                                                 }}
-                                                                className="w-full text-left p-3 my-1 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold block"
+                                                                className={cn(
+                                                                    "w-full text-left px-3 py-2 cursor-pointer rounded-xl transition-colors duration-150 hover:bg-gray-100 flex items-center gap-2",
+                                                                    selectedCatalogId === cat.catalog_id ? "bg-gray-50 font-medium" : ""
+                                                                )}
                                                             >
-                                                                <span className="block text-sm text-white font-bold">{cat.catalog_name}</span>
-                                                                <span className="block text-[10px] text-white opacity-85 font-mono">{cat.catalog_id}</span>
+                                                                <div className="flex-1 min-w-0">
+                                                                    <p className="text-sm font-semibold text-gray-900 truncate">{cat.catalog_name}</p>
+                                                                    <p className="text-xs text-gray-400 font-mono">{cat.catalog_id}</p>
+                                                                </div>
+                                                                {selectedCatalogId === cat.catalog_id && <Check className="w-4 h-4 text-black shrink-0" />}
                                                             </button>
                                                         ))}
                                                     </div>
                                                 );
-                                            })()}
+                                            })() }
                                         </div>
                                     </div>
                                 </PopoverContent>
@@ -1060,7 +1061,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                         align="start"
                                         sideOffset={4}
                                         side="bottom"
-                                        avoidCollisions={false}
+                                        avoidCollisions={true}
                                         style={{ minWidth: "var(--radix-popover-trigger-width)", width: "auto" }}
                                     >
                                         <div className="flex flex-col overflow-hidden rounded-xl bg-white text-gray-900">
