@@ -136,8 +136,16 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
         try {
             const uid = localStorage.getItem('tiktok_uid');
             const token = localStorage.getItem('tiktok_token');
+            const url = `${API_BASE_URL}/api/tiktok/catalog/list?advertiserId=${advId}`;
+            
+            console.log("=========================================");
+            console.log("➡️ [Client fetchCatalogs] Sending request to server:");
+            console.log(`  URL: ${url}`);
+            console.log(`  x-tiktok-user-id: ${uid}`);
+            console.log(`  x-tiktok-token: ${token ? token.substring(0, 10) + '...' : 'null'}`);
+
             const res = await fetch(
-                `${API_BASE_URL}/api/tiktok/catalog/list?advertiserId=${advId}`,
+                url,
                 {
                     credentials: 'include',
                     headers: {
@@ -146,8 +154,11 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                     }
                 }
             );
+
+            console.log(`📥 [Client fetchCatalogs] Response received. HTTP status: ${res.status} ${res.statusText}`);
             const data = await res.json();
-            console.log("TikTok settings fetchCatalogs success/fail check:", data);
+            console.log("📥 [Client fetchCatalogs] Response body data:", JSON.stringify(data, null, 2));
+
             if (data.success) {
                 setCatalogs(data.catalogs || []);
             } else {
@@ -155,10 +166,12 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                 setCatalogs([]);
             }
         } catch (err) {
+            console.error("❌ [Client fetchCatalogs] Error caught during fetch:", err);
             setCatalogError(err.message);
             setCatalogs([]);
         } finally {
             setLoadingCatalogs(false);
+            console.log("=========================================");
         }
     }, []);
 
@@ -171,8 +184,16 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
         try {
             const uid = localStorage.getItem('tiktok_uid');
             const token = localStorage.getItem('tiktok_token');
+            const url = `${API_BASE_URL}/api/tiktok/catalog/products?advertiserId=${advId}&catalog_id=${catalogId}`;
+
+            console.log("=========================================");
+            console.log("➡️ [Client fetchCatalogProducts] Sending request to server:");
+            console.log(`  URL: ${url}`);
+            console.log(`  x-tiktok-user-id: ${uid}`);
+            console.log(`  x-tiktok-token: ${token ? token.substring(0, 10) + '...' : 'null'}`);
+
             const res = await fetch(
-                `${API_BASE_URL}/api/tiktok/catalog/products?advertiserId=${advId}&catalog_id=${catalogId}`,
+                url,
                 {
                     credentials: 'include',
                     headers: {
@@ -181,17 +202,22 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                     }
                 }
             );
+
+            console.log(`📥 [Client fetchCatalogProducts] Response received. HTTP status: ${res.status} ${res.statusText}`);
             const data = await res.json();
-            console.log("TikTok settings fetchCatalogProducts success/fail check:", data);
+            console.log("📥 [Client fetchCatalogProducts] Response body data preview:", JSON.stringify({ ...data, products: data.products?.slice(0, 3) }, null, 2));
+
             if (data.success) {
                 setCatalogProducts(data.products || []);
             } else {
                 setProductError(data.error || 'Failed to load products');
             }
         } catch (err) {
+            console.error("❌ [Client fetchCatalogProducts] Error caught during fetch:", err);
             setProductError(err.message);
         } finally {
             setLoadingProducts(false);
+            console.log("=========================================");
         }
     }, []);
 
