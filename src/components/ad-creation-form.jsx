@@ -6844,6 +6844,7 @@ export default function AdCreationForm({
                   open={isLinkPagesOpen}
                   onOpenChange={setIsLinkPagesOpen}
                   redirectState="home"
+                  contentClassName="!top-[calc(50%+40px)]"
                 />
                 <div className="space-y-3">
                   <div className="space-y-2">

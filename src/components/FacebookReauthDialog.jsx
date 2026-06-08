@@ -8,6 +8,8 @@ export default function FacebookReauthDialog({
   onOpenChange,
   redirectState,
   title = "Link New Ad Accounts",
+  showBackdrop = true,
+  contentClassName = "",
 }) {
   const handleFacebookReauth = () => {
     onOpenChange(false)
@@ -16,8 +18,8 @@ export default function FacebookReauthDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogOverlay className="bg-black/20" />
-      <DialogContent className="sm:max-w-md !rounded-[28px] !duration-150 data-[state=open]:!slide-in-from-left-0 data-[state=closed]:!slide-out-to-left-0 data-[state=open]:!slide-in-from-top-0 data-[state=closed]:!slide-out-to-top-0 data-[state=open]:!zoom-in-100 data-[state=closed]:!zoom-out-100">
+      {showBackdrop && <DialogOverlay className="bg-black/20" />}
+      <DialogContent className={`sm:max-w-md !rounded-[28px] !duration-150 data-[state=open]:!slide-in-from-left-0 data-[state=closed]:!slide-out-to-left-0 data-[state=open]:!slide-in-from-top-0 data-[state=closed]:!slide-out-to-top-0 data-[state=open]:!zoom-in-100 data-[state=closed]:!zoom-out-100 ${contentClassName}`}>
         <div className="text-left space-y-4 p-6 !rounded-[28px]">
           <div className="space-y-2">
             <img
