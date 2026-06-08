@@ -538,6 +538,36 @@ export default function TikTokAds() {
     }
   }, [advertiserPrefs, selectedAdvertiser]);
 
+  // Auto-populate product from saved catalog selection in Firebase
+  const catalogRestoredRef = useRef({});
+  useEffect(() => {
+    if (!selectedAdvertiser) return;
+    if (catalogRestoredRef.current[selectedAdvertiser]) return;
+
+    const uid = localStorage.getItem('tiktok_uid');
+    const token = localStorage.getItem('tiktok_token');
+
+    fetch(`${API_BASE_URL}/api/tiktok/catalog/selection?advertiserId=${selectedAdvertiser}`, {
+      credentials: 'include',
+      headers: {
+        ...(uid && { 'x-tiktok-user-id': uid }),
+        ...(token && { 'x-tiktok-token': token }),
+      },
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.selection?.product_id) {
+          const sel = data.selection;
+          // Only set if not already populated
+          if (!productName) setProductName(sel.product_name || '');
+          if (!productImageUrl) setProductImageUrl(sel.product_image_url || '');
+          if (!selectedSavedProductId) setSelectedSavedProductId(sel.product_id || '');
+          catalogRestoredRef.current[selectedAdvertiser] = true;
+        }
+      })
+      .catch(err => console.warn('[TikTokAds] Could not load catalog selection:', err.message));
+  }, [selectedAdvertiser]);
+
   // Variant helper methods matching Home.jsx pattern
   const cloneSnapshotValue = (value) => {
     if (Array.isArray(value)) return [...value];

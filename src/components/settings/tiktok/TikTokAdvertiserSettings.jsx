@@ -97,6 +97,23 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
     const [editingProduct, setEditingProduct] = useState(null);
     const [newSellingPoint, setNewSellingPoint] = useState("");
 
+    // ── Catalog & Product state ──
+    const [catalogs, setCatalogs] = useState([]);
+    const [loadingCatalogs, setLoadingCatalogs] = useState(false);
+    const [catalogError, setCatalogError] = useState(null);
+    const [selectedCatalogId, setSelectedCatalogId] = useState(null);
+    const [selectedCatalogName, setSelectedCatalogName] = useState(null);
+    const [openCatalog, setOpenCatalog] = useState(false);
+
+    const [catalogProducts, setCatalogProducts] = useState([]);
+    const [loadingProducts, setLoadingProducts] = useState(false);
+    const [productError, setProductError] = useState(null);
+    const [selectedProductId, setSelectedProductId] = useState(null);
+    const [selectedProductName, setSelectedProductName] = useState(null);
+    const [selectedProductImage, setSelectedProductImage] = useState(null);
+    const [openProduct, setOpenProduct] = useState(false);
+    const [savingCatalogSelection, setSavingCatalogSelection] = useState(false);
+
     const tiktokHeaders = useCallback(() => {
         const uid = localStorage.getItem('tiktok_uid');
         const token = localStorage.getItem('tiktok_token');
@@ -104,6 +121,135 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
             ...(uid && { 'x-tiktok-user-id': uid }),
             ...(token && { 'x-tiktok-token': token }),
         };
+    }, []);
+
+    // ── Fetch catalogs from TikTok via server (bc_id resolved automatically) ──
+    const fetchCatalogs = useCallback(async (advId) => {
+        if (!advId) return;
+        setLoadingCatalogs(true);
+        setCatalogError(null);
+        try {
+            const uid = localStorage.getItem('tiktok_uid');
+            const token = localStorage.getItem('tiktok_token');
+            const res = await fetch(
+                `${API_BASE_URL}/api/tiktok/catalog/list?advertiserId=${advId}`,
+                {
+                    credentials: 'include',
+                    headers: {
+                        ...(uid && { 'x-tiktok-user-id': uid }),
+                        ...(token && { 'x-tiktok-token': token }),
+                    }
+                }
+            );
+            const data = await res.json();
+            if (data.success) {
+                setCatalogs(data.catalogs || []);
+            } else {
+                setCatalogError(data.error || 'Failed to load catalogs');
+                setCatalogs([]);
+            }
+        } catch (err) {
+            setCatalogError(err.message);
+            setCatalogs([]);
+        } finally {
+            setLoadingCatalogs(false);
+        }
+    }, []);
+
+    // ── Fetch products for a selected catalog ──
+    const fetchCatalogProducts = useCallback(async (advId, catalogId) => {
+        if (!advId || !catalogId) return;
+        setLoadingProducts(true);
+        setProductError(null);
+        setCatalogProducts([]);
+        try {
+            const uid = localStorage.getItem('tiktok_uid');
+            const token = localStorage.getItem('tiktok_token');
+            const res = await fetch(
+                `${API_BASE_URL}/api/tiktok/catalog/products?advertiserId=${advId}&catalog_id=${catalogId}`,
+                {
+                    credentials: 'include',
+                    headers: {
+                        ...(uid && { 'x-tiktok-user-id': uid }),
+                        ...(token && { 'x-tiktok-token': token }),
+                    }
+                }
+            );
+            const data = await res.json();
+            if (data.success) {
+                setCatalogProducts(data.products || []);
+            } else {
+                setProductError(data.error || 'Failed to load products');
+            }
+        } catch (err) {
+            setProductError(err.message);
+        } finally {
+            setLoadingProducts(false);
+        }
+    }, []);
+
+    // ── Load saved selection from Firebase when advertiser changes ──
+    const loadSavedCatalogSelection = useCallback(async (advId) => {
+        if (!advId) return;
+        try {
+            const uid = localStorage.getItem('tiktok_uid');
+            const token = localStorage.getItem('tiktok_token');
+            const res = await fetch(
+                `${API_BASE_URL}/api/tiktok/catalog/selection?advertiserId=${advId}`,
+                {
+                    credentials: 'include',
+                    headers: {
+                        ...(uid && { 'x-tiktok-user-id': uid }),
+                        ...(token && { 'x-tiktok-token': token }),
+                    }
+                }
+            );
+            const data = await res.json();
+            if (data.success && data.selection) {
+                const sel = data.selection;
+                setSelectedCatalogId(sel.catalog_id || null);
+                setSelectedCatalogName(sel.catalog_name || null);
+                setSelectedProductId(sel.product_id || null);
+                setSelectedProductName(sel.product_name || null);
+                setSelectedProductImage(sel.product_image_url || null);
+                // If a catalog was previously chosen, fetch its products
+                if (sel.catalog_id) {
+                    fetchCatalogProducts(advId, sel.catalog_id);
+                }
+            } else {
+                setSelectedCatalogId(null);
+                setSelectedCatalogName(null);
+                setSelectedProductId(null);
+                setSelectedProductName(null);
+                setSelectedProductImage(null);
+                setCatalogProducts([]);
+            }
+        } catch (err) {
+            console.warn('[Catalog] Failed to load saved selection:', err.message);
+        }
+    }, [fetchCatalogProducts]);
+
+    // ── Save selection to Firebase ──
+    const saveCatalogSelection = useCallback(async (advId, selection) => {
+        setSavingCatalogSelection(true);
+        try {
+            const uid = localStorage.getItem('tiktok_uid');
+            const token = localStorage.getItem('tiktok_token');
+            await fetch(`${API_BASE_URL}/api/tiktok/catalog/selection`, {
+                method: 'POST',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(uid && { 'x-tiktok-user-id': uid }),
+                    ...(token && { 'x-tiktok-token': token }),
+                },
+                body: JSON.stringify({ advertiserId: advId, ...selection }),
+            });
+        } catch (err) {
+            console.warn('[Catalog] Failed to save selection:', err.message);
+        } finally {
+            setSavingCatalogSelection(false);
+        }
     }, []);
 
     const handleRefreshAdvertisers = async () => {
@@ -135,12 +281,20 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
 
 
 
-    // Fetch identities when advertiser changes
+    // Fetch identities + catalogs + saved catalog selection when advertiser changes
     useEffect(() => {
         if (selectedAdvertiser) {
             fetchTikTokIdentities(selectedAdvertiser);
+            // Reset catalog state
+            setCatalogs([]);
+            setCatalogProducts([]);
+            setCatalogError(null);
+            setProductError(null);
+            // Load catalogs and saved selection
+            fetchCatalogs(selectedAdvertiser);
+            loadSavedCatalogSelection(selectedAdvertiser);
         }
-    }, [selectedAdvertiser, fetchTikTokIdentities]);
+    }, [selectedAdvertiser, fetchTikTokIdentities, fetchCatalogs, loadSavedCatalogSelection]);
 
     // Auto-select the first advertiser if none is currently selected
     useEffect(() => {
@@ -188,15 +342,21 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
         if (initialSettings) {
             setSettings(JSON.parse(JSON.stringify(initialSettings)));
         }
-        setHasChanges(false);
+        // hasChanges is derived — resetting settings above will recompute it to false
     };
 
     const handleAdvertiserChange = (id) => {
         setSelectedAdvertiser(id);
         setOpenAdvertiser(false);
         setInitialSettings(null);
-        setHasChanges(false);
-
+        // Reset catalog dropdowns on advertiser change
+        setSelectedCatalogId(null);
+        setSelectedCatalogName(null);
+        setSelectedProductId(null);
+        setSelectedProductName(null);
+        setSelectedProductImage(null);
+        setCatalogs([]);
+        setCatalogProducts([]);
         try {
             localStorage.setItem('last_selected_tiktok_advertiser', id);
         } catch (e) { }
@@ -876,6 +1036,274 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                             Save Product
                                         </Button>
                                     </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* ─── Catalog & Product Preferences ─── */}
+                    <div className="bg-[#f5f5f5] rounded-2xl p-4 space-y-3">
+                        <div className="flex items-center justify-between mb-1">
+                            <div className="flex items-center gap-2">
+                                <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+                                </svg>
+                                <h3 className="font-medium text-[14px] text-zinc-950">Catalog &amp; Product Preferences</h3>
+                                {savingCatalogSelection && (
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin text-gray-400" />
+                                )}
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    fetchCatalogs(selectedAdvertiser);
+                                    if (selectedCatalogId) fetchCatalogProducts(selectedAdvertiser, selectedCatalogId);
+                                }}
+                                disabled={loadingCatalogs}
+                                className="text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-40"
+                                title="Refresh catalogs"
+                            >
+                                <RefreshCcw className={`w-3.5 h-3.5 ${loadingCatalogs ? 'animate-spin' : ''}`} />
+                            </button>
+                        </div>
+
+                        <p className="text-xs text-gray-500">
+                            Choose a catalog and product. Your selection will auto-populate in the TikTok Ad Creation form.
+                        </p>
+
+                        {/* Catalog Error */}
+                        {catalogError && (
+                            <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl p-3">
+                                <Info className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
+                                <p className="text-xs text-red-600">{catalogError}</p>
+                            </div>
+                        )}
+
+                        {/* Catalog Dropdown */}
+                        <div className="space-y-1">
+                            <label className="text-xs font-semibold text-gray-700">Catalog</label>
+                            <Popover open={openCatalog} onOpenChange={setOpenCatalog}>
+                                <PopoverTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        disabled={loadingCatalogs || !selectedAdvertiser}
+                                        className="w-full justify-between border border-gray-300 rounded-2xl bg-white shadow flex items-center hover:bg-white px-3 py-4.5"
+                                    >
+                                        {loadingCatalogs ? (
+                                            <div className="flex items-center gap-2">
+                                                <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+                                                <span className="text-sm text-gray-400">Loading catalogs...</span>
+                                            </div>
+                                        ) : (
+                                            <span className="text-sm font-medium text-gray-900 truncate">
+                                                {selectedCatalogName || 'Select a Catalog'}
+                                            </span>
+                                        )}
+                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent
+                                    className="min-w-[--radix-popover-trigger-width] w-auto !max-w-none p-0 rounded-xl bg-white border-gray-200 shadow-2xl"
+                                    align="start"
+                                    sideOffset={4}
+                                    side="bottom"
+                                    avoidCollisions={false}
+                                    style={{ minWidth: "var(--radix-popover-trigger-width)", width: "auto" }}
+                                >
+                                    <Command filter={() => 1} loop={false}>
+                                        <CommandInput placeholder="Search catalogs..." wrapperClassName="bg-gray-50 border-gray-100" />
+                                        <CommandList className="max-h-[300px] overflow-y-auto rounded-xl">
+                                            <CommandEmpty className="p-4 text-center text-xs text-gray-500">
+                                                {catalogs.length === 0 ? 'No catalogs found for this advertiser.' : 'No results.'}
+                                            </CommandEmpty>
+                                            {catalogs.length > 0 && (
+                                                <CommandGroup>
+                                                    {/* Clear option */}
+                                                    <CommandItem
+                                                        value="__clear__"
+                                                        onSelect={() => {
+                                                            setSelectedCatalogId(null);
+                                                            setSelectedCatalogName(null);
+                                                            setSelectedProductId(null);
+                                                            setSelectedProductName(null);
+                                                            setSelectedProductImage(null);
+                                                            setCatalogProducts([]);
+                                                            setOpenCatalog(false);
+                                                            saveCatalogSelection(selectedAdvertiser, {
+                                                                catalog_id: null, catalog_name: null,
+                                                                product_id: null, product_name: null, product_image_url: null,
+                                                            });
+                                                        }}
+                                                        className="px-3 py-2 cursor-pointer m-1 rounded-xl text-gray-400 hover:bg-gray-50 italic text-xs"
+                                                    >
+                                                        None (clear selection)
+                                                    </CommandItem>
+                                                    {catalogs.map((cat) => (
+                                                        <CommandItem
+                                                            key={cat.catalog_id}
+                                                            value={cat.catalog_id}
+                                                            onSelect={() => {
+                                                                setSelectedCatalogId(cat.catalog_id);
+                                                                setSelectedCatalogName(cat.catalog_name);
+                                                                setSelectedProductId(null);
+                                                                setSelectedProductName(null);
+                                                                setSelectedProductImage(null);
+                                                                setCatalogProducts([]);
+                                                                setOpenCatalog(false);
+                                                                fetchCatalogProducts(selectedAdvertiser, cat.catalog_id);
+                                                                saveCatalogSelection(selectedAdvertiser, {
+                                                                    catalog_id: cat.catalog_id,
+                                                                    catalog_name: cat.catalog_name,
+                                                                    product_id: null, product_name: null, product_image_url: null,
+                                                                });
+                                                            }}
+                                                            className="px-3 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150 hover:bg-gray-100 flex items-center gap-2"
+                                                        >
+                                                            <div className="flex-1 min-w-0">
+                                                                <p className="text-sm font-semibold text-gray-900 truncate">{cat.catalog_name}</p>
+                                                                <p className="text-xs text-gray-400 font-mono">{cat.catalog_id}</p>
+                                                            </div>
+                                                            {selectedCatalogId === cat.catalog_id && <Check className="w-4 h-4 text-black shrink-0" />}
+                                                        </CommandItem>
+                                                    ))}
+                                                </CommandGroup>
+                                            )}
+                                        </CommandList>
+                                    </Command>
+                                </PopoverContent>
+                            </Popover>
+                        </div>
+
+                        {/* Products Dropdown — shown only when a catalog is selected */}
+                        {selectedCatalogId && (
+                            <div className="space-y-1">
+                                <label className="text-xs font-semibold text-gray-700">Product</label>
+                                {productError && (
+                                    <p className="text-xs text-red-500 mb-1">{productError}</p>
+                                )}
+                                <Popover open={openProduct} onOpenChange={setOpenProduct}>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            disabled={loadingProducts}
+                                            className="w-full justify-between border border-gray-300 rounded-2xl bg-white shadow flex items-center hover:bg-white px-3 py-4.5"
+                                        >
+                                            {loadingProducts ? (
+                                                <div className="flex items-center gap-2">
+                                                    <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+                                                    <span className="text-sm text-gray-400">Loading products...</span>
+                                                </div>
+                                            ) : (
+                                                <div className="flex items-center gap-2 min-w-0">
+                                                    {selectedProductImage && (
+                                                        <img src={selectedProductImage} alt="" className="w-6 h-6 rounded object-cover shrink-0" />
+                                                    )}
+                                                    <span className="text-sm font-medium text-gray-900 truncate">
+                                                        {selectedProductName || 'Select a Product'}
+                                                    </span>
+                                                </div>
+                                            )}
+                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent
+                                        className="min-w-[--radix-popover-trigger-width] w-auto !max-w-none p-0 rounded-xl bg-white border-gray-200 shadow-2xl"
+                                        align="start"
+                                        sideOffset={4}
+                                        side="bottom"
+                                        avoidCollisions={false}
+                                        style={{ minWidth: "var(--radix-popover-trigger-width)", width: "auto" }}
+                                    >
+                                        <Command filter={() => 1} loop={false}>
+                                            <CommandInput placeholder="Search products..." wrapperClassName="bg-gray-50 border-gray-100" />
+                                            <CommandList className="max-h-[360px] overflow-y-auto rounded-xl">
+                                                <CommandEmpty className="p-4 text-center text-xs text-gray-500">
+                                                    {catalogProducts.length === 0 ? 'No products in this catalog.' : 'No results.'}
+                                                </CommandEmpty>
+                                                {catalogProducts.length > 0 && (
+                                                    <CommandGroup>
+                                                        {/* Clear option */}
+                                                        <CommandItem
+                                                            value="__clear__"
+                                                            onSelect={() => {
+                                                                setSelectedProductId(null);
+                                                                setSelectedProductName(null);
+                                                                setSelectedProductImage(null);
+                                                                setOpenProduct(false);
+                                                                saveCatalogSelection(selectedAdvertiser, {
+                                                                    catalog_id: selectedCatalogId,
+                                                                    catalog_name: selectedCatalogName,
+                                                                    product_id: null, product_name: null, product_image_url: null,
+                                                                });
+                                                            }}
+                                                            className="px-3 py-2 cursor-pointer m-1 rounded-xl text-gray-400 hover:bg-gray-50 italic text-xs"
+                                                        >
+                                                            None (clear product)
+                                                        </CommandItem>
+                                                        {catalogProducts.map((prod) => (
+                                                            <CommandItem
+                                                                key={prod.product_id}
+                                                                value={prod.product_id}
+                                                                onSelect={() => {
+                                                                    setSelectedProductId(prod.product_id);
+                                                                    setSelectedProductName(prod.product_name);
+                                                                    setSelectedProductImage(prod.image_url || null);
+                                                                    setOpenProduct(false);
+                                                                    saveCatalogSelection(selectedAdvertiser, {
+                                                                        catalog_id: selectedCatalogId,
+                                                                        catalog_name: selectedCatalogName,
+                                                                        product_id: prod.product_id,
+                                                                        product_name: prod.product_name,
+                                                                        product_image_url: prod.image_url || null,
+                                                                    });
+                                                                    toast.success(`Product saved: ${prod.product_name}`);
+                                                                }}
+                                                                className="px-3 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150 hover:bg-gray-100 flex items-center gap-3"
+                                                            >
+                                                                {prod.image_url ? (
+                                                                    <img src={prod.image_url} alt="" className="w-10 h-10 rounded-lg object-cover shrink-0 border border-gray-100" />
+                                                                ) : (
+                                                                    <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
+                                                                        <Info className="w-4 h-4 text-gray-300" />
+                                                                    </div>
+                                                                )}
+                                                                <div className="flex-1 min-w-0">
+                                                                    <p className="text-sm font-semibold text-gray-900 truncate">{prod.product_name}</p>
+                                                                    {prod.price && (
+                                                                        <p className="text-xs text-gray-400">{prod.price} {prod.currency}</p>
+                                                                    )}
+                                                                </div>
+                                                                {selectedProductId === prod.product_id && <Check className="w-4 h-4 text-black shrink-0" />}
+                                                            </CommandItem>
+                                                        ))}
+                                                    </CommandGroup>
+                                                )}
+                                            </CommandList>
+                                        </Command>
+                                    </PopoverContent>
+                                </Popover>
+                            </div>
+                        )}
+
+                        {/* Selected Product Preview Card */}
+                        {selectedProductId && (
+                            <div className="flex items-center gap-3 bg-white border border-gray-200 rounded-xl p-3 shadow-xs">
+                                {selectedProductImage ? (
+                                    <img src={selectedProductImage} alt={selectedProductName} className="w-12 h-12 rounded-lg object-cover border border-gray-100 shrink-0" />
+                                ) : (
+                                    <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
+                                        <Info className="w-5 h-5 text-gray-300" />
+                                    </div>
+                                )}
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-xs text-gray-400 font-medium mb-0.5">Selected Product</p>
+                                    <p className="text-sm font-semibold text-gray-900 truncate">{selectedProductName}</p>
+                                    <p className="text-xs text-gray-400 font-mono truncate">{selectedProductId}</p>
+                                </div>
+                                <div className="flex items-center gap-1 shrink-0">
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-50 border border-green-200 rounded-full text-[10px] font-semibold text-green-700">
+                                        <Check className="w-2.5 h-2.5" /> Saved
+                                    </span>
                                 </div>
                             </div>
                         )}
