@@ -708,6 +708,15 @@ export default function TikTokAdCreationForm({
   const [formProductSearch, setFormProductSearch] = useState("")
 
   // Sync default selection from preferences once when loaded
+  const activeFormProductImage = useMemo(() => {
+    const matched = formCatalogProducts.find(p => p.product_id === formProductId);
+    if (matched) return matched.image_url || null;
+    if (formProductId === advertiserPrefs?.catalogSelection?.product_id) {
+      return advertiserPrefs?.catalogSelection?.product_image_url || null;
+    }
+    return null;
+  }, [formCatalogProducts, formProductId, advertiserPrefs]);
+
   const formCatalogInitRef = useRef({});
   useEffect(() => {
     if (!selectedAdvertiser) return;
@@ -4731,21 +4740,6 @@ export default function TikTokAdCreationForm({
                             }
                             return (
                               <div className="space-y-0.5">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setFormCatalogId(null);
-                                    setFormCatalogName(null);
-                                    setFormProductId(null);
-                                    setFormProductName(null);
-                                    setFormCatalogProducts([]);
-                                    setOpenFormCatalog(false);
-                                    setFormCatalogSearch("");
-                                  }}
-                                  className="w-full text-left px-3 py-2 cursor-pointer rounded-xl text-gray-400 hover:bg-gray-50 italic text-xs block transition-colors"
-                                >
-                                  None (clear selection)
-                                </button>
                                 {filtered.map((cat) => (
                                   <button
                                     type="button"
@@ -4800,9 +4794,18 @@ export default function TikTokAdCreationForm({
                               <span className="text-sm text-gray-400">Loading products...</span>
                             </div>
                           ) : (
-                            <span className="text-sm font-medium text-gray-900 truncate">
-                              {formProductName || 'Select a Product'}
-                            </span>
+                            <div className="flex items-center gap-2 min-w-0">
+                              {activeFormProductImage && (
+                                <img
+                                  src={activeFormProductImage}
+                                  alt=""
+                                  className="w-6 h-6 rounded-full object-cover shrink-0 border border-gray-100"
+                                />
+                              )}
+                              <span className="text-sm font-medium text-gray-900 truncate">
+                                {formProductName || 'Select a Product'}
+                              </span>
+                            </div>
                           )}
                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
@@ -4843,18 +4846,6 @@ export default function TikTokAdCreationForm({
                               }
                               return (
                                 <div className="space-y-0.5">
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setFormProductId(null);
-                                      setFormProductName(null);
-                                      setOpenFormProduct(false);
-                                      setFormProductSearch("");
-                                    }}
-                                    className="w-full text-left px-3 py-2 cursor-pointer rounded-xl text-gray-400 hover:bg-gray-50 italic text-xs block transition-colors"
-                                  >
-                                    None (clear product)
-                                  </button>
                                   {filtered.map((prod) => (
                                     <button
                                       type="button"
@@ -4870,6 +4861,13 @@ export default function TikTokAdCreationForm({
                                         formProductId === prod.product_id ? "bg-gray-50 font-medium" : ""
                                       )}
                                     >
+                                      {prod.image_url && (
+                                        <img
+                                          src={prod.image_url}
+                                          alt=""
+                                          className="w-6 h-6 rounded-full object-cover shrink-0 border border-gray-100"
+                                        />
+                                      )}
                                       <div className="flex-1 min-w-0">
                                         <p className="text-sm font-semibold text-gray-900 truncate">{prod.product_name}</p>
                                         {prod.price && (

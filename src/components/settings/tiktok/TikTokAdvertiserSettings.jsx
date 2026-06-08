@@ -903,22 +903,6 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                                 }
                                                 return (
                                                     <div className="space-y-0.5">
-                                                        {/* Clear option */}
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => {
-                                                                setSettings(prev => ({
-                                                                    ...prev,
-                                                                    catalogSelection: null
-                                                                }));
-                                                                setCatalogProducts([]);
-                                                                setOpenCatalog(false);
-                                                                setCatalogSearch("");
-                                                            }}
-                                                            className="w-full text-left px-3 py-2 cursor-pointer rounded-xl text-gray-400 hover:bg-gray-50 italic text-xs block transition-colors"
-                                                        >
-                                                            None (clear selection)
-                                                        </button>
                                                         {filtered.map((cat) => (
                                                             <button
                                                                 type="button"
@@ -985,6 +969,13 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                                 </div>
                                             ) : (
                                                 <div className="flex items-center gap-2 min-w-0">
+                                                    {selectedProductImage && (
+                                                        <img
+                                                            src={selectedProductImage}
+                                                            alt=""
+                                                            className="w-6 h-6 rounded-full object-cover shrink-0 border border-gray-100"
+                                                        />
+                                                    )}
                                                     <span className="text-sm font-medium text-gray-900 truncate">
                                                         {selectedProductName || 'Select a Product'}
                                                     </span>
@@ -1030,28 +1021,6 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                                     }
                                                     return (
                                                         <div className="space-y-0.5">
-                                                            {/* Clear option */}
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => {
-                                                                    setSettings(prev => ({
-                                                                        ...prev,
-                                                                        catalogSelection: {
-                                                                            ...(prev?.catalogSelection || {}),
-                                                                            product_id: null,
-                                                                            product_name: null,
-                                                                            product_image_url: null,
-                                                                            sku_id: null,
-                                                                            item_group_id: null,
-                                                                        }
-                                                                    }));
-                                                                    setOpenProduct(false);
-                                                                    setProductSearch("");
-                                                                }}
-                                                                className="w-full text-left px-3 py-2 cursor-pointer rounded-xl text-gray-400 hover:bg-gray-50 italic text-xs block transition-colors"
-                                                            >
-                                                                None (clear product)
-                                                            </button>
                                                             {filtered.map((prod) => (
                                                                 <button
                                                                     type="button"
@@ -1076,6 +1045,13 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                                                         selectedProductId === prod.product_id ? "bg-gray-50 font-medium" : ""
                                                                     )}
                                                                 >
+                                                                    {prod.image_url && (
+                                                                        <img
+                                                                            src={prod.image_url}
+                                                                            alt=""
+                                                                            className="w-6 h-6 rounded-full object-cover shrink-0 border border-gray-100"
+                                                                        />
+                                                                    )}
                                                                     <div className="flex-1 min-w-0">
                                                                         <p className="text-sm font-semibold text-gray-900 truncate">{prod.product_name}</p>
                                                                         {prod.price && (
