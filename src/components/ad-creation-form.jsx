@@ -6927,9 +6927,9 @@ export default function AdCreationForm({
                             wrapperClassName="bg-gray-50 border-gray-200 rounded-[20px]"
                           />
                           <CommandList className="max-h-[500px] overflow-y-auto rounded-2xl custom-scrollbar" selectOnFocus={false}>
-                            <CommandGroup>
-                              {filteredPages.length > 0 ? (
-                                filteredPages.map((page) => (
+                            {filteredPages.length > 0 ? (
+                              <CommandGroup>
+                                {filteredPages.map((page) => (
                                   <CommandItem
                                     key={page.id}
                                     value={page.id}
@@ -6964,11 +6964,11 @@ export default function AdCreationForm({
 
                                   </CommandItem>
 
-                                ))
-                              ) : (
-                                <LinkPagesEmptyState onClick={handleLinkMorePages} />
-                              )}
-                            </CommandGroup>
+                                ))}
+                              </CommandGroup>
+                            ) : (
+                              <LinkPagesEmptyState message="No pages found." onClick={handleLinkMorePages} />
+                            )}
                           </CommandList>
                         </Command>
                       </PopoverContent>
@@ -7039,9 +7039,9 @@ export default function AdCreationForm({
                             wrapperClassName="bg-gray-50 border-gray-200 rounded-[20px]"
                           />
                           <CommandList className="max-h-[300px] overflow-y-auto rounded-2xl custom-scrollbar" selectOnFocus={false}>
-                            <CommandGroup>
-                              {filteredInstagramAccounts.length > 0 ? (
-                                filteredInstagramAccounts.map((page) => (
+                            {filteredInstagramAccounts.length > 0 ? (
+                              <CommandGroup>
+                                {filteredInstagramAccounts.map((page) => (
                                   <CommandItem
                                     key={page.instagramAccount.id}
                                     value={page.instagramAccount.id}
@@ -7062,11 +7062,11 @@ export default function AdCreationForm({
                                     />
                                     <span>{page.instagramAccount.username}</span>
                                   </CommandItem>
-                                ))
-                              ) : (
-                                <LinkPagesEmptyState onClick={handleLinkMorePages} />
-                              )}
-                            </CommandGroup>
+                                ))}
+                              </CommandGroup>
+                            ) : (
+                              <LinkPagesEmptyState message="No IG accounts found." onClick={handleLinkMorePages} />
+                            )}
                           </CommandList>
                         </Command>
                       </PopoverContent>
