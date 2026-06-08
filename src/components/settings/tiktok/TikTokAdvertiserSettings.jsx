@@ -424,7 +424,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                 width: "auto",
                             }}
                         >
-                            <Command filter={() => 1} loop={false} value="">
+                            <Command key={advertisers.length} loop={false} value="">
                                 <CommandInput
                                     placeholder="Search advertiser accounts..."
                                     className="bg-transparent"
@@ -438,7 +438,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                             return (
                                                 <CommandItem
                                                     key={id}
-                                                    value={id}
+                                                    value={`${a.name || ""} ${id}`.toLowerCase()}
                                                     onSelect={() => handleAdvertiserChange(id)}
                                                     className={cn(
                                                         "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150 hover:bg-gray-100",
@@ -534,7 +534,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                         width: "auto",
                                     }}
                                 >
-                                    <Command filter={() => 1} loop={false}>
+                                    <Command key={identities.length} loop={false}>
                                         <CommandInput
                                             placeholder="Search identities..."
                                             wrapperClassName="bg-gray-50 border-gray-100"
@@ -544,7 +544,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                             {identities.map((i) => (
                                                 <CommandItem
                                                     key={i.identity_id}
-                                                    value={i.identity_id}
+                                                    value={`${i.display_name || ""} ${i.identity_id}`.toLowerCase()}
                                                     onSelect={() => {
                                                         setSettings({ ...currentSettings, defaultIdentityId: i.identity_id });
                                                         setOpenIdentity(false);
@@ -846,7 +846,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                     avoidCollisions={false}
                                     style={{ minWidth: "var(--radix-popover-trigger-width)", width: "auto" }}
                                 >
-                                    <Command filter={() => 1} loop={false}>
+                                    <Command key={catalogs.length} loop={false}>
                                         <CommandInput placeholder="Search catalogs..." wrapperClassName="bg-gray-50 border-gray-100" />
                                         <CommandList className="max-h-[300px] overflow-y-auto rounded-xl">
                                             <CommandEmpty className="p-4 text-center text-xs text-gray-500">
@@ -856,7 +856,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                                 <CommandGroup>
                                                     {/* Clear option */}
                                                     <CommandItem
-                                                        value="__clear__"
+                                                        value="none clear selection"
                                                         onSelect={() => {
                                                             setSelectedCatalogId(null);
                                                             setSelectedCatalogName(null);
@@ -877,7 +877,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                                     {catalogs.map((cat) => (
                                                         <CommandItem
                                                             key={cat.catalog_id}
-                                                            value={cat.catalog_id}
+                                                            value={`${cat.catalog_name || ""} ${cat.catalog_id}`.toLowerCase()}
                                                             onSelect={() => {
                                                                 setSelectedCatalogId(cat.catalog_id);
                                                                 setSelectedCatalogName(cat.catalog_name);
@@ -950,7 +950,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                         avoidCollisions={false}
                                         style={{ minWidth: "var(--radix-popover-trigger-width)", width: "auto" }}
                                     >
-                                        <Command filter={() => 1} loop={false}>
+                                        <Command key={catalogProducts.length} loop={false}>
                                             <CommandInput placeholder="Search products..." wrapperClassName="bg-gray-50 border-gray-100" />
                                             <CommandList className="max-h-[360px] overflow-y-auto rounded-xl">
                                                 <CommandEmpty className="p-4 text-center text-xs text-gray-500">
@@ -960,7 +960,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                                     <CommandGroup>
                                                         {/* Clear option */}
                                                         <CommandItem
-                                                            value="__clear__"
+                                                            value="none clear product"
                                                             onSelect={() => {
                                                                 setSelectedProductId(null);
                                                                 setSelectedProductName(null);
@@ -979,7 +979,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                                         {catalogProducts.map((prod) => (
                                                             <CommandItem
                                                                 key={prod.product_id}
-                                                                value={prod.product_id}
+                                                                value={`${prod.product_name || ""} ${prod.product_id}`.toLowerCase()}
                                                                 onSelect={() => {
                                                                     setSelectedProductId(prod.product_id);
                                                                     setSelectedProductName(prod.product_name);
