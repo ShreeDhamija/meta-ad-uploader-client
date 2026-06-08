@@ -148,6 +148,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                 }
             );
             const data = await res.json();
+            console.log("TikTok settings fetchCatalogs success/fail check:", data);
             if (data.success) {
                 setCatalogs(data.catalogs || []);
             } else {
@@ -182,6 +183,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                 }
             );
             const data = await res.json();
+            console.log("TikTok settings fetchCatalogProducts success/fail check:", data);
             if (data.success) {
                 setCatalogProducts(data.products || []);
             } else {
@@ -433,7 +435,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                 width: "auto",
                             }}
                         >
-                            <Command loop={false} shouldFilter={false} value="">
+                            <Command key={`adv-${advertisers.length}`} loop={false} shouldFilter={false} value="">
                                 <CommandInput
                                     placeholder="Search advertiser accounts..."
                                     value={advertiserSearch}
@@ -563,7 +565,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                         width: "auto",
                                     }}
                                 >
-                                    <Command loop={false} shouldFilter={false}>
+                                    <Command key={`id-${identities.length}`} loop={false} shouldFilter={false}>
                                         <CommandInput
                                             placeholder="Search identities..."
                                             value={identitySearch}
@@ -895,7 +897,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                     avoidCollisions={false}
                                     style={{ minWidth: "var(--radix-popover-trigger-width)", width: "auto" }}
                                 >
-                                    <Command loop={false} shouldFilter={false}>
+                                    <Command key={`cat-${catalogs.length}`} loop={false} shouldFilter={false}>
                                         <CommandInput
                                             placeholder="Search catalogs..."
                                             value={catalogSearch}
@@ -910,6 +912,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                                     const q = catalogSearch.toLowerCase();
                                                     return name.includes(q) || id.includes(q);
                                                 });
+                                                console.log("Catalog dropdown render details:", { total: catalogs.length, filtered: filtered.length, filteredItems: filtered });
                                                 if (filtered.length === 0) {
                                                     return (
                                                         <CommandEmpty className="p-4 text-center text-xs text-gray-500">
@@ -1021,7 +1024,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                         avoidCollisions={false}
                                         style={{ minWidth: "var(--radix-popover-trigger-width)", width: "auto" }}
                                     >
-                                        <Command loop={false} shouldFilter={false}>
+                                        <Command key={`prod-${catalogProducts.length}`} loop={false} shouldFilter={false}>
                                             <CommandInput
                                                 placeholder="Search products..."
                                                 value={productSearch}
@@ -1036,6 +1039,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                                         const q = productSearch.toLowerCase();
                                                         return name.includes(q) || id.includes(q);
                                                     });
+                                                    console.log("Product dropdown render details:", { total: catalogProducts.length, filtered: filtered.length, filteredItems: filtered });
                                                     if (filtered.length === 0) {
                                                         return (
                                                             <CommandEmpty className="p-4 text-center text-xs text-gray-500">
