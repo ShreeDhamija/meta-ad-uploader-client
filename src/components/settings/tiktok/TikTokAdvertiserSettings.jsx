@@ -1,13 +1,12 @@
 import TikTokIcon from "@/assets/icons/tiktok.svg?react"
 import { Button } from "@/components/ui/button"
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { saveTikTokSettings } from "@/lib/saveTikTokSettings"
 import { useTikTokAuth } from "@/lib/TikTokAuthContext"
 import useTikTokAdvertiserSettings from "@/lib/useTikTokAdvertiserSettings"
 import { useAppData } from "@/lib/AppContext"
 import { cn } from "@/lib/utils"
-import { Check, ChevronsUpDown, HelpCircle, Layout, Loader, Loader2, RefreshCcw, Info, Trash, Plus, X, Upload, Pencil, Folder } from "lucide-react"
+import { Check, ChevronsUpDown, HelpCircle, Layout, Loader, Loader2, RefreshCcw, Info, Trash, Plus, X, Upload, Pencil, Folder, Search } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import { toast } from "sonner"
@@ -435,15 +434,18 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                 width: "auto",
                             }}
                         >
-                            <Command key={`adv-${advertisers.length}`} loop={false} shouldFilter={false} value="">
-                                <CommandInput
-                                    placeholder="Search advertiser accounts..."
-                                    value={advertiserSearch}
-                                    onValueChange={setAdvertiserSearch}
-                                    className="bg-transparent"
-                                    wrapperClassName="bg-gray-50 border-gray-200 rounded-[20px]"
-                                />
-                                <CommandList className="max-h-[500px] overflow-y-auto rounded-2xl custom-scrollbar" selectOnFocus={false}>
+                            <div className="flex flex-col overflow-hidden rounded-2xl bg-white text-gray-900">
+                                <div className="mx-2 mt-2 mb-1 flex items-center rounded-2xl border border-gray-300 bg-white px-3 shadow">
+                                    <Search className="mr-2 h-4 w-4 shrink-0 opacity-50 text-gray-500" />
+                                    <input
+                                        type="text"
+                                        placeholder="Search advertiser accounts..."
+                                        value={advertiserSearch}
+                                        onChange={(e) => setAdvertiserSearch(e.target.value)}
+                                        className="flex h-11 w-full bg-transparent py-3 text-sm outline-none placeholder:text-gray-400 text-gray-900 border-none focus:ring-0"
+                                    />
+                                </div>
+                                <div className="max-h-[500px] overflow-y-auto rounded-2xl custom-scrollbar p-1">
                                     {(() => {
                                         const filtered = advertisers.filter(a => {
                                             const name = (a.name || "").toLowerCase();
@@ -452,35 +454,35 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                             return name.includes(q) || id.includes(q);
                                         });
                                         if (filtered.length === 0) {
-                                            return <CommandEmpty>No accounts found.</CommandEmpty>;
+                                            return <div className="py-6 text-center text-sm text-gray-500">No accounts found.</div>;
                                         }
                                         return (
-                                            <CommandGroup>
+                                            <div className="space-y-0.5">
                                                 {filtered.map(a => {
                                                     const id = a.advertiser_id || a.id;
                                                     return (
-                                                        <CommandItem
+                                                        <button
+                                                            type="button"
                                                             key={id}
-                                                            value={`${a.name || ""} ${id}`.toLowerCase()}
-                                                            onSelect={() => {
+                                                            onClick={() => {
                                                                 handleAdvertiserChange(id);
                                                                 setAdvertiserSearch("");
                                                             }}
                                                             className={cn(
-                                                                "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150 hover:bg-gray-100",
+                                                                "w-full text-left px-4 py-2 cursor-pointer rounded-2xl transition-colors duration-150 hover:bg-gray-100 flex items-center justify-between",
                                                                 selectedAdvertiser === id ? "bg-gray-100 font-semibold" : ""
                                                             )}
                                                         >
                                                             <span className="text-sm">{a.name}</span>
                                                             {selectedAdvertiser === id && <Check className="ml-auto w-4 h-4" />}
-                                                        </CommandItem>
+                                                        </button>
                                                     );
                                                 })}
-                                            </CommandGroup>
+                                            </div>
                                         );
                                     })()}
-                                </CommandList>
-                            </Command>
+                                </div>
+                            </div>
                         </PopoverContent>
                     </Popover>
                     <button
@@ -565,14 +567,18 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                         width: "auto",
                                     }}
                                 >
-                                    <Command key={`id-${identities.length}`} loop={false} shouldFilter={false}>
-                                        <CommandInput
-                                            placeholder="Search identities..."
-                                            value={identitySearch}
-                                            onValueChange={setIdentitySearch}
-                                            wrapperClassName="bg-gray-50 border-gray-100"
-                                        />
-                                        <CommandList className="max-h-[300px] overflow-y-auto rounded-xl">
+                                    <div className="flex flex-col overflow-hidden rounded-xl bg-white text-gray-900">
+                                        <div className="mx-2 mt-2 mb-1 flex items-center rounded-2xl border border-gray-300 bg-white px-3 shadow">
+                                            <Search className="mr-2 h-4 w-4 shrink-0 opacity-50 text-gray-500" />
+                                            <input
+                                                type="text"
+                                                placeholder="Search identities..."
+                                                value={identitySearch}
+                                                onChange={(e) => setIdentitySearch(e.target.value)}
+                                                className="flex h-11 w-full bg-transparent py-3 text-sm outline-none placeholder:text-gray-400 text-gray-900 border-none focus:ring-0"
+                                            />
+                                        </div>
+                                        <div className="max-h-[300px] overflow-y-auto rounded-xl p-1">
                                             {(() => {
                                                 const filtered = identities.filter(i => {
                                                     const name = (i.display_name || "").toLowerCase();
@@ -581,33 +587,33 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                                     return name.includes(q) || id.includes(q);
                                                 });
                                                 if (filtered.length === 0) {
-                                                    return <CommandEmpty className="p-4 text-center text-xs text-gray-500">No identities found.</CommandEmpty>;
+                                                    return <div className="py-6 text-center text-xs text-gray-500">No identities found.</div>;
                                                 }
                                                 return (
-                                                    <CommandGroup>
+                                                    <div className="space-y-0.5">
                                                         {filtered.map((i) => (
-                                                            <CommandItem
+                                                            <button
+                                                                type="button"
                                                                 key={i.identity_id}
-                                                                value={`${i.display_name || ""} ${i.identity_id}`.toLowerCase()}
-                                                                onSelect={() => {
+                                                                onClick={() => {
                                                                     setSettings({ ...currentSettings, defaultIdentityId: i.identity_id });
                                                                     setOpenIdentity(false);
                                                                     setIdentitySearch("");
                                                                 }}
-                                                                className="px-3 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150 hover:bg-gray-100 flex items-center gap-3"
+                                                                className="w-full text-left px-3 py-2 cursor-pointer rounded-xl transition-colors duration-150 hover:bg-gray-100 flex items-center justify-between"
                                                             >
-                                                                <div className="flex items-center gap-1.5">
-                                                                    <span className="text-sm font-semibold text-gray-900">{i.display_name}</span>
-                                                                    <span className="text-xs text-gray-400 font-normal">{i.identity_id}</span>
+                                                                <div className="flex items-center gap-1.5 min-w-0">
+                                                                    <span className="text-sm font-semibold text-gray-900 truncate">{i.display_name}</span>
+                                                                    <span className="text-xs text-gray-400 font-normal shrink-0">{i.identity_id}</span>
                                                                 </div>
-                                                                {currentSettings.defaultIdentityId === i.identity_id && <Check className="ml-auto w-4 h-4 text-black" />}
-                                                            </CommandItem>
+                                                                {currentSettings.defaultIdentityId === i.identity_id && <Check className="ml-auto w-4 h-4 text-black shrink-0" />}
+                                                            </button>
                                                         ))}
-                                                    </CommandGroup>
+                                                    </div>
                                                 );
                                             })()}
-                                        </CommandList>
-                                    </Command>
+                                        </div>
+                                    </div>
                                 </PopoverContent>
                             </Popover>
                         </div>
@@ -795,30 +801,31 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                     </Button>
                                 </PopoverTrigger>
                                 <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-1 bg-white rounded-2xl shadow-xl border-gray-100" side="bottom" avoidCollisions={false}>
-                                    <Command>
-                                        <CommandList>
-                                            <CommandGroup>
+                                    <div className="flex flex-col overflow-hidden rounded-2xl bg-white text-gray-900">
+                                        <div className="max-h-[300px] overflow-y-auto rounded-2xl p-1">
+                                            <div className="space-y-0.5">
                                                 {CTA_OPTIONS.map(opt => (
-                                                    <CommandItem
+                                                    <button
+                                                        type="button"
                                                         key={opt.value}
-                                                        onSelect={() => {
+                                                        onClick={() => {
                                                             const prev = currentSettings.defaultCTAs || [];
                                                             const next = prev.includes(opt.value)
                                                                 ? prev.filter(v => v !== opt.value)
                                                                 : [...prev, opt.value];
                                                             setSettings({ ...currentSettings, defaultCTAs: next });
                                                         }}
-                                                        className="flex items-center gap-2 p-2 rounded-xl hover:bg-gray-50 cursor-pointer"
+                                                        className="w-full text-left px-3 py-2 cursor-pointer rounded-xl transition-colors duration-150 hover:bg-gray-100 flex items-center gap-2"
                                                     >
                                                         <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${currentSettings.defaultCTAs?.includes(opt.value) ? "bg-black border-black text-white" : "border-gray-200"}`}>
                                                             {currentSettings.defaultCTAs?.includes(opt.value) && <Check className="w-3 h-3" />}
                                                         </div>
                                                         <span className="text-sm font-medium">{opt.label}</span>
-                                                    </CommandItem>
+                                                    </button>
                                                 ))}
-                                            </CommandGroup>
-                                        </CommandList>
-                                    </Command>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </PopoverContent>
                             </Popover>
                         </div>
@@ -897,14 +904,18 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                     avoidCollisions={false}
                                     style={{ minWidth: "var(--radix-popover-trigger-width)", width: "auto" }}
                                 >
-                                    <Command key={`cat-${catalogs.length}`} loop={false} shouldFilter={false}>
-                                        <CommandInput
-                                            placeholder="Search catalogs..."
-                                            value={catalogSearch}
-                                            onValueChange={setCatalogSearch}
-                                            wrapperClassName="bg-gray-50 border-gray-100"
-                                        />
-                                        <CommandList className="max-h-[300px] overflow-y-auto rounded-xl">
+                                    <div className="flex flex-col overflow-hidden rounded-xl bg-white text-gray-900">
+                                        <div className="mx-2 mt-2 mb-1 flex items-center rounded-2xl border border-gray-300 bg-white px-3 shadow">
+                                            <Search className="mr-2 h-4 w-4 shrink-0 opacity-50 text-gray-500" />
+                                            <input
+                                                type="text"
+                                                placeholder="Search catalogs..."
+                                                value={catalogSearch}
+                                                onChange={(e) => setCatalogSearch(e.target.value)}
+                                                className="flex h-11 w-full bg-transparent py-3 text-sm outline-none placeholder:text-gray-400 text-gray-900 border-none focus:ring-0"
+                                            />
+                                        </div>
+                                        <div className="max-h-[300px] overflow-y-auto rounded-xl p-1">
                                             {(() => {
                                                 const filtered = catalogs.filter(cat => {
                                                     const name = (cat.catalog_name || "").toLowerCase();
@@ -915,17 +926,17 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                                 console.log("Catalog dropdown render details:", { total: catalogs.length, filtered: filtered.length, filteredItems: filtered });
                                                 if (filtered.length === 0) {
                                                     return (
-                                                        <CommandEmpty className="p-4 text-center text-xs text-gray-500">
+                                                        <div className="py-6 text-center text-xs text-gray-500">
                                                             {catalogs.length === 0 ? 'No catalogs found for this advertiser.' : 'No results.'}
-                                                        </CommandEmpty>
+                                                        </div>
                                                     );
                                                 }
                                                 return (
-                                                    <CommandGroup>
+                                                    <div className="space-y-0.5">
                                                         {/* Clear option */}
-                                                        <CommandItem
-                                                            value="none clear selection"
-                                                            onSelect={() => {
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
                                                                 setSelectedCatalogId(null);
                                                                 setSelectedCatalogName(null);
                                                                 setSelectedProductId(null);
@@ -939,15 +950,15 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                                                     product_id: null, product_name: null, product_image_url: null,
                                                                 });
                                                             }}
-                                                            className="px-3 py-2 cursor-pointer m-1 rounded-xl text-gray-400 hover:bg-gray-50 italic text-xs"
+                                                            className="w-full text-left px-3 py-2 cursor-pointer rounded-xl text-gray-400 hover:bg-gray-50 italic text-xs block transition-colors"
                                                         >
                                                             None (clear selection)
-                                                        </CommandItem>
+                                                        </button>
                                                         {filtered.map((cat) => (
-                                                            <CommandItem
+                                                            <button
+                                                                type="button"
                                                                 key={cat.catalog_id}
-                                                                value={`${cat.catalog_name || ""} ${cat.catalog_id}`.toLowerCase()}
-                                                                onSelect={() => {
+                                                                onClick={() => {
                                                                     setSelectedCatalogId(cat.catalog_id);
                                                                     setSelectedCatalogName(cat.catalog_name);
                                                                     setSelectedProductId(null);
@@ -963,20 +974,23 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                                                         product_id: null, product_name: null, product_image_url: null,
                                                                     });
                                                                 }}
-                                                                className="px-3 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150 hover:bg-gray-100 flex items-center gap-2"
+                                                                className={cn(
+                                                                    "w-full text-left px-3 py-2 cursor-pointer rounded-xl transition-colors duration-150 hover:bg-gray-100 flex items-center gap-2",
+                                                                    selectedCatalogId === cat.catalog_id ? "bg-gray-50 font-medium" : ""
+                                                                )}
                                                             >
                                                                 <div className="flex-1 min-w-0">
                                                                     <p className="text-sm font-semibold text-gray-900 truncate">{cat.catalog_name}</p>
                                                                     <p className="text-xs text-gray-400 font-mono">{cat.catalog_id}</p>
                                                                 </div>
                                                                 {selectedCatalogId === cat.catalog_id && <Check className="w-4 h-4 text-black shrink-0" />}
-                                                            </CommandItem>
+                                                            </button>
                                                         ))}
-                                                    </CommandGroup>
+                                                    </div>
                                                 );
                                             })()}
-                                        </CommandList>
-                                    </Command>
+                                        </div>
+                                    </div>
                                 </PopoverContent>
                             </Popover>
                         </div>
@@ -1024,14 +1038,18 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                         avoidCollisions={false}
                                         style={{ minWidth: "var(--radix-popover-trigger-width)", width: "auto" }}
                                     >
-                                        <Command key={`prod-${catalogProducts.length}`} loop={false} shouldFilter={false}>
-                                            <CommandInput
-                                                placeholder="Search products..."
-                                                value={productSearch}
-                                                onValueChange={setProductSearch}
-                                                wrapperClassName="bg-gray-50 border-gray-100"
-                                            />
-                                            <CommandList className="max-h-[360px] overflow-y-auto rounded-xl">
+                                        <div className="flex flex-col overflow-hidden rounded-xl bg-white text-gray-900">
+                                            <div className="mx-2 mt-2 mb-1 flex items-center rounded-2xl border border-gray-300 bg-white px-3 shadow">
+                                                <Search className="mr-2 h-4 w-4 shrink-0 opacity-50 text-gray-500" />
+                                                <input
+                                                    type="text"
+                                                    placeholder="Search products..."
+                                                    value={productSearch}
+                                                    onChange={(e) => setProductSearch(e.target.value)}
+                                                    className="flex h-11 w-full bg-transparent py-3 text-sm outline-none placeholder:text-gray-400 text-gray-900 border-none focus:ring-0"
+                                                />
+                                            </div>
+                                            <div className="max-h-[360px] overflow-y-auto rounded-xl p-1">
                                                 {(() => {
                                                     const filtered = catalogProducts.filter(prod => {
                                                         const name = (prod.product_name || "").toLowerCase();
@@ -1042,17 +1060,17 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                                     console.log("Product dropdown render details:", { total: catalogProducts.length, filtered: filtered.length, filteredItems: filtered });
                                                     if (filtered.length === 0) {
                                                         return (
-                                                            <CommandEmpty className="p-4 text-center text-xs text-gray-500">
+                                                            <div className="py-6 text-center text-xs text-gray-500">
                                                                 {catalogProducts.length === 0 ? 'No products in this catalog.' : 'No results.'}
-                                                            </CommandEmpty>
+                                                            </div>
                                                         );
                                                     }
                                                     return (
-                                                        <CommandGroup>
+                                                        <div className="space-y-0.5">
                                                             {/* Clear option */}
-                                                            <CommandItem
-                                                                value="none clear product"
-                                                                onSelect={() => {
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
                                                                     setSelectedProductId(null);
                                                                     setSelectedProductName(null);
                                                                     setSelectedProductImage(null);
@@ -1064,15 +1082,15 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                                                         product_id: null, product_name: null, product_image_url: null,
                                                                     });
                                                                 }}
-                                                                className="px-3 py-2 cursor-pointer m-1 rounded-xl text-gray-400 hover:bg-gray-50 italic text-xs"
+                                                                className="w-full text-left px-3 py-2 cursor-pointer rounded-xl text-gray-400 hover:bg-gray-50 italic text-xs block transition-colors"
                                                             >
                                                                 None (clear product)
-                                                            </CommandItem>
+                                                            </button>
                                                             {filtered.map((prod) => (
-                                                                <CommandItem
+                                                                <button
+                                                                    type="button"
                                                                     key={prod.product_id}
-                                                                    value={`${prod.product_name || ""} ${prod.product_id}`.toLowerCase()}
-                                                                    onSelect={() => {
+                                                                    onClick={() => {
                                                                         setSelectedProductId(prod.product_id);
                                                                         setSelectedProductName(prod.product_name);
                                                                         setSelectedProductImage(prod.image_url || null);
@@ -1087,7 +1105,10 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                                                         });
                                                                         toast.success(`Product saved: ${prod.product_name}`);
                                                                     }}
-                                                                    className="px-3 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150 hover:bg-gray-100 flex items-center gap-3"
+                                                                    className={cn(
+                                                                        "w-full text-left px-3 py-2 cursor-pointer rounded-xl transition-colors duration-150 hover:bg-gray-100 flex items-center gap-3",
+                                                                        selectedProductId === prod.product_id ? "bg-gray-50 font-medium" : ""
+                                                                    )}
                                                                 >
                                                                     {prod.image_url ? (
                                                                         <img src={prod.image_url} alt="" className="w-10 h-10 rounded-lg object-cover shrink-0 border border-gray-100" />
@@ -1103,13 +1124,13 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                                                         )}
                                                                     </div>
                                                                     {selectedProductId === prod.product_id && <Check className="w-4 h-4 text-black shrink-0" />}
-                                                                </CommandItem>
+                                                                </button>
                                                             ))}
-                                                        </CommandGroup>
+                                                        </div>
                                                     );
                                                 })()}
-                                            </CommandList>
-                                        </Command>
+                                            </div>
+                                        </div>
                                     </PopoverContent>
                                 </Popover>
                             </div>
