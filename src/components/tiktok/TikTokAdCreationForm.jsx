@@ -1043,6 +1043,19 @@ export default function TikTokAdCreationForm({
                 } : {})
               }
               if (currentIdentityId) creative.identity_id = currentIdentityId
+
+              const catSel = advertiserPrefs?.catalogSelection;
+              if (catSel && catSel.catalog_id) {
+                creative.catalog_id = catSel.catalog_id;
+                if (catSel.item_group_id) {
+                  creative.item_group_id = catSel.item_group_id;
+                }
+                const resolvedSku = catSel.sku_id || catSel.product_id;
+                if (resolvedSku) {
+                  creative.sku_id = resolvedSku;
+                }
+              }
+
               creatives.push(creative)
             } else {
               for (const singleCta of creativeCTAs) {
@@ -1079,6 +1092,19 @@ export default function TikTokAdCreationForm({
                   } : {})
                 }
                 if (currentIdentityId) creative.identity_id = currentIdentityId
+
+                const catSel = advertiserPrefs?.catalogSelection;
+                if (catSel && catSel.catalog_id) {
+                  creative.catalog_id = catSel.catalog_id;
+                  if (catSel.item_group_id) {
+                    creative.item_group_id = catSel.item_group_id;
+                  }
+                  const resolvedSku = catSel.sku_id || catSel.product_id;
+                  if (resolvedSku) {
+                    creative.sku_id = resolvedSku;
+                  }
+                }
+
                 creatives.push(creative)
               }
             }

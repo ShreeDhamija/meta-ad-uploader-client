@@ -974,6 +974,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                                                 saveCatalogSelection(selectedAdvertiser, {
                                                                     catalog_id: null, catalog_name: null,
                                                                     product_id: null, product_name: null, product_image_url: null,
+                                                                    sku_id: null, item_group_id: null,
                                                                 });
                                                             }}
                                                             className="w-full text-left px-3 py-2 cursor-pointer rounded-xl text-gray-400 hover:bg-gray-50 italic text-xs block transition-colors"
@@ -998,6 +999,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                                                         catalog_id: cat.catalog_id,
                                                                         catalog_name: cat.catalog_name,
                                                                         product_id: null, product_name: null, product_image_url: null,
+                                                                        sku_id: null, item_group_id: null,
                                                                     });
                                                                 }}
                                                                 className={cn(
@@ -1014,7 +1016,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                                         ))}
                                                     </div>
                                                 );
-                                            })() }
+                                            })()}
                                         </div>
                                     </div>
                                 </PopoverContent>
@@ -1106,6 +1108,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                                                         catalog_id: selectedCatalogId,
                                                                         catalog_name: selectedCatalogName,
                                                                         product_id: null, product_name: null, product_image_url: null,
+                                                                        sku_id: null, item_group_id: null,
                                                                     });
                                                                 }}
                                                                 className="w-full text-left px-3 py-2 cursor-pointer rounded-xl text-gray-400 hover:bg-gray-50 italic text-xs block transition-colors"
@@ -1128,6 +1131,8 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                                                             product_id: prod.product_id,
                                                                             product_name: prod.product_name,
                                                                             product_image_url: prod.image_url || null,
+                                                                            sku_id: prod.sku_id || null,
+                                                                            item_group_id: prod.item_group_id || null,
                                                                         });
                                                                         toast.success(`Product saved: ${prod.product_name}`);
                                                                     }}
