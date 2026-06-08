@@ -1429,7 +1429,7 @@ export default function TikTokAdCreationForm({
     setAdGroups([])
   }, [onAdvertiserChange, setCampaigns, setAdGroups, setSelectedCampaign, setSelectedAdGroup])
 
-  // Fetch Campaigns & Identities on Advertiser change
+  // Fetch Campaigns on Advertiser change
   useEffect(() => {
     if (!selectedAdvertiser) {
       campaignsLoadedForAdvertiserRef.current = null
@@ -1461,11 +1461,19 @@ export default function TikTokAdCreationForm({
         .catch(() => toast.error('Failed to load campaigns'))
         .finally(() => setLoadingCampaigns(false))
     }
+  }, [selectedAdvertiser, setCampaigns, setSelectedCampaign, tiktokFetch])
+
+  // Fetch Identities on Advertiser change
+  useEffect(() => {
+    if (!selectedAdvertiser) {
+      setIdentities([])
+      return
+    }
 
     fetchTikTokIdentities(selectedAdvertiser).then(list => {
       setIdentities(list)
     })
-  }, [selectedAdvertiser, setCampaigns, setSelectedCampaign, setAdGroups, setIdentities, tiktokFetch, fetchTikTokIdentities])
+  }, [selectedAdvertiser, setIdentities, fetchTikTokIdentities])
 
   // Automatically sync identities from context cache when selectedAdvertiser or context value changes
   useEffect(() => {
