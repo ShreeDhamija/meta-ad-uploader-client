@@ -1489,7 +1489,7 @@ export default function AdCreationForm({
     }
   }
 
-  const uploadToS3 = async (file, onChunkUploaded, uniqueId, maxUploadRetries = 2, signal = null) => {    // Validate inputs
+  const uploadToS3 = async (file, onChunkUploaded, uniqueId, maxUploadRetries = 2, signal = null, retryUploadLimit = null) => {    // Validate inputs
     if (!file) {
       console.error('❌ FATAL: No file provided to uploadToS3');
       throw new Error('No file provided for upload');
@@ -1515,15 +1515,13 @@ export default function AdCreationForm({
 
     const CHUNK_SIZE = 10 * 1024 * 1024; // 10 MB
     const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
-    const limit = pLimit(5);
 
     let lastError = null;
 
     // Detect fastest region once per session; cached after first call.
     const region = await detectFastestS3Region();
 
-    // Retry loop for the entire upload process
-    for (let uploadAttempt = 1; uploadAttempt <= maxUploadRetries; uploadAttempt++) {
+    const runUploadAttempt = async (uploadAttempt) => {
       let uploadId = null;
       let s3Key = null;
 
@@ -1569,6 +1567,8 @@ export default function AdCreationForm({
         }
 
         let uploadedChunksCount = 0;
+        const chunkConcurrency = uploadAttempt > 1 ? 1 : 5;
+        const limit = pLimit(chunkConcurrency);
 
         const uploadPromises = presignedUrls.map((part, index) => {
           const { partNumber, url } = part;
@@ -1693,6 +1693,17 @@ export default function AdCreationForm({
 
           await new Promise(resolve => setTimeout(resolve, delay));
         }
+      }
+    };
+
+    // Retry loop for the entire upload process
+    for (let uploadAttempt = 1; uploadAttempt <= maxUploadRetries; uploadAttempt++) {
+      const uploadResult = uploadAttempt > 1 && retryUploadLimit
+        ? await retryUploadLimit(() => runUploadAttempt(uploadAttempt))
+        : await runUploadAttempt(uploadAttempt);
+
+      if (uploadResult) {
+        return uploadResult;
       }
     }
 
@@ -1865,6 +1876,8 @@ export default function AdCreationForm({
       ),
     [pages, instagramSearchValue]
   );
+  const hasPages = pages.length > 0;
+  const hasInstagramAccounts = pages.some((page) => page.instagramAccount);
 
 
   const refreshPages = async () => {
@@ -3816,6 +3829,7 @@ export default function AdCreationForm({
 
       // Set up concurrency limiter
       const limit = pLimit(3)
+      const localS3RetryLimit = pLimit(1)
 
 
       const CHUNK_SIZE = 10 * 1024 * 1024;
@@ -3838,7 +3852,7 @@ export default function AdCreationForm({
       const uploadPromises = largeFiles.map(file =>
         limit(() => {
           throwIfCancelled();
-          return uploadToS3(file, updateOverallProgress, getFileId(file), 2, signal);
+          return uploadToS3(file, updateOverallProgress, getFileId(file), 2, signal, localS3RetryLimit);
         })
       );
 
@@ -6877,6 +6891,13 @@ export default function AdCreationForm({
                               />
                               <span>{pages.find((page) => page.id === pageId)?.name || pageId}</span>
                             </div>
+                          ) : !hasPages ? (
+                            <span className="truncate text-gray-500">
+                              No pages found.{" "}
+                              <span className="text-xs font-medium text-black underline underline-offset-2">
+                                Click to link more pages
+                              </span>
+                            </span>
                           ) : (
                             "Select a Page"
                           )}
@@ -6945,7 +6966,7 @@ export default function AdCreationForm({
 
                                 ))
                               ) : (
-                                <LinkPagesEmptyState label="pages" onClick={handleLinkMorePages} />
+                                <LinkPagesEmptyState onClick={handleLinkMorePages} />
                               )}
                             </CommandGroup>
                           </CommandList>
@@ -6982,6 +7003,13 @@ export default function AdCreationForm({
                                 {pages.find((p) => p.instagramAccount?.id === instagramAccountId)?.instagramAccount?.username || instagramAccountId}
                               </span>
                             </div>
+                          ) : !hasInstagramAccounts ? (
+                            <span className="truncate text-gray-500">
+                              No IG accounts found.{" "}
+                              <span className="text-xs font-medium text-black underline underline-offset-2">
+                                Click to link more pages
+                              </span>
+                            </span>
                           ) : (
                             "Select Instagram Account"
                           )}
@@ -7036,7 +7064,7 @@ export default function AdCreationForm({
                                   </CommandItem>
                                 ))
                               ) : (
-                                <LinkPagesEmptyState label="Instagram accounts" onClick={handleLinkMorePages} />
+                                <LinkPagesEmptyState onClick={handleLinkMorePages} />
                               )}
                             </CommandGroup>
                           </CommandList>

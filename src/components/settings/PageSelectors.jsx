@@ -51,6 +51,8 @@ function PageSelectors({
     ),
     [pages, instagramSearch]
   );
+  const hasPages = pages.length > 0;
+  const hasInstagramAccounts = pages.some((p) => p.instagramAccount);
 
   // Memoized refresh function
   const refreshPages = useCallback(async () => {
@@ -150,20 +152,27 @@ function PageSelectors({
                     <Loader className="h-4 w-4 animate-spin" />
                     <span>Loading pages...</span>
                   </div>
-                ) : (
+                ) : selectedPage?.name ? (
                   <div className="flex items-center gap-2">
-                    {selectedPage?.name && (
-                      <img
-                        src={
-                          selectedPage.profilePicture ||
-                          "https://api.withblip.com/backup_page_image.png"
-                        }
-                        alt="Page"
-                        className="w-5 h-5 rounded-full object-cover border border-gray-300"
-                      />
-                    )}
-                    <span>{selectedPage?.name || "Select Facebook Page"}</span>
+                    <img
+                      src={
+                        selectedPage.profilePicture ||
+                        "https://api.withblip.com/backup_page_image.png"
+                      }
+                      alt="Page"
+                      className="w-5 h-5 rounded-full object-cover border border-gray-300"
+                    />
+                    <span>{selectedPage.name}</span>
                   </div>
+                ) : !hasPages ? (
+                  <span className="truncate text-gray-500">
+                    No pages found.{" "}
+                    <span className="text-xs font-medium text-black underline underline-offset-2">
+                      Click to link more pages
+                    </span>
+                  </span>
+                ) : (
+                  <span>Select Facebook Page</span>
                 )}
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
               </Button>
@@ -205,7 +214,7 @@ function PageSelectors({
                       </CommandItem>
                     ))
                   ) : (
-                    <LinkPagesEmptyState label="pages" onClick={handleLinkMorePages} />
+                    <LinkPagesEmptyState onClick={handleLinkMorePages} />
                   )}
                 </CommandList>
               </Command>
@@ -233,7 +242,18 @@ function PageSelectors({
                       className="w-6 h-6 rounded-full object-cover border border-gray-300"
                     />
                   )}
-                  <span>{selectedInstagram?.username || "Select Instagram Account"}</span>
+                  {selectedInstagram?.username ? (
+                    <span>{selectedInstagram.username}</span>
+                  ) : !hasInstagramAccounts ? (
+                    <span className="truncate text-gray-500">
+                      No IG accounts found.{" "}
+                      <span className="text-xs font-medium text-black underline underline-offset-2">
+                        Click to link more pages
+                      </span>
+                    </span>
+                  ) : (
+                    <span>Select Instagram Account</span>
+                  )}
                 </div>
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
               </Button>
@@ -276,7 +296,7 @@ function PageSelectors({
                       </CommandItem>
                     ))
                   ) : (
-                    <LinkPagesEmptyState label="Instagram accounts" onClick={handleLinkMorePages} />
+                    <LinkPagesEmptyState onClick={handleLinkMorePages} />
                   )}
                 </CommandList>
               </Command>
