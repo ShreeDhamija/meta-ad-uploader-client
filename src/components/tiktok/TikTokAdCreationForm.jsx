@@ -41,7 +41,8 @@ import {
   Image,
   CopyIcon,
   ArrowUpDown,
-  Info
+  Info,
+  Search
 } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useDropzone } from "react-dropzone"
@@ -692,6 +693,88 @@ export default function TikTokAdCreationForm({
   })
   const [preserveMedia, setPreserveMedia] = useState(false)
 
+  const [formCatalogId, setFormCatalogId] = useState(null)
+  const [formCatalogName, setFormCatalogName] = useState(null)
+  const [formProductId, setFormProductId] = useState(null)
+  const [formProductName, setFormProductName] = useState(null)
+
+  const [formCatalogs, setFormCatalogs] = useState([])
+  const [formCatalogProducts, setFormCatalogProducts] = useState([])
+  const [loadingFormCatalogs, setLoadingFormCatalogs] = useState(false)
+  const [loadingFormProducts, setLoadingFormProducts] = useState(false)
+  const [openFormCatalog, setOpenFormCatalog] = useState(false)
+  const [openFormProduct, setOpenFormProduct] = useState(false)
+  const [formCatalogSearch, setFormCatalogSearch] = useState("")
+  const [formProductSearch, setFormProductSearch] = useState("")
+
+  // Sync default selection from preferences once when loaded
+  const formCatalogInitRef = useRef({});
+  useEffect(() => {
+    if (!selectedAdvertiser) return;
+    if (formCatalogInitRef.current[selectedAdvertiser]) return;
+
+    if (advertiserPrefs?.catalogSelection) {
+      const sel = advertiserPrefs.catalogSelection;
+      setFormCatalogId(sel.catalog_id || null);
+      setFormCatalogName(sel.catalog_name || null);
+      setFormProductId(sel.product_id || null);
+      setFormProductName(sel.product_name || null);
+      formCatalogInitRef.current[selectedAdvertiser] = true;
+    }
+  }, [advertiserPrefs, selectedAdvertiser]);
+
+  // Fetch catalogs for creation form dropdown
+  useEffect(() => {
+    if (!selectedAdvertiser) {
+      setFormCatalogs([]);
+      return;
+    }
+    setLoadingFormCatalogs(true);
+    const uid = localStorage.getItem('tiktok_uid');
+    const token = localStorage.getItem('tiktok_token');
+    fetch(`${API_BASE_URL}/api/tiktok/catalog/list?advertiserId=${selectedAdvertiser}`, {
+      credentials: 'include',
+      headers: {
+        ...(uid && { 'x-tiktok-user-id': uid }),
+        ...(token && { 'x-tiktok-token': token }),
+      }
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          setFormCatalogs(data.catalogs || []);
+        }
+      })
+      .catch(err => console.warn('[CreationForm] Failed to load catalogs:', err.message))
+      .finally(() => setLoadingFormCatalogs(false));
+  }, [selectedAdvertiser]);
+
+  // Fetch products for selected form catalog
+  useEffect(() => {
+    if (!selectedAdvertiser || !formCatalogId) {
+      setFormCatalogProducts([]);
+      return;
+    }
+    setLoadingFormProducts(true);
+    const uid = localStorage.getItem('tiktok_uid');
+    const token = localStorage.getItem('tiktok_token');
+    fetch(`${API_BASE_URL}/api/tiktok/catalog/products?advertiserId=${selectedAdvertiser}&catalog_id=${formCatalogId}`, {
+      credentials: 'include',
+      headers: {
+        ...(uid && { 'x-tiktok-user-id': uid }),
+        ...(token && { 'x-tiktok-token': token }),
+      }
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          setFormCatalogProducts(data.products || []);
+        }
+      })
+      .catch(err => console.warn('[CreationForm] Failed to load products:', err.message))
+      .finally(() => setLoadingFormProducts(false));
+  }, [selectedAdvertiser, formCatalogId]);
+
 
   const fileRef = useRef()
   const pickerInstanceRef = useRef(null)
@@ -1044,15 +1127,30 @@ export default function TikTokAdCreationForm({
               }
               if (currentIdentityId) creative.identity_id = currentIdentityId
 
-              const catSel = advertiserPrefs?.catalogSelection;
-              if (catSel && catSel.catalog_id) {
-                creative.catalog_id = catSel.catalog_id;
-                if (catSel.item_group_id) {
-                  creative.item_group_id = catSel.item_group_id;
-                }
-                const resolvedSku = catSel.sku_id || catSel.product_id;
-                if (resolvedSku) {
-                  creative.sku_id = resolvedSku;
+              if (formCatalogId) {
+                creative.catalog_id = formCatalogId;
+                const matchedProd = formCatalogProducts.find(p => p.product_id === formProductId);
+                if (matchedProd) {
+                  if (matchedProd.item_group_id) {
+                    creative.item_group_id = matchedProd.item_group_id;
+                  }
+                  const resolvedSku = matchedProd.sku_id || matchedProd.product_id;
+                  if (resolvedSku) {
+                    creative.sku_id = resolvedSku;
+                  }
+                } else {
+                  const catSel = advertiserPrefs?.catalogSelection;
+                  if (catSel && catSel.product_id === formProductId) {
+                    if (catSel.item_group_id) {
+                      creative.item_group_id = catSel.item_group_id;
+                    }
+                    const resolvedSku = catSel.sku_id || catSel.product_id;
+                    if (resolvedSku) {
+                      creative.sku_id = resolvedSku;
+                    }
+                  } else if (formProductId) {
+                    creative.sku_id = formProductId;
+                  }
                 }
               }
 
@@ -1093,15 +1191,30 @@ export default function TikTokAdCreationForm({
                 }
                 if (currentIdentityId) creative.identity_id = currentIdentityId
 
-                const catSel = advertiserPrefs?.catalogSelection;
-                if (catSel && catSel.catalog_id) {
-                  creative.catalog_id = catSel.catalog_id;
-                  if (catSel.item_group_id) {
-                    creative.item_group_id = catSel.item_group_id;
-                  }
-                  const resolvedSku = catSel.sku_id || catSel.product_id;
-                  if (resolvedSku) {
-                    creative.sku_id = resolvedSku;
+                if (formCatalogId) {
+                  creative.catalog_id = formCatalogId;
+                  const matchedProd = formCatalogProducts.find(p => p.product_id === formProductId);
+                  if (matchedProd) {
+                    if (matchedProd.item_group_id) {
+                      creative.item_group_id = matchedProd.item_group_id;
+                    }
+                    const resolvedSku = matchedProd.sku_id || matchedProd.product_id;
+                    if (resolvedSku) {
+                      creative.sku_id = resolvedSku;
+                    }
+                  } else {
+                    const catSel = advertiserPrefs?.catalogSelection;
+                    if (catSel && catSel.product_id === formProductId) {
+                      if (catSel.item_group_id) {
+                        creative.item_group_id = catSel.item_group_id;
+                      }
+                      const resolvedSku = catSel.sku_id || catSel.product_id;
+                      if (resolvedSku) {
+                        creative.sku_id = resolvedSku;
+                      }
+                    } else if (formProductId) {
+                      creative.sku_id = formProductId;
+                    }
                   }
                 }
 
@@ -4548,221 +4661,233 @@ export default function TikTokAdCreationForm({
               <div className="border-t border-gray-100 pt-6 space-y-4">
                 <div className="flex flex-col gap-1">
                   <Label className="flex items-center gap-2 font-semibold text-sm">
-                    {renderDiffMark(["productName", "productImageUrl", "sellingPoints"])}
                     <Info className="w-4 h-4 text-gray-500" />
-                    Add product information <span className="text-gray-400 font-normal text-xs">• Optional</span>
+                    Product Information <span className="text-gray-400 font-normal text-xs">• Optional</span>
                   </Label>
                   <span className="text-xs text-gray-500 leading-relaxed">
-                    This information will be used in different ad variations to create personalized ad delivery with the goal of improving ad performance.
+                    Select a catalog and product to include customized product tags in your ads.
                   </span>
                 </div>
 
-                {/* Saved Product Picker */}
-                {advertiserPrefs?.products?.length > 0 && (
-                  <div className="space-y-2">
-                    <Label className="text-xs font-semibold text-gray-700">Select Saved Product</Label>
-                    <Select
-                      value={selectedSavedProductId}
-                      onValueChange={(value) => {
-                        setSelectedSavedProductId(value);
-                        if (value === "none") {
-                          setProductName("");
-                          setProductImageUrl("");
-                          setSellingPoints([]);
-                          return;
-                        }
-                        const selectedProduct = advertiserPrefs.products.find(p => String(p.id) === value);
-                        if (selectedProduct) {
-                          setProductName(selectedProduct.name || "");
-                          setProductImageUrl(selectedProduct.image || "");
-                          setSellingPoints(selectedProduct.sellingPoints || []);
-                        } else {
-                          setProductName("");
-                          setProductImageUrl("");
-                          setSellingPoints([]);
-                        }
-                      }}
+                {/* Catalog Selection */}
+                <div className="space-y-1">
+                  <Label className="text-xs font-semibold text-gray-700">Catalog</Label>
+                  <Popover open={openFormCatalog} onOpenChange={(open) => {
+                    setOpenFormCatalog(open);
+                    if (!open) setFormCatalogSearch("");
+                  }}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        disabled={loadingFormCatalogs || !selectedAdvertiser}
+                        className="w-full justify-between border border-gray-300 rounded-2xl bg-white shadow flex items-center hover:bg-white px-3 py-4.5"
+                      >
+                        {loadingFormCatalogs ? (
+                          <div className="flex items-center gap-2">
+                            <Loader className="h-4 w-4 animate-spin text-gray-400" />
+                            <span className="text-sm text-gray-400">Loading catalogs...</span>
+                          </div>
+                        ) : (
+                          <span className="text-sm font-medium text-gray-900 truncate">
+                            {formCatalogName || 'Select a Catalog'}
+                          </span>
+                        )}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      className="min-w-[--radix-popover-trigger-width] w-auto !max-w-none p-0 rounded-xl bg-white border-gray-200 shadow-2xl animate-none"
+                      align="start"
+                      sideOffset={4}
+                      side="bottom"
+                      avoidCollisions={false}
+                      style={{ minWidth: "var(--radix-popover-trigger-width)", width: "auto" }}
                     >
-                      <SelectTrigger className={cn("w-full font-medium", formFieldChrome)}>
-                        <SelectValue placeholder="Select a saved product to auto-fill..." />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white rounded-xl gap-4">
-                        <SelectItem value="none" className="rounded-xl data-[highlighted]:bg-gray-100 transition-all my-0.5">
-                          -- Clear Selection / Custom Product --
-                        </SelectItem>
-                        {advertiserPrefs.products.map(p => (
-                          <SelectItem
-                            key={p.id}
-                            value={String(p.id)}
-                            className="rounded-xl data-[highlighted]:bg-gray-100 transition-all my-0.5 cursor-pointer"
-                          >
-                            {p.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      <div className="flex flex-col overflow-hidden rounded-xl bg-white text-gray-900">
+                        <div className="mx-2 mt-2 mb-1 flex items-center rounded-2xl border border-gray-300 bg-white px-3 shadow">
+                          <Search className="mr-2 h-4 w-4 shrink-0 opacity-50 text-gray-500" />
+                          <input
+                            type="text"
+                            placeholder="Search catalogs..."
+                            value={formCatalogSearch}
+                            onChange={(e) => setFormCatalogSearch(e.target.value)}
+                            className="flex h-11 w-full bg-transparent py-3 text-sm outline-none placeholder:text-gray-400 text-gray-900 border-none focus:ring-0"
+                          />
+                        </div>
+                        <div className="max-h-[300px] overflow-y-auto rounded-xl p-1">
+                          {(() => {
+                            const filtered = formCatalogs.filter(cat => {
+                              const name = (cat.catalog_name || "").toLowerCase();
+                              const id = String(cat.catalog_id || "").toLowerCase();
+                              const q = formCatalogSearch.toLowerCase();
+                              return name.includes(q) || id.includes(q);
+                            });
+                            if (filtered.length === 0) {
+                              return (
+                                <div className="py-6 text-center text-xs text-gray-500">
+                                  {formCatalogs.length === 0 ? 'No catalogs found.' : 'No results.'}
+                                </div>
+                              );
+                            }
+                            return (
+                              <div className="space-y-0.5">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setFormCatalogId(null);
+                                    setFormCatalogName(null);
+                                    setFormProductId(null);
+                                    setFormProductName(null);
+                                    setFormCatalogProducts([]);
+                                    setOpenFormCatalog(false);
+                                    setFormCatalogSearch("");
+                                  }}
+                                  className="w-full text-left px-3 py-2 cursor-pointer rounded-xl text-gray-400 hover:bg-gray-50 italic text-xs block transition-colors"
+                                >
+                                  None (clear selection)
+                                </button>
+                                {filtered.map((cat) => (
+                                  <button
+                                    type="button"
+                                    key={cat.catalog_id}
+                                    onClick={() => {
+                                      setFormCatalogId(cat.catalog_id);
+                                      setFormCatalogName(cat.catalog_name);
+                                      setFormProductId(null);
+                                      setFormProductName(null);
+                                      setFormCatalogProducts([]);
+                                      setOpenFormCatalog(false);
+                                      setFormCatalogSearch("");
+                                    }}
+                                    className={cn(
+                                      "w-full text-left px-3 py-2 cursor-pointer rounded-xl transition-colors duration-150 hover:bg-gray-100 flex items-center gap-2",
+                                      formCatalogId === cat.catalog_id ? "bg-gray-50 font-medium" : ""
+                                    )}
+                                  >
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-sm font-semibold text-gray-900 truncate">{cat.catalog_name}</p>
+                                      <p className="text-xs text-gray-400 font-mono">{cat.catalog_id}</p>
+                                    </div>
+                                    {formCatalogId === cat.catalog_id && <Check className="w-4 h-4 text-black shrink-0" />}
+                                  </button>
+                                ))}
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                {/* Product Selection */}
+                {formCatalogId && (
+                  <div className="space-y-1">
+                    <Label className="text-xs font-semibold text-gray-700">Product</Label>
+                    <Popover open={openFormProduct} onOpenChange={(open) => {
+                      setOpenFormProduct(open);
+                      if (!open) setFormProductSearch("");
+                    }}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          disabled={loadingFormProducts}
+                          className="w-full justify-between border border-gray-300 rounded-2xl bg-white shadow flex items-center hover:bg-white px-3 py-4.5"
+                        >
+                          {loadingFormProducts ? (
+                            <div className="flex items-center gap-2">
+                              <Loader className="h-4 w-4 animate-spin text-gray-400" />
+                              <span className="text-sm text-gray-400">Loading products...</span>
+                            </div>
+                          ) : (
+                            <span className="text-sm font-medium text-gray-900 truncate">
+                              {formProductName || 'Select a Product'}
+                            </span>
+                          )}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        className="min-w-[--radix-popover-trigger-width] w-auto !max-w-none p-0 rounded-xl bg-white border-gray-200 shadow-2xl animate-none"
+                        align="start"
+                        sideOffset={4}
+                        side="bottom"
+                        avoidCollisions={false}
+                        style={{ minWidth: "var(--radix-popover-trigger-width)", width: "auto" }}
+                      >
+                        <div className="flex flex-col overflow-hidden rounded-xl bg-white text-gray-900">
+                          <div className="mx-2 mt-2 mb-1 flex items-center rounded-2xl border border-gray-300 bg-white px-3 shadow">
+                            <Search className="mr-2 h-4 w-4 shrink-0 opacity-50 text-gray-500" />
+                            <input
+                              type="text"
+                              placeholder="Search products..."
+                              value={formProductSearch}
+                              onChange={(e) => setFormProductSearch(e.target.value)}
+                              className="flex h-11 w-full bg-transparent py-3 text-sm outline-none placeholder:text-gray-400 text-gray-900 border-none focus:ring-0"
+                            />
+                          </div>
+                          <div className="max-h-[360px] overflow-y-auto rounded-xl p-1">
+                            {(() => {
+                              const filtered = formCatalogProducts.filter(prod => {
+                                const name = (prod.product_name || "").toLowerCase();
+                                const id = String(prod.product_id || "").toLowerCase();
+                                const q = formProductSearch.toLowerCase();
+                                return name.includes(q) || id.includes(q);
+                              });
+                              if (filtered.length === 0) {
+                                return (
+                                  <div className="py-6 text-center text-xs text-gray-500">
+                                    {formCatalogProducts.length === 0 ? 'No products in this catalog.' : 'No results.'}
+                                  </div>
+                                );
+                              }
+                              return (
+                                <div className="space-y-0.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setFormProductId(null);
+                                      setFormProductName(null);
+                                      setOpenFormProduct(false);
+                                      setFormProductSearch("");
+                                    }}
+                                    className="w-full text-left px-3 py-2 cursor-pointer rounded-xl text-gray-400 hover:bg-gray-50 italic text-xs block transition-colors"
+                                  >
+                                    None (clear product)
+                                  </button>
+                                  {filtered.map((prod) => (
+                                    <button
+                                      type="button"
+                                      key={prod.product_id}
+                                      onClick={() => {
+                                        setFormProductId(prod.product_id);
+                                        setFormProductName(prod.product_name);
+                                        setOpenFormProduct(false);
+                                        setFormProductSearch("");
+                                      }}
+                                      className={cn(
+                                        "w-full text-left px-3 py-2 cursor-pointer rounded-xl transition-colors duration-150 hover:bg-gray-100 flex items-center gap-3",
+                                        formProductId === prod.product_id ? "bg-gray-50 font-medium" : ""
+                                      )}
+                                    >
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-semibold text-gray-900 truncate">{prod.product_name}</p>
+                                        {prod.price && (
+                                          <p className="text-xs text-gray-400">{prod.price} {prod.currency}</p>
+                                        )}
+                                      </div>
+                                      {formProductId === prod.product_id && <Check className="w-4 h-4 text-black shrink-0" />}
+                                    </button>
+                                  ))}
+                                </div>
+                              );
+                            })()}
+                          </div>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
                   </div>
                 )}
-
-                {/* Product Name */}
-                <div className="space-y-2">
-                  <Label htmlFor="product-name" className="text-xs font-semibold text-gray-700">Product name</Label>
-                  <Input
-                    id="product-name"
-                    value={productName}
-                    onChange={(e) => setProductName(e.target.value)}
-                    placeholder="Enter title"
-                    className={formInputChrome}
-                  />
-                </div>
-
-                {/* Product Image */}
-                <div className="space-y-2">
-                  <Label className="text-xs font-semibold text-gray-700 block">Product image</Label>
-                  <div className="flex items-center gap-3">
-                    {productImageUrl ? (
-                      <div className="relative shrink-0">
-                        <img src={productImageUrl} alt="Product" className="w-16 h-16 rounded-xl object-cover border border-gray-200" />
-                        <button
-                          type="button"
-                          onClick={() => setProductImageUrl("")}
-                          className="absolute -top-1.5 -right-1.5 p-0.5 bg-red-500 text-white rounded-full hover:bg-red-600 animate-[bounce_1s_infinite]"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
-                    ) : (
-                      <label className="w-16 h-16 rounded-xl bg-gray-50 border-2 border-dashed border-gray-300 flex flex-col items-center justify-center shrink-0 cursor-pointer hover:bg-gray-100 transition-colors">
-                        <Plus className="w-6 h-6 text-gray-400" />
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={async (e) => {
-                            const file = e.target.files?.[0];
-                            if (!file) return;
-
-                            const formData = new FormData();
-                            formData.append("file", file);
-                            formData.append("advertiserId", selectedAdvertiser);
-
-                            try {
-                              const res = await fetch(`${API_BASE_URL}/api/tiktok/product-image/upload`, {
-                                method: "POST",
-                                body: formData,
-                                credentials: "include",
-                                headers: {
-                                  'x-tiktok-user-id': localStorage.getItem('tiktok_uid'),
-                                  'x-tiktok-token': localStorage.getItem('tiktok_token'),
-                                }
-                              });
-                              const data = await res.json();
-                              if (data.success && data.url) {
-                                setProductImageUrl(data.url);
-                              } else {
-                                throw new Error(data.error || "Failed to upload image");
-                              }
-                            } catch (err) {
-                              console.error("Failed to upload image:", err.message);
-                            }
-                          }}
-                        />
-                      </label>
-                    )}
-                  </div>
-                </div>
-
-                {/* Selling Points */}
-                <div className="space-y-2">
-                  <Label className="text-xs font-semibold text-gray-700 block">Selling points</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      value={newSellingPoint}
-                      onChange={(e) => setNewSellingPoint(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          if (!newSellingPoint.trim()) return;
-                          if (sellingPoints.includes(newSellingPoint.trim())) return;
-                          setSellingPoints([...sellingPoints, newSellingPoint.trim()]);
-                          setNewSellingPoint("");
-                        }
-                      }}
-                      placeholder="Press enter to add each entry"
-                      className="border border-gray-300 rounded-2xl h-11 px-4 text-sm flex-1 focus:outline-hidden focus:ring-0 focus-visible:outline-hidden"
-                    />
-                    <Button
-                      type="button"
-                      onClick={() => {
-                        if (!newSellingPoint.trim()) return;
-                        if (sellingPoints.includes(newSellingPoint.trim())) return;
-                        setSellingPoints([...sellingPoints, newSellingPoint.trim()]);
-                        setNewSellingPoint("");
-                      }}
-                      className="rounded-2xl h-11 px-6 bg-zinc-800 text-white font-semibold hover:bg-black"
-                    >
-                      Confirm
-                    </Button>
-                  </div>
-
-                  {/* Suggestions */}
-                  <div className="flex flex-wrap items-center gap-1.5 pt-1 text-xs text-gray-500">
-                    <span>Suggestions:</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (!sellingPoints.includes("x% off")) {
-                          setSellingPoints([...sellingPoints, "x% off"]);
-                        }
-                      }}
-                      className="text-blue-600 hover:underline font-medium cursor-pointer"
-                    >
-                      + x% off
-                    </button>
-                    <span>,</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (!sellingPoints.includes("Save $x")) {
-                          setSellingPoints([...sellingPoints, "Save $x"]);
-                        }
-                      }}
-                      className="text-blue-600 hover:underline font-medium cursor-pointer"
-                    >
-                      + Save $x
-                    </button>
-                    <span>,</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (!sellingPoints.includes("Limited-time offer")) {
-                          setSellingPoints([...sellingPoints, "Limited-time offer"]);
-                        }
-                      }}
-                      className="text-blue-600 hover:underline font-medium cursor-pointer"
-                    >
-                      + Limited-time offer
-                    </button>
-                  </div>
-
-                  {/* Tags display */}
-                  {sellingPoints.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 pt-2">
-                      {sellingPoints.map((tag) => (
-                        <span key={tag} className="inline-flex items-center gap-1 bg-gray-100 border border-gray-200 text-[11px] text-gray-700 px-2.5 py-1 rounded-full font-medium">
-                          {tag}
-                          <button
-                            type="button"
-                            onClick={() => setSellingPoints(sellingPoints.filter(t => t !== tag))}
-                            className="text-gray-400 hover:text-gray-600 cursor-pointer"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
               </div>
 
               {/* 6. Media Section or Spark Info Card */}

@@ -100,18 +100,18 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
     const [catalogs, setCatalogs] = useState([]);
     const [loadingCatalogs, setLoadingCatalogs] = useState(false);
     const [catalogError, setCatalogError] = useState(null);
-    const [selectedCatalogId, setSelectedCatalogId] = useState(null);
-    const [selectedCatalogName, setSelectedCatalogName] = useState(null);
     const [openCatalog, setOpenCatalog] = useState(false);
 
     const [catalogProducts, setCatalogProducts] = useState([]);
     const [loadingProducts, setLoadingProducts] = useState(false);
     const [productError, setProductError] = useState(null);
-    const [selectedProductId, setSelectedProductId] = useState(null);
-    const [selectedProductName, setSelectedProductName] = useState(null);
-    const [selectedProductImage, setSelectedProductImage] = useState(null);
     const [openProduct, setOpenProduct] = useState(false);
-    const [savingCatalogSelection, setSavingCatalogSelection] = useState(false);
+
+    const selectedCatalogId = settings?.catalogSelection?.catalog_id || null;
+    const selectedCatalogName = settings?.catalogSelection?.catalog_name || null;
+    const selectedProductId = settings?.catalogSelection?.product_id || null;
+    const selectedProductName = settings?.catalogSelection?.product_name || null;
+    const selectedProductImage = settings?.catalogSelection?.product_image_url || null;
 
     // Search query states for manual dropdown filtering
     const [advertiserSearch, setAdvertiserSearch] = useState("");
@@ -221,70 +221,6 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
         }
     }, []);
 
-    // ── Load saved selection from Firebase when advertiser changes ──
-    const loadSavedCatalogSelection = useCallback(async (advId) => {
-        if (!advId) return;
-        try {
-            const uid = localStorage.getItem('tiktok_uid');
-            const token = localStorage.getItem('tiktok_token');
-            const res = await fetch(
-                `${API_BASE_URL}/api/tiktok/catalog/selection?advertiserId=${advId}`,
-                {
-                    credentials: 'include',
-                    headers: {
-                        ...(uid && { 'x-tiktok-user-id': uid }),
-                        ...(token && { 'x-tiktok-token': token }),
-                    }
-                }
-            );
-            const data = await res.json();
-            if (data.success && data.selection) {
-                const sel = data.selection;
-                setSelectedCatalogId(sel.catalog_id || null);
-                setSelectedCatalogName(sel.catalog_name || null);
-                setSelectedProductId(sel.product_id || null);
-                setSelectedProductName(sel.product_name || null);
-                setSelectedProductImage(sel.product_image_url || null);
-                // If a catalog was previously chosen, fetch its products
-                if (sel.catalog_id) {
-                    fetchCatalogProducts(advId, sel.catalog_id);
-                }
-            } else {
-                setSelectedCatalogId(null);
-                setSelectedCatalogName(null);
-                setSelectedProductId(null);
-                setSelectedProductName(null);
-                setSelectedProductImage(null);
-                setCatalogProducts([]);
-            }
-        } catch (err) {
-            console.warn('[Catalog] Failed to load saved selection:', err.message);
-        }
-    }, [fetchCatalogProducts]);
-
-    // ── Save selection to Firebase ──
-    const saveCatalogSelection = useCallback(async (advId, selection) => {
-        setSavingCatalogSelection(true);
-        try {
-            const uid = localStorage.getItem('tiktok_uid');
-            const token = localStorage.getItem('tiktok_token');
-            await fetch(`${API_BASE_URL}/api/tiktok/catalog/selection`, {
-                method: 'POST',
-                credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(uid && { 'x-tiktok-user-id': uid }),
-                    ...(token && { 'x-tiktok-token': token }),
-                },
-                body: JSON.stringify({ advertiserId: advId, ...selection }),
-            });
-        } catch (err) {
-            console.warn('[Catalog] Failed to save selection:', err.message);
-        } finally {
-            setSavingCatalogSelection(false);
-        }
-    }, []);
-
     const handleRefreshAdvertisers = async () => {
         setRefreshingAdvertisers(true);
         try {
@@ -314,7 +250,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
 
 
 
-    // Fetch identities + catalogs + saved catalog selection when advertiser changes
+    // Fetch identities + catalogs when advertiser changes
     useEffect(() => {
         if (selectedAdvertiser) {
             fetchTikTokIdentities(selectedAdvertiser);
@@ -323,11 +259,20 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
             setCatalogProducts([]);
             setCatalogError(null);
             setProductError(null);
-            // Load catalogs and saved selection
+            // Load catalogs
             fetchCatalogs(selectedAdvertiser);
-            loadSavedCatalogSelection(selectedAdvertiser);
         }
-    }, [selectedAdvertiser, fetchTikTokIdentities, fetchCatalogs, loadSavedCatalogSelection]);
+    }, [selectedAdvertiser, fetchTikTokIdentities, fetchCatalogs]);
+
+    // Fetch catalog products when selected catalog changes (or when settings are first loaded)
+    const activeCatalogId = settings?.catalogSelection?.catalog_id;
+    useEffect(() => {
+        if (selectedAdvertiser && activeCatalogId) {
+            fetchCatalogProducts(selectedAdvertiser, activeCatalogId);
+        } else {
+            setCatalogProducts([]);
+        }
+    }, [selectedAdvertiser, activeCatalogId, fetchCatalogProducts]);
 
     // Auto-select the first advertiser if none is currently selected
     useEffect(() => {
@@ -383,11 +328,10 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
         setOpenAdvertiser(false);
         setInitialSettings(null);
         // Reset catalog dropdowns on advertiser change
-        setSelectedCatalogId(null);
-        setSelectedCatalogName(null);
-        setSelectedProductId(null);
-        setSelectedProductName(null);
-        setSelectedProductImage(null);
+        setSettings(prev => ({
+            ...prev,
+            catalogSelection: null
+        }));
         setCatalogs([]);
         setCatalogProducts([]);
         try {
@@ -454,7 +398,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                             align="start"
                             sideOffset={4}
                             side="bottom"
-                            avoidCollisions={true}
+                            avoidCollisions={false}
                             style={{
                                 minWidth: "var(--radix-popover-trigger-width)",
                                 width: "auto",
@@ -587,7 +531,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                     align="start"
                                     sideOffset={4}
                                     side="bottom"
-                                    avoidCollisions={true}
+                                    avoidCollisions={false}
                                     style={{
                                         minWidth: "var(--radix-popover-trigger-width)",
                                         width: "auto",
@@ -826,7 +770,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                         <ChevronsUpDown className="w-4 h-4 opacity-50" />
                                     </Button>
                                 </PopoverTrigger>
-                                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-1 bg-white rounded-2xl shadow-xl border-gray-100" side="bottom" avoidCollisions={true}>
+                                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-1 bg-white rounded-2xl shadow-xl border-gray-100" side="bottom" avoidCollisions={false}>
                                     <div className="flex flex-col overflow-hidden rounded-2xl bg-white text-gray-900">
                                         <div className="max-h-[300px] overflow-y-auto rounded-2xl p-1">
                                             <div className="space-y-0.5">
@@ -866,9 +810,9 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
                                 </svg>
                                 <h3 className="font-medium text-[14px] text-zinc-950">Catalog &amp; Product Preferences</h3>
-                                {savingCatalogSelection && (
-                                    <Loader2 className="w-3.5 h-3.5 animate-spin text-gray-400" />
-                                )}
+                                 {(loadingCatalogs || loadingProducts) && (
+                                     <Loader2 className="w-3.5 h-3.5 animate-spin text-gray-400" />
+                                 )}
                             </div>
                             <button
                                 type="button"
@@ -927,7 +871,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                     align="start"
                                     sideOffset={4}
                                     side="bottom"
-                                    avoidCollisions={true}
+                                    avoidCollisions={false}
                                     style={{ minWidth: "var(--radix-popover-trigger-width)", width: "auto" }}
                                 >
                                     <div className="flex flex-col overflow-hidden rounded-xl bg-white text-gray-900">
@@ -963,19 +907,13 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                                         <button
                                                             type="button"
                                                             onClick={() => {
-                                                                setSelectedCatalogId(null);
-                                                                setSelectedCatalogName(null);
-                                                                setSelectedProductId(null);
-                                                                setSelectedProductName(null);
-                                                                setSelectedProductImage(null);
+                                                                setSettings(prev => ({
+                                                                    ...prev,
+                                                                    catalogSelection: null
+                                                                }));
                                                                 setCatalogProducts([]);
                                                                 setOpenCatalog(false);
                                                                 setCatalogSearch("");
-                                                                saveCatalogSelection(selectedAdvertiser, {
-                                                                    catalog_id: null, catalog_name: null,
-                                                                    product_id: null, product_name: null, product_image_url: null,
-                                                                    sku_id: null, item_group_id: null,
-                                                                });
                                                             }}
                                                             className="w-full text-left px-3 py-2 cursor-pointer rounded-xl text-gray-400 hover:bg-gray-50 italic text-xs block transition-colors"
                                                         >
@@ -986,21 +924,21 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                                                 type="button"
                                                                 key={cat.catalog_id}
                                                                 onClick={() => {
-                                                                    setSelectedCatalogId(cat.catalog_id);
-                                                                    setSelectedCatalogName(cat.catalog_name);
-                                                                    setSelectedProductId(null);
-                                                                    setSelectedProductName(null);
-                                                                    setSelectedProductImage(null);
+                                                                    setSettings(prev => ({
+                                                                        ...prev,
+                                                                        catalogSelection: {
+                                                                            catalog_id: cat.catalog_id,
+                                                                            catalog_name: cat.catalog_name,
+                                                                            product_id: null,
+                                                                            product_name: null,
+                                                                            product_image_url: null,
+                                                                            sku_id: null,
+                                                                            item_group_id: null,
+                                                                        }
+                                                                    }));
                                                                     setCatalogProducts([]);
                                                                     setOpenCatalog(false);
                                                                     setCatalogSearch("");
-                                                                    fetchCatalogProducts(selectedAdvertiser, cat.catalog_id);
-                                                                    saveCatalogSelection(selectedAdvertiser, {
-                                                                        catalog_id: cat.catalog_id,
-                                                                        catalog_name: cat.catalog_name,
-                                                                        product_id: null, product_name: null, product_image_url: null,
-                                                                        sku_id: null, item_group_id: null,
-                                                                    });
                                                                 }}
                                                                 className={cn(
                                                                     "w-full text-left px-3 py-2 cursor-pointer rounded-xl transition-colors duration-150 hover:bg-gray-100 flex items-center gap-2",
@@ -1047,9 +985,6 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                                 </div>
                                             ) : (
                                                 <div className="flex items-center gap-2 min-w-0">
-                                                    {selectedProductImage && (
-                                                        <img src={selectedProductImage} alt="" className="w-6 h-6 rounded object-cover shrink-0" />
-                                                    )}
                                                     <span className="text-sm font-medium text-gray-900 truncate">
                                                         {selectedProductName || 'Select a Product'}
                                                     </span>
@@ -1063,7 +998,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                         align="start"
                                         sideOffset={4}
                                         side="bottom"
-                                        avoidCollisions={true}
+                                        avoidCollisions={false}
                                         style={{ minWidth: "var(--radix-popover-trigger-width)", width: "auto" }}
                                     >
                                         <div className="flex flex-col overflow-hidden rounded-xl bg-white text-gray-900">
@@ -1099,17 +1034,19 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                                             <button
                                                                 type="button"
                                                                 onClick={() => {
-                                                                    setSelectedProductId(null);
-                                                                    setSelectedProductName(null);
-                                                                    setSelectedProductImage(null);
+                                                                    setSettings(prev => ({
+                                                                        ...prev,
+                                                                        catalogSelection: {
+                                                                            ...(prev?.catalogSelection || {}),
+                                                                            product_id: null,
+                                                                            product_name: null,
+                                                                            product_image_url: null,
+                                                                            sku_id: null,
+                                                                            item_group_id: null,
+                                                                        }
+                                                                    }));
                                                                     setOpenProduct(false);
                                                                     setProductSearch("");
-                                                                    saveCatalogSelection(selectedAdvertiser, {
-                                                                        catalog_id: selectedCatalogId,
-                                                                        catalog_name: selectedCatalogName,
-                                                                        product_id: null, product_name: null, product_image_url: null,
-                                                                        sku_id: null, item_group_id: null,
-                                                                    });
                                                                 }}
                                                                 className="w-full text-left px-3 py-2 cursor-pointer rounded-xl text-gray-400 hover:bg-gray-50 italic text-xs block transition-colors"
                                                             >
@@ -1120,34 +1057,25 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                                                     type="button"
                                                                     key={prod.product_id}
                                                                     onClick={() => {
-                                                                        setSelectedProductId(prod.product_id);
-                                                                        setSelectedProductName(prod.product_name);
-                                                                        setSelectedProductImage(prod.image_url || null);
+                                                                        setSettings(prev => ({
+                                                                            ...prev,
+                                                                            catalogSelection: {
+                                                                                ...(prev?.catalogSelection || {}),
+                                                                                product_id: prod.product_id,
+                                                                                product_name: prod.product_name,
+                                                                                product_image_url: prod.image_url || null,
+                                                                                sku_id: prod.sku_id || null,
+                                                                                item_group_id: prod.item_group_id || null,
+                                                                            }
+                                                                        }));
                                                                         setOpenProduct(false);
                                                                         setProductSearch("");
-                                                                        saveCatalogSelection(selectedAdvertiser, {
-                                                                            catalog_id: selectedCatalogId,
-                                                                            catalog_name: selectedCatalogName,
-                                                                            product_id: prod.product_id,
-                                                                            product_name: prod.product_name,
-                                                                            product_image_url: prod.image_url || null,
-                                                                            sku_id: prod.sku_id || null,
-                                                                            item_group_id: prod.item_group_id || null,
-                                                                        });
-                                                                        toast.success(`Product saved: ${prod.product_name}`);
                                                                     }}
                                                                     className={cn(
                                                                         "w-full text-left px-3 py-2 cursor-pointer rounded-xl transition-colors duration-150 hover:bg-gray-100 flex items-center gap-3",
                                                                         selectedProductId === prod.product_id ? "bg-gray-50 font-medium" : ""
                                                                     )}
                                                                 >
-                                                                    {prod.image_url ? (
-                                                                        <img src={prod.image_url} alt="" className="w-10 h-10 rounded-lg object-cover shrink-0 border border-gray-100" />
-                                                                    ) : (
-                                                                        <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
-                                                                            <Info className="w-4 h-4 text-gray-300" />
-                                                                        </div>
-                                                                    )}
                                                                     <div className="flex-1 min-w-0">
                                                                         <p className="text-sm font-semibold text-gray-900 truncate">{prod.product_name}</p>
                                                                         {prod.price && (
@@ -1164,29 +1092,6 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                         </div>
                                     </PopoverContent>
                                 </Popover>
-                            </div>
-                        )}
-
-                        {/* Selected Product Preview Card */}
-                        {selectedProductId && (
-                            <div className="flex items-center gap-3 bg-white border border-gray-200 rounded-xl p-3 shadow-xs">
-                                {selectedProductImage ? (
-                                    <img src={selectedProductImage} alt={selectedProductName} className="w-12 h-12 rounded-lg object-cover border border-gray-100 shrink-0" />
-                                ) : (
-                                    <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
-                                        <Info className="w-5 h-5 text-gray-300" />
-                                    </div>
-                                )}
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-xs text-gray-400 font-medium mb-0.5">Selected Product</p>
-                                    <p className="text-sm font-semibold text-gray-900 truncate">{selectedProductName}</p>
-                                    <p className="text-xs text-gray-400 font-mono truncate">{selectedProductId}</p>
-                                </div>
-                                <div className="flex items-center gap-1 shrink-0">
-                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-50 border border-green-200 rounded-full text-[10px] font-semibold text-green-700">
-                                        <Check className="w-2.5 h-2.5" /> Saved
-                                    </span>
-                                </div>
                             </div>
                         )}
                     </div>
