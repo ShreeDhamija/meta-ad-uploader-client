@@ -962,6 +962,9 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                                         <div className="text-[10px] font-bold text-red-500 bg-red-50 p-1 rounded">
                                                             DEBUG: filtered.length = {filtered.length}
                                                         </div>
+                                                        <pre className="text-[10px] bg-yellow-100 p-2 text-black block rounded overflow-auto max-h-[100px] font-mono">
+                                                            {JSON.stringify(filtered, null, 2)}
+                                                        </pre>
                                                         <button
                                                             type="button"
                                                             onClick={() => {
