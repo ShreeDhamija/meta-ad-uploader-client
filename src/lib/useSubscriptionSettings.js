@@ -22,14 +22,18 @@ export default function useSubscription() {
             // Session is unrecoverable client-side (likely cookie rotation race).
             // Force a clean re-auth: set a flag so AuthContext skips /auth/me on
             // the next load, best-effort kill the server session, then redirect.
+            // Skip if we're already on /login — AppContext mounts these hooks
+            // globally, and re-firing the redirect from there causes a loop.
             if (res.status === 401) {
-                sessionStorage.setItem('forceLogout', '1');
-                fetch(`${API_BASE_URL}/auth/logout`, {
-                    method: 'POST',
-                    credentials: 'include',
-                    keepalive: true,
-                }).catch(() => { });
-                window.location.href = '/login';
+                if (window.location.pathname !== '/login') {
+                    sessionStorage.setItem('forceLogout', '1');
+                    fetch(`${API_BASE_URL}/auth/logout`, {
+                        method: 'POST',
+                        credentials: 'include',
+                        keepalive: true,
+                    }).catch(() => { });
+                    window.location.href = '/login';
+                }
                 return;
             }
 
