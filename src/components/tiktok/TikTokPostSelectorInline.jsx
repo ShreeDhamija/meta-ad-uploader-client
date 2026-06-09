@@ -24,7 +24,7 @@ function TikTokPostSelectorInline({
   const [isLoading, setIsLoading] = useState(false)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [error, setError] = useState(null)
-  const [page, setPage] = useState(1)
+  const [cursor, setCursor] = useState(0)
   const [hasMore, setHasMore] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [hasFetched, setHasFetched] = useState(false)
@@ -43,7 +43,7 @@ function TikTokPostSelectorInline({
     })
   }, [importedPosts])
 
-  const fetchPosts = useCallback(async (targetPage = 1, isLoadMore = false) => {
+  const fetchPosts = useCallback(async (targetCursor = 0, isLoadMore = false) => {
     if (!advertiserId || !identityId) {
       setPosts([])
       setHasMore(false)
@@ -63,7 +63,7 @@ function TikTokPostSelectorInline({
         advertiserId,
         identityId,
         identityType,
-        page: targetPage.toString(),
+        cursor: targetCursor.toString(),
         pageSize: "20"
       })
 
@@ -77,13 +77,12 @@ function TikTokPostSelectorInline({
       // Format response structure from TikTok API: resData.data.videos or resData.data.list
       const data = resData.data
       const list = data?.videos || data?.list || []
-      const pageInfo = data?.page_info || {}
 
       const formattedList = list.map(item => {
         const itemId = item.item_info?.item_id || item.item_id;
         const posterUrl = item.video_info?.poster_url || item.video_info?.preview_url || item.thumbnail_url || "";
-        const caption = item.item_info?.text || (item.recommendation_level ? `Recommendation: ${item.recommendation_level} (${item.item_id})` : `Recommended Video (${item.item_id})`);
-        const tiktokName = item.user_info?.tiktok_name || "Recommended Video";
+        const caption = item.caption || item.item_info?.text || (item.recommendation_level ? `Recommendation: ${item.recommendation_level} (${item.item_id})` : `Recommended Video (${item.item_id})`);
+        const tiktokName = item.user_info?.tiktok_name || "Organic Video";
         const authEndTime = item.auth_info?.auth_end_time || null;
 
         return {
@@ -112,10 +111,9 @@ function TikTokPostSelectorInline({
         setHasFetched(true)
       }
 
-      const totalPage = pageInfo.total_page || 1
-      const currentPage = pageInfo.page || targetPage
-      setPage(currentPage)
-      setHasMore(data?.page_info ? (currentPage < totalPage) : false)
+      const nextCursor = data?.cursor ?? 0
+      setCursor(nextCursor)
+      setHasMore(data?.has_more ?? false)
     } catch (err) {
       console.error("Error fetching TikTok posts:", err)
       const errMsg = err.message || "Failed to fetch organic posts"
@@ -129,7 +127,7 @@ function TikTokPostSelectorInline({
 
   // Trigger initial fetch when inputs change
   useEffect(() => {
-    fetchPosts(1, false)
+    fetchPosts(0, false)
   }, [advertiserId, identityId, identityType])
 
   const togglePostSelection = (post) => {
@@ -150,7 +148,7 @@ function TikTokPostSelectorInline({
 
   const loadMore = () => {
     if (hasMore && !isLoadingMore) {
-      fetchPosts(page + 1, true)
+      fetchPosts(cursor, true)
     }
   }
 
@@ -192,7 +190,7 @@ function TikTokPostSelectorInline({
           <Button
             type="button"
             size="sm"
-            onClick={() => fetchPosts(1, false)}
+            onClick={() => fetchPosts(0, false)}
             disabled={isLoading}
             className="px-3 py-5 bg-white text-black border border-gray-300 rounded-xl hover:bg-gray-55 transition-colors"
           >
@@ -224,7 +222,7 @@ function TikTokPostSelectorInline({
         {error && (
           <div className="flex flex-col items-center justify-center text-center p-4 border border-red-200 rounded-2xl bg-red-50/50 flex-shrink-0 m-1">
             <p className="text-red-500 text-sm mb-3 font-medium">{error}</p>
-            <Button size="sm" variant="outline" onClick={() => fetchPosts(1, false)}>
+            <Button size="sm" variant="outline" onClick={() => fetchPosts(0, false)}>
               Retry
             </Button>
           </div>
@@ -258,11 +256,10 @@ function TikTokPostSelectorInline({
               return (
                 <label
                   key={post.id}
-                  className={`grid grid-cols-[auto_48px_1fr_75px_75px_120px] gap-3 items-center p-3 rounded-2xl border cursor-pointer transition-all duration-150 ${
-                    isSelected
-                      ? 'border-zinc-850 bg-zinc-50/70 shadow-sm'
-                      : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50/50'
-                  }`}
+                  className={`grid grid-cols-[auto_48px_1fr_75px_75px_120px] gap-3 items-center p-3 rounded-2xl border cursor-pointer transition-all duration-150 ${isSelected
+                    ? 'border-zinc-850 bg-zinc-50/70 shadow-sm'
+                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50/50'
+                    }`}
                 >
                   <Checkbox
                     checked={isSelected}
@@ -309,11 +306,10 @@ function TikTokPostSelectorInline({
                   {/* Expiry Warning / Status */}
                   <div className="flex justify-center">
                     {expiry ? (
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 ${
-                        expiry.type === 'expired'
-                          ? 'bg-red-50 text-red-600 border border-red-200 animate-pulse'
-                          : 'bg-amber-50 text-amber-600 border border-amber-200'
-                      }`}>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 ${expiry.type === 'expired'
+                        ? 'bg-red-50 text-red-600 border border-red-200 animate-pulse'
+                        : 'bg-amber-50 text-amber-600 border border-amber-200'
+                        }`}>
                         <AlertTriangle className="h-3 w-3 shrink-0" />
                         {expiry.message}
                       </span>
