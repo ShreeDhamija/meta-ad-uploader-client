@@ -18,6 +18,21 @@ export default function useGlobalSettings() {
             const res = await fetch(`${API_BASE_URL}/settings/global`, {
                 credentials: "include",
             });
+
+            // Session is unrecoverable client-side (likely cookie rotation race).
+            // Force a clean re-auth: set a flag so AuthContext skips /auth/me on
+            // the next load, best-effort kill the server session, then redirect.
+            if (res.status === 401) {
+                sessionStorage.setItem('forceLogout', '1');
+                fetch(`${API_BASE_URL}/auth/logout`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    keepalive: true,
+                }).catch(() => { });
+                window.location.href = '/login';
+                return;
+            }
+
             const data = await res.json();
 
             setHasSeenOnboarding(data?.settings?.hasSeenOnboarding || false);

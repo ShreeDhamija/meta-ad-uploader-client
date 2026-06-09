@@ -34,7 +34,6 @@ import MetaMediaLibraryModal from "@/components/MetaMediaLibraryModal";
 import FrameioPickerModal from "@/components/FrameioPickerModal";
 import FlexAdsImportModal from "@/components/FlexAdsImportModal";
 import FacebookReauthDialog from "@/components/FacebookReauthDialog";
-import LinkPagesEmptyState from "@/components/LinkPagesEmptyState";
 import { v4 as uuidv4 } from 'uuid';
 import ConfigIcon from '@/assets/icons/plus.svg?react';
 import FacebookIcon from '@/assets/icons/fb.svg?react';
@@ -6968,7 +6967,17 @@ export default function AdCreationForm({
                                 ))}
                               </CommandGroup>
                             ) : (
-                              <LinkPagesEmptyState message="No pages found." onClick={handleLinkMorePages} />
+                              <div className="px-4 py-5 text-center">
+                                <p className="mb-2 text-sm text-gray-500">No pages found.</p>
+                                <Button
+                                  type="button"
+                                  variant="link"
+                                  onClick={handleLinkMorePages}
+                                  className="h-auto p-0 text-xs font-medium text-black underline underline-offset-2 hover:text-gray-700"
+                                >
+                                  Confirm Blip has access to pages to make ads
+                                </Button>
+                              </div>
                             )}
                           </CommandList>
                         </Command>
@@ -7066,7 +7075,17 @@ export default function AdCreationForm({
                                 ))}
                               </CommandGroup>
                             ) : (
-                              <LinkPagesEmptyState message="No IG accounts found." onClick={handleLinkMorePages} />
+                              <div className="px-4 py-5 text-center">
+                                <p className="mb-2 text-sm text-gray-500">No IG accounts found.</p>
+                                <Button
+                                  type="button"
+                                  variant="link"
+                                  onClick={handleLinkMorePages}
+                                  className="h-auto p-0 text-xs font-medium text-black underline underline-offset-2 hover:text-gray-700"
+                                >
+                                  Confirm Blip has access to pages to make ads
+                                </Button>
+                              </div>
                             )}
                           </CommandList>
                         </Command>

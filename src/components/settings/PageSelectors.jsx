@@ -17,7 +17,6 @@ import { useAppData } from "@/lib/AppContext"
 import { toast } from "sonner";
 import { cn } from "@/lib/utils"
 import MetaIcon from '@/assets/icons/meta.svg?react';
-import LinkPagesEmptyState from "@/components/LinkPagesEmptyState"
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 function PageSelectors({
@@ -217,7 +216,17 @@ function PageSelectors({
                       ))}
                     </CommandGroup>
                   ) : (
-                    <LinkPagesEmptyState message="No pages found." onClick={handleLinkMorePages} />
+                    <div className="px-4 py-5 text-center">
+                      <p className="mb-2 text-sm text-gray-500">No pages found.</p>
+                      <Button
+                        type="button"
+                        variant="link"
+                        onClick={handleLinkMorePages}
+                        className="h-auto p-0 text-xs font-medium text-black underline underline-offset-2 hover:text-gray-700"
+                      >
+                        Confirm Blip has access to pages to make ads
+                      </Button>
+                    </div>
                   )}
                 </CommandList>
               </Command>
@@ -301,7 +310,17 @@ function PageSelectors({
                       ))}
                     </CommandGroup>
                   ) : (
-                    <LinkPagesEmptyState message="No IG accounts found." onClick={handleLinkMorePages} />
+                    <div className="px-4 py-5 text-center">
+                      <p className="mb-2 text-sm text-gray-500">No IG accounts found.</p>
+                      <Button
+                        type="button"
+                        variant="link"
+                        onClick={handleLinkMorePages}
+                        className="h-auto p-0 text-xs font-medium text-black underline underline-offset-2 hover:text-gray-700"
+                      >
+                        Confirm Blip has access to pages to make ads
+                      </Button>
+                    </div>
                   )}
                 </CommandList>
               </Command>
