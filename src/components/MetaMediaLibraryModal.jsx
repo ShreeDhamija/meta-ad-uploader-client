@@ -1,8 +1,9 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import axios from 'axios';
 import { toast } from "sonner"
-import { Loader2, Image as ImageIcon, Video, FolderOpen, Heart, MessageCircle, Users, CalendarDays } from "lucide-react";
+import { Loader2, Image as ImageIcon, Video, FolderOpen, Heart, MessageCircle, Users, CalendarDays, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import IGColor from "@/assets/icons/IGColor.webp";
 import Meta from "@/assets/icons/Meta2.svg";
 import Instagram from "@/assets/icons/ig.svg";
@@ -139,6 +140,7 @@ export default function MetaMediaLibraryModal({
     const [loadingMoreMetaVideos, setLoadingMoreMetaVideos] = useState(false);
     const [loadingMoreIg, setLoadingMoreIg] = useState(false);
     const [filterCollaborators, setFilterCollaborators] = useState(false);
+    const [metaSearchQuery, setMetaSearchQuery] = useState('');
 
     const mapMetaImages = (rawImages) => rawImages.map(img => ({
         type: 'image',
@@ -333,6 +335,7 @@ export default function MetaMediaLibraryModal({
         setIsOpen(true);
         setSelectedMetaFiles([]);
         setSelectedIgPosts([]);
+        setMetaSearchQuery('');
         if (mediaSource === 'meta_library') {
             fetchMetaLibrary();
         } else {
@@ -345,6 +348,7 @@ export default function MetaMediaLibraryModal({
         setActiveTab('images');
         setSelectedMetaFiles([]);
         setSelectedIgPosts([]);
+        setMetaSearchQuery('');
 
         if (source === 'instagram') {
             if (!instagramAccountId) {
@@ -417,13 +421,62 @@ export default function MetaMediaLibraryModal({
     };
 
     const isLoading = mediaSource === 'meta_library' ? loadingMeta : loadingIg;
-    const displayItems = (() => {
+    const normalizedMetaSearch = metaSearchQuery.trim().toLowerCase();
+    const displayItems = useMemo(() => {
         if (mediaSource === 'meta_library') {
-            return activeTab === 'images' ? metaImages : metaVideos;
+            const items = activeTab === 'images' ? metaImages : metaVideos;
+            if (!normalizedMetaSearch) return items;
+            return items.filter(item => (item.name || '').toLowerCase().includes(normalizedMetaSearch));
         }
         const items = activeTab === 'images' ? igImages : igVideos;
         return filterCollaborators ? items.filter(item => item.collaborators && item.collaborators.length > 0) : items;
-    })();
+    }, [activeTab, filterCollaborators, igImages, igVideos, mediaSource, metaImages, metaVideos, normalizedMetaSearch]);
+
+    const activeMetaPagination = activeTab === 'images' ? metaImagesPagination : metaVideosPagination;
+    const isMetaSearchActive = mediaSource === 'meta_library' && normalizedMetaSearch.length > 0;
+
+    const renderLoadMoreButton = () => {
+        if (mediaSource === 'meta_library') {
+            const isImagesTab = activeTab === 'images';
+            const hasMore = isImagesTab ? metaImagesPagination.hasMore : metaVideosPagination.hasMore;
+            if (!hasMore) return null;
+
+            const isLoadingMore = isImagesTab ? loadingMoreMetaImages : loadingMoreMetaVideos;
+            const onLoadMore = isImagesTab ? loadMoreMetaImages : loadMoreMetaVideos;
+
+            return (
+                <div className="flex w-full justify-center pt-4">
+                    <Button
+                        type="button"
+                        onClick={onLoadMore}
+                        disabled={isLoadingMore}
+                        className="h-12 w-full rounded-2xl bg-zinc-700 text-white hover:bg-zinc-800 hover:text-white"
+                    >
+                        {isLoadingMore ? (
+                            <><Loader2 className="h-4 w-4 animate-spin mr-2" />Loading...</>
+                        ) : "Load More"}
+                    </Button>
+                </div>
+            );
+        }
+
+        if (!igPagination.hasMore) return null;
+
+        return (
+            <div className="flex w-full justify-center pt-4">
+                <Button
+                    type="button"
+                    onClick={loadMoreIg}
+                    disabled={loadingMoreIg}
+                    className="h-12 w-full rounded-2xl bg-zinc-700 text-white hover:bg-zinc-800 hover:text-white"
+                >
+                    {loadingMoreIg ? (
+                        <><Loader2 className="h-4 w-4 animate-spin mr-2" />Loading...</>
+                    ) : "Load More"}
+                </Button>
+            </div>
+        );
+    };
 
 
     const selectionCount =
@@ -441,6 +494,7 @@ export default function MetaMediaLibraryModal({
         setMediaSource(source);
         setSelectedMetaFiles([]);
         setSelectedIgPosts([]);
+        setMetaSearchQuery('');
         setIsOpen(true);
         if (source === 'meta_library') {
             fetchMetaLibrary();
@@ -511,6 +565,18 @@ export default function MetaMediaLibraryModal({
                                 </TabsList>
                             </Tabs>
                         )}
+                        {mediaSource === 'meta_library' && (
+                            <div className="relative min-w-[220px] flex-1 sm:flex-none sm:w-64">
+                                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                                <Input
+                                    type="search"
+                                    value={metaSearchQuery}
+                                    onChange={(event) => setMetaSearchQuery(event.target.value)}
+                                    placeholder="Search asset names..."
+                                    className="h-9 rounded-xl border-gray-200 pl-9 pr-3 text-sm focus-visible:ring-0 focus-visible:ring-offset-0"
+                                />
+                            </div>
+                        )}
                         <Button
                             type="button"
                             variant="outline"
@@ -567,9 +633,17 @@ export default function MetaMediaLibraryModal({
                         ) : displayItems.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-12 text-gray-500">
                                 <ImageIcon className="h-12 w-12 mb-2 opacity-50" />
-                                <p>{mediaSource === 'instagram' && !instagramAccountId
-                                    ? 'No Instagram account selected. Please select one first.'
-                                    : 'No images found.'}</p>
+                                <p>{isMetaSearchActive
+                                    ? 'No results found.'
+                                    : mediaSource === 'instagram' && !instagramAccountId
+                                        ? 'No Instagram account selected. Please select one first.'
+                                        : 'No images found.'}</p>
+                                {isMetaSearchActive && activeMetaPagination.hasMore && (
+                                    <p className="mt-1 text-sm text-gray-400">
+                                        Try loading more items to search beyond the currently loaded assets.
+                                    </p>
+                                )}
+                                {isMetaSearchActive && renderLoadMoreButton()}
                             </div>
                         ) : (
                             <>
@@ -629,34 +703,7 @@ export default function MetaMediaLibraryModal({
                                     {/* Load More for images */}
 
                                 </ScrollArea>
-                                {mediaSource === 'meta_library' && metaImagesPagination.hasMore && (
-                                    <div className="flex justify-center pt-4">
-                                        <Button
-                                            type="button"
-                                            onClick={loadMoreMetaImages}
-                                            disabled={loadingMoreMetaImages}
-                                            className="w-full rounded-xl bg-zinc-700 text-white hover:bg-zinc-800 hover:text-white"
-                                        >
-                                            {loadingMoreMetaImages ? (
-                                                <><Loader2 className="h-4 w-4 animate-spin mr-2" />Loading...</>
-                                            ) : "Load More"}
-                                        </Button>
-                                    </div>
-                                )}
-                                {mediaSource === 'instagram' && igPagination.hasMore && (
-                                    <div className="flex justify-center pt-4">
-                                        <Button
-                                            type="button"
-                                            onClick={loadMoreIg}
-                                            disabled={loadingMoreIg}
-                                            className="w-full rounded-xl bg-zinc-700 text-white hover:bg-zinc-800 hover:text-white"
-                                        >
-                                            {loadingMoreIg ? (
-                                                <><Loader2 className="h-4 w-4 animate-spin mr-2" />Loading...</>
-                                            ) : "Load More"}
-                                        </Button>
-                                    </div>
-                                )}
+                                {renderLoadMoreButton()}
                             </>
                         )}
                     </TabsContent>
@@ -669,7 +716,13 @@ export default function MetaMediaLibraryModal({
                         ) : displayItems.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-12 text-gray-500">
                                 <Video className="h-12 w-12 mb-2 opacity-50" />
-                                <p>No videos found.</p>
+                                <p>{isMetaSearchActive ? 'No results found.' : 'No videos found.'}</p>
+                                {isMetaSearchActive && activeMetaPagination.hasMore && (
+                                    <p className="mt-1 text-sm text-gray-400">
+                                        Try loading more items to search beyond the currently loaded assets.
+                                    </p>
+                                )}
+                                {isMetaSearchActive && renderLoadMoreButton()}
                             </div>
                         ) : (
                             <>
@@ -728,34 +781,7 @@ export default function MetaMediaLibraryModal({
 
                                 </ScrollArea>
                                 {/* Load More for videos */}
-                                {mediaSource === 'meta_library' && metaVideosPagination.hasMore && (
-                                    <div className="flex justify-center pt-4">
-                                        <Button
-                                            type="button"
-                                            onClick={loadMoreMetaVideos}
-                                            disabled={loadingMoreMetaVideos}
-                                            className="w-full rounded-xl bg-zinc-700 text-white hover:bg-zinc-800 hover:text-white"
-                                        >
-                                            {loadingMoreMetaVideos ? (
-                                                <><Loader2 className="h-4 w-4 animate-spin mr-2" />Loading...</>
-                                            ) : "Load More"}
-                                        </Button>
-                                    </div>
-                                )}
-                                {mediaSource === 'instagram' && igPagination.hasMore && (
-                                    <div className="flex justify-center pt-4">
-                                        <Button
-                                            type="button"
-                                            onClick={loadMoreIg}
-                                            disabled={loadingMoreIg}
-                                            className="w-full rounded-xl bg-zinc-700 text-white hover:bg-zinc-800 hover:text-white"
-                                        >
-                                            {loadingMoreIg ? (
-                                                <><Loader2 className="h-4 w-4 animate-spin mr-2" />Loading...</>
-                                            ) : "Load More"}
-                                        </Button>
-                                    </div>
-                                )}
+                                {renderLoadMoreButton()}
                             </>
                         )}
                     </TabsContent>
