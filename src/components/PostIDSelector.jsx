@@ -39,6 +39,53 @@ const truncateText = (text, maxLength = 40) => {
     return text.substring(0, maxLength) + "..."
 }
 
+const getNumericMetric = (value) => {
+    const parsed = parseFloat(value)
+    return Number.isFinite(parsed) ? parsed : null
+}
+
+const isActiveAd = (ad) => (
+    String(ad?.effective_status || ad?.status || '').toUpperCase() === 'ACTIVE'
+)
+
+const sortAdsForMode = (items, sortMode = 'spend', activeFirst = false) => {
+    const sorted = [...items]
+
+    sorted.sort((a, b) => {
+        if (activeFirst) {
+            const activeDelta = Number(isActiveAd(b)) - Number(isActiveAd(a))
+            if (activeDelta !== 0) return activeDelta
+        }
+
+        if (sortMode === 'roas') {
+            const aRoas = getNumericMetric(a.roas)
+            const bRoas = getNumericMetric(b.roas)
+            if (aRoas !== null && bRoas !== null && bRoas !== aRoas) return bRoas - aRoas
+            if (aRoas !== null && bRoas === null) return -1
+            if (aRoas === null && bRoas !== null) return 1
+            return (getNumericMetric(b.spend) || 0) - (getNumericMetric(a.spend) || 0)
+        }
+
+        if (sortMode === 'name_az') {
+            return (a.ad_name || '').localeCompare(b.ad_name || '')
+        }
+
+        if (sortMode === 'date_newest') {
+            return new Date(b.created_time || 0) - new Date(a.created_time || 0)
+        }
+
+        if (sortMode === 'date_oldest') {
+            return new Date(a.created_time || 0) - new Date(b.created_time || 0)
+        }
+
+        const spendDelta = (getNumericMetric(b.spend) || 0) - (getNumericMetric(a.spend) || 0)
+        if (spendDelta !== 0) return spendDelta
+        return (getNumericMetric(b.roas) || 0) - (getNumericMetric(a.roas) || 0)
+    })
+
+    return sorted
+}
+
 function PostSelectorInline({
     adAccountId,
     onImport,
@@ -78,11 +125,13 @@ function PostSelectorInline({
     const [hasMore, setHasMore] = useState(false)
     const [hasFetched, setHasFetched] = useState(false)
     const [datePreset, setDatePreset] = useState('last_7d')
+    const [listSortMode, setListSortMode] = useState('spend')
 
     // Search state
     const [viewMode, setViewMode] = useState('list') // 'list' | 'search' | 'adset'
     const [searchQuery, setSearchQuery] = useState('')
     const [isSearching, setIsSearching] = useState(false)
+    const [searchSortMode, setSearchSortMode] = useState('spend')
 
     // Adset browse state
     const [adsetBrowseCampaignId, setAdsetBrowseCampaignId] = useState('')
@@ -94,7 +143,7 @@ function PostSelectorInline({
     const [browseCampaignSearch, setBrowseCampaignSearch] = useState('')
     const [openBrowseAdSet, setOpenBrowseAdSet] = useState(false)
     const [browseAdSetSearch, setBrowseAdSetSearch] = useState('')
-    const [adsetSortMode, setAdsetSortMode] = useState('spend') // 'spend' | 'name_az' | 'date_newest' | 'date_oldest'
+    const [adsetSortMode, setAdsetSortMode] = useState('spend') // 'spend' | 'roas' | 'name_az' | 'date_newest' | 'date_oldest'
     const [adsetAdsSearch, setAdsetAdsSearch] = useState('')
 
     const filteredBrowseCampaigns = useMemo(() =>
@@ -116,23 +165,13 @@ function PostSelectorInline({
         let arr = q
             ? ads.filter(a => (a.ad_name || '').toLowerCase().includes(q))
             : ads
-        const sorted = [...arr]
-        switch (adsetSortMode) {
-            case 'name_az':
-                sorted.sort((a, b) => (a.ad_name || '').localeCompare(b.ad_name || ''))
-                break
-            case 'date_newest':
-                sorted.sort((a, b) => new Date(b.created_time || 0) - new Date(a.created_time || 0))
-                break
-            case 'date_oldest':
-                sorted.sort((a, b) => new Date(a.created_time || 0) - new Date(b.created_time || 0))
-                break
-            case 'spend':
-            default:
-                sorted.sort((a, b) => parseFloat(b.spend || 0) - parseFloat(a.spend || 0))
-        }
-        return sorted
+        return sortAdsForMode(arr, adsetSortMode, true)
     }, [ads, adsetAdsSearch, adsetSortMode])
+
+    const displayedAds = useMemo(() => {
+        if (viewMode === 'adset') return displayedAdsetAds
+        return sortAdsForMode(ads, viewMode === 'search' ? searchSortMode : listSortMode, viewMode === 'search')
+    }, [ads, displayedAdsetAds, listSortMode, searchSortMode, viewMode])
 
     const fetchAds = useCallback(async (cursor = null, preset = datePreset) => {
         if (!adAccountId) {
@@ -422,6 +461,11 @@ function PostSelectorInline({
     const formatSpend = (spend) => {
         const amount = parseFloat(spend) || 0
         return `$${amount.toFixed(2)}`
+    }
+
+    const formatRoas = (roas) => {
+        const amount = getNumericMetric(roas)
+        return amount === null ? '—' : `${amount.toFixed(2)}x`
     }
 
     const renderNameTooltip = (value, maxLength = 75) => {
@@ -822,10 +866,10 @@ function PostSelectorInline({
                             <div className={cn(
                                 "grid gap-2 px-2 py-2 text-xs font-medium text-white bg-blue-500 rounded-xl items-center",
                                 viewMode === 'adset'
-                                    ? "grid-cols-[20px_48px_1fr_110px_110px]"
+                                    ? "grid-cols-[20px_48px_1fr_100px_80px_110px]"
                                     : viewMode === 'search'
-                                        ? "grid-cols-[20px_48px_minmax(0,1fr)_minmax(0,0.72fr)_90px_90px]"
-                                    : "grid-cols-[20px_48px_1fr_120px_110px]"
+                                        ? "grid-cols-[20px_48px_minmax(0,1fr)_minmax(0,0.62fr)_85px_70px_90px]"
+                                        : "grid-cols-[20px_48px_minmax(0,1fr)_minmax(0,0.7fr)_110px_80px]"
                             )}>
                                 <div></div>
                                 <div className="-ml-4">Thumbnail</div>
@@ -838,6 +882,7 @@ function PostSelectorInline({
                                                     <button className="flex items-center gap-1 ml-auto hover:opacity-80 transition-opacity">
                                                         <span>
                                                             {adsetSortMode === 'spend' && `Spend (${getDatePresetLabel(adsetBrowseDatePreset)})`}
+                                                            {adsetSortMode === 'roas' && `ROAS (${getDatePresetLabel(adsetBrowseDatePreset)})`}
                                                             {adsetSortMode === 'name_az' && 'Sorted A→Z'}
                                                             {adsetSortMode === 'date_newest' && 'Newest first'}
                                                             {adsetSortMode === 'date_oldest' && 'Oldest first'}
@@ -861,6 +906,13 @@ function PostSelectorInline({
                                                             {preset.label}
                                                         </DropdownMenuItem>
                                                     ))}
+                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuItem
+                                                        onClick={() => setAdsetSortMode('roas')}
+                                                        className={adsetSortMode === 'roas' ? 'bg-gray-100' : ''}
+                                                    >
+                                                        ROAS high to low
+                                                    </DropdownMenuItem>
                                                     <DropdownMenuSeparator />
                                                     <DropdownMenuItem
                                                         onClick={() => setAdsetSortMode('name_az')}
@@ -887,12 +939,37 @@ function PostSelectorInline({
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
                                         </div>
+                                        <div className="text-right">ROAS</div>
                                         <div className="text-right">Status</div>
                                     </>
                                 ) : viewMode === 'search' ? (
                                     <>
                                         <div>Ad Set</div>
-                                        <div className="text-right">Spend (30D)</div>
+                                        <div className="text-right whitespace-nowrap">
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <button className="flex items-center gap-1 ml-auto hover:opacity-80 transition-opacity">
+                                                        <span>{searchSortMode === 'roas' ? 'ROAS (30D)' : 'Spend (30D)'}</span>
+                                                        <ChevronDown className="h-3 w-3" />
+                                                    </button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end" className="bg-white rounded-xl">
+                                                    <DropdownMenuItem
+                                                        onClick={() => setSearchSortMode('spend')}
+                                                        className={searchSortMode === 'spend' ? 'bg-gray-100' : ''}
+                                                    >
+                                                        Spend high to low
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                        onClick={() => setSearchSortMode('roas')}
+                                                        className={searchSortMode === 'roas' ? 'bg-gray-100' : ''}
+                                                    >
+                                                        ROAS high to low
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </div>
+                                        <div className="text-right">ROAS</div>
                                         <div className="text-right">Status</div>
                                     </>
                                 ) : (
@@ -902,23 +979,37 @@ function PostSelectorInline({
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
                                                     <button className="flex items-center gap-1 ml-auto hover:opacity-80 transition-opacity">
-                                                        <span>Spend ({getDatePresetLabel()})</span>
+                                                        <span>{listSortMode === 'roas' ? `ROAS (${getDatePresetLabel()})` : `Spend (${getDatePresetLabel()})`}</span>
                                                         <ChevronDown className="h-3 w-3" />
                                                     </button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end" className="bg-white rounded-xl">
+                                                    <DropdownMenuLabel className="text-[11px] uppercase tracking-wide text-gray-500 font-medium">
+                                                        Sort by Spend
+                                                    </DropdownMenuLabel>
                                                     {DATE_PRESETS.map((preset) => (
                                                         <DropdownMenuItem
                                                             key={preset.value}
-                                                            onClick={() => handleDatePresetChange(preset.value)}
-                                                            className={datePreset === preset.value ? 'bg-gray-100' : ''}
+                                                            onClick={() => {
+                                                                setListSortMode('spend')
+                                                                handleDatePresetChange(preset.value)
+                                                            }}
+                                                            className={listSortMode === 'spend' && datePreset === preset.value ? 'bg-gray-100' : ''}
                                                         >
                                                             {preset.label}
                                                         </DropdownMenuItem>
                                                     ))}
+                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuItem
+                                                        onClick={() => setListSortMode('roas')}
+                                                        className={listSortMode === 'roas' ? 'bg-gray-100' : ''}
+                                                    >
+                                                        ROAS high to low
+                                                    </DropdownMenuItem>
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
                                         </div>
+                                        <div className="text-right">ROAS</div>
                                     </>
                                 )}
                             </div>
@@ -929,16 +1020,16 @@ function PostSelectorInline({
                         <ScrollArea className="h-[550px] outline-none focus:outline-none">
                             <TooltipProvider delayDuration={150}>
                                 <div className="space-y-1.5">
-                                    {(viewMode === 'adset' ? displayedAdsetAds : ads).map((ad) => (
+                                    {displayedAds.map((ad) => (
                                         <label
                                             key={ad.id}
                                             className={cn(
                                                 "grid gap-2 items-center p-3 rounded-xl border cursor-pointer transition-colors",
                                                 viewMode === 'adset'
-                                                    ? "grid-cols-[auto_48px_1fr_110px_110px]"
+                                                    ? "grid-cols-[auto_48px_1fr_100px_80px_110px]"
                                                     : viewMode === 'search'
-                                                        ? "grid-cols-[auto_48px_minmax(0,1fr)_minmax(0,0.72fr)_90px_90px]"
-                                                        : "grid-cols-[auto_48px_1fr_120px_110px]",
+                                                        ? "grid-cols-[auto_48px_minmax(0,1fr)_minmax(0,0.62fr)_85px_70px_90px]"
+                                                        : "grid-cols-[auto_48px_minmax(0,1fr)_minmax(0,0.7fr)_110px_80px]",
                                                 selectedAdIds.has(ad.id)
                                                     ? 'border-blue-500 bg-blue-50'
                                                     : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
@@ -983,6 +1074,11 @@ function PostSelectorInline({
                                                         </span>
                                                     </div>
                                                     <div className="text-right">
+                                                        <span className="text-sm font-medium text-gray-900">
+                                                            {formatRoas(ad.roas)}
+                                                        </span>
+                                                    </div>
+                                                    <div className="text-right">
                                                         <span className={`text-xs font-medium px-2 py-1 rounded-full ${ad.effective_status === 'ACTIVE'
                                                             ? 'bg-green-100 text-green-700'
                                                             : ad.effective_status === 'PAUSED'
@@ -1003,6 +1099,12 @@ function PostSelectorInline({
                                                     <div className="text-right">
                                                         <span className="text-sm font-medium text-gray-900">
                                                             {formatSpend(ad.spend)}
+                                                        </span>
+                                                    </div>
+                                                    {/* ROAS */}
+                                                    <div className="text-right">
+                                                        <span className="text-sm font-medium text-gray-900">
+                                                            {formatRoas(ad.roas)}
                                                         </span>
                                                     </div>
                                                     {/* Status */}
@@ -1027,6 +1129,12 @@ function PostSelectorInline({
                                                     <div className="text-right">
                                                         <span className="text-sm font-medium text-gray-900">
                                                             {formatSpend(ad.spend)}
+                                                        </span>
+                                                    </div>
+                                                    {/* ROAS */}
+                                                    <div className="text-right">
+                                                        <span className="text-sm font-medium text-gray-900">
+                                                            {formatRoas(ad.roas)}
                                                         </span>
                                                     </div>
                                                 </>
