@@ -173,6 +173,15 @@ function PostSelectorInline({
         return sortAdsForMode(ads, viewMode === 'search' ? searchSortMode : listSortMode, viewMode === 'search')
     }, [ads, displayedAdsetAds, listSortMode, searchSortMode, viewMode])
 
+    const hasValidRoas = useMemo(() => ads.some(ad => getNumericMetric(ad.roas) !== null), [ads])
+
+    useEffect(() => {
+        if (hasValidRoas) return
+        if (listSortMode === 'roas') setListSortMode('spend')
+        if (searchSortMode === 'roas') setSearchSortMode('spend')
+        if (adsetSortMode === 'roas') setAdsetSortMode('spend')
+    }, [adsetSortMode, hasValidRoas, listSortMode, searchSortMode])
+
     const fetchAds = useCallback(async (cursor = null, preset = datePreset) => {
         if (!adAccountId) {
             setError("No ad account selected")
@@ -461,11 +470,6 @@ function PostSelectorInline({
     const formatSpend = (spend) => {
         const amount = parseFloat(spend) || 0
         return `$${amount.toFixed(2)}`
-    }
-
-    const formatRoas = (roas) => {
-        const amount = getNumericMetric(roas)
-        return amount === null ? '—' : `${amount.toFixed(2)}x`
     }
 
     const renderNameTooltip = (value, maxLength = 75) => {
@@ -866,10 +870,10 @@ function PostSelectorInline({
                             <div className={cn(
                                 "grid gap-2 px-2 py-2 text-xs font-medium text-white bg-blue-500 rounded-xl items-center",
                                 viewMode === 'adset'
-                                    ? "grid-cols-[20px_48px_1fr_100px_80px_110px]"
+                                    ? "grid-cols-[20px_48px_1fr_110px_110px]"
                                     : viewMode === 'search'
-                                        ? "grid-cols-[20px_48px_minmax(0,1fr)_minmax(0,0.62fr)_85px_70px_90px]"
-                                        : "grid-cols-[20px_48px_minmax(0,1fr)_minmax(0,0.7fr)_110px_80px]"
+                                        ? "grid-cols-[20px_48px_minmax(0,1fr)_minmax(0,0.72fr)_90px_90px]"
+                                        : "grid-cols-[20px_48px_1fr_120px_110px]"
                             )}>
                                 <div></div>
                                 <div className="-ml-4">Thumbnail</div>
@@ -906,13 +910,17 @@ function PostSelectorInline({
                                                             {preset.label}
                                                         </DropdownMenuItem>
                                                     ))}
-                                                    <DropdownMenuSeparator />
-                                                    <DropdownMenuItem
-                                                        onClick={() => setAdsetSortMode('roas')}
-                                                        className={adsetSortMode === 'roas' ? 'bg-gray-100' : ''}
-                                                    >
-                                                        ROAS high to low
-                                                    </DropdownMenuItem>
+                                                    {hasValidRoas && (
+                                                        <>
+                                                            <DropdownMenuSeparator />
+                                                            <DropdownMenuItem
+                                                                onClick={() => setAdsetSortMode('roas')}
+                                                                className={adsetSortMode === 'roas' ? 'bg-gray-100' : ''}
+                                                            >
+                                                                ROAS high to low
+                                                            </DropdownMenuItem>
+                                                        </>
+                                                    )}
                                                     <DropdownMenuSeparator />
                                                     <DropdownMenuItem
                                                         onClick={() => setAdsetSortMode('name_az')}
@@ -939,7 +947,6 @@ function PostSelectorInline({
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
                                         </div>
-                                        <div className="text-right">ROAS</div>
                                         <div className="text-right">Status</div>
                                     </>
                                 ) : viewMode === 'search' ? (
@@ -960,16 +967,17 @@ function PostSelectorInline({
                                                     >
                                                         Spend high to low
                                                     </DropdownMenuItem>
-                                                    <DropdownMenuItem
-                                                        onClick={() => setSearchSortMode('roas')}
-                                                        className={searchSortMode === 'roas' ? 'bg-gray-100' : ''}
-                                                    >
-                                                        ROAS high to low
-                                                    </DropdownMenuItem>
+                                                    {hasValidRoas && (
+                                                        <DropdownMenuItem
+                                                            onClick={() => setSearchSortMode('roas')}
+                                                            className={searchSortMode === 'roas' ? 'bg-gray-100' : ''}
+                                                        >
+                                                            ROAS high to low
+                                                        </DropdownMenuItem>
+                                                    )}
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
                                         </div>
-                                        <div className="text-right">ROAS</div>
                                         <div className="text-right">Status</div>
                                     </>
                                 ) : (
@@ -999,17 +1007,20 @@ function PostSelectorInline({
                                                             {preset.label}
                                                         </DropdownMenuItem>
                                                     ))}
-                                                    <DropdownMenuSeparator />
-                                                    <DropdownMenuItem
-                                                        onClick={() => setListSortMode('roas')}
-                                                        className={listSortMode === 'roas' ? 'bg-gray-100' : ''}
-                                                    >
-                                                        ROAS high to low
-                                                    </DropdownMenuItem>
+                                                    {hasValidRoas && (
+                                                        <>
+                                                            <DropdownMenuSeparator />
+                                                            <DropdownMenuItem
+                                                                onClick={() => setListSortMode('roas')}
+                                                                className={listSortMode === 'roas' ? 'bg-gray-100' : ''}
+                                                            >
+                                                                ROAS high to low
+                                                            </DropdownMenuItem>
+                                                        </>
+                                                    )}
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
                                         </div>
-                                        <div className="text-right">ROAS</div>
                                     </>
                                 )}
                             </div>
@@ -1026,10 +1037,10 @@ function PostSelectorInline({
                                             className={cn(
                                                 "grid gap-2 items-center p-3 rounded-xl border cursor-pointer transition-colors",
                                                 viewMode === 'adset'
-                                                    ? "grid-cols-[auto_48px_1fr_100px_80px_110px]"
+                                                    ? "grid-cols-[auto_48px_1fr_110px_110px]"
                                                     : viewMode === 'search'
-                                                        ? "grid-cols-[auto_48px_minmax(0,1fr)_minmax(0,0.62fr)_85px_70px_90px]"
-                                                        : "grid-cols-[auto_48px_minmax(0,1fr)_minmax(0,0.7fr)_110px_80px]",
+                                                        ? "grid-cols-[auto_48px_minmax(0,1fr)_minmax(0,0.72fr)_90px_90px]"
+                                                        : "grid-cols-[auto_48px_1fr_120px_110px]",
                                                 selectedAdIds.has(ad.id)
                                                     ? 'border-blue-500 bg-blue-50'
                                                     : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
@@ -1074,11 +1085,6 @@ function PostSelectorInline({
                                                         </span>
                                                     </div>
                                                     <div className="text-right">
-                                                        <span className="text-sm font-medium text-gray-900">
-                                                            {formatRoas(ad.roas)}
-                                                        </span>
-                                                    </div>
-                                                    <div className="text-right">
                                                         <span className={`text-xs font-medium px-2 py-1 rounded-full ${ad.effective_status === 'ACTIVE'
                                                             ? 'bg-green-100 text-green-700'
                                                             : ad.effective_status === 'PAUSED'
@@ -1099,12 +1105,6 @@ function PostSelectorInline({
                                                     <div className="text-right">
                                                         <span className="text-sm font-medium text-gray-900">
                                                             {formatSpend(ad.spend)}
-                                                        </span>
-                                                    </div>
-                                                    {/* ROAS */}
-                                                    <div className="text-right">
-                                                        <span className="text-sm font-medium text-gray-900">
-                                                            {formatRoas(ad.roas)}
                                                         </span>
                                                     </div>
                                                     {/* Status */}
@@ -1129,12 +1129,6 @@ function PostSelectorInline({
                                                     <div className="text-right">
                                                         <span className="text-sm font-medium text-gray-900">
                                                             {formatSpend(ad.spend)}
-                                                        </span>
-                                                    </div>
-                                                    {/* ROAS */}
-                                                    <div className="text-right">
-                                                        <span className="text-sm font-medium text-gray-900">
-                                                            {formatRoas(ad.roas)}
                                                         </span>
                                                     </div>
                                                 </>
