@@ -223,6 +223,7 @@ export default function Home() {
     const [partnerIgAccountId, setPartnerIgAccountId] = useState("");
     const [partnerFbPageId, setPartnerFbPageId] = useState("");
     const [partnershipIdentityMode, setPartnershipIdentityMode] = useState("dynamic");
+    const [partnershipPrimaryIdentity, setPartnershipPrimaryIdentity] = useState("brand");
     const [adScheduleStartTime, setAdScheduleStartTime] = useState(null);
     const [adScheduleEndTime, setAdScheduleEndTime] = useState(null);
 
@@ -619,6 +620,7 @@ export default function Home() {
         partnerIgAccountId,
         partnerFbPageId,
         partnershipIdentityMode,
+        partnershipPrimaryIdentity,
         adNameFormulaV2: cloneSnapshotValue(adNameFormulaV2),
         adValues: cloneSnapshotValue(adValues),
         adScheduleStartTime,
@@ -654,6 +656,7 @@ export default function Home() {
         partnerIgAccountId,
         partnerFbPageId,
         partnershipIdentityMode,
+        partnershipPrimaryIdentity,
         adNameFormulaV2,
         adValues,
         adScheduleStartTime,
@@ -695,6 +698,7 @@ export default function Home() {
         setPartnerIgAccountId(snapshot.partnerIgAccountId || "");
         setPartnerFbPageId(snapshot.partnerFbPageId || "");
         setPartnershipIdentityMode(snapshot.partnershipIdentityMode || "dynamic");
+        setPartnershipPrimaryIdentity(snapshot.partnershipPrimaryIdentity || "brand");
         setAdNameFormulaV2(cloneSnapshotValue(snapshot.adNameFormulaV2) || { rawInput: "" });
         setAdValues(cloneSnapshotValue(snapshot.adValues) || { dateType: "MonthYYYY", customTexts: {} });
         setAdScheduleStartTime(snapshot.adScheduleStartTime || null);
@@ -1485,6 +1489,8 @@ export default function Home() {
                             setPartnerFbPageId={setPartnerFbPageId}
                             partnershipIdentityMode={partnershipIdentityMode}
                             setPartnershipIdentityMode={setPartnershipIdentityMode}
+                            partnershipPrimaryIdentity={partnershipPrimaryIdentity}
+                            setPartnershipPrimaryIdentity={setPartnershipPrimaryIdentity}
                             adScheduleStartTime={adScheduleStartTime}
                             setAdScheduleStartTime={setAdScheduleStartTime}
                             adScheduleEndTime={adScheduleEndTime}

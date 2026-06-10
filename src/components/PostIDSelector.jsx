@@ -472,6 +472,34 @@ function PostSelectorInline({
         return `$${amount.toFixed(2)}`
     }
 
+    const formatRoas = (roas) => {
+        const amount = getNumericMetric(roas)
+        return amount === null ? '—' : amount.toFixed(2)
+    }
+
+    const getActiveSortMode = () => {
+        if (viewMode === 'adset') return adsetSortMode
+        if (viewMode === 'search') return searchSortMode
+        return listSortMode
+    }
+
+    const renderMetricValue = (ad) => {
+        if (getActiveSortMode() === 'roas') {
+            return (
+                <span className="inline-flex items-baseline justify-end gap-1.5">
+                    <span className="text-sm font-medium text-gray-900">{formatRoas(ad.roas)}</span>
+                    <span className="text-[11px] font-medium text-gray-400">({formatSpend(ad.spend)})</span>
+                </span>
+            )
+        }
+
+        return (
+            <span className="text-sm font-medium text-gray-900">
+                {formatSpend(ad.spend)}
+            </span>
+        )
+    }
+
     const renderNameTooltip = (value, maxLength = 75) => {
         const displayValue = value || ""
 
@@ -1080,9 +1108,7 @@ function PostSelectorInline({
                                             {viewMode === 'adset' ? (
                                                 <>
                                                     <div className="text-right">
-                                                        <span className="text-sm font-medium text-gray-900">
-                                                            {formatSpend(ad.spend)}
-                                                        </span>
+                                                        {renderMetricValue(ad)}
                                                     </div>
                                                     <div className="text-right">
                                                         <span className={`text-xs font-medium px-2 py-1 rounded-full ${ad.effective_status === 'ACTIVE'
@@ -1103,9 +1129,7 @@ function PostSelectorInline({
                                                     </div>
                                                     {/* Spend */}
                                                     <div className="text-right">
-                                                        <span className="text-sm font-medium text-gray-900">
-                                                            {formatSpend(ad.spend)}
-                                                        </span>
+                                                        {renderMetricValue(ad)}
                                                     </div>
                                                     {/* Status */}
                                                     <div className="text-right">
@@ -1127,9 +1151,7 @@ function PostSelectorInline({
                                                     </div>
                                                     {/* Spend */}
                                                     <div className="text-right">
-                                                        <span className="text-sm font-medium text-gray-900">
-                                                            {formatSpend(ad.spend)}
-                                                        </span>
+                                                        {renderMetricValue(ad)}
                                                     </div>
                                                 </>
                                             )}

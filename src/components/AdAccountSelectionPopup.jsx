@@ -112,7 +112,7 @@ export default function AdAccountSelectionPopup({ isOpen, onClose, onSave, selec
     return (
         <Dialog open={isOpen} onOpenChange={handleClose}>
             <DialogOverlay className="bg-black/80 backdrop-blur-sm" />
-            <DialogContent className="sm:max-w-[500px] !rounded-[30px] p-8">
+            <DialogContent className="sm:max-w-[500px] !rounded-[30px] p-8 data-[state=open]:!slide-in-from-left-0 data-[state=closed]:!slide-out-to-left-0 data-[state=open]:!slide-in-from-top-0 data-[state=closed]:!slide-out-to-top-0">
                 <DialogHeader className="space-y-4">
                     <DialogTitle className="text-xl">Select Your Ad Account{maxAccounts > 1 ? 's' : ''}</DialogTitle>
                     <DialogDescription className="text-base leading-relaxed">
