@@ -7288,18 +7288,8 @@ export default function AdCreationForm({
                                 </Label>
                               </div>
                               <div className="flex items-center gap-2">
-                                <RadioGroupItem
-                                  value="first_identity_only"
-                                  id="identity-first"
-                                  disabled={!partnerFbPageId && partnerIgAccountId}
-                                />
-                                <Label
-                                  htmlFor="identity-first"
-                                  className={cn(
-                                    "text-sm font-normal cursor-pointer",
-                                    !partnerFbPageId && partnerIgAccountId && "text-gray-400 cursor-not-allowed"
-                                  )}
-                                >
+                                <RadioGroupItem value="first_identity_only" id="identity-first" />
+                                <Label htmlFor="identity-first" className="text-sm font-normal cursor-pointer">
                                   First identity only
                                 </Label>
                               </div>
@@ -7329,22 +7319,15 @@ export default function AdCreationForm({
                                 <div className="flex items-center gap-2">
                                   <RadioGroupItem value="brand" id="primary-brand" />
                                   <Label htmlFor="primary-brand" className="text-sm font-normal cursor-pointer">
-                                    Main brand IG
+                                    {(() => {
+                                      const brandUsername = pages.find((p) => p.instagramAccount?.id === instagramAccountId)?.instagramAccount?.username;
+                                      return brandUsername ? `@${brandUsername}` : "Main brand IG";
+                                    })()}
                                   </Label>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                  <RadioGroupItem
-                                    value="partner"
-                                    id="primary-partner"
-                                    disabled={!partnerFbPageId}
-                                  />
-                                  <Label
-                                    htmlFor="primary-partner"
-                                    className={cn(
-                                      "text-sm font-normal cursor-pointer",
-                                      !partnerFbPageId && "text-gray-400 cursor-not-allowed"
-                                    )}
-                                  >
+                                  <RadioGroupItem value="partner" id="primary-partner" />
+                                  <Label htmlFor="primary-partner" className="text-sm font-normal cursor-pointer">
                                     {selectedPartner?.creatorUsername
                                       ? `@${selectedPartner.creatorUsername}`
                                       : "Partner IG"}
