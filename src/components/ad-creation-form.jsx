@@ -6278,6 +6278,11 @@ export default function AdCreationForm({
     if (!importedActivePost) return;
     setImportedPostAdNames((prev) => ({ ...prev, [importedActiveKey]: value }));
   };
+  const adNamePreviewFile = files[0]
+    || driveFiles[0]
+    || dropboxFiles[0]
+    || frameioFiles[0]
+    || (importedFiles[0] ? { name: importedFiles[0].name } : null);
 
   const adNameSection = (
     <div id="adName" className="space-y-1">
@@ -6324,7 +6329,7 @@ export default function AdCreationForm({
           <Label className="text-xs text-gray-500">
             Ad Name Preview: {
               (files.length > 0 || driveFiles.length > 0 || dropboxFiles.length > 0 || frameioFiles.length > 0 || importedFiles.length > 0 || importedPosts.length > 0 || selectedIgOrganicPosts.length > 0)
-                ? computeAdNameFromFormula(files[0] || driveFiles[0] || frameioFiles[0], 0, link[0], null, adType)
+                ? computeAdNameFromFormula(adNamePreviewFile, 0, link[0], null, adType)
                 : "Upload a file to see example"
             }
           </Label>

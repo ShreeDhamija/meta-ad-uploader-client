@@ -12,6 +12,63 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 const IG_CACHE_KEY = 'ig_media_cache';
+const META_CACHE_KEY_PREFIX = 'meta_media_library_cache';
+const META_CACHE_TTL_MS = 15 * 60 * 1000;
+const metaLibraryMemoryCache = new Map();
+
+const getMetaCacheKey = (adAccountId) => `${META_CACHE_KEY_PREFIX}:${adAccountId}`;
+
+const isFreshMetaCache = (cached) => (
+    cached
+    && Array.isArray(cached.images)
+    && Array.isArray(cached.videos)
+    && cached.imagesPagination
+    && cached.videosPagination
+    && Date.now() - cached.cachedAt < META_CACHE_TTL_MS
+);
+
+const getMetaCache = (adAccountId) => {
+    if (!adAccountId) return null;
+
+    const memoryCached = metaLibraryMemoryCache.get(adAccountId);
+    if (isFreshMetaCache(memoryCached)) return memoryCached;
+
+    try {
+        const cached = JSON.parse(sessionStorage.getItem(getMetaCacheKey(adAccountId)));
+        if (isFreshMetaCache(cached)) {
+            metaLibraryMemoryCache.set(adAccountId, cached);
+            return cached;
+        }
+    } catch { }
+
+    metaLibraryMemoryCache.delete(adAccountId);
+    return null;
+};
+
+const setMetaCache = (adAccountId, images, videos, imagesPagination, videosPagination) => {
+    if (!adAccountId) return;
+
+    const cacheValue = {
+        images,
+        videos,
+        imagesPagination,
+        videosPagination,
+        cachedAt: Date.now(),
+    };
+
+    metaLibraryMemoryCache.set(adAccountId, cacheValue);
+    try {
+        sessionStorage.setItem(getMetaCacheKey(adAccountId), JSON.stringify(cacheValue));
+    } catch { }
+};
+
+const clearMetaCache = (adAccountId) => {
+    if (!adAccountId) return;
+    metaLibraryMemoryCache.delete(adAccountId);
+    try {
+        sessionStorage.removeItem(getMetaCacheKey(adAccountId));
+    } catch { }
+};
 
 const getIgCache = (igUserId) => {
     try {
@@ -162,23 +219,42 @@ export default function MetaMediaLibraryModal({
         previewUrl: vid.thumbnail_url,
     }));
 
-    const fetchMetaLibrary = useCallback(async () => {
+    const fetchMetaLibrary = useCallback(async (forceRefresh = false) => {
         if (!adAccountId) return;
+
+        if (forceRefresh) {
+            clearMetaCache(adAccountId);
+        } else {
+            const cached = getMetaCache(adAccountId);
+            if (cached) {
+                setMetaImages(cached.images);
+                setMetaVideos(cached.videos);
+                setMetaImagesPagination(cached.imagesPagination);
+                setMetaVideosPagination(cached.videosPagination);
+                return;
+            }
+        }
+
         setLoadingMeta(true);
         try {
             const imgRes = await axios.get(`${API_BASE_URL}/auth/library-images`, {
                 params: { adAccountId },
                 withCredentials: true,
             });
-            setMetaImages(mapMetaImages(imgRes.data?.data || []));
-            setMetaImagesPagination(imgRes.data?.pagination || { hasMore: false, nextCursor: null });
+            const images = mapMetaImages(imgRes.data?.data || []);
+            const imagesPagination = imgRes.data?.pagination || { hasMore: false, nextCursor: null };
+            setMetaImages(images);
+            setMetaImagesPagination(imagesPagination);
 
             const vidRes = await axios.get(`${API_BASE_URL}/auth/library-videos`, {
                 params: { adAccountId },
                 withCredentials: true,
             });
-            setMetaVideos(mapMetaVideos(vidRes.data?.data || []));
-            setMetaVideosPagination(vidRes.data?.pagination || { hasMore: false, nextCursor: null });
+            const videos = mapMetaVideos(vidRes.data?.data || []);
+            const videosPagination = vidRes.data?.pagination || { hasMore: false, nextCursor: null };
+            setMetaVideos(videos);
+            setMetaVideosPagination(videosPagination);
+            setMetaCache(adAccountId, images, videos, imagesPagination, videosPagination);
         } catch (err) {
             console.error('Error fetching Meta library:', err);
             toast.error('Failed to load Meta media library');
@@ -197,7 +273,12 @@ export default function MetaMediaLibraryModal({
             });
             const newData = res.data?.data || [];
             const newPagination = res.data?.pagination || { hasMore: false, nextCursor: null };
-            setMetaImages(prev => [...prev, ...mapMetaImages(newData)]);
+            const newImages = mapMetaImages(newData);
+            setMetaImages(prev => {
+                const updatedImages = [...prev, ...newImages];
+                setMetaCache(adAccountId, updatedImages, metaVideos, newPagination, metaVideosPagination);
+                return updatedImages;
+            });
             setMetaImagesPagination(newPagination);
             if (!newPagination.hasMore) {
                 toast.info('No more images to load');
@@ -208,7 +289,7 @@ export default function MetaMediaLibraryModal({
         } finally {
             setLoadingMoreMetaImages(false);
         }
-    }, [adAccountId, metaImagesPagination.nextCursor]);
+    }, [adAccountId, metaImagesPagination.nextCursor, metaVideos, metaVideosPagination]);
 
     const loadMoreMetaVideos = useCallback(async () => {
         if (!metaVideosPagination.nextCursor) return;
@@ -220,7 +301,12 @@ export default function MetaMediaLibraryModal({
             });
             const newData = res.data?.data || [];
             const newPagination = res.data?.pagination || { hasMore: false, nextCursor: null };
-            setMetaVideos(prev => [...prev, ...mapMetaVideos(newData)]);
+            const newVideos = mapMetaVideos(newData);
+            setMetaVideos(prev => {
+                const updatedVideos = [...prev, ...newVideos];
+                setMetaCache(adAccountId, metaImages, updatedVideos, metaImagesPagination, newPagination);
+                return updatedVideos;
+            });
             setMetaVideosPagination(newPagination);
             if (!newPagination.hasMore) {
                 toast.info('No more videos to load');
@@ -231,7 +317,7 @@ export default function MetaMediaLibraryModal({
         } finally {
             setLoadingMoreMetaVideos(false);
         }
-    }, [adAccountId, metaVideosPagination.nextCursor]);
+    }, [adAccountId, metaImages, metaImagesPagination, metaVideosPagination.nextCursor]);
 
 
 
@@ -585,7 +671,7 @@ export default function MetaMediaLibraryModal({
                                 if (mediaSource === 'instagram') {
                                     fetchInstagramPosts(true);
                                 } else {
-                                    fetchMetaLibrary();
+                                    fetchMetaLibrary(true);
                                 }
                             }}
                             disabled={mediaSource === 'instagram' ? loadingIg : loadingMeta}
