@@ -1891,6 +1891,9 @@ export default function TikTokAdCreationForm({
     if (!campaignId || !selectedAdvertiser || !newCampaignName.trim()) return
     const campaign = campaigns.find(c => c.campaign_id === campaignId)
     if (!campaign) return
+    if (campaign.adgroup_count > 20) {
+      return toast.error(`Cannot duplicate this campaign. It has ${campaign.adgroup_count} ad groups, which exceeds the limit of 20.`)
+    }
     setIsDuplicating(true)
     const duplicatedName = newCampaignName.trim()
     try {
@@ -3937,7 +3940,16 @@ export default function TikTokAdCreationForm({
                         ? (() => {
                           const found = identities.find(i => i.identity_id === selectedIdentity);
                           return found ? (
-                            <span className="font-semibold text-gray-900">{found.display_name}</span>
+                            <span className="flex items-center gap-2">
+                              {(found.avatar_url || found.profile_image) && (
+                                <img
+                                  src={found.avatar_url || found.profile_image}
+                                  alt={found.display_name}
+                                  className="w-6 h-6 rounded-full object-cover shrink-0"
+                                />
+                              )}
+                              <span className="font-semibold text-gray-900">{found.display_name}</span>
+                            </span>
                           ) : <span>{selectedIdentity}</span>;
                         })()
                         : <span>{adType === 'NORMAL' ? "Select Identity" : "Select account to Promote From"}</span>}
@@ -3960,15 +3972,24 @@ export default function TikTokAdCreationForm({
                               setOpenIdentity(false)
                             }}
                             className={cn(
-                              "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
+                              "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150 flex items-center justify-between",
                               selectedIdentity === i.identity_id ? "bg-gray-100 font-semibold" : "hover:bg-gray-50"
                             )}
                           >
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-sm font-semibold text-gray-900">{i.display_name}</span>
-                              <span className="text-xs text-gray-400 font-normal">{i.identity_id}</span>
+                            <div className="flex items-center gap-2 min-w-0">
+                              {(i.avatar_url || i.profile_image) && (
+                                <img
+                                  src={i.avatar_url || i.profile_image}
+                                  alt={i.display_name}
+                                  className="w-6 h-6 rounded-full object-cover shrink-0"
+                                />
+                              )}
+                              <div className="flex flex-col min-w-0">
+                                <span className="text-sm font-semibold text-gray-900 truncate">{i.display_name}</span>
+                                <span className="text-[10px] text-gray-400 font-normal shrink-0 truncate">{i.identity_id}</span>
+                              </div>
                             </div>
-                            {selectedIdentity === i.identity_id && <Check className="ml-auto h-4 w-4 text-black" />}
+                            {selectedIdentity === i.identity_id && <Check className="ml-auto h-4 w-4 text-black shrink-0" />}
                           </CommandItem>
                         ))}
                       </CommandGroup>

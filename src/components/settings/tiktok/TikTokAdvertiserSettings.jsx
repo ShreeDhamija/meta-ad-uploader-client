@@ -515,9 +515,20 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                             <div className="flex items-center gap-2">
                                                 {(() => {
                                                     const found = identities.find(i => i.identity_id === currentSettings.defaultIdentityId);
-                                                    return (
+                                                    return found ? (
+                                                        <span className="flex items-center gap-2">
+                                                            {(found.avatar_url || found.profile_image) && (
+                                                                <img
+                                                                    src={found.avatar_url || found.profile_image}
+                                                                    alt={found.display_name}
+                                                                    className="w-6 h-6 rounded-full object-cover shrink-0"
+                                                                />
+                                                            )}
+                                                            <span className="text-sm font-medium text-gray-900">{found.display_name}</span>
+                                                        </span>
+                                                    ) : (
                                                         <span className="text-sm font-medium text-gray-900">
-                                                            {found ? found.display_name : (currentSettings.defaultIdentityId || "Select TikTok Identity")}
+                                                            {currentSettings.defaultIdentityId || "Select TikTok Identity"}
                                                         </span>
                                                     );
                                                 })()}
@@ -572,9 +583,18 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                                                 }}
                                                                 className="w-full text-left px-3 py-2 cursor-pointer rounded-xl transition-colors duration-150 hover:bg-gray-100 flex items-center justify-between"
                                                             >
-                                                                <div className="flex items-center gap-1.5 min-w-0">
-                                                                    <span className="text-sm font-semibold text-gray-900 truncate">{i.display_name}</span>
-                                                                    <span className="text-xs text-gray-400 font-normal shrink-0">{i.identity_id}</span>
+                                                                <div className="flex items-center gap-2 min-w-0">
+                                                                    {(i.avatar_url || i.profile_image) && (
+                                                                        <img
+                                                                            src={i.avatar_url || i.profile_image}
+                                                                            alt={i.display_name}
+                                                                            className="w-6 h-6 rounded-full object-cover shrink-0"
+                                                                        />
+                                                                    )}
+                                                                    <div className="flex flex-col min-w-0">
+                                                                        <span className="text-sm font-semibold text-gray-900 truncate">{i.display_name}</span>
+                                                                        <span className="text-xs text-gray-400 font-normal shrink-0 truncate">{i.identity_id}</span>
+                                                                    </div>
                                                                 </div>
                                                                 {currentSettings.defaultIdentityId === i.identity_id && <Check className="ml-auto w-4 h-4 text-black shrink-0" />}
                                                             </button>

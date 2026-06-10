@@ -86,6 +86,12 @@ export default function TikTokCampaignDuplicator({ advertiserId }) {
     setDuplicationResult(null)
 
     try {
+      const campaignObj = campaigns.find(c => c.campaign_id === selectedCampaign)
+      if (campaignObj && campaignObj.adgroup_count > 20) {
+        setIsDuplicating(false)
+        return toast.error(`Cannot duplicate this campaign. It has ${campaignObj.adgroup_count} ad groups, which exceeds the limit of 20.`)
+      }
+
       const payload = {
         advertiser_id: advertiserId,
         source_campaign_id: selectedCampaign,
