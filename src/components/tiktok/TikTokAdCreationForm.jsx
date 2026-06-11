@@ -9,7 +9,7 @@ import ReorderAdNameParts from "@/components/ui/ReorderAdNameParts"
 import { useNavigate } from "react-router-dom"
 
 import { useTikTokVideoUpload } from "@/hooks/useTikTokVideoUpload"
-import { readCache, writeCache } from "@/lib/dataCache"
+import { readCache, writeCache, clearCache } from "@/lib/dataCache"
 import { useTikTokAuth } from "@/lib/TikTokAuthContext"
 import { cn } from "@/lib/utils"
 import { saveTikTokSettings, deleteTikTokCopyTemplate } from "@/lib/saveTikTokSettings"
@@ -1379,6 +1379,17 @@ export default function TikTokAdCreationForm({
         }).catch(() => { })
       }
     } finally {
+      if (Array.isArray(selectedCampaign)) {
+        selectedCampaign.forEach(campId => {
+          clearCache(`tiktok_adgroups_${campId}`);
+        });
+      }
+      try {
+        forceRefreshAdGroups();
+      } catch (refreshErr) {
+        console.warn('[TikTokAdCreationForm] Failed to refresh ad groups on job completion:', refreshErr);
+      }
+
       setJobQueue(prev => prev.slice(1))
       setIsSubmitting(false)
       setIsUploading(false)
@@ -2464,8 +2475,12 @@ export default function TikTokAdCreationForm({
         fileCount = fd.importedPosts.length;
       }
 
-      if (fileCount > 50) {
-        toast.error(`${variant.name}: You cannot launch more than 50 ads at once (current selection: ${fileCount} ads).`);
+      const activeTexts = fd.adTexts ? fd.adTexts.filter(t => t.trim() !== '') : [];
+      const captionCount = activeTexts.length > 0 ? activeTexts.length : 1;
+      const adsToBeCreated = fileCount * captionCount;
+
+      if (adsToBeCreated > 50) {
+        toast.error(`${variant.name}: You cannot launch more than 50 ads at once (current selection: ${adsToBeCreated} ads).`);
         return;
       }
 
@@ -2474,8 +2489,42 @@ export default function TikTokAdCreationForm({
           const agObj = adGroups.find(ag => ag.adgroup_id === adgroupId);
           if (agObj) {
             const currentAdCount = agObj.ad_count || 0;
-            if (currentAdCount + fileCount > 50) {
-              toast.error(`${variant.name}: Cannot launch ads. Ad group "${agObj.adgroup_name}" currently has ${currentAdCount} ads. Adding ${fileCount} more would exceed the limit of 50 ads per ad group.`);
+
+            // Calculate ads already queued for this ad group in the job queue
+            let queuedAdsCount = 0;
+            jobQueue.forEach(qj => {
+              const qfd = qj.formData;
+              if (!qfd.isDuplicatingAdGroupMode && qfd.selectedAdGroup && qfd.selectedAdGroup.includes(adgroupId)) {
+                let qFileCount = qfd.files.length + qfd.driveFiles.length + qfd.dropboxFiles.length + qfd.tiktokLibraryFiles.length;
+                if (qfd.adType === 'SPARK') {
+                  qFileCount = qfd.importedPosts.length;
+                }
+                const qActiveTexts = qfd.adTexts ? qfd.adTexts.filter(t => t.trim() !== '') : [];
+                const qCaptionCount = qActiveTexts.length > 0 ? qActiveTexts.length : 1;
+                queuedAdsCount += qFileCount * qCaptionCount;
+              }
+            });
+
+            // Also account for the currently running job if it is targeting this ad group
+            if (currentJob) {
+              const qfd = currentJob.formData;
+              if (!qfd.isDuplicatingAdGroupMode && qfd.selectedAdGroup && qfd.selectedAdGroup.includes(adgroupId)) {
+                let qFileCount = qfd.files.length + qfd.driveFiles.length + qfd.dropboxFiles.length + qfd.tiktokLibraryFiles.length;
+                if (qfd.adType === 'SPARK') {
+                  qFileCount = qfd.importedPosts.length;
+                }
+                const qActiveTexts = qfd.adTexts ? qfd.adTexts.filter(t => t.trim() !== '') : [];
+                const qCaptionCount = qActiveTexts.length > 0 ? qActiveTexts.length : 1;
+                queuedAdsCount += qFileCount * qCaptionCount;
+              }
+            }
+
+            if (currentAdCount + queuedAdsCount + adsToBeCreated > 50) {
+              if (queuedAdsCount > 0) {
+                toast.error(`${variant.name}: Cannot launch ads. Ad group "${agObj.adgroup_name}" currently has ${currentAdCount} ads and ${queuedAdsCount} ads pending in the job queue. Adding ${adsToBeCreated} more would exceed the limit of 50 ads per ad group.`);
+              } else {
+                toast.error(`${variant.name}: Cannot launch ads. Ad group "${agObj.adgroup_name}" currently has ${currentAdCount} ads. Adding ${adsToBeCreated} more would exceed the limit of 50 ads per ad group.`);
+              }
               return;
             }
           }
@@ -3709,6 +3758,7 @@ export default function TikTokAdCreationForm({
                                           </div>
                                         </div>
                                       </CommandItem>
+                                    )
                                   })}
                                 </div>
                               )
