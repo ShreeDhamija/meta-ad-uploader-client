@@ -3401,7 +3401,11 @@ export default function TikTokAdCreationForm({
                     <div className="p-2 border-t border-gray-100">
                       <Button
                         type="button"
-                        disabled={campaigns.length === 0}
+                        disabled={
+                          campaigns.length === 0 ||
+                          (selectedCampaign.length === 1 &&
+                            campaigns.find(c => c.campaign_id === selectedCampaign[0])?.is_smart_performance_campaign)
+                        }
                         onClick={() => {
                           if (selectedCampaign.length === 1) {
                             const campId = selectedCampaign[0];
@@ -3490,6 +3494,7 @@ export default function TikTokAdCreationForm({
                             <CommandGroup>
                               {campaigns
                                 .filter((c) =>
+                                  !c.is_smart_performance_campaign &&
                                   (c.campaign_name || c.campaign_id || '').toLowerCase().includes(duplicateCampaignSearchValue.toLowerCase())
                                 )
                                 .map((c) => (
