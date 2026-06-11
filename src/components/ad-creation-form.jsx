@@ -1063,6 +1063,7 @@ export default function AdCreationForm({
     selectedShopDestination,
     selectedShopDestinationType,
     selectedForm,
+    selectedTemplate,
     isPartnershipAd,
     partnerIgAccountId,
     partnerFbPageId,
@@ -1091,6 +1092,7 @@ export default function AdCreationForm({
     selectedShopDestination,
     selectedShopDestinationType,
     selectedForm,
+    selectedTemplate,
     isPartnershipAd,
     partnerIgAccountId,
     partnerFbPageId,
@@ -1318,12 +1320,15 @@ export default function AdCreationForm({
       selectedShopDestination: variantState.selectedShopDestination || '',
       selectedShopDestinationType: variantState.selectedShopDestinationType || '',
       selectedForm: variantState.selectedForm || null,
+      selectedTemplate: variantState.selectedTemplate || '',
       isPartnershipAd: Boolean(variantState.isPartnershipAd),
       partnerIgAccountId: variantState.partnerIgAccountId || '',
       partnerFbPageId: variantState.partnerFbPageId || '',
       partnershipIdentityMode: variantState.partnershipIdentityMode || 'dynamic',
       partnershipPrimaryIdentity: variantState.partnershipPrimaryIdentity || 'brand',
-      adNameFormulaV2: variantState.adNameFormulaV2 ? { ...variantState.adNameFormulaV2 } : null,
+      adNameFormulaV2: variantState.adNameFormulaV2
+        ? { ...variantState.adNameFormulaV2, selectedTemplate: variantState.selectedTemplate || '' }
+        : null,
       adValues: variantState.adValues ? JSON.parse(JSON.stringify(variantState.adValues)) : {},
       adScheduleStartTime: variantState.adScheduleStartTime || null,
       adScheduleEndTime: variantState.adScheduleEndTime || null,
@@ -1422,6 +1427,7 @@ export default function AdCreationForm({
     setSelectedShopDestination(d.selectedShopDestination || '');
     setSelectedShopDestinationType(d.selectedShopDestinationType || '');
     setSelectedForm(d.selectedForm || null);
+    setSelectedTemplate(d.selectedTemplate || '');
     setIsPartnershipAd(Boolean(d.isPartnershipAd));
     setPartnerIgAccountId(d.partnerIgAccountId || '');
     setPartnerFbPageId(d.partnerFbPageId || '');
@@ -1435,7 +1441,7 @@ export default function AdCreationForm({
     setCompletedJobs(prev => prev.filter(j => j.id !== job.id));
 
     toast.success('Form restored — review and resubmit when ready.');
-  }, [setActiveVariantId, setAdNameFormulaV2, setAdScheduleEndTime, setAdScheduleStartTime, setAdType, setCta, setDescriptions, setDriveFiles, setDropboxFiles, setFrameioFiles, setDuplicateAdSet, setEnablePlacementCustomization, setFileGroups, setFileVariantMap, setFiles, setGroupVariantMap, setHeadlines, setImportedFiles, setImportedPosts, setInstagramAccountId, setIsCarouselAd, setIsPartnershipAd, setLaunchPaused, setLink, setMessages, setNewAdSetName, setPageId, setPartnerFbPageId, setPartnerIgAccountId, setPartnershipIdentityMode, setPartnershipPrimaryIdentity, setPhoneNumber, setPostVariantMap, setSelectedAdAccount, setSelectedAdSets, setSelectedCampaign, setSelectedFiles, setSelectedForm, setSelectedIgOrganicPosts, setSelectedShopDestination, setSelectedShopDestinationType, setThumbnail, setVariants, setVideoThumbs]);
+  }, [setActiveVariantId, setAdNameFormulaV2, setAdScheduleEndTime, setAdScheduleStartTime, setAdType, setCta, setDescriptions, setDriveFiles, setDropboxFiles, setFrameioFiles, setDuplicateAdSet, setEnablePlacementCustomization, setFileGroups, setFileVariantMap, setFiles, setGroupVariantMap, setHeadlines, setImportedFiles, setImportedPosts, setInstagramAccountId, setIsCarouselAd, setIsPartnershipAd, setLaunchPaused, setLink, setMessages, setNewAdSetName, setPageId, setPartnerFbPageId, setPartnerIgAccountId, setPartnershipIdentityMode, setPartnershipPrimaryIdentity, setPhoneNumber, setPostVariantMap, setSelectedAdAccount, setSelectedAdSets, setSelectedCampaign, setSelectedFiles, setSelectedForm, setSelectedIgOrganicPosts, setSelectedShopDestination, setSelectedShopDestinationType, setSelectedTemplate, setThumbnail, setVariants, setVideoThumbs]);
 
 
   const adLimitWarning = useMemo(() => {
@@ -3193,11 +3199,6 @@ export default function AdCreationForm({
 
 
   const computeAdNameFromFormula = useCallback((file, iterationIndex = 0, link = "", formula = null, adType = "") => {
-
-    if (!adNameFormulaV2?.rawInput) {
-      return computeAdName(file, adValues.dateType, iterationIndex);
-    }
-
     const formulaToUse = formula || adNameFormulaV2;
     if (!formulaToUse?.rawInput) {
       return computeAdName(file, adValues.dateType, iterationIndex);
@@ -3261,8 +3262,9 @@ export default function AdCreationForm({
       .replace(/\{\{Iteration\}\}/gi, String(iterationIndex + 1).padStart(2, "0"))
       .replace(/\{\{URL Slug\}\}/gi, urlSlug)
       .replace(/\{\{Ad Type\}\}/gi, adTypeLabel);
-    const templateHashReplacement = isTemplateLinkSyncUser && selectedTemplate && defaultTemplateName
-      ? (selectedTemplate === defaultTemplateName ? "33" : "21")
+    const templateNameForFormula = formulaToUse.selectedTemplate || selectedTemplate;
+    const templateHashReplacement = isTemplateLinkSyncUser && templateNameForFormula && defaultTemplateName
+      ? (templateNameForFormula === defaultTemplateName ? "33" : "21")
       : null;
     if (templateHashReplacement) {
       adName = adName.replace(/#/g, templateHashReplacement);
@@ -3276,7 +3278,7 @@ export default function AdCreationForm({
 
 
     return adName.trim() || "Ad Generated Through Blip";
-  }, [adNameFormulaV2, defaultTemplateName, isTemplateLinkSyncUser, selectedTemplate]);
+  }, [adNameFormulaV2, adValues.dateType, computeAdName, defaultTemplateName, isTemplateLinkSyncUser, selectedTemplate]);
 
 
   useEffect(() => {
