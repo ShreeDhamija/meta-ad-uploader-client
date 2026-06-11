@@ -2459,9 +2459,18 @@ export default function TikTokAdCreationForm({
         return;
       }
 
-      if (fd.isDuplicatingAdGroupMode && !fd.newAdGroupName.trim()) {
-        toast.error(`${variant.name}: Please enter a name for the new duplicated ad group`);
-        return;
+      if (fd.isDuplicatingAdGroupMode) {
+        if (!fd.newAdGroupName.trim()) {
+          toast.error(`${variant.name}: Please enter a name for the new duplicated ad group`);
+          return;
+        }
+        if (fd.selectedCampaign && fd.selectedCampaign.length === 1) {
+          const camp = campaigns.find(c => c.campaign_id === fd.selectedCampaign[0]);
+          if (camp && camp.adgroup_count >= 20) {
+            toast.error(`${variant.name}: Cannot duplicate ad group. Selected campaign "${camp.campaign_name}" has reached the limit of 20 ad group.`);
+            return;
+          }
+        }
       }
 
       if (!fd.selectedIdentity || fd.selectedIdentity === 'CUSTOMIZED_USER') {
@@ -3687,19 +3696,23 @@ export default function TikTokAdCreationForm({
                       )}
                     </CommandList>
 
-                    <div className="p-2 border-t border-gray-100">
-                      <Button
-                        type="button"
-                        disabled={campaigns.length === 0}
-                        onClick={() => {
-                          setShowDuplicateAdGroupBlock(true);
-                          setOpenAdGroup(false);
-                        }}
-                        className="h-10 w-full px-4 py-3 rounded-2xl bg-zinc-800 text-white hover:!bg-black hover:!text-white shadow-md flex items-center justify-center text-xs font-semibold cursor-pointer transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed border-none"
-                      >
-                        🚀 Launch in a New Ad Group
-                      </Button>
-                    </div>
+                    <Button
+                      type="button"
+                      disabled={
+                        campaigns.length === 0 ||
+                        (selectedCampaign.length === 1 &&
+                          campaigns.find(c => c.campaign_id === selectedCampaign[0])?.adgroup_count >= 20)
+                      }
+                      onClick={() => {
+                        setShowDuplicateAdGroupBlock(true);
+                        setOpenAdGroup(false);
+                      }}
+                      className="h-10 w-full px-4 py-3 rounded-2xl bg-zinc-800 text-white hover:!bg-black hover:!text-white shadow-md flex items-center justify-center text-xs font-semibold cursor-pointer transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed border-none"
+                    >
+                      {selectedCampaign.length === 1 && campaigns.find(c => c.campaign_id === selectedCampaign[0])?.adgroup_count >= 20
+                        ? "Max Ad Sets Reached (20/20)"
+                        : "🚀 Launch in a New Ad Group"}
+                    </Button>
                   </Command>
                 </PopoverContent>
               </Popover>
