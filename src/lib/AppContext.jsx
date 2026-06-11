@@ -1,4 +1,4 @@
-import { useEffect, useState, useContext, useMemo, useCallback, createContext } from "react"
+import { useEffect, useState, useContext, useMemo, useCallback, useRef, createContext } from "react"
 import useSubscription from "@/lib/useSubscriptionSettings"
 import useGlobalSettings from "@/lib/useGlobalSettings"
 import { readCache, writeCache, clearCache } from "@/lib/dataCache"
@@ -17,11 +17,17 @@ const shouldBustCacheFromURL = () => {
 
 export const AppProvider = ({ children }) => {
   const isOnAuthRoute = typeof window !== 'undefined' && isAuthRoute();
-  const bustOnMount = shouldBustCacheFromURL();
-  if (bustOnMount) clearCache();
+  const authRedirectingRef = useRef(false);
+  const [{ bustOnMount, cachedAccounts, cachedPages }] = useState(() => {
+    const shouldBust = shouldBustCacheFromURL();
+    if (shouldBust) clearCache();
 
-  const cachedAccounts = bustOnMount ? null : readCache('adAccounts');
-  const cachedPages = bustOnMount ? null : readCache('pages');
+    return {
+      bustOnMount: shouldBust,
+      cachedAccounts: shouldBust ? null : readCache('adAccounts'),
+      cachedPages: shouldBust ? null : readCache('pages'),
+    };
+  });
 
   const [pages, setPages] = useState(cachedPages || [])
   const [adAccounts, setAdAccounts] = useState(cachedAccounts || [])
@@ -41,12 +47,30 @@ export const AppProvider = ({ children }) => {
     return allAdAccounts
   }, [allAdAccounts, subscriptionData.planType, selectedAdAccountIds])
 
+  const handleUnauthorizedSession = useCallback(() => {
+    if (authRedirectingRef.current || isOnAuthRoute || isAuthRoute()) return;
+
+    authRedirectingRef.current = true;
+    sessionStorage.setItem('forceLogout', '1');
+    fetch(`${API_BASE_URL}/auth/logout`, {
+      method: 'POST',
+      credentials: 'include',
+      keepalive: true,
+    }).catch(() => { });
+    window.location.href = '/login';
+  }, [isOnAuthRoute]);
+
   const fetchAdAccounts = useCallback(async () => {
     if (isOnAuthRoute) return []
 
     setAdAccountsLoading(true);
     try {
       const res = await fetch(`${API_BASE_URL}/auth/fetch-ad-accounts`, { credentials: "include" })
+      if (res.status === 401) {
+        handleUnauthorizedSession()
+        return []
+      }
+
       const data = await res.json()
       if (data.success && data.adAccounts) {
         setAllAdAccounts(data.adAccounts)
@@ -60,7 +84,7 @@ export const AppProvider = ({ children }) => {
     } finally {
       setAdAccountsLoading(false);
     }
-  }, [isOnAuthRoute])
+  }, [handleUnauthorizedSession, isOnAuthRoute])
 
   const fetchPages = useCallback(async () => {
     if (isOnAuthRoute) return []
@@ -68,6 +92,11 @@ export const AppProvider = ({ children }) => {
     setPagesLoading(true);
     try {
       const res = await fetch(`${API_BASE_URL}/auth/fetch-pages`, { credentials: "include" })
+      if (res.status === 401) {
+        handleUnauthorizedSession()
+        return []
+      }
+
       const data = await res.json()
       if (data.success && data.pages) {
         setPages(data.pages)
@@ -80,7 +109,7 @@ export const AppProvider = ({ children }) => {
     } finally {
       setPagesLoading(false);
     }
-  }, [isOnAuthRoute])
+  }, [handleUnauthorizedSession, isOnAuthRoute])
 
 
   const refreshPagePictures = useCallback(async (pagesToRefresh) => {
@@ -92,6 +121,11 @@ export const AppProvider = ({ children }) => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pageIds: pagesToRefresh.map(p => p.id) }),
       });
+      if (res.status === 401) {
+        handleUnauthorizedSession()
+        return
+      }
+
       const data = await res.json();
       if (!data.success) return;
 
@@ -115,7 +149,7 @@ export const AppProvider = ({ children }) => {
     } catch (err) {
       console.error("Failed to refresh page pictures:", err);
     }
-  }, []);
+  }, [handleUnauthorizedSession]);
 
 
 
