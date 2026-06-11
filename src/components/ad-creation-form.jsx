@@ -56,6 +56,7 @@ import QueueIcon from '@/assets/icons/queue.svg?react';
 import PartialSuccess from '@/assets/icons/partialsuccess.svg?react';
 import pLimit from 'p-limit';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
+const TEMPLATE_LINK_SYNC_USER_ID = "10236978990363167";
 
 // Staging gate — used to hide work-in-progress UI (currently: the
 // "View Top Creatives for Flexible Ads" trigger). Mirrors the pattern in
@@ -772,7 +773,7 @@ export default function AdCreationForm({
   const [uploadingToS3, setUploadingToS3] = useState(false)
 
   const [pageSearchValue, setPageSearchValue] = useState("")
-  const { isLoggedIn } = useAuth()
+  const { isLoggedIn, userId } = useAuth()
   const { showMessenger } = useIntercom()
   const [openInstagram, setOpenInstagram] = useState(false)
   const [instagramSearchValue, setInstagramSearchValue] = useState("")
@@ -1873,6 +1874,26 @@ export default function AdCreationForm({
 
   const availableLinks = adAccountSettings?.links || [];
   const defaultLink = availableLinks.find(l => l.isDefault) || availableLinks[0];
+  const isTemplateLinkSyncUser = String(userId || "") === TEMPLATE_LINK_SYNC_USER_ID;
+
+  useEffect(() => {
+    if (!isTemplateLinkSyncUser || !selectedTemplate || !defaultTemplateName || availableLinks.length === 0) return;
+
+    const defaultUrl = defaultLink?.url || "";
+    const syncedUrl = selectedTemplate === defaultTemplateName
+      ? defaultUrl
+      : availableLinks.find((linkObj) => linkObj?.url && linkObj.url !== defaultUrl)?.url;
+    if (!syncedUrl) return;
+
+    setShowCustomLink(false);
+    setCustomLink("");
+    setLink((prevLinks) => {
+      const currentLinks = Array.isArray(prevLinks) && prevLinks.length > 1 ? prevLinks : [prevLinks?.[0] || ""];
+      const nextLinks = currentLinks.length > 1 ? currentLinks.map(() => syncedUrl) : [syncedUrl];
+      return JSON.stringify(currentLinks) === JSON.stringify(nextLinks) ? prevLinks : nextLinks;
+    });
+    setLinkCustomStates({});
+  }, [availableLinks, defaultLink, defaultTemplateName, isTemplateLinkSyncUser, selectedTemplate, setCustomLink, setLink, setShowCustomLink]);
 
   const filteredPages = useMemo(() =>
     pages.filter((page) =>
@@ -3240,6 +3261,12 @@ export default function AdCreationForm({
       .replace(/\{\{Iteration\}\}/gi, String(iterationIndex + 1).padStart(2, "0"))
       .replace(/\{\{URL Slug\}\}/gi, urlSlug)
       .replace(/\{\{Ad Type\}\}/gi, adTypeLabel);
+    const templateHashReplacement = isTemplateLinkSyncUser && selectedTemplate && defaultTemplateName
+      ? (selectedTemplate === defaultTemplateName ? "33" : "21")
+      : null;
+    if (templateHashReplacement) {
+      adName = adName.replace(/#/g, templateHashReplacement);
+    }
     adName = adName.replace(/\{\{([^:}]+):([^}]+)\}\}/g, (match, category, value) => value);
     adName = adName.replace(/\{\{([^}]+)\}\}/g, (match, content) => {
       // Don't touch built-in variables that weren't already replaced
@@ -3249,7 +3276,7 @@ export default function AdCreationForm({
 
 
     return adName.trim() || "Ad Generated Through Blip";
-  }, [adNameFormulaV2]);
+  }, [adNameFormulaV2, defaultTemplateName, isTemplateLinkSyncUser, selectedTemplate]);
 
 
   useEffect(() => {
