@@ -1091,7 +1091,10 @@ export default function TikTokAdCreationForm({
 
         for (const adgroupId of adGroupIdsToSubmit) {
           if (signal.aborted) throw new DOMException('Job cancelled.', 'AbortError')
-          const adGroupName = adGroups.find(ag => ag.adgroup_id === adgroupId)?.adgroup_name || adgroupId
+          const adGroupObj = adGroups.find(ag => ag.adgroup_id === adgroupId)
+          const adGroupName = adGroupObj?.adgroup_name || adgroupId
+          const shoppingAdsType = adGroupObj?.shopping_ads_type || null
+          const productSource = adGroupObj?.product_source || null
 
           const finalAdName = computeAdNameFromFormula(
             item.file,
@@ -1132,7 +1135,9 @@ export default function TikTokAdCreationForm({
                   spark_ad_auth_code: item.file.authCode,
                   tiktok_item_id: videoId,
                   adType: 'SPARK'
-                } : {})
+                } : {}),
+                ...(shoppingAdsType ? { shopping_ads_type: shoppingAdsType } : {}),
+                ...(productSource ? { product_source: productSource } : {})
               }
               if (currentIdentityId) creative.identity_id = currentIdentityId
 
@@ -1196,7 +1201,9 @@ export default function TikTokAdCreationForm({
                     spark_ad_auth_code: item.file.authCode,
                     tiktok_item_id: videoId,
                     adType: 'SPARK'
-                  } : {})
+                  } : {}),
+                  ...(shoppingAdsType ? { shopping_ads_type: shoppingAdsType } : {}),
+                  ...(productSource ? { product_source: productSource } : {})
                 }
                 if (currentIdentityId) creative.identity_id = currentIdentityId
 
