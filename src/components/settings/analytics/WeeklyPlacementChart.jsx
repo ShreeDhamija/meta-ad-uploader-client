@@ -38,16 +38,25 @@ function formatPct(v) {
     return `${v.toFixed(1)}%`
 }
 
+function formatRoas(v) {
+    if (v == null) return "—"
+    return `${v.toFixed(2)}×`
+}
+
 function truncateName(name, max = 30) {
     if (!name) return ""
     return name.length > max ? name.slice(0, max - 1) + "…" : name
 }
 
-function CustomTooltip({ active, payload, viewMode, hiddenSeries }) {
+function CustomTooltip({ active, payload, viewMode, metric, hiddenSeries }) {
     if (!active || !payload?.length) return null
     const visible = payload.filter(p => !hiddenSeries.has(p.dataKey))
     if (!visible.length) return null
     const title = payload[0]?.payload?.tooltipTitle || payload[0]?.payload?.week
+    const formatValue = (v) =>
+        metric === "roas" ? formatRoas(Number(v))
+            : viewMode === "percent" ? formatPct(Number(v))
+                : formatSpend(Number(v))
     return (
         <div className="rounded-xl border border-gray-200 bg-white p-3 text-xs shadow-lg">
             <p className="mb-2 font-semibold text-gray-900">{title}</p>
@@ -60,7 +69,7 @@ function CustomTooltip({ active, payload, viewMode, hiddenSeries }) {
                         />
                         <span className="max-w-[180px] truncate">{item.name}</span>
                         <span className="ml-auto font-medium text-gray-900">
-                            {viewMode === "percent" ? formatPct(Number(item.value)) : formatSpend(Number(item.value))}
+                            {formatValue(item.value)}
                         </span>
                     </p>
                 ))}
@@ -75,9 +84,13 @@ export default function WeeklyPlacementChart({ adAccountId, dateRange, refreshKe
     const [error, setError] = useState(null)
     const [hiddenSeries, setHiddenSeries] = useState(new Set())
     const [viewMode, setViewMode] = useState("dollar")
+    const [metric, setMetric] = useState("spend")
     const [breakdown, setBreakdown] = useState("placement")
 
     const dimensionConfig = getDimensionConfig(breakdown)
+    // ROAS is only offered when the current breakdown actually has purchase ROAS data.
+    const hasRoas = !!data?.hasRoas
+    const effectiveMetric = metric === "roas" && hasRoas ? "roas" : "spend"
 
     useEffect(() => {
         setHiddenSeries(new Set())
@@ -111,6 +124,14 @@ export default function WeeklyPlacementChart({ adAccountId, dateRange, refreshKe
     const series = data?.placements || []
 
     const chartData = useMemo(() => {
+        // ROAS: plot the normalized (spend-weighted) ROAS values directly — no $/% transform.
+        if (effectiveMetric === "roas") {
+            return (data?.roasSeries || []).map(row => ({
+                ...row,
+                week: formatBucketLabel(row.week, granularity),
+                tooltipTitle: formatBucketTooltipTitle(row.week, granularity),
+            }))
+        }
         return (data?.series || []).map(row => {
             const weekLabel = formatBucketLabel(row.week, granularity)
             const tooltipTitle = formatBucketTooltipTitle(row.week, granularity)
@@ -124,7 +145,7 @@ export default function WeeklyPlacementChart({ adAccountId, dateRange, refreshKe
             }
             return pctRow
         })
-    }, [data, series, viewMode, granularity])
+    }, [data, series, viewMode, effectiveMetric, granularity])
 
     const handleToggleSeries = (key) => {
         setHiddenSeries(prev => {
@@ -159,26 +180,50 @@ export default function WeeklyPlacementChart({ adAccountId, dateRange, refreshKe
                             </button>
                         ))}
                     </div>
-                    {/* $ / % toggle */}
-                    <div className="flex items-center gap-0.5 bg-gray-100 rounded-xl p-0.5">
-                        {[
-                            { key: "dollar", label: "$" },
-                            { key: "percent", label: "%" },
-                        ].map(opt => (
-                            <button
-                                key={opt.key}
-                                onClick={() => setViewMode(opt.key)}
-                                className={cn(
-                                    "px-3 py-1.5 text-[11px] font-medium rounded-lg transition-all min-w-[28px]",
-                                    viewMode === opt.key
-                                        ? "bg-white text-gray-900 shadow-xs ring-1 ring-black/5"
-                                        : "text-gray-500 hover:text-gray-700",
-                                )}
-                            >
-                                {opt.label}
-                            </button>
-                        ))}
-                    </div>
+                    {/* Spend / ROAS toggle (only when ROAS data is available) */}
+                    {hasRoas && (
+                        <div className="flex items-center gap-0.5 bg-gray-100 rounded-xl p-0.5">
+                            {[
+                                { key: "spend", label: "Spend" },
+                                { key: "roas", label: "ROAS" },
+                            ].map(opt => (
+                                <button
+                                    key={opt.key}
+                                    onClick={() => setMetric(opt.key)}
+                                    className={cn(
+                                        "px-3 py-1.5 text-[11px] font-medium rounded-lg transition-all",
+                                        effectiveMetric === opt.key
+                                            ? "bg-white text-gray-900 shadow-xs ring-1 ring-black/5"
+                                            : "text-gray-500 hover:text-gray-700",
+                                    )}
+                                >
+                                    {opt.label}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                    {/* $ / % toggle (spend only — share-of-total is meaningless for ROAS) */}
+                    {effectiveMetric === "spend" && (
+                        <div className="flex items-center gap-0.5 bg-gray-100 rounded-xl p-0.5">
+                            {[
+                                { key: "dollar", label: "$" },
+                                { key: "percent", label: "%" },
+                            ].map(opt => (
+                                <button
+                                    key={opt.key}
+                                    onClick={() => setViewMode(opt.key)}
+                                    className={cn(
+                                        "px-3 py-1.5 text-[11px] font-medium rounded-lg transition-all min-w-[28px]",
+                                        viewMode === opt.key
+                                            ? "bg-white text-gray-900 shadow-xs ring-1 ring-black/5"
+                                            : "text-gray-500 hover:text-gray-700",
+                                    )}
+                                >
+                                    {opt.label}
+                                </button>
+                            ))}
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -208,11 +253,15 @@ export default function WeeklyPlacementChart({ adAccountId, dateRange, refreshKe
                                 tick={{ fontSize: 10, fill: "#9ca3af" }}
                                 tickLine={false}
                                 axisLine={{ stroke: "#e5e7eb" }}
-                                tickFormatter={viewMode === "percent" ? (v) => `${v.toFixed(0)}%` : formatSpend}
-                                domain={viewMode === "percent" ? [0, 100] : undefined}
+                                tickFormatter={
+                                    effectiveMetric === "roas" ? (v) => `${v.toFixed(1)}×`
+                                        : viewMode === "percent" ? (v) => `${v.toFixed(0)}%`
+                                            : formatSpend
+                                }
+                                domain={viewMode === "percent" && effectiveMetric === "spend" ? [0, 100] : undefined}
                                 width={48}
                             />
-                            <Tooltip content={<CustomTooltip viewMode={viewMode} hiddenSeries={hiddenSeries} />} />
+                            <Tooltip content={<CustomTooltip viewMode={viewMode} metric={effectiveMetric} hiddenSeries={hiddenSeries} />} />
                             {series.map((key, i) => (
                                 <Line
                                     key={key}
