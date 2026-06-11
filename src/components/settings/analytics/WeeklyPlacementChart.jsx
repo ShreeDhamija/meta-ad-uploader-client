@@ -18,9 +18,9 @@ const COLORS = [
 ]
 
 const DIMENSIONS = [
-    { key: "placement", label: "Placement", subtitle: "" },
-    { key: "age", label: "Age", subtitle: "By placement + audience" },
-    { key: "gender", label: "Gender", subtitle: "Ad spend by gender" },
+    { key: "placement", label: "Placement", subtitle: "By placement + platform" },
+    { key: "age", label: "Age", subtitle: "By age" },
+    { key: "gender", label: "Gender", subtitle: "By gender" },
 ]
 
 function getDimensionConfig(key) {
