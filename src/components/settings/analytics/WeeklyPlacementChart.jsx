@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import { Helix } from "ldrs/react"
 import "ldrs/react/Helix.css"
 import {
@@ -96,8 +96,30 @@ export default function WeeklyPlacementChart({ adAccountId, dateRange, refreshKe
         setHiddenSeries(new Set())
     }, [adAccountId, breakdown])
 
+    // In-memory cache so toggling the breakdown view (Placement/Age/Gender) doesn't
+    // refetch what we've already pulled. Keyed by every request param, so a change to
+    // the global date range / account / granularity / manual refresh yields a new key
+    // and fetches fresh. Mirrors the *CacheRef pattern in AnalyticsDashboard.
+    const cacheRef = useRef({})
+
+    // Drop cached breakdowns when the global date range changes — stale-range data
+    // isn't worth keeping around.
+    useEffect(() => {
+        cacheRef.current = {}
+    }, [dateRange?.since, dateRange?.until])
+
     useEffect(() => {
         if (!adAccountId) { setData(null); return }
+
+        const cacheKey = `${adAccountId}::${breakdown}::${granularity}::${dateRange?.since || ""}::${dateRange?.until || ""}::${refreshKey || ""}`
+        const cached = cacheRef.current[cacheKey]
+        if (cached) {
+            setData(cached)
+            setError(null)
+            setIsLoading(false)
+            return
+        }
+
         let cancelled = false
         setIsLoading(true)
         setError(null)
@@ -115,7 +137,7 @@ export default function WeeklyPlacementChart({ adAccountId, dateRange, refreshKe
                 if (!r.ok) return r.json().then(e => { throw new Error(e.error || "Failed to fetch") })
                 return r.json()
             })
-            .then(d => { if (!cancelled) setData(d) })
+            .then(d => { if (!cancelled) { cacheRef.current[cacheKey] = d; setData(d) } })
             .catch(err => { if (!cancelled) setError(err.message || "Error") })
             .finally(() => { if (!cancelled) setIsLoading(false) })
         return () => { cancelled = true }
