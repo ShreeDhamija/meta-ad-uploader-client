@@ -1316,6 +1316,13 @@ export default function Home() {
 
         <>
 
+            <div
+                role="status"
+                className="z-[60] flex min-h-[44px] w-full items-center justify-center bg-red-600 px-4 py-2 text-center text-sm font-semibold text-white shadow-sm"
+            >
+                We are facing issues with Facebook API. We&apos;re working on fixing it ASAP.
+            </div>
+
             {/* Mobile message - hidden on desktop */}
             {showMobileBanner && (
                 <div className="mobile-message fixed inset-0 bg-white flex-col items-center justify-center p-6 z-[100] hidden">

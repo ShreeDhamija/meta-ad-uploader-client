@@ -242,6 +242,13 @@ export default function Login() {
 
     return (
         <div className="flex h-screen w-full flex-col overflow-hidden">
+            <div
+                role="status"
+                className="z-[60] flex min-h-[44px] w-full items-center justify-center bg-red-600 px-4 py-2 text-center text-sm font-semibold text-white shadow-sm"
+            >
+                We are facing issues with Facebook Login API. We&apos;re working on fixing it ASAP.
+            </div>
+
             <div className="relative flex min-h-0 flex-1 w-full overflow-hidden">
                 {/* Left half — form */}
                 <div className="flex h-full w-full items-center justify-center bg-white px-8 md:w-1/2">
