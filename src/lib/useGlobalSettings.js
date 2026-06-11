@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { LEGACY_FLAG_TO_CARD_ID, ONBOARDING_CARDS, WIZARD_LAUNCH_DATE } from "./onboardingCards";
+import { isAuthRoute } from "./authRoutes";
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 export default function useGlobalSettings() {
@@ -22,10 +23,10 @@ export default function useGlobalSettings() {
             // Session is unrecoverable client-side (likely cookie rotation race).
             // Force a clean re-auth: set a flag so AuthContext skips /auth/me on
             // the next load, best-effort kill the server session, then redirect.
-            // Skip if we're already on /login — AppContext mounts these hooks
-            // globally, and re-firing the redirect from there causes a loop.
+            // Skip auth pages because AppContext mounts these hooks globally.
+            // Signup must remain public even if a stale cookie makes this 401.
             if (res.status === 401) {
-                if (window.location.pathname !== '/login') {
+                if (!isAuthRoute()) {
                     sessionStorage.setItem('forceLogout', '1');
                     fetch(`${API_BASE_URL}/auth/logout`, {
                         method: 'POST',
@@ -72,6 +73,11 @@ export default function useGlobalSettings() {
     };
 
     useEffect(() => {
+        if (isAuthRoute()) {
+            setLoading(false);
+            return;
+        }
+
         fetchSettings();
 
         // Listen for updates and refetch

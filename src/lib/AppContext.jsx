@@ -2,6 +2,7 @@ import { useEffect, useState, useContext, useMemo, useCallback, createContext } 
 import useSubscription from "@/lib/useSubscriptionSettings"
 import useGlobalSettings from "@/lib/useGlobalSettings"
 import { readCache, writeCache, clearCache } from "@/lib/dataCache"
+import { isAuthRoute } from "@/lib/authRoutes"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
@@ -15,6 +16,7 @@ const shouldBustCacheFromURL = () => {
 };
 
 export const AppProvider = ({ children }) => {
+  const isOnAuthRoute = typeof window !== 'undefined' && isAuthRoute();
   const bustOnMount = shouldBustCacheFromURL();
   if (bustOnMount) clearCache();
 
@@ -40,6 +42,8 @@ export const AppProvider = ({ children }) => {
   }, [allAdAccounts, subscriptionData.planType, selectedAdAccountIds])
 
   const fetchAdAccounts = useCallback(async () => {
+    if (isOnAuthRoute) return []
+
     setAdAccountsLoading(true);
     try {
       const res = await fetch(`${API_BASE_URL}/auth/fetch-ad-accounts`, { credentials: "include" })
@@ -56,9 +60,11 @@ export const AppProvider = ({ children }) => {
     } finally {
       setAdAccountsLoading(false);
     }
-  }, [])
+  }, [isOnAuthRoute])
 
   const fetchPages = useCallback(async () => {
+    if (isOnAuthRoute) return []
+
     setPagesLoading(true);
     try {
       const res = await fetch(`${API_BASE_URL}/auth/fetch-pages`, { credentials: "include" })
@@ -74,7 +80,7 @@ export const AppProvider = ({ children }) => {
     } finally {
       setPagesLoading(false);
     }
-  }, [])
+  }, [isOnAuthRoute])
 
 
   const refreshPagePictures = useCallback(async (pagesToRefresh) => {
@@ -114,6 +120,8 @@ export const AppProvider = ({ children }) => {
 
 
   useEffect(() => {
+    if (isOnAuthRoute) return
+
     if (bustOnMount) {
       // Strip the flag so a manual refresh won't keep busting.
       const url = new URL(window.location)
@@ -133,7 +141,7 @@ export const AppProvider = ({ children }) => {
       // Cache hit — refresh just the pics in the background
       refreshPagePictures(cachedPages);
     }
-  }, [])
+  }, [isOnAuthRoute, bustOnMount, cachedAccounts, cachedPages, fetchAdAccounts, fetchPages, refreshPagePictures])
 
   useEffect(() => {
     setAdAccounts(filteredAdAccounts)
