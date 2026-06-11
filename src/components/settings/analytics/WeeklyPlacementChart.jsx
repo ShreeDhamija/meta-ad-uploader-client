@@ -18,8 +18,8 @@ const COLORS = [
 ]
 
 const DIMENSIONS = [
-    { key: "placement", label: "Placement", subtitle: "Ad spend by publisher platform + position" },
-    { key: "age", label: "Age", subtitle: "Ad spend by age group" },
+    { key: "placement", label: "Placement", subtitle: "" },
+    { key: "age", label: "Age", subtitle: "By placement + audience" },
     { key: "gender", label: "Gender", subtitle: "Ad spend by gender" },
 ]
 
