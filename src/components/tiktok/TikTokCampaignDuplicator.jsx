@@ -87,9 +87,15 @@ export default function TikTokCampaignDuplicator({ advertiserId }) {
 
     try {
       const campaignObj = campaigns.find(c => c.campaign_id === selectedCampaign)
-      if (campaignObj && campaignObj.adgroup_count > 20) {
-        setIsDuplicating(false)
-        return toast.error(`Cannot duplicate this campaign. It has ${campaignObj.adgroup_count} ad groups, which exceeds the limit of 20.`)
+      if (campaignObj) {
+        if (campaignObj.is_smart_performance_campaign) {
+          setIsDuplicating(false)
+          return toast.error("Cannot duplicate this campaign. Duplication of Smart Performance Campaigns (SPC) is not supported.")
+        }
+        if (campaignObj.adgroup_count >= 20) {
+          setIsDuplicating(false)
+          return toast.error(`Cannot duplicate this campaign. It has ${campaignObj.adgroup_count} ad groups, which reaches or exceeds the limit of 20.`)
+        }
       }
 
       const payload = {
@@ -183,6 +189,8 @@ export default function TikTokCampaignDuplicator({ advertiserId }) {
                       <CommandEmpty>No campaign found.</CommandEmpty>
                       <CommandGroup>
                         {campaigns.filter(c =>
+                          !c.is_smart_performance_campaign &&
+                          (c.adgroup_count === undefined || c.adgroup_count < 20) &&
                           (c.campaign_name || '').toLowerCase().includes(campaignSearch.toLowerCase())
                         ).map(c => (
                           <CommandItem

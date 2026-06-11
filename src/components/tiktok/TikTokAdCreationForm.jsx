@@ -1898,8 +1898,8 @@ export default function TikTokAdCreationForm({
     if (!campaignId || !selectedAdvertiser || !newCampaignName.trim()) return
     const campaign = campaigns.find(c => c.campaign_id === campaignId)
     if (!campaign) return
-    if (campaign.adgroup_count > 20) {
-      return toast.error(`Cannot duplicate this campaign. It has ${campaign.adgroup_count} ad groups, which exceeds the limit of 20.`)
+    if (campaign.adgroup_count >= 20) {
+      return toast.error(`Cannot duplicate this campaign. It has ${campaign.adgroup_count} ad groups, which reaches or exceeds the limit of 20.`)
     }
     setIsDuplicating(true)
     const duplicatedName = newCampaignName.trim()
@@ -2459,18 +2459,32 @@ export default function TikTokAdCreationForm({
         return;
       }
 
-      if (fd.isDuplicatingAdGroupMode) {
-        if (!fd.newAdGroupName.trim()) {
-          toast.error(`${variant.name}: Please enter a name for the new duplicated ad group`);
-          return;
-        }
-        if (fd.selectedCampaign && fd.selectedCampaign.length === 1) {
-          const camp = campaigns.find(c => c.campaign_id === fd.selectedCampaign[0]);
-          if (camp && camp.adgroup_count >= 20) {
-            toast.error(`${variant.name}: Cannot duplicate ad group. Selected campaign "${camp.campaign_name}" has reached the limit of 20 ad group.`);
-            return;
+      let fileCount = fd.files.length + fd.driveFiles.length + fd.dropboxFiles.length + fd.tiktokLibraryFiles.length;
+      if (fd.adType === 'SPARK') {
+        fileCount = fd.importedPosts.length;
+      }
+
+      if (fileCount > 50) {
+        toast.error(`${variant.name}: You cannot launch more than 50 ads at once (current selection: ${fileCount} ads).`);
+        return;
+      }
+
+      if (!fd.isDuplicatingAdGroupMode && fd.selectedAdGroup && fd.selectedAdGroup.length > 0) {
+        for (const adgroupId of fd.selectedAdGroup) {
+          const agObj = adGroups.find(ag => ag.adgroup_id === adgroupId);
+          if (agObj) {
+            const currentAdCount = agObj.ad_count || 0;
+            if (currentAdCount + fileCount > 50) {
+              toast.error(`${variant.name}: Cannot launch ads. Ad group "${agObj.adgroup_name}" currently has ${currentAdCount} ads. Adding ${fileCount} more would exceed the limit of 50 ads per ad group.`);
+              return;
+            }
           }
         }
+      }
+
+      if (fd.isDuplicatingAdGroupMode && !fd.newAdGroupName.trim()) {
+        toast.error(`${variant.name}: Please enter a name for the new duplicated ad group`);
+        return;
       }
 
       if (!fd.selectedIdentity || fd.selectedIdentity === 'CUSTOMIZED_USER') {
@@ -3413,7 +3427,10 @@ export default function TikTokAdCreationForm({
                         disabled={
                           campaigns.length === 0 ||
                           (selectedCampaign.length === 1 &&
-                            campaigns.find(c => c.campaign_id === selectedCampaign[0])?.is_smart_performance_campaign)
+                            (() => {
+                              const camp = campaigns.find(c => c.campaign_id === selectedCampaign[0]);
+                              return camp?.is_smart_performance_campaign || (camp?.adgroup_count !== undefined && camp.adgroup_count >= 20);
+                            })())
                         }
                         onClick={() => {
                           if (selectedCampaign.length === 1) {
@@ -3504,6 +3521,7 @@ export default function TikTokAdCreationForm({
                               {campaigns
                                 .filter((c) =>
                                   !c.is_smart_performance_campaign &&
+                                  (c.adgroup_count === undefined || c.adgroup_count < 20) &&
                                   (c.campaign_name || c.campaign_id || '').toLowerCase().includes(duplicateCampaignSearchValue.toLowerCase())
                                 )
                                 .map((c) => (
@@ -3654,6 +3672,7 @@ export default function TikTokAdCreationForm({
                                   )}
                                   {campaignAdGroups.map((ag) => {
                                     const isSelected = selectedAdGroup.includes(ag.adgroup_id);
+                                    const isFull = ag.ad_count !== undefined && ag.ad_count >= 50;
                                     return (
                                       <CommandItem
                                         key={`${ag.campaignId || 'camp'}-${ag.adgroup_id}`}
@@ -3662,12 +3681,16 @@ export default function TikTokAdCreationForm({
                                           if (isSelected) {
                                             setSelectedAdGroup(prev => prev.filter(id => id !== ag.adgroup_id))
                                           } else {
+                                            if (isFull) {
+                                              return toast.error(`Cannot select ad group "${ag.adgroup_name}". It already has ${ag.ad_count} ads, which is the limit of 50.`);
+                                            }
                                             setSelectedAdGroup(prev => [...prev, ag.adgroup_id])
                                           }
                                         }}
                                         className={cn(
                                           "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
-                                          isSelected ? "bg-gray-100 font-semibold" : "hover:bg-gray-50"
+                                          isSelected ? "bg-gray-100 font-semibold" : "hover:bg-gray-50",
+                                          (!isSelected && isFull) && "opacity-50 cursor-not-allowed"
                                         )}
                                       >
                                         <div className="flex items-center gap-2 w-full">
@@ -3677,8 +3700,8 @@ export default function TikTokAdCreationForm({
                                             className="w-4 h-4 bg-white border border-gray-300 rounded-[6px] data-[state=checked]:bg-zinc-800 data-[state=checked]:text-white pointer-events-none"
                                           />
                                           <div className="flex-1 min-w-0 flex items-center justify-between">
-                                            <span className={cn("text-sm font-medium truncate flex-1", (ag.operation_status === "DISABLE" || ag.operation_status === false || ag.operation_status === "false") && "text-gray-400")}>
-                                              {ag.adgroup_name}
+                                            <span className={cn("text-sm font-medium truncate flex-1", (ag.operation_status === "DISABLE" || ag.operation_status === false || ag.operation_status === "false" || (!isSelected && isFull)) && "text-gray-400")}>
+                                              {ag.adgroup_name} {ag.ad_count !== undefined && `(${ag.ad_count}/50)`}
                                             </span>
                                             {(ag.operation_status === "ENABLE" || ag.operation_status === true || ag.operation_status === "true") && (
                                               <span className="ml-2 w-2 h-2 rounded-full bg-green-500 shrink-0" />
@@ -3688,7 +3711,6 @@ export default function TikTokAdCreationForm({
                                       </CommandItem>
                                     )
                                   })}
-                                </div>
                               )
                             });
                           })()}
@@ -3696,23 +3718,19 @@ export default function TikTokAdCreationForm({
                       )}
                     </CommandList>
 
-                    <Button
-                      type="button"
-                      disabled={
-                        campaigns.length === 0 ||
-                        (selectedCampaign.length === 1 &&
-                          campaigns.find(c => c.campaign_id === selectedCampaign[0])?.adgroup_count >= 20)
-                      }
-                      onClick={() => {
-                        setShowDuplicateAdGroupBlock(true);
-                        setOpenAdGroup(false);
-                      }}
-                      className="h-10 w-full px-4 py-3 rounded-2xl bg-zinc-800 text-white hover:!bg-black hover:!text-white shadow-md flex items-center justify-center text-xs font-semibold cursor-pointer transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed border-none"
-                    >
-                      {selectedCampaign.length === 1 && campaigns.find(c => c.campaign_id === selectedCampaign[0])?.adgroup_count >= 20
-                        ? "Max Ad Sets Reached (20/20)"
-                        : "🚀 Launch in a New Ad Group"}
-                    </Button>
+                    <div className="p-2 border-t border-gray-100">
+                      <Button
+                        type="button"
+                        disabled={campaigns.length === 0}
+                        onClick={() => {
+                          setShowDuplicateAdGroupBlock(true);
+                          setOpenAdGroup(false);
+                        }}
+                        className="h-10 w-full px-4 py-3 rounded-2xl bg-zinc-800 text-white hover:!bg-black hover:!text-white shadow-md flex items-center justify-center text-xs font-semibold cursor-pointer transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed border-none"
+                      >
+                        🚀 Launch in a New Ad Group
+                      </Button>
+                    </div>
                   </Command>
                 </PopoverContent>
               </Popover>
