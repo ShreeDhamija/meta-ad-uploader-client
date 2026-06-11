@@ -56,7 +56,7 @@ import QueueIcon from '@/assets/icons/queue.svg?react';
 import PartialSuccess from '@/assets/icons/partialsuccess.svg?react';
 import pLimit from 'p-limit';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
-const TEMPLATE_LINK_SYNC_USER_ID = "10236978990363167";
+const TEMPLATE_LINK_SYNC_USER_ID = "929470643071391";
 
 // Staging gate — used to hide work-in-progress UI (currently: the
 // "View Top Creatives for Flexible Ads" trigger). Mirrors the pattern in
