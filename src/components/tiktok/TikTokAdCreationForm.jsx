@@ -3709,8 +3709,8 @@ export default function TikTokAdCreationForm({
                                           </div>
                                         </div>
                                       </CommandItem>
-                                    )
                                   })}
+                                </div>
                               )
                             });
                           })()}
