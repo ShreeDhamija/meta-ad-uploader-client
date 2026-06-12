@@ -707,6 +707,44 @@ export default function TikTokAdCreationForm({
   const [formCatalogSearch, setFormCatalogSearch] = useState("")
   const [formProductSearch, setFormProductSearch] = useState("")
 
+  const isShoppingAdGroup = useMemo(() => {
+    const activeAgId = selectedAdGroup?.[0] || (showDuplicateAdGroupBlock ? duplicateAdGroup : null);
+    if (!activeAgId) return false;
+    const agObj = adGroups.find(g => g.adgroup_id === activeAgId);
+    if (!agObj) return false;
+    return !!(
+      (agObj.shopping_ads_type && agObj.shopping_ads_type !== 'UNSET') ||
+      (agObj.product_source && agObj.product_source !== 'UNSET')
+    );
+  }, [selectedAdGroup, adGroups, showDuplicateAdGroupBlock, duplicateAdGroup]);
+
+  useEffect(() => {
+    const activeAgId = selectedAdGroup?.[0] || (showDuplicateAdGroupBlock ? duplicateAdGroup : null);
+    if (!activeAgId) {
+      setFormCatalogId(null);
+      setFormCatalogName(null);
+      return;
+    }
+    const agObj = adGroups.find(g => g.adgroup_id === activeAgId);
+    if (agObj && agObj.catalog_id) {
+      setFormCatalogId(agObj.catalog_id);
+      const matched = formCatalogs.find(c => c.catalog_id === agObj.catalog_id);
+      setFormCatalogName(matched ? matched.catalog_name : `Catalog ${agObj.catalog_id}`);
+    } else {
+      setFormCatalogId(null);
+      setFormCatalogName(null);
+    }
+  }, [selectedAdGroup, adGroups, showDuplicateAdGroupBlock, duplicateAdGroup, formCatalogs]);
+
+  useEffect(() => {
+    if (formCatalogId && formCatalogs.length > 0) {
+      const matched = formCatalogs.find(c => c.catalog_id === formCatalogId);
+      if (matched) {
+        setFormCatalogName(matched.catalog_name);
+      }
+    }
+  }, [formCatalogId, formCatalogs]);
+
   // Sync default selection from preferences once when loaded
   const activeFormProductImage = useMemo(() => {
     const matched = formCatalogProducts.find(p => p.product_id === formProductId);
@@ -1095,6 +1133,10 @@ export default function TikTokAdCreationForm({
           const adGroupName = adGroupObj?.adgroup_name || adgroupId
           const shoppingAdsType = adGroupObj?.shopping_ads_type || null
           const productSource = adGroupObj?.product_source || null
+          const isShoppingAg = !!(
+            (shoppingAdsType && shoppingAdsType !== 'UNSET') ||
+            (productSource && productSource !== 'UNSET')
+          )
 
           const finalAdName = computeAdNameFromFormula(
             item.file,
@@ -1141,7 +1183,7 @@ export default function TikTokAdCreationForm({
               }
               if (currentIdentityId) creative.identity_id = currentIdentityId
 
-              if (formCatalogId) {
+              if (isShoppingAg && formCatalogId) {
                 creative.catalog_id = formCatalogId;
                 const matchedProd = formCatalogProducts.find(p => p.product_id === formProductId);
                 if (matchedProd) {
@@ -1207,7 +1249,7 @@ export default function TikTokAdCreationForm({
                 }
                 if (currentIdentityId) creative.identity_id = currentIdentityId
 
-                if (formCatalogId) {
+                if (isShoppingAg && formCatalogId) {
                   creative.catalog_id = formCatalogId;
                   const matchedProd = formCatalogProducts.find(p => p.product_id === formProductId);
                   if (matchedProd) {
@@ -1572,6 +1614,15 @@ export default function TikTokAdCreationForm({
           }
         }
         setAdGroups(unique)
+
+        // Show toasts if any ad group count reaches/exceeds 50
+        const fullGroups = unique.filter(ag => ag.ad_count !== undefined && ag.ad_count >= 50);
+        if (fullGroups.length > 0) {
+          fullGroups.forEach(ag => {
+            toast.error(`Ad group "${ag.adgroup_name}" has reached or exceeded the limit of 50 ads (currently has ${ag.ad_count} ads).`);
+          });
+        }
+
         adGroupsLoadedForSelectionRef.current = selectionKey
         setSelectedAdGroup(prevSelected => {
           // Keep any currently selected ad groups that are actually present in the newly fetched ad groups
@@ -1849,7 +1900,9 @@ export default function TikTokAdCreationForm({
   }
 
   const forceRefreshAdGroups = (e) => {
-    e.stopPropagation()
+    if (e && typeof e.stopPropagation === 'function') {
+      e.stopPropagation();
+    }
     if (!selectedCampaign || selectedCampaign.length === 0) return
     setLoadingAdGroups(true)
 
@@ -1880,6 +1933,14 @@ export default function TikTokAdCreationForm({
         }
         setAdGroups(unique)
         toast.success('Ad Groups refreshed!')
+
+        // Show toasts if any ad group count reaches/exceeds 50
+        const fullGroups = unique.filter(ag => ag.ad_count !== undefined && ag.ad_count >= 50);
+        if (fullGroups.length > 0) {
+          fullGroups.forEach(ag => {
+            toast.error(`Ad group "${ag.adgroup_name}" has reached or exceeded the limit of 50 ads (currently has ${ag.ad_count} ads).`);
+          });
+        }
       })
       .catch(() => toast.error('Failed to refresh ad groups'))
       .finally(() => setLoadingAdGroups(false))
@@ -4789,226 +4850,147 @@ export default function TikTokAdCreationForm({
               </div>
 
               {/* Optional Section: Add Product Information */}
-              <div className="border-t border-gray-100 pt-6 space-y-4">
-                <div className="flex flex-col gap-1">
-                  <Label className="flex items-center gap-2 font-semibold text-sm">
-                    <Info className="w-4 h-4 text-gray-500" />
-                    Product Information <span className="text-gray-400 font-normal text-xs">• Optional</span>
-                  </Label>
-                  <span className="text-xs text-gray-500 leading-relaxed">
-                    Select a catalog and product to include customized product tags in your ads.
-                  </span>
-                </div>
+              {isShoppingAdGroup && (
+                <div className="border-t border-gray-100 pt-6 space-y-4">
+                  <div className="flex flex-col gap-1">
+                    <Label className="flex items-center gap-2 font-semibold text-sm">
+                      <Info className="w-4 h-4 text-gray-500" />
+                      Product Information <span className="text-gray-400 font-normal text-xs">• Optional</span>
+                    </Label>
+                    <span className="text-xs text-gray-500 leading-relaxed">
+                      Select a product to promote from the auto-selected catalog.
+                    </span>
+                  </div>
 
-                {/* Catalog Selection */}
-                <div className="space-y-1">
-                  <Label className="text-xs font-semibold text-gray-700">Catalog</Label>
-                  <Popover open={openFormCatalog} onOpenChange={(open) => {
-                    setOpenFormCatalog(open);
-                    if (!open) setFormCatalogSearch("");
-                  }}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        disabled={loadingFormCatalogs || !selectedAdvertiser}
-                        className="w-full justify-between border border-gray-300 rounded-2xl bg-white shadow flex items-center hover:bg-white px-3 py-4.5"
-                      >
-                        {loadingFormCatalogs ? (
-                          <div className="flex items-center gap-2">
-                            <Loader className="h-4 w-4 animate-spin text-gray-400" />
-                            <span className="text-sm text-gray-400">Loading catalogs...</span>
-                          </div>
-                        ) : (
-                          <span className="text-sm font-medium text-gray-900 truncate">
-                            {formCatalogName || 'Select a Catalog'}
-                          </span>
-                        )}
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent
-                      className="min-w-[--radix-popover-trigger-width] w-auto !max-w-none p-0 rounded-xl bg-white border-gray-200 shadow-2xl animate-none"
-                      align="start"
-                      sideOffset={4}
-                      side="bottom"
-                      avoidCollisions={false}
-                      style={{ minWidth: "var(--radix-popover-trigger-width)", width: "auto" }}
-                    >
-                      <div className="flex flex-col overflow-hidden rounded-xl bg-white text-gray-900">
-                        <div className="mx-2 mt-2 mb-1 flex items-center rounded-2xl border border-gray-300 bg-white px-3 shadow">
-                          <Search className="mr-2 h-4 w-4 shrink-0 opacity-50 text-gray-500" />
-                          <input
-                            type="text"
-                            placeholder="Search catalogs..."
-                            value={formCatalogSearch}
-                            onChange={(e) => setFormCatalogSearch(e.target.value)}
-                            className="flex h-11 w-full bg-transparent py-3 text-sm outline-none placeholder:text-gray-400 text-gray-900 border-none focus:ring-0"
-                          />
-                        </div>
-                        <div className="max-h-[300px] overflow-y-auto rounded-xl p-1">
-                          {(() => {
-                            const filtered = formCatalogs.filter(cat => {
-                              const name = (cat.catalog_name || "").toLowerCase();
-                              const id = String(cat.catalog_id || "").toLowerCase();
-                              const q = formCatalogSearch.toLowerCase();
-                              return name.includes(q) || id.includes(q);
-                            });
-                            if (filtered.length === 0) {
-                              return (
-                                <div className="py-6 text-center text-xs text-gray-500">
-                                  {formCatalogs.length === 0 ? 'No catalogs found.' : 'No results.'}
-                                </div>
-                              );
-                            }
-                            return (
-                              <div className="space-y-0.5">
-                                {filtered.map((cat) => (
-                                  <button
-                                    type="button"
-                                    key={cat.catalog_id}
-                                    onClick={() => {
-                                      setFormCatalogId(cat.catalog_id);
-                                      setFormCatalogName(cat.catalog_name);
-                                      setFormProductId(null);
-                                      setFormProductName(null);
-                                      setFormCatalogProducts([]);
-                                      setOpenFormCatalog(false);
-                                      setFormCatalogSearch("");
-                                    }}
-                                    className={cn(
-                                      "w-full text-left px-3 py-2 cursor-pointer rounded-xl transition-colors duration-150 hover:bg-gray-100 flex items-center gap-2",
-                                      formCatalogId === cat.catalog_id ? "bg-gray-50 font-medium" : ""
-                                    )}
-                                  >
-                                    <div className="flex-1 min-w-0">
-                                      <p className="text-sm font-semibold text-gray-900 truncate">{cat.catalog_name}</p>
-                                      <p className="text-xs text-gray-400 font-mono">{cat.catalog_id}</p>
-                                    </div>
-                                    {formCatalogId === cat.catalog_id && <Check className="w-4 h-4 text-black shrink-0" />}
-                                  </button>
-                                ))}
-                              </div>
-                            );
-                          })()}
-                        </div>
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                </div>
-
-                {/* Product Selection */}
-                {formCatalogId && (
+                  {/* Catalog Selection (Locked/Read-Only) */}
                   <div className="space-y-1">
-                    <Label className="text-xs font-semibold text-gray-700">Product</Label>
-                    <Popover open={openFormProduct} onOpenChange={(open) => {
-                      setOpenFormProduct(open);
-                      if (!open) setFormProductSearch("");
-                    }}>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          disabled={loadingFormProducts}
-                          className="w-full justify-between border border-gray-300 rounded-2xl bg-white shadow flex items-center hover:bg-white px-3 py-4.5"
+                    <Label className="text-xs font-semibold text-gray-700">Catalog</Label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={true}
+                      className="w-full justify-between border border-gray-300 rounded-2xl bg-gray-50 shadow flex items-center px-3 py-4.5 cursor-not-allowed opacity-90 text-left"
+                    >
+                      <span className="text-sm font-medium text-gray-700 truncate">
+                        {formCatalogName || (formCatalogId ? `Catalog ${formCatalogId}` : 'No Catalog associated with Ad Group')}
+                      </span>
+                    </Button>
+                  </div>
+
+                  {/* Product Selection */}
+                  {formCatalogId && (
+                    <div className="space-y-1">
+                      <Label className="text-xs font-semibold text-gray-700">Product</Label>
+                      <Popover open={openFormProduct} onOpenChange={(open) => {
+                        setOpenFormProduct(open);
+                        if (!open) setFormProductSearch("");
+                      }}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            disabled={loadingFormProducts}
+                            className="w-full justify-between border border-gray-300 rounded-2xl bg-white shadow flex items-center hover:bg-white px-3 py-4.5"
+                          >
+                            {loadingFormProducts ? (
+                              <div className="flex items-center gap-2">
+                                <Loader className="h-4 w-4 animate-spin text-gray-400" />
+                                <span className="text-sm text-gray-400">Loading products...</span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2 min-w-0 font-normal">
+                                {activeFormProductImage && (
+                                  <img
+                                    src={activeFormProductImage}
+                                    alt=""
+                                    className="w-6 h-6 rounded-full object-cover shrink-0 border border-gray-100 font-normal"
+                                  />
+                                )}
+                                <span className="text-sm font-medium text-gray-900 truncate">
+                                  {formProductName || 'Select a Product'}
+                                </span>
+                              </div>
+                            )}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent
+                          className="min-w-[--radix-popover-trigger-width] w-auto !max-w-none p-0 rounded-xl bg-white border-gray-200 shadow-2xl animate-none"
+                          align="start"
+                          sideOffset={4}
+                          side="bottom"
+                          avoidCollisions={false}
+                          style={{ minWidth: "var(--radix-popover-trigger-width)", width: "auto" }}
                         >
-                          {loadingFormProducts ? (
-                            <div className="flex items-center gap-2">
-                              <Loader className="h-4 w-4 animate-spin text-gray-400" />
-                              <span className="text-sm text-gray-400">Loading products...</span>
+                          <div className="flex flex-col overflow-hidden rounded-xl bg-white text-gray-900">
+                            <div className="mx-2 mt-2 mb-1 flex items-center rounded-2xl border border-gray-300 bg-white px-3 shadow">
+                              <Search className="mr-2 h-4 w-4 shrink-0 opacity-50 text-gray-500" />
+                              <input
+                                type="text"
+                                placeholder="Search products..."
+                                value={formProductSearch}
+                                onChange={(e) => setFormProductSearch(e.target.value)}
+                                className="flex h-11 w-full bg-transparent py-3 text-sm outline-none placeholder:text-gray-400 text-gray-900 border-none focus:ring-0"
+                              />
                             </div>
-                          ) : (
-                            <div className="flex items-center gap-2 min-w-0">
-                              {activeFormProductImage && (
-                                <img
-                                  src={activeFormProductImage}
-                                  alt=""
-                                  className="w-6 h-6 rounded-full object-cover shrink-0 border border-gray-100"
-                                />
-                              )}
-                              <span className="text-sm font-medium text-gray-900 truncate">
-                                {formProductName || 'Select a Product'}
-                              </span>
-                            </div>
-                          )}
-                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent
-                        className="min-w-[--radix-popover-trigger-width] w-auto !max-w-none p-0 rounded-xl bg-white border-gray-200 shadow-2xl animate-none"
-                        align="start"
-                        sideOffset={4}
-                        side="bottom"
-                        avoidCollisions={false}
-                        style={{ minWidth: "var(--radix-popover-trigger-width)", width: "auto" }}
-                      >
-                        <div className="flex flex-col overflow-hidden rounded-xl bg-white text-gray-900">
-                          <div className="mx-2 mt-2 mb-1 flex items-center rounded-2xl border border-gray-300 bg-white px-3 shadow">
-                            <Search className="mr-2 h-4 w-4 shrink-0 opacity-50 text-gray-500" />
-                            <input
-                              type="text"
-                              placeholder="Search products..."
-                              value={formProductSearch}
-                              onChange={(e) => setFormProductSearch(e.target.value)}
-                              className="flex h-11 w-full bg-transparent py-3 text-sm outline-none placeholder:text-gray-400 text-gray-900 border-none focus:ring-0"
-                            />
-                          </div>
-                          <div className="max-h-[360px] overflow-y-auto rounded-xl p-1">
-                            {(() => {
-                              const filtered = formCatalogProducts.filter(prod => {
-                                const name = (prod.product_name || "").toLowerCase();
-                                const id = String(prod.product_id || "").toLowerCase();
-                                const q = formProductSearch.toLowerCase();
-                                return name.includes(q) || id.includes(q);
-                              });
-                              if (filtered.length === 0) {
+                            <div className="max-h-[360px] overflow-y-auto rounded-xl p-1">
+                              {(() => {
+                                const filtered = formCatalogProducts.filter(prod => {
+                                  const name = (prod.product_name || "").toLowerCase();
+                                  const id = String(prod.product_id || "").toLowerCase();
+                                  const q = formProductSearch.toLowerCase();
+                                  return name.includes(q) || id.includes(q);
+                                });
+                                if (filtered.length === 0) {
+                                  return (
+                                    <div className="py-6 text-center text-xs text-gray-500">
+                                      {formCatalogProducts.length === 0 ? 'No products in this catalog.' : 'No results.'}
+                                    </div>
+                                  );
+                                }
                                 return (
-                                  <div className="py-6 text-center text-xs text-gray-500">
-                                    {formCatalogProducts.length === 0 ? 'No products in this catalog.' : 'No results.'}
+                                  <div className="space-y-0.5">
+                                    {filtered.map((prod) => (
+                                      <button
+                                        type="button"
+                                        key={prod.product_id}
+                                        onClick={() => {
+                                          setFormProductId(prod.product_id);
+                                          setFormProductName(prod.product_name);
+                                          setOpenFormProduct(false);
+                                          setFormProductSearch("");
+                                        }}
+                                        className={cn(
+                                          "w-full text-left px-3 py-2 cursor-pointer rounded-xl transition-colors duration-150 hover:bg-gray-100 flex items-center gap-3",
+                                          formProductId === prod.product_id ? "bg-gray-50 font-medium" : ""
+                                        )}
+                                      >
+                                        {prod.image_url && (
+                                          <img
+                                            src={prod.image_url}
+                                            alt=""
+                                            className="w-6 h-6 rounded-full object-cover shrink-0 border border-gray-100"
+                                          />
+                                        )}
+                                        <div className="flex-1 min-w-0">
+                                          <p className="text-sm font-semibold text-gray-900 truncate">{prod.product_name}</p>
+                                          {prod.price && (
+                                            <p className="text-xs text-gray-400">{prod.price} {prod.currency}</p>
+                                          )}
+                                        </div>
+                                        {formProductId === prod.product_id && <Check className="w-4 h-4 text-black shrink-0" />}
+                                      </button>
+                                    ))}
                                   </div>
                                 );
-                              }
-                              return (
-                                <div className="space-y-0.5">
-                                  {filtered.map((prod) => (
-                                    <button
-                                      type="button"
-                                      key={prod.product_id}
-                                      onClick={() => {
-                                        setFormProductId(prod.product_id);
-                                        setFormProductName(prod.product_name);
-                                        setOpenFormProduct(false);
-                                        setFormProductSearch("");
-                                      }}
-                                      className={cn(
-                                        "w-full text-left px-3 py-2 cursor-pointer rounded-xl transition-colors duration-150 hover:bg-gray-100 flex items-center gap-3",
-                                        formProductId === prod.product_id ? "bg-gray-50 font-medium" : ""
-                                      )}
-                                    >
-                                      {prod.image_url && (
-                                        <img
-                                          src={prod.image_url}
-                                          alt=""
-                                          className="w-6 h-6 rounded-full object-cover shrink-0 border border-gray-100"
-                                        />
-                                      )}
-                                      <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-semibold text-gray-900 truncate">{prod.product_name}</p>
-                                        {prod.price && (
-                                          <p className="text-xs text-gray-400">{prod.price} {prod.currency}</p>
-                                        )}
-                                      </div>
-                                      {formProductId === prod.product_id && <Check className="w-4 h-4 text-black shrink-0" />}
-                                    </button>
-                                  ))}
-                                </div>
-                              );
-                            })()}
+                              })()}
+                            </div>
                           </div>
-                        </div>
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                )}
-              </div>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* 6. Media Section or Spark Info Card */}
               <div className="border-t border-gray-100 pt-6">
