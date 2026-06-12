@@ -19,7 +19,7 @@ function renderInlineBold(text) {
     )
 }
 
-// ── Extract bullets from a text block ──
+
 function extractBullets(text) {
     return text
         .split("\n")
