@@ -18,7 +18,6 @@ import useSubscription from "@/lib/useSubscriptionSettings"
 import { saveSettings } from "@/lib/saveSettings"
 import AdAccountSelectionPopup from "../components/AdAccountSelectionPopup"
 import { useIntercom } from "@/lib/useIntercom";
-import { isAuthRoute } from "@/lib/authRoutes";
 import DesktopIcon from '@/assets/Desktop.webp';
 import TrialExpiredPopup from '../components/TrialExpiredPopup';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
@@ -291,10 +290,10 @@ export default function Home() {
 
 
     useEffect(() => {
-        if (!authLoading && !isLoggedIn && !isAuthRoute(location.pathname)) {
+        if (!authLoading && !isLoggedIn) {
             navigate("/login");
         }
-    }, [authLoading, isLoggedIn, location.pathname, navigate]);
+    }, [authLoading, isLoggedIn, navigate]);
 
 
 

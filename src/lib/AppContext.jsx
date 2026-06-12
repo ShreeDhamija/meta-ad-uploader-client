@@ -1,8 +1,7 @@
-import { useEffect, useState, useContext, useMemo, useCallback, useRef, createContext } from "react"
+import { useEffect, useState, useContext, useMemo, useCallback, createContext } from "react"
 import useSubscription from "@/lib/useSubscriptionSettings"
 import useGlobalSettings from "@/lib/useGlobalSettings"
 import { readCache, writeCache, clearCache } from "@/lib/dataCache"
-import { isAuthRoute } from "@/lib/authRoutes"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
@@ -16,18 +15,11 @@ const shouldBustCacheFromURL = () => {
 };
 
 export const AppProvider = ({ children }) => {
-  const isOnAuthRoute = typeof window !== 'undefined' && isAuthRoute();
-  const authRedirectingRef = useRef(false);
-  const [{ bustOnMount, cachedAccounts, cachedPages }] = useState(() => {
-    const shouldBust = shouldBustCacheFromURL();
-    if (shouldBust) clearCache();
+  const bustOnMount = shouldBustCacheFromURL();
+  if (bustOnMount) clearCache();
 
-    return {
-      bustOnMount: shouldBust,
-      cachedAccounts: shouldBust ? null : readCache('adAccounts'),
-      cachedPages: shouldBust ? null : readCache('pages'),
-    };
-  });
+  const cachedAccounts = bustOnMount ? null : readCache('adAccounts');
+  const cachedPages = bustOnMount ? null : readCache('pages');
 
   const [pages, setPages] = useState(cachedPages || [])
   const [adAccounts, setAdAccounts] = useState(cachedAccounts || [])
@@ -47,30 +39,10 @@ export const AppProvider = ({ children }) => {
     return allAdAccounts
   }, [allAdAccounts, subscriptionData.planType, selectedAdAccountIds])
 
-  const handleUnauthorizedSession = useCallback(() => {
-    if (authRedirectingRef.current || isOnAuthRoute || isAuthRoute()) return;
-
-    authRedirectingRef.current = true;
-    sessionStorage.setItem('forceLogout', '1');
-    fetch(`${API_BASE_URL}/auth/logout`, {
-      method: 'POST',
-      credentials: 'include',
-      keepalive: true,
-    }).catch(() => { });
-    window.location.href = '/login';
-  }, [isOnAuthRoute]);
-
   const fetchAdAccounts = useCallback(async () => {
-    if (isOnAuthRoute) return []
-
     setAdAccountsLoading(true);
     try {
       const res = await fetch(`${API_BASE_URL}/auth/fetch-ad-accounts`, { credentials: "include" })
-      if (res.status === 401) {
-        handleUnauthorizedSession()
-        return []
-      }
-
       const data = await res.json()
       if (data.success && data.adAccounts) {
         setAllAdAccounts(data.adAccounts)
@@ -84,19 +56,12 @@ export const AppProvider = ({ children }) => {
     } finally {
       setAdAccountsLoading(false);
     }
-  }, [handleUnauthorizedSession, isOnAuthRoute])
+  }, [])
 
   const fetchPages = useCallback(async () => {
-    if (isOnAuthRoute) return []
-
     setPagesLoading(true);
     try {
       const res = await fetch(`${API_BASE_URL}/auth/fetch-pages`, { credentials: "include" })
-      if (res.status === 401) {
-        handleUnauthorizedSession()
-        return []
-      }
-
       const data = await res.json()
       if (data.success && data.pages) {
         setPages(data.pages)
@@ -109,7 +74,7 @@ export const AppProvider = ({ children }) => {
     } finally {
       setPagesLoading(false);
     }
-  }, [handleUnauthorizedSession, isOnAuthRoute])
+  }, [])
 
 
   const refreshPagePictures = useCallback(async (pagesToRefresh) => {
@@ -121,10 +86,6 @@ export const AppProvider = ({ children }) => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pageIds: pagesToRefresh.map(p => p.id) }),
       });
-      if (res.status === 401) {
-        handleUnauthorizedSession()
-        return
-      }
 
       const data = await res.json();
       if (!data.success) return;
@@ -149,13 +110,11 @@ export const AppProvider = ({ children }) => {
     } catch (err) {
       console.error("Failed to refresh page pictures:", err);
     }
-  }, [handleUnauthorizedSession]);
+  }, []);
 
 
 
   useEffect(() => {
-    if (isOnAuthRoute) return
-
     if (bustOnMount) {
       // Strip the flag so a manual refresh won't keep busting.
       const url = new URL(window.location)
@@ -175,7 +134,11 @@ export const AppProvider = ({ children }) => {
       // Cache hit — refresh just the pics in the background
       refreshPagePictures(cachedPages);
     }
-  }, [isOnAuthRoute, bustOnMount, cachedAccounts, cachedPages, fetchAdAccounts, fetchPages, refreshPagePictures])
+    // Run once on mount. Do NOT add the cached values as deps — they are re-read
+    // from localStorage each render (new reference), which would re-fire this
+    // effect every render and cause an infinite fetch loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     setAdAccounts(filteredAdAccounts)

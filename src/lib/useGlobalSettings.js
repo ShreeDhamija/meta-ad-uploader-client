@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { LEGACY_FLAG_TO_CARD_ID, ONBOARDING_CARDS, WIZARD_LAUNCH_DATE } from "./onboardingCards";
-import { isAuthRoute } from "./authRoutes";
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 export default function useGlobalSettings() {
@@ -16,26 +15,17 @@ export default function useGlobalSettings() {
 
     const fetchSettings = async () => {
         try {
-            const res = await fetch(`${API_BASE_URL}/settings/global`, {
+            let res = await fetch(`${API_BASE_URL}/settings/global`, {
                 credentials: "include",
             });
 
-            // Session is unrecoverable client-side (likely cookie rotation race).
-            // Force a clean re-auth: set a flag so AuthContext skips /auth/me on
-            // the next load, best-effort kill the server session, then redirect.
-            // Skip auth pages because AppContext mounts these hooks globally.
-            // Signup must remain public even if a stale cookie makes this 401.
+            // A 401 on first load is usually a brief session race right after
+            // login. Retry once before giving up — never redirect.
             if (res.status === 401) {
-                if (!isAuthRoute()) {
-                    sessionStorage.setItem('forceLogout', '1');
-                    fetch(`${API_BASE_URL}/auth/logout`, {
-                        method: 'POST',
-                        credentials: 'include',
-                        keepalive: true,
-                    }).catch(() => { });
-                    window.location.href = '/login';
-                }
-                return;
+                await new Promise((r) => setTimeout(r, 400));
+                res = await fetch(`${API_BASE_URL}/settings/global`, {
+                    credentials: "include",
+                });
             }
 
             const data = await res.json();
@@ -73,11 +63,6 @@ export default function useGlobalSettings() {
     };
 
     useEffect(() => {
-        if (isAuthRoute()) {
-            setLoading(false);
-            return;
-        }
-
         fetchSettings();
 
         // Listen for updates and refetch

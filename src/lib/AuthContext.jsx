@@ -17,15 +17,6 @@ export const AuthProvider = ({ children }) => {
 
 
   useEffect(() => {
-    // If a data endpoint just 401'd, this tab is in an inconsistent auth state.
-    // Don't trust /auth/me on this load — force the user to re-authenticate
-    // explicitly so we can't bounce them straight back into the broken session.
-    if (sessionStorage.getItem('forceLogout')) {
-      sessionStorage.removeItem('forceLogout');
-      setAuthLoading(false);
-      return;
-    }
-
     const checkAuth = async () => {
       try {
         const res = await fetch(`${API_BASE_URL}/auth/me`, {
