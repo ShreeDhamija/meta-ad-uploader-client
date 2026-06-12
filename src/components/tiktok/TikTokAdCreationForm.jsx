@@ -1291,7 +1291,8 @@ export default function TikTokAdCreationForm({
             creatives: creatives,
             jobId: jobToProcess.id,
             cta: creativeCTAs,
-            s3Url: currentS3Url
+            s3Url: currentS3Url,
+            ad_count: adGroupObj?.ad_count !== undefined ? adGroupObj.ad_count : 0
           }
 
           try {
@@ -1304,6 +1305,10 @@ export default function TikTokAdCreationForm({
             const createData = await createRes.json()
             if (!createRes.ok || !createData.success) {
               throw new Error(createData.error || 'Ad creation failed')
+            }
+
+            if (adGroupObj) {
+              adGroupObj.ad_count = (adGroupObj.ad_count || 0) + creatives.length;
             }
 
             successCount++
