@@ -1592,12 +1592,20 @@ export default function MediaPreview({
                               )}
                             </div>
                             {/* post_id below the image card */}
-                            <p
-                              className="mt-1 ml-1 text-xs font-mono text-gray-700 truncate max-w-full transition-opacity"
+                            <div
+                              className="mt-1 ml-1 transition-opacity space-y-0.5"
                               style={{ opacity: isDimmed ? 0.3 : 1 }}
                             >
-                              {post.ad_name}
-                            </p>
+                              <p className="text-xs font-mono text-gray-750 truncate max-w-full font-semibold">
+                                {post.ad_name}
+                              </p>
+                              <p className="text-[10px] font-mono text-gray-400 truncate max-w-full">
+                                ID: {post.id}
+                              </p>
+                              <p className="text-[10px] font-mono text-gray-500 truncate max-w-full">
+                                Code: {post.auth_code}
+                              </p>
+                            </div>
                           </div>
                         );
                       })}

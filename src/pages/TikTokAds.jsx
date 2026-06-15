@@ -106,7 +106,7 @@ export default function TikTokAds() {
   const [driveFiles, setDriveFiles] = useState([])
   const [dropboxFiles, setDropboxFiles] = useState([])
   const [selectedIdentity, setSelectedIdentity] = useState('')
-  const [sparkAuthCode, setSparkAuthCode] = useState('')
+  const [sparkAuthCodes, setSparkAuthCodes] = useState([''])
   const [urlMode, setUrlMode] = useState('WEBSITE')
   const [adType, setAdType] = useState('NORMAL')
   const [showMobileBanner, setShowMobileBanner] = useState(true)
@@ -585,7 +585,7 @@ export default function TikTokAds() {
     cta,
     landingUrl,
     selectedIdentity,
-    sparkAuthCode,
+    sparkAuthCodes,
     urlMode,
     selectedCampaign,
     selectedAdGroup,
@@ -601,7 +601,7 @@ export default function TikTokAds() {
     cta,
     landingUrl,
     selectedIdentity,
-    sparkAuthCode,
+    sparkAuthCodes,
     urlMode,
     selectedCampaign,
     selectedAdGroup,
@@ -621,7 +621,7 @@ export default function TikTokAds() {
     setCta(Array.isArray(rawCta) ? rawCta : (rawCta ? [rawCta] : ["SHOP_NOW"]));
     setLandingUrl(snapshot.landingUrl || "");
     setSelectedIdentity(snapshot.selectedIdentity || "");
-    setSparkAuthCode(snapshot.sparkAuthCode || "");
+    setSparkAuthCodes(snapshot.sparkAuthCodes || [""]);
     setUrlMode(snapshot.urlMode || "WEBSITE");
     const rawCampaign = snapshot.selectedCampaign || "";
     setSelectedCampaign(Array.isArray(rawCampaign) ? rawCampaign : (rawCampaign ? [rawCampaign] : []));
@@ -901,7 +901,7 @@ export default function TikTokAds() {
                 driveFiles={driveFiles} setDriveFiles={setDriveFiles}
                 dropboxFiles={dropboxFiles} setDropboxFiles={setDropboxFiles}
                 selectedIdentity={selectedIdentity} setSelectedIdentity={setSelectedIdentity}
-                sparkAuthCode={sparkAuthCode} setSparkAuthCode={setSparkAuthCode}
+                sparkAuthCodes={sparkAuthCodes} setSparkAuthCodes={setSparkAuthCodes}
                 urlMode={urlMode} setUrlMode={setUrlMode}
                 adType={adType} setAdType={setAdType}
                 importedPosts={importedPosts} setImportedPosts={setImportedPosts}

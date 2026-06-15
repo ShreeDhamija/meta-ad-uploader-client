@@ -517,7 +517,7 @@ export default function TikTokAdCreationForm({
   driveFiles, setDriveFiles,
   dropboxFiles, setDropboxFiles,
   selectedIdentity, setSelectedIdentity,
-  sparkAuthCode, setSparkAuthCode,
+  sparkAuthCodes, setSparkAuthCodes,
   urlMode, setUrlMode,
   adType, setAdType,
   importedPosts, setImportedPosts,
@@ -559,6 +559,22 @@ export default function TikTokAdCreationForm({
   const formFieldChrome = "border-gray-300 rounded-2xl py-4.5 bg-white shadow"
   const formInputChrome = `${formFieldChrome} focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0`
   const formTextareaChrome = "w-full border border-gray-300 rounded-2xl bg-white px-3 pt-2.5 pb-2.5 text-sm leading-5 resize-none shadow focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+
+  const addField = (setter, values) => {
+    setter([...values, ""]);
+  };
+
+  const removeField = (setter, values, index) => {
+    if (values.length > 1) {
+      setter(values.filter((_, i) => i !== index))
+    }
+  }
+
+  const updateField = (setter, values, index, newValue) => {
+    const newValues = [...values]
+    newValues[index] = newValue
+    setter(newValues)
+  }
 
   const renderDiffMark = (fieldKeys) => {
     if (isFormFieldModified && isFormFieldModified(fieldKeys)) {
@@ -615,7 +631,6 @@ export default function TikTokAdCreationForm({
   const [isSavingNew, setIsSavingNew] = useState(false)
   const [isUpdatingTemplate, setIsUpdatingTemplate] = useState(false)
   const [sparkSourceTab, setSparkSourceTab] = useState("auth_codes") // "auth_codes" | "video_list"
-  const [rawAuthCodes, setRawAuthCodes] = useState("")
   const [isResolvingCodes, setIsResolvingCodes] = useState(false)
   const [resolvedCodes, setResolvedCodes] = useState([])
   const [showSaveNewDialog, setShowSaveNewDialog] = useState(false)
@@ -890,7 +905,7 @@ export default function TikTokAdCreationForm({
       adTexts: variantState.adTexts || (variantState.adText ? [variantState.adText] : null) || adTexts || [''],
       cta: variantState.cta || cta || ['SHOP_NOW'],
       landingUrl: variantState.landingUrl || landingUrl || '',
-      sparkAuthCode: variantState.sparkAuthCode || sparkAuthCode || '',
+      sparkAuthCodes: variantState.sparkAuthCodes || sparkAuthCodes || [''],
       urlMode: variantState.urlMode || urlMode || 'WEBSITE',
       adType: variantState.adType || adType || 'NORMAL',
 
@@ -928,7 +943,7 @@ export default function TikTokAdCreationForm({
       formData,
     }
   }, [
-    variants, adName, adTexts, cta, landingUrl, sparkAuthCode, urlMode, adType,
+    variants, adName, adTexts, cta, landingUrl, sparkAuthCodes, urlMode, adType,
     files, driveFiles, dropboxFiles, tiktokLibraryFiles, importedPosts, selectedAdvertiser,
     selectedCampaign, selectedAdGroup, showDuplicateAdGroupBlock, duplicateAdGroup,
     newAdGroupName, selectedIdentity, fileVariantMap, postVariantMap, launchPaused,
@@ -952,14 +967,14 @@ export default function TikTokAdCreationForm({
     setAdTexts(d.adTexts || (d.adText ? [d.adText] : ['']))
     setCta(d.cta || ['SHOP_NOW'])
     setLandingUrl(d.landingUrl || '')
-    setSparkAuthCode(d.sparkAuthCode || '')
+    setSparkAuthCodes(d.sparkAuthCodes || [''])
     setUrlMode(d.urlMode || 'WEBSITE')
     setAdType(d.adType || 'NORMAL')
 
     setFiles(d.files || [])
     setDriveFiles(d.driveFiles || [])
     setDropboxFiles(d.dropboxFiles || [])
-    if (setSparkAuthCode) setSparkAuthCode(d.sparkAuthCode || '')
+    if (setSparkAuthCodes) setSparkAuthCodes(d.sparkAuthCodes || [''])
 
     setSelectedAdvertiser(d.selectedAdvertiser || '')
     setSelectedCampaign(d.selectedCampaign || [])
@@ -971,7 +986,7 @@ export default function TikTokAdCreationForm({
     setGroupVariantMap({})
     setPostVariantMap({})
   }, [
-    setAdName, setAdTexts, setCta, setLandingUrl, setSparkAuthCode, setUrlMode,
+    setAdName, setAdTexts, setCta, setLandingUrl, setSparkAuthCodes, setUrlMode,
     setAdType, setFiles, setDriveFiles, setDropboxFiles, setSelectedAdvertiser,
     setSelectedCampaign, setSelectedAdGroup, setVariants, setActiveVariantId,
     setFileVariantMap, setGroupVariantMap, setPostVariantMap
@@ -989,7 +1004,7 @@ export default function TikTokAdCreationForm({
       adTexts,
       cta,
       landingUrl,
-      sparkAuthCode,
+      sparkAuthCodes,
       urlMode,
       adType,
       files,
@@ -2722,13 +2737,20 @@ export default function TikTokAdCreationForm({
   const hasDuplicateCaptions = duplicateCaptionIndices.size > 0;
 
   const handleResolveAuthCodes = async () => {
-    if (!rawAuthCodes.trim()) {
+    // Split any entries in sparkAuthCodes by commas/newlines/spaces if multiple are typed/pasted
+    const lines = [];
+    sparkAuthCodes.forEach(code => {
+      if (!code) return;
+      const parts = code.split(/[\n\r,]+/).map(p => p.trim()).filter(Boolean);
+      lines.push(...parts);
+    });
+
+    if (lines.length === 0) {
       toast.error("Please enter at least one authorization code.");
       return;
     }
 
     setIsResolvingCodes(true);
-    const lines = rawAuthCodes.split("\n").map(l => l.trim()).filter(Boolean);
     const newResolved = [];
 
     for (let index = 0; index < lines.length; index++) {
@@ -4196,19 +4218,46 @@ export default function TikTokAdCreationForm({
 
                 {sparkSourceTab === "auth_codes" ? (
                   <div className="space-y-3">
-                    <div className="space-y-1.5">
+                    <div className="space-y-2">
                       <Label className="text-xs font-medium text-gray-400">
                         Authorization Codes
                       </Label>
-                      <TextareaAutosize
-                        minRows={3}
-                        maxRows={6}
-                        placeholder="Paste auth codes here (one per line)"
-                        value={rawAuthCodes}
-                        onChange={e => setRawAuthCodes(e.target.value)}
-                        className={formTextareaChrome}
-                      />
-                      <p className="text-[10px] text-gray-400 leading-normal pl-1">
+                      <div className="space-y-3">
+                        {sparkAuthCodes.map((value, index) => (
+                          <div key={index} className="flex items-center gap-2">
+                            <div className="flex flex-col w-full">
+                              <Input
+                                value={value}
+                                onChange={(e) => updateField(setSparkAuthCodes, sparkAuthCodes, index, e.target.value)}
+                                placeholder="Enter spark code (e.g. abcd12345)"
+                                className={formInputChrome}
+                              />
+                            </div>
+                            {sparkAuthCodes.length > 1 && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                className="border border-gray-400 rounded-xl bg-white shadow-xs"
+                                size="icon"
+                                onClick={() => removeField(setSparkAuthCodes, sparkAuthCodes, index)}
+                              >
+                                <Trash2 className="w-4 h-4 text-gray-600 cursor-pointer hover:text-red-500" />
+                                <span className="sr-only">Remove</span>
+                              </Button>
+                            )}
+                          </div>
+                        ))}
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="w-full rounded-xl shadow bg-zinc-600 hover:bg-black text-white"
+                          onClick={() => addField(setSparkAuthCodes, sparkAuthCodes)}
+                        >
+                          <Plus className="mr-2 h-4 w-4 text-white" />
+                          Add spark code option
+                        </Button>
+                      </div>
+                      <p className="text-[10px] text-gray-400 leading-normal pl-1 mt-1">
                         Enter the organic post video codes generated from the creator's TikTok app. For stitch or duet videos, enter both codes separated by a comma.
                       </p>
                     </div>
@@ -4216,7 +4265,7 @@ export default function TikTokAdCreationForm({
                     <Button
                       type="button"
                       onClick={handleResolveAuthCodes}
-                      disabled={isResolvingCodes || !rawAuthCodes.trim()}
+                      disabled={isResolvingCodes || !sparkAuthCodes.some(c => c.trim())}
                       className="w-full rounded-2xl py-5 font-semibold transition-all bg-black hover:bg-zinc-800 text-white shadow-md disabled:bg-zinc-300"
                     >
                       {isResolvingCodes ? (
