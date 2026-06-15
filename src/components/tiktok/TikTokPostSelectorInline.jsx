@@ -15,6 +15,7 @@ function TikTokPostSelectorInline({
   advertiserId,
   identityId,
   identityType = "TT_ACCOUNT",
+  identityObj = null,
   onImport,
   importedPosts = [],
 }) {
@@ -24,7 +25,7 @@ function TikTokPostSelectorInline({
   const [isLoading, setIsLoading] = useState(false)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [error, setError] = useState(null)
-  const [cursor, setCursor] = useState(0)
+  const [cursor, setCursor] = useState(null)
   const [hasMore, setHasMore] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [hasFetched, setHasFetched] = useState(false)
@@ -43,7 +44,7 @@ function TikTokPostSelectorInline({
     })
   }, [importedPosts])
 
-  const fetchPosts = useCallback(async (targetCursor = 0, isLoadMore = false) => {
+  const fetchPosts = useCallback(async (targetCursor = null, isLoadMore = false) => {
     if (!advertiserId || !identityId) {
       setPosts([])
       setHasMore(false)
@@ -59,13 +60,21 @@ function TikTokPostSelectorInline({
     setError(null)
 
     try {
+      const finalIdentityType = identityObj?.identity_type || identityType;
       const params = new URLSearchParams({
         advertiserId,
         identityId,
-        identityType,
-        cursor: targetCursor.toString(),
+        identityType: finalIdentityType,
         pageSize: "20"
       })
+
+      if (targetCursor) {
+        params.append("cursor", targetCursor.toString());
+      }
+
+      if (identityObj?.identity_authorized_bc_id) {
+        params.append("identityAuthorizedBcId", identityObj.identity_authorized_bc_id);
+      }
 
       const res = await tiktokFetch(`${API_BASE_URL}/api/tiktok/tt-video-list?${params}`)
       const resData = await res.json()
@@ -74,28 +83,32 @@ function TikTokPostSelectorInline({
         throw new Error(resData.error || "Failed to fetch posts")
       }
 
-      // Format response structure from TikTok API: resData.data.videos or resData.data.list
+      // Format response structure from TikTok API: resData.data.video_list (new endpoint) or resData.data.videos or resData.data.list
       const data = resData.data
-      const list = data?.videos || data?.list || []
+      const list = data?.video_list || data?.videos || data?.list || []
 
       const formattedList = list.map(item => {
-        const itemId = item.item_info?.item_id || item.item_id;
+        const itemId = item.item_id || item.item_info?.item_id;
         const posterUrl = item.video_info?.poster_url || item.video_info?.preview_url || item.thumbnail_url || "";
-        const caption = item.caption || item.item_info?.text || (item.recommendation_level ? `Recommendation: ${item.recommendation_level} (${item.item_id})` : `Recommended Video (${item.item_id})`);
-        const tiktokName = item.user_info?.tiktok_name || "Organic Video";
+        const caption = item.text || item.caption || item.item_info?.text || (item.recommendation_level ? `Recommendation: ${item.recommendation_level} (${item.item_id || item.item_info?.item_id})` : `Recommended Video (${item.item_id || item.item_info?.item_id})`);
+        const tiktokName = item.user_info?.tiktok_name || identityObj?.display_name || "Organic Video";
         const authEndTime = item.auth_info?.auth_end_time || null;
 
+        const postIdentityId = item.user_info?.identity_id || identityObj?.identity_id || identityId;
+        const postIdentityType = item.user_info?.identity_type || identityObj?.identity_type || identityType;
+        const postIdentityAuthorizedBcId = identityObj?.identity_authorized_bc_id || "";
 
         return {
           id: itemId,
-          image_url: item.video_info?.poster_url || item.thumbnail_url || "",
+          image_url: posterUrl,
           preview_url: item.video_info?.preview_url || "",
           previewUrl: item.video_info?.preview_url || "",
           ad_name: caption,
           tiktok_name: tiktokName,
           auth_code: item.item_info?.auth_code || "",
-          identity_id: item.user_info?.identity_id || identityId,
-          identity_type: item.user_info?.identity_type || identityType,
+          identity_id: postIdentityId,
+          identity_type: postIdentityType,
+          identity_authorized_bc_id: postIdentityAuthorizedBcId,
           likes: item.video_info?.like_count || item.likes || 0,
           views: item.video_info?.view_count || item.video_views || 0,
           auth_end_time: authEndTime,
@@ -114,7 +127,7 @@ function TikTokPostSelectorInline({
         setHasFetched(true)
       }
 
-      const nextCursor = data?.cursor ?? 0
+      const nextCursor = data?.cursor ?? null
       setCursor(nextCursor)
       setHasMore(data?.has_more ?? false)
     } catch (err) {
@@ -126,12 +139,12 @@ function TikTokPostSelectorInline({
       setIsLoading(false)
       setIsLoadingMore(false)
     }
-  }, [advertiserId, identityId, identityType, tiktokFetch])
+  }, [advertiserId, identityId, identityType, identityObj, tiktokFetch])
 
   // Trigger initial fetch when inputs change
   useEffect(() => {
-    fetchPosts(0, false)
-  }, [advertiserId, identityId, identityType])
+    fetchPosts(null, false)
+  }, [advertiserId, identityId, identityType, identityObj])
 
   const togglePostSelection = (post) => {
     const isSelected = selectedPostIds.has(post.id)

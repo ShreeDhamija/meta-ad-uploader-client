@@ -1509,17 +1509,15 @@ export default function MediaPreview({
                                 className="transition-opacity"
                                 style={{ opacity: isDimmed ? 0.3 : 1 }}
                               >
-                                {post.preview_url || post.previewUrl ? (
-                                  <video
-                                    src={post.preview_url || post.previewUrl}
-                                    poster={post.image_url || "https://api.withblip.com/thumbnail.jpg"}
-                                    controls
+                                {post.image_url ? (
+                                  <img
+                                    src={post.image_url}
+                                    alt="Post thumbnail"
                                     className="w-full h-auto object-cover rounded-xl"
-                                    preload="metadata"
                                   />
                                 ) : (
                                   <img
-                                    src={post.image_url || "https://api.withblip.com/thumbnail.jpg"}
+                                    src="https://api.withblip.com/thumbnail.jpg"
                                     alt="Post"
                                     className="w-full h-auto object-cover"
                                   />
@@ -1554,12 +1552,6 @@ export default function MediaPreview({
                               <p className="text-xs font-semibold text-gray-800 line-clamp-2 leading-relaxed" title={post.ad_name}>
                                 {post.ad_name}
                               </p>
-                              {post.id && (
-                                <p className="text-[10px] text-gray-405 font-mono truncate">ID: {post.id}</p>
-                              )}
-                              {post.auth_code && (
-                                <p className="text-[10px] text-gray-405 font-mono truncate">Code: {post.auth_code}</p>
-                              )}
                             </div>
                           </div>
                         );

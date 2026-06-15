@@ -1037,7 +1037,8 @@ export default function TikTokAdCreationForm({
             id: post.id,
             authCode: post.auth_code,
             identityId: post.identity_id,
-            identityType: post.identity_type
+            identityType: post.identity_type,
+            identityAuthorizedBcId: post.identity_authorized_bc_id || ""
           }
         })
       })
@@ -1115,6 +1116,7 @@ export default function TikTokAdCreationForm({
         const isCustomized = !selectedIdentity || selectedIdentity === 'CUSTOMIZED_USER'
         const currentIdentityId = adType === 'SPARK' ? item.file.identityId : (isCustomized ? undefined : selectedIdentity)
         const currentIdentityType = adType === 'SPARK' ? item.file.identityType : (isCustomized ? 'CUSTOMIZED_USER' : (selectedIdentityObj?.identity_type || 'TT_USER'))
+        const currentIdentityAuthorizedBcId = adType === 'SPARK' ? item.file.identityAuthorizedBcId : (isCustomized ? undefined : (selectedIdentityObj?.identity_authorized_bc_id || ''))
 
         const finalUrl = urlMode === 'WEBSITE'
           ? applyUtmsToUrl(landingUrl, advertiserPrefs?.defaultUTMs || [])
@@ -1197,6 +1199,7 @@ export default function TikTokAdCreationForm({
                 ...(productSource ? { product_source: productSource } : {})
               }
               if (currentIdentityId) creative.identity_id = currentIdentityId
+              if (currentIdentityAuthorizedBcId) creative.identity_authorized_bc_id = currentIdentityAuthorizedBcId
 
               if (isShoppingAg && formCatalogId) {
                 creative.catalog_id = formCatalogId;
@@ -1263,6 +1266,7 @@ export default function TikTokAdCreationForm({
                   ...(productSource ? { product_source: productSource } : {})
                 }
                 if (currentIdentityId) creative.identity_id = currentIdentityId
+                if (currentIdentityAuthorizedBcId) creative.identity_authorized_bc_id = currentIdentityAuthorizedBcId
 
                 if (isShoppingAg && formCatalogId) {
                   creative.catalog_id = formCatalogId;
@@ -4196,32 +4200,34 @@ export default function TikTokAdCreationForm({
             {/* Organic Post to Boost for Spark Ads */}
             {adType === 'SPARK' && (
               <div className="space-y-4">
-                <Label className="flex items-center gap-2 font-semibold">
-                  <Zap className="w-4 h-4 text-gray-500" />
-                  Spark Ads Video Sourcing
-                </Label>
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <Label className="flex items-center gap-2 font-semibold">
+                    <Zap className="w-4 h-4 text-gray-500" />
+                    Spark Ads Video Sourcing
+                  </Label>
 
-                <div className="flex bg-gray-100 p-1 rounded-2xl w-fit border border-gray-200">
-                  <button
-                    type="button"
-                    onClick={() => setSparkSourceTab("auth_codes")}
-                    className={`px-4 py-2 text-xs font-semibold rounded-xl transition-all ${sparkSourceTab === "auth_codes"
-                      ? "bg-white text-black shadow-sm"
-                      : "text-gray-500 hover:text-black"
-                      }`}
-                  >
-                    Paste Auth Codes
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSparkSourceTab("video_list")}
-                    className={`px-4 py-2 text-xs font-semibold rounded-xl transition-all ${sparkSourceTab === "video_list"
-                      ? "bg-white text-black shadow-sm"
-                      : "text-gray-500 hover:text-black"
-                      }`}
-                  >
-                    Choose from Video List
-                  </button>
+                  <div className="flex bg-gray-100 p-1 rounded-2xl border border-gray-200">
+                    <button
+                      type="button"
+                      onClick={() => setSparkSourceTab("auth_codes")}
+                      className={`px-4 py-2 text-xs font-semibold rounded-xl transition-all ${sparkSourceTab === "auth_codes"
+                        ? "bg-white text-black shadow-sm"
+                        : "text-gray-500 hover:text-black"
+                        }`}
+                    >
+                      Paste Auth Codes
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSparkSourceTab("video_list")}
+                      className={`px-4 py-2 text-xs font-semibold rounded-xl transition-all ${sparkSourceTab === "video_list"
+                        ? "bg-white text-black shadow-sm"
+                        : "text-gray-500 hover:text-black"
+                        }`}
+                    >
+                      Choose from Video List
+                    </button>
+                  </div>
                 </div>
 
                 {sparkSourceTab === "auth_codes" ? (
@@ -4237,6 +4243,11 @@ export default function TikTokAdCreationForm({
                               <Input
                                 value={value}
                                 onChange={(e) => updateField(setSparkAuthCodes, sparkAuthCodes, index, e.target.value)}
+                                onBlur={() => {
+                                  if (sparkAuthCodes.some(c => c.trim())) {
+                                    handleResolveAuthCodes();
+                                  }
+                                }}
                                 placeholder="Enter spark code (e.g. abcd12345)"
                                 className={formInputChrome}
                               />
@@ -4270,23 +4281,12 @@ export default function TikTokAdCreationForm({
                       </p>
                     </div>
 
-                    <Button
-                      type="button"
-                      onClick={handleResolveAuthCodes}
-                      disabled={isResolvingCodes || !sparkAuthCodes.some(c => c.trim())}
-                      className="w-full rounded-2xl py-5 font-semibold transition-all bg-black hover:bg-zinc-800 text-white shadow-md disabled:bg-zinc-300"
-                    >
-                      {isResolvingCodes ? (
-                        <>
-                          <Loader className="mr-2 h-4 w-4 animate-spin" />
-                          Resolving Codes...
-                        </>
-                      ) : (
-                        "Resolve Posts"
-                      )}
-                    </Button>
-
-
+                    {isResolvingCodes && (
+                      <div className="flex items-center gap-2 text-xs text-gray-500 py-1">
+                        <Loader className="h-3.5 w-3.5 animate-spin text-gray-400" />
+                        Resolving codes...
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="border border-gray-200 rounded-2xl p-4 bg-white min-h-[300px] max-h-[500px] overflow-hidden flex flex-col shadow-xs">
@@ -4300,6 +4300,7 @@ export default function TikTokAdCreationForm({
                       <TikTokPostSelectorInline
                         advertiserId={selectedAdvertiser}
                         identityId={selectedIdentity}
+                        identityObj={identities.find(i => i.identity_id === selectedIdentity) || null}
                         onImport={setImportedPosts}
                         importedPosts={importedPosts}
                       />
