@@ -138,6 +138,21 @@ function VariantAssignmentPopover({
   );
 }
 
+function FileNameTooltip({ name }) {
+  return (
+    <TooltipProvider delayDuration={0}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <p className="mt-1 ml-1 text-sm truncate">{name}</p>
+        </TooltipTrigger>
+        <TooltipContent side="top" align="start" className="max-w-[320px] break-words text-xs">
+          {name}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+
 // Sortable item component
 const SortableMediaItem = React.memo(function SortableMediaItem({
   file,
@@ -378,7 +393,7 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
           )}
         </div>
         <div className={`transition-opacity ${dimmed ? 'opacity-30' : (isDragging ? 'opacity-50' : 'opacity-100')}`}>
-          <p className="mt-1 ml-1 text-sm truncate" title={file.name} > {file.name} </p>
+          <FileNameTooltip name={file.name} />
 
           {isCarouselAd && (
             <span className="text-[10px] px-2 py-1 border border-gray-200 rounded-lg bg-gray-100 text-gray-700 mt-1 block w-fit">
