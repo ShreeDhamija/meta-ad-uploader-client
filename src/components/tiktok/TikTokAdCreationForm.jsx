@@ -734,6 +734,30 @@ export default function TikTokAdCreationForm({
     );
   }, [selectedAdGroup, adGroups, showDuplicateAdGroupBlock, duplicateAdGroup]);
 
+  const showProductCatalog = useMemo(() => {
+    if (selectedCampaign && selectedCampaign.length > 0) {
+      const hasSalesCampaign = selectedCampaign.some(campId => {
+        const c = campaigns.find(x => x.campaign_id === campId);
+        return c && String(c.virtual_objective_type).toUpperCase() === 'SALES';
+      });
+      if (hasSalesCampaign) return true;
+    }
+
+    const activeAgId = selectedAdGroup?.[0] || (showDuplicateAdGroupBlock ? duplicateAdGroup : null);
+    if (activeAgId) {
+      const agObj = adGroups.find(g => g.adgroup_id === activeAgId);
+      if (agObj) {
+        const campId = agObj.campaignId || agObj.campaign_id;
+        const c = campaigns.find(x => x.campaign_id === campId);
+        if (c && String(c.virtual_objective_type).toUpperCase() === 'SALES') {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }, [selectedCampaign, campaigns, selectedAdGroup, showDuplicateAdGroupBlock, duplicateAdGroup, adGroups]);
+
   useEffect(() => {
     const activeAgId = selectedAdGroup?.[0] || (showDuplicateAdGroupBlock ? duplicateAdGroup : null);
     if (!activeAgId) {
@@ -1156,6 +1180,61 @@ export default function TikTokAdCreationForm({
             (productSource && productSource !== 'UNSET')
           )
 
+          const campaignObj = campaigns.find(c => c.campaign_id === adGroupObj?.campaignId || c.campaign_id === selectedCampaign[0])
+          const showProductCatalogForAdGroup = campaignObj && String(campaignObj.virtual_objective_type).toUpperCase() === 'SALES'
+
+          let catalogIdToUse = null
+          let skuIdToUse = null
+          let itemGroupIdToUse = null
+
+          if (isShoppingAg) {
+            if (showProductCatalogForAdGroup && formCatalogId) {
+              catalogIdToUse = formCatalogId
+              const matchedProd = formCatalogProducts.find(p => p.product_id === formProductId)
+              if (matchedProd) {
+                if (matchedProd.item_group_id) {
+                  itemGroupIdToUse = matchedProd.item_group_id
+                }
+                const resolvedSku = matchedProd.sku_id || matchedProd.product_id
+                if (resolvedSku) {
+                  skuIdToUse = resolvedSku
+                }
+              } else {
+                const catSel = advertiserPrefs?.catalogSelection
+                if (catSel && catSel.product_id === formProductId) {
+                  if (catSel.item_group_id) {
+                    itemGroupIdToUse = catSel.item_group_id
+                  }
+                  const resolvedSku = catSel.sku_id || catSel.product_id
+                  if (resolvedSku) {
+                    skuIdToUse = resolvedSku
+                  }
+                } else if (formProductId) {
+                  skuIdToUse = formProductId
+                }
+              }
+            } else {
+              // Fallback to parameters already mapped in the ad group
+              if (adGroupObj?.catalog_id) {
+                catalogIdToUse = adGroupObj.catalog_id
+              }
+              if (adGroupObj?.sku_ids) {
+                if (Array.isArray(adGroupObj.sku_ids) && adGroupObj.sku_ids.length > 0) {
+                  skuIdToUse = adGroupObj.sku_ids[0]
+                } else if (typeof adGroupObj.sku_ids === 'string' && adGroupObj.sku_ids.trim() !== '') {
+                  skuIdToUse = adGroupObj.sku_ids
+                }
+              }
+              if (adGroupObj?.item_group_ids) {
+                if (Array.isArray(adGroupObj.item_group_ids) && adGroupObj.item_group_ids.length > 0) {
+                  itemGroupIdToUse = adGroupObj.item_group_ids[0]
+                } else if (typeof adGroupObj.item_group_ids === 'string' && adGroupObj.item_group_ids.trim() !== '') {
+                  itemGroupIdToUse = adGroupObj.item_group_ids
+                }
+              }
+            }
+          }
+
           const finalAdName = computeAdNameFromFormula(
             item.file,
             i,
@@ -1202,30 +1281,13 @@ export default function TikTokAdCreationForm({
               if (currentIdentityId) creative.identity_id = currentIdentityId
               if (currentIdentityAuthorizedBcId) creative.identity_authorized_bc_id = currentIdentityAuthorizedBcId
 
-              if (isShoppingAg && formCatalogId) {
-                creative.catalog_id = formCatalogId;
-                const matchedProd = formCatalogProducts.find(p => p.product_id === formProductId);
-                if (matchedProd) {
-                  if (matchedProd.item_group_id) {
-                    creative.item_group_id = matchedProd.item_group_id;
-                  }
-                  const resolvedSku = matchedProd.sku_id || matchedProd.product_id;
-                  if (resolvedSku) {
-                    creative.sku_id = resolvedSku;
-                  }
-                } else {
-                  const catSel = advertiserPrefs?.catalogSelection;
-                  if (catSel && catSel.product_id === formProductId) {
-                    if (catSel.item_group_id) {
-                      creative.item_group_id = catSel.item_group_id;
-                    }
-                    const resolvedSku = catSel.sku_id || catSel.product_id;
-                    if (resolvedSku) {
-                      creative.sku_id = resolvedSku;
-                    }
-                  } else if (formProductId) {
-                    creative.sku_id = formProductId;
-                  }
+              if (isShoppingAg && catalogIdToUse) {
+                creative.catalog_id = catalogIdToUse;
+                if (skuIdToUse) {
+                  creative.sku_id = skuIdToUse;
+                }
+                if (itemGroupIdToUse) {
+                  creative.item_group_id = itemGroupIdToUse;
                 }
               }
 
@@ -1269,30 +1331,13 @@ export default function TikTokAdCreationForm({
                 if (currentIdentityId) creative.identity_id = currentIdentityId
                 if (currentIdentityAuthorizedBcId) creative.identity_authorized_bc_id = currentIdentityAuthorizedBcId
 
-                if (isShoppingAg && formCatalogId) {
-                  creative.catalog_id = formCatalogId;
-                  const matchedProd = formCatalogProducts.find(p => p.product_id === formProductId);
-                  if (matchedProd) {
-                    if (matchedProd.item_group_id) {
-                      creative.item_group_id = matchedProd.item_group_id;
-                    }
-                    const resolvedSku = matchedProd.sku_id || matchedProd.product_id;
-                    if (resolvedSku) {
-                      creative.sku_id = resolvedSku;
-                    }
-                  } else {
-                    const catSel = advertiserPrefs?.catalogSelection;
-                    if (catSel && catSel.product_id === formProductId) {
-                      if (catSel.item_group_id) {
-                        creative.item_group_id = catSel.item_group_id;
-                      }
-                      const resolvedSku = catSel.sku_id || catSel.product_id;
-                      if (resolvedSku) {
-                        creative.sku_id = resolvedSku;
-                      }
-                    } else if (formProductId) {
-                      creative.sku_id = formProductId;
-                    }
+                if (isShoppingAg && catalogIdToUse) {
+                  creative.catalog_id = catalogIdToUse;
+                  if (skuIdToUse) {
+                    creative.sku_id = skuIdToUse;
+                  }
+                  if (itemGroupIdToUse) {
+                    creative.item_group_id = itemGroupIdToUse;
                   }
                 }
 
@@ -4838,7 +4883,7 @@ export default function TikTokAdCreationForm({
               </div>
 
               {/* Optional Section: Add Product Information */}
-              {isShoppingAdGroup && (
+              {isShoppingAdGroup && showProductCatalog && (
                 <div className="border-t border-gray-100 pt-6 space-y-4">
                   <div className="flex flex-col gap-1">
                     <Label className="flex items-center gap-2 font-semibold text-sm">
