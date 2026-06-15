@@ -1350,15 +1350,16 @@ export default function TikTokAdCreationForm({
             advertiserId: selectedAdvertiser,
             adgroupId: adgroupId,
             ...(currentIdentityId ? { identityId: currentIdentityId } : {}),
-            identityType: currentIdentityType,
-            adName: finalAdName,
-            adType: adType,
-            creatives: creatives,
-            jobId: jobToProcess.id,
-            cta: creativeCTAs,
-            s3Url: currentS3Url,
-            ad_count: adGroupObj?.ad_count !== undefined ? adGroupObj.ad_count : 0
-          }
+              identityType: currentIdentityType,
+              adName: finalAdName,
+              adType: adType,
+              creatives: creatives,
+              jobId: jobToProcess.id,
+              cta: creativeCTAs,
+              s3Url: currentS3Url,
+              ad_count: adGroupObj?.ad_count !== undefined ? adGroupObj.ad_count : 0,
+              campaignAutomationType: campaignObj?.campaign_automation_type || null
+            }
 
           try {
             const createRes = await tiktokFetch(`${API_BASE_URL}/api/tiktok/create-ad`, {
