@@ -5038,6 +5038,9 @@ export default function AdCreationForm({
               formData.append("link", JSON.stringify(link));
             }
 
+            if (adScheduleStartTime) formData.append("adScheduleStartTime", adScheduleStartTime);
+            if (adScheduleEndTime) formData.append("adScheduleEndTime", adScheduleEndTime);
+
             queueCreateAdPromise(formData, { fileName: post.ad_name });
           });
         });
