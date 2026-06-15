@@ -85,9 +85,12 @@ function TikTokPostSelectorInline({
         const tiktokName = item.user_info?.tiktok_name || "Organic Video";
         const authEndTime = item.auth_info?.auth_end_time || null;
 
+
         return {
           id: itemId,
-          image_url: posterUrl,
+          image_url: item.video_info?.poster_url || item.thumbnail_url || "",
+          preview_url: item.video_info?.preview_url || "",
+          previewUrl: item.video_info?.preview_url || "",
           ad_name: caption,
           tiktok_name: tiktokName,
           auth_code: item.item_info?.auth_code || "",
@@ -97,7 +100,7 @@ function TikTokPostSelectorInline({
           views: item.video_info?.view_count || item.video_views || 0,
           auth_end_time: authEndTime,
           raw: item
-        }
+        };
       })
 
       if (isLoadMore) {

@@ -1565,12 +1565,23 @@ export default function MediaPreview({
                                 className="transition-opacity"
                                 style={{ opacity: isDimmed ? 0.3 : 1 }}
                               >
-                                <img
-                                  src={post.image_url || "https://api.withblip.com/thumbnail.jpg"}
-                                  alt="Post"
-                                  className="w-full h-auto object-cover"
-                                />
+                                {post.preview_url || post.previewUrl ? (
+                                  <video
+                                    src={post.preview_url || post.previewUrl}
+                                    poster={post.image_url || "https://api.withblip.com/thumbnail.jpg"}
+                                    controls
+                                    className="w-full h-auto object-cover rounded-xl"
+                                    preload="metadata"
+                                  />
+                                ) : (
+                                  <img
+                                    src={post.image_url || "https://api.withblip.com/thumbnail.jpg"}
+                                    alt="Post"
+                                    className="w-full h-auto object-cover"
+                                  />
+                                )}
                               </div>
+
                               <Button
                                 type="button"
                                 variant="ghost"

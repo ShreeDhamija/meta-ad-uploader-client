@@ -2805,10 +2805,11 @@ export default function TikTokAdCreationForm({
         const tiktokName = videoObj.user_info?.tiktok_name || videoObj.display_name || "TikTok Creator";
         const postIdentityId = videoObj.user_info?.identity_id || selectedIdentity;
         const postIdentityType = videoObj.user_info?.identity_type || "BC_AUTH_TT";
-
         const newPost = {
           id: itemId,
-          image_url: posterUrl,
+          image_url: videoObj.poster_url || videoObj.cover_image_url || "",
+          preview_url: videoObj.preview_url || "",
+          previewUrl: videoObj.preview_url || "",
           ad_name: caption,
           tiktok_name: tiktokName,
           auth_code: authCode,
@@ -4278,79 +4279,7 @@ export default function TikTokAdCreationForm({
                       )}
                     </Button>
 
-                    {resolvedCodes.length > 0 && (
-                      <div className="space-y-2.5 mt-4">
-                        <Label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
-                          Resolution Results ({resolvedCodes.length})
-                        </Label>
-                        <div className="grid gap-2.5 max-h-[300px] overflow-y-auto pr-1">
-                          {resolvedCodes.map((item, idx) => {
-                            const isSuccess = item.status === 'success';
-                            return (
-                              <div
-                                key={item.id || idx}
-                                className={`flex gap-3 items-center p-3 rounded-2xl border transition-all ${isSuccess
-                                  ? 'bg-zinc-50/70 border-zinc-200 shadow-xs'
-                                  : 'bg-red-50/50 border-red-200'
-                                  }`}
-                              >
-                                {isSuccess ? (
-                                  <>
-                                    <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 border border-gray-200">
-                                      {item.image_url ? (
-                                        <img src={item.image_url} alt="" className="w-full h-full object-cover" />
-                                      ) : (
-                                        <div className="w-full h-full flex items-center justify-center bg-gray-150">
-                                          <Image className="h-4 w-4 text-gray-400" />
-                                        </div>
-                                      )}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                      <p className="text-xs font-semibold text-gray-800 line-clamp-2 leading-relaxed" title={item.ad_name}>
-                                        {item.ad_name}
-                                      </p>
-                                      <div className="flex items-center gap-2 mt-1 text-[10px] text-gray-400 font-medium">
-                                        <span className="font-mono">Code: {item.auth_code}</span>
-                                        <span>•</span>
-                                        <span>by {item.tiktok_name}</span>
-                                      </div>
-                                    </div>
-                                    <div className="text-right flex shrink-0 flex-col justify-center text-[10px] text-gray-500 font-medium">
-                                      <div>Likes: {item.likes >= 1000 ? (item.likes / 1000).toFixed(1) + 'k' : item.likes}</div>
-                                      <div>Views: {item.views >= 1000 ? (item.views / 1000).toFixed(1) + 'k' : item.views}</div>
-                                    </div>
-                                  </>
-                                ) : (
-                                  <>
-                                    <div className="p-2 bg-red-100 text-red-650 rounded-lg shrink-0">
-                                      <AlertTriangle className="h-4 w-4" />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                      <p className="text-xs font-semibold text-red-700 truncate">
-                                        Failed to resolve: {item.auth_code}
-                                      </p>
-                                      <p className="text-[10px] text-red-500 mt-0.5 leading-relaxed">
-                                        {item.error}
-                                      </p>
-                                    </div>
-                                    <Button
-                                      type="button"
-                                      size="sm"
-                                      variant="outline"
-                                      className="h-8 rounded-xl px-3 bg-white border-red-300 text-red-600 hover:bg-red-50 text-[11px] font-semibold"
-                                      onClick={() => handleRetryResolve(item)}
-                                      disabled={isResolvingCodes}
-                                    >
-                                      Retry
-                                    </Button>
-                                  </>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
+
                   </div>
                 ) : (
                   <div className="border border-gray-200 rounded-2xl p-4 bg-white min-h-[300px] max-h-[500px] overflow-hidden flex flex-col shadow-xs">
