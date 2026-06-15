@@ -1040,12 +1040,15 @@ export default function MediaPreview({
 
       const result = JSON.parse(responseText);
 
-      const newGroups = result.groups.map(indexGroup =>
-        createFileGroup(indexGroup.map(idx => {
-          const file = imageFiles[idx];
-          return getFileId(file);
-        }))
-      );
+      const newGroups = result.groups
+        .map(indexGroup =>
+          indexGroup
+            .map(idx => imageFiles[idx])      // may be undefined if server sends a bad index
+            .filter(Boolean)                   // drop anything that didn't resolve to a real file
+            .map(file => getFileId(file))
+        )
+        .filter(ids => ids.length === 2)       // only keep complete pairs
+        .map(ids => createFileGroup(ids));
 
       setFileGroups(newGroups);
       setSelectedFiles(new Set());
