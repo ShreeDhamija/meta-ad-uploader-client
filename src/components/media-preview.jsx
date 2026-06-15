@@ -1509,7 +1509,15 @@ export default function MediaPreview({
                                 className="transition-opacity"
                                 style={{ opacity: isDimmed ? 0.3 : 1 }}
                               >
-                                {post.image_url ? (
+                                {post.preview_url || post.previewUrl ? (
+                                  <video
+                                    src={post.preview_url || post.previewUrl}
+                                    poster={post.image_url || "https://api.withblip.com/thumbnail.jpg"}
+                                    controls
+                                    className="w-full h-auto object-cover rounded-xl"
+                                    preload="metadata"
+                                  />
+                                ) : post.image_url ? (
                                   <img
                                     src={post.image_url}
                                     alt="Post thumbnail"

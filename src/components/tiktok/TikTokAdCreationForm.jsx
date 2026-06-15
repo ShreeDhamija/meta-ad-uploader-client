@@ -74,6 +74,7 @@ import UploadIcon from '@/assets/icons/upload.svg?react'
 import QueueIcon from '@/assets/icons/queue.svg?react'
 import PartialSuccess from '@/assets/icons/partialsuccess.svg?react'
 import LabelIcon from '@/assets/icons/label.svg?react'
+import TikTokIconUrl from '@/assets/icons/tiktok.svg'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com'
 const TIKTOK_PINK = '#FE2C55'
@@ -4134,13 +4135,11 @@ export default function TikTokAdCreationForm({
                           const found = identities.find(i => i.identity_id === selectedIdentity);
                           return found ? (
                             <span className="flex items-center gap-2">
-                              {(found.avatar_url || found.profile_image) && (
-                                <img
-                                  src={found.avatar_url || found.profile_image}
-                                  alt={found.display_name}
-                                  className="w-6 h-6 rounded-full object-cover shrink-0"
-                                />
-                              )}
+                              <img
+                                src={found.avatar_url || found.profile_image || TikTokIconUrl}
+                                alt={found.display_name}
+                                className="w-6 h-6 rounded-full object-cover shrink-0 bg-gray-50 border border-gray-100 p-0.5"
+                              />
                               <span className="font-semibold text-gray-900">{found.display_name}</span>
                             </span>
                           ) : <span>{selectedIdentity}</span>;
@@ -4170,13 +4169,11 @@ export default function TikTokAdCreationForm({
                             )}
                           >
                             <div className="flex items-center gap-2 min-w-0">
-                              {(i.avatar_url || i.profile_image) && (
-                                <img
-                                  src={i.avatar_url || i.profile_image}
-                                  alt={i.display_name}
-                                  className="w-6 h-6 rounded-full object-cover shrink-0"
-                                />
-                              )}
+                              <img
+                                src={i.avatar_url || i.profile_image || TikTokIconUrl}
+                                alt={i.display_name}
+                                className="w-6 h-6 rounded-full object-cover shrink-0 bg-gray-50 border border-gray-100 p-0.5"
+                              />
                               <div className="flex flex-col min-w-0">
                                 <span className="text-sm font-semibold text-gray-900 truncate">{i.display_name}</span>
                                 <span className="text-[10px] text-gray-400 font-normal shrink-0 truncate">{i.identity_id}</span>

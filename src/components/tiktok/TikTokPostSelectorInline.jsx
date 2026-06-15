@@ -251,13 +251,12 @@ function TikTokPostSelectorInline({
         )}
 
         {filteredPosts.length > 0 && (
-          <div className="grid grid-cols-[20px_48px_1fr_75px_75px_120px] gap-3 px-3 py-2.5 text-xs font-semibold text-white bg-zinc-800 rounded-xl items-center shadow-sm">
+          <div className="grid grid-cols-[20px_48px_1fr_75px_75px] gap-3 px-3 py-2.5 text-xs font-semibold text-white bg-zinc-800 rounded-xl items-center shadow-sm">
             <div></div>
             <div>Cover</div>
             <div>Caption</div>
             <div className="text-right">Likes</div>
             <div className="text-right">Views</div>
-            <div className="text-center">Auth Status</div>
           </div>
         )}
       </div>
@@ -267,12 +266,11 @@ function TikTokPostSelectorInline({
           <div className="space-y-1.5 pb-4">
             {filteredPosts.map((post) => {
               const isSelected = selectedPostIds.has(post.id)
-              const expiry = getExpiryWarning(post.auth_end_time)
 
               return (
                 <label
                   key={post.id}
-                  className={`grid grid-cols-[auto_48px_1fr_75px_75px_120px] gap-3 items-center p-3 rounded-2xl border cursor-pointer transition-all duration-150 ${isSelected
+                  className={`grid grid-cols-[auto_48px_1fr_75px_75px] gap-3 items-center p-3 rounded-2xl border cursor-pointer transition-all duration-150 ${isSelected
                     ? 'border-zinc-850 bg-zinc-50/70 shadow-sm'
                     : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50/50'
                     }`}
@@ -306,7 +304,6 @@ function TikTokPostSelectorInline({
                     <p className="text-xs font-semibold text-gray-800 line-clamp-2 leading-relaxed" title={post.ad_name}>
                       {post.ad_name}
                     </p>
-                    <p className="text-[10px] text-gray-400 mt-0.5 font-mono truncate">ID: {post.id}</p>
                   </div>
 
                   {/* Likes */}
@@ -317,24 +314,6 @@ function TikTokPostSelectorInline({
                   {/* Views */}
                   <div className="text-right text-xs font-medium text-gray-700">
                     {formatNumber(post.views)}
-                  </div>
-
-                  {/* Expiry Warning / Status */}
-                  <div className="flex justify-center">
-                    {expiry ? (
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 ${expiry.type === 'expired'
-                        ? 'bg-red-50 text-red-600 border border-red-200 animate-pulse'
-                        : 'bg-amber-50 text-amber-600 border border-amber-200'
-                        }`}>
-                        <AlertTriangle className="h-3 w-3 shrink-0" />
-                        {expiry.message}
-                      </span>
-                    ) : (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-50 text-green-600 border border-green-200 flex items-center gap-1">
-                        <Check className="h-3 w-3 shrink-0" />
-                        Active
-                      </span>
-                    )}
                   </div>
                 </label>
               )

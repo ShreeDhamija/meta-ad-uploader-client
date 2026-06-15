@@ -1,4 +1,5 @@
 import TikTokIcon from "@/assets/icons/tiktok.svg?react"
+import TikTokIconUrl from "@/assets/icons/tiktok.svg"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { saveTikTokSettings } from "@/lib/saveTikTokSettings"
@@ -517,13 +518,11 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                                     const found = identities.find(i => i.identity_id === currentSettings.defaultIdentityId);
                                                     return found ? (
                                                         <span className="flex items-center gap-2">
-                                                            {(found.avatar_url || found.profile_image) && (
-                                                                <img
-                                                                    src={found.avatar_url || found.profile_image}
-                                                                    alt={found.display_name}
-                                                                    className="w-6 h-6 rounded-full object-cover shrink-0"
-                                                                />
-                                                            )}
+                                                            <img
+                                                                src={found.avatar_url || found.profile_image || TikTokIconUrl}
+                                                                alt={found.display_name}
+                                                                className="w-6 h-6 rounded-full object-cover shrink-0 bg-gray-50 border border-gray-100 p-0.5"
+                                                            />
                                                             <span className="text-sm font-medium text-gray-900">{found.display_name}</span>
                                                         </span>
                                                     ) : (
@@ -584,13 +583,11 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                                                 className="w-full text-left px-3 py-2 cursor-pointer rounded-xl transition-colors duration-150 hover:bg-gray-100 flex items-center justify-between"
                                                             >
                                                                 <div className="flex items-center gap-2 min-w-0">
-                                                                    {(i.avatar_url || i.profile_image) && (
-                                                                        <img
-                                                                            src={i.avatar_url || i.profile_image}
-                                                                            alt={i.display_name}
-                                                                            className="w-6 h-6 rounded-full object-cover shrink-0"
-                                                                        />
-                                                                    )}
+                                                                    <img
+                                                                        src={i.avatar_url || i.profile_image || TikTokIconUrl}
+                                                                        alt={i.display_name}
+                                                                        className="w-6 h-6 rounded-full object-cover shrink-0 bg-gray-50 border border-gray-100 p-0.5"
+                                                                    />
                                                                     <div className="flex flex-col min-w-0">
                                                                         <span className="text-sm font-semibold text-gray-900 truncate">{i.display_name}</span>
                                                                         <span className="text-xs text-gray-400 font-normal shrink-0 truncate">{i.identity_id}</span>
