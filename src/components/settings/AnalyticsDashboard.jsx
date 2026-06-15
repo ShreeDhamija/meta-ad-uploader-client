@@ -1778,6 +1778,7 @@ export default function AnalyticsDashboard() {
                 <TrendingCreative
                     adAccountId={selectedAdAccount}
                     conversionEvent={effectiveConversionEvent}
+                    mode={metricMode}
                     refreshKey={chartsRefreshKey}
                 />
             )}

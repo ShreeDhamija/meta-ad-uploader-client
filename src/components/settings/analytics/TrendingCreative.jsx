@@ -18,6 +18,11 @@ function formatSpend(v) {
     return `$${v.toFixed(0)}`
 }
 
+function formatRoas(v) {
+    if (v == null) return "—"
+    return `${v.toFixed(2)}x`
+}
+
 function formatWatchTime(seconds) {
     if (seconds == null) return "—"
     const s = Math.round(seconds)
@@ -86,10 +91,11 @@ function TruncatedWithTooltip({ text, max, className, tooltipSide = "top" }) {
     )
 }
 
-export default function TrendingCreative({ adAccountId, conversionEvent, refreshKey, className }) {
+export default function TrendingCreative({ adAccountId, conversionEvent, mode = "cpr", refreshKey, className }) {
     const [data, setData] = useState(null)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState(null)
+    const isRoasMode = mode === "roas"
 
     // Session-scoped response cache. Keyed by accountId + conversionEvent +
     // refreshKey — includes refreshKey so the user's manual refresh (which
@@ -100,7 +106,7 @@ export default function TrendingCreative({ adAccountId, conversionEvent, refresh
 
     useEffect(() => {
         if (!adAccountId) { setData(null); return }
-        const cacheKey = `${adAccountId}::${conversionEvent || "__auto__"}::${refreshKey || 0}`
+        const cacheKey = `${adAccountId}::${mode}::${conversionEvent || "__auto__"}::${refreshKey || 0}`
 
         // Cache hit — render instantly, no Helix.
         if (cacheRef.current[cacheKey]) {
@@ -114,7 +120,7 @@ export default function TrendingCreative({ adAccountId, conversionEvent, refresh
         setLoading(true)
         setError(null)
 
-        const params = new URLSearchParams({ adAccountId })
+        const params = new URLSearchParams({ adAccountId, mode })
         if (conversionEvent) params.set("conversionEvent", conversionEvent)
         if (refreshKey) params.set("rk", String(refreshKey))
 
@@ -133,7 +139,7 @@ export default function TrendingCreative({ adAccountId, conversionEvent, refresh
             .finally(() => { if (!cancelled) setLoading(false) })
 
         return () => { cancelled = true }
-    }, [adAccountId, conversionEvent, refreshKey])
+    }, [adAccountId, conversionEvent, mode, refreshKey])
 
     return (
         <TooltipProvider delayDuration={150}>
@@ -177,6 +183,11 @@ export default function TrendingCreative({ adAccountId, conversionEvent, refresh
                                         <th className="px-3 pb-2 text-center text-[10px] font-medium uppercase tracking-wide text-gray-400">
                                             CPA
                                         </th>
+                                        {isRoasMode && (
+                                            <th className="px-3 pb-2 text-center text-[10px] font-medium uppercase tracking-wide text-gray-400">
+                                                ROAS
+                                            </th>
+                                        )}
                                         <th className="px-3 pb-2 text-center text-[10px] font-medium uppercase tracking-wide text-gray-400">
                                             CTR
                                         </th>
@@ -227,6 +238,11 @@ export default function TrendingCreative({ adAccountId, conversionEvent, refresh
                                             <td className="whitespace-nowrap px-3 py-2.5 text-center align-middle text-sm font-medium text-gray-800">
                                                 {ad.cpa != null ? `$${Math.round(ad.cpa)}` : "—"}
                                             </td>
+                                            {isRoasMode && (
+                                                <td className="whitespace-nowrap px-3 py-2.5 text-center align-middle text-sm font-medium text-gray-800">
+                                                    {formatRoas(ad.roas)}
+                                                </td>
+                                            )}
                                             <td className="whitespace-nowrap px-3 py-2.5 text-center align-middle text-sm font-medium text-gray-800">
                                                 {ad.ctr != null ? `${ad.ctr.toFixed(2)}%` : "—"}
                                             </td>
