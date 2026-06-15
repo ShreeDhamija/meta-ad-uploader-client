@@ -78,7 +78,7 @@ function CustomTooltip({ active, payload, viewMode, metric, hiddenSeries }) {
     )
 }
 
-export default function WeeklyPlacementChart({ adAccountId, dateRange, refreshKey, granularity = 'weekly' }) {
+export default function WeeklyPlacementChart({ adAccountId, dateRange, refreshKey, granularity = 'weekly', showDefaultTooltip = false }) {
     const [data, setData] = useState(null)
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState(null)
@@ -168,6 +168,7 @@ export default function WeeklyPlacementChart({ adAccountId, dateRange, refreshKe
             return pctRow
         })
     }, [data, series, viewMode, effectiveMetric, granularity])
+    const shouldShowDefaultTooltip = showDefaultTooltip && chartData.length === 1
 
     const handleToggleSeries = (key) => {
         setHiddenSeries(prev => {
@@ -283,7 +284,11 @@ export default function WeeklyPlacementChart({ adAccountId, dateRange, refreshKe
                                 domain={viewMode === "percent" && effectiveMetric === "spend" ? [0, 100] : undefined}
                                 width={48}
                             />
-                            <Tooltip content={<CustomTooltip viewMode={viewMode} metric={effectiveMetric} hiddenSeries={hiddenSeries} />} />
+                            <Tooltip
+                                content={<CustomTooltip viewMode={viewMode} metric={effectiveMetric} hiddenSeries={hiddenSeries} />}
+                                defaultIndex={shouldShowDefaultTooltip ? 0 : undefined}
+                                active={shouldShowDefaultTooltip ? true : undefined}
+                            />
                             {series.map((key, i) => (
                                 <Line
                                     key={key}

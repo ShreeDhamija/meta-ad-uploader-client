@@ -44,6 +44,7 @@ import {
     createAnalyticsDateRangeFromPreset,
     getAnalyticsDateRangeCacheKey,
     DEFAULT_ANALYTICS_GRANULARITY,
+    getAnalyticsRangeDays,
     resolveAllowedGranularity,
     ANALYTICS_GRANULARITIES,
     isGranularityAllowed,
@@ -425,6 +426,7 @@ export default function AnalyticsDashboard() {
 
     const recsCount = recommendations?.recommendations?.length || 0
     const poorAdsCount = poorAds?.ads?.length || 0
+    const showSingleDayChartTooltips = getAnalyticsRangeDays(analyticsDateRange) === 1
 
 
 
@@ -1570,6 +1572,7 @@ export default function AnalyticsDashboard() {
                                     loading={dailyLoading}
                                     mode={metricMode}
                                     granularity={analyticsGranularity}
+                                    showDefaultTooltip={showSingleDayChartTooltips}
                                 />
                             </div>
                             <div className="border-t border-gray-200 lg:border-t-0">
@@ -1577,6 +1580,7 @@ export default function AnalyticsDashboard() {
                                     data={weeklyInsights}
                                     loading={weeklyLoading}
                                     granularity={analyticsGranularity}
+                                    showDefaultTooltip={showSingleDayChartTooltips}
                                 />
                             </div>
                             <div className="pointer-events-none absolute left-1/2 top-[7%] hidden h-[90%] -translate-x-1/2 border-l border-dashed border-gray-300 lg:block" />
@@ -1593,6 +1597,7 @@ export default function AnalyticsDashboard() {
                                     dateRange={analyticsDateRange}
                                     granularity={analyticsGranularity}
                                     refreshKey={chartsRefreshKey}
+                                    showDefaultTooltip={showSingleDayChartTooltips}
                                 />
                             </div>
                             <div className="border-t border-gray-200 lg:border-t-0">
@@ -1600,6 +1605,7 @@ export default function AnalyticsDashboard() {
                                     data={weeklyInsights}
                                     loading={weeklyLoading}
                                     granularity={analyticsGranularity}
+                                    showDefaultTooltip={showSingleDayChartTooltips}
                                 />
                             </div>
                             <div className="pointer-events-none absolute left-1/2 top-[7%] hidden h-[90%] -translate-x-1/2 border-l border-dashed border-gray-300 lg:block" />

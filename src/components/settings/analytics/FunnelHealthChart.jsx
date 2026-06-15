@@ -35,7 +35,7 @@ const FUNNEL_CHART_SIDE_INSET = 0
 // Both metrics are always shown — the metric selector dropdown was removed.
 const SELECTED_METRICS = ["frequency", "firstTimeImpressionRate"]
 
-export default function FunnelHealthChart({ data, loading, className, granularity = 'weekly' }) {
+export default function FunnelHealthChart({ data, loading, className, granularity = 'weekly', showDefaultTooltip = false }) {
     const selectedMetrics = SELECTED_METRICS
 
     const chartData = useMemo(() => {
@@ -65,6 +65,7 @@ export default function FunnelHealthChart({ data, loading, className, granularit
         if (selectedMetricConfigs.length === 1) return selectedMetricConfigs[0].label
         return selectedMetricConfigs.map((metric) => metric.label).join(', ')
     }, [selectedMetricConfigs])
+    const shouldShowDefaultTooltip = showDefaultTooltip && chartData.length === 1
 
     const CustomTooltip = ({ active, payload }) => {
         if (!active || !payload?.length) return null
@@ -132,7 +133,11 @@ export default function FunnelHealthChart({ data, loading, className, granularit
                                     width={index > 1 ? 0 : metric.yAxisWidth}
                                 />
                             ))}
-                            <Tooltip content={<CustomTooltip />} />
+                            <Tooltip
+                                content={<CustomTooltip />}
+                                defaultIndex={shouldShowDefaultTooltip ? 0 : undefined}
+                                active={shouldShowDefaultTooltip ? true : undefined}
+                            />
                             {selectedMetricConfigs.map((metric) => (
                                 <Line
                                     key={metric.key}

@@ -40,7 +40,7 @@ function formatEventName(actionType) {
     return actionType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
-export default function KPIChart({ data, loading, mode, granularity = 'daily' }) {
+export default function KPIChart({ data, loading, mode, granularity = 'daily', showDefaultTooltip = false }) {
     const { chartData, campaigns } = useMemo(() => {
         if (!data?.dailyInsights?.length) return { chartData: [], campaigns: [] }
 
@@ -149,6 +149,7 @@ export default function KPIChart({ data, loading, mode, granularity = 'daily' })
     const formatValue = mode === 'roas'
         ? (v) => v !== null && v !== undefined ? `${v.toFixed(2)}x` : 'N/A'
         : (v) => v !== null && v !== undefined ? `$${Math.round(v).toLocaleString()}` : 'N/A'
+    const shouldShowDefaultTooltip = showDefaultTooltip && chartDataWithTrend.length === 1
 
     const CustomTooltip = ({ active, payload }) => {
         if (!active || !payload?.length) return null
@@ -216,7 +217,11 @@ export default function KPIChart({ data, loading, mode, granularity = 'daily' })
                                 tickFormatter={(v) => mode === 'roas' ? `${v.toFixed(1)}x` : `$${Math.round(v)}`}
                                 width={DAILY_CHART_LEFT_INSET}
                             />
-                            <Tooltip content={<CustomTooltip />} />
+                            <Tooltip
+                                content={<CustomTooltip />}
+                                defaultIndex={shouldShowDefaultTooltip ? 0 : undefined}
+                                active={shouldShowDefaultTooltip ? true : undefined}
+                            />
                             <Line
                                 type="monotone"
                                 dataKey="__trend"

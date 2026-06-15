@@ -52,7 +52,7 @@ const METRIC_OPTIONS = {
 
 const WEEKLY_CHART_SIDE_INSET = 0
 
-export default function WeeklyChart({ data, loading, className, granularity = 'weekly' }) {
+export default function WeeklyChart({ data, loading, className, granularity = 'weekly', showDefaultTooltip = false }) {
     const [selectedMetrics, setSelectedMetrics] = useState(["costPerLinkClick", "cpm"])
 
     const chartData = useMemo(() => {
@@ -92,6 +92,7 @@ export default function WeeklyChart({ data, loading, className, granularity = 'w
         if (selectedMetricConfigs.length === 1) return selectedMetricConfigs[0].label
         return selectedMetricConfigs.map((metric) => metric.label).join(', ')
     }, [selectedMetricConfigs])
+    const shouldShowDefaultTooltip = showDefaultTooltip && chartData.length === 1
 
     const handleMetricToggle = (metricKey, checked) => {
         setSelectedMetrics((prev) => {
@@ -173,7 +174,11 @@ export default function WeeklyChart({ data, loading, className, granularity = 'w
                                     width={index > 1 ? 0 : metric.yAxisWidth}
                                 />
                             ))}
-                            <Tooltip content={<CustomTooltip />} />
+                            <Tooltip
+                                content={<CustomTooltip />}
+                                defaultIndex={shouldShowDefaultTooltip ? 0 : undefined}
+                                active={shouldShowDefaultTooltip ? true : undefined}
+                            />
                             {selectedMetricConfigs.map((metric) => (
                                 <Line
                                     key={metric.key}
