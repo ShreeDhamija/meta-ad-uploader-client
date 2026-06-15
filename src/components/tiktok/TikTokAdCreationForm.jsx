@@ -2797,9 +2797,11 @@ export default function TikTokAdCreationForm({
         }
 
         const videoObj = infoData.video || {};
-        const itemId = videoObj.item_id || videoObj.video_id || infoData.videoId || authCode;
+        const itemId = (typeof videoObj.item_id === 'string' ? videoObj.item_id : '') ||
+          (typeof videoObj.video_id === 'string' ? videoObj.video_id : '') ||
+          (typeof infoData.videoId === 'string' ? infoData.videoId : '') ||
+          authCode;
         const caption = videoObj.text || videoObj.title || videoObj.caption || `Spark Post ${itemId}`;
-        const posterUrl = videoObj.poster_url || videoObj.cover_image_url || videoObj.preview_url || "";
         const likes = videoObj.like_count || 0;
         const views = videoObj.view_count || 0;
         const tiktokName = videoObj.user_info?.tiktok_name || videoObj.display_name || "TikTok Creator";
@@ -2894,7 +2896,10 @@ export default function TikTokAdCreationForm({
       }
 
       const videoObj = infoData.video || {};
-      const itemId = videoObj.item_id || videoObj.video_id || infoData.videoId || failedItem.auth_code;
+      const itemId = (typeof videoObj.item_id === 'string' ? videoObj.item_id : '') ||
+        (typeof videoObj.video_id === 'string' ? videoObj.video_id : '') ||
+        (typeof infoData.videoId === 'string' ? infoData.videoId : '') ||
+        failedItem.auth_code;
       const caption = videoObj.text || videoObj.title || videoObj.caption || `Spark Post ${itemId}`;
       const posterUrl = videoObj.poster_url || videoObj.cover_image_url || videoObj.preview_url || "";
       const likes = videoObj.like_count || 0;
@@ -2906,6 +2911,8 @@ export default function TikTokAdCreationForm({
       const updatedPost = {
         id: itemId,
         image_url: posterUrl,
+        preview_url: videoObj.preview_url || "",
+        previewUrl: videoObj.preview_url || "",
         ad_name: caption,
         tiktok_name: tiktokName,
         auth_code: failedItem.auth_code,

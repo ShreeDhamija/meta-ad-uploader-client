@@ -138,6 +138,21 @@ function VariantAssignmentPopover({
   );
 }
 
+function FileNameTooltip({ name }) {
+  return (
+    <TooltipProvider delayDuration={0}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <p className="mt-1 ml-1 text-sm truncate">{name}</p>
+        </TooltipTrigger>
+        <TooltipContent side="top" align="start" className="max-w-[320px] break-words text-xs">
+          {name}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+
 // Sortable item component
 const SortableMediaItem = React.memo(function SortableMediaItem({
   file,
@@ -156,7 +171,8 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
   assignedVariantId,
   variants,
   onAssignVariant,
-  onAddVariant
+  onAddVariant,
+  isRemoving
 }) {
   const {
     attributes,
@@ -196,7 +212,7 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
     <div
       ref={setNodeRef}
       style={style}
-      className={`relative group ${isSelectable ? 'cursor-pointer' : ''}`}
+      className={`relative group ${isSelectable ? 'cursor-pointer' : ''} ${isRemoving ? 'media-preview-remove-item' : ''}`}
       onClick={isSelectable ? () => onSelect(fileId) : undefined}
     >
       {/* Selection background for placement customization - only show when NOT grouped */}
@@ -377,7 +393,7 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
           )}
         </div>
         <div className={`transition-opacity ${dimmed ? 'opacity-30' : (isDragging ? 'opacity-50' : 'opacity-100')}`}>
-          <p className="mt-1 ml-1 text-sm truncate" title={file.name} > {file.name} </p>
+          <FileNameTooltip name={file.name} />
 
           {isCarouselAd && (
             <span className="text-[10px] px-2 py-1 border border-gray-200 rounded-lg bg-gray-100 text-gray-700 mt-1 block w-fit">
@@ -427,14 +443,12 @@ export default function MediaPreview({
   setGroupVariantMap,
   postVariantMap,
   setPostVariantMap,
-  hasSeenPowerupPopup,
-  setShowPowerupPopup,
   isLaunchingMedia = false
 }) {
-  // const [selectedFiles, setSelectedFiles] = useState(new Set());
   const [isAIGrouping, setIsAIGrouping] = useState(false);
   const [isFlexAutoGrouping, setIsFlexAutoGrouping] = useState(false);
   const [showDisableVariantsDialog, setShowDisableVariantsDialog] = useState(false);
+  const [removingMediaIds, setRemovingMediaIds] = useState(new Set());
 
   const sensors = useSensors(useSensor(PointerSensor));
   const hideUngroupedVariantDropdowns = isCarouselAd || enablePlacementCustomization;
@@ -470,10 +484,6 @@ export default function MediaPreview({
     return [...ungroupedLocalFiles, ...ungroupedDropboxFiles, ...ungroupedFrameioFiles, ...ungroupedImportedFiles];
   }, [files, dropboxFiles, frameioFiles, importedFiles, groupedFileIds]);
 
-  // const totalFileCount = useMemo(() => {
-  //   return files.filter(f => !f.isDrive).length + driveFiles.length + (dropboxFiles?.length || 0) + importedFiles.length;
-  // }, [files, driveFiles, dropboxFiles, importedFiles]);
-
   const totalFileCount = useMemo(() => {
     return files.filter(f => !f.isDrive).length + driveFiles.length + (dropboxFiles?.length || 0) + (frameioFiles?.length || 0) + importedFiles.length + importedPosts.length + selectedIgOrganicPosts.length;
   }, [files, driveFiles, dropboxFiles, frameioFiles, importedFiles, importedPosts, selectedIgOrganicPosts]);
@@ -485,8 +495,6 @@ export default function MediaPreview({
     if (enablePlacementCustomization && totalFileCount === 2 && ungroupedFiles.length === 2 && selectedFiles.size === 0) return true;
     return false;
   }, [selectedFiles.size, adType, isCarouselAd, enablePlacementCustomization, totalFileCount, ungroupedFiles.length]);
-
-
 
   const canAIGroup = useMemo(() => {
     const allFiles = [
@@ -507,12 +515,9 @@ export default function MediaPreview({
       if (file.isDrive || file.isDropbox) {
         try {
           const provider = file.isDrive ? 'google' : 'dropbox';
-          // Dropbox IDs usually start with 'id:', ensuring we pass the ID correctly
-          // const fileId = file.id;
           const fileId = file.isDrive ? file.id : file.dropboxId;
-          // Fetch from YOUR backend
           const res = await fetch(`${API_BASE_URL}/api/proxy/cloud-image?fileId=${encodeURIComponent(fileId)}&provider=${provider}`, {
-            credentials: 'include', // Important to send session cookies for auth
+            credentials: 'include',
           });
 
           if (!res.ok) {
@@ -548,7 +553,7 @@ export default function MediaPreview({
         }
       }
 
-      // 2. Standard Canvas Resizing Logic (Same as before)
+      // 2. Standard Canvas Resizing Logic
       const reader = new FileReader();
       const img = new Image();
 
@@ -557,7 +562,7 @@ export default function MediaPreview({
           const canvas = document.createElement('canvas');
           const ctx = canvas.getContext('2d');
 
-          const maxDim = 1024; // Increased slightly for better AI analysis
+          const maxDim = 1024;
           let width = img.width;
           let height = img.height;
 
@@ -582,11 +587,9 @@ export default function MediaPreview({
       };
       reader.onerror = () => reject(new Error(`Failed to read file: ${file.name}`));
 
-      // Read the blob (either local file or downloaded blob)
       reader.readAsDataURL(blobToProcess);
     });
   };
-
 
   const getAspectRatio = async (file) => {
     return new Promise((resolve) => {
@@ -597,7 +600,7 @@ export default function MediaPreview({
         else if (ratio < 0.7) resolve('vertical');
         else resolve('other');
       };
-      img.onerror = () => resolve('other'); // Fallback on error
+      img.onerror = () => resolve('other');
 
       if (file.isDrive) {
         img.src = `https://drive.google.com/thumbnail?id=${file.id}&sz=w400`;
@@ -628,7 +631,8 @@ export default function MediaPreview({
     adType !== 'flexible' &&
     importedPosts.length === 0 &&
     selectedIgOrganicPosts.length === 0;
-  const showVariantSetupButton = variants.length > 1 || totalFileCount >= 2;
+  const showVariantSetupButton = variants.length > 1 || totalFileCount >= 1;
+  const isSingleMediaSplit = totalFileCount === 1;
   const showVariantButtonInPlacementRow = showVariantSetupButton && showPlacementCustomizationRow;
   const showVariantButtonInHeader = showVariantSetupButton && !showPlacementCustomizationRow;
   const variantSetupLabel = variants.length === 1 ? 'Split Ad Data' : 'Disable Split';
@@ -643,9 +647,6 @@ export default function MediaPreview({
             size="sm"
             onClick={() => {
               if (variants.length === 1) {
-                if (!hasSeenPowerupPopup) {
-                  setShowPowerupPopup(true);
-                }
                 handleAddVariant();
               } else {
                 setShowDisableVariantsDialog(true);
@@ -665,50 +666,65 @@ export default function MediaPreview({
     </TooltipProvider>
   );
 
-
-
-
-
+  const renderSingleMediaSplitNote = () => (
+    isSingleMediaSplit && variants.length > 1 ? (
+      <span className="block text-xs text-gray-550 leading-tight mt-1 text-left">
+        Note: With 1 file uploaded, every variant will reuse the same file while you edit all other fields independently.
+      </span>
+    ) : null
+  );
 
   // Event handlers with useCallback
   const removeFile = useCallback((file) => {
     const fileId = getFileId(file);
+    const removeDelay = 180;
 
-    // Remove from selection
-    setSelectedFiles(prev => {
-      const newSet = new Set(prev);
-      newSet.delete(fileId);
-      return newSet;
+    setRemovingMediaIds(prev => {
+      if (prev.has(fileId)) return prev;
+      const next = new Set(prev);
+      next.add(fileId);
+      return next;
     });
 
-    // Remove from groups
-    setFileGroups(prev => prev
-      .map(group => ({
-        ...group,
-        fileIds: getGroupFileIds(group).filter(id => id !== fileId)
-      }))
-      .filter(group => group.fileIds.length > 0)
-    );
+    window.setTimeout(() => {
+      // Remove from selection
+      setSelectedFiles(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(fileId);
+        return newSet;
+      });
 
-    // Remove from appropriate state
-    if (file.isMetaLibrary) {
-      setImportedFiles(prev => prev.filter(f =>
-        file.type === 'image' ? f.hash !== file.hash : f.id !== file.id
-      ));
-    } else if (file.isDropbox) {
-      setDropboxFiles(prev => prev.filter(f => f.dropboxId !== file.dropboxId));
-    } else if (file.isFrameio) {
-      setFrameioFiles(prev => prev.filter(f => f.frameioId !== file.frameioId));
-    } else if (file.isDrive) {
-      setDriveFiles(prev => prev.filter(f => f.id !== file.id));
-    } else {
-      setFiles(prev => prev.filter(f => (f.uniqueId || f.name) !== (file.uniqueId || file.name)));
-    }
+      // Remove from groups
+      setFileGroups(prev => prev
+        .map(group => ({
+          ...group,
+          fileIds: getGroupFileIds(group).filter(id => id !== fileId)
+        }))
+        .filter(group => group.fileIds.length > 0)
+      );
+
+      // Remove from appropriate state
+      if (file.isMetaLibrary) {
+        setImportedFiles(prev => prev.filter(f =>
+          file.type === 'image' ? f.hash !== file.hash : f.id !== file.id
+        ));
+      } else if (file.isDropbox) {
+        setDropboxFiles(prev => prev.filter(f => f.dropboxId !== file.dropboxId));
+      } else if (file.isFrameio) {
+        setFrameioFiles(prev => prev.filter(f => f.frameioId !== file.frameioId));
+      } else if (file.isDrive) {
+        setDriveFiles(prev => prev.filter(f => f.id !== file.id));
+      } else {
+        setFiles(prev => prev.filter(f => (f.uniqueId || f.name) !== (file.uniqueId || file.name)));
+      }
+
+      setRemovingMediaIds(prev => {
+        const next = new Set(prev);
+        next.delete(fileId);
+        return next;
+      });
+    }, removeDelay);
   }, [setSelectedFiles, setFileGroups, setDropboxFiles, setFrameioFiles, setDriveFiles, setFiles, setImportedFiles]);
-
-
-
-
 
   const handlePlacementCustomizationChange = useCallback((checked) => {
     const hasAssignments = Object.keys(fileVariantMap).length > 0 || Object.keys(groupVariantMap).length > 0;
@@ -722,7 +738,6 @@ export default function MediaPreview({
 
     setEnablePlacementCustomization(checked);
     if (!checked) {
-      // Clear all grouping when disabled
       setFileGroups([]);
       setSelectedFiles(new Set());
     }
@@ -766,7 +781,6 @@ export default function MediaPreview({
       return;
     }
 
-    // Auto-group when exactly 2 total files exist and not enough are selected
     if (enablePlacementCustomization && totalFileCount === 2 && ungroupedFiles.length === 2 && selectedFiles.size === 0) {
       const newGroup = ungroupedFiles.map(f => getFileId(f));
       setFileGroups(prev => [...prev, createFileGroup(newGroup)]);
@@ -780,7 +794,6 @@ export default function MediaPreview({
 
       const selectedFileIds = Array.from(selectedFiles);
 
-      // Get selected files from all arrays
       const selectedLocalFiles = files.filter(file => {
         const fileId = file.isDrive ? file.id : (file.uniqueId || file.name);
         return selectedFileIds.includes(fileId);
@@ -806,7 +819,6 @@ export default function MediaPreview({
         return selectedFileIds.includes(fileId);
       }).map(file => ({ ...file, isMetaLibrary: true }));
 
-      // Get unselected files
       const unselectedLocalFiles = files.filter(file => {
         const fileId = file.isDrive ? file.id : file.uniqueId || file.name;
         return !selectedFileIds.includes(fileId);
@@ -832,14 +844,12 @@ export default function MediaPreview({
         return !selectedFileIds.includes(fileId);
       }).map(file => ({ ...file, isMetaLibrary: true }));
 
-      // Combine files: unselected first, then selected
       const allLocalFiles = [...unselectedLocalFiles, ...selectedLocalFiles];
       const allDriveFiles = [...unselectedDriveFiles, ...selectedDriveFiles];
       const allDropboxFiles = [...unselectedDropboxFiles, ...selectedDropboxFiles];
       const allFrameioFiles = [...unselectedFrameioFiles, ...selectedFrameioFiles];
       const allMetaFiles = [...unselectedMetaFiles, ...selectedMetaFiles];
 
-      // Remove duplicates and set state
       const seenFiles = new Set();
       const newLocalFiles = [];
       const newDriveFiles = [];
@@ -879,72 +889,6 @@ export default function MediaPreview({
     }
   }, [selectedFiles, setFileGroups, files, driveFiles, dropboxFiles, frameioFiles, importedFiles, setFiles, setDriveFiles, setDropboxFiles, setFrameioFiles, setImportedFiles, setSelectedFiles, adType, enablePlacementCustomization, isCarouselAd, totalFileCount, ungroupedFiles]);
 
-
-
-  // const handleAIGroup = useCallback(async () => {
-  //   try {
-  //     setIsAIGrouping(true);
-
-  //     // Combine all file sources (same pattern used by handleFlexibleAutoGroup)
-  //     const allFiles = [
-  //       ...files,
-  //       ...driveFiles.filter(df => !files.some(f => f.isDrive && f.id === df.id)).map(f => ({ ...f, isDrive: true })),
-  //       ...(dropboxFiles || []).map(f => ({ ...f, isDropbox: true })),
-  //     ];
-
-  //     // Only process image files
-  //     const imageFiles = allFiles.filter(file => !isVideoFile(file));
-
-  //     const processedImages = await Promise.all(
-  //       imageFiles.map(async (file, index) => {
-  //         const base64 = await compressAndConvertToBase64(file);
-  //         const aspectRatio = await getAspectRatio(file);
-
-  //         return {
-  //           base64,
-  //           mimeType: file.type || file.mimeType || 'image/jpeg',
-  //           aspectRatio,
-  //           index,
-  //           fileId: getFileId(file)
-  //         };
-  //       })
-  //     );
-
-  //     const response = await fetch(`${API_BASE_URL}/api/grouping/group-images`, {
-  //       method: 'POST',
-  //       headers: {
-  //         'Content-Type': 'application/json',
-  //       },
-  //       credentials: 'include',
-  //       body: JSON.stringify({ images: processedImages })
-  //     });
-
-  //     const responseText = await response.text();
-
-  //     if (!response.ok) {
-  //       throw new Error(`Grouping failed: ${responseText}`);
-  //     }
-
-  //     const result = JSON.parse(responseText);
-
-  //     // Convert AI indices to actual fileIds using imageFiles (not files)
-  //     const newGroups = result.groups.map(indexGroup =>
-  //       indexGroup.map(idx => {
-  //         const file = imageFiles[idx];
-  //         return getFileId(file);
-  //       })
-  //     );
-
-  //     setFileGroups(newGroups);
-  //     setSelectedFiles(new Set());
-  //   } catch (error) {
-  //     console.error('AI grouping error:', error);
-  //     alert(`Failed to group images: ${error.message}`);
-  //   } finally {
-  //     setIsAIGrouping(false);
-  //   }
-  // }, [files, driveFiles, dropboxFiles, setFileGroups, setSelectedFiles]);
-
   const handleAIGroup = useCallback(async () => {
     try {
       setIsAIGrouping(true);
@@ -958,17 +902,16 @@ export default function MediaPreview({
 
       const imageFiles = allFiles.filter(file => !isVideoFile(file));
 
-      // --- NEW CONCURRENCY BATCHING LOGIC ---
       const processedImages = [];
-      const CONCURRENCY_LIMIT = 5; // Process 5 images at a time to prevent browser freeze
+      const CONCURRENCY_LIMIT = 5;
 
       for (let i = 0; i < imageFiles.length; i += CONCURRENCY_LIMIT) {
         const batch = imageFiles.slice(i, i + CONCURRENCY_LIMIT);
 
         const batchResults = await Promise.all(
           batch.map(async (file, batchIndex) => {
-            const actualIndex = i + batchIndex; // Maintain correct 0-49 index for the AI
-            const base64 = await compressAndConvertToBase64(file); // Kept at 1024px for text
+            const actualIndex = i + batchIndex;
+            const base64 = await compressAndConvertToBase64(file);
             const aspectRatio = await getAspectRatio(file);
 
             return {
@@ -983,7 +926,6 @@ export default function MediaPreview({
 
         processedImages.push(...batchResults);
       }
-      // --------------------------------------
 
       const response = await fetch(`${API_BASE_URL}/api/grouping/group-images`, {
         method: 'POST',
@@ -991,7 +933,7 @@ export default function MediaPreview({
           'Content-Type': 'application/json',
         },
         credentials: 'include',
-        body: JSON.stringify({ images: processedImages }) // All 50 sent together
+        body: JSON.stringify({ images: processedImages })
       });
 
       const responseText = await response.text();
@@ -1019,13 +961,10 @@ export default function MediaPreview({
     }
   }, [files, driveFiles, dropboxFiles, frameioFiles, setFileGroups, setSelectedFiles]);
 
-
-
   const handleFlexibleAutoGroup = useCallback(async () => {
     setIsFlexAutoGrouping(true);
     await new Promise(resolve => setTimeout(resolve, 50));
 
-    // Combine all file sources
     const allFiles = [
       ...files,
       ...driveFiles.filter(df => !files.some(f => f.isDrive && f.id === df.id)),
@@ -1052,14 +991,9 @@ export default function MediaPreview({
     setIsFlexAutoGrouping(false);
   }, [files, driveFiles, dropboxFiles, frameioFiles, importedFiles, setFileGroups, setSelectedFiles]);
 
-
-
-
-
   const handleUngroup = useCallback((groupId) => {
     setFileGroups(prev => prev.filter((group) => group.id !== groupId));
   }, [setFileGroups]);
-
 
   const handleGroupDragEnd = useCallback((groupId, event) => {
     const { active, over } = event;
@@ -1077,12 +1011,10 @@ export default function MediaPreview({
     });
   }, [setFileGroups]);
 
-
   const handleDragEnd = useCallback((event) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
-    // Combine all files in current order
     const allFiles = [
       ...files,
       ...driveFiles.filter(df => !files.some(f => f.isDrive && f.id === df.id)),
@@ -1121,7 +1053,6 @@ export default function MediaPreview({
         delete next[fileId];
         return next;
       }
-
       return { ...prev, [fileId]: variantId };
     });
   }, [setFileVariantMap]);
@@ -1133,7 +1064,6 @@ export default function MediaPreview({
         delete next[groupId];
         return next;
       }
-
       return { ...prev, [groupId]: variantId };
     });
   }, [setGroupVariantMap]);
@@ -1145,7 +1075,6 @@ export default function MediaPreview({
         delete next[postKey];
         return next;
       }
-
       return { ...prev, [postKey]: variantId };
     });
   }, [setPostVariantMap]);
@@ -1168,6 +1097,7 @@ export default function MediaPreview({
 
     return null;
   }, [driveFiles, dropboxFiles, frameioFiles, files, importedFiles]);
+
   return (
     <>
       {(files.length > 0 || driveFiles.length > 0 || (dropboxFiles?.length || 0) > 0 || (frameioFiles?.length || 0) > 0 || importedPosts.length > 0 || importedFiles.length > 0 || selectedIgOrganicPosts.length > 0) ? (
@@ -1191,9 +1121,24 @@ export default function MediaPreview({
               pointer-events: none;
             }
 
+            @keyframes mediaPreviewRemove {
+              to {
+                opacity: 0;
+                transform: translate3d(0, 6px, 0) scale(0.8);
+              }
+            }
+
+            .media-preview-remove-item {
+              animation: mediaPreviewRemove 180ms ease-out forwards;
+              will-change: transform, opacity;
+              transform-origin: center;
+              pointer-events: none;
+            }
+
             @media (prefers-reduced-motion: reduce) {
-              .media-preview-launch-item {
-                animation-duration: 180ms;
+              .media-preview-launch-item,
+              .media-preview-remove-item {
+                animation-duration: 120ms;
               }
             }
           `}</style>
@@ -1211,7 +1156,6 @@ export default function MediaPreview({
             onDrop={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              // const droppedFiles = Array.from(e.dataTransfer.files);
               const droppedFiles = Array.from(e.dataTransfer.files).map(withUniqueId);
               setFiles(prev => [...prev, ...droppedFiles]);
             }}
@@ -1219,14 +1163,11 @@ export default function MediaPreview({
             <CardHeader className={`w-full ${showVariantButtonInHeader || showPlacementCustomizationRow ? 'pb-4' : ''}`}>
               <div className="flex w-full items-start justify-between gap-3 flex-nowrap">
                 <div className="flex flex-col items-start">
-                  <CardTitle className="text-left">
-                    {adType === 'SPARK' ? 'Selected Posts' : 'Uploads Preview'}
-                  </CardTitle>
+                  <CardTitle className="text-left">Uploads Preview</CardTitle>
                   <CardDescription className="text-left">
-                    {adType === 'SPARK'
-                      ? `${importedPosts.length} post${importedPosts.length === 1 ? '' : 's'} selected for bulk launch`
-                      : `${files.filter(f => !f.isDrive).length + driveFiles.length + (dropboxFiles?.length || 0) + (frameioFiles?.length || 0) + importedFiles.length + importedPosts.length + selectedIgOrganicPosts.length} file${(files.filter(f => !f.isDrive).length + driveFiles.length + (dropboxFiles?.length || 0) + (frameioFiles?.length || 0) + importedFiles.length + importedPosts.length + selectedIgOrganicPosts.length) > 1 ? "s" : ""} selected`}
+                    {`${files.filter(f => !f.isDrive).length + driveFiles.length + (dropboxFiles?.length || 0) + (frameioFiles?.length || 0) + importedFiles.length + importedPosts.length + selectedIgOrganicPosts.length} file${(files.filter(f => !f.isDrive).length + driveFiles.length + (dropboxFiles?.length || 0) + (frameioFiles?.length || 0) + importedFiles.length + importedPosts.length + selectedIgOrganicPosts.length) > 1 ? "s" : ""} selected`}
                   </CardDescription>
+                  {renderSingleMediaSplitNote()}
                 </div>
 
                 <div className="flex shrink-0 gap-2">
@@ -1314,7 +1255,7 @@ export default function MediaPreview({
 
               {isCarouselAd && (
                 <div className="mt-1">
-                  <CardDescription className="text-left text-xs text-gray-500 whitespace-nowrap">
+                  <CardDescription className="text-left text-xs text-gray-550 whitespace-nowrap">
                     {fileGroups.length > 0
                       ? 'Drag to reorder cards within each carousel group. Select files to create new groups.'
                       : 'Select files to group into separate carousel ads, or drag to reorder cards'
@@ -1470,6 +1411,7 @@ export default function MediaPreview({
                                           assignedVariantId={groupVariantMap[group.id] || 'default'}
                                           variants={variants}
                                           onAssignVariant={() => { }}
+                                          isRemoving={removingMediaIds.has(fileId)}
                                         />
                                       );
                                     })}
@@ -1505,6 +1447,7 @@ export default function MediaPreview({
                                     assignedVariantId={groupVariantMap[group.id] || 'default'}
                                     variants={variants}
                                     onAssignVariant={() => { }}
+                                    isRemoving={removingMediaIds.has(fileId)}
                                   />
                                 ) : null;
                               })}
@@ -1517,7 +1460,7 @@ export default function MediaPreview({
                     {/* Ungrouped files */}
                     <div className="grid grid-cols-1 sm:grid-cols-4 gap-6" style={{ padding: '6px', }}>
                       {ungroupedFiles.map((file, index) => {
-                        const fileId = getFileId(file);  // ✅ Use the helper that handles all file types
+                        const fileId = getFileId(file);
                         const assignedVariantId = fileVariantMap[fileId] || 'default';
                         const isDimmed = !enablePlacementCustomization && assignedVariantId !== activeVariantId;
                         const showVariantDropdown = variants.length > 1 && !hideUngroupedVariantDropdowns && !(adType === 'flexible' && fileGroups.length > 0);
@@ -1544,6 +1487,7 @@ export default function MediaPreview({
                               variants={variants}
                               onAssignVariant={(variantId) => assignFileToVariant(fileId, variantId)}
                               onAddVariant={handleAddVariant}
+                              isRemoving={removingMediaIds.has(fileId)}
                             />
                           </div>
                         );
@@ -1602,20 +1546,20 @@ export default function MediaPreview({
                                 </div>
                               )}
                             </div>
-                            {/* post_id below the image card */}
+                            {/* details below the image card */}
                             <div
-                              className="mt-1 ml-1 transition-opacity space-y-0.5"
+                              className="mt-1 ml-1 transition-opacity space-y-0.5 text-left"
                               style={{ opacity: isDimmed ? 0.3 : 1 }}
                             >
-                              <p className="text-xs font-mono text-gray-750 truncate max-w-full font-semibold">
+                              <p className="text-xs font-semibold text-gray-800 line-clamp-2 leading-relaxed" title={post.ad_name}>
                                 {post.ad_name}
                               </p>
-                              <p className="text-[10px] font-mono text-gray-400 truncate max-w-full">
-                                ID: {post.id}
-                              </p>
-                              <p className="text-[10px] font-mono text-gray-500 truncate max-w-full">
-                                Code: {post.auth_code}
-                              </p>
+                              {post.id && (
+                                <p className="text-[10px] text-gray-405 font-mono truncate">ID: {post.id}</p>
+                              )}
+                              {post.auth_code && (
+                                <p className="text-[10px] text-gray-405 font-mono truncate">Code: {post.auth_code}</p>
+                              )}
                             </div>
                           </div>
                         );
@@ -1667,12 +1611,9 @@ export default function MediaPreview({
                                 </div>
                               )}
                             </div>
-
                           </div>
                         );
                       })}
-
-
                     </div>
                   </div>
                 </SortableContext>
@@ -1748,7 +1689,6 @@ export default function MediaPreview({
             }}
           >
             <div className="bg-white rounded-2xl shadow-md p-8 max-w-sm w-full mx-4 text-center min-h-[500px] border border-gray-100 flex flex-col justify-center">
-              {/* UPLOAD Text */}
               <div className="mb-8">
                 <img
                   src={Uploadimg}
@@ -1757,7 +1697,6 @@ export default function MediaPreview({
                 />
               </div>
 
-              {/* Your server image */}
               <div className="mb-8">
                 <img
                   src={RocketImg}
@@ -1766,7 +1705,6 @@ export default function MediaPreview({
                 />
               </div>
 
-              {/* Text */}
               <div className="space-y-1">
                 <h3 className="text-md font-semibold text-gray-800">
                   Media Previews Will Appear Here
