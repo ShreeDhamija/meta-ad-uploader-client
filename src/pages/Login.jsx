@@ -26,6 +26,8 @@ const SOURCE_OPTIONS = [
     "Google",
     "ChatGPT / LLM",
     "Twitter / X",
+    "Instagram",
+    "Advertisement",
     "Reddit",
     "Referral",
     "Joining a Team",
@@ -238,7 +240,7 @@ export default function Login() {
 
     const popupActiveIndex = popupStep === 'role' ? 0 : popupStep === 'source' ? 1 : 2
     const showTeamCodeRow = popupStep === 'source' && signupSource === 'Joining a Team'
-    const popupHeight = showTeamCodeRow ? 640 : 500
+    const popupHeight = popupStep === 'source' ? (showTeamCodeRow ? 710 : 570) : 500
 
     return (
         <div className="flex h-screen w-full flex-col overflow-hidden">
