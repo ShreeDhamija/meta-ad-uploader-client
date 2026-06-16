@@ -4259,7 +4259,7 @@ export default function TikTokAdCreationForm({
                               />
                               <div className="flex flex-col min-w-0">
                                 <span className="text-sm font-semibold text-gray-900 truncate">{i.display_name}</span>
-                                <span className="text-[10px] text-gray-400 font-normal shrink-0 truncate">{i.identity_id}</span>
+                                <span className="text-[10px] text-gray-400 font-normal shrink-0 truncate">{i.username}</span>
                               </div>
                             </div>
                             {selectedIdentity === i.identity_id && <Check className="ml-auto h-4 w-4 text-black shrink-0" />}
