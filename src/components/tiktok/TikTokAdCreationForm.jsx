@@ -4377,13 +4377,15 @@ export default function TikTokAdCreationForm({
                         <p className="text-xs text-gray-400 mt-1">Please select an account in the field above to browse its video list.</p>
                       </div>
                     ) : (
-                      <TikTokPostSelectorInline
-                        advertiserId={selectedAdvertiser}
-                        identityId={selectedIdentity}
-                        identityObj={identities.find(i => i.identity_id === selectedIdentity) || null}
-                        onImport={setImportedPosts}
-                        importedPosts={importedPosts}
-                      />
+                      <div className="flex-1 min-h-0">
+                        <TikTokPostSelectorInline
+                          advertiserId={selectedAdvertiser}
+                          identityId={selectedIdentity}
+                          identityObj={identities.find(i => i.identity_id === selectedIdentity) || null}
+                          onImport={setImportedPosts}
+                          importedPosts={importedPosts}
+                        />
+                      </div>
                     )}
                   </div>
                 )}
