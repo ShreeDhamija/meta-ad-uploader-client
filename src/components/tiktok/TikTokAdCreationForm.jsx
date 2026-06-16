@@ -711,7 +711,7 @@ export default function TikTokAdCreationForm({
 
   const [formCatalogId, setFormCatalogId] = useState(null)
   const [formCatalogName, setFormCatalogName] = useState(null)
-  const [formProductId, setFormProductId] = useState(null)
+  const [formProductId, setFormProductId] = useState([])
   const [formProductName, setFormProductName] = useState(null)
 
   const [formCatalogs, setFormCatalogs] = useState([])
@@ -787,13 +787,30 @@ export default function TikTokAdCreationForm({
 
   // Sync default selection from preferences once when loaded
   const activeFormProductImage = useMemo(() => {
-    const matched = formCatalogProducts.find(p => p.product_id === formProductId);
+    const firstId = Array.isArray(formProductId) ? formProductId[0] : formProductId;
+    if (!firstId) return null;
+    const matched = formCatalogProducts.find(p => p.product_id === firstId);
     if (matched) return matched.image_url || null;
-    if (formProductId === advertiserPrefs?.catalogSelection?.product_id) {
+    if (firstId === advertiserPrefs?.catalogSelection?.product_id) {
       return advertiserPrefs?.catalogSelection?.product_image_url || null;
     }
     return null;
   }, [formCatalogProducts, formProductId, advertiserPrefs]);
+
+  const selectedProductsLabel = useMemo(() => {
+    const productIds = Array.isArray(formProductId) ? formProductId : (formProductId ? [formProductId] : []);
+    if (productIds.length === 0) return 'Select a Product';
+    if (productIds.length === 1) {
+      const matched = formCatalogProducts.find(p => p.product_id === productIds[0]);
+      if (matched) return matched.product_name;
+      const catSel = advertiserPrefs?.catalogSelection;
+      if (catSel && catSel.product_id === productIds[0]) {
+        return catSel.product_name || productIds[0];
+      }
+      return productIds[0];
+    }
+    return `${productIds.length} Products Selected`;
+  }, [formProductId, formCatalogProducts, advertiserPrefs]);
 
   const formCatalogInitRef = useRef({});
   useEffect(() => {
@@ -804,7 +821,10 @@ export default function TikTokAdCreationForm({
       const sel = advertiserPrefs.catalogSelection;
       setFormCatalogId(sel.catalog_id || null);
       setFormCatalogName(sel.catalog_name || null);
-      setFormProductId(sel.product_id || null);
+      const initialProductIds = Array.isArray(sel.product_id)
+        ? sel.product_id
+        : sel.product_id ? [sel.product_id] : [];
+      setFormProductId(initialProductIds);
       setFormProductName(sel.product_name || null);
       formCatalogInitRef.current[selectedAdvertiser] = true;
     }
@@ -1190,28 +1210,41 @@ export default function TikTokAdCreationForm({
           if (isShoppingAg) {
             if (showProductCatalogForAdGroup && formCatalogId) {
               catalogIdToUse = formCatalogId
-              const matchedProd = formCatalogProducts.find(p => p.product_id === formProductId)
-              if (matchedProd) {
-                if (matchedProd.item_group_id) {
-                  itemGroupIdToUse = matchedProd.item_group_id
-                }
-                const resolvedSku = matchedProd.sku_id || matchedProd.product_id
-                if (resolvedSku) {
-                  skuIdToUse = resolvedSku
-                }
-              } else {
-                const catSel = advertiserPrefs?.catalogSelection
-                if (catSel && catSel.product_id === formProductId) {
-                  if (catSel.item_group_id) {
-                    itemGroupIdToUse = catSel.item_group_id
+              const productIds = Array.isArray(formProductId) ? formProductId : (formProductId ? [formProductId] : [])
+              const skuIds = []
+              const itemGroupIds = []
+
+              productIds.forEach(id => {
+                const matchedProd = formCatalogProducts.find(p => p.product_id === id)
+                if (matchedProd) {
+                  if (matchedProd.item_group_id) {
+                    itemGroupIds.push(matchedProd.item_group_id)
                   }
-                  const resolvedSku = catSel.sku_id || catSel.product_id
+                  const resolvedSku = matchedProd.sku_id || matchedProd.product_id
                   if (resolvedSku) {
-                    skuIdToUse = resolvedSku
+                    skuIds.push(resolvedSku)
                   }
-                } else if (formProductId) {
-                  skuIdToUse = formProductId
+                } else {
+                  const catSel = advertiserPrefs?.catalogSelection
+                  if (catSel && catSel.product_id === id) {
+                    if (catSel.item_group_id) {
+                      itemGroupIds.push(catSel.item_group_id)
+                    }
+                    const resolvedSku = catSel.sku_id || catSel.product_id
+                    if (resolvedSku) {
+                      skuIds.push(resolvedSku)
+                    }
+                  } else {
+                    skuIds.push(id)
+                  }
                 }
+              })
+
+              if (skuIds.length > 0) {
+                skuIdToUse = skuIds.join(',')
+              }
+              if (itemGroupIds.length > 0) {
+                itemGroupIdToUse = itemGroupIds.join(',')
               }
             } else {
               // Fallback to parameters already mapped in the ad group
@@ -1245,7 +1278,14 @@ export default function TikTokAdCreationForm({
 
           updateProgress(progressBase + 20, `Creating ad "${finalAdName}" in group "${adGroupName}"...`)
 
-          const creativeCTAs = Array.isArray(cta) ? cta : [cta]
+          const isSalesCampaign = !!(
+            (campaignObj && String(campaignObj.virtual_objective_type).toUpperCase() === 'SALES') ||
+            isShoppingAg
+          )
+          let creativeCTAs = Array.isArray(cta) ? cta : [cta]
+          if (isSalesCampaign && creativeCTAs.length > 0) {
+            creativeCTAs = [creativeCTAs[0]]
+          }
           const activeCaptions = (adTexts || []).filter(t => t.trim() !== '')
           const finalCaptions = activeCaptions.length > 0 ? activeCaptions : ['']
 
@@ -4940,7 +4980,7 @@ export default function TikTokAdCreationForm({
                                   />
                                 )}
                                 <span className="text-sm font-medium text-gray-900 truncate">
-                                  {formProductName || 'Select a Product'}
+                                  {selectedProductsLabel}
                                 </span>
                               </div>
                             )}
@@ -4988,16 +5028,21 @@ export default function TikTokAdCreationForm({
                                         type="button"
                                         key={prod.product_id}
                                         onClick={() => {
-                                          setFormProductId(prod.product_id);
-                                          setFormProductName(prod.product_name);
-                                          setOpenFormProduct(false);
-                                          setFormProductSearch("");
+                                          setFormProductId(prev => {
+                                            const current = Array.isArray(prev) ? prev : (prev ? [prev] : []);
+                                            return current.includes(prod.product_id)
+                                              ? current.filter(id => id !== prod.product_id)
+                                              : [...current, prod.product_id];
+                                          });
                                         }}
                                         className={cn(
                                           "w-full text-left px-3 py-2 cursor-pointer rounded-xl transition-colors duration-150 hover:bg-gray-100 flex items-center gap-3",
-                                          formProductId === prod.product_id ? "bg-gray-50 font-medium" : ""
+                                          (Array.isArray(formProductId) ? formProductId.includes(prod.product_id) : formProductId === prod.product_id) ? "bg-gray-50 font-medium" : ""
                                         )}
                                       >
+                                        <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${(Array.isArray(formProductId) ? formProductId.includes(prod.product_id) : formProductId === prod.product_id) ? "bg-black border-black text-white" : "border-gray-200"}`}>
+                                          {(Array.isArray(formProductId) ? formProductId.includes(prod.product_id) : formProductId === prod.product_id) && <Check className="w-3 h-3 text-white" />}
+                                        </div>
                                         {prod.image_url && (
                                           <img
                                             src={prod.image_url}
@@ -5011,7 +5056,6 @@ export default function TikTokAdCreationForm({
                                             <p className="text-xs text-gray-400">{prod.price} {prod.currency}</p>
                                           )}
                                         </div>
-                                        {formProductId === prod.product_id && <Check className="w-4 h-4 text-black shrink-0" />}
                                       </button>
                                     ))}
                                   </div>
