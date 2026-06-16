@@ -4369,7 +4369,7 @@ export default function TikTokAdCreationForm({
                     )}
                   </div>
                 ) : (
-                  <div className="border border-gray-200 rounded-2xl p-4 bg-white min-h-[300px] max-h-[500px] overflow-hidden flex flex-col shadow-xs">
+                  <div className="border border-gray-200 rounded-2xl p-4 bg-white h-[500px] overflow-hidden flex flex-col shadow-xs">
                     {(!selectedIdentity || selectedIdentity === 'CUSTOMIZED_USER') ? (
                       <div className="flex flex-col items-center justify-center text-center p-8 flex-1 text-gray-500">
                         <AlertTriangle className="h-8 w-8 text-amber-500 mb-2" />
@@ -4377,15 +4377,13 @@ export default function TikTokAdCreationForm({
                         <p className="text-xs text-gray-400 mt-1">Please select an account in the field above to browse its video list.</p>
                       </div>
                     ) : (
-                      <div className="flex-1 min-h-0">
-                        <TikTokPostSelectorInline
-                          advertiserId={selectedAdvertiser}
-                          identityId={selectedIdentity}
-                          identityObj={identities.find(i => i.identity_id === selectedIdentity) || null}
-                          onImport={setImportedPosts}
-                          importedPosts={importedPosts}
-                        />
-                      </div>
+                      <TikTokPostSelectorInline
+                        advertiserId={selectedAdvertiser}
+                        identityId={selectedIdentity}
+                        identityObj={identities.find(i => i.identity_id === selectedIdentity) || null}
+                        onImport={setImportedPosts}
+                        importedPosts={importedPosts}
+                      />
                     )}
                   </div>
                 )}

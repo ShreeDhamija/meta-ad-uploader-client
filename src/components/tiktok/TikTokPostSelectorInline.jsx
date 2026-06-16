@@ -288,94 +288,94 @@ function TikTokPostSelectorInline({
       </div>
 
       {filteredPosts.length > 0 && (
-        <ScrollArea className="flex-1 pr-2 outline-none custom-scrollbar">
-          <div className="space-y-1.5 pb-4">
-            {filteredPosts.map((post) => {
-              const isSelected = selectedPostIds.has(post.id)
+        <div className="space-y-1.5 pb-4">
+          {filteredPosts.map((post) => {
+            const isSelected = selectedPostIds.has(post.id)
 
-              return (
-                <label
-                  key={post.id}
-                  className={`grid grid-cols-[auto_48px_1fr_100px_75px_75px] gap-3 items-center p-3 rounded-2xl border cursor-pointer transition-all duration-150 ${isSelected
-                    ? 'border-zinc-850 bg-zinc-50/70 shadow-sm'
-                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50/50'
-                    }`}
-                >
-                  <Checkbox
-                    checked={isSelected}
-                    onCheckedChange={() => togglePostSelection(post)}
-                    className="border-gray-400"
-                  />
+            return (
+              <label
+                key={post.id}
+                className={`grid grid-cols-[auto_48px_1fr_100px_75px_75px] gap-3 items-center p-3 rounded-2xl border cursor-pointer transition-all duration-150 ${isSelected
+                  ? 'border-zinc-850 bg-zinc-50/70 shadow-sm'
+                  : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50/50'
+                  }`}
+              >
+                <Checkbox
+                  checked={isSelected}
+                  onCheckedChange={() => togglePostSelection(post)}
+                  className="border-gray-400"
+                />
 
-                  {/* Thumbnail */}
-                  <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 border border-gray-200">
-                    {post.image_url ? (
-                      <img
-                        src={post.image_url}
-                        alt="Post thumbnail"
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          e.target.style.display = 'none'
-                          e.target.nextSibling.style.display = 'flex'
-                        }}
-                      />
-                    ) : null}
-                    <div className={`w-full h-full items-center justify-center ${post.image_url ? 'hidden' : 'flex'}`}>
-                      <ImageOff className="h-5 w-5 text-gray-400" />
-                    </div>
+                {/* Thumbnail */}
+                <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 border border-gray-200">
+                  {post.image_url ? (
+                    <img
+                      src={post.image_url}
+                      alt="Post thumbnail"
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.target.style.display = 'none'
+                        e.target.nextSibling.style.display = 'flex'
+                      }}
+                    />
+                  ) : null}
+                  <div className={`w-full h-full items-center justify-center ${post.image_url ? 'hidden' : 'flex'}`}>
+                    <ImageOff className="h-5 w-5 text-gray-400" />
                   </div>
+                </div>
 
-                  {/* Caption Text */}
-                  <div className="min-w-0">
-                    <p className="text-xs font-semibold text-gray-800 line-clamp-2 leading-relaxed" title={post.ad_name}>
-                      {post.ad_name}
-                    </p>
-                  </div>
+                {/* Caption Text */}
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-gray-800 line-clamp-2 leading-relaxed" title={post.ad_name}>
+                    {post.ad_name}
+                  </p>
+                </div>
 
-                  {/* Date Created */}
-                  <div className="text-left text-xs font-medium text-gray-500 whitespace-nowrap">
-                    {formatDate(post.create_time)}
-                  </div>
+                {/* Date Created */}
+                <div className="text-left text-xs font-medium text-gray-500 whitespace-nowrap">
+                  {formatDate(post.create_time)}
+                </div>
 
-                  {/* Likes */}
-                  <div className="text-right text-xs font-medium text-gray-700">
-                    {formatNumber(post.likes)}
-                  </div>
+                {/* Likes */}
+                <div className="text-right text-xs font-medium text-gray-700">
+                  {formatNumber(post.likes)}
+                </div>
 
-                  {/* Views */}
-                  <div className="text-right text-xs font-medium text-gray-700">
-                    {formatNumber(post.views)}
-                  </div>
-                </label>
-              )
-            })}
+                {/* Views */}
+                <div className="text-right text-xs font-medium text-gray-700">
+                  {formatNumber(post.views)}
+                </div>
+              </label>
+            )
+          })}
 
-            {hasMore && (
-              <div className="pt-2">
-                <Button
-                  variant="outline"
-                  className="w-full rounded-xl py-5 border-gray-300 text-sm font-medium hover:bg-gray-50"
-                  onClick={loadMore}
-                  disabled={isLoadingMore}
-                >
-                  {isLoadingMore ? (
-                    <>
-                      <Loader className="h-4 w-4 mr-2 animate-spin text-gray-500" />
-                      Loading more posts...
-                    </>
-                  ) : (
-                    <>
-                      <ChevronDown className="h-4 w-4 mr-2 text-gray-500" />
-                      Load More Posts
-                    </>
-                  )}
-                </Button>
-              </div>
-            )}
-          </div>
-        </ScrollArea>
-      )}
-    </div>
+          {hasMore && (
+            <div className="pt-2">
+              <Button
+                variant="outline"
+                className="w-full rounded-xl py-5 border-gray-300 text-sm font-medium hover:bg-gray-50"
+                onClick={loadMore}
+                disabled={isLoadingMore}
+              >
+                {isLoadingMore ? (
+                  <>
+                    <Loader className="h-4 w-4 mr-2 animate-spin text-gray-500" />
+                    Loading more posts...
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown className="h-4 w-4 mr-2 text-gray-500" />
+                    Load More Posts
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
+        </div>
+        </div>
+  )
+}
+    </div >
   )
 }
 
