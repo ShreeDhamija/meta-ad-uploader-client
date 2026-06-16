@@ -386,6 +386,12 @@ export default function MetaMediaLibraryModal({
     };
 
     const handleImport = () => {
+        console.log('handleImport debug:', {
+            mediaSource,
+            selectedIgPosts,
+            selectedIgPostsLength: selectedIgPosts.length,
+            selectedMetaFilesLength: selectedMetaFiles.length,
+        });
 
         if (mediaSource === 'meta_library') {
             const existingIds = new Set(importedFiles.map(getMetaFileId));

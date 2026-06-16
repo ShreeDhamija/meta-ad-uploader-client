@@ -486,6 +486,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
     if (!selectedAdAccount || !adSettings) return;
 
     const initial = calculateInitialSettings(adSettings);
+    console.log("adSettings.adNameFormulaV2:", adSettings.adNameFormulaV2);
 
     if (skipFormResetRef.current) {
       skipFormResetRef.current = false;

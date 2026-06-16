@@ -2238,6 +2238,8 @@ export default function AdCreationForm({
     window.Dropbox.choose({
       success: async (selectedFiles) => {
 
+        // Log for debugging
+        selectedFiles.forEach(f => console.log(`File: ${f.name} ID: ${f.id}`));
 
         const dropboxFilesData = selectedFiles.map((file) => ({
           dropboxId: file.id, // ✅ We use this ID for the backend now
@@ -2253,6 +2255,7 @@ export default function AdCreationForm({
         setDropboxFiles(prev => [...prev, ...dropboxFilesData]);
       },
       cancel: () => {
+        console.log('Dropbox picker cancelled');
       },
       linkType: 'direct', // Changed to preview (safer default), though 'direct' is fine too
       multiselect: true,
@@ -5845,6 +5848,7 @@ export default function AdCreationForm({
         errorMessage = error.message;
       }
 
+      console.log("❌ handleCreateAd catch:", error.message);
       throw new Error(errorMessage);
 
     } finally {

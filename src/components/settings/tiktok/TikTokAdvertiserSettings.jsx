@@ -139,6 +139,11 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
             const token = localStorage.getItem('tiktok_token');
             const url = `${API_BASE_URL}/api/tiktok/catalog/list?advertiserId=${advId}`;
 
+            console.log("=========================================");
+            console.log("➡️ [Client fetchCatalogs] Sending request to server:");
+            console.log(`  URL: ${url}`);
+            console.log(`  x-tiktok-user-id: ${uid}`);
+            console.log(`  x-tiktok-token: ${token ? token.substring(0, 10) + '...' : 'null'}`);
 
             const res = await fetch(
                 url,
@@ -151,7 +156,9 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                 }
             );
 
+            console.log(`📥 [Client fetchCatalogs] Response received. HTTP status: ${res.status} ${res.statusText}`);
             const data = await res.json();
+            console.log("📥 [Client fetchCatalogs] Response body data:", JSON.stringify(data, null, 2));
 
             if (data.success) {
                 setCatalogs(data.catalogs || []);
@@ -165,6 +172,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
             setCatalogs([]);
         } finally {
             setLoadingCatalogs(false);
+            console.log("=========================================");
         }
     }, []);
 
@@ -179,6 +187,11 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
             const token = localStorage.getItem('tiktok_token');
             const url = `${API_BASE_URL}/api/tiktok/catalog/products?advertiserId=${advId}&catalog_id=${catalogId}`;
 
+            console.log("=========================================");
+            console.log("➡️ [Client fetchCatalogProducts] Sending request to server:");
+            console.log(`  URL: ${url}`);
+            console.log(`  x-tiktok-user-id: ${uid}`);
+            console.log(`  x-tiktok-token: ${token ? token.substring(0, 10) + '...' : 'null'}`);
 
             const res = await fetch(
                 url,
@@ -191,7 +204,9 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                 }
             );
 
+            console.log(`📥 [Client fetchCatalogProducts] Response received. HTTP status: ${res.status} ${res.statusText}`);
             const data = await res.json();
+            console.log("📥 [Client fetchCatalogProducts] Response body data preview:", JSON.stringify({ ...data, products: data.products?.slice(0, 3) }, null, 2));
 
             if (data.success) {
                 setCatalogProducts(data.products || []);
@@ -203,6 +218,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
             setProductError(err.message);
         } finally {
             setLoadingProducts(false);
+            console.log("=========================================");
         }
     }, []);
 
@@ -894,6 +910,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                                     const q = catalogSearch.toLowerCase();
                                                     return name.includes(q) || id.includes(q);
                                                 });
+                                                console.log("Catalog dropdown render details:", { total: catalogs.length, filtered: filtered.length, filteredItems: filtered });
                                                 if (filtered.length === 0) {
                                                     return (
                                                         <div className="py-6 text-center text-xs text-gray-500">
@@ -1011,6 +1028,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                                         const q = productSearch.toLowerCase();
                                                         return name.includes(q) || id.includes(q);
                                                     });
+                                                    console.log("Product dropdown render details:", { total: catalogProducts.length, filtered: filtered.length, filteredItems: filtered });
                                                     if (filtered.length === 0) {
                                                         return (
                                                             <div className="py-6 text-center text-xs text-gray-500">

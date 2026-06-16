@@ -27,6 +27,7 @@ export default function TikTokCallback() {
 
     // 1. Check if already logged in (context might already have it)
     if (isTikTokLoggedIn) {
+      console.log('✅ [TikTokCallback] User already logged in via context. Redirecting...')
       setStatus('success')
       navigate('/tiktok-ads')
       return
@@ -34,9 +35,26 @@ export default function TikTokCallback() {
 
     // 2. Prevent double-execution using the GLOBAL guard
     if (isExchangeInProgress) {
+      console.log('⏳ [TikTokCallback] Exchange already in progress or completed (Global Guard). Skipping.')
       return
     }
 
+    console.log('\n🟡====== [TikTokCallback] Starting Exchange Process ======')
+    console.log('  Param [connected]  :', connected)
+    console.log('  Param [error]      :', errorMsg)
+    console.log('  Param [t] token    :', exchangeToken ? exchangeToken.substring(0, 8) + '...' : 'NONE')
+    console.log('  Param [login_type] :', loginType)
+
+    // Beautiful styled log to browser developer tools console
+    console.log(
+      '%c📊 [TikTok Authentication Classifier]',
+      'background: #FE2C55; color: #fff; padding: 4px 8px; border-radius: 4px; font-weight: bold;'
+    )
+    console.log(
+      `%cType: ${loginType.toUpperCase()} LOGIN`,
+      'color: #00f0ff; font-weight: bold; font-size: 13px;'
+    )
+    console.log('%c──────────────────────────────────────────', 'color: rgba(255,255,255,0.15);')
 
     if (errorMsg) {
       isExchangeInProgress = true
@@ -51,6 +69,7 @@ export default function TikTokCallback() {
     if (connected === 'true') {
       if (exchangeToken) {
         isExchangeInProgress = true
+        console.log('🔄 [TikTokCallback] Calling /auth/exchange with token...')
         // Note: Using 'api/tiktok' prefix as seen in logs
         const exchangeUrl = `${API_BASE_URL}/api/tiktok/auth/exchange?t=${exchangeToken}`
 
@@ -64,8 +83,11 @@ export default function TikTokCallback() {
               console.error('❌ [TikTokCallback] Failed to parse backend response:', body)
               throw new Error('Invalid response from server')
             }
+            console.log('✅ [TikTokCallback] Full exchange response:', data)
 
             if (data.connected && data.user) {
+              console.log('✅ [TikTokCallback] Exchange success! User:', data.user.name)
+              console.log('🔑 [TikTokCallback] User openId:', data.user.openId)
               setStatus('success')
               toast.success('Successfully connected to TikTok Ads!')
               setTikTokSession(data.user, data.advertisers || [], data.accessToken || null)
@@ -79,6 +101,7 @@ export default function TikTokCallback() {
 
               // Handle "token consumed" as a possible success if we already have a session
               if (data.error === 'Invalid or expired exchange token') {
+                console.log('🔄 [TikTokCallback] Token already consumed. Checking session status...')
                 return refreshTikTokUser().then(() => {
                   setStatus('success')
                   navigate('/tiktok-ads')
@@ -98,6 +121,7 @@ export default function TikTokCallback() {
           })
       } else {
         isExchangeInProgress = true
+        console.log('⚠️ [TikTokCallback] No exchange token — falling back to refreshTikTokUser()')
         refreshTikTokUser().then(() => {
           setStatus('success')
           navigate('/tiktok-ads')
