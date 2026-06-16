@@ -5022,6 +5022,12 @@ export default function AdCreationForm({
             formData.append("launchPaused", launchPaused);
             formData.append("jobId", frontendJobId);
 
+            // Send the creative ID for both modes so the backend can create a
+            // fresh ad from the existing creative when an ad schedule is set.
+            if (post.creative_id) {
+              formData.append("creativeId", post.creative_id);
+            }
+
             // POST-SPECIFIC: Send the post ID instead of media
             if (usePostID) {
               // Post ID mode - create ad from post using object_story_id
