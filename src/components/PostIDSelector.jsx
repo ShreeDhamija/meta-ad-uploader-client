@@ -575,15 +575,12 @@ function PostSelectorInline({
 
     useEffect(() => {
         renderCount.current += 1;
-        console.log('🔄 PostSelectorInline render #', renderCount.current);
 
         if (prevAdAccountId.current !== adAccountId) {
-            console.log('🔍 adAccountId changed:', prevAdAccountId.current, '->', adAccountId);
             prevAdAccountId.current = adAccountId;
         }
 
         if (prevOnImport.current !== onImport) {
-            console.log('⚠️ onImport reference changed!');
             prevOnImport.current = onImport;
         }
     });

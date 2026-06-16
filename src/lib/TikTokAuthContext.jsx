@@ -5,8 +5,6 @@ import { readCache, writeCache, clearCache } from '@/lib/dataCache'
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com'
 
 // 🔍 Log environment on load so we know which API URL is being used
-console.log('🌐 [TikTokAuthContext] Loaded. API_BASE_URL =', API_BASE_URL)
-console.log('🌐 [TikTokAuthContext] VITE_API_URL env =', import.meta.env.VITE_API_URL || 'NOT SET')
 
 const TikTokAuthContext = createContext(null)
 
@@ -31,8 +29,6 @@ export function TikTokAuthProvider({ children }) {
 
   // Called directly by TikTokCallback after the exchange endpoint succeeds
   const setTikTokSession = (user, advertisers = [], accessToken = null) => {
-    console.log('✅ [TikTokAuthContext] setTikTokSession called with user:', user?.name)
-    console.log('🔑 [TikTokAuthContext] User openId:', user?.openId)
     setIsTikTokLoggedIn(true)
     setTikTokUser(user)
     if (user) {
@@ -59,10 +55,6 @@ export function TikTokAuthProvider({ children }) {
   const refreshTikTokUser = async () => {
     const endpoint = `${API_BASE_URL}/api/tiktok/auth/me`
     try {
-      console.log('\n🔍====== [TikTok Auth] refreshTikTokUser ======')
-      console.log('  Fetching URL      :', endpoint)
-      console.log('  credentials       : include')
-      console.log('  document.cookie   :', document.cookie || 'EMPTY (httpOnly cookies not visible here)')
 
       // Send stored tiktokId as a hint so the server can recover from Firestore
       const storedUid = (() => { try { return localStorage.getItem('tiktok_uid') } catch (_) { return null } })()
@@ -71,7 +63,6 @@ export function TikTokAuthProvider({ children }) {
       const headers = { 'Content-Type': 'application/json' }
       if (storedUid) {
         headers['x-tiktok-user-id'] = storedUid
-        console.log('  Sending x-tiktok-user-id hint:', storedUid)
       }
       if (storedToken) {
         headers['x-tiktok-token'] = storedToken
@@ -82,9 +73,7 @@ export function TikTokAuthProvider({ children }) {
 
       const res = await fetch(endpoint, { credentials: 'include', headers })
 
-      console.log('  HTTP Status       :', res.status, res.statusText)
-      console.log('  Response Headers  :')
-      res.headers.forEach((value, key) => console.log(`    ${key}: ${value}`))
+
 
       const rawText = await res.text()
       let data
@@ -98,13 +87,9 @@ export function TikTokAuthProvider({ children }) {
         return
       }
 
-      console.log('✅ [TikTok Auth] Full refresh user response data:', data)
-      console.log('==============================\n')
 
       if (res.ok) {
         if (data.connected && data.user) {
-          console.log('✅ [TikTok Auth] User IS connected:', data.user.name)
-          console.log('🔑 [TikTok Auth] User openId:', data.user.openId)
           setIsTikTokLoggedIn(true)
           setTikTokUser(data.user)
           try { localStorage.setItem('tiktok_user', JSON.stringify(data.user)) } catch (_) {}
@@ -153,13 +138,11 @@ export function TikTokAuthProvider({ children }) {
 
   const logoutTikTok = async () => {
     try {
-      console.log("🚪 [TikTok Auth] Logging out...");
       const res = await fetch(`${API_BASE_URL}/api/tiktok/auth/logout`, {
         method: 'POST',
         credentials: 'include',
       })
       if (res.ok) {
-        console.log("✅ [TikTok Auth] Logout successful. Clearing local storage...");
         // Clear tokens FIRST to prevent auto-recovery
         try { localStorage.removeItem('tiktok_uid') } catch (_) {}
         try { localStorage.removeItem('tiktok_token') } catch (_) {}
@@ -197,12 +180,7 @@ export function TikTokAuthProvider({ children }) {
     if (storedToken) extraHeaders['x-tiktok-token'] = storedToken
     if (storedAdvertiserIds) extraHeaders['x-tiktok-advertiser-ids'] = storedAdvertiserIds
 
-    console.log(
-      `🔑 [tiktokFetch] ${(options.method || 'GET').toUpperCase()} ${url}` +
-      ` | uid=${storedUid ? '✅' : '❌ MISSING'}` +
-      ` | token=${storedToken ? '✅' : '❌ MISSING'}` +
-      ` | advIds=${storedAdvertiserIds || '❌ MISSING'}`
-    )
+
 
     return fetch(url, {
       credentials: 'include',
