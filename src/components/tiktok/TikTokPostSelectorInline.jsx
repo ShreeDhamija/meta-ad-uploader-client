@@ -288,7 +288,8 @@ function TikTokPostSelectorInline({
       </div>
 
       {filteredPosts.length > 0 && (
-        <div className="space-y-1.5 pb-4">
+        <div className="flex-1 overflow-y-auto pr-2 outline-none custom-scrollbar">
+          <div className="space-y-1.5 pb-4">
           {filteredPosts.map((post) => {
             const isSelected = selectedPostIds.has(post.id)
 
@@ -371,11 +372,10 @@ function TikTokPostSelectorInline({
               </Button>
             </div>
           )}
+          </div>
         </div>
-        </div>
-  )
-}
-    </div >
+      )}
+    </div>
   )
 }
 
