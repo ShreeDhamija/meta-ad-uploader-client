@@ -11,6 +11,30 @@ import { useTikTokAuth } from "@/lib/TikTokAuthContext"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
+const formatDate = (timeVal) => {
+  if (!timeVal) return "-";
+  let date;
+  if (typeof timeVal === 'number') {
+    date = new Date(timeVal < 9999999999 ? timeVal * 1000 : timeVal);
+  } else if (typeof timeVal === 'string') {
+    const parsedInt = parseInt(timeVal, 10);
+    if (!isNaN(parsedInt) && String(parsedInt) === timeVal.trim()) {
+      date = new Date(parsedInt < 9999999999 ? parsedInt * 1000 : parsedInt);
+    } else {
+      date = new Date(timeVal);
+    }
+  } else {
+    return "-";
+  }
+
+  if (isNaN(date.getTime())) return "-";
+  return date.toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  });
+}
+
 function TikTokPostSelectorInline({
   advertiserId,
   identityId,
@@ -112,6 +136,7 @@ function TikTokPostSelectorInline({
           likes: item.video_info?.like_count || item.likes || 0,
           views: item.video_info?.view_count || item.video_views || 0,
           auth_end_time: authEndTime,
+          create_time: item.create_time || item.item_info?.create_time || item.item_info?.post_create_time || null,
           raw: item
         };
       })
@@ -251,10 +276,11 @@ function TikTokPostSelectorInline({
         )}
 
         {filteredPosts.length > 0 && (
-          <div className="grid grid-cols-[20px_48px_1fr_75px_75px] gap-3 px-3 py-2.5 text-xs font-semibold text-white bg-zinc-800 rounded-xl items-center shadow-sm">
+          <div className="grid grid-cols-[20px_48px_1fr_100px_75px_75px] gap-3 px-3 py-2.5 text-xs font-semibold text-white bg-zinc-800 rounded-xl items-center shadow-sm">
             <div></div>
             <div>Cover</div>
             <div>Caption</div>
+            <div className="text-left">Date Created</div>
             <div className="text-right">Likes</div>
             <div className="text-right">Views</div>
           </div>
@@ -270,7 +296,7 @@ function TikTokPostSelectorInline({
               return (
                 <label
                   key={post.id}
-                  className={`grid grid-cols-[auto_48px_1fr_75px_75px] gap-3 items-center p-3 rounded-2xl border cursor-pointer transition-all duration-150 ${isSelected
+                  className={`grid grid-cols-[auto_48px_1fr_100px_75px_75px] gap-3 items-center p-3 rounded-2xl border cursor-pointer transition-all duration-150 ${isSelected
                     ? 'border-zinc-850 bg-zinc-50/70 shadow-sm'
                     : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50/50'
                     }`}
@@ -304,6 +330,11 @@ function TikTokPostSelectorInline({
                     <p className="text-xs font-semibold text-gray-800 line-clamp-2 leading-relaxed" title={post.ad_name}>
                       {post.ad_name}
                     </p>
+                  </div>
+
+                  {/* Date Created */}
+                  <div className="text-left text-xs font-medium text-gray-500 whitespace-nowrap">
+                    {formatDate(post.create_time)}
                   </div>
 
                   {/* Likes */}

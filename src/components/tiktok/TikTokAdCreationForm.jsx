@@ -631,7 +631,7 @@ export default function TikTokAdCreationForm({
   const [isDeletingTemplates, setIsDeletingTemplates] = useState(false)
   const [isSavingNew, setIsSavingNew] = useState(false)
   const [isUpdatingTemplate, setIsUpdatingTemplate] = useState(false)
-  const [sparkSourceTab, setSparkSourceTab] = useState("auth_codes") // "auth_codes" | "video_list"
+  const [sparkSourceTab, setSparkSourceTab] = useState("video_list") // "auth_codes" | "video_list"
   const [isResolvingCodes, setIsResolvingCodes] = useState(false)
   const [resolvedCodes, setResolvedCodes] = useState([])
   const [showSaveNewDialog, setShowSaveNewDialog] = useState(false)
@@ -1390,16 +1390,16 @@ export default function TikTokAdCreationForm({
             advertiserId: selectedAdvertiser,
             adgroupId: adgroupId,
             ...(currentIdentityId ? { identityId: currentIdentityId } : {}),
-              identityType: currentIdentityType,
-              adName: finalAdName,
-              adType: adType,
-              creatives: creatives,
-              jobId: jobToProcess.id,
-              cta: creativeCTAs,
-              s3Url: currentS3Url,
-              ad_count: adGroupObj?.ad_count !== undefined ? adGroupObj.ad_count : 0,
-              campaignAutomationType: campaignObj?.campaign_automation_type || null
-            }
+            identityType: currentIdentityType,
+            adName: finalAdName,
+            adType: adType,
+            creatives: creatives,
+            jobId: jobToProcess.id,
+            cta: creativeCTAs,
+            s3Url: currentS3Url,
+            ad_count: adGroupObj?.ad_count !== undefined ? adGroupObj.ad_count : 0,
+            campaignAutomationType: campaignObj?.campaign_automation_type || null
+          }
 
           try {
             const createRes = await tiktokFetch(`${API_BASE_URL}/api/tiktok/create-ad`, {
@@ -1642,22 +1642,21 @@ export default function TikTokAdCreationForm({
     }
 
     fetchTikTokIdentities(selectedAdvertiser).then(list => {
-      setIdentities(list)
+      setIdentities((list || []).filter(i => i.identity_type === 'BC_AUTH_TT'))
     })
   }, [selectedAdvertiser, setIdentities, fetchTikTokIdentities])
 
   // Automatically sync identities from context cache when selectedAdvertiser or context value changes
   useEffect(() => {
     if (selectedAdvertiser && tiktokIdentities[selectedAdvertiser]) {
-      setIdentities(tiktokIdentities[selectedAdvertiser]);
+      setIdentities(tiktokIdentities[selectedAdvertiser].filter(i => i.identity_type === 'BC_AUTH_TT'));
     }
   }, [selectedAdvertiser, tiktokIdentities, setIdentities]);
 
   // Automatically update selectedIdentity when adType or identities list changes
   useEffect(() => {
     if (identities.length > 0) {
-      const best = identities.find(i => i.identity_type === 'TT_USER') ||
-        identities.find(i => i.identity_type === 'BC_AUTH_TT') ||
+      const best = identities.find(i => i.identity_type === 'BC_AUTH_TT') ||
         identities[0]
       setSelectedIdentity(best?.identity_id || '')
     } else {
@@ -2062,12 +2061,10 @@ export default function TikTokAdCreationForm({
     if (!selectedAdvertiser || loadingIdentities) return
     fetchTikTokIdentities(selectedAdvertiser, true)
       .then(list => {
-        setIdentities(list)
-        if (list.length > 0) {
-          const best = list.find(i => i.identity_type === 'TT_USER') ||
-            list.find(i => i.identity_type === 'BC_AUTH_TT') ||
-            list[0]
-          setSelectedIdentity(best.identity_id)
+        const filtered = (list || []).filter(i => i.identity_type === 'BC_AUTH_TT')
+        setIdentities(filtered)
+        if (filtered.length > 0) {
+          setSelectedIdentity(filtered[0].identity_id)
         } else {
           setSelectedIdentity('')
         }
@@ -4144,7 +4141,7 @@ export default function TikTokAdCreationForm({
                           onValueChange={(value) => {
                             if (activeVariantId !== 'default') return;
                             setAdType(value);
-                            const firstLinked = identities.find(i => i.identity_type === 'TT_USER' || i.identity_type === 'BC_AUTH_TT') || identities[0];
+                            const firstLinked = identities.find(i => i.identity_type === 'BC_AUTH_TT') || identities[0];
                             if (firstLinked) {
                               setSelectedIdentity(firstLinked.identity_id);
                             } else {
@@ -4292,16 +4289,6 @@ export default function TikTokAdCreationForm({
                   <div className="flex bg-gray-100 p-1 rounded-2xl border border-gray-200">
                     <button
                       type="button"
-                      onClick={() => setSparkSourceTab("auth_codes")}
-                      className={`px-4 py-2 text-xs font-semibold rounded-xl transition-all ${sparkSourceTab === "auth_codes"
-                        ? "bg-white text-black shadow-sm"
-                        : "text-gray-500 hover:text-black"
-                        }`}
-                    >
-                      Paste Auth Codes
-                    </button>
-                    <button
-                      type="button"
                       onClick={() => setSparkSourceTab("video_list")}
                       className={`px-4 py-2 text-xs font-semibold rounded-xl transition-all ${sparkSourceTab === "video_list"
                         ? "bg-white text-black shadow-sm"
@@ -4309,6 +4296,16 @@ export default function TikTokAdCreationForm({
                         }`}
                     >
                       Choose from Video List
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSparkSourceTab("auth_codes")}
+                      className={`px-4 py-2 text-xs font-semibold rounded-xl transition-all ${sparkSourceTab === "auth_codes"
+                        ? "bg-white text-black shadow-sm"
+                        : "text-gray-500 hover:text-black"
+                        }`}
+                    >
+                      Paste Auth Codes
                     </button>
                   </div>
                 </div>

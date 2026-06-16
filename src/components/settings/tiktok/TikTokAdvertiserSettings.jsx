@@ -79,7 +79,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
     const [refreshingAdvertisers, setRefreshingAdvertisers] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const { tiktokIdentities, tiktokIdentitiesLoading, fetchTikTokIdentities } = useAppData();
-    const identities = tiktokIdentities[selectedAdvertiser] || [];
+    const identities = (tiktokIdentities[selectedAdvertiser] || []).filter(i => i.identity_type === 'BC_AUTH_TT');
     const loadingIdentities = tiktokIdentitiesLoading[selectedAdvertiser] || false;
     const [openIdentity, setOpenIdentity] = useState(false);
     const [openCta, setOpenCta] = useState(false);
