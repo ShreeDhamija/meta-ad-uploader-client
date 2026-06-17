@@ -355,7 +355,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
     const currentAdvertiser = advertisers.find(a => (a.advertiser_id || a.id) === selectedAdvertiser);
 
     return (
-        <div className={cn("space-y-6 w-full max-w-3xl", (openCatalog || openProduct) ? "pb-[380px]" : "")}>
+        <div className="space-y-6 w-full max-w-3xl">
             {/* Advertiser Selector — mirrors Meta's Ad Account dropdown */}
             <div className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -874,8 +874,8 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                     className="min-w-[--radix-popover-trigger-width] w-auto !max-w-none p-0 rounded-xl bg-white border-gray-200 shadow-2xl"
                                     align="start"
                                     sideOffset={4}
-                                    side="bottom"
-                                    avoidCollisions={false}
+                                    side="top"
+                                    avoidCollisions={true}
                                     style={{ minWidth: "var(--radix-popover-trigger-width)", width: "auto" }}
                                 >
                                     <div className="flex flex-col overflow-hidden rounded-xl bg-white text-gray-900">
@@ -991,8 +991,8 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                         className="min-w-[--radix-popover-trigger-width] w-auto !max-w-none p-0 rounded-xl bg-white border-gray-200 shadow-2xl"
                                         align="start"
                                         sideOffset={4}
-                                        side="bottom"
-                                        avoidCollisions={false}
+                                        side="top"
+                                        avoidCollisions={true}
                                         style={{ minWidth: "var(--radix-popover-trigger-width)", width: "auto" }}
                                     >
                                         <div className="flex flex-col overflow-hidden rounded-xl bg-white text-gray-900">
