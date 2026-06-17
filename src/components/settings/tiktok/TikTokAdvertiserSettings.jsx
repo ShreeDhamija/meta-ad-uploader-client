@@ -497,7 +497,8 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                         ) : (
                                             <div className="flex items-center gap-2">
                                                 {(() => {
-                                                    const found = identities.find(i => i.identity_id === currentSettings.defaultIdentityId);
+                                                    const unfilteredList = tiktokIdentities[selectedAdvertiser] || [];
+                                                    const found = unfilteredList.find(i => i.identity_id === currentSettings.defaultIdentityId);
                                                     return found ? (
                                                         <span className="flex items-center gap-2">
                                                             <img
@@ -509,7 +510,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                                         </span>
                                                     ) : (
                                                         <span className="text-sm font-medium text-gray-900">
-                                                            {currentSettings.defaultIdentityId || "Select TikTok Identity"}
+                                                            {currentSettings.defaultIdentityName || currentSettings.defaultIdentityId || "Select TikTok Identity"}
                                                         </span>
                                                     );
                                                 })()}
@@ -558,7 +559,11 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                                                 type="button"
                                                                 key={i.identity_id}
                                                                 onClick={() => {
-                                                                    setSettings({ ...currentSettings, defaultIdentityId: i.identity_id });
+                                                                    setSettings({
+                                                                        ...currentSettings,
+                                                                        defaultIdentityId: i.identity_id,
+                                                                        defaultIdentityName: i.display_name
+                                                                    });
                                                                     setOpenIdentity(false);
                                                                     setIdentitySearch("");
                                                                 }}
@@ -809,9 +814,9 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
                                 </svg>
                                 <h3 className="font-medium text-[14px] text-zinc-950">Catalog &amp; Product Preferences</h3>
-                                 {(loadingCatalogs || loadingProducts) && (
-                                     <Loader2 className="w-3.5 h-3.5 animate-spin text-gray-400" />
-                                 )}
+                                {(loadingCatalogs || loadingProducts) && (
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin text-gray-400" />
+                                )}
                             </div>
                             <button
                                 type="button"
