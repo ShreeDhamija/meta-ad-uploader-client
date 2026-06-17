@@ -1081,6 +1081,28 @@ export default function AnalyticsDashboard() {
         fetchPoorAds(true)
     }, [selectedAdAccount, adAccountSettingsLoading, fetchPoorAds])
 
+    const handlePoorAdsPaused = useCallback((adIds, accountId = selectedAdAccount) => {
+        if (!accountId || !Array.isArray(adIds) || adIds.length === 0) return
+
+        const pausedAdIds = new Set(adIds)
+        const removePausedAds = (payload) => {
+            if (!payload?.ads) return payload
+            return {
+                ...payload,
+                ads: payload.ads.filter(ad => !pausedAdIds.has(ad.adId)),
+            }
+        }
+
+        const cachedPayload = poorAdsCacheRef.current[accountId]
+        if (cachedPayload) {
+            poorAdsCacheRef.current[accountId] = removePausedAds(cachedPayload)
+        }
+
+        if (currentAccountRef.current === accountId || selectedAdAccount === accountId) {
+            setPoorAds(prev => removePausedAds(prev))
+        }
+    }, [selectedAdAccount])
+
     const handleRefreshCharts = useCallback(() => {
         if (!selectedAdAccount || adAccountSettingsLoading) return
 
@@ -1738,6 +1760,7 @@ export default function AnalyticsDashboard() {
                                 poorAdsLoading={poorAdsLoading}
                                 onRefreshBudgetRecommendations={handleRefreshBudgetRecommendations}
                                 onRefreshPoorAds={handleRefreshPoorAds}
+                                onPoorAdsPaused={handlePoorAdsPaused}
                                 budgetRefreshing={recsLoading}
                                 budgetRefreshToken={budgetRefreshSignal}
                             />
@@ -1756,6 +1779,7 @@ export default function AnalyticsDashboard() {
                             poorAdsLoading={poorAdsLoading}
                             onRefreshBudgetRecommendations={handleRefreshBudgetRecommendations}
                             onRefreshPoorAds={handleRefreshPoorAds}
+                            onPoorAdsPaused={handlePoorAdsPaused}
                             budgetRefreshing={recsLoading}
                             budgetRefreshToken={budgetRefreshSignal}
                         />

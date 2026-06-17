@@ -315,6 +315,7 @@ export default function RecommendationCards({
     poorAdsData, poorAdsLoading,
     onRefreshBudgetRecommendations,
     onRefreshPoorAds,
+    onPoorAdsPaused,
     budgetRefreshing = false,
     budgetRefreshToken = null,
 }) {
@@ -343,7 +344,6 @@ export default function RecommendationCards({
         setFatigueExpanded(false)
         setSelected(new Set())
         setPausingId(null)
-        setPausedIds(new Set())
         setSelectedScaleWinners(new Set())
         setShowDismissed(false)
     }, [adAccountId, section, mode])
@@ -558,6 +558,14 @@ export default function RecommendationCards({
         return poorAdsData.ads.filter(ad => !pausedIds.has(ad.adId))
     }, [poorAdsData, pausedIds])
 
+    const markPoorAdsPaused = (adIds) => {
+        if (onPoorAdsPaused) onPoorAdsPaused(adIds, adAccountId)
+
+        setPausedIds(prev => {
+            return new Set([...prev, ...adIds])
+        })
+    }
+
     const allSelected = ads.length > 0 && selected.size === ads.length
     const someSelected = selected.size > 0 && selected.size < ads.length
     const bulkPauseLabel = `Pause ${selected.size} Selected`
@@ -588,7 +596,7 @@ export default function RecommendationCards({
             const result = await res.json()
             if (result.success) {
                 toast.success('Ad paused')
-                setPausedIds(prev => new Set([...prev, adId]))
+                markPoorAdsPaused([adId])
                 setSelected(prev => { const next = new Set(prev); next.delete(adId); return next })
             } else {
                 toast.error(result.error || 'Failed to pause ad')
@@ -607,6 +615,7 @@ export default function RecommendationCards({
         setConfirmDialog(null)
 
         let success = 0, failed = 0
+        const pausedAdIds = []
         for (const adId of ids) {
             try {
                 const res = await fetch(`${API_BASE_URL}/api/analytics/apply-action`, {
@@ -617,10 +626,12 @@ export default function RecommendationCards({
                 const result = await res.json()
                 if (result.success) {
                     success++
-                    setPausedIds(prev => new Set([...prev, adId]))
+                    pausedAdIds.push(adId)
                 } else { failed++ }
             } catch { failed++ }
         }
+
+        if (pausedAdIds.length > 0) markPoorAdsPaused(pausedAdIds)
 
         if (success > 0) toast.success(`Paused ${success} ad${success > 1 ? 's' : ''}`)
         if (failed > 0) toast.error(`Failed to pause ${failed} ad${failed > 1 ? 's' : ''}`)
@@ -1383,7 +1394,7 @@ export default function RecommendationCards({
              */}
             <Dialog open={!!confirmDialog} onOpenChange={() => setConfirmDialog(null)}>
                 <DialogOverlay className="bg-black/50" />
-                <DialogContent className="sm:max-w-[400px] !rounded-[24px] p-6">
+                <DialogContent className="sm:max-w-[400px] !rounded-[24px] p-6 !duration-0 data-[state=open]:!animate-none data-[state=closed]:!animate-none">
                     <DialogHeader>
                         <DialogTitle className="text-lg flex items-center gap-2">
                             <AlertTriangle className="w-5 h-5 text-red-500" />
