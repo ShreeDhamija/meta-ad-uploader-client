@@ -146,6 +146,19 @@ export default function AdAccountSettings({
     [adSets, adSetSearchValue]
   );
 
+  const visibleAdSetIds = useMemo(
+    () => filteredAdSets.map((adset) => adset.id),
+    [filteredAdSets]
+  );
+
+  const selectedVisibleAdSetCount = useMemo(
+    () => visibleAdSetIds.filter((id) => selectedAdSets.includes(id)).length,
+    [visibleAdSetIds, selectedAdSets]
+  );
+
+  const areAllVisibleAdSetsSelected =
+    visibleAdSetIds.length > 0 && selectedVisibleAdSetCount === visibleAdSetIds.length;
+
 
 
 
@@ -292,6 +305,31 @@ export default function AdAccountSettings({
       setSelectedAdSets((prev) => prev.filter((id) => id !== adsetId))
     }
   });
+
+  const handleSelectAllVisibleAdSets = useCallback(() => {
+    if (visibleAdSetIds.length === 0) return;
+
+    if (areAllVisibleAdSetsSelected) {
+      const visibleIds = new Set(visibleAdSetIds);
+      setSelectedAdSets((prev) => prev.filter((id) => !visibleIds.has(id)));
+      return;
+    }
+
+    setSelectedAdSets((prev) => Array.from(new Set([...prev, ...visibleAdSetIds])));
+    if (showDuplicateBlock) {
+      setShowDuplicateBlock(false);
+      setDuplicateAdSet("");
+      setNewAdSetName("");
+    }
+  }, [
+    areAllVisibleAdSetsSelected,
+    setDuplicateAdSet,
+    setNewAdSetName,
+    setSelectedAdSets,
+    setShowDuplicateBlock,
+    showDuplicateBlock,
+    visibleAdSetIds,
+  ]);
 
 
 
@@ -1038,61 +1076,90 @@ transition-all duration-150 hover:!bg-black
                             return acc;
                           }, {});
 
-                          return Object.entries(groupedByCampaign).map(([campaignId, campaignAdSets]) => {
-                            const campaignName = campaignAdSets[0]?.campaignName || campaignId;
-
-                            return (
-                              <div key={campaignId}>
-                                {/* Campaign separator */}
-                                {selectedCampaign.length >= 2 && (
-                                  <div
-                                    className="px-4 py-2 mx-1 mb-1 bg-gray-100 text-gray-700 font-semibold text-xs rounded-lg pointer-events-none truncate"
-                                    title={`${campaignName} Ad Sets`}
-                                  >
-                                    {campaignName} Ad Sets
-                                  </div>
+                          return (
+                            <>
+                              <CommandItem
+                                key="select-all-visible-adsets"
+                                value="select-all-visible-adsets"
+                                forceMount
+                                onSelect={handleSelectAllVisibleAdSets}
+                                className={cn(
+                                  "py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
+                                  areAllVisibleAdSetsSelected ? "bg-gray-100 hover:!bg-gray-100 font-semibold" : "hover:!bg-gray-200",
                                 )}
-                                {/* Adsets for this campaign */}
-                                {campaignAdSets.map((adset) => {
-                                  const isSelected = selectedAdSets.includes(adset.id);
-                                  return (
-                                    <CommandItem
-                                      key={adset.id}
-                                      value={adset.name || adset.id}
-                                      onSelect={() => handleAdSetCheckboxChange(adset.id, !isSelected)}
-                                      className={cn(
-                                        "py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
-                                        isSelected ? "bg-gray-100 hover:!bg-gray-100 font-semibold" : "hover:!bg-gray-200",
-                                      )}
-                                    >
-                                      <div className="flex items-center space-x-2 w-full min-w-0">
-                                        <Checkbox
-                                          id={`adset-${adset.id}`}
-                                          checked={isSelected}
-                                          className="p-0 w-4 h-4 aspect-square bg-white border border-gray-300 rounded-[6px]"
-                                        >
-                                          <Checkbox.Indicator>
-                                            <Check className="w-3 h-3 text-green-500" />
-                                          </Checkbox.Indicator>
-                                        </Checkbox>
-                                        <Label className={cn("min-w-0 flex-1 cursor-pointer flex items-center justify-between", adset.status !== "ACTIVE" && "text-gray-400")}>
-                                          <span className="min-w-0 truncate leading-[1.25]" title={adset.name || adset.id}>{adset.name || adset.id}</span>
-                                          <span className="ml-2 flex shrink-0 items-center">
-                                            {adset.totalAds != null && (
-                                              <span className="text-xs text-gray-400 mr-1.5">({adset.totalAds} {adset.totalAds === 1 ? 'Ad' : 'Ads'})</span>
-                                            )}
-                                            {adset.status === "ACTIVE" && (
-                                              <span className="ml-0 w-2 h-2 rounded-full bg-green-500" />
-                                            )}
-                                          </span>
-                                        </Label>
+                              >
+                                <div className="flex items-center space-x-2 w-full min-w-0">
+                                  <Checkbox
+                                    id="select-all-visible-adsets"
+                                    checked={areAllVisibleAdSetsSelected}
+                                    className="p-0 w-4 h-4 aspect-square bg-white border border-gray-300 rounded-[6px]"
+                                  >
+                                    <Checkbox.Indicator>
+                                      <Check className="w-3 h-3 text-green-500" />
+                                    </Checkbox.Indicator>
+                                  </Checkbox>
+                                  <Label className="min-w-0 flex-1 cursor-pointer flex items-center justify-between">
+                                    <span className="min-w-0 truncate leading-[1.25]">Select all</span>
+                                  </Label>
+                                </div>
+                              </CommandItem>
+                              {Object.entries(groupedByCampaign).map(([campaignId, campaignAdSets]) => {
+                                const campaignName = campaignAdSets[0]?.campaignName || campaignId;
+
+                                return (
+                                  <div key={campaignId}>
+                                    {/* Campaign separator */}
+                                    {selectedCampaign.length >= 2 && (
+                                      <div
+                                        className="px-4 py-2 mx-1 mb-1 bg-gray-100 text-gray-700 font-semibold text-xs rounded-lg pointer-events-none truncate"
+                                        title={`${campaignName} Ad Sets`}
+                                      >
+                                        {campaignName} Ad Sets
                                       </div>
-                                    </CommandItem>
-                                  );
-                                })}
-                              </div>
-                            );
-                          });
+                                    )}
+                                    {/* Adsets for this campaign */}
+                                    {campaignAdSets.map((adset) => {
+                                      const isSelected = selectedAdSets.includes(adset.id);
+                                      return (
+                                        <CommandItem
+                                          key={adset.id}
+                                          value={adset.name || adset.id}
+                                          onSelect={() => handleAdSetCheckboxChange(adset.id, !isSelected)}
+                                          className={cn(
+                                            "py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
+                                            isSelected ? "bg-gray-100 hover:!bg-gray-100 font-semibold" : "hover:!bg-gray-200",
+                                          )}
+                                        >
+                                          <div className="flex items-center space-x-2 w-full min-w-0">
+                                            <Checkbox
+                                              id={`adset-${adset.id}`}
+                                              checked={isSelected}
+                                              className="p-0 w-4 h-4 aspect-square bg-white border border-gray-300 rounded-[6px]"
+                                            >
+                                              <Checkbox.Indicator>
+                                                <Check className="w-3 h-3 text-green-500" />
+                                              </Checkbox.Indicator>
+                                            </Checkbox>
+                                            <Label className={cn("min-w-0 flex-1 cursor-pointer flex items-center justify-between", adset.status !== "ACTIVE" && "text-gray-400")}>
+                                              <span className="min-w-0 truncate leading-[1.25]" title={adset.name || adset.id}>{adset.name || adset.id}</span>
+                                              <span className="ml-2 flex shrink-0 items-center">
+                                                {adset.totalAds != null && (
+                                                  <span className="text-xs text-gray-400 mr-1.5">({adset.totalAds} {adset.totalAds === 1 ? 'Ad' : 'Ads'})</span>
+                                                )}
+                                                {adset.status === "ACTIVE" && (
+                                                  <span className="ml-0 w-2 h-2 rounded-full bg-green-500" />
+                                                )}
+                                              </span>
+                                            </Label>
+                                          </div>
+                                        </CommandItem>
+                                      );
+                                    })}
+                                  </div>
+                                );
+                              })}
+                            </>
+                          );
                         })()
                       ) : (
                         <CommandItem disabled className="opacity-50 cursor-not-allowed">
