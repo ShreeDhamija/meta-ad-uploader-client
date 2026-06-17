@@ -154,7 +154,8 @@ function FileNameTooltip({ name }) {
 }
 
 const LOCAL_VIDEO_SCRUB_FRAME_COUNT = 6;
-const LOCAL_VIDEO_SCRUB_MAX_SIZE = 240;
+const LOCAL_VIDEO_SCRUB_MAX_SIZE = 320;
+const LOCAL_VIDEO_SCRUB_QUALITY = 0.7;
 const localVideoScrubCache = new Map();
 const localVideoScrubPendingCache = new Map();
 
@@ -227,7 +228,7 @@ async function generateLocalVideoScrubFramesUncached(file, fileId) {
       }
 
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      frames.push(canvas.toDataURL("image/jpeg", 0.6));
+      frames.push(canvas.toDataURL("image/jpeg", LOCAL_VIDEO_SCRUB_QUALITY));
     }
 
     localVideoScrubCache.set(fileId, frames);
@@ -246,6 +247,7 @@ async function generateLocalVideoScrubFramesUncached(file, fileId) {
 function LocalVideoScrubber({ file, thumbnailSrc, fallbackSrc, className }) {
   const [frames, setFrames] = useState(() => localVideoScrubCache.get(getFileId(file)) || null);
   const [activeFrameIndex, setActiveFrameIndex] = useState(0);
+  const [cursorRatio, setCursorRatio] = useState(0.5);
   const [isHovering, setIsHovering] = useState(false);
   const [isLoadingFrames, setIsLoadingFrames] = useState(false);
   const isMountedRef = useRef(true);
@@ -260,6 +262,7 @@ function LocalVideoScrubber({ file, thumbnailSrc, fallbackSrc, className }) {
   useEffect(() => {
     setFrames(localVideoScrubCache.get(getFileId(file)) || null);
     setActiveFrameIndex(0);
+    setCursorRatio(0.5);
     setIsHovering(false);
     setIsLoadingFrames(false);
   }, [file]);
@@ -279,11 +282,15 @@ function LocalVideoScrubber({ file, thumbnailSrc, fallbackSrc, className }) {
   }, [file, frames, isLoadingFrames]);
 
   const handleMouseMove = (event) => {
-    if (!frames?.length) return;
     const rect = event.currentTarget.getBoundingClientRect();
     const ratio = rect.width > 0 ? (event.clientX - rect.left) / rect.width : 0;
-    const nextIndex = Math.min(frames.length - 1, Math.max(0, Math.floor(ratio * frames.length)));
-    setActiveFrameIndex(nextIndex);
+    const boundedRatio = Math.min(1, Math.max(0, ratio));
+    setCursorRatio(boundedRatio);
+
+    if (frames?.length) {
+      const nextIndex = Math.min(frames.length - 1, Math.max(0, Math.floor(boundedRatio * frames.length)));
+      setActiveFrameIndex(nextIndex);
+    }
   };
 
   const displaySrc = isHovering && frames?.length
@@ -301,6 +308,7 @@ function LocalVideoScrubber({ file, thumbnailSrc, fallbackSrc, className }) {
       onMouseLeave={() => {
         setIsHovering(false);
         setActiveFrameIndex(0);
+        setCursorRatio(0.5);
       }}
     >
       <img
@@ -318,15 +326,11 @@ function LocalVideoScrubber({ file, thumbnailSrc, fallbackSrc, className }) {
           }
         }}
       />
-      {isHovering && frames?.length > 1 && (
-        <div className="absolute inset-x-2 bottom-2 flex gap-0.5">
-          {frames.map((_, index) => (
-            <span
-              key={index}
-              className={`h-1 flex-1 rounded-full ${index === activeFrameIndex ? "bg-white" : "bg-white/45"}`}
-            />
-          ))}
-        </div>
+      {isHovering && (
+        <span
+          className="pointer-events-none absolute inset-y-0 w-px bg-gray-200/90 shadow-[0_0_0_1px_rgba(0,0,0,0.18)]"
+          style={{ left: `${cursorRatio * 100}%` }}
+        />
       )}
       {isHovering && isLoadingFrames && !frames?.length && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/20">
