@@ -656,13 +656,10 @@ export default function TikTokAdCreationForm({
 
   // Library / Upload status local states
   const [tiktokLibraryFiles] = useState([]) // Keep library files array empty to default upload paths
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isUploading, setIsUploading] = useState(false)
-  const [uploadProgress, setUploadProgress] = useState(0)
 
   // Google/Dropbox state variables
   const [googleAuthStatus, setGoogleAuthStatus] = useState({ checking: true, authenticated: false, accessToken: null })
-  const [uploadSources, setUploadSources] = useState(['local'])
+  const [uploadSources, setUploadSources] = useState(['local', 'drive', 'dropbox'])
   const [uploadSourcesOpen, setUploadSourcesOpen] = useState(false)
   const [showFolderInput, setShowFolderInput] = useState(false)
   const [folderLinkValue, setFolderLinkValue] = useState("")
@@ -1067,8 +1064,6 @@ export default function TikTokAdCreationForm({
       launchPaused,
     } = jobToProcess.formData
 
-    setIsSubmitting(true)
-    setIsUploading(true)
     setProgress(0)
     setProgressMessage('Starting TikTok ad creation...')
 
@@ -1538,14 +1533,12 @@ export default function TikTokAdCreationForm({
         });
       }
       try {
-        forceRefreshAdGroups();
+        forceRefreshAdGroups(null, isDuplicatingAdGroupMode);
       } catch (refreshErr) {
         console.warn('[TikTokAdCreationForm] Failed to refresh ad groups on job completion:', refreshErr);
       }
 
       setJobQueue(prev => prev.slice(1))
-      setIsSubmitting(false)
-      setIsUploading(false)
       setCurrentJob(null)
       setIsProcessingQueue(false)
       setIsCancelling(false)
@@ -2009,7 +2002,7 @@ export default function TikTokAdCreationForm({
       .finally(() => setLoadingCampaigns(false))
   }
 
-  const forceRefreshAdGroups = (e) => {
+  const forceRefreshAdGroups = (e, showToast = true) => {
     if (e && typeof e.stopPropagation === 'function') {
       e.stopPropagation();
     }
@@ -2042,7 +2035,9 @@ export default function TikTokAdCreationForm({
           }
         }
         setAdGroups(unique)
-        toast.success('Ad Groups refreshed!')
+        if (showToast) {
+          toast.success('Ad Groups refreshed!')
+        }
 
         // Show toasts if any ad group count reaches/exceeds 50
         const fullGroups = unique.filter(ag => ag.ad_count !== undefined && ag.ad_count >= 50);
@@ -2052,7 +2047,11 @@ export default function TikTokAdCreationForm({
           });
         }
       })
-      .catch(() => toast.error('Failed to refresh ad groups'))
+      .catch(() => {
+        if (showToast) {
+          toast.error('Failed to refresh ad groups')
+        }
+      })
       .finally(() => setLoadingAdGroups(false))
   }
 
@@ -2190,7 +2189,6 @@ export default function TikTokAdCreationForm({
       setVideoFile(taggedFiles[0])
       setVideoPreview(URL.createObjectURL(taggedFiles[0]))
     }
-    setUploadProgress(0)
     e.target.value = ""
   }
 
@@ -2230,8 +2228,7 @@ export default function TikTokAdCreationForm({
       setVideoFile(taggedFiles[0])
       setVideoPreview(URL.createObjectURL(taggedFiles[0]))
     }
-    setUploadProgress(0)
-  }, [setFiles, setVideoFile, setVideoPreview, setUploadProgress])
+  }, [setFiles, setVideoFile, setVideoPreview])
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -2600,7 +2597,6 @@ export default function TikTokAdCreationForm({
     if (setFiles) setFiles([])
     setDriveFiles([])
     setDropboxFiles([])
-    setUploadProgress(0)
     setFileVariantMap({})
     setGroupVariantMap({})
     setPostVariantMap({})
@@ -2608,11 +2604,12 @@ export default function TikTokAdCreationForm({
 
   // Submit form handler to queue background jobs
   const handleQueueJob = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
 
     if (isQueueingJobs) {
       return;
     }
+    setIsQueueingJobs(true);
 
     const orderedVariants = [
       variants.find((variant) => variant.id === 'default'),
@@ -5174,20 +5171,6 @@ export default function TikTokAdCreationForm({
                       )
                     })()}
 
-                    {/* Progress bar */}
-                    {(isUploading || videoUploading) && !isSubmitting && (
-                      <div className="mt-2">
-                        <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
-                          <div
-                            className="h-full bg-emerald-500 transition-all duration-300"
-                            style={{ width: `${videoUploading ? videoUploadProgress : uploadProgress}%` }}
-                          />
-                        </div>
-                        <p className="text-[10px] font-medium text-emerald-600 mt-1">
-                          Uploading {videoUploading ? videoUploadProgress : uploadProgress}%
-                        </p>
-                      </div>
-                    )}
                   </div>
                 )}
               </div>
@@ -5197,13 +5180,13 @@ export default function TikTokAdCreationForm({
                 <div className="space-y-1">
                   <Button
                     type="submit"
-                    disabled={isSubmitting || !isFormValid}
+                    disabled={isQueueingJobs || !isFormValid}
                     className="w-full h-12 bg-neutral-950 hover:bg-blue-700 text-white rounded-2xl font-semibold transition-all duration-150"
                   >
-                    {isSubmitting ? (
+                    {isQueueingJobs ? (
                       <div className="flex items-center justify-center gap-2">
                         <Loader className="w-5 h-5 animate-spin" />
-                        {(isUploading || videoUploading) ? 'Uploading Media...' : 'Creating TikTok Ad...'}
+                        Queueing Ads...
                       </div>
                     ) : (
                       'Publish Ads'
@@ -5243,7 +5226,7 @@ export default function TikTokAdCreationForm({
                       <RadioGroup
                         value={launchPaused ? "paused" : "active"}
                         onValueChange={(value) => setLaunchPaused(value === "paused")}
-                        disabled={isSubmitting}
+                        disabled={isQueueingJobs}
                         className="flex items-center space-x-2"
                       >
                         <div
