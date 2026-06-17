@@ -153,6 +153,190 @@ function FileNameTooltip({ name }) {
   );
 }
 
+const LOCAL_VIDEO_SCRUB_FRAME_COUNT = 6;
+const LOCAL_VIDEO_SCRUB_MAX_SIZE = 240;
+const localVideoScrubCache = new Map();
+const localVideoScrubPendingCache = new Map();
+
+function waitForVideoEvent(video, eventName, timeoutMs = 8000) {
+  return new Promise((resolve, reject) => {
+    const cleanup = () => {
+      clearTimeout(timeout);
+      video.removeEventListener(eventName, handleEvent);
+      video.removeEventListener("error", handleError);
+    };
+    const handleEvent = () => {
+      cleanup();
+      resolve();
+    };
+    const handleError = () => {
+      cleanup();
+      reject(new Error(`Video ${eventName} failed`));
+    };
+    const timeout = setTimeout(() => {
+      cleanup();
+      reject(new Error(`Video ${eventName} timed out`));
+    }, timeoutMs);
+
+    video.addEventListener(eventName, handleEvent, { once: true });
+    video.addEventListener("error", handleError, { once: true });
+  });
+}
+
+async function generateLocalVideoScrubFrames(file) {
+  const fileId = getFileId(file);
+  if (localVideoScrubCache.has(fileId)) return localVideoScrubCache.get(fileId);
+  if (localVideoScrubPendingCache.has(fileId)) return localVideoScrubPendingCache.get(fileId);
+
+  const pending = generateLocalVideoScrubFramesUncached(file, fileId)
+    .finally(() => localVideoScrubPendingCache.delete(fileId));
+  localVideoScrubPendingCache.set(fileId, pending);
+  return pending;
+}
+
+async function generateLocalVideoScrubFramesUncached(file, fileId) {
+  const url = URL.createObjectURL(file);
+  const video = document.createElement("video");
+
+  try {
+    video.preload = "metadata";
+    video.muted = true;
+    video.playsInline = true;
+    video.src = url;
+
+    await waitForVideoEvent(video, "loadedmetadata");
+    if (video.readyState < 2) {
+      await waitForVideoEvent(video, "loadeddata");
+    }
+
+    const duration = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 1;
+    const scale = Math.min(1, LOCAL_VIDEO_SCRUB_MAX_SIZE / Math.max(video.videoWidth || 1, video.videoHeight || 1));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round((video.videoWidth || LOCAL_VIDEO_SCRUB_MAX_SIZE) * scale));
+    canvas.height = Math.max(1, Math.round((video.videoHeight || LOCAL_VIDEO_SCRUB_MAX_SIZE) * scale));
+    const ctx = canvas.getContext("2d");
+    const frames = [];
+
+    for (let i = 0; i < LOCAL_VIDEO_SCRUB_FRAME_COUNT; i += 1) {
+      const progress = (i + 0.5) / LOCAL_VIDEO_SCRUB_FRAME_COUNT;
+      const targetTime = Math.min(Math.max(duration * progress, 0.05), Math.max(duration - 0.05, 0));
+
+      if (Math.abs(video.currentTime - targetTime) > 0.01) {
+        video.currentTime = targetTime;
+        await waitForVideoEvent(video, "seeked");
+      }
+
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      frames.push(canvas.toDataURL("image/jpeg", 0.6));
+    }
+
+    localVideoScrubCache.set(fileId, frames);
+    if (localVideoScrubCache.size > 60) {
+      localVideoScrubCache.delete(localVideoScrubCache.keys().next().value);
+    }
+
+    return frames;
+  } finally {
+    URL.revokeObjectURL(url);
+    video.removeAttribute("src");
+    video.load();
+  }
+}
+
+function LocalVideoScrubber({ file, thumbnailSrc, fallbackSrc, className }) {
+  const [frames, setFrames] = useState(() => localVideoScrubCache.get(getFileId(file)) || null);
+  const [activeFrameIndex, setActiveFrameIndex] = useState(0);
+  const [isHovering, setIsHovering] = useState(false);
+  const [isLoadingFrames, setIsLoadingFrames] = useState(false);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    setFrames(localVideoScrubCache.get(getFileId(file)) || null);
+    setActiveFrameIndex(0);
+    setIsHovering(false);
+    setIsLoadingFrames(false);
+  }, [file]);
+
+  const ensureFrames = useCallback(async () => {
+    if (frames || isLoadingFrames) return;
+
+    setIsLoadingFrames(true);
+    try {
+      const nextFrames = await generateLocalVideoScrubFrames(file);
+      if (isMountedRef.current) setFrames(nextFrames);
+    } catch (error) {
+      console.error(`Video scrub preview failed for ${file.name}:`, error);
+    } finally {
+      if (isMountedRef.current) setIsLoadingFrames(false);
+    }
+  }, [file, frames, isLoadingFrames]);
+
+  const handleMouseMove = (event) => {
+    if (!frames?.length) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    const ratio = rect.width > 0 ? (event.clientX - rect.left) / rect.width : 0;
+    const nextIndex = Math.min(frames.length - 1, Math.max(0, Math.floor(ratio * frames.length)));
+    setActiveFrameIndex(nextIndex);
+  };
+
+  const displaySrc = isHovering && frames?.length
+    ? frames[activeFrameIndex]
+    : thumbnailSrc;
+
+  return (
+    <div
+      className="relative"
+      onMouseEnter={() => {
+        setIsHovering(true);
+        ensureFrames();
+      }}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={() => {
+        setIsHovering(false);
+        setActiveFrameIndex(0);
+      }}
+    >
+      <img
+        src={displaySrc || fallbackSrc}
+        alt={file.name}
+        title={file.name}
+        className={className}
+        onError={(e) => {
+          e.target.onerror = null;
+          e.target.src = fallbackSrc;
+        }}
+        onLoad={(e) => {
+          if (e.target.naturalWidth === 0) {
+            e.target.src = fallbackSrc;
+          }
+        }}
+      />
+      {isHovering && frames?.length > 1 && (
+        <div className="absolute inset-x-2 bottom-2 flex gap-0.5">
+          {frames.map((_, index) => (
+            <span
+              key={index}
+              className={`h-1 flex-1 rounded-full ${index === activeFrameIndex ? "bg-white" : "bg-white/45"}`}
+            />
+          ))}
+        </div>
+      )}
+      {isHovering && isLoadingFrames && !frames?.length && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+          <Loader2 className="h-5 w-5 animate-spin text-white" />
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Sortable item component
 const SortableMediaItem = React.memo(function SortableMediaItem({
   file,
@@ -320,21 +504,11 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
               ) : (
                 // Local video - use generated thumbnail
                 videoThumbs[getFileId(file)] ? (
-                  <img
-                    src={videoThumbs[getFileId(file)] || "https://api.withblip.com/thumbnail.jpg"}
-                    alt={file.name}
-                    title={file.name}
+                  <LocalVideoScrubber
+                    file={file}
+                    thumbnailSrc={videoThumbs[getFileId(file)]}
+                    fallbackSrc="https://api.withblip.com/thumbnail.jpg"
                     className="w-full h-auto object-cover"
-                    onError={(e) => {
-                      e.target.onerror = null;
-                      e.target.src = "https://api.withblip.com/thumbnail.jpg";
-                    }}
-                    onLoad={(e) => {
-                      // Check if image actually rendered
-                      if (e.target.naturalWidth === 0) {
-                        e.target.src = "https://api.withblip.com/thumbnail.jpg";
-                      }
-                    }}
                   />
                 ) : (
                   <div className="w-full h-32 bg-gray-200 flex items-center justify-center">
