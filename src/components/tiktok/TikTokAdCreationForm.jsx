@@ -1089,10 +1089,7 @@ export default function TikTokAdCreationForm({
       (tiktokLibraryFiles || []).forEach(f => itemsToUpload.push({ type: 'library', file: f }));
     }
 
-    let successCount = 0
-    let failureCount = 0
     let totalCount = itemsToUpload.length * (isDuplicatingAdGroupMode ? 1 : selectedAdGroup.length)
-    let errorMessages = []
 
     setLiveProgress({
       completed: 0,
@@ -1108,86 +1105,126 @@ export default function TikTokAdCreationForm({
     }
 
     try {
+      const uploadedItems = []
+      const uploadErrors = []
+
+      // Stage 1: Upload media files
       for (let i = 0; i < itemsToUpload.length; i++) {
         if (signal.aborted) throw new DOMException('Job cancelled.', 'AbortError')
         const item = itemsToUpload[i]
         let videoId = null
         let currentS3Url = null
 
-        const progressBase = Math.round((i / itemsToUpload.length) * 90)
-        const progressNext = Math.round(((i + 1) / itemsToUpload.length) * 90)
+        const progressBase = Math.round((i / itemsToUpload.length) * 40) // Spend up to 40% on uploading
+        updateProgress(progressBase, `Uploading media ${i + 1}/${itemsToUpload.length}: ${item.file.name}...`)
 
-        updateProgress(progressBase + 5, `Uploading and processing media ${i + 1}/${itemsToUpload.length}: ${item.file.name}...`)
+        try {
+          if (adType === 'SPARK') {
+            videoId = item.file.id
+          } else if (item.type === 'local') {
+            const uploadResult = await uploadVideoToTikTok(item.file, signal)
+            if (!uploadResult?.videoId) {
+              throw new Error(`Video upload failed for "${item.file.name}"`)
+            }
+            videoId = uploadResult.videoId
+            currentS3Url = uploadResult.s3Url || null
+          } else if (item.type === 'drive' || item.type === 'dropbox') {
+            const formData = new FormData()
+            if (item.type === 'drive') {
+              formData.append('driveFile', JSON.stringify(item.file))
+            } else {
+              formData.append('dropboxFile', JSON.stringify(item.file))
+            }
 
-        if (adType === 'SPARK') {
-          videoId = item.file.id
-        } else if (item.type === 'local') {
-          const uploadResult = await uploadVideoToTikTok(item.file, signal)
-          if (!uploadResult?.videoId) {
-            throw new Error(`Video upload failed for "${item.file.name}"`)
+            const uploadParams = new URLSearchParams({ advertiserId: selectedAdvertiser })
+            const uploadUrl = `${API_BASE_URL}/api/tiktok/upload-video?${uploadParams}`
+            const sourceName = item.type === 'drive' ? 'Google Drive' : 'Dropbox'
+
+            updateProgress(progressBase + 5, `Downloading "${item.file.name}" from ${sourceName}...`)
+            const uploadRes = await tiktokFetch(uploadUrl, { method: 'POST', body: formData, signal })
+            const uploadData = await uploadRes.json()
+            if (!uploadRes.ok || !uploadData.success || !uploadData.videoId) {
+              throw new Error(uploadData.error || `Upload failed for "${item.file.name}"`)
+            }
+            videoId = uploadData.videoId
+            currentS3Url = uploadData.s3Url || null
+          } else if (item.type === 'library') {
+            videoId = item.file.videoId
           }
-          videoId = uploadResult.videoId
-          currentS3Url = uploadResult.s3Url || null
-        } else if (item.type === 'drive' || item.type === 'dropbox') {
-          const formData = new FormData()
-          if (item.type === 'drive') {
-            formData.append('driveFile', JSON.stringify(item.file))
-          } else {
-            formData.append('dropboxFile', JSON.stringify(item.file))
-          }
 
-          const uploadParams = new URLSearchParams({ advertiserId: selectedAdvertiser })
-          const uploadUrl = `${API_BASE_URL}/api/tiktok/upload-video?${uploadParams}`
-          const sourceName = item.type === 'drive' ? 'Google Drive' : 'Dropbox'
-
-          updateProgress(progressBase + 10, `Downloading "${item.file.name}" from ${sourceName}...`)
-          const uploadRes = await tiktokFetch(uploadUrl, { method: 'POST', body: formData, signal })
-          const uploadData = await uploadRes.json()
-          if (!uploadRes.ok || !uploadData.success || !uploadData.videoId) {
-            throw new Error(uploadData.error || `Upload failed for "${item.file.name}"`)
+          uploadedItems.push({
+            item,
+            videoId,
+            s3Url: currentS3Url
+          })
+        } catch (err) {
+          if (err.name === 'AbortError' || signal.aborted) {
+            throw err
           }
-          videoId = uploadData.videoId
-          currentS3Url = uploadData.s3Url || null
-        } else if (item.type === 'library') {
-          videoId = item.file.videoId
+          console.error(`Upload failed for ${item.file.name}:`, err)
+          const errDetail = err.message || 'Upload failed'
+          const failedAdCount = isDuplicatingAdGroupMode ? 1 : selectedAdGroup.length
+
+          uploadErrors.push({ error: errDetail, fileName: item.file.name })
+          setLiveProgress(prev => ({
+            ...prev,
+            completed: prev.completed + failedAdCount,
+            failed: prev.failed + failedAdCount,
+            errors: [...prev.errors, { error: errDetail, fileName: item.file.name }]
+          }))
         }
+      }
 
-        const selectedIdentityObj = identities.find(i => i.identity_id === selectedIdentity)
-        const isCustomized = !selectedIdentity || selectedIdentity === 'CUSTOMIZED_USER'
+      // Stage 2: Compilation & bulk ad group submission
+      updateProgress(40, 'Compiling ad groups payload...')
+
+      const selectedIdentityObj = identities.find(i => i.identity_id === selectedIdentity)
+      const isCustomized = !selectedIdentity || selectedIdentity === 'CUSTOMIZED_USER'
+      const finalUrl = urlMode === 'WEBSITE'
+        ? applyUtmsToUrl(landingUrl, advertiserPrefs?.defaultUTMs || [])
+        : landingUrl
+
+      let adGroupIdsToSubmit = [...selectedAdGroup]
+
+      if (isDuplicatingAdGroupMode && uploadedItems.length > 0) {
+        updateProgress(42, 'Duplicating ad group on-the-fly...')
+        const dupRes = await tiktokFetch(`${API_BASE_URL}/api/tiktok/adgroup/duplicate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            advertiser_id: selectedAdvertiser,
+            source_adgroup_id: duplicateAdGroup,
+            new_campaign_id: selectedCampaign[0],
+            new_adgroup_name: newAdGroupName.trim()
+          }),
+          signal
+        })
+        const dupData = await dupRes.json()
+        if (!dupRes.ok || !dupData.success || !dupData.copied_adgroup_id) {
+          throw new Error(dupData.error || 'Ad group duplication failed')
+        }
+        adGroupIdsToSubmit = [dupData.copied_adgroup_id]
+      }
+
+      const adGroupsMap = {}
+
+      for (let idx = 0; idx < uploadedItems.length; idx++) {
+        const { item, videoId, s3Url } = uploadedItems[idx]
+
         const currentIdentityId = adType === 'SPARK' ? item.file.identityId : (isCustomized ? undefined : selectedIdentity)
         const currentIdentityType = adType === 'SPARK' ? item.file.identityType : (isCustomized ? 'CUSTOMIZED_USER' : (selectedIdentityObj?.identity_type || 'TT_USER'))
         const currentIdentityAuthorizedBcId = adType === 'SPARK' ? item.file.identityAuthorizedBcId : (isCustomized ? undefined : (selectedIdentityObj?.identity_authorized_bc_id || ''))
 
-        const finalUrl = urlMode === 'WEBSITE'
-          ? applyUtmsToUrl(landingUrl, advertiserPrefs?.defaultUTMs || [])
-          : landingUrl
-
-        let adGroupIdsToSubmit = [...selectedAdGroup]
-
-        if (isDuplicatingAdGroupMode && i === 0) {
-          updateProgress(progressBase + 15, 'Duplicating ad group on-the-fly...')
-          const dupRes = await tiktokFetch(`${API_BASE_URL}/api/tiktok/adgroup/duplicate`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              advertiser_id: selectedAdvertiser,
-              source_adgroup_id: duplicateAdGroup,
-              new_campaign_id: selectedCampaign[0],
-              new_adgroup_name: newAdGroupName.trim()
-            }),
-            signal
-          })
-          const dupData = await dupRes.json()
-          if (!dupRes.ok || !dupData.success || !dupData.copied_adgroup_id) {
-            throw new Error(dupData.error || 'Ad group duplication failed')
-          }
-          adGroupIdsToSubmit = [dupData.copied_adgroup_id]
-        }
+        const finalAdName = computeAdNameFromFormula(
+          item.file,
+          idx,
+          landingUrl,
+          adNameFormulaV2,
+          adType
+        )
 
         for (const adgroupId of adGroupIdsToSubmit) {
-          if (signal.aborted) throw new DOMException('Job cancelled.', 'AbortError')
           const adGroupObj = adGroups.find(ag => ag.adgroup_id === adgroupId)
-          const adGroupName = adGroupObj?.adgroup_name || adgroupId
           const shoppingAdsType = adGroupObj?.shopping_ads_type || null
           const productSource = adGroupObj?.product_source || null
           const isShoppingAg = !!(
@@ -1242,7 +1279,6 @@ export default function TikTokAdCreationForm({
                 itemGroupIdToUse = itemGroupIds.join(',')
               }
             } else {
-              // Fallback to parameters already mapped in the ad group
               if (adGroupObj?.catalog_id) {
                 catalogIdToUse = adGroupObj.catalog_id
               }
@@ -1262,16 +1298,6 @@ export default function TikTokAdCreationForm({
               }
             }
           }
-
-          const finalAdName = computeAdNameFromFormula(
-            item.file,
-            i,
-            landingUrl,
-            adNameFormulaV2,
-            adType
-          )
-
-          updateProgress(progressBase + 20, `Creating ad "${finalAdName}" in group "${adGroupName}"...`)
 
           const isSalesCampaign = !!(
             (campaignObj && String(campaignObj.virtual_objective_type).toUpperCase() === 'SALES') ||
@@ -1318,12 +1344,8 @@ export default function TikTokAdCreationForm({
 
               if (isShoppingAg && catalogIdToUse) {
                 creative.catalog_id = catalogIdToUse;
-                if (skuIdToUse) {
-                  creative.sku_id = skuIdToUse;
-                }
-                if (itemGroupIdToUse) {
-                  creative.item_group_id = itemGroupIdToUse;
-                }
+                if (skuIdToUse) creative.sku_id = skuIdToUse;
+                if (itemGroupIdToUse) creative.item_group_id = itemGroupIdToUse;
               }
 
               creatives.push(creative)
@@ -1368,12 +1390,8 @@ export default function TikTokAdCreationForm({
 
                 if (isShoppingAg && catalogIdToUse) {
                   creative.catalog_id = catalogIdToUse;
-                  if (skuIdToUse) {
-                    creative.sku_id = skuIdToUse;
-                  }
-                  if (itemGroupIdToUse) {
-                    creative.item_group_id = itemGroupIdToUse;
-                  }
+                  if (skuIdToUse) creative.sku_id = skuIdToUse;
+                  if (itemGroupIdToUse) creative.item_group_id = itemGroupIdToUse;
                 }
 
                 creatives.push(creative)
@@ -1381,115 +1399,63 @@ export default function TikTokAdCreationForm({
             }
           }
 
-          const createPayload = {
-            advertiserId: selectedAdvertiser,
-            adgroupId: adgroupId,
-            ...(currentIdentityId ? { identityId: currentIdentityId } : {}),
-            identityType: currentIdentityType,
-            adName: finalAdName,
-            adType: adType,
-            creatives: creatives,
-            jobId: jobToProcess.id,
-            cta: creativeCTAs,
-            s3Url: currentS3Url,
-            ad_count: adGroupObj?.ad_count !== undefined ? adGroupObj.ad_count : 0,
-            campaignAutomationType: campaignObj?.campaign_automation_type || null
-          }
-
-          try {
-            const createRes = await tiktokFetch(`${API_BASE_URL}/api/tiktok/create-ad`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(createPayload),
-              signal
-            })
-            const createData = await createRes.json()
-            if (!createRes.ok || !createData.success) {
-              throw new Error(createData.error || 'Ad creation failed')
+          if (!adGroupsMap[adgroupId]) {
+            const adGroupObj = adGroups.find(ag => ag.adgroup_id === adgroupId)
+            adGroupsMap[adgroupId] = {
+              adgroupId: adgroupId,
+              adName: finalAdName,
+              adType: adType,
+              s3Url: s3Url,
+              ad_count: adGroupObj?.ad_count !== undefined ? adGroupObj.ad_count : 0,
+              creatives: []
             }
-
-            if (adGroupObj) {
-              adGroupObj.ad_count = (adGroupObj.ad_count || 0) + creatives.length;
-            }
-
-            successCount++
-            setLiveProgress(prev => {
-              const updatedCompleted = prev.completed + 1
-              return {
-                ...prev,
-                completed: updatedCompleted,
-                succeeded: prev.succeeded + 1
-              }
-            })
-          } catch (err) {
-            failureCount++
-            const errDetail = err.message || 'Ad creation failed'
-            errorMessages.push({ error: errDetail, fileName: item.file.name })
-            setLiveProgress(prev => {
-              const updatedCompleted = prev.completed + 1
-              return {
-                ...prev,
-                completed: updatedCompleted,
-                failed: prev.failed + 1,
-                errors: [...prev.errors, { error: errDetail, fileName: item.file.name }]
-              }
-            })
           }
-
-          // Rate-limiting delay (1000ms) between creations
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          adGroupsMap[adgroupId].creatives.push(...creatives)
         }
       }
 
-      updateProgress(100, 'TikTok ad creation complete!')
-      setStatus('complete')
+      const adGroupsPayload = Object.values(adGroupsMap)
 
-      const completedJob = {
-        id: jobToProcess.id,
-        message: failureCount > 0
-          ? `Completed with ${failureCount} failure(s).`
-          : `Created TikTok ads successfully for all ${itemsToUpload.length} videos!`,
-        completedAt: Date.now(),
-        status: failureCount === 0 ? 'complete' : (successCount > 0 ? 'partial-success' : 'error'),
-        formData: jobToProcess.formData,
-        successCount,
-        failureCount,
-        totalCount,
-        errorMessages,
+      if (adGroupsPayload.length === 0) {
+        throw new Error('All video uploads failed. Cannot create TikTok ads.')
       }
 
-      addCompletedJob(completedJob)
+      updateProgress(45, 'Submitting batch request to server...')
 
-      await fetch(`${API_BASE_URL}/auth/complete-job`, {
+      const campaignObj = campaigns.find(c => c.campaign_id === selectedCampaign[0])
+
+      const createPayload = {
+        advertiserId: selectedAdvertiser,
+        jobId: jobToProcess.id,
+        campaignAutomationType: campaignObj?.campaign_automation_type || null,
+        cta: Array.isArray(cta) ? cta : [cta],
+        initialFailureCount: uploadErrors.length * (isDuplicatingAdGroupMode ? 1 : selectedAdGroup.length),
+        initialErrorMessages: uploadErrors.map(e => ({ error: e.error, fileName: e.fileName })),
+        adGroups: adGroupsPayload
+      }
+
+      const createRes = await tiktokFetch(`${API_BASE_URL}/api/tiktok/create-ads`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jobId: jobToProcess.id,
-          message: completedJob.message,
-          status: completedJob.status,
-          successCount,
-          failureCount,
-          totalCount,
-          errorMessages,
-        })
-      }).catch(() => { })
+        body: JSON.stringify(createPayload),
+        signal
+      })
+      const createData = await createRes.json()
+      if (!createRes.ok || !createData.success) {
+        throw new Error(createData.error || 'Batch ad creation failed')
+      }
+
+      for (const adGroupPay of adGroupsPayload) {
+        const adGroupObj = adGroups.find(ag => ag.adgroup_id === adGroupPay.adgroupId)
+        if (adGroupObj) {
+          adGroupObj.ad_count = (adGroupObj.ad_count || 0) + adGroupPay.creatives.length
+        }
+      }
 
     } catch (err) {
       if (err.name === 'AbortError' || signal.aborted) {
         setStatus('cancelled')
         updateProgress(100, 'Job cancelled.')
-        const cancelledJob = {
-          id: jobToProcess.id,
-          message: 'Job cancelled.',
-          completedAt: Date.now(),
-          status: 'cancelled',
-          formData: jobToProcess.formData,
-          successCount,
-          failureCount,
-          totalCount,
-          errorMessages,
-        }
-        addCompletedJob(cancelledJob)
 
         await fetch(`${API_BASE_URL}/auth/cancel-job`, {
           method: 'POST',
@@ -1499,30 +1465,18 @@ export default function TikTokAdCreationForm({
       } else {
         setStatus('error')
         updateProgress(100, `Job Failed: ${err.message}`)
-        const failedJob = {
-          id: jobToProcess.id,
-          message: `Job Failed: ${err.message}`,
-          completedAt: Date.now(),
-          status: 'error',
-          formData: jobToProcess.formData,
-          successCount,
-          failureCount,
-          totalCount,
-          errorMessages: [{ error: err.message }],
-        }
-        addCompletedJob(failedJob)
 
         await fetch(`${API_BASE_URL}/auth/complete-job`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             jobId: jobToProcess.id,
-            message: failedJob.message,
+            message: `Job Failed: ${err.message}`,
             status: 'error',
-            successCount,
-            failureCount,
+            successCount: 0,
+            failureCount: totalCount,
             totalCount,
-            errorMessages: [{ error: err.message }],
+            errorMessages: [{ error: err.message }]
           })
         }).catch(() => { })
       }
@@ -1538,10 +1492,7 @@ export default function TikTokAdCreationForm({
         console.warn('[TikTokAdCreationForm] Failed to refresh ad groups on job completion:', refreshErr);
       }
 
-      setJobQueue(prev => prev.slice(1))
-      setCurrentJob(null)
-      setIsProcessingQueue(false)
-      setIsCancelling(false)
+      // Queue advancement is handled reactively by the SSE status change useEffect
     }
   }
 
@@ -1580,6 +1531,82 @@ export default function TikTokAdCreationForm({
       setIsCancelling(false)
     })
   }, [jobQueue, isProcessingQueue])
+
+  // Listen to final status updates from SSE to complete the job and advance the queue
+  useEffect(() => {
+    if (!isProcessingQueue || !currentJob) {
+      return
+    }
+
+    if (trackedStatus === 'idle') {
+      return
+    }
+
+    if (
+      trackedStatus === 'complete' ||
+      trackedStatus === 'partial-success' ||
+      trackedStatus === 'error' ||
+      trackedStatus === 'job-not-found' ||
+      trackedStatus === 'cancelled'
+    ) {
+      const successCount = trackedMetaData?.successCount || 0
+      const failureCount = trackedMetaData?.failureCount || 0
+      const totalCount = trackedMetaData?.totalCount || currentJob.adCount || 1
+      const errorMessages = trackedMetaData?.errorMessages || []
+
+      let completedJob = {
+        id: currentJob.id,
+        completedAt: Date.now(),
+        formData: currentJob.formData,
+        successCount,
+        failureCount,
+        totalCount,
+        errorMessages: errorMessages.map(msg => typeof msg === 'string' ? { error: msg } : msg)
+      }
+
+      if (trackedStatus === 'complete') {
+        completedJob.status = 'complete'
+        completedJob.message = `Created TikTok ads successfully for all ${totalCount} videos!`
+        toast.success(completedJob.message)
+      } else if (trackedStatus === 'partial-success') {
+        completedJob.status = 'partial-success'
+        completedJob.message = trackedMessage || `Completed with ${failureCount} failure(s).`
+        toast.warning(completedJob.message)
+      } else if (trackedStatus === 'cancelled') {
+        completedJob.status = 'cancelled'
+        completedJob.message = trackedMessage || 'Job cancelled.'
+        toast.info('Job cancelled.')
+      } else if (trackedStatus === 'job-not-found') {
+        completedJob.status = 'retry'
+        completedJob.message = 'Job timed out. Refresh page to try again.'
+      } else {
+        completedJob.status = 'error'
+        completedJob.message = `Job Failed: ${trackedMessage || 'An unknown error occurred.'}`
+        toast.error(completedJob.message)
+      }
+
+      addCompletedJob(completedJob)
+
+      // Advance queue
+      setJobQueue(prev => prev.slice(1))
+      setCurrentJob(null)
+      setIsProcessingQueue(false)
+      setIsCancelling(false)
+    }
+  }, [trackedStatus, trackedMessage, trackedMetaData, isProcessingQueue, currentJob, addCompletedJob])
+
+  // Sync SSE metadata updates to liveProgress
+  useEffect(() => {
+    if (currentJob && trackedMetaData && (trackedMetaData.successCount !== undefined || trackedMetaData.failureCount !== undefined)) {
+      setLiveProgress(prev => ({
+        ...prev,
+        succeeded: trackedMetaData.successCount || 0,
+        failed: trackedMetaData.failureCount || 0,
+        completed: (trackedMetaData.successCount || 0) + (trackedMetaData.failureCount || 0),
+        errors: (trackedMetaData.errorMessages || []).map(err => typeof err === 'string' ? { error: err } : err)
+      }))
+    }
+  }, [trackedMetaData, currentJob])
 
   // Handle advertiser account change
   const handleAdvertiserChange = useCallback((value) => {
