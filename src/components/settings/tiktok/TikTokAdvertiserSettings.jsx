@@ -355,7 +355,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
     const currentAdvertiser = advertisers.find(a => (a.advertiser_id || a.id) === selectedAdvertiser);
 
     return (
-        <div className="space-y-6 w-full max-w-3xl pb-[380px]">
+        <div className={cn("space-y-6 w-full max-w-3xl", (openCatalog || openProduct) ? "pb-[380px]" : "")}>
             {/* Advertiser Selector — mirrors Meta's Ad Account dropdown */}
             <div className="space-y-2">
                 <div className="flex items-center justify-between">

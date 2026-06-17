@@ -1122,7 +1122,7 @@ export default function TikTokAdCreationForm({
         if (adType === 'SPARK') {
           videoId = item.file.id
         } else if (item.type === 'local') {
-          const uploadResult = await uploadVideoToTikTok(item.file)
+          const uploadResult = await uploadVideoToTikTok(item.file, signal)
           if (!uploadResult?.videoId) {
             throw new Error(`Video upload failed for "${item.file.name}"`)
           }
@@ -2611,175 +2611,173 @@ export default function TikTokAdCreationForm({
     }
     setIsQueueingJobs(true);
 
-    const orderedVariants = [
-      variants.find((variant) => variant.id === 'default'),
-      ...variants.filter((variant) => variant.id !== 'default'),
-    ].filter(Boolean);
+    try {
+      const orderedVariants = [
+        variants.find((variant) => variant.id === 'default'),
+        ...variants.filter((variant) => variant.id !== 'default'),
+      ].filter(Boolean);
 
-    const newJobs = [];
+      const newJobs = [];
 
-    for (const variant of orderedVariants) {
-      const job = captureFormDataAsJob(variant.id);
-      if (!job || job.adCount === 0 || !hasMediaInFormData(job.formData)) {
-        continue;
-      }
+      for (const variant of orderedVariants) {
+        const job = captureFormDataAsJob(variant.id);
+        if (!job || job.adCount === 0 || !hasMediaInFormData(job.formData)) {
+          continue;
+        }
 
-      const fd = job.formData;
+        const fd = job.formData;
 
-      if (!fd.selectedAdvertiser) {
-        toast.error(`${variant.name}: Please select an advertiser account`);
-        return;
-      }
+        if (!fd.selectedAdvertiser) {
+          toast.error(`${variant.name}: Please select an advertiser account`);
+          return;
+        }
 
-      if (!fd.isDuplicatingAdGroupMode && (!fd.selectedAdGroup || fd.selectedAdGroup.length === 0)) {
-        toast.error(`${variant.name}: Please select at least one ad group`);
-        return;
-      }
+        if (!fd.isDuplicatingAdGroupMode && (!fd.selectedAdGroup || fd.selectedAdGroup.length === 0)) {
+          toast.error(`${variant.name}: Please select at least one ad group`);
+          return;
+        }
 
-      let fileCount = fd.files.length + fd.driveFiles.length + fd.dropboxFiles.length + fd.tiktokLibraryFiles.length;
-      if (fd.adType === 'SPARK') {
-        fileCount = fd.importedPosts.length;
-      }
+        let fileCount = fd.files.length + fd.driveFiles.length + fd.dropboxFiles.length + fd.tiktokLibraryFiles.length;
+        if (fd.adType === 'SPARK') {
+          fileCount = fd.importedPosts.length;
+        }
 
-      const activeTexts = fd.adTexts ? fd.adTexts.filter(t => t.trim() !== '') : [];
-      const captionCount = activeTexts.length > 0 ? activeTexts.length : 1;
-      const adsToBeCreated = fileCount * captionCount;
+        const activeTexts = fd.adTexts ? fd.adTexts.filter(t => t.trim() !== '') : [];
+        const captionCount = activeTexts.length > 0 ? activeTexts.length : 1;
+        const adsToBeCreated = fileCount * captionCount;
 
-      if (adsToBeCreated > 50) {
-        toast.error(`${variant.name}: You cannot launch more than 50 ads at once (current selection: ${adsToBeCreated} ads).`);
-        return;
-      }
+        if (adsToBeCreated > 50) {
+          toast.error(`${variant.name}: You cannot launch more than 50 ads at once (current selection: ${adsToBeCreated} ads).`);
+          return;
+        }
 
-      if (!fd.isDuplicatingAdGroupMode && fd.selectedAdGroup && fd.selectedAdGroup.length > 0) {
-        for (const adgroupId of fd.selectedAdGroup) {
-          const agObj = adGroups.find(ag => ag.adgroup_id === adgroupId);
-          if (agObj) {
-            const currentAdCount = agObj.ad_count || 0;
+        if (!fd.isDuplicatingAdGroupMode && fd.selectedAdGroup && fd.selectedAdGroup.length > 0) {
+          for (const adgroupId of fd.selectedAdGroup) {
+            const agObj = adGroups.find(ag => ag.adgroup_id === adgroupId);
+            if (agObj) {
+              const currentAdCount = agObj.ad_count || 0;
 
-            // Calculate ads already queued for this ad group in the job queue
-            let queuedAdsCount = 0;
-            jobQueue.forEach(qj => {
-              const qfd = qj.formData;
-              if (!qfd.isDuplicatingAdGroupMode && qfd.selectedAdGroup && qfd.selectedAdGroup.includes(adgroupId)) {
-                let qFileCount = qfd.files.length + qfd.driveFiles.length + qfd.dropboxFiles.length + qfd.tiktokLibraryFiles.length;
-                if (qfd.adType === 'SPARK') {
-                  qFileCount = qfd.importedPosts.length;
+              // Calculate ads already queued for this ad group in the job queue
+              let queuedAdsCount = 0;
+              jobQueue.forEach(qj => {
+                const qfd = qj.formData;
+                if (!qfd.isDuplicatingAdGroupMode && qfd.selectedAdGroup && qfd.selectedAdGroup.includes(adgroupId)) {
+                  let qFileCount = qfd.files.length + qfd.driveFiles.length + qfd.dropboxFiles.length + qfd.tiktokLibraryFiles.length;
+                  if (qfd.adType === 'SPARK') {
+                    qFileCount = qfd.importedPosts.length;
+                  }
+                  const qActiveTexts = qfd.adTexts ? qfd.adTexts.filter(t => t.trim() !== '') : [];
+                  const qCaptionCount = qActiveTexts.length > 0 ? qActiveTexts.length : 1;
+                  queuedAdsCount += qFileCount * qCaptionCount;
                 }
-                const qActiveTexts = qfd.adTexts ? qfd.adTexts.filter(t => t.trim() !== '') : [];
-                const qCaptionCount = qActiveTexts.length > 0 ? qActiveTexts.length : 1;
-                queuedAdsCount += qFileCount * qCaptionCount;
+              });
+
+              // Also account for the currently running job if it is targeting this ad group
+              if (currentJob) {
+                const qfd = currentJob.formData;
+                if (!qfd.isDuplicatingAdGroupMode && qfd.selectedAdGroup && qfd.selectedAdGroup.includes(adgroupId)) {
+                  let qFileCount = qfd.files.length + qfd.driveFiles.length + qfd.dropboxFiles.length + qfd.tiktokLibraryFiles.length;
+                  if (qfd.adType === 'SPARK') {
+                    qFileCount = qfd.importedPosts.length;
+                  }
+                  const qActiveTexts = qfd.adTexts ? qfd.adTexts.filter(t => t.trim() !== '') : [];
+                  const qCaptionCount = qActiveTexts.length > 0 ? qActiveTexts.length : 1;
+                  queuedAdsCount += qFileCount * qCaptionCount;
+                }
               }
-            });
 
-            // Also account for the currently running job if it is targeting this ad group
-            if (currentJob) {
-              const qfd = currentJob.formData;
-              if (!qfd.isDuplicatingAdGroupMode && qfd.selectedAdGroup && qfd.selectedAdGroup.includes(adgroupId)) {
-                let qFileCount = qfd.files.length + qfd.driveFiles.length + qfd.dropboxFiles.length + qfd.tiktokLibraryFiles.length;
-                if (qfd.adType === 'SPARK') {
-                  qFileCount = qfd.importedPosts.length;
+              if (currentAdCount + queuedAdsCount + adsToBeCreated > 50) {
+                if (queuedAdsCount > 0) {
+                  toast.error(`${variant.name}: Cannot launch ads. Ad group "${agObj.adgroup_name}" currently has ${currentAdCount} ads and ${queuedAdsCount} ads pending in the job queue. Adding ${adsToBeCreated} more would exceed the limit of 50 ads per ad group.`);
+                } else {
+                  toast.error(`${variant.name}: Cannot launch ads. Ad group "${agObj.adgroup_name}" currently has ${currentAdCount} ads. Adding ${adsToBeCreated} more would exceed the limit of 50 ads per ad group.`);
                 }
-                const qActiveTexts = qfd.adTexts ? qfd.adTexts.filter(t => t.trim() !== '') : [];
-                const qCaptionCount = qActiveTexts.length > 0 ? qActiveTexts.length : 1;
-                queuedAdsCount += qFileCount * qCaptionCount;
+                return;
               }
             }
+          }
+        }
 
-            if (currentAdCount + queuedAdsCount + adsToBeCreated > 50) {
-              if (queuedAdsCount > 0) {
-                toast.error(`${variant.name}: Cannot launch ads. Ad group "${agObj.adgroup_name}" currently has ${currentAdCount} ads and ${queuedAdsCount} ads pending in the job queue. Adding ${adsToBeCreated} more would exceed the limit of 50 ads per ad group.`);
-              } else {
-                toast.error(`${variant.name}: Cannot launch ads. Ad group "${agObj.adgroup_name}" currently has ${currentAdCount} ads. Adding ${adsToBeCreated} more would exceed the limit of 50 ads per ad group.`);
-              }
+        if (fd.isDuplicatingAdGroupMode && !fd.newAdGroupName.trim()) {
+          toast.error(`${variant.name}: Please enter a name for the new duplicated ad group`);
+          return;
+        }
+
+        if (!fd.selectedIdentity || fd.selectedIdentity === 'CUSTOMIZED_USER') {
+          toast.error(fd.adType === 'NORMAL'
+            ? `${variant.name}: Identity is required. Please select one.`
+            : `${variant.name}: Promote From is required. Please select a linked TikTok account.`
+          );
+          return;
+        }
+
+        if (fd.adType === 'SPARK') {
+          if (!fd.importedPosts || fd.importedPosts.length === 0) {
+            toast.error(`${variant.name}: Spark Ads require at least one selected organic post.`);
+            return;
+          }
+        }
+
+        const hasFormula = adNameFormulaV2?.rawInput?.trim();
+        if (!hasFormula && !fd.adName.trim()) {
+          toast.error(`${variant.name}: Ad name is required`);
+          return;
+        }
+
+        if (!fd.cta || fd.cta.length === 0) {
+          toast.error(`${variant.name}: Please select at least one Call to Action`);
+          return;
+        }
+
+        if (fd.adType !== 'SPARK') {
+          const activeTexts = fd.adTexts ? fd.adTexts.filter(t => t.trim() !== '') : [];
+          if (activeTexts.length === 0) {
+            toast.error(`${variant.name}: Please enter ad text`);
+            return;
+          }
+          for (const singleText of activeTexts) {
+            if (singleText.length > 100) {
+              toast.error(`${variant.name}: Text cannot exceed 100 characters ("${singleText.substring(0, 15)}...")`);
               return;
             }
           }
         }
-      }
 
-      if (fd.isDuplicatingAdGroupMode && !fd.newAdGroupName.trim()) {
-        toast.error(`${variant.name}: Please enter a name for the new duplicated ad group`);
-        return;
-      }
+        if (fd.urlMode === 'WEBSITE') {
+          if (!fd.landingUrl || !fd.landingUrl.trim()) {
+            toast.error(`${variant.name}: Landing Page URL is required`);
+            return;
+          }
 
-      if (!fd.selectedIdentity || fd.selectedIdentity === 'CUSTOMIZED_USER') {
-        toast.error(fd.adType === 'NORMAL'
-          ? `${variant.name}: Identity is required. Please select one.`
-          : `${variant.name}: Promote From is required. Please select a linked TikTok account.`
-        );
-        return;
-      }
+          let isValidUrl = false;
+          try {
+            const urlString = fd.landingUrl.trim();
+            if (/^https?:\/\//i.test(urlString)) {
+              new URL(urlString);
+              isValidUrl = true;
+            }
+          } catch (_) { }
 
-      if (fd.adType === 'SPARK') {
-        if (!fd.importedPosts || fd.importedPosts.length === 0) {
-          toast.error(`${variant.name}: Spark Ads require at least one selected organic post.`);
-          return;
-        }
-      }
-
-      const hasFormula = adNameFormulaV2?.rawInput?.trim();
-      if (!hasFormula && !fd.adName.trim()) {
-        toast.error(`${variant.name}: Ad name is required`);
-        return;
-      }
-
-      if (!fd.cta || fd.cta.length === 0) {
-        toast.error(`${variant.name}: Please select at least one Call to Action`);
-        return;
-      }
-
-      if (fd.adType !== 'SPARK') {
-        const activeTexts = fd.adTexts ? fd.adTexts.filter(t => t.trim() !== '') : [];
-        if (activeTexts.length === 0) {
-          toast.error(`${variant.name}: Please enter ad text`);
-          return;
-        }
-        for (const singleText of activeTexts) {
-          if (singleText.length > 100) {
-            toast.error(`${variant.name}: Text cannot exceed 100 characters ("${singleText.substring(0, 15)}...")`);
+          if (!isValidUrl) {
+            toast.error(`${variant.name}: Please enter a valid Landing Page URL starting with http:// or https://`);
             return;
           }
         }
+
+        newJobs.push(job);
       }
 
-      if (fd.urlMode === 'WEBSITE') {
-        if (!fd.landingUrl || !fd.landingUrl.trim()) {
-          toast.error(`${variant.name}: Landing Page URL is required`);
-          return;
-        }
-
-        let isValidUrl = false;
-        try {
-          const urlString = fd.landingUrl.trim();
-          if (/^https?:\/\//i.test(urlString)) {
-            new URL(urlString);
-            isValidUrl = true;
-          }
-        } catch (_) { }
-
-        if (!isValidUrl) {
-          toast.error(`${variant.name}: Please enter a valid Landing Page URL starting with http:// or https://`);
-          return;
-        }
+      if (newJobs.length === 0) {
+        toast.error('No variants have files assigned or required fields filled. Nothing to publish.');
+        return;
       }
 
-      newJobs.push(job);
-    }
+      const shouldShowVariantLabel = newJobs.some((job) => job.variantId !== 'default');
+      const queuedJobs = newJobs.map((job) => ({
+        ...job,
+        showVariantLabel: shouldShowVariantLabel,
+      }));
 
-    if (newJobs.length === 0) {
-      toast.error('No variants have files assigned or required fields filled. Nothing to publish.');
-      return;
-    }
-
-    const shouldShowVariantLabel = newJobs.some((job) => job.variantId !== 'default');
-    const queuedJobs = newJobs.map((job) => ({
-      ...job,
-      showVariantLabel: shouldShowVariantLabel,
-    }));
-
-    setIsQueueingJobs(true);
-
-    try {
       setJobQueue((prev) => [...prev, ...queuedJobs]);
       if (!preserveMedia) {
         clearQueuedMedia();
