@@ -163,7 +163,10 @@ function PostSelectorInline({
     const displayedAdsetAds = useMemo(() => {
         const q = adsetAdsSearch.trim().toLowerCase()
         let arr = q
-            ? ads.filter(a => (a.ad_name || '').toLowerCase().includes(q))
+            ? ads.filter(a =>
+                (a.ad_name || '').toLowerCase().includes(q) ||
+                String(a.ad_id || a.id || '').toLowerCase().includes(q)
+            )
             : ads
         return sortAdsForMode(arr, adsetSortMode, true)
     }, [ads, adsetAdsSearch, adsetSortMode])
@@ -252,7 +255,7 @@ function PostSelectorInline({
         }
 
         if (!searchQuery.trim()) {
-            toast.error("Please enter an ad name to search")
+            toast.error("Please enter an ad name or ID to search")
             return
         }
 
@@ -632,7 +635,7 @@ function PostSelectorInline({
                             <div className="flex items-center gap-2 px-1">
                                 <Input
                                     type="text"
-                                    placeholder="Enter ad name to search..."
+                                    placeholder="Enter ad name or ID to search..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     onKeyDown={handleSearchKeyDown}
@@ -822,15 +825,15 @@ function PostSelectorInline({
                                     </Popover>
                                 </div>
 
-                                {/* Filter loaded ads by name */}
+                                {/* Filter loaded ads by name or ID */}
                                 {adsetBrowseSelectedAdSetId && ads.length > 0 && (
                                     <div className="space-y-1.5">
-                                        <Label className="text-xs text-gray-700">Filter ads by name</Label>
+                                        <Label className="text-xs text-gray-700">Filter ads by name or ID</Label>
                                         <div className="relative">
                                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
                                             <Input
                                                 type="text"
-                                                placeholder="Filter returned ads..."
+                                                placeholder="Filter returned ads by name or ID..."
                                                 value={adsetAdsSearch}
                                                 onChange={(e) => setAdsetAdsSearch(e.target.value)}
                                                 className="pl-8 h-9 text-sm rounded-xl border-gray-300 focus:border-blue-500 focus:ring-blue-500"
