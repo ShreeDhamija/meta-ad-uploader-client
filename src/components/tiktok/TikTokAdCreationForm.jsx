@@ -1420,7 +1420,7 @@ export default function TikTokAdCreationForm({
         throw new Error('All video uploads failed. Cannot create TikTok ads.')
       }
 
-      updateProgress(45, 'Submitting batch request to server...')
+      updateProgress(45, 'Creating tiktok ads')
 
       const campaignObj = campaigns.find(c => c.campaign_id === selectedCampaign[0])
 
@@ -1531,6 +1531,14 @@ export default function TikTokAdCreationForm({
       setIsCancelling(false)
     })
   }, [jobQueue, isProcessingQueue])
+
+  // Sync SSE progress to local progress state
+  useEffect(() => {
+    if (currentJob && trackedStatus !== 'idle') {
+      setProgress(trackedProgress)
+      setProgressMessage(trackedMessage)
+    }
+  }, [trackedProgress, trackedMessage, currentJob, trackedStatus])
 
   // Listen to final status updates from SSE to complete the job and advance the queue
   useEffect(() => {
