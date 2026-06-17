@@ -58,7 +58,7 @@ export function useTikTokVideoUpload(advertiserId) {
 
       try {
         const startResponse = await axios.post(
-          `${API_BASE_URL}/auth/s3/start-upload`,
+          `${API_BASE_URL}/api/tiktok/s3/start-upload`,
           { fileName: file.name, fileType: file.type },
           { withCredentials: true, signal }
         );
@@ -71,7 +71,7 @@ export function useTikTokVideoUpload(advertiserId) {
         }
 
         const urlsResponse = await axios.post(
-          `${API_BASE_URL}/auth/s3/get-upload-urls`,
+          `${API_BASE_URL}/api/tiktok/s3/get-upload-urls`,
           { key: s3Key, uploadId, parts: totalChunks },
           { withCredentials: true, signal }
         );
@@ -113,7 +113,7 @@ export function useTikTokVideoUpload(advertiserId) {
         for (let attempt = 1; attempt <= 5; attempt++) {
           try {
             completeResponse = await axios.post(
-              `${API_BASE_URL}/auth/s3/complete-upload`,
+              `${API_BASE_URL}/api/tiktok/s3/complete-upload`,
               { key: s3Key, uploadId, parts: completedParts },
               { withCredentials: true, signal }
             );
@@ -140,7 +140,7 @@ export function useTikTokVideoUpload(advertiserId) {
           if (uploadId && s3Key) {
             try {
               await axios.post(
-                `${API_BASE_URL}/auth/s3/abort-upload`,
+                `${API_BASE_URL}/api/tiktok/s3/abort-upload`,
                 { key: s3Key, uploadId },
                 { withCredentials: true }
               );
@@ -154,7 +154,7 @@ export function useTikTokVideoUpload(advertiserId) {
         if (uploadId && s3Key) {
           try {
             await axios.post(
-              `${API_BASE_URL}/auth/s3/abort-upload`,
+              `${API_BASE_URL}/api/tiktok/s3/abort-upload`,
               { key: s3Key, uploadId },
               { withCredentials: true }
             );
