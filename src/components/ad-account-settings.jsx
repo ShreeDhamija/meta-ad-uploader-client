@@ -1078,31 +1078,33 @@ transition-all duration-150 hover:!bg-black
 
                           return (
                             <>
-                              <CommandItem
-                                key="select-all-visible-adsets"
-                                value="select-all-visible-adsets"
-                                forceMount
-                                onSelect={handleSelectAllVisibleAdSets}
-                                className={cn(
-                                  "py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
-                                  areAllVisibleAdSetsSelected ? "bg-gray-100 hover:!bg-gray-100 font-semibold" : "hover:!bg-gray-200",
-                                )}
-                              >
-                                <div className="flex items-center space-x-2 w-full min-w-0">
-                                  <Checkbox
-                                    id="select-all-visible-adsets"
-                                    checked={areAllVisibleAdSetsSelected}
-                                    className="p-0 w-4 h-4 aspect-square bg-white border border-gray-300 rounded-[6px]"
-                                  >
-                                    <Checkbox.Indicator>
-                                      <Check className="w-3 h-3 text-green-500" />
-                                    </Checkbox.Indicator>
-                                  </Checkbox>
-                                  <Label className="min-w-0 flex-1 cursor-pointer flex items-center justify-between">
-                                    <span className="min-w-0 truncate leading-[1.25]">Select all</span>
-                                  </Label>
-                                </div>
-                              </CommandItem>
+                              {filteredAdSets.length > 1 && (
+                                <CommandItem
+                                  key="select-all-visible-adsets"
+                                  value="select-all-visible-adsets"
+                                  forceMount
+                                  onSelect={handleSelectAllVisibleAdSets}
+                                  className={cn(
+                                    "py-2 cursor-pointer m-1 rounded-2xl bg-gray-100 text-xs transition-colors duration-150 hover:!bg-gray-100",
+                                    areAllVisibleAdSetsSelected && "font-semibold",
+                                  )}
+                                >
+                                  <div className="flex items-center space-x-2 w-full min-w-0">
+                                    <Checkbox
+                                      id="select-all-visible-adsets"
+                                      checked={areAllVisibleAdSetsSelected}
+                                      className="p-0 w-4 h-4 aspect-square bg-white border border-gray-300 rounded-[6px]"
+                                    >
+                                      <Checkbox.Indicator>
+                                        <Check className="w-3 h-3 text-green-500" />
+                                      </Checkbox.Indicator>
+                                    </Checkbox>
+                                    <Label className="min-w-0 flex-1 cursor-pointer flex items-center justify-between text-xs">
+                                      <span className="min-w-0 truncate leading-[1.25]">Select all</span>
+                                    </Label>
+                                  </div>
+                                </CommandItem>
+                              )}
                               {Object.entries(groupedByCampaign).map(([campaignId, campaignAdSets]) => {
                                 const campaignName = campaignAdSets[0]?.campaignName || campaignId;
 
