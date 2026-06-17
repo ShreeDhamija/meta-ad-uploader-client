@@ -1139,6 +1139,11 @@ transition-all duration-150 hover:!bg-black
                     <CopyIcon className="w-4 h-4" />
                     Select an ad set shell to duplicate
                   </Label>
+                  {variants && variants.length > 1 && (
+                    <Label className="block rounded-xl bg-amber-100 px-3 py-2 text-xs font-medium leading-5 text-amber-900">
+                      Each variant will create its own new ad set. To launch all variants into one new ad set, create that ad set in a standalone variant first, then launch the remaining variants into it.
+                    </Label>
+                  )}
                   <Label className="text-gray-500 text-[12px] font-regular">We’ll retain all targeting settings and replace the creative</Label>
 
                   <Popover open={openDuplicateAdSet} onOpenChange={setOpenDuplicateAdSet}>
