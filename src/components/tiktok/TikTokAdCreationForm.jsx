@@ -3293,7 +3293,7 @@ export default function TikTokAdCreationForm({
                               </button>
                             )}
 
-                            {job.formData?.selectedAdvertiser && (
+                            {job.formData?.selectedAdvertiser && (job.status === 'complete' || job.status === 'partial-success' || job.status === 'cancelled') && (
                               <a
                                 href={`https://ads.tiktok.com/i18n/manage/creative?aadvid=${job.formData.selectedAdvertiser}`}
                                 target="_blank"
