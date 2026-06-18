@@ -554,7 +554,8 @@ export default function TikTokAdCreationForm({
   productName, setProductName,
   productImageUrl, setProductImageUrl,
   sellingPoints, setSellingPoints,
-  selectedSavedProductId, setSelectedSavedProductId
+  selectedSavedProductId, setSelectedSavedProductId,
+  onBeforeMediaClear
 }) {
   const navigate = useNavigate()
   const formFieldChrome = "border-gray-300 rounded-2xl py-4.5 bg-white shadow"
@@ -1445,11 +1446,19 @@ export default function TikTokAdCreationForm({
         throw new Error(createData.error || 'Batch ad creation failed')
       }
 
-      for (const adGroupPay of adGroupsPayload) {
-        const adGroupObj = adGroups.find(ag => ag.adgroup_id === adGroupPay.adgroupId)
-        if (adGroupObj) {
-          adGroupObj.ad_count = (adGroupObj.ad_count || 0) + adGroupPay.creatives.length
-        }
+      if (setAdGroups) {
+        setAdGroups(prevAdGroups => {
+          return prevAdGroups.map(ag => {
+            const adGroupPay = adGroupsPayload.find(pay => pay.adgroupId === ag.adgroup_id)
+            if (adGroupPay) {
+              return {
+                ...ag,
+                ad_count: (ag.ad_count || 0) + adGroupPay.creatives.length
+              }
+            }
+            return ag;
+          })
+        })
       }
 
     } catch (err) {
@@ -1595,6 +1604,18 @@ export default function TikTokAdCreationForm({
 
       addCompletedJob(completedJob)
 
+      // Clear cache and refresh ad groups to get the new ad counts from TikTok
+      if (Array.isArray(selectedCampaign)) {
+        selectedCampaign.forEach(campId => {
+          clearCache(`tiktok_adgroups_${campId}`);
+        });
+      }
+      try {
+        forceRefreshAdGroups(null, false);
+      } catch (refreshErr) {
+        console.warn('[TikTokAdCreationForm] Failed to refresh ad groups on job completion:', refreshErr);
+      }
+
       // Advance queue
       setJobQueue(prev => prev.slice(1))
       setCurrentJob(null)
@@ -1711,6 +1732,9 @@ export default function TikTokAdCreationForm({
       return
     }
 
+    // Synchronously set the ref to prevent re-entrant loops triggered by subsequent setAdGroups/setLoadingAdGroups re-renders
+    adGroupsLoadedForSelectionRef.current = selectionKey
+
     setLoadingAdGroups(true)
     setAdGroups([]) // Clear old ad groups immediately to avoid showing stale data from the previous campaign!
 
@@ -1753,15 +1777,6 @@ export default function TikTokAdCreationForm({
         }
         setAdGroups(unique)
 
-        // Show toasts if any ad group count reaches/exceeds 50
-        const fullGroups = unique.filter(ag => ag.ad_count !== undefined && ag.ad_count >= 50);
-        if (fullGroups.length > 0) {
-          fullGroups.forEach(ag => {
-            toast.error(`Ad group "${ag.adgroup_name}" has reached or exceeded the limit of 50 ads (currently has ${ag.ad_count} ads).`);
-          });
-        }
-
-        adGroupsLoadedForSelectionRef.current = selectionKey
         setSelectedAdGroup(prevSelected => {
           // Keep any currently selected ad groups that are actually present in the newly fetched ad groups
           return prevSelected.filter(id => unique.some(g => g.adgroup_id === id))
@@ -1769,6 +1784,8 @@ export default function TikTokAdCreationForm({
       })
       .catch(() => {
         if (!active) return
+        // Reset ref so that if fetching failed, a retry is possible
+        adGroupsLoadedForSelectionRef.current = ""
         toast.error('Failed to load ad groups')
       })
       .finally(() => {
@@ -2072,14 +2089,6 @@ export default function TikTokAdCreationForm({
         setAdGroups(unique)
         if (showToast) {
           toast.success('Ad Groups refreshed!')
-        }
-
-        // Show toasts if any ad group count reaches/exceeds 50
-        const fullGroups = unique.filter(ag => ag.ad_count !== undefined && ag.ad_count >= 50);
-        if (fullGroups.length > 0) {
-          fullGroups.forEach(ag => {
-            toast.error(`Ad group "${ag.adgroup_name}" has reached or exceeded the limit of 50 ads (currently has ${ag.ad_count} ads).`);
-          });
         }
       })
       .catch(() => {
@@ -2632,6 +2641,7 @@ export default function TikTokAdCreationForm({
     if (setFiles) setFiles([])
     setDriveFiles([])
     setDropboxFiles([])
+    if (setImportedPosts) setImportedPosts([])
     setFileVariantMap({})
     setGroupVariantMap({})
     setPostVariantMap({})
@@ -2815,6 +2825,11 @@ export default function TikTokAdCreationForm({
 
       setJobQueue((prev) => [...prev, ...queuedJobs]);
       if (!preserveMedia) {
+        try {
+          await onBeforeMediaClear?.();
+        } catch (error) {
+          console.error("Failed to launch media preview animation:", error);
+        }
         clearQueuedMedia();
       }
     } finally {
@@ -3315,7 +3330,7 @@ export default function TikTokAdCreationForm({
                         </div>
 
                         {/* Error details (moved outside the flex row) */}
-                        {(job.status === 'partial-success' || job.status === 'cancelled') && job.errorMessages?.length > 0 && (
+                        {(job.status === 'partial-success' || job.status === 'cancelled' || job.status === 'error') && job.errorMessages?.length > 0 && (
                           <div className="mt-2 ml-9">
                             <details className="text-xs">
                               <summary className="cursor-pointer text-[#FF0000] font-medium">

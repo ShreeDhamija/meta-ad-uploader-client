@@ -15,6 +15,7 @@ import { toast, Toaster } from 'sonner'
 import { v4 as uuidv4 } from "uuid"
 
 const TIKTOK_CACHE_KEY = 'tiktok_ads_cache';
+const MEDIA_PREVIEW_LAUNCH_DURATION_MS = 560;
 
 // Error boundary to catch component preview failures and prevent crashes
 class ErrorBoundary extends React.Component {
@@ -160,6 +161,60 @@ export default function TikTokAds() {
   const [selectedIgOrganicPosts, setSelectedIgOrganicPosts] = useState([])
   const [hasSeenPowerupPopup, setHasSeenPowerupPopup] = useState(false)
   const [showPowerupPopup, setShowPowerupPopup] = useState(false)
+
+  // Launch animation states/callbacks
+  const [isLaunchingMediaPreview, setIsLaunchingMediaPreview] = useState(false)
+  const mediaPreviewLaunchTimeoutRef = useRef(null)
+
+  useEffect(() => {
+    return () => {
+      if (mediaPreviewLaunchTimeoutRef.current) {
+        clearTimeout(mediaPreviewLaunchTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  const triggerMediaPreviewLaunch = useCallback(() => {
+    const hasMediaToLaunch = (
+      files.length > 0 ||
+      driveFiles.length > 0 ||
+      dropboxFiles.length > 0 ||
+      frameioFiles.length > 0 ||
+      importedPosts.length > 0 ||
+      importedFiles.length > 0 ||
+      selectedIgOrganicPosts.length > 0
+    )
+
+    if (!hasMediaToLaunch) {
+      return Promise.resolve()
+    }
+
+    if (mediaPreviewLaunchTimeoutRef.current) {
+      clearTimeout(mediaPreviewLaunchTimeoutRef.current)
+    }
+
+    const prefersReducedMotion = typeof window !== "undefined" &&
+      window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches
+    const launchDuration = prefersReducedMotion ? 140 : MEDIA_PREVIEW_LAUNCH_DURATION_MS
+
+    setIsLaunchingMediaPreview(true)
+
+    return new Promise((resolve) => {
+      mediaPreviewLaunchTimeoutRef.current = setTimeout(() => {
+        setIsLaunchingMediaPreview(false)
+        mediaPreviewLaunchTimeoutRef.current = null
+        resolve()
+      }, launchDuration)
+    })
+  }, [
+    files.length,
+    driveFiles.length,
+    dropboxFiles.length,
+    frameioFiles.length,
+    importedPosts.length,
+    importedFiles.length,
+    selectedIgOrganicPosts.length
+  ])
 
   // Variant States
   const [variants, setVariants] = useState([{ id: "default", name: "Default", snapshot: null }])
@@ -932,6 +987,7 @@ export default function TikTokAds() {
                 setGroupVariantMap={setGroupVariantMap}
                 postVariantMap={postVariantMap}
                 setPostVariantMap={setPostVariantMap}
+                onBeforeMediaClear={triggerMediaPreviewLaunch}
               />
             </div>
 
@@ -978,7 +1034,7 @@ export default function TikTokAds() {
                     setPostVariantMap={setPostVariantMap}
                     hasSeenPowerupPopup={hasSeenPowerupPopup}
                     setShowPowerupPopup={setShowPowerupPopup}
-                    isLaunchingMedia={false}
+                    isLaunchingMedia={isLaunchingMediaPreview}
                   />
                 </ErrorBoundary>
               </div>
