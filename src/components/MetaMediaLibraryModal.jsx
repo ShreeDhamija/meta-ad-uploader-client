@@ -783,12 +783,12 @@ export default function MetaMediaLibraryModal({
                                                             {isMeta && item.source && (
                                                                 <button
                                                                     type="button"
-                                                                    className="absolute top-2 left-2 z-20 flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-800 shadow-sm transition hover:bg-white hover:text-black"
+                                                                    className="absolute top-2 left-2 z-20 flex h-5 w-5 items-center justify-center rounded-md border border-gray-300 bg-white text-gray-800 shadow-sm transition hover:bg-white hover:text-black"
                                                                     onClick={(event) => openSourceUrl(event, item.source)}
                                                                     aria-label="Open video in new tab"
                                                                     title="Open video in new tab"
                                                                 >
-                                                                    <ExternalLink className="h-4 w-4" />
+                                                                    <ExternalLink className="h-3 w-3" />
                                                                 </button>
                                                             )}
                                                         </div>
@@ -872,12 +872,12 @@ export default function MetaMediaLibraryModal({
                                                             {isMeta && item.source && (
                                                                 <button
                                                                     type="button"
-                                                                    className="absolute top-2 left-2 z-20 flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-800 shadow-sm transition hover:bg-white hover:text-black"
+                                                                    className="absolute top-2 left-2 z-20 flex h-5 w-5 items-center justify-center rounded-md border border-gray-300 bg-white text-gray-800 shadow-sm transition hover:bg-white hover:text-black"
                                                                     onClick={(event) => openSourceUrl(event, item.source)}
                                                                     aria-label="Open video in new tab"
                                                                     title="Open video in new tab"
                                                                 >
-                                                                    <ExternalLink className="h-4 w-4" />
+                                                                    <ExternalLink className="h-3 w-3" />
                                                                 </button>
                                                             )}
                                                         </div>

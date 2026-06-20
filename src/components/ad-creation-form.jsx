@@ -6592,7 +6592,7 @@ export default function AdCreationForm({
                                       const url = `https://adsmanager.facebook.com/adsmanager/manage/adsets/edit/standalone?${job.selectedAdAccount.replace('_', '=')}&selected_adset_ids=${job.selectedAdSets[0]}&business_id=${bizId}&global_scope_id=${bizId}`;
                                       window.open(url, '_blank');
                                     }}
-                                    className="text-gray-500 hover:text-blue-500 transition-colors p-1"
+                                    className="cursor-pointer text-gray-500 hover:text-blue-500 transition-colors p-1"
                                     aria-label="View in Ads Manager"
                                   >
                                     <Eye className="w-4 h-4" />
@@ -6600,7 +6600,7 @@ export default function AdCreationForm({
                                 </TooltipTrigger>
                                 <TooltipContent side="left" align="start" className="max-w-[320px] rounded-xl border border-gray-200 bg-white p-3 text-xs text-gray-900 shadow-lg">
                                   <div className="space-y-2">
-                                    <p className="font-semibold">Ads Created:</p>
+                                    <p className="font-semibold">View Ads Created</p>
                                     {successfulAdNames.length > 0 ? (
                                       <ul className="ml-3 list-disc space-y-1">
                                         {successfulAdNames.map((name, index) => (

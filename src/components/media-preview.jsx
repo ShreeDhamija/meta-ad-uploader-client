@@ -570,12 +570,12 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
             <Button
               type="button"
               variant="ghost"
-              className={`absolute bottom-1.5 right-1.5 z-30 h-7 w-7 rounded-full border border-gray-300 bg-white p-0 text-gray-800 shadow-xs transition-opacity hover:bg-white hover:text-black ${dimmed ? 'opacity-30' : 'opacity-90'}`}
+              className={`absolute bottom-1.5 right-1.5 z-30 h-5 w-5 rounded-md border border-gray-300 bg-white p-0 text-gray-800 shadow-xs transition-opacity hover:bg-white hover:text-black ${dimmed ? 'opacity-30' : 'opacity-90'}`}
               style={{ backgroundColor: "white" }}
               onClick={openMetaSourceLink}
               title="Open video in new tab"
             >
-              <ExternalLink className="h-3.5 w-3.5" />
+              <ExternalLink className="h-3 w-3" />
               <span className="sr-only">Open video in new tab</span>
             </Button>
           )}
