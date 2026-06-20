@@ -290,7 +290,8 @@ const useAdCreationProgress = (jobId, isCreatingAds) => {
                 successCount: data.successCount,
                 failureCount: data.failureCount,
                 totalCount: data.totalCount,
-                errorMessages: data.errorMessages // NEW
+                errorMessages: data.errorMessages, // NEW
+                successfulAdNames: data.successfulAdNames
 
               });
 
@@ -561,6 +562,32 @@ const ErrorFileName = ({ name }) => {
           type="button"
           onClick={() => setExpanded(true)}
           className="ml-1 text-[#FF8080] hover:text-[#FF0000] underline underline-offset-2"
+        >
+          View Full Ad Name
+        </button>
+      )}
+    </li>
+  );
+};
+
+const CreatedAdName = ({ name }) => {
+  const [expanded, setExpanded] = useState(false);
+  const LIMIT = 50;
+  const needsTruncation = name.length > LIMIT;
+  const display = !needsTruncation || expanded ? name : `${name.slice(0, LIMIT)}...`;
+
+  return (
+    <li className="break-words text-gray-700 leading-snug">
+      {display}
+      {needsTruncation && !expanded && (
+        <button
+          type="button"
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            setExpanded(true);
+          }}
+          className="ml-1 text-blue-500 hover:text-blue-700 underline underline-offset-2"
         >
           View Full Ad Name
         </button>
@@ -2063,7 +2090,8 @@ export default function AdCreationForm({
           completedAt: Date.now(),
           status: 'success',
           selectedAdSets: currentJob.formData.selectedAdSets,      // ADD THIS
-          selectedAdAccount: currentJob.formData.selectedAdAccount  // ADD THIS
+          selectedAdAccount: currentJob.formData.selectedAdAccount,  // ADD THIS
+          successfulAdNames: metaData.successfulAdNames || []
         };
         // setCompletedJobs(prev => [...prev, completedJob]);
         addCompletedJob(completedJob);
@@ -2080,6 +2108,7 @@ export default function AdCreationForm({
           failureCount: metaData.failureCount,
           totalCount: metaData.totalCount,
           errorMessages: metaData.errorMessages,
+          successfulAdNames: metaData.successfulAdNames || [],
           selectedAdSets: currentJob.formData.selectedAdSets,
           selectedAdAccount: currentJob.formData.selectedAdAccount,
           formData: currentJob.formData,
@@ -2111,6 +2140,7 @@ export default function AdCreationForm({
           failureCount: metaData.failureCount,
           totalCount: metaData.totalCount,
           errorMessages: metaData.errorMessages,
+          successfulAdNames: metaData.successfulAdNames || [],
           selectedAdSets: currentJob.formData.selectedAdSets,
           selectedAdAccount: currentJob.formData.selectedAdAccount,
           formData: currentJob.formData,
@@ -4967,6 +4997,7 @@ export default function AdCreationForm({
         promises.push(createAdApiCall(formData, API_BASE_URL, signal));
         promiseMetadata.push({
           adSetId: formData.get("adSetId"),
+          adName: formData.get("adName"),
           ...metadata,
         });
       };
@@ -6021,7 +6052,7 @@ export default function AdCreationForm({
                 completed: prev.completed + 1,
                 failed: prev.failed + 1,
                 errors: [...prev.errors, {
-                  fileName: promiseMetadata[index]?.fileName || null,
+                  fileName: promiseMetadata[index]?.adName || promiseMetadata[index]?.fileName || null,
                   error: errorMsg
                 }]
               }));
@@ -6050,6 +6081,11 @@ export default function AdCreationForm({
           acc[adSetId] = (acc[adSetId] || 0) + 1;
           return acc;
         }, {});
+        const successfulAdNames = responses
+          .map((response, index) => ({ response, meta: promiseMetadata[index] }))
+          .filter(({ response }) => response?.status === 'fulfilled')
+          .map(({ meta }) => meta?.adName || meta?.fileName)
+          .filter(Boolean);
 
         if (Object.keys(successfulAdCountsByAdSet).length > 0) {
           onAdSetCountsCreated?.(successfulAdCountsByAdSet);
@@ -6068,7 +6104,7 @@ export default function AdCreationForm({
               errorMsg = response.reason.message;
             }
             return {
-              fileName: meta?.fileName || null,
+              fileName: meta?.adName || meta?.fileName || null,
               error: errorMsg
             };
           });
@@ -6122,6 +6158,7 @@ export default function AdCreationForm({
             failureCount,
             totalCount,
             errorMessages,
+            successfulAdNames,
             selectedAdSets,
             selectedAdAccount,
             selectedTemplate
@@ -6143,6 +6180,7 @@ export default function AdCreationForm({
             failureCount,
             totalCount,
             errorMessages,
+            successfulAdNames,
             selectedAdSets: selectedAdSets,
             selectedAdAccount: selectedAdAccount,
             formData: jobData.formData,
@@ -6465,6 +6503,10 @@ export default function AdCreationForm({
                 {/* Completed Jobs */}
 
                 {completedJobs.map((job) => {
+                  const successfulAdNames = Array.isArray(job.successfulAdNames)
+                    ? job.successfulAdNames.filter(Boolean)
+                    : [];
+
                   return (
                     <div key={job.id} className="p-3.5 border-b border-gray-100">
                       {/* Main job row */}
@@ -6540,18 +6582,38 @@ export default function AdCreationForm({
                           )}
 
                           {job.selectedAdSets && job.selectedAdSets.length > 0 && job.selectedAdAccount && (
-                            <button
-                              onClick={() => {
-                                const account = adAccounts.find(a => a.id === job.selectedAdAccount);
-                                const bizId = account?.business_id || '';
-                                const url = `https://adsmanager.facebook.com/adsmanager/manage/adsets/edit/standalone?${job.selectedAdAccount.replace('_', '=')}&selected_adset_ids=${job.selectedAdSets[0]}&business_id=${bizId}&global_scope_id=${bizId}`;
-                                window.open(url, '_blank');
-                              }}
-                              className="text-gray-500 hover:text-blue-500 transition-colors p-1"
-                              title="View in Ads Manager"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </button>
+                            <TooltipProvider delayDuration={0}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button
+                                    onClick={() => {
+                                      const account = adAccounts.find(a => a.id === job.selectedAdAccount);
+                                      const bizId = account?.business_id || '';
+                                      const url = `https://adsmanager.facebook.com/adsmanager/manage/adsets/edit/standalone?${job.selectedAdAccount.replace('_', '=')}&selected_adset_ids=${job.selectedAdSets[0]}&business_id=${bizId}&global_scope_id=${bizId}`;
+                                      window.open(url, '_blank');
+                                    }}
+                                    className="text-gray-500 hover:text-blue-500 transition-colors p-1"
+                                    aria-label="View in Ads Manager"
+                                  >
+                                    <Eye className="w-4 h-4" />
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent side="left" align="start" className="max-w-[320px] rounded-xl border border-gray-200 bg-white p-3 text-xs text-gray-900 shadow-lg">
+                                  <div className="space-y-2">
+                                    <p className="font-semibold">Ads Created:</p>
+                                    {successfulAdNames.length > 0 ? (
+                                      <ul className="ml-3 list-disc space-y-1">
+                                        {successfulAdNames.map((name, index) => (
+                                          <CreatedAdName key={`${name}-${index}`} name={name} />
+                                        ))}
+                                      </ul>
+                                    ) : (
+                                      <p className="text-gray-500">Ad names unavailable</p>
+                                    )}
+                                  </div>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                           )}
 
                           {(job.status === 'error' || job.status === 'partial-success') && job.formData && (

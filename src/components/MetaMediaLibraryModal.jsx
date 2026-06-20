@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import axios from 'axios';
 import { toast } from "sonner"
-import { Loader2, Image as ImageIcon, Video, FolderOpen, Heart, MessageCircle, Users, CalendarDays, Search } from "lucide-react";
+import { Loader2, Image as ImageIcon, Video, FolderOpen, Heart, MessageCircle, Users, CalendarDays, Search, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import IGColor from "@/assets/icons/IGColor.webp";
@@ -12,7 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 const IG_CACHE_KEY = 'ig_media_cache';
-const META_CACHE_KEY_PREFIX = 'meta_media_library_cache';
+const META_CACHE_KEY_PREFIX = 'meta_media_library_cache_v2';
 const META_CACHE_TTL_MS = 15 * 60 * 1000;
 const metaLibraryMemoryCache = new Map();
 
@@ -217,7 +217,15 @@ export default function MetaMediaLibraryModal({
         height: vid.height,
         thumbnail_url: vid.thumbnail_url,
         previewUrl: vid.thumbnail_url,
+        source: vid.source,
     }));
+
+    const openSourceUrl = (event, url) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const openedWindow = window.open(url, '_blank', 'noopener,noreferrer');
+        if (openedWindow) openedWindow.opener = null;
+    };
 
     const fetchMetaLibrary = useCallback(async (forceRefresh = false) => {
         if (!adAccountId) return;
@@ -772,6 +780,17 @@ export default function MetaMediaLibraryModal({
                                                                 onCheckedChange={() => isMeta ? toggleMetaFile(item) : toggleIgPost(item)}
                                                                 className="absolute top-2 right-2 rounded-md h-5 w-5 bg-white/80 border-gray-300"
                                                             />
+                                                            {isMeta && item.source && (
+                                                                <button
+                                                                    type="button"
+                                                                    className="absolute top-2 left-2 z-20 flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-800 shadow-sm transition hover:bg-white hover:text-black"
+                                                                    onClick={(event) => openSourceUrl(event, item.source)}
+                                                                    aria-label="Open video in new tab"
+                                                                    title="Open video in new tab"
+                                                                >
+                                                                    <ExternalLink className="h-4 w-4" />
+                                                                </button>
+                                                            )}
                                                         </div>
                                                         {!isMeta ? (
                                                             <IgCardInfo item={item} instagramAccountId={instagramAccountId} />
@@ -850,6 +869,17 @@ export default function MetaMediaLibraryModal({
                                                                 onCheckedChange={() => isMeta ? toggleMetaFile(item) : toggleIgPost(item)}
                                                                 className="absolute top-2 right-2 rounded-md h-5 w-5 bg-white/80 border-gray-300"
                                                             />
+                                                            {isMeta && item.source && (
+                                                                <button
+                                                                    type="button"
+                                                                    className="absolute top-2 left-2 z-20 flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-800 shadow-sm transition hover:bg-white hover:text-black"
+                                                                    onClick={(event) => openSourceUrl(event, item.source)}
+                                                                    aria-label="Open video in new tab"
+                                                                    title="Open video in new tab"
+                                                                >
+                                                                    <ExternalLink className="h-4 w-4" />
+                                                                </button>
+                                                            )}
                                                         </div>
                                                         {!isMeta ? (
                                                             <IgCardInfo item={item} instagramAccountId={instagramAccountId} />

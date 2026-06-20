@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { ChevronDown, CirclePlus, GripVertical, Loader2, Rocket, Trash } from 'lucide-react'
+import { ChevronDown, CirclePlus, ExternalLink, GripVertical, Loader2, Rocket, Trash } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
@@ -395,6 +395,13 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
         : (file.isDrive ? file.id : file.uniqueId || file.name);
 
   const isSelectable = (enablePlacementCustomization || adType === 'flexible' || isCarouselAd) && groupNumber == null;
+  const hasMetaSourceLink = file.isMetaLibrary && file.source;
+
+  const openMetaSourceLink = (event) => {
+    event.stopPropagation();
+    const openedWindow = window.open(file.source, '_blank', 'noopener,noreferrer');
+    if (openedWindow) openedWindow.opener = null;
+  };
 
   return (
     <div
@@ -547,7 +554,7 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
             type="button"
             variant="ghost"
             className={`absolute border rounded-lg bg-white shadow-xs z-30 transition-opacity ${isCarouselAd
-              ? 'bottom-1.5 right-1.5 border-gray-300 h-6 w-6 p-2'
+              ? `${hasMetaSourceLink ? 'bottom-9' : 'bottom-1.5'} right-1.5 border-gray-300 h-6 w-6 p-2`
               : 'top-1.5 right-1.5 border-gray-400 h-7 w-7 p-3'
               } ${dimmed ? 'opacity-30' : 'opacity-90'}`}
             style={{ backgroundColor: "white" }}
@@ -559,6 +566,19 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
             <Trash className={isCarouselAd ? 'h-1.5 w-1.5' : 'h-2 w-2'} />
             <span className="sr-only">Remove</span>
           </Button>
+          {hasMetaSourceLink && (
+            <Button
+              type="button"
+              variant="ghost"
+              className={`absolute bottom-1.5 right-1.5 z-30 h-7 w-7 rounded-full border border-gray-300 bg-white p-0 text-gray-800 shadow-xs transition-opacity hover:bg-white hover:text-black ${dimmed ? 'opacity-30' : 'opacity-90'}`}
+              style={{ backgroundColor: "white" }}
+              onClick={openMetaSourceLink}
+              title="Open video in new tab"
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+              <span className="sr-only">Open video in new tab</span>
+            </Button>
+          )}
           {showVariantDropdown && (
             <div className="absolute bottom-2 left-2 z-30">
               <VariantAssignmentPopover

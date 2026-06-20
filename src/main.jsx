@@ -16,6 +16,7 @@ import Login from "./pages/Login.jsx";
 import Signup from "./pages/Login.jsx";
 import Settings from "./pages/Settings.jsx";
 import Analytics from "./pages/Analytics.jsx";
+import CreativeStrategy from "./pages/CreativeStrategy.jsx";
 import NotFound from "./pages/NotFound.jsx";
 import TermsOfService from "./pages/Landing/TermsOfService.jsx";
 import PrivacyPolicy from "./pages/Landing/PrivacyPolicy.jsx";
@@ -30,6 +31,7 @@ const router = createBrowserRouter([
       { path: "signup", element: <Signup /> },
       { path: "settings", element: <Settings /> },
       { path: "analytics", element: <Analytics /> },
+      { path: "creative-strategy", element: <CreativeStrategy /> },
       { path: "terms-of-service", element: <TermsOfService /> },
       { path: "privacy-policy", element: <PrivacyPolicy /> },
       { path: "*", element: <NotFound /> },
