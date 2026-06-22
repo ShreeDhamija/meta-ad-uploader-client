@@ -987,6 +987,8 @@ export default function TikTokAds() {
                 setGroupVariantMap={setGroupVariantMap}
                 postVariantMap={postVariantMap}
                 setPostVariantMap={setPostVariantMap}
+                selectedFiles={selectedFiles}
+                setSelectedFiles={setSelectedFiles}
                 onBeforeMediaClear={triggerMediaPreviewLaunch}
               />
             </div>

@@ -555,6 +555,8 @@ export default function TikTokAdCreationForm({
   productImageUrl, setProductImageUrl,
   sellingPoints, setSellingPoints,
   selectedSavedProductId, setSelectedSavedProductId,
+  selectedFiles,
+  setSelectedFiles,
   onBeforeMediaClear
 }) {
   const navigate = useNavigate()
@@ -2646,6 +2648,7 @@ export default function TikTokAdCreationForm({
     setFileVariantMap({})
     setGroupVariantMap({})
     setPostVariantMap({})
+    if (setSelectedFiles) setSelectedFiles(new Set())
   }
 
   // Submit form handler to queue background jobs
@@ -3114,6 +3117,13 @@ export default function TikTokAdCreationForm({
         errors.push("At least one selected organic post is required")
       }
     } else {
+      const hasMedia = (files && files.length > 0) ||
+        (driveFiles && driveFiles.length > 0) ||
+        (dropboxFiles && dropboxFiles.length > 0) ||
+        (tiktokLibraryFiles && tiktokLibraryFiles.length > 0);
+      if (!hasMedia) {
+        errors.push("At least one media item is required")
+      }
       const activeTexts = adTexts ? adTexts.filter(t => t.trim() !== '') : []
       if (activeTexts.length === 0) {
         errors.push("Enter ad text")
@@ -3156,11 +3166,13 @@ export default function TikTokAdCreationForm({
   }, [
     selectedAdvertiser, selectedCampaign, showDuplicateAdGroupBlock, duplicateAdGroup,
     selectedAdGroup, newAdGroupName, selectedIdentity, adType, importedPosts,
-    adTexts, adNameFormulaV2, adName, cta, urlMode, landingUrl
+    adTexts, adNameFormulaV2, adName, cta, urlMode, landingUrl,
+    files, driveFiles, dropboxFiles, tiktokLibraryFiles
   ])
 
   const validationErrors = getValidationErrors()
   const isFormValid = validationErrors.length === 0
+  const publishDisabled = !isFormValid || (selectedFiles && selectedFiles.size > 0)
 
   return (
     <>
@@ -5229,7 +5241,7 @@ export default function TikTokAdCreationForm({
                 <div className="space-y-1">
                   <Button
                     type="submit"
-                    disabled={isQueueingJobs || !isFormValid}
+                    disabled={isQueueingJobs || publishDisabled}
                     className="w-full h-12 bg-neutral-950 hover:bg-blue-700 text-white rounded-2xl font-semibold transition-all duration-150"
                   >
                     {isQueueingJobs ? (
