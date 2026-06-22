@@ -1432,7 +1432,8 @@ export default function TikTokAdCreationForm({
         cta: Array.isArray(cta) ? cta : [cta],
         initialFailureCount: uploadErrors.length * (isDuplicatingAdGroupMode ? 1 : selectedAdGroup.length),
         initialErrorMessages: uploadErrors.map(e => ({ error: e.error, fileName: e.fileName })),
-        adGroups: adGroupsPayload
+        adGroups: adGroupsPayload,
+        s3Urls: uploadedItems.map(item => item.s3Url).filter(Boolean)
       }
 
       const createRes = await tiktokFetch(`${API_BASE_URL}/api/tiktok/create-ads`, {
