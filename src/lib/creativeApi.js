@@ -38,10 +38,26 @@ export const creativeApi = {
   runInsights: (productId) => request("/insights/run", { method: "POST", body: { productId } }),
   getInsights: (productId) => request(`/insights?productId=${encodeURIComponent(productId)}`),
   getInsightAd: (productId, adId) => request(`/insights/ad?productId=${encodeURIComponent(productId)}&adId=${encodeURIComponent(adId)}`),
+  runBackfill: (clientId, kind) => request("/backfills/run", { method: "POST", body: { clientId, kind } }),
   runResearch: (productId) => request("/research/run", { method: "POST", body: { productId } }),
   getResearch: (productId) => request(`/research?productId=${encodeURIComponent(productId)}`),
   runLibrary: (productId) => request("/library/run", { method: "POST", body: { productId } }),
   getLibrary: (productId) => request(`/library?productId=${encodeURIComponent(productId)}`),
+  runGenerate: (body) => request("/generate/run", { method: "POST", body }),
+  getGenerated: (productId) => request(`/generate?productId=${encodeURIComponent(productId)}`),
+  getFormats: () => request("/generate/formats"),
+  fillCopy: (body) => request("/generate/fill-copy", { method: "POST", body }),
+  uploadInspo: (body) => request("/inspo/upload", { method: "POST", body }),
+  runInspo: (clientId) => request("/inspo/run", { method: "POST", body: { clientId } }),
+  getInspo: (clientId, productId) =>
+    request(`/inspo?clientId=${encodeURIComponent(clientId)}${productId ? `&productId=${encodeURIComponent(productId)}` : ""}`),
+  runWeekly: (clientId) => request("/weekly/run", { method: "POST", body: { clientId } }),
+  getWeekly: (clientId) => request(`/weekly?clientId=${encodeURIComponent(clientId)}`),
+  getHeartbeat: (clientId, force) =>
+    request(`/weekly/heartbeat?clientId=${encodeURIComponent(clientId)}${force ? "&force=1" : ""}`),
+  approveIdea: (ideaId) => request(`/weekly/ideas/${encodeURIComponent(ideaId)}/approve`, { method: "POST" }),
+  generateBrief: (ideaId, productId) =>
+    request(`/weekly/ideas/${encodeURIComponent(ideaId)}/brief`, { method: "POST", body: { productId } }),
   getJob: (id) => request(`/jobs/${id}`),
 };
 

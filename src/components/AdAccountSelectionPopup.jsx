@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react"
+import PropTypes from "prop-types"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
@@ -53,12 +53,17 @@ export default function AdAccountSelectionPopup({ isOpen, onClose, onSave, selec
         )
     }, [allAdAccounts, searchQuery])
 
-    const handleSave = async () => {
-        if (selectedAccountIds.length === 0) {
-            toast.error("Please select an ad account")
-            return
+    const saveSelection = async (emptySelectionMessage = "Please select an ad account") => {
+        if (isLoading) {
+            return false
         }
 
+        if (selectedAccountIds.length === 0) {
+            toast.error(emptySelectionMessage)
+            return false
+        }
+
+        const accountIdsToSave = [...selectedAccountIds]
         setIsLoading(true)
         try {
             const response = await fetch(`${API_BASE_URL}/settings/save`, {
@@ -69,7 +74,7 @@ export default function AdAccountSelectionPopup({ isOpen, onClose, onSave, selec
                 credentials: 'include',
                 body: JSON.stringify({
                     globalSettings: {
-                        selectedAdAccountIds: selectedAccountIds
+                        selectedAdAccountIds: accountIdsToSave
                     }
                 })
             })
@@ -77,16 +82,24 @@ export default function AdAccountSelectionPopup({ isOpen, onClose, onSave, selec
             if (response.ok) {
                 toast.success("Ad account selected successfully!")
                 window.dispatchEvent(new Event('globalSettingsUpdated'))
+                onSave?.(accountIdsToSave)
                 onClose()
+                return true
             } else {
                 toast.error("Failed to save ad account selection")
+                return false
             }
         } catch (error) {
             console.error("Error saving ad account:", error)
             toast.error("Failed to save ad account selection")
+            return false
         } finally {
             setIsLoading(false)
         }
+    }
+
+    const handleSave = () => {
+        saveSelection()
     }
 
     const getDialogDescription = () => {
@@ -101,11 +114,7 @@ export default function AdAccountSelectionPopup({ isOpen, onClose, onSave, selec
     const handleClose = (open) => {
         // Only allow closing if not opening (i.e., trying to close) and at least one account is selected
         if (!open) {
-            if (selectedAccountIds.length === 0) {
-                toast.error("Please select at least one ad account before closing")
-                return
-            }
-            onClose()
+            saveSelection("Please select at least one ad account before closing")
         }
     }
 
@@ -202,7 +211,7 @@ export default function AdAccountSelectionPopup({ isOpen, onClose, onSave, selec
                     <Button
                         onClick={handleSave}
                         disabled={selectedAccountIds.length === 0 || isLoading}
-                        className="rounded-2xl flex-1"
+                        className="h-[46px] rounded-2xl flex-1"
                     >
                         {isLoading ? "Saving..." : "Save Selection"}
                     </Button>
@@ -210,4 +219,11 @@ export default function AdAccountSelectionPopup({ isOpen, onClose, onSave, selec
             </DialogContent>
         </Dialog>
     )
+}
+
+AdAccountSelectionPopup.propTypes = {
+    isOpen: PropTypes.bool.isRequired,
+    onClose: PropTypes.func.isRequired,
+    onSave: PropTypes.func,
+    selectedAdAccountIds: PropTypes.arrayOf(PropTypes.string),
 }

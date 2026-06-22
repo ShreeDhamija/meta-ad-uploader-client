@@ -25,6 +25,9 @@ import ProductsView from "./views/ProductsView";
 import IntelligenceView from "./views/IntelligenceView";
 import ResearchView from "./views/ResearchView";
 import LibraryView from "./views/LibraryView";
+import GenerateView from "./views/GenerateView";
+import InspirationView from "./views/InspirationView";
+import WeeklyView from "./views/WeeklyView";
 import ComingSoon from "./views/ComingSoon";
 
 const NAV = [
@@ -33,9 +36,9 @@ const NAV = [
   { key: "products", label: "Products", icon: Box },
   { key: "intelligence", label: "Intelligence", icon: Zap },
   { key: "library", label: "Library", icon: BookOpen },
-  { key: "generate", label: "Generate", icon: Flame, phase: "Phase 7" },
-  { key: "inspiration", label: "Inspiration", icon: Heart, phase: "Phase 8" },
-  { key: "weekly", label: "Weekly Strategy", icon: MousePointerClick, phase: "Phase 9" },
+  { key: "generate", label: "Generate", icon: Flame },
+  { key: "inspiration", label: "Inspiration", icon: Heart },
+  { key: "weekly", label: "Weekly Strategy", icon: MousePointerClick },
   { key: "research", label: "Research", icon: SearchCheck },
 ];
 
@@ -46,6 +49,9 @@ const DESCRIPTIONS = {
   intelligence: "Run Meta ad analysis and review analyzed creatives + the strategy audit.",
   research: "Run the 7-phase research agent → personas, brand deep dive, language bank.",
   library: "Generate draft hooks, headlines, and primary text per persona.",
+  generate: "Generate static image ads from a creative format + brand/product context.",
+  inspiration: "Upload reference ads (image/video) and mine their structure for on-brand adaptation.",
+  weekly: "Run the weekly creative strategist → tiered concept cards. Approve ideas to brief.",
 };
 
 export default function CreativeStrategyLayout() {
@@ -94,6 +100,9 @@ export default function CreativeStrategyLayout() {
       case "intelligence": return <IntelligenceView ctx={ctx} />;
       case "research": return <ResearchView ctx={ctx} />;
       case "library": return <LibraryView ctx={ctx} />;
+      case "generate": return <GenerateView ctx={ctx} />;
+      case "inspiration": return <InspirationView ctx={ctx} />;
+      case "weekly": return <WeeklyView ctx={ctx} />;
       default: {
         const item = NAV.find((n) => n.key === activeTab);
         return <ComingSoon label={item?.label} phase={item?.phase} />;

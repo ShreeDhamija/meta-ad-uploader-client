@@ -15,6 +15,7 @@ export default function IntelligenceView({ ctx }) {
   const [err, setErr] = useState(null);
   const [loading, setLoading] = useState(false);
   const [openAd, setOpenAd] = useState(null); // { adId, ad }
+  const [bfJobId, setBfJobId] = useState(null);
 
   const load = async (pid) => {
     setLoading(true); setErr(null);
@@ -42,6 +43,13 @@ export default function IntelligenceView({ ctx }) {
     } catch (e) { setErr(e.message); }
   };
 
+  const runBackfill = async (kind) => {
+    setErr(null);
+    if (!ctx.selectedBrandId) { setErr("Select a brand first"); return; }
+    try { const { jobId } = await creativeApi.runBackfill(ctx.selectedBrandId, kind); setBfJobId(jobId); }
+    catch (e) { setErr(e.message); }
+  };
+
   const expandAd = async (adId) => {
     if (openAd?.adId === adId) { setOpenAd(null); return; }
     setOpenAd({ adId, ad: null });
@@ -61,6 +69,14 @@ export default function IntelligenceView({ ctx }) {
         <span className="text-sm text-neutral-400">{selectedProduct?.name} · {selectedProduct?.metaAdAccountId}</span>
       </div>
       {err && <p className="text-sm text-red-600">{err}</p>}
+
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-xs text-neutral-500">Maintenance (brand-wide):</span>
+        <button onClick={() => runBackfill("classify")} className="text-xs rounded-xl border border-neutral-300 px-3 py-1">Classify ads</button>
+        <button onClick={() => runBackfill("curate_hooks")} className="text-xs rounded-xl border border-neutral-300 px-3 py-1">Curate hooks → proven-hooks</button>
+        <button onClick={() => runBackfill("normalize_angles")} className="text-xs rounded-xl border border-neutral-300 px-3 py-1">Normalize angles</button>
+        {bfJobId && <JobStatus jobId={bfJobId} onDone={(job) => { if (job.status === "completed") setBfJobId(null); }} />}
+      </div>
 
       {auditEntries.length > 0 && (
         <div className="space-y-3">
