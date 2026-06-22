@@ -1663,18 +1663,18 @@ export default function Home() {
                         <p className="mt-3 text-sm leading-6 text-gray-600">
                             Stay on this page while your ads are being created or uploaded. If you leave now, the ad creation progress will be lost.
                         </p>
-                        <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                        <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row">
                             <button
                                 type="button"
                                 onClick={handleExitLaunchPage}
-                                className="rounded-xl bg-red-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-red-700"
+                                className="w-full rounded-full bg-red-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-red-700 sm:flex-[0.85]"
                             >
                                 Exit Anyway
                             </button>
                             <button
                                 type="button"
                                 onClick={handleStayOnLaunchPage}
-                                className="rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
+                                className="w-full rounded-full bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 sm:flex-[1.35]"
                             >
                                 Stay And Continue Ad Launch
                             </button>
