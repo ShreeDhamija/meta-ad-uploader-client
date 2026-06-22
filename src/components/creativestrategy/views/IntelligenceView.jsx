@@ -91,7 +91,7 @@ export default function IntelligenceView({ ctx }) {
           {ads.map((a) => (
             <button key={a.adId} onClick={() => expandAd(a.adId)}
               className={`text-left rounded-2xl border overflow-hidden transition-all ${openAd?.adId === a.adId ? "border-neutral-900 shadow" : "border-neutral-200 hover:shadow-sm"}`}>
-              {(a.thumbnailUrl || a.mediaUrl) && <img src={a.thumbnailUrl || a.mediaUrl} alt="" className="w-full h-32 object-cover bg-neutral-100" />}
+              {(a.imageUrl || a.thumbnailUrl || a.mediaUrl) && <img src={a.imageUrl || a.thumbnailUrl || a.mediaUrl} alt="" className="w-full h-32 object-cover bg-neutral-100" />}
               <div className="p-3 space-y-1">
                 <div className="text-sm font-medium truncate">{a.adName || "(unnamed)"}</div>
                 <div className="text-xs text-neutral-400">${Math.round(a.spend || 0)} · {a.mediaType} {a.grade ? `· ${a.grade}` : ""}</div>

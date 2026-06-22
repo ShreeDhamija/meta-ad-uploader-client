@@ -765,7 +765,8 @@ export default function AdCreationForm({
   setGroupVariantMap,
   postVariantMap,
   setPostVariantMap,
-  onBeforeMediaClear
+  onBeforeMediaClear,
+  onAdLaunchInProgressChange
 }) {
   const formFieldChrome = "border-gray-300 rounded-2xl py-4.5 bg-white shadow";
   const formInputChrome = `${formFieldChrome} focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0`;
@@ -831,6 +832,16 @@ export default function AdCreationForm({
   const [isCancelling, setIsCancelling] = useState(false);
 
   const [preserveMedia, setPreserveMedia] = useState(false);
+
+  const adLaunchInProgress = uploadingToS3 || isQueueingJobs || isProcessingQueue || Boolean(currentJob) || jobQueue.length > 0;
+  useEffect(() => {
+    onAdLaunchInProgressChange?.(adLaunchInProgress);
+  }, [adLaunchInProgress, onAdLaunchInProgressChange]);
+
+  useEffect(() => {
+    return () => onAdLaunchInProgressChange?.(false);
+  }, [onAdLaunchInProgressChange]);
+
   const handleLinkMorePages = useCallback(() => {
     setOpenPage(false)
     setOpenInstagram(false)
@@ -3899,166 +3910,171 @@ export default function AdCreationForm({
 
     const totalLargeFiles = largeFiles.length + largeDriveFiles.length + largeDropboxFiles.length + largeFrameioFiles.length;
     if (totalLargeFiles > 0) {
+      setUploadingToS3(true);
       setProgressMessage(`Uploading videos...`);
 
-      // Set up concurrency limiter
-      const limit = pLimit(3)
-      const localS3RetryLimit = pLimit(1)
+      try {
+        // Set up concurrency limiter
+        const limit = pLimit(3)
+        const localS3RetryLimit = pLimit(1)
 
 
-      const CHUNK_SIZE = 10 * 1024 * 1024;
-      const allFiles = largeFiles; // Or largeFiles + largeDriveFiles if needed
+        const CHUNK_SIZE = 10 * 1024 * 1024;
+        const allFiles = largeFiles; // Or largeFiles + largeDriveFiles if needed
 
-      const totalChunksAllFiles = allFiles.reduce(
-        (sum, file) => sum + Math.ceil(file.size / CHUNK_SIZE),
-        0
-      );
-      let uploadedChunks = 0;
+        const totalChunksAllFiles = allFiles.reduce(
+          (sum, file) => sum + Math.ceil(file.size / CHUNK_SIZE),
+          0
+        );
+        let uploadedChunks = 0;
 
-      const updateOverallProgress = () => {
-        if (signal?.aborted) return; // Don't update progress after cancel
-        uploadedChunks += 1;
-        const percent = Math.round((uploadedChunks / totalChunksAllFiles) * 100);
-        setProgress(percent);
-        setProgressMessage("Uploading files for processing...");
-      };
+        const updateOverallProgress = () => {
+          if (signal?.aborted) return; // Don't update progress after cancel
+          uploadedChunks += 1;
+          const percent = Math.round((uploadedChunks / totalChunksAllFiles) * 100);
+          setProgress(percent);
+          setProgressMessage("Uploading files for processing...");
+        };
 
-      const uploadPromises = largeFiles.map(file =>
-        limit(() => {
-          throwIfCancelled();
-          return uploadToS3(file, updateOverallProgress, getFileId(file), 2, signal, localS3RetryLimit);
-        })
-      );
-
-
-
-
-      const results = await Promise.allSettled(uploadPromises);
+        const uploadPromises = largeFiles.map(file =>
+          limit(() => {
+            throwIfCancelled();
+            return uploadToS3(file, updateOverallProgress, getFileId(file), 2, signal, localS3RetryLimit);
+          })
+        );
 
 
 
-      // Process regular file results
-      results.forEach((result, index) => {
-        if (result.status === 'fulfilled') {
-          const uploadResult = result.value;
-          if (enablePlacementCustomization && aspectRatioMap[getFileId(largeFiles[index])]) {
-            uploadResult.aspectRatio = aspectRatioMap[getFileId(largeFiles[index])];
+
+        const results = await Promise.allSettled(uploadPromises);
+
+
+
+        // Process regular file results
+        results.forEach((result, index) => {
+          if (result.status === 'fulfilled') {
+            const uploadResult = result.value;
+            if (enablePlacementCustomization && aspectRatioMap[getFileId(largeFiles[index])]) {
+              uploadResult.aspectRatio = aspectRatioMap[getFileId(largeFiles[index])];
+            }
+            s3Results.push(uploadResult);
+          } else {
+            // Don't show error toast if this was a user cancellation
+            const isCancellation = result.reason?.name === 'AbortError' ||
+              axios.isCancel(result.reason) ||
+              signal?.aborted;
+
+            if (!isCancellation) {
+              toast.error(`Failed to upload ${largeFiles[index].name} due to weak network connection. Reload page to try again`);
+            }
+            console.error(`❌ Failed to upload ${largeFiles[index].name}:`, result.reason);
           }
-          s3Results.push(uploadResult);
-        } else {
-          // Don't show error toast if this was a user cancellation
-          const isCancellation = result.reason?.name === 'AbortError' ||
-            axios.isCancel(result.reason) ||
-            signal?.aborted;
+        });
 
-          if (!isCancellation) {
-            toast.error(`Failed to upload ${largeFiles[index].name} due to weak network connection. Reload page to try again`);
+        // Upload Drive files with concurrency control
+        const driveUploadPromises = largeDriveFiles.map(file =>
+          limit(() => {
+            throwIfCancelled();
+            return uploadDriveFileToS3(file, 3, signal);
+          })
+        );
+
+        const driveResults = await Promise.allSettled(driveUploadPromises);
+
+        // Process Drive file results
+        driveResults.forEach((result, index) => {
+          if (result.status === 'fulfilled') {
+            const uploadResult = result.value; // The complete object is now the result
+
+            // Include aspect ratio if we have it
+            if (enablePlacementCustomization && aspectRatioMap[getFileId(largeDriveFiles[index])]) {
+              uploadResult.aspectRatio = aspectRatioMap[getFileId(largeDriveFiles[index])];
+            }
+
+            s3DriveResults.push(uploadResult);
+
+
+
+          } else {
+            const isCancellation = result.reason?.name === 'AbortError' ||
+              axios.isCancel(result.reason) ||
+              signal?.aborted;
+
+            if (!isCancellation) {
+              toast.error(`Failed to upload Drive video: ${largeDriveFiles[index].name}`);
+            }
+            console.error("❌ Google Drive to S3 upload failed", result.reason);
           }
-          console.error(`❌ Failed to upload ${largeFiles[index].name}:`, result.reason);
-        }
-      });
+        });
 
-      // Upload Drive files with concurrency control
-      const driveUploadPromises = largeDriveFiles.map(file =>
-        limit(() => {
-          throwIfCancelled();
-          return uploadDriveFileToS3(file, 3, signal);
-        })
-      );
+        // Upload Dropbox files with concurrency control
+        const dropboxUploadPromises = largeDropboxFiles.map(file =>
+          limit(() => {
+            throwIfCancelled();
+            return uploadDropboxFileToS3(file, 3, signal);
+          })
+        );
 
-      const driveResults = await Promise.allSettled(driveUploadPromises);
+        const dropboxResults = await Promise.allSettled(dropboxUploadPromises);
 
-      // Process Drive file results
-      driveResults.forEach((result, index) => {
-        if (result.status === 'fulfilled') {
-          const uploadResult = result.value; // The complete object is now the result
+        // Process Dropbox file results
+        dropboxResults.forEach((result, index) => {
+          if (result.status === 'fulfilled') {
+            const uploadResult = result.value;
+            if (enablePlacementCustomization && aspectRatioMap[getFileId(largeDropboxFiles[index])]) {
+              uploadResult.aspectRatio = aspectRatioMap[getFileId(largeDropboxFiles[index])];
+            }
+            uploadResult.dropboxId = largeDropboxFiles[index].dropboxId;  // ✅ Add this if missing
+            s3DropboxResults.push(uploadResult);
+          } else {
+            const isCancellation = result.reason?.name === 'AbortError' ||
+              axios.isCancel(result.reason) ||
+              signal?.aborted;
 
-          // Include aspect ratio if we have it
-          if (enablePlacementCustomization && aspectRatioMap[getFileId(largeDriveFiles[index])]) {
-            uploadResult.aspectRatio = aspectRatioMap[getFileId(largeDriveFiles[index])];
+            if (!isCancellation) {
+              toast.error(`Failed to upload Dropbox video: ${largeDriveFiles[index].name}`);
+            }
+            console.error("❌ Dropbox to S3 upload failed", result.reason);
           }
+        });
 
-          s3DriveResults.push(uploadResult);
+        // Upload Frame.io files with concurrency control (always uploaded to S3)
+        const frameioUploadPromises = largeFrameioFiles.map(file =>
+          limit(() => {
+            throwIfCancelled();
+            return uploadFrameioFileToS3(file, 3, signal);
+          })
+        );
 
+        const frameioResults = await Promise.allSettled(frameioUploadPromises);
 
+        frameioResults.forEach((result, index) => {
+          if (result.status === 'fulfilled') {
+            const uploadResult = result.value;
+            if (enablePlacementCustomization && aspectRatioMap[getFileId(largeFrameioFiles[index])]) {
+              uploadResult.aspectRatio = aspectRatioMap[getFileId(largeFrameioFiles[index])];
+            }
+            uploadResult.frameioId = largeFrameioFiles[index].frameioId;
+            s3FrameioResults.push(uploadResult);
+          } else {
+            const isCancellation = result.reason?.name === 'AbortError' ||
+              axios.isCancel(result.reason) ||
+              signal?.aborted;
 
-        } else {
-          const isCancellation = result.reason?.name === 'AbortError' ||
-            axios.isCancel(result.reason) ||
-            signal?.aborted;
-
-          if (!isCancellation) {
-            toast.error(`Failed to upload Drive video: ${largeDriveFiles[index].name}`);
+            if (!isCancellation) {
+              toast.error(`Failed to upload Frame.io file: ${largeFrameioFiles[index].name}`);
+            }
+            console.error("❌ Frame.io to S3 upload failed", result.reason);
           }
-          console.error("❌ Google Drive to S3 upload failed", result.reason);
-        }
-      });
+        });
 
-      // Upload Dropbox files with concurrency control
-      const dropboxUploadPromises = largeDropboxFiles.map(file =>
-        limit(() => {
-          throwIfCancelled();
-          return uploadDropboxFileToS3(file, 3, signal);
-        })
-      );
-
-      const dropboxResults = await Promise.allSettled(dropboxUploadPromises);
-
-      // Process Dropbox file results
-      dropboxResults.forEach((result, index) => {
-        if (result.status === 'fulfilled') {
-          const uploadResult = result.value;
-          if (enablePlacementCustomization && aspectRatioMap[getFileId(largeDropboxFiles[index])]) {
-            uploadResult.aspectRatio = aspectRatioMap[getFileId(largeDropboxFiles[index])];
-          }
-          uploadResult.dropboxId = largeDropboxFiles[index].dropboxId;  // ✅ Add this if missing
-          s3DropboxResults.push(uploadResult);
-        } else {
-          const isCancellation = result.reason?.name === 'AbortError' ||
-            axios.isCancel(result.reason) ||
-            signal?.aborted;
-
-          if (!isCancellation) {
-            toast.error(`Failed to upload Dropbox video: ${largeDriveFiles[index].name}`);
-          }
-          console.error("❌ Dropbox to S3 upload failed", result.reason);
-        }
-      });
-
-      // Upload Frame.io files with concurrency control (always uploaded to S3)
-      const frameioUploadPromises = largeFrameioFiles.map(file =>
-        limit(() => {
-          throwIfCancelled();
-          return uploadFrameioFileToS3(file, 3, signal);
-        })
-      );
-
-      const frameioResults = await Promise.allSettled(frameioUploadPromises);
-
-      frameioResults.forEach((result, index) => {
-        if (result.status === 'fulfilled') {
-          const uploadResult = result.value;
-          if (enablePlacementCustomization && aspectRatioMap[getFileId(largeFrameioFiles[index])]) {
-            uploadResult.aspectRatio = aspectRatioMap[getFileId(largeFrameioFiles[index])];
-          }
-          uploadResult.frameioId = largeFrameioFiles[index].frameioId;
-          s3FrameioResults.push(uploadResult);
-        } else {
-          const isCancellation = result.reason?.name === 'AbortError' ||
-            axios.isCancel(result.reason) ||
-            signal?.aborted;
-
-          if (!isCancellation) {
-            toast.error(`Failed to upload Frame.io file: ${largeFrameioFiles[index].name}`);
-          }
-          console.error("❌ Frame.io to S3 upload failed", result.reason);
-        }
-      });
-
-      throwIfCancelled();
-      setProgress(100);
-      setProgressMessage('File upload complete! Creating ads...');
-      // toast.success("Video files uploaded!");
+        throwIfCancelled();
+        setProgress(100);
+        setProgressMessage('File upload complete! Creating ads...');
+        // toast.success("Video files uploaded!");
+      } finally {
+        setUploadingToS3(false);
+      }
     }
     throwIfCancelled(); // ADD THIS LINE
     // 🔧 NOW start the actual job (50-100% progress)

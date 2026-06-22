@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react"
 import { toast, Toaster } from "sonner"
+import { useBlocker } from "react-router"
 import { useNavigate, useLocation } from "react-router-dom"
 import { v4 as uuidv4 } from "uuid";
 
@@ -234,9 +235,8 @@ export default function Home() {
     const [postVariantMap, setPostVariantMap] = useState({});
 
     const [showMobileBanner, setShowMobileBanner] = useState(true);
+    const [adLaunchInProgress, setAdLaunchInProgress] = useState(false);
     const mediaPreviewLaunchTimeoutRef = useRef(null);
-
-    if (authLoading) return null
 
     useEffect(() => {
         return () => {
@@ -245,6 +245,37 @@ export default function Home() {
             }
         };
     }, []);
+
+    const blocker = useBlocker(({ currentLocation, nextLocation }) => {
+        if (!adLaunchInProgress) return false;
+        const currentPath = `${currentLocation.pathname}${currentLocation.search}${currentLocation.hash}`;
+        const nextPath = `${nextLocation.pathname}${nextLocation.search}${nextLocation.hash}`;
+        return currentPath !== nextPath;
+    });
+
+    useEffect(() => {
+        if (!adLaunchInProgress) return;
+
+        const handleBeforeUnload = (event) => {
+            event.preventDefault();
+            event.returnValue = "";
+        };
+
+        window.addEventListener("beforeunload", handleBeforeUnload);
+        return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+    }, [adLaunchInProgress]);
+
+    const handleStayOnLaunchPage = useCallback(() => {
+        if (blocker.state === "blocked") {
+            blocker.reset();
+        }
+    }, [blocker]);
+
+    const handleExitLaunchPage = useCallback(() => {
+        if (blocker.state === "blocked") {
+            blocker.proceed();
+        }
+    }, [blocker]);
 
     const triggerMediaPreviewLaunch = useCallback(() => {
         const hasMediaToLaunch = (
@@ -1311,6 +1342,8 @@ export default function Home() {
 
 
 
+    if (authLoading) return null
+
     return (
 
         <>
@@ -1511,6 +1544,7 @@ export default function Home() {
                             postVariantMap={postVariantMap}
                             setPostVariantMap={setPostVariantMap}
                             onBeforeMediaClear={triggerMediaPreviewLaunch}
+                            onAdLaunchInProgressChange={setAdLaunchInProgress}
 
 
                         />
@@ -1614,6 +1648,40 @@ export default function Home() {
                 isOpen={showAdAccountPopup}
                 onClose={() => setShowAdAccountPopup(false)}
             />
+
+            {blocker.state === "blocked" && (
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4">
+                    <div
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="ad-launch-exit-warning-title"
+                        className="w-full max-w-[460px] rounded-[28px] bg-white p-6 shadow-2xl"
+                    >
+                        <h2 id="ad-launch-exit-warning-title" className="text-xl font-semibold text-gray-950">
+                            Ad launch in progress
+                        </h2>
+                        <p className="mt-3 text-sm leading-6 text-gray-600">
+                            Stay on this page while your ads are being created or uploaded. If you leave now, the ad creation progress will be lost.
+                        </p>
+                        <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                            <button
+                                type="button"
+                                onClick={handleExitLaunchPage}
+                                className="rounded-xl bg-red-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-red-700"
+                            >
+                                Exit Anyway
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleStayOnLaunchPage}
+                                className="rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
+                            >
+                                Stay And Continue Ad Launch
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <Toaster richColors position="bottom-left" closeButton />
 
