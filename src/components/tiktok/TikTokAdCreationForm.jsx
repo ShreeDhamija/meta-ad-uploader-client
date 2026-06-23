@@ -758,6 +758,30 @@ export default function TikTokAdCreationForm({
     return false;
   }, [selectedCampaign, campaigns, selectedAdGroup, showDuplicateAdGroupBlock, duplicateAdGroup, adGroups]);
 
+  const isSalesCampaignSelected = useMemo(() => {
+    if (selectedCampaign && selectedCampaign.length > 0) {
+      const hasSalesCampaign = selectedCampaign.some(campId => {
+        const c = campaigns.find(x => x.campaign_id === campId);
+        return c && String(c.virtual_objective_type).toUpperCase() === 'SALES';
+      });
+      if (hasSalesCampaign) return true;
+    }
+
+    const activeAgId = selectedAdGroup?.[0] || (showDuplicateAdGroupBlock ? duplicateAdGroup : null);
+    if (activeAgId) {
+      const agObj = adGroups.find(g => g.adgroup_id === activeAgId);
+      if (agObj) {
+        const campId = agObj.campaignId || agObj.campaign_id;
+        const c = campaigns.find(x => x.campaign_id === campId);
+        if (c && String(c.virtual_objective_type).toUpperCase() === 'SALES') {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }, [selectedCampaign, campaigns, selectedAdGroup, showDuplicateAdGroupBlock, duplicateAdGroup, adGroups]);
+
   useEffect(() => {
     const activeAgId = selectedAdGroup?.[0] || (showDuplicateAdGroupBlock ? duplicateAdGroup : null);
     if (!activeAgId) {
@@ -1314,63 +1338,53 @@ export default function TikTokAdCreationForm({
           const finalCaptions = activeCaptions.length > 0 ? activeCaptions : ['']
 
           const creatives = []
-          for (const singleCaption of finalCaptions) {
-            if (creativeCTAs.length > 1) {
-              let creativeAdName = finalAdName
-              if (finalCaptions.length > 1) {
-                const cleanCap = singleCaption.trim().substring(0, 15)
-                creativeAdName = `${finalAdName} - ${cleanCap ? `"${cleanCap}"` : `Text ${finalCaptions.indexOf(singleCaption) + 1}`}`
-              }
+          const useMultipleTextsNative = isSalesCampaign && finalCaptions.length > 1;
 
-              const creative = {
-                video_id: videoId,
-                ad_text: singleCaption,
-                ad_name: creativeAdName,
-                identity_type: currentIdentityType,
-                landing_page_type: urlMode === 'WEBSITE' ? 'EXTERNAL_WEBSITE' : 'INSTANT_PAGE',
-                operation_status: launchPaused ? 'DISABLE' : 'ENABLE',
-                ...(urlMode === 'WEBSITE'
-                  ? { landing_page_url: finalUrl }
-                  : { page_id: landingUrl }
-                ),
-                ...(adType === 'SPARK' ? {
-                  is_spark_ad: true,
-                  spark_ad_auth_code: item.file.authCode,
-                  tiktok_item_id: videoId,
-                  adType: 'SPARK'
-                } : {}),
-                ...(shoppingAdsType ? { shopping_ads_type: shoppingAdsType } : {}),
-                ...(productSource ? { product_source: productSource } : {})
-              }
-              if (currentIdentityId) creative.identity_id = currentIdentityId
-              if (currentIdentityAuthorizedBcId) creative.identity_authorized_bc_id = currentIdentityAuthorizedBcId
+          if (useMultipleTextsNative) {
+            const singleCta = creativeCTAs[0] || 'SHOP_NOW';
+            const creative = {
+              video_id: videoId,
+              ad_texts: finalCaptions,
+              call_to_action: singleCta,
+              ad_name: finalAdName,
+              identity_type: currentIdentityType,
+              landing_page_type: urlMode === 'WEBSITE' ? 'EXTERNAL_WEBSITE' : 'INSTANT_PAGE',
+              operation_status: launchPaused ? 'DISABLE' : 'ENABLE',
+              ...(urlMode === 'WEBSITE'
+                ? { landing_page_url: finalUrl }
+                : { page_id: landingUrl }
+              ),
+              ...(adType === 'SPARK' ? {
+                is_spark_ad: true,
+                spark_ad_auth_code: item.file.authCode,
+                tiktok_item_id: videoId,
+                adType: 'SPARK'
+              } : {}),
+              ...(shoppingAdsType ? { shopping_ads_type: shoppingAdsType } : {}),
+              ...(productSource ? { product_source: productSource } : {})
+            }
+            if (currentIdentityId) creative.identity_id = currentIdentityId
+            if (currentIdentityAuthorizedBcId) creative.identity_authorized_bc_id = currentIdentityAuthorizedBcId
 
-              if (isShoppingAg && catalogIdToUse) {
-                creative.catalog_id = catalogIdToUse;
-                if (skuIdToUse) creative.sku_id = skuIdToUse;
-                if (itemGroupIdToUse) creative.item_group_id = itemGroupIdToUse;
-              }
+            if (isShoppingAg && catalogIdToUse) {
+              creative.catalog_id = catalogIdToUse;
+              if (skuIdToUse) creative.sku_id = skuIdToUse;
+              if (itemGroupIdToUse) creative.item_group_id = itemGroupIdToUse;
+            }
 
-              creatives.push(creative)
-            } else {
-              for (const singleCta of creativeCTAs) {
+            creatives.push(creative)
+          } else {
+            for (const singleCaption of finalCaptions) {
+              if (creativeCTAs.length > 1) {
                 let creativeAdName = finalAdName
-                const modifiers = []
                 if (finalCaptions.length > 1) {
                   const cleanCap = singleCaption.trim().substring(0, 15)
-                  modifiers.push(cleanCap ? `"${cleanCap}"` : `Text ${finalCaptions.indexOf(singleCaption) + 1}`)
-                }
-                if (creativeCTAs.length > 1) {
-                  modifiers.push(singleCta)
-                }
-                if (modifiers.length > 0) {
-                  creativeAdName = `${finalAdName} - ${modifiers.join(' - ')}`
+                  creativeAdName = `${finalAdName} - ${cleanCap ? `"${cleanCap}"` : `Text ${finalCaptions.indexOf(singleCaption) + 1}`}`
                 }
 
                 const creative = {
                   video_id: videoId,
                   ad_text: singleCaption,
-                  call_to_action: singleCta,
                   ad_name: creativeAdName,
                   identity_type: currentIdentityType,
                   landing_page_type: urlMode === 'WEBSITE' ? 'EXTERNAL_WEBSITE' : 'INSTANT_PAGE',
@@ -1398,6 +1412,53 @@ export default function TikTokAdCreationForm({
                 }
 
                 creatives.push(creative)
+              } else {
+                for (const singleCta of creativeCTAs) {
+                  let creativeAdName = finalAdName
+                  const modifiers = []
+                  if (finalCaptions.length > 1) {
+                    const cleanCap = singleCaption.trim().substring(0, 15)
+                    modifiers.push(cleanCap ? `"${cleanCap}"` : `Text ${finalCaptions.indexOf(singleCaption) + 1}`)
+                  }
+                  if (creativeCTAs.length > 1) {
+                    modifiers.push(singleCta)
+                  }
+                  if (modifiers.length > 0) {
+                    creativeAdName = `${finalAdName} - ${modifiers.join(' - ')}`
+                  }
+
+                  const creative = {
+                    video_id: videoId,
+                    ad_text: singleCaption,
+                    call_to_action: singleCta,
+                    ad_name: creativeAdName,
+                    identity_type: currentIdentityType,
+                    landing_page_type: urlMode === 'WEBSITE' ? 'EXTERNAL_WEBSITE' : 'INSTANT_PAGE',
+                    operation_status: launchPaused ? 'DISABLE' : 'ENABLE',
+                    ...(urlMode === 'WEBSITE'
+                      ? { landing_page_url: finalUrl }
+                      : { page_id: landingUrl }
+                    ),
+                    ...(adType === 'SPARK' ? {
+                      is_spark_ad: true,
+                      spark_ad_auth_code: item.file.authCode,
+                      tiktok_item_id: videoId,
+                      adType: 'SPARK'
+                    } : {}),
+                    ...(shoppingAdsType ? { shopping_ads_type: shoppingAdsType } : {}),
+                    ...(productSource ? { product_source: productSource } : {})
+                  }
+                  if (currentIdentityId) creative.identity_id = currentIdentityId
+                  if (currentIdentityAuthorizedBcId) creative.identity_authorized_bc_id = currentIdentityAuthorizedBcId
+
+                  if (isShoppingAg && catalogIdToUse) {
+                    creative.catalog_id = catalogIdToUse;
+                    if (skuIdToUse) creative.sku_id = skuIdToUse;
+                    if (itemGroupIdToUse) creative.item_group_id = itemGroupIdToUse;
+                  }
+
+                  creatives.push(creative)
+                }
               }
             }
           }
@@ -1856,14 +1917,14 @@ export default function TikTokAdCreationForm({
   const copyTemplates = advertiserPrefs?.copyTemplates || {};
   const defaultTemplateName = advertiserPrefs?.defaultTemplateName || "";
 
-  const hasAnyContent = adTexts[0]?.trim() !== "";
+  const hasAnyContent = adTexts.some(t => t.trim() !== "");
 
   const hasUnsavedTemplateChangesRaw = useMemo(() => {
     if (!selectedTemplate || !copyTemplates[selectedTemplate]) return false;
     const tpl = copyTemplates[selectedTemplate];
-    const currentText = adTexts[0] || "";
-    const originalText = tpl.texts?.[0] || tpl.text || "";
-    return currentText.trim() !== originalText.trim();
+    const currentTexts = adTexts.map(t => t.trim()).filter(Boolean);
+    const originalTexts = (tpl.texts || (tpl.text ? [tpl.text] : [])).map(t => t.trim()).filter(Boolean);
+    return JSON.stringify(currentTexts) !== JSON.stringify(originalTexts);
   }, [adTexts, copyTemplates, selectedTemplate]);
 
   const [hasUnsavedTemplateChanges, setHasUnsavedTemplateChanges] = useState(false);
@@ -1879,12 +1940,12 @@ export default function TikTokAdCreationForm({
 
   // Does this exact combo already exist in another template?
   const existingDuplicateTemplate = useMemo(() => {
-    const currentText = adTexts[0]?.trim() || "";
-    if (!currentText) return null;
+    const currentTexts = adTexts.map(t => t.trim()).filter(Boolean);
+    if (currentTexts.length === 0) return null;
     for (const [name, tpl] of Object.entries(copyTemplates)) {
       if (name === selectedTemplate) continue;
-      const originalText = tpl.texts?.[0] || tpl.text || "";
-      if (currentText === originalText.trim()) {
+      const originalTexts = (tpl.texts || (tpl.text ? [tpl.text] : [])).map(t => t.trim()).filter(Boolean);
+      if (JSON.stringify(currentTexts) === JSON.stringify(originalTexts)) {
         return name;
       }
     }
@@ -1902,7 +1963,7 @@ export default function TikTokAdCreationForm({
     try {
       const templateData = {
         name,
-        texts: [adTexts[0]?.trim() || ""],
+        texts: adTexts.map(t => t.trim()).filter(Boolean),
       };
       const updated = { ...(copyTemplates || {}) };
       updated[name] = templateData;
@@ -1932,7 +1993,7 @@ export default function TikTokAdCreationForm({
     try {
       const templateData = {
         name: selectedTemplate,
-        texts: [adTexts[0]?.trim() || ""],
+        texts: adTexts.map(t => t.trim()).filter(Boolean),
       };
       const updated = { ...(copyTemplates || {}) };
       updated[selectedTemplate] = templateData;
@@ -2570,7 +2631,7 @@ export default function TikTokAdCreationForm({
     }
 
     let fileName = "";
-    if (file && file.name) {
+    if (adType !== "SPARK" && file && file.name) {
       fileName = file.name.replace(/\.[^/.]+$/, "");
     }
 
@@ -4482,8 +4543,16 @@ export default function TikTokAdCreationForm({
                 <div className="mt-1">
                   <Label className="text-xs text-gray-500">
                     Ad Name Preview: {
-                      (files?.length > 0 || videoFile || driveFiles?.length > 0 || dropboxFiles?.length > 0)
-                        ? computeAdNameFromFormula(files[0] || videoFile || driveFiles[0] || dropboxFiles[0], 0, landingUrl, null, adType)
+                      (files?.length > 0 || videoFile || driveFiles?.length > 0 || dropboxFiles?.length > 0 || (adType === 'SPARK' && importedPosts?.length > 0))
+                        ? computeAdNameFromFormula(
+                            (adType === 'SPARK' && importedPosts?.length > 0)
+                              ? { name: importedPosts[0].ad_name || 'Spark Ad' }
+                              : (files[0] || videoFile || driveFiles[0] || dropboxFiles[0]),
+                            0,
+                            landingUrl,
+                            null,
+                            adType
+                          )
                         : "Upload a file to see example"
                     }
                   </Label>
@@ -4717,7 +4786,11 @@ export default function TikTokAdCreationForm({
                                     } else {
                                       setSelectedTemplate(name);
                                       if (data.texts && data.texts.length > 0) {
-                                        setAdTexts([data.texts[0] || ""]);
+                                        setAdTexts([...data.texts]);
+                                      } else if (data.text) {
+                                        setAdTexts([data.text]);
+                                      } else {
+                                        setAdTexts([""]);
                                       }
                                       setTemplateDropdownOpen(false);
                                       setTemplateSearch("");
@@ -4751,30 +4824,71 @@ export default function TikTokAdCreationForm({
                     </div>
                   </div>
 
-                  {/* Single Caption Textarea */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label className="flex items-center gap-1.5">
-                        {renderDiffMark("adTexts")}
-                        <span className="font-semibold text-sm">Text</span>
-                        {adType === 'SPARK' && <span className="text-gray-400 font-normal text-xs">(Optional)</span>}
-                      </Label>
-                      <span className="text-[10px] text-zinc-400 font-medium">{(adTexts[0] || "").length}/100</span>
+                  {/* Multiple Text Options Textareas */}
+                  <div className="space-y-3">
+                    <Label className="flex items-center gap-1.5">
+                      {renderDiffMark("adTexts")}
+                      <span className="font-semibold text-sm">Text</span>
+                      {adType === 'SPARK' && <span className="text-gray-400 font-normal text-xs">(Optional)</span>}
+                    </Label>
+
+                    <div className="space-y-4">
+                      {adTexts.map((value, index) => (
+                        <div key={index} className="flex items-start gap-2">
+                          <div className="flex flex-col w-full">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-xs text-gray-500 font-medium">Text Option {index + 1}</span>
+                              <span className="text-[10px] text-zinc-400 font-medium">{(value || "").length}/100</span>
+                            </div>
+                            <TextareaAutosize
+                              value={value}
+                              onChange={(e) => updateField(setAdTexts, adTexts, index, e.target.value)}
+                              placeholder={`Enter Caption Option ${index + 1}`}
+                              minRows={2}
+                              maxRows={8}
+                              className={`${formTextareaChrome} ${(value || "").length > 100 ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]" : ""}`}
+                              style={{ scrollbarWidth: 'thin', scrollbarColor: '#e5e7eb transparent' }}
+                            />
+                            {(value || "").length > 100 && (
+                              <p className="text-xs text-red-500 font-medium mt-1">Text cannot exceed 100 characters</p>
+                            )}
+                          </div>
+                          {adTexts.length > 1 && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              className="border border-gray-400 rounded-xl bg-white shadow-xs mt-6"
+                              size="icon"
+                              onClick={() => removeField(setAdTexts, adTexts, index)}
+                            >
+                              <Trash2 className="w-4 h-4 text-gray-600 cursor-pointer hover:text-red-500" />
+                              <span className="sr-only">Remove</span>
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+
+                      {adTexts.length < 5 && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="w-full rounded-xl shadow bg-zinc-600 hover:bg-black text-white"
+                          onClick={() => addField(setAdTexts, adTexts)}
+                        >
+                          <Plus className="mr-2 h-4 w-4 text-white" />
+                          Add text option
+                        </Button>
+                      )}
+
+                      {adTexts.length > 1 && !isSalesCampaignSelected && (
+                        <div className="text-xs text-amber-600 bg-amber-50 border border-amber-100 rounded-xl p-2.5 mt-2 flex items-start gap-2 leading-relaxed">
+                          <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500 mt-0.5" />
+                          <span>
+                            <strong>Note:</strong> Multiple text options are only supported for campaigns with a <strong>Sales</strong> objective. If you proceed with a different campaign objective, only the first text option will be used.
+                          </span>
+                        </div>
+                      )}
                     </div>
-                    <TextareaAutosize
-                      value={adTexts[0] || ""}
-                      onChange={(e) => {
-                        setAdTexts([e.target.value]);
-                      }}
-                      placeholder="Enter Caption"
-                      minRows={3}
-                      maxRows={8}
-                      className={formTextareaChrome}
-                      style={{ scrollbarWidth: 'thin', scrollbarColor: '#e5e7eb transparent' }}
-                    />
-                    {(adTexts[0] || "").length > 100 && (
-                      <p className="text-xs text-red-500 font-medium mt-1">Text cannot exceed 100 characters</p>
-                    )}
                   </div>
                 </div>
               )}

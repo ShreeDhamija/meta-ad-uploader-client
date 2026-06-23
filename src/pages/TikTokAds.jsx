@@ -577,16 +577,20 @@ export default function TikTokAds() {
         setLandingUrl(defaultLink.url);
       }
 
-      // 4. Default Ad Text — use default template if set, otherwise fall back to first available template
-      if (adTexts.length === 1 && adTexts[0] === '' && advertiserPrefs.copyTemplates) {
-        const templateName = advertiserPrefs.defaultTemplateName
-          || Object.keys(advertiserPrefs.copyTemplates)[0]
-          || '';
-        const template = templateName ? advertiserPrefs.copyTemplates[templateName] : null;
-        if (template && template.texts?.length > 0) {
-          setAdTexts(template.texts);
-        }
-      }
+       // 4. Default Ad Text — use default template if set, otherwise fall back to first available template
+       if (adTexts.length === 1 && adTexts[0] === '' && advertiserPrefs.copyTemplates) {
+         const templateName = advertiserPrefs.defaultTemplateName
+           || Object.keys(advertiserPrefs.copyTemplates)[0]
+           || '';
+         const template = templateName ? advertiserPrefs.copyTemplates[templateName] : null;
+         if (template) {
+           if (template.texts?.length > 0) {
+             setAdTexts([...template.texts]);
+           } else if (template.text) {
+             setAdTexts([template.text]);
+           }
+         }
+       }
 
       // Mark as restored
       restoredDefaultsRef.current[selectedAdvertiser] = true;
