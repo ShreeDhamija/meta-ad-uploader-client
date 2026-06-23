@@ -20,6 +20,11 @@ import {
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/AuthContext";
 import { creativeApi } from "@/lib/creativeApi";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import CostTracker from "./CostTracker";
+import { JobsProvider } from "./JobsContext";
+import JobsIndicator from "./JobsIndicator";
+import OverviewView from "./views/OverviewView";
 import BrandsView from "./views/BrandsView";
 import ProductsView from "./views/ProductsView";
 import IntelligenceView from "./views/IntelligenceView";
@@ -60,22 +65,32 @@ export default function CreativeStrategyLayout() {
 
   const [activeTab, setActiveTab] = useState("brands");
   const [brands, setBrands] = useState([]);
+  const [brandsLoading, setBrandsLoading] = useState(true);
   const [selectedBrandId, setSelectedBrandId] = useState(null);
   const [products, setProducts] = useState([]);
+  const [productsLoading, setProductsLoading] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState(null);
   const [error, setError] = useState(null);
 
   // Auto-create/refresh brands from the user's linked Meta ad accounts on load.
   // Falls back to listing existing brands if the Meta sync fails (e.g. no token).
-  const loadBrands = () =>
-    creativeApi.syncBrands()
+  const loadBrands = () => {
+    setBrandsLoading(true);
+    return creativeApi.syncBrands()
       .then((r) => setBrands(r.clients))
       .catch((e) => {
         setError(`Meta sync failed (${e.message}) — showing existing brands`);
         return creativeApi.listClients().then((r) => setBrands(r.clients)).catch(() => {});
-      });
-  const loadProducts = (brandId) =>
-    creativeApi.listProducts(brandId).then((r) => setProducts(r.products)).catch((e) => setError(e.message));
+      })
+      .finally(() => setBrandsLoading(false));
+  };
+  const loadProducts = (brandId) => {
+    setProductsLoading(true);
+    return creativeApi.listProducts(brandId)
+      .then((r) => setProducts(r.products))
+      .catch((e) => setError(e.message))
+      .finally(() => setProductsLoading(false));
+  };
 
   useEffect(() => { loadBrands(); }, []);
   useEffect(() => {
@@ -88,13 +103,14 @@ export default function CreativeStrategyLayout() {
   const selectedProduct = products.find((p) => p.id === selectedProductId) || null;
 
   const ctx = {
-    brands, selectedBrand, selectedBrandId, setSelectedBrandId, reloadBrands: loadBrands,
-    products, selectedProduct, selectedProductId, setSelectedProductId, reloadProducts: () => loadProducts(selectedBrandId),
+    brands, brandsLoading, selectedBrand, selectedBrandId, setSelectedBrandId, reloadBrands: loadBrands,
+    products, productsLoading, selectedProduct, selectedProductId, setSelectedProductId, reloadProducts: () => loadProducts(selectedBrandId),
     goTo: setActiveTab,
   };
 
   const renderView = () => {
     switch (activeTab) {
+      case "overview": return <OverviewView ctx={ctx} />;
       case "brands": return <BrandsView ctx={ctx} />;
       case "products": return <ProductsView ctx={ctx} />;
       case "intelligence": return <IntelligenceView ctx={ctx} />;
@@ -113,6 +129,7 @@ export default function CreativeStrategyLayout() {
   const active = NAV.find((n) => n.key === activeTab);
 
   return (
+    <JobsProvider>
     <div className="flex min-h-screen bg-neutral-100">
       {/* Sidebar */}
       <div className="w-[290px] flex flex-col h-screen sticky top-0 px-4 py-6 max-lg:w-[80px] max-lg:min-w-[80px] max-lg:px-2">
@@ -172,30 +189,30 @@ export default function CreativeStrategyLayout() {
         <div className="bg-white rounded-3xl border border-gray-200 shadow-xs h-[calc(100vh-3rem)] flex flex-col overflow-hidden">
           {/* Top context bar */}
           <div className="border-b border-neutral-100 px-8 py-4 flex items-center gap-3">
-            <select
-              value={selectedBrandId || ""}
-              onChange={(e) => setSelectedBrandId(e.target.value || null)}
-              className="rounded-2xl border border-neutral-200 bg-white shadow-xs px-4 py-2 text-sm"
-            >
-              <option value="">Select Brand</option>
-              {brands.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-            </select>
-            <select
-              value={selectedProductId || ""}
-              onChange={(e) => setSelectedProductId(e.target.value || null)}
-              disabled={!selectedBrandId}
-              className="rounded-2xl border border-neutral-200 bg-white shadow-xs px-4 py-2 text-sm disabled:opacity-50"
-            >
-              <option value="">Select Product</option>
-              {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
+            <Select value={selectedBrandId || ""} onValueChange={(v) => setSelectedBrandId(v || null)}>
+              <SelectTrigger className="w-[200px] rounded-2xl border-neutral-200 bg-white shadow-xs">
+                <SelectValue placeholder="Select Brand" />
+              </SelectTrigger>
+              <SelectContent>
+                {brands.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={selectedProductId || ""} onValueChange={(v) => setSelectedProductId(v || null)} disabled={!selectedBrandId}>
+              <SelectTrigger className="w-[200px] rounded-2xl border-neutral-200 bg-white shadow-xs">
+                <SelectValue placeholder="Select Product" />
+              </SelectTrigger>
+              <SelectContent>
+                {products.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <CostTracker clientId={selectedBrandId} />
+            <JobsIndicator />
           </div>
 
           <div className="flex-1 overflow-auto">
             <div className="w-full max-w-5xl mx-auto p-10">
-              <p className="text-sm text-gray-400 mb-1">Creative Strategy / {active?.label}</p>
-              <h1 className="text-xl font-semibold mb-1">{active?.label}</h1>
-              {DESCRIPTIONS[activeTab] && <p className="text-gray-400 text-sm mb-6">{DESCRIPTIONS[activeTab]}</p>}
+              <h1 className="text-2xl font-semibold tracking-tight mb-1">{active?.label}</h1>
+              {DESCRIPTIONS[activeTab] && <p className="text-neutral-400 text-sm mb-6">{DESCRIPTIONS[activeTab]}</p>}
               {error && <div className="text-sm text-red-600 mb-4">{error}</div>}
               {renderView()}
             </div>
@@ -203,5 +220,6 @@ export default function CreativeStrategyLayout() {
         </div>
       </main>
     </div>
+    </JobsProvider>
   );
 }

@@ -4,8 +4,11 @@
 // Each analyzed file shows its concept bucket + visual/hook/angle breakdown.
 import { useEffect, useRef, useState } from "react";
 import PropTypes from "prop-types";
+import { Heart, Upload } from "lucide-react";
 import { creativeApi } from "@/lib/creativeApi";
-import JobStatus from "../JobStatus";
+import { Button } from "@/components/ui/button";
+import { ViewLoading, EmptyState, ErrorBanner } from "../ui";
+import { useJobRunner, JobBadge } from "../JobsContext";
 
 function fileToDataUrl(file) {
   return new Promise((resolve, reject) => {
@@ -19,15 +22,16 @@ function fileToDataUrl(file) {
 export default function InspirationView({ ctx }) {
   const { selectedBrand, selectedBrandId, selectedProductId } = ctx;
   const [items, setItems] = useState([]);
-  const [jobId, setJobId] = useState(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
   const [expanded, setExpanded] = useState(null);
+  const [loading, setLoading] = useState(false);
   const fileRef = useRef(null);
 
   const load = async (cid) => {
+    setLoading(true);
     try { const r = await creativeApi.getInspo(cid, selectedProductId || undefined); setItems(r.items); }
-    catch (e) { setErr(e.message); }
+    catch (e) { setErr(e.message); } finally { setLoading(false); }
   };
 
   useEffect(() => {
@@ -35,8 +39,12 @@ export default function InspirationView({ ctx }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedBrandId, selectedProductId]);
 
+  const { job, start } = useJobRunner({
+    kind: "inspo_analyze", brandId: selectedBrandId, onComplete: () => load(selectedBrandId),
+  });
+
   if (!selectedBrandId) {
-    return <p className="text-sm text-neutral-400">Select a brand (top bar) to upload reference ads.</p>;
+    return <EmptyState icon={Heart} title="No brand selected" hint="Select a brand in the top bar to upload reference ads." />;
   }
 
   const onPick = async (e) => {
@@ -55,7 +63,7 @@ export default function InspirationView({ ctx }) {
         fileType,
         dataBase64: dataUrl,
       });
-      if (r.jobId) setJobId(r.jobId); // image → background job
+      if (r.jobId) start(r.jobId);    // image → background job
       await load(selectedBrandId);    // video → already analyzed
     } catch (e2) { setErr(e2.message); }
     finally { setBusy(false); }
@@ -65,15 +73,17 @@ export default function InspirationView({ ctx }) {
     <div className="space-y-5">
       <div className="flex items-center gap-3">
         <input ref={fileRef} type="file" accept="image/*,video/*" onChange={onPick} className="hidden" />
-        <button onClick={() => fileRef.current?.click()} disabled={busy}
-          className="rounded-xl bg-neutral-900 text-white px-4 py-2 text-sm disabled:opacity-50">
-          {busy ? "Uploading…" : "Upload reference"}
-        </button>
-        {jobId && <JobStatus jobId={jobId} onDone={(job) => { if (job.status === "completed") setJobId(null); load(selectedBrandId); }} />}
+        <Button onClick={() => fileRef.current?.click()} disabled={busy} size="sm" className="rounded-xl gap-1.5">
+          <Upload className="w-4 h-4" />{busy ? "Uploading…" : "Upload reference"}
+        </Button>
+        <JobBadge job={job} />
         <span className="text-sm text-neutral-400">{selectedBrand?.name} · image analyzes in background, video inline (not stored)</span>
       </div>
-      {err && <p className="text-sm text-red-600">{err}</p>}
+      <ErrorBanner message={err} />
 
+      {loading && items.length === 0 ? <ViewLoading label="Loading references…" /> : items.length === 0 ? (
+        <EmptyState icon={Heart} title="No references yet" hint="Upload an image or video ad to mine its structure (concept, hook, angle, awareness stage)." />
+      ) : (
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         {items.map((it) => (
           <div key={it.id} className="rounded-2xl border border-neutral-200 overflow-hidden">
@@ -107,8 +117,8 @@ export default function InspirationView({ ctx }) {
             </div>
           </div>
         ))}
-        {items.length === 0 && <p className="text-sm text-neutral-400 col-span-full">No references yet — upload an image or video ad to analyze.</p>}
       </div>
+      )}
     </div>
   );
 }
@@ -120,7 +130,7 @@ function Row({ k, v }) {
 Row.propTypes = { k: PropTypes.string.isRequired, v: PropTypes.string };
 
 function StatusTag({ status }) {
-  const tone = status === "analyzed" ? "bg-green-100 text-green-700"
+  const tone = status === "analyzed" ? "bg-emerald-100 text-emerald-700"
     : status === "failed" ? "bg-red-100 text-red-700"
     : "bg-amber-100 text-amber-700";
   return <span className={`text-xs rounded-full px-2 py-0.5 ${tone}`}>{status}</span>;

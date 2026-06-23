@@ -129,6 +129,7 @@ function CustomVariablesSetupDialog({ open, onOpenChange, variables, onSave }) {
         />
         <DialogPrimitive.Content
           className="fixed left-1/2 top-1/2 z-50 flex w-full max-w-lg -translate-x-1/2 -translate-y-1/2 flex-col gap-4 rounded-2xl border bg-background p-6 shadow-lg duration-0"
+          style={{ maxHeight: "min(700px, calc(100dvh - 2rem))" }}
         >
           <DialogHeader>
             <DialogTitle className="text-base font-semibold">
@@ -141,7 +142,7 @@ function CustomVariablesSetupDialog({ open, onOpenChange, variables, onSave }) {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto space-y-4 py-2 pr-1 custom-scrollbar">
+          <div className="min-h-0 flex-1 overflow-y-auto space-y-4 py-2 pr-1 custom-scrollbar">
             {editing.map((category) => (
               <div
                 key={category._editKey}
