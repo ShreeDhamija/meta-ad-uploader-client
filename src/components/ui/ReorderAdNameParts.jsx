@@ -129,7 +129,7 @@ function CustomVariablesSetupDialog({ open, onOpenChange, variables, onSave }) {
         />
         <DialogPrimitive.Content
           className="fixed left-1/2 top-1/2 z-50 flex w-full max-w-lg -translate-x-1/2 -translate-y-1/2 flex-col gap-4 rounded-2xl border bg-background p-6 shadow-lg duration-0"
-          style={{ maxHeight: "min(700px, calc(100dvh - 2rem))" }}
+          style={{ maxHeight: "min(800px, calc(100dvh - 2rem))" }}
         >
           <DialogHeader>
             <DialogTitle className="text-base font-semibold">
@@ -146,7 +146,7 @@ function CustomVariablesSetupDialog({ open, onOpenChange, variables, onSave }) {
             {editing.map((category) => (
               <div
                 key={category._editKey}
-                className="bg-gray-50 rounded-xl p-4 space-y-3 relative group"
+                className="bg-[#f7f7f7] rounded-xl p-4 space-y-3 relative group"
               >
                 {editing.length > 1 && (
                   <button
