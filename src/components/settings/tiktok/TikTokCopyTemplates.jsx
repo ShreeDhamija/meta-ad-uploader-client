@@ -25,7 +25,7 @@ export default function TikTokCopyTemplates({
 }) {
     const [selectedName, setSelectedName] = useState("")
     const [templateName, setTemplateName] = useState("")
-    const [texts, setTexts] = useState([""])
+    const [text, setText] = useState("")
     const [isProcessing, setIsProcessing] = useState(false)
     const [templateSearch, setTemplateSearch] = useState("")
     const [templateDropdownOpen, setTemplateDropdownOpen] = useState(false)
@@ -127,31 +127,15 @@ export default function TikTokCopyTemplates({
 
     const normalizeText = (text) => text.trim().toLowerCase().replace(/\s+/g, ' ');
 
-    const textExistsInTemplate = useCallback((text) => {
-        const normalizedText = normalizeText(text);
-        return texts.some(t => normalizeText(t) === normalizedText);
-    }, [texts]);
+    const textExistsInTemplate = useCallback((textVal) => {
+        const normalizedText = normalizeText(textVal);
+        return normalizeText(text) === normalizedText;
+    }, [text]);
 
-    const createTextImportHandler = useCallback((text) => () => {
-        const currentTexts = [...texts];
-        // find first empty or blank input
-        const emptyIndex = currentTexts.findIndex(t => t.trim() === "");
-        let importedToIndex;
-
-        if (emptyIndex !== -1) {
-            currentTexts[emptyIndex] = text;
-            importedToIndex = emptyIndex;
-        } else if (currentTexts.length < 5) {
-            currentTexts.push(text);
-            importedToIndex = currentTexts.length - 1;
-        } else {
-            currentTexts[0] = text;
-            importedToIndex = 0;
-        }
-
-        setTexts(currentTexts);
-        toast.success(`Imported text into Text slot ${importedToIndex + 1}`);
-    }, [texts]);
+    const createTextImportHandler = useCallback((textVal) => () => {
+        setText(textVal);
+        toast.success("Imported text");
+    }, []);
 
     const nameAlreadyExists = useMemo(() =>
         templateName.trim() &&
@@ -160,33 +144,31 @@ export default function TikTokCopyTemplates({
         [templateName, selectedName, templates]
     )
 
-    const hasFilledTextValue = useCallback((text) => text.trim() !== "", [])
-    const filterFilledTexts = useCallback((items) => items.filter(hasFilledTextValue), [hasFilledTextValue])
-
     const templateChanged = useMemo(() => {
         const currentTemplate = templates[selectedName] || {};
-        const filteredTexts = filterFilledTexts(texts);
-        const originalTexts = currentTemplate.texts || [];
+        const currentTemplateText = currentTemplate.text || (currentTemplate.texts && currentTemplate.texts[0]) || "";
+        const trimmedText = text.trim();
+        const originalText = currentTemplateText.trim();
 
         if (!selectedName) {
-            return !!(templateName.trim() || filteredTexts.length > 0);
+            return !!(templateName.trim() || trimmedText);
         }
 
         return (
             templateName !== selectedName ||
-            JSON.stringify(filteredTexts) !== JSON.stringify(originalTexts)
+            trimmedText !== originalText
         );
-    }, [templateName, selectedName, templates, texts, filterFilledTexts]);
+    }, [templateName, selectedName, templates, text]);
 
     // Sync with props
     useEffect(() => {
         if (selectedName && templates[selectedName]) {
             const t = templates[selectedName];
             setTemplateName(t.name || selectedName);
-            setTexts(t.texts || [""]);
+            setText(t.text || (t.texts && t.texts[0]) || "");
         } else if (!selectedName) {
             setTemplateName("");
-            setTexts([""]);
+            setText("");
         }
     }, [selectedName, templates]);
 
@@ -205,26 +187,10 @@ export default function TikTokCopyTemplates({
         }
     }, [advertiserId, templates, defaultName]);
 
-    const handleAdd = useCallback(() => {
-        if (texts.length < 5) setTexts([...texts, ""])
-    }, [texts])
-
-    const handleRemove = useCallback((index) => {
-        const updated = [...texts]
-        updated.splice(index, 1)
-        setTexts(updated)
-    }, [texts])
-
-    const handleChange = useCallback((index, value) => {
-        const updated = [...texts]
-        updated[index] = value
-        setTexts(updated)
-    }, [texts])
-
     const handleNewTemplate = useCallback(() => {
         setSelectedName("")
         setTemplateName("")
-        setTexts([""])
+        setText("")
     }, [])
 
     const executePendingAction = useCallback((action, payload) => {
@@ -251,15 +217,15 @@ export default function TikTokCopyTemplates({
             return false
         }
 
-        const filteredTexts = filterFilledTexts(texts);
-        if (filteredTexts.length === 0) {
+        const trimmedText = text.trim();
+        if (!trimmedText) {
             toast.error("Text is required")
             return false
         }
 
         const newTemplate = {
             name: templateName,
-            texts: filteredTexts,
+            text: trimmedText,
         }
 
         setIsProcessing(true)
@@ -582,46 +548,18 @@ export default function TikTokCopyTemplates({
 
             <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                    <label className="text-[14px] text-gray-700 font-medium">Text Options</label>
-                    {texts.length < 5 && (
-                        <button
-                            type="button"
-                            onClick={handleAdd}
-                            className="text-xs text-blue-600 hover:text-blue-800 flex items-center font-medium gap-1"
-                            disabled={isProcessing}
-                        >
-                            <CirclePlus className="w-3.5 h-3.5" />
-                            Add Option
-                        </button>
-                    )}
+                    <label className="text-[14px] text-gray-700">Text</label>
                 </div>
-                <div className="space-y-3">
-                    {texts.map((text, index) => (
-                        <div key={index} className="flex gap-2 items-start">
-                            <div className="flex-1">
-                                <TextareaAutosize
-                                    placeholder={`Text Option ${index + 1}`}
-                                    value={text || ""}
-                                    onChange={(e) => handleChange(index, e.target.value)}
-                                    className={`${settingsTextareaChrome} w-full text-sm resize-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0`}
-                                    minRows={3}
-                                    maxRows={10}
-                                    disabled={isProcessing}
-                                />
-                            </div>
-                            {texts.length > 1 && (
-                                <button
-                                    type="button"
-                                    onClick={() => handleRemove(index)}
-                                    className="p-2 hover:bg-gray-200 rounded-xl text-gray-400 hover:text-red-500 transition-colors mt-1"
-                                    disabled={isProcessing}
-                                    title="Remove option"
-                                >
-                                    <Trash2 className="w-4 h-4" />
-                                </button>
-                            )}
-                        </div>
-                    ))}
+                <div className="flex flex-col w-full">
+                    <TextareaAutosize
+                        placeholder="Enter Caption"
+                        value={text}
+                        onChange={(e) => setText(e.target.value)}
+                        className={`${settingsTextareaChrome} w-full text-sm resize-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0`}
+                        minRows={3}
+                        maxRows={10}
+                        disabled={isProcessing}
+                    />
                 </div>
             </div>
 
@@ -629,7 +567,7 @@ export default function TikTokCopyTemplates({
                 <Button
                     className="bg-blue-500 text-white w-full rounded-xl hover:bg-blue-600 h-[45px]"
                     onClick={handleSaveTemplate}
-                    disabled={!templateName.trim() || isProcessing || nameAlreadyExists || !templateChanged || !texts.some(hasFilledTextValue)}
+                    disabled={!templateName.trim() || isProcessing || nameAlreadyExists || !templateChanged || !text.trim()}
                 >
                     {nameAlreadyExists
                         ? "This template name already exists"

@@ -1335,13 +1335,10 @@ export default function TikTokAdCreationForm({
             creativeCTAs = [creativeCTAs[0]]
           }
           const activeCaptions = (adTexts || []).filter(t => t.trim() !== '')
-          let finalCaptions = activeCaptions.length > 0 ? activeCaptions : ['']
-          if (!isSalesCampaign) {
-            finalCaptions = [finalCaptions[0]]
-          }
+          let finalCaptions = activeCaptions.length > 0 ? [activeCaptions[0]] : ['']
 
           const creatives = []
-          const useMultipleTextsNative = isSalesCampaign;
+          const useMultipleTextsNative = false;
 
           if (useMultipleTextsNative) {
             const singleCta = creativeCTAs[0] || 'SHOP_NOW';
@@ -1925,9 +1922,9 @@ export default function TikTokAdCreationForm({
   const hasUnsavedTemplateChangesRaw = useMemo(() => {
     if (!selectedTemplate || !copyTemplates[selectedTemplate]) return false;
     const tpl = copyTemplates[selectedTemplate];
-    const currentTexts = adTexts.map(t => t.trim()).filter(Boolean);
-    const originalTexts = (tpl.texts || (tpl.text ? [tpl.text] : [])).map(t => t.trim()).filter(Boolean);
-    return JSON.stringify(currentTexts) !== JSON.stringify(originalTexts);
+    const currentText = adTexts.map(t => t.trim()).filter(Boolean)[0] || "";
+    const originalText = tpl.text || (tpl.texts && tpl.texts[0]) || "";
+    return currentText.trim() !== originalText.trim();
   }, [adTexts, copyTemplates, selectedTemplate]);
 
   const [hasUnsavedTemplateChanges, setHasUnsavedTemplateChanges] = useState(false);
@@ -1943,12 +1940,12 @@ export default function TikTokAdCreationForm({
 
   // Does this exact combo already exist in another template?
   const existingDuplicateTemplate = useMemo(() => {
-    const currentTexts = adTexts.map(t => t.trim()).filter(Boolean);
-    if (currentTexts.length === 0) return null;
+    const currentText = adTexts.map(t => t.trim()).filter(Boolean)[0] || "";
+    if (!currentText) return null;
     for (const [name, tpl] of Object.entries(copyTemplates)) {
       if (name === selectedTemplate) continue;
-      const originalTexts = (tpl.texts || (tpl.text ? [tpl.text] : [])).map(t => t.trim()).filter(Boolean);
-      if (JSON.stringify(currentTexts) === JSON.stringify(originalTexts)) {
+      const originalText = tpl.text || (tpl.texts && tpl.texts[0]) || "";
+      if (currentText.trim() === originalText.trim()) {
         return name;
       }
     }
@@ -1966,7 +1963,7 @@ export default function TikTokAdCreationForm({
     try {
       const templateData = {
         name,
-        texts: adTexts.map(t => t.trim()).filter(Boolean),
+        text: adTexts.map(t => t.trim()).filter(Boolean)[0] || "",
       };
       const updated = { ...(copyTemplates || {}) };
       updated[name] = templateData;
@@ -1996,7 +1993,7 @@ export default function TikTokAdCreationForm({
     try {
       const templateData = {
         name: selectedTemplate,
-        texts: adTexts.map(t => t.trim()).filter(Boolean),
+        text: adTexts.map(t => t.trim()).filter(Boolean)[0] || "",
       };
       const updated = { ...(copyTemplates || {}) };
       updated[selectedTemplate] = templateData;
@@ -4788,13 +4785,8 @@ export default function TikTokAdCreationForm({
                                       toggleDeleteSelection(name);
                                     } else {
                                       setSelectedTemplate(name);
-                                      if (data.texts && data.texts.length > 0) {
-                                        setAdTexts([...data.texts]);
-                                      } else if (data.text) {
-                                        setAdTexts([data.text]);
-                                      } else {
-                                        setAdTexts([""]);
-                                      }
+                                      const loadedText = data.text || (data.texts && data.texts[0]) || "";
+                                      setAdTexts([loadedText]);
                                       setTemplateDropdownOpen(false);
                                       setTemplateSearch("");
                                     }
@@ -4827,7 +4819,7 @@ export default function TikTokAdCreationForm({
                     </div>
                   </div>
 
-                  {/* Multiple Text Options Textareas */}
+                  {/* Single Text Option Textarea */}
                   <div className="space-y-3">
                     <Label className="flex items-center gap-1.5">
                       {renderDiffMark("adTexts")}
@@ -4836,61 +4828,27 @@ export default function TikTokAdCreationForm({
                     </Label>
 
                     <div className="space-y-4">
-                      {adTexts.map((value, index) => (
-                        <div key={index} className="flex items-start gap-2">
-                          <div className="flex flex-col w-full">
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="text-xs text-gray-500 font-medium">Text Option {index + 1}</span>
-                              <span className="text-[10px] text-zinc-400 font-medium">{(value || "").length}/100</span>
-                            </div>
-                            <TextareaAutosize
-                              value={value}
-                              onChange={(e) => updateField(setAdTexts, adTexts, index, e.target.value)}
-                              placeholder={`Enter Caption Option ${index + 1}`}
-                              minRows={2}
-                              maxRows={8}
-                              className={`${formTextareaChrome} ${(value || "").length > 100 ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]" : ""}`}
-                              style={{ scrollbarWidth: 'thin', scrollbarColor: '#e5e7eb transparent' }}
-                            />
-                            {(value || "").length > 100 && (
-                              <p className="text-xs text-red-500 font-medium mt-1">Text cannot exceed 100 characters</p>
-                            )}
+                      <div className="flex items-start gap-2">
+                        <div className="flex flex-col w-full">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-[10px] text-zinc-400 font-medium">{(adTexts[0] || "").length}/100</span>
                           </div>
-                          {adTexts.length > 1 && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              className="border border-gray-400 rounded-xl bg-white shadow-xs mt-6"
-                              size="icon"
-                              onClick={() => removeField(setAdTexts, adTexts, index)}
-                            >
-                              <Trash2 className="w-4 h-4 text-gray-600 cursor-pointer hover:text-red-500" />
-                              <span className="sr-only">Remove</span>
-                            </Button>
+                          <TextareaAutosize
+                            value={adTexts[0] || ""}
+                            onChange={(e) => {
+                              setAdTexts([e.target.value]);
+                            }}
+                            placeholder="Enter Caption"
+                            minRows={2}
+                            maxRows={8}
+                            className={`${formTextareaChrome} ${(adTexts[0] || "").length > 100 ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]" : ""}`}
+                            style={{ scrollbarWidth: 'thin', scrollbarColor: '#e5e7eb transparent' }}
+                          />
+                          {(adTexts[0] || "").length > 100 && (
+                            <p className="text-xs text-red-500 font-medium mt-1">Text cannot exceed 100 characters</p>
                           )}
                         </div>
-                      ))}
-
-                      {adTexts.length < 5 && (
-                        <Button
-                          type="button"
-                          size="sm"
-                          className="w-full rounded-xl shadow bg-zinc-600 hover:bg-black text-white"
-                          onClick={() => addField(setAdTexts, adTexts)}
-                        >
-                          <Plus className="mr-2 h-4 w-4 text-white" />
-                          Add text option
-                        </Button>
-                      )}
-
-                      {adTexts.length > 1 && !isSalesCampaignSelected && (
-                        <div className="text-xs text-amber-600 bg-amber-50 border border-amber-100 rounded-xl p-2.5 mt-2 flex items-start gap-2 leading-relaxed">
-                          <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500 mt-0.5" />
-                          <span>
-                            <strong>Note:</strong> Multiple text options are only supported for campaigns with a <strong>Sales</strong> objective. If you proceed with a different campaign objective, only the first text option will be used.
-                          </span>
-                        </div>
-                      )}
+                      </div>
                     </div>
                   </div>
                 </div>
