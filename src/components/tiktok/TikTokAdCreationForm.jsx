@@ -2627,6 +2627,9 @@ export default function TikTokAdCreationForm({
   const computeAdNameFromFormula = useCallback((file, iterationIndex = 0, link = "", formula = null, adType = "") => {
     const formulaToUse = formula || adNameFormulaV2;
     if (!formulaToUse?.rawInput?.trim()) {
+      if (adType === "SPARK" && (!adName || adName === "Ad Generated Through Blip")) {
+        return " ";
+      }
       return adName || "Ad Generated Through Blip";
     }
 
@@ -2691,7 +2694,14 @@ export default function TikTokAdCreationForm({
       .replace(/\{\{Ad Type\}\}/gi, adTypeLabel);
 
     calculatedName = calculatedName.replace(/\{\{([^}]+)\}\}/g, "");
-    return calculatedName.trim() || "Ad Generated Through Blip";
+    const finalCalculatedName = calculatedName.trim();
+    if (!finalCalculatedName) {
+      return adType === "SPARK" ? " " : "Ad Generated Through Blip";
+    }
+    if (adType === "SPARK" && finalCalculatedName === "Ad Generated Through Blip") {
+      return " ";
+    }
+    return finalCalculatedName;
   }, [adNameFormulaV2, adName]);
 
   const hasMediaInFormData = (fd) => {
@@ -4545,14 +4555,14 @@ export default function TikTokAdCreationForm({
                     Ad Name Preview: {
                       (files?.length > 0 || videoFile || driveFiles?.length > 0 || dropboxFiles?.length > 0 || (adType === 'SPARK' && importedPosts?.length > 0))
                         ? computeAdNameFromFormula(
-                            (adType === 'SPARK' && importedPosts?.length > 0)
-                              ? { name: importedPosts[0].ad_name || 'Spark Ad' }
-                              : (files[0] || videoFile || driveFiles[0] || dropboxFiles[0]),
-                            0,
-                            landingUrl,
-                            null,
-                            adType
-                          )
+                          (adType === 'SPARK' && importedPosts?.length > 0)
+                            ? { name: importedPosts[0].ad_name || 'Spark Ad' }
+                            : (files[0] || videoFile || driveFiles[0] || dropboxFiles[0]),
+                          0,
+                          landingUrl,
+                          null,
+                          adType
+                        )
                         : "Upload a file to see example"
                     }
                   </Label>
