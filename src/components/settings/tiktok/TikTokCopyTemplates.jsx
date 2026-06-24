@@ -582,18 +582,46 @@ export default function TikTokCopyTemplates({
 
             <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                    <label className="text-[14px] text-gray-700">Text</label>
+                    <label className="text-[14px] text-gray-700 font-medium">Text Options</label>
+                    {texts.length < 5 && (
+                        <button
+                            type="button"
+                            onClick={handleAdd}
+                            className="text-xs text-blue-600 hover:text-blue-800 flex items-center font-medium gap-1"
+                            disabled={isProcessing}
+                        >
+                            <CirclePlus className="w-3.5 h-3.5" />
+                            Add Option
+                        </button>
+                    )}
                 </div>
-                <div className="flex flex-col w-full">
-                    <TextareaAutosize
-                        placeholder="Enter Caption"
-                        value={texts[0] || ""}
-                        onChange={(e) => handleChange(0, e.target.value)}
-                        className={`${settingsTextareaChrome} w-full text-sm resize-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0`}
-                        minRows={3}
-                        maxRows={10}
-                        disabled={isProcessing}
-                    />
+                <div className="space-y-3">
+                    {texts.map((text, index) => (
+                        <div key={index} className="flex gap-2 items-start">
+                            <div className="flex-1">
+                                <TextareaAutosize
+                                    placeholder={`Text Option ${index + 1}`}
+                                    value={text || ""}
+                                    onChange={(e) => handleChange(index, e.target.value)}
+                                    className={`${settingsTextareaChrome} w-full text-sm resize-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0`}
+                                    minRows={3}
+                                    maxRows={10}
+                                    disabled={isProcessing}
+                                />
+                            </div>
+                            {texts.length > 1 && (
+                                <button
+                                    type="button"
+                                    onClick={() => handleRemove(index)}
+                                    className="p-2 hover:bg-gray-200 rounded-xl text-gray-400 hover:text-red-500 transition-colors mt-1"
+                                    disabled={isProcessing}
+                                    title="Remove option"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
+                            )}
+                        </div>
+                    ))}
                 </div>
             </div>
 

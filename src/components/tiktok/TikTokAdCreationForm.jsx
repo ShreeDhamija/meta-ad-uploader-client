@@ -1335,10 +1335,13 @@ export default function TikTokAdCreationForm({
             creativeCTAs = [creativeCTAs[0]]
           }
           const activeCaptions = (adTexts || []).filter(t => t.trim() !== '')
-          const finalCaptions = activeCaptions.length > 0 ? activeCaptions : ['']
+          let finalCaptions = activeCaptions.length > 0 ? activeCaptions : ['']
+          if (!isSalesCampaign) {
+            finalCaptions = [finalCaptions[0]]
+          }
 
           const creatives = []
-          const useMultipleTextsNative = isSalesCampaign && finalCaptions.length > 1;
+          const useMultipleTextsNative = isSalesCampaign;
 
           if (useMultipleTextsNative) {
             const singleCta = creativeCTAs[0] || 'SHOP_NOW';
