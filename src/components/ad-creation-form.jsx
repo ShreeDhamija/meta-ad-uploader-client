@@ -2954,7 +2954,7 @@ export default function AdCreationForm({
 
     let fileName = "";
     if (file && file.name) {
-      fileName = file.name.replace(/\.[^/.]+$/, "");
+      fileName = "";
     }
 
     let fileType = "";

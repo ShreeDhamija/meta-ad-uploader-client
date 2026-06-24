@@ -2635,7 +2635,7 @@ export default function TikTokAdCreationForm({
 
     let fileName = "";
     if (adType !== "SPARK" && file && file.name) {
-      fileName = file.name.replace(/\.[^/.]+$/, "");
+      fileName = "";
     }
 
     let fileType = "";
