@@ -52,7 +52,7 @@ const DEFAULT_PIXEL_TRACKING = {
 };
 
 // Pixel Tracking settings are currently limited to these user IDs.
-const PIXEL_TRACKING_ALLOWED_USER_IDS = ["10236978990363167", "10163794086700369"];
+const PIXEL_TRACKING_ALLOWED_USER_IDS = ["10236978990363167", "10163794086700369", "122113601127356755"];
 
 // Single cache key for draft settings
 const DRAFT_CACHE_KEY = 'adAccountSettings_draft';
