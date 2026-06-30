@@ -3155,6 +3155,14 @@ export default function AdCreationForm({
   const campaignSupportsFlexibleAds = campaignObjective.length > 0 &&
     campaignObjective.every(obj => ["OUTCOME_SALES", "OUTCOME_APP_PROMOTION"].includes(obj));
 
+  // For OUTCOME_SALES campaigns, BOOK_NOW must be sent to the server as BOOK_TRAVEL.
+  const resolveCtaForServer = (ctaValue) =>
+    ctaValue === "BOOK_NOW" &&
+    campaignObjective.length > 0 &&
+    campaignObjective.every(obj => obj === "OUTCOME_SALES")
+      ? "BOOK_TRAVEL"
+      : ctaValue;
+
   // Reset adType to 'regular' if flexible is selected but the campaign doesn't support it
   useEffect(() => {
     if (adType === 'flexible' && !campaignSupportsFlexibleAds) {
@@ -4251,7 +4259,7 @@ export default function AdCreationForm({
       } else {
         formData.append("link", linkJSON);
       }
-      formData.append("cta", cta);
+      formData.append("cta", resolveCtaForServer(cta));
       formData.append("launchPaused", launchPaused);
       formData.append("jobId", jobId);
       if (selectedForm) {
@@ -5119,7 +5127,7 @@ export default function AdCreationForm({
             formData.append("instagramAccountId", instagramAccountId || "");
             formData.append("launchPaused", launchPaused);
             formData.append("jobId", frontendJobId);
-            formData.append("cta", cta || "LEARN_MORE");  // placeholder CTA
+            formData.append("cta", resolveCtaForServer(cta || "LEARN_MORE"));  // placeholder CTA
             if (usePhoneNumberField) {
               formData.append("phoneNumber", phoneNumber);
             } else {
