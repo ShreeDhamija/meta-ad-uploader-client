@@ -8,6 +8,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { ChevronsUpDown, Loader, CirclePlus, Info, RefreshCw, ChevronDown, CircleX, Folder, Pencil, CloudSync } from "lucide-react"
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import { useAppData } from "@/lib/AppContext"
+import { useAuth } from "@/lib/AuthContext"
 import CopyTemplates from "./CopyTemplates"
 import PageSelectors from "./PageSelectors"
 import LinkParameters from "./LinkParameters"
@@ -50,12 +51,17 @@ const DEFAULT_PIXEL_TRACKING = {
   offlineDatasetId: null,
 };
 
+// Pixel Tracking settings are currently limited to these user IDs.
+const PIXEL_TRACKING_ALLOWED_USER_IDS = ["10236978990363167", "10163794086700369"];
+
 // Single cache key for draft settings
 const DRAFT_CACHE_KEY = 'adAccountSettings_draft';
 
 
 export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAccountPopup, subscriptionData }) {
   const { adAccounts, pages, adAccountsLoading, refetchAdAccounts } = useAppData()
+  const { userId } = useAuth()
+  const showPixelTracking = PIXEL_TRACKING_ALLOWED_USER_IDS.includes(String(userId))
   const [selectedAdAccount, setSelectedAdAccount] = useState(() => {
     // If there's a preselected account, use that
     if (preselectedAdAccount) return preselectedAdAccount;
@@ -832,11 +838,13 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
 
           <CreativeEnhancements enhancements={enhancements} setEnhancements={setEnhancements} />
           <MultiAdvertiserAds enabled={multiAdvertiserAds} setEnabled={setMultiAdvertiserAds} />
-          <PixelTracking
-            pixelTracking={pixelTracking}
-            setPixelTracking={setPixelTracking}
-            selectedAdAccount={selectedAdAccount}
-          />
+          {showPixelTracking && (
+            <PixelTracking
+              pixelTracking={pixelTracking}
+              setPixelTracking={setPixelTracking}
+              selectedAdAccount={selectedAdAccount}
+            />
+          )}
 
 
         </div>

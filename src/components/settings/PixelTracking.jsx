@@ -26,7 +26,7 @@ const PixelSelect = memo(({ pixels, value, onChange, loading, placeholder }) => 
     const selected = pixels.find(p => p.id === value)
     const displayText = selected
         ? (selected.name || selected.id)
-        : (value ? value : "None")
+        : (value ? value : "Select a pixel")
 
     return (
         <Popover open={open} onOpenChange={setOpen}>
@@ -52,7 +52,7 @@ const PixelSelect = memo(({ pixels, value, onChange, loading, placeholder }) => 
                 className="min-w-[--radix-popover-trigger-width] w-auto !max-w-none p-0 bg-white shadow-lg rounded-2xl"
                 align="start"
                 sideOffset={4}
-                side="bottom"
+                side="top"
                 avoidCollisions={false}
                 style={{
                     minWidth: "var(--radix-popover-trigger-width)",
@@ -66,13 +66,6 @@ const PixelSelect = memo(({ pixels, value, onChange, loading, placeholder }) => 
                     <CommandInput placeholder={placeholder || "Search pixels..."} className="bg-transparent" wrapperClassName="bg-gray-50 border-gray-200 rounded-[20px]" />
                     <CommandList className="max-h-[300px] overflow-y-auto rounded-2xl custom-scrollbar">
                         <CommandGroup>
-                            <CommandItem
-                                value="none"
-                                onSelect={() => { onChange(null); setOpen(false); }}
-                                className={`px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150 hover:bg-gray-100 ${!value ? "bg-gray-100 font-semibold" : ""}`}
-                            >
-                                None
-                            </CommandItem>
                             {pixels.map((pixel) => (
                                 <CommandItem
                                     key={pixel.id}
