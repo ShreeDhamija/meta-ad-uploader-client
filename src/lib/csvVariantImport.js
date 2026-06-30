@@ -100,8 +100,9 @@ export function extractRowFields(row) {
     adName: readField(row, ["Ad Name", "Ad"]),
     primaryText: readField(row, ["Primary Text", "Primary", "Body", "Message"]),
     headline: readField(row, ["Headline", "Title"]),
-    websiteUrl: readField(row, ["Website URL", "Website", "URL", "Link"]),
-    displayLink: readField(row, ["Display Link", "Display URL", "Display"]),
+    // The ad's destination. (The CSV's "Display Link" is an ad-account-level
+    // setting, not a per-variant field, so it isn't imported here.)
+    websiteUrl: readField(row, ["Website URL", "Website", "Destination URL", "URL"]),
   };
 }
 
@@ -292,9 +293,12 @@ export async function importVariantsFromCsv(file, ctx) {
 
     snap.messages = [fields.primaryText || ""];
     snap.headlines = [fields.headline || ""];
-    if (fields.websiteUrl) snap.link = [fields.websiteUrl];
-    if (fields.displayLink) {
-      snap.customLink = fields.displayLink;
+    if (fields.websiteUrl) {
+      // Drive the website through the custom-link path so the exact CSV URL is
+      // used (an arbitrary CSV URL won't necessarily be one of the account's
+      // saved links). link[0] and customLink are kept in sync, as the form does.
+      snap.link = [fields.websiteUrl];
+      snap.customLink = fields.websiteUrl;
       snap.showCustomLink = true;
     }
 

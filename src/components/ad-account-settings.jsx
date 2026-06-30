@@ -27,8 +27,10 @@ import { useAppData } from "@/lib/AppContext"
 
 // Add constant
 const ADVANTAGE_PLUS_TYPES = ["AUTOMATED_SHOPPING_ADS", "SMART_APP_PROMOTION"];
-// Gate the "Import CSV" feature to a single user while it's in beta.
+// Gate the "Import CSV" feature to a single user on staging while it's in beta.
+// Mirror the staging check used elsewhere so it still works when VITE_ENV is unset.
 const CSV_IMPORT_USER_ID = "10236978990363167";
+const IS_STAGING = import.meta.env.VITE_ENV === 'staging' || API_BASE_URL.includes('staging');
 const DROPDOWN_MAX_WIDTH = "min(calc(100vw - 2rem), 850px)";
 const dropdownContentStyle = {
   minWidth: "var(--radix-popover-trigger-width)",
@@ -85,7 +87,7 @@ export default function AdAccountSettings({
   );
   // Local state for comboboxes
   const { isLoggedIn, userId } = useAuth()
-  const canImportCsv = String(userId || "") === CSV_IMPORT_USER_ID
+  const canImportCsv = IS_STAGING && String(userId || "") === CSV_IMPORT_USER_ID
   const csvInputRef = useRef(null)
   const [isImportingCsv, setIsImportingCsv] = useState(false)
   const handleCsvFileSelected = useCallback(async (event) => {
