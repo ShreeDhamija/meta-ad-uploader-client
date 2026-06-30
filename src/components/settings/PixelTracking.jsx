@@ -10,12 +10,10 @@ const EVENT_ROWS = [
     {
         key: "websitePixelId",
         label: "Website Events",
-        description: "Track website (offsite) conversions against the selected Meta Pixel.",
     },
     {
         key: "offlineDatasetId",
         label: "Offline Events",
-        description: "Track offline conversions against the selected dataset.",
     },
 ];
 
@@ -147,10 +145,7 @@ function PixelTracking({ pixelTracking, setPixelTracking, selectedAdAccount }) {
             <div className="space-y-4">
                 {EVENT_ROWS.map((row) => (
                     <div key={row.key} className="space-y-1.5">
-                        <div>
-                            <p className="font-medium text-[14px]">{row.label}</p>
-                            <p className="text-sm text-gray-400">{row.description}</p>
-                        </div>
+                        <p className="font-medium text-[14px]">{row.label}</p>
                         <PixelSelect
                             pixels={pixels}
                             value={pixelTracking?.[row.key] || null}
