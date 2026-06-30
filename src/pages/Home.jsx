@@ -852,15 +852,16 @@ export default function Home() {
             apiBaseUrl: API_BASE_URL,
             captureCurrentSnapshot,
             cloneSnapshotValue,
+            hydrateFromSnapshot,
             makeId: uuidv4,
             existingVariants: variants,
-            activeVariantId,
             setVariants,
+            setActiveVariantId,
             setFileVariantMap,
             setDriveFiles,
             toast,
         });
-    }, [campaigns, selectedAdAccount, captureCurrentSnapshot, variants, activeVariantId, setVariants, setFileVariantMap, setDriveFiles]);
+    }, [campaigns, selectedAdAccount, captureCurrentSnapshot, hydrateFromSnapshot, variants, setVariants, setActiveVariantId, setFileVariantMap, setDriveFiles]);
 
     const handleDeleteVariant = useCallback((variantId) => {
         if (variantId === "default") return;

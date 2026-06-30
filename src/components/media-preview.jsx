@@ -650,7 +650,7 @@ export default function MediaPreview({
   const [removingMediaIds, setRemovingMediaIds] = useState(new Set());
 
   const sensors = useSensors(useSensor(PointerSensor));
-  const hideUngroupedVariantDropdowns = isCarouselAd || enablePlacementCustomization;
+  const hideUngroupedVariantDropdowns = isCarouselAd;
 
   const groupedFileIds = useMemo(
     () => new Set(fileGroups.flatMap((group) => getGroupFileIds(group))),

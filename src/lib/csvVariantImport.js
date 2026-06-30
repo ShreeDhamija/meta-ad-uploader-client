@@ -187,9 +187,9 @@ function makeLetterAllocator(existingVariants) {
 
 // ctx: {
 //   campaigns, selectedAdAccount, apiBaseUrl,
-//   captureCurrentSnapshot, cloneSnapshotValue, makeId,
-//   existingVariants, activeVariantId,
-//   setVariants, setFileVariantMap, setDriveFiles, toast,
+//   captureCurrentSnapshot, cloneSnapshotValue, hydrateFromSnapshot, makeId,
+//   existingVariants,
+//   setVariants, setActiveVariantId, setFileVariantMap, setDriveFiles, toast,
 // }
 export async function importVariantsFromCsv(file, ctx) {
   const {
@@ -198,10 +198,11 @@ export async function importVariantsFromCsv(file, ctx) {
     apiBaseUrl,
     captureCurrentSnapshot,
     cloneSnapshotValue,
+    hydrateFromSnapshot,
     makeId,
     existingVariants,
-    activeVariantId,
     setVariants,
+    setActiveVariantId,
     setFileVariantMap,
     setDriveFiles,
     toast,
@@ -279,9 +280,10 @@ export async function importVariantsFromCsv(file, ctx) {
   const warnings = [];
   const nextLetter = makeLetterAllocator(existingVariants);
 
-  const newVariants = [];
+  const newVariants = [];      // variants for rows 1..N (row 0 → Default)
   const newDriveFiles = [];
   const fileVariantAssignments = {};
+  let defaultSnapshot = null;  // row 0 populates the existing Default variant
 
   for (let idx = 0; idx < rows.length; idx++) {
     const { fields, driveFileId } = rows[idx];
@@ -321,7 +323,8 @@ export async function importVariantsFromCsv(file, ctx) {
       );
     }
 
-    const variantId = makeId();
+    // Row 0 populates the existing Default variant; the rest become new variants.
+    const variantId = idx === 0 ? "default" : makeId();
 
     if (driveFileId) {
       if (!googleToken) {
@@ -338,15 +341,22 @@ export async function importVariantsFromCsv(file, ctx) {
       }
     }
 
-    newVariants.push({ id: variantId, name: `Variant ${nextLetter()}`, snapshot: snap });
+    if (idx === 0) {
+      defaultSnapshot = snap;
+    } else {
+      newVariants.push({ id: variantId, name: `Variant ${nextLetter()}`, snapshot: snap });
+    }
   }
 
-  // Preserve the currently-active variant's live edits, then append the new ones.
-  const currentSnapshot = captureCurrentSnapshot();
+  // Row 0 → Default (the active variant): clear its stored snapshot and load it
+  // into the live form. Rows 1..N are appended as new variants; any pre-existing
+  // non-default variants are kept untouched.
   setVariants((prev) => [
-    ...prev.map((v) => (v.id === activeVariantId ? { ...v, snapshot: currentSnapshot } : v)),
+    ...prev.map((v) => (v.id === "default" ? { ...v, snapshot: null } : v)),
     ...newVariants,
   ]);
+  setActiveVariantId("default");
+  if (defaultSnapshot) hydrateFromSnapshot(defaultSnapshot);
 
   if (newDriveFiles.length > 0) {
     setDriveFiles((prev) => {
@@ -356,10 +366,13 @@ export async function importVariantsFromCsv(file, ctx) {
     setFileVariantMap((prev) => ({ ...prev, ...fileVariantAssignments }));
   }
 
-  const matchedAdSets = newVariants.filter((v) => (v.snapshot.selectedAdSets || []).length > 0).length;
+  const totalVariants = newVariants.length + (defaultSnapshot ? 1 : 0);
+  const matchedAdSets =
+    (defaultSnapshot && (defaultSnapshot.selectedAdSets || []).length > 0 ? 1 : 0) +
+    newVariants.filter((v) => (v.snapshot.selectedAdSets || []).length > 0).length;
   const driveCount = newDriveFiles.length;
   toast.success(
-    `Imported ${newVariants.length} variant${newVariants.length !== 1 ? "s" : ""}` +
+    `Imported ${totalVariants} variant${totalVariants !== 1 ? "s" : ""}` +
       ` · ${matchedAdSets} ad set${matchedAdSets !== 1 ? "s" : ""} matched` +
       (driveCount > 0 ? ` · ${driveCount} Drive file${driveCount !== 1 ? "s" : ""} attached` : "")
   );
@@ -372,5 +385,5 @@ export async function importVariantsFromCsv(file, ctx) {
     );
   }
 
-  return { created: newVariants.length, warnings };
+  return { created: totalVariants, warnings };
 }
