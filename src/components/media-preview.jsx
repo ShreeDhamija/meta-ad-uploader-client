@@ -1588,7 +1588,7 @@ export default function MediaPreview({
                         htmlFor="placementCustomization"
                         className={`text-sm font-medium leading-none ${hasAnyDynamicCreativeAdSets ? 'cursor-not-allowed opacity-50' : 'peer-disabled:cursor-not-allowed peer-disabled:opacity-70'}`}
                       >
-                        Enable placement customization
+                        Placement Customization <span className="text-gray-500">(Group Square & Vertical Assets)</span>
                         {hasAnyDynamicCreativeAdSets && (
                           <span className="text-xs text-gray-400 ml-1">(not available for dynamic creative ad sets)</span>
                         )}
