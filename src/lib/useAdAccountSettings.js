@@ -91,6 +91,7 @@ export default function useAdAccountSettings(adAccountId) {
                         conversionEvent: null,
                         multiAdvertiserAds: false,
                         customVariables: [],
+                        pixelTracking: { websitePixelId: null, offlineDatasetId: null },
                     });
                 } else {
                     setDocumentExists(true);
@@ -130,6 +131,7 @@ export default function useAdAccountSettings(adAccountId) {
                         conversionEvent: s.conversionEvent || null,
                         multiAdvertiserAds: s.multiAdvertiserAds ?? false,
                         customVariables: Array.isArray(s.customVariables) ? s.customVariables : [],
+                        pixelTracking: s.pixelTracking || { websitePixelId: null, offlineDatasetId: null },
 
                     });
                 }

@@ -18,6 +18,7 @@ import { saveSettings } from "@/lib/saveSettings"
 import useAdAccountSettings from "@/lib/useAdAccountSettings"
 import useTeamSync from "@/lib/useTeamSync"
 import CreativeEnhancements from "./CreativeEnhancements"
+import PixelTracking from "./PixelTracking"
 import ReorderAdNameParts from "@/components/ui/ReorderAdNameParts"
 import LabelIcon from '@/assets/icons/label.svg?react';
 import confetti from 'canvas-confetti'
@@ -42,6 +43,11 @@ const DEFAULT_ENHANCEMENTS = {
   reveal: false,
   summary: false,
   animation: false,
+};
+
+const DEFAULT_PIXEL_TRACKING = {
+  websitePixelId: null,
+  offlineDatasetId: null,
 };
 
 // Single cache key for draft settings
@@ -100,6 +106,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
   const [enhancements, setEnhancements] = useState(DEFAULT_ENHANCEMENTS)
   const [adNameFormulaV2, setAdNameFormulaV2] = useState({ rawInput: "" }) // Add this line
   const [customVariables, setCustomVariables] = useState([])
+  const [pixelTracking, setPixelTracking] = useState(DEFAULT_PIXEL_TRACKING)
   const [isDirty, setIsDirty] = useState(false)
   const [initialSettings, setInitialSettings] = useState({})
   const [isReauthOpen, setIsReauthOpen] = useState(false)
@@ -208,7 +215,8 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
       JSON.stringify(enhancements) !== JSON.stringify(initialSettings.creativeEnhancements) ||
       adNameFormulaV2?.rawInput !== initialSettings.adNameFormulaV2?.rawInput ||
       multiAdvertiserAds !== initialSettings.multiAdvertiserAds ||
-      displayLink !== initialSettings.displayLink
+      displayLink !== initialSettings.displayLink ||
+      JSON.stringify(pixelTracking) !== JSON.stringify(initialSettings.pixelTracking)
     );
   }, [
     selectedPage,
@@ -222,7 +230,8 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
     multiAdvertiserAds,  // ADD THIS
     selectedAdAccount,
     areUtmPairsEqual,
-    displayLink
+    displayLink,
+    pixelTracking
 
 
   ]);
@@ -247,6 +256,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
       multiAdvertiserAds: adSettings.multiAdvertiserAds || false,
       customVariables: adSettings.customVariables || [],
       displayLink: adSettings.displayLink || "",
+      pixelTracking: adSettings.pixelTracking || DEFAULT_PIXEL_TRACKING,
 
 
     };
@@ -270,6 +280,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
       setCustomVariables([]);  // ← ADD THIS
       setInitialSettings({});
       setDisplayLink("");
+      setPixelTracking(DEFAULT_PIXEL_TRACKING);
 
     }
 
@@ -300,6 +311,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
     setMultiAdvertiserAds(initialSettings.multiAdvertiserAds);
     setCustomVariables(initialSettings.customVariables);
     setDisplayLink(initialSettings.displayLink);
+    setPixelTracking(initialSettings.pixelTracking || DEFAULT_PIXEL_TRACKING);
 
 
     // Clear the cached draft
@@ -329,6 +341,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
       multiAdvertiserAds: multiAdvertiserAds,
       customVariables: customVariables,
       displayLink: displayLink,
+      pixelTracking: pixelTracking,
 
 
     };
@@ -363,6 +376,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
         multiAdvertiserAds: multiAdvertiserAds,
         customVariables: customVariables,
         displayLink: displayLink,
+        pixelTracking: pixelTracking,
 
 
       };
@@ -390,7 +404,8 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
     multiAdvertiserAds,
     isFirstEverSave,
     customVariables,
-    displayLink
+    displayLink,
+    pixelTracking
   ]);
 
 
@@ -449,6 +464,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
         multiAdvertiserAds,
         customVariables,
         displayLink,     // ← ADD THIS
+        pixelTracking,
         timestamp: Date.now()
       };
 
@@ -467,7 +483,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
         // Ignore parse errors
       }
     }
-  }, [selectedAdAccount, hasChanges, selectedPage, selectedInstagram, links, utmPairs, defaultCTA, enhancements, adNameFormulaV2, multiAdvertiserAds, customVariables, displayLink]);
+  }, [selectedAdAccount, hasChanges, selectedPage, selectedInstagram, links, utmPairs, defaultCTA, enhancements, adNameFormulaV2, multiAdvertiserAds, customVariables, displayLink, pixelTracking]);
 
 
 
@@ -511,6 +527,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
           setMultiAdvertiserAds(draft.multiAdvertiserAds);
           setCustomVariables(draft.customVariables || []);
           setDisplayLink(draft.displayLink || "");
+          setPixelTracking(draft.pixelTracking || DEFAULT_PIXEL_TRACKING);
           setInitialSettings(initial);
           cacheRestoredRef.current = true;
           return;
@@ -532,6 +549,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
     setMultiAdvertiserAds(initial.multiAdvertiserAds);
     setCustomVariables(initial.customVariables || []);  // ← ADD THIS
     setDisplayLink(initial.displayLink || "");
+    setPixelTracking(initial.pixelTracking || DEFAULT_PIXEL_TRACKING);
 
   }, [adSettings, selectedAdAccount, calculateInitialSettings]);
 
@@ -814,6 +832,11 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
 
           <CreativeEnhancements enhancements={enhancements} setEnhancements={setEnhancements} />
           <MultiAdvertiserAds enabled={multiAdvertiserAds} setEnabled={setMultiAdvertiserAds} />
+          <PixelTracking
+            pixelTracking={pixelTracking}
+            setPixelTracking={setPixelTracking}
+            selectedAdAccount={selectedAdAccount}
+          />
 
 
         </div>
