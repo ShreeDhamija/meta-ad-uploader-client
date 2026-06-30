@@ -16,6 +16,7 @@ import { useAppData } from "@/lib/AppContext"
 import useGlobalSettings from "@/lib/useGlobalSettings"
 import useAdAccountSettings from "@/lib/useAdAccountSettings"
 import useSubscription from "@/lib/useSubscriptionSettings"
+import { importVariantsFromCsv } from "@/lib/csvVariantImport"
 import { saveSettings } from "@/lib/saveSettings"
 import AdAccountSelectionPopup from "../components/AdAccountSelectionPopup"
 import { useIntercom } from "@/lib/useIntercom";
@@ -842,6 +843,25 @@ export default function Home() {
         setSelectedFiles(new Set());
     }, [activeVariantId, captureCurrentSnapshot, getVariantSnapshot, variants]);
 
+    // CSV → variants. Thin wrapper around the helper; passes the state + setters
+    // it needs so all of the parsing/matching/Drive logic lives in csvVariantImport.
+    const handleImportCsv = useCallback((file) => {
+        return importVariantsFromCsv(file, {
+            campaigns,
+            selectedAdAccount,
+            apiBaseUrl: API_BASE_URL,
+            captureCurrentSnapshot,
+            cloneSnapshotValue,
+            makeId: uuidv4,
+            existingVariants: variants,
+            activeVariantId,
+            setVariants,
+            setFileVariantMap,
+            setDriveFiles,
+            toast,
+        });
+    }, [campaigns, selectedAdAccount, captureCurrentSnapshot, variants, activeVariantId, setVariants, setFileVariantMap, setDriveFiles]);
+
     const handleDeleteVariant = useCallback((variantId) => {
         if (variantId === "default") return;
 
@@ -1411,6 +1431,7 @@ export default function Home() {
                             isFormFieldModified={isFormFieldModified}
                             variants={variants}
                             activeVariantId={activeVariantId}
+                            onImportCsv={handleImportCsv}
                         />
 
                         <AdCreationForm
