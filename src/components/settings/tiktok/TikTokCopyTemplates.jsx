@@ -578,7 +578,7 @@ export default function TikTokCopyTemplates({
                                     Saving...
                                 </>
                             )
-                            : !templateName.trim() && texts.some(hasFilledTextValue)
+                            : !templateName.trim() && text.trim()
                                 ? "Enter Template Name to Save"
                                 : "Save Template"
                     }
