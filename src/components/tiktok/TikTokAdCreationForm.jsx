@@ -1051,9 +1051,7 @@ export default function TikTokAdCreationForm({
       const uid = localStorage.getItem('tiktok_uid');
       const token = localStorage.getItem('tiktok_token');
       const identityType = selectedIdentityObj?.identity_type || 'BC_AUTH_TT';
-      const regionCodesVal = selectedLocationIds.length > 0 ? selectedLocationIds : ["ID"];
-
-      const url = `${API_BASE_URL}/api/tiktok/showcase/products?advertiserId=${selectedAdvertiser}&identityId=${selectedIdentity}&identityType=${identityType}&regionCodes=${JSON.stringify(regionCodesVal)}`;
+      const url = `${API_BASE_URL}/api/tiktok/showcase/products?advertiserId=${selectedAdvertiser}&identityId=${selectedIdentity}&identityType=${identityType}`;
 
       fetch(url, {
         credentials: 'include',
