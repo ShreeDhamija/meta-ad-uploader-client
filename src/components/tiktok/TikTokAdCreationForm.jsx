@@ -3374,7 +3374,7 @@ export default function TikTokAdCreationForm({
       errors.push("Select at least one Call to Action")
     }
 
-    if (urlMode === 'WEBSITE') {
+    if (!isShoppingAdGroup && urlMode === 'WEBSITE') {
       if (!landingUrl || !landingUrl.trim()) {
         errors.push("Landing Page URL is required")
       } else {
@@ -3397,7 +3397,7 @@ export default function TikTokAdCreationForm({
     selectedAdvertiser, selectedCampaign, showDuplicateAdGroupBlock, duplicateAdGroup,
     selectedAdGroup, newAdGroupName, selectedIdentity, adType, importedPosts,
     adTexts, adNameFormulaV2, adName, cta, urlMode, landingUrl,
-    files, driveFiles, dropboxFiles, tiktokLibraryFiles
+    files, driveFiles, dropboxFiles, tiktokLibraryFiles, isShoppingAdGroup
   ])
 
   const validationErrors = getValidationErrors()
@@ -5728,13 +5728,13 @@ export default function TikTokAdCreationForm({
                     )}
                   </Button>
 
-                  {urlMode === 'WEBSITE' && !landingUrl?.trim() && (
+                  {!isShoppingAdGroup && urlMode === 'WEBSITE' && !landingUrl?.trim() && (
                     <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
                       Please provide a link URL
                     </div>
                   )}
 
-                  {urlMode === 'WEBSITE' && landingUrl?.trim() && !(() => {
+                  {!isShoppingAdGroup && urlMode === 'WEBSITE' && landingUrl?.trim() && !(() => {
                     try {
                       const urlString = landingUrl.trim();
                       if (/^https?:\/\//i.test(urlString)) {
