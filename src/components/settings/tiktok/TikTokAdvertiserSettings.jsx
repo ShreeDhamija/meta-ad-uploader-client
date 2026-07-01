@@ -114,11 +114,32 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
     const selectedProductName = settings?.catalogSelection?.product_name || null;
     const selectedProductImage = settings?.catalogSelection?.product_image_url || null;
 
+    // ── Store & Product state ──
+    const [stores, setStores] = useState([]);
+    const [loadingStores, setLoadingStores] = useState(false);
+    const [storeError, setStoreError] = useState(null);
+    const [openStore, setOpenStore] = useState(false);
+
+    const [storeProducts, setStoreProducts] = useState([]);
+    const [loadingStoreProducts, setLoadingStoreProducts] = useState(false);
+    const [storeProductError, setStoreProductError] = useState(null);
+    const [openStoreProduct, setOpenStoreProduct] = useState(false);
+
+    const selectedStoreId = settings?.storeSelection?.store_id || null;
+    const selectedStoreName = settings?.storeSelection?.store_name || null;
+    const selectedStoreProductId = settings?.storeSelection?.product_id || null;
+    const selectedStoreProductName = settings?.storeSelection?.product_name || null;
+    const selectedStoreProductImage = settings?.storeSelection?.product_image_url || null;
+    const selectedStoreBcId = settings?.storeSelection?.bc_id || null;
+    const selectedStoreCatalogId = settings?.storeSelection?.catalog_id || null;
+
     // Search query states for manual dropdown filtering
     const [advertiserSearch, setAdvertiserSearch] = useState("");
     const [identitySearch, setIdentitySearch] = useState("");
     const [catalogSearch, setCatalogSearch] = useState("");
     const [productSearch, setProductSearch] = useState("");
+    const [storeSearch, setStoreSearch] = useState("");
+    const [storeProductSearch, setStoreProductSearch] = useState("");
 
     const tiktokHeaders = useCallback(() => {
         const uid = localStorage.getItem('tiktok_uid');
@@ -204,6 +225,76 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
         }
     }, []);
 
+    // ── Fetch stores from TikTok via server ──
+    const fetchStores = useCallback(async (advId) => {
+        if (!advId) return;
+        setLoadingStores(true);
+        setStoreError(null);
+        try {
+            const uid = localStorage.getItem('tiktok_uid');
+            const token = localStorage.getItem('tiktok_token');
+            const url = `${API_BASE_URL}/api/tiktok/store/list?advertiserId=${advId}`;
+
+            const res = await fetch(url, {
+                credentials: 'include',
+                headers: {
+                    ...(uid && { 'x-tiktok-user-id': uid }),
+                    ...(token && { 'x-tiktok-token': token }),
+                }
+            });
+
+            const data = await res.json();
+            if (data.success) {
+                setStores(data.stores || []);
+            } else {
+                setStoreError(data.error || 'Failed to load stores');
+                setStores([]);
+            }
+        } catch (err) {
+            console.error("❌ [Client fetchStores] Error caught:", err);
+            setStoreError(err.message);
+            setStores([]);
+        } finally {
+            setLoadingStores(false);
+        }
+    }, []);
+
+    // ── Fetch products for a selected store ──
+    const fetchStoreProducts = useCallback(async (advId, storeId, bcId) => {
+        if (!advId || !storeId) return;
+        setLoadingStoreProducts(true);
+        setStoreProductError(null);
+        setStoreProducts([]);
+        try {
+            const uid = localStorage.getItem('tiktok_uid');
+            const token = localStorage.getItem('tiktok_token');
+            let url = `${API_BASE_URL}/api/tiktok/store/products?advertiserId=${advId}&store_id=${storeId}`;
+            if (bcId) {
+                url += `&bc_id=${bcId}`;
+            }
+
+            const res = await fetch(url, {
+                credentials: 'include',
+                headers: {
+                    ...(uid && { 'x-tiktok-user-id': uid }),
+                    ...(token && { 'x-tiktok-token': token }),
+                }
+            });
+
+            const data = await res.json();
+            if (data.success) {
+                setStoreProducts(data.products || []);
+            } else {
+                setStoreProductError(data.error || 'Failed to load store products');
+            }
+        } catch (err) {
+            console.error("❌ [Client fetchStoreProducts] Error caught:", err);
+            setStoreProductError(err.message);
+        } finally {
+            setLoadingStoreProducts(false);
+        }
+    }, []);
+
     const handleRefreshAdvertisers = async () => {
         setRefreshingAdvertisers(true);
         try {
@@ -231,9 +322,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
         }
     }, [settings, initialSettings]);
 
-
-
-    // Fetch identities + catalogs when advertiser changes
+    // Fetch identities + catalogs + stores when advertiser changes
     useEffect(() => {
         if (selectedAdvertiser) {
             fetchTikTokIdentities(selectedAdvertiser);
@@ -242,10 +331,16 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
             setCatalogProducts([]);
             setCatalogError(null);
             setProductError(null);
-            // Load catalogs
             fetchCatalogs(selectedAdvertiser);
+
+            // Reset store state
+            setStores([]);
+            setStoreProducts([]);
+            setStoreError(null);
+            setStoreProductError(null);
+            fetchStores(selectedAdvertiser);
         }
-    }, [selectedAdvertiser, fetchTikTokIdentities, fetchCatalogs]);
+    }, [selectedAdvertiser, fetchTikTokIdentities, fetchCatalogs, fetchStores]);
 
     // Fetch catalog products when selected catalog changes (or when settings are first loaded)
     const activeCatalogId = settings?.catalogSelection?.catalog_id;
@@ -256,6 +351,17 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
             setCatalogProducts([]);
         }
     }, [selectedAdvertiser, activeCatalogId, fetchCatalogProducts]);
+
+    // Fetch store products when selected store changes (or when settings are first loaded)
+    const activeStoreId = settings?.storeSelection?.store_id;
+    const activeStoreBcId = settings?.storeSelection?.bc_id;
+    useEffect(() => {
+        if (selectedAdvertiser && activeStoreId) {
+            fetchStoreProducts(selectedAdvertiser, activeStoreId, activeStoreBcId);
+        } else {
+            setStoreProducts([]);
+        }
+    }, [selectedAdvertiser, activeStoreId, activeStoreBcId, fetchStoreProducts]);
 
     // Auto-select the first advertiser if none is currently selected
     useEffect(() => {
@@ -1061,6 +1167,272 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                                                         )}
                                                                     </div>
                                                                     {selectedProductId === prod.product_id && <Check className="w-4 h-4 text-black shrink-0" />}
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    );
+                                                })()}
+                                            </div>
+                                        </div>
+                                    </PopoverContent>
+                                </Popover>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* ─── Store & Product Preferences (Showcase) ─── */}
+                    <div className="bg-[#f5f5f5] rounded-2xl p-4 space-y-3">
+                        <div className="flex items-center justify-between mb-1">
+                            <div className="flex items-center gap-2">
+                                <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 21v-7.5a.75.75 0 0 1 .75-.75h3a.75.75 0 0 1 .75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349M3.12 11.005 12 3 l8.88 8.005M12 3v18M4.88 12.18V21M8.25 15v6m3-6v6" />
+                                </svg>
+                                <h3 className="font-medium text-[14px] text-zinc-950">Store &amp; Product Preferences</h3>
+                                {(loadingStores || loadingStoreProducts) && (
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin text-gray-400" />
+                                )}
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    fetchStores(selectedAdvertiser);
+                                    if (selectedStoreId) fetchStoreProducts(selectedAdvertiser, selectedStoreId, selectedStoreBcId);
+                                }}
+                                disabled={loadingStores}
+                                className="text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-40"
+                                title="Refresh stores"
+                            >
+                                <RefreshCcw className={`w-3.5 h-3.5 ${loadingStores ? 'animate-spin' : ''}`} />
+                            </button>
+                        </div>
+
+                        <p className="text-xs text-gray-500">
+                            Choose a showcase store and product. Your selection will auto-populate in the TikTok Ad Creation form.
+                        </p>
+
+                        {/* Store Error */}
+                        {storeError && (
+                            <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl p-3">
+                                <Info className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
+                                <p className="text-xs text-red-600">{storeError}</p>
+                            </div>
+                        )}
+
+                        {/* Store Dropdown */}
+                        <div className="space-y-1">
+                            <label className="text-xs font-semibold text-gray-700">Store</label>
+                            <Popover open={openStore} onOpenChange={(open) => {
+                                setOpenStore(open);
+                                if (!open) setStoreSearch("");
+                            }}>
+                                <PopoverTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        disabled={loadingStores || !selectedAdvertiser}
+                                        className="w-full justify-between border border-gray-300 rounded-2xl bg-white shadow flex items-center hover:bg-white px-3 py-4.5"
+                                    >
+                                        {loadingStores ? (
+                                            <div className="flex items-center gap-2">
+                                                <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+                                                <span className="text-sm text-gray-400">Loading stores...</span>
+                                            </div>
+                                        ) : (
+                                            <span className="text-sm font-medium text-gray-900 truncate">
+                                                {selectedStoreName || 'Select a Store'}
+                                            </span>
+                                        )}
+                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent
+                                    className="min-w-[--radix-popover-trigger-width] w-auto !max-w-none p-0 rounded-xl bg-white border-gray-200 shadow-2xl"
+                                    align="start"
+                                    sideOffset={4}
+                                    side="top"
+                                    avoidCollisions={true}
+                                    style={{ minWidth: "var(--radix-popover-trigger-width)", width: "auto" }}
+                                >
+                                    <div className="flex flex-col overflow-hidden rounded-xl bg-white text-gray-900">
+                                        <div className="mx-2 mt-2 mb-1 flex items-center rounded-2xl border border-gray-300 bg-white px-3 shadow">
+                                            <Search className="mr-2 h-4 w-4 shrink-0 opacity-50 text-gray-500" />
+                                            <input
+                                                type="text"
+                                                placeholder="Search stores..."
+                                                value={storeSearch}
+                                                onChange={(e) => setStoreSearch(e.target.value)}
+                                                className="flex h-11 w-full bg-transparent py-3 text-sm outline-none placeholder:text-gray-400 text-gray-900 border-none focus:ring-0"
+                                            />
+                                        </div>
+                                        <div className="max-h-[300px] overflow-y-auto rounded-xl p-1">
+                                            {(() => {
+                                                const filtered = stores.filter(st => {
+                                                    const name = (st.store_name || "").toLowerCase();
+                                                    const id = String(st.store_id || "").toLowerCase();
+                                                    const q = storeSearch.toLowerCase();
+                                                    return name.includes(q) || id.includes(q);
+                                                });
+                                                if (filtered.length === 0) {
+                                                    return (
+                                                        <div className="py-6 text-center text-xs text-gray-500">
+                                                            {stores.length === 0 ? 'No stores found for this advertiser.' : 'No results.'}
+                                                        </div>
+                                                    );
+                                                }
+                                                return (
+                                                    <div className="space-y-0.5">
+                                                        {filtered.map((st) => (
+                                                            <button
+                                                                type="button"
+                                                                key={st.store_id}
+                                                                onClick={() => {
+                                                                    setSettings(prev => ({
+                                                                        ...prev,
+                                                                        storeSelection: {
+                                                                            store_id: st.store_id,
+                                                                            store_name: st.store_name,
+                                                                            product_id: null,
+                                                                            product_name: null,
+                                                                            product_image_url: null,
+                                                                            bc_id: st.store_authorized_bc_id || null,
+                                                                            catalog_id: st.catalog_id || null
+                                                                        }
+                                                                    }));
+                                                                    setStoreProducts([]);
+                                                                    setOpenStore(false);
+                                                                    setStoreSearch("");
+                                                                }}
+                                                                className={cn(
+                                                                    "w-full text-left px-3 py-2 cursor-pointer rounded-xl transition-colors duration-150 hover:bg-gray-100 flex items-center gap-2",
+                                                                    selectedStoreId === st.store_id ? "bg-gray-50 font-medium" : ""
+                                                                )}
+                                                            >
+                                                                <div className="flex-1 min-w-0">
+                                                                    <p className="text-sm font-semibold text-gray-900 truncate">{st.store_name}</p>
+                                                                    <p className="text-xs text-gray-400 font-mono">{st.store_id}</p>
+                                                                </div>
+                                                                {selectedStoreId === st.store_id && <Check className="w-4 h-4 text-black shrink-0" />}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                );
+                                            })()}
+                                        </div>
+                                    </div>
+                                </PopoverContent>
+                            </Popover>
+                        </div>
+
+                        {/* Store Products Dropdown — shown only when a store is selected */}
+                        {selectedStoreId && (
+                            <div className="space-y-1">
+                                <label className="text-xs font-semibold text-gray-700">Store Product</label>
+                                {storeProductError && (
+                                    <p className="text-xs text-red-500 mb-1">{storeProductError}</p>
+                                )}
+                                <Popover open={openStoreProduct} onOpenChange={(open) => {
+                                    setOpenStoreProduct(open);
+                                    if (!open) setStoreProductSearch("");
+                                }}>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            disabled={loadingStoreProducts}
+                                            className="w-full justify-between border border-gray-300 rounded-2xl bg-white shadow flex items-center hover:bg-white px-3 py-4.5"
+                                        >
+                                            {loadingStoreProducts ? (
+                                                <div className="flex items-center gap-2">
+                                                    <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+                                                    <span className="text-sm text-gray-400">Loading store products...</span>
+                                                </div>
+                                            ) : (
+                                                <div className="flex items-center gap-2 min-w-0">
+                                                    {selectedStoreProductImage && (
+                                                        <img
+                                                            src={selectedStoreProductImage}
+                                                            alt=""
+                                                            className="w-6 h-6 rounded-full object-cover shrink-0 border border-gray-100"
+                                                        />
+                                                    )}
+                                                    <span className="text-sm font-medium text-gray-900 truncate">
+                                                        {selectedStoreProductName || 'Select a Store Product'}
+                                                    </span>
+                                                </div>
+                                            )}
+                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent
+                                        className="min-w-[--radix-popover-trigger-width] w-auto !max-w-none p-0 rounded-xl bg-white border-gray-200 shadow-2xl"
+                                        align="start"
+                                        sideOffset={4}
+                                        side="top"
+                                        avoidCollisions={true}
+                                        style={{ minWidth: "var(--radix-popover-trigger-width)", width: "auto" }}
+                                    >
+                                        <div className="flex flex-col overflow-hidden rounded-xl bg-white text-gray-900">
+                                            <div className="mx-2 mt-2 mb-1 flex items-center rounded-2xl border border-gray-300 bg-white px-3 shadow">
+                                                <Search className="mr-2 h-4 w-4 shrink-0 opacity-50 text-gray-500" />
+                                                <input
+                                                    type="text"
+                                                    placeholder="Search store products..."
+                                                    value={storeProductSearch}
+                                                    onChange={(e) => setStoreProductSearch(e.target.value)}
+                                                    className="flex h-11 w-full bg-transparent py-3 text-sm outline-none placeholder:text-gray-400 text-gray-900 border-none focus:ring-0"
+                                                />
+                                            </div>
+                                            <div className="max-h-[360px] overflow-y-auto rounded-xl p-1">
+                                                {(() => {
+                                                    const filtered = storeProducts.filter(prod => {
+                                                        const name = (prod.title || "").toLowerCase();
+                                                        const id = String(prod.item_group_id || "").toLowerCase();
+                                                        const q = storeProductSearch.toLowerCase();
+                                                        return name.includes(q) || id.includes(q);
+                                                    });
+                                                    if (filtered.length === 0) {
+                                                        return (
+                                                            <div className="py-6 text-center text-xs text-gray-500">
+                                                                {storeProducts.length === 0 ? 'No products in this store.' : 'No results.'}
+                                                            </div>
+                                                        );
+                                                    }
+                                                    return (
+                                                        <div className="space-y-0.5">
+                                                            {filtered.map((prod) => (
+                                                                <button
+                                                                    type="button"
+                                                                    key={prod.item_group_id}
+                                                                    onClick={() => {
+                                                                        setSettings(prev => ({
+                                                                            ...prev,
+                                                                            storeSelection: {
+                                                                                ...(prev?.storeSelection || {}),
+                                                                                product_id: prod.item_group_id,
+                                                                                product_name: prod.title,
+                                                                                product_image_url: prod.product_image_url || null,
+                                                                            }
+                                                                        }));
+                                                                        setOpenStoreProduct(false);
+                                                                        setStoreProductSearch("");
+                                                                    }}
+                                                                    className={cn(
+                                                                        "w-full text-left px-3 py-2 cursor-pointer rounded-xl transition-colors duration-150 hover:bg-gray-100 flex items-center gap-3",
+                                                                        selectedStoreProductId === prod.item_group_id ? "bg-gray-50 font-medium" : ""
+                                                                    )}
+                                                                >
+                                                                    {prod.product_image_url && (
+                                                                        <img
+                                                                            src={prod.product_image_url}
+                                                                            alt=""
+                                                                            className="w-6 h-6 rounded-full object-cover shrink-0 border border-gray-100"
+                                                                        />
+                                                                    )}
+                                                                    <div className="flex-1 min-w-0">
+                                                                        <p className="text-sm font-semibold text-gray-900 truncate">{prod.title}</p>
+                                                                        {prod.min_price && (
+                                                                            <p className="text-xs text-gray-400">{prod.min_price} {prod.currency}</p>
+                                                                        )}
+                                                                    </div>
+                                                                    {selectedStoreProductId === prod.item_group_id && <Check className="w-4 h-4 text-black shrink-0" />}
                                                                 </button>
                                                             ))}
                                                         </div>
