@@ -923,7 +923,7 @@ export default function TikTokAdCreationForm({
   }, [selectedAdvertiser, formCatalogId]);
 
   // ── Showcase Store & Store Products computation and fetches ──
-  
+
   const showStoreProductSelection = useMemo(() => {
     return selectedAdGroup.some(agId => {
       const agObj = adGroups.find(g => g.adgroup_id === agId);
@@ -1516,10 +1516,13 @@ export default function TikTokAdCreationForm({
             if (currentIdentityId) creative.identity_id = currentIdentityId
             if (currentIdentityAuthorizedBcId) creative.identity_authorized_bc_id = currentIdentityAuthorizedBcId
 
-            if (isShoppingAg && catalogIdToUse) {
-              creative.catalog_id = catalogIdToUse;
+            if (isShoppingAg) {
+              if (catalogIdToUse) creative.catalog_id = catalogIdToUse;
               if (skuIdToUse) creative.sku_id = skuIdToUse;
               if (itemGroupIdToUse) creative.item_group_id = itemGroupIdToUse;
+              if (productSource === 'SHOWCASE') {
+                creative.store_id = formStoreId || adGroupObj?.store_id || null;
+              }
             }
 
             creatives.push(creative)
@@ -1555,10 +1558,13 @@ export default function TikTokAdCreationForm({
                 if (currentIdentityId) creative.identity_id = currentIdentityId
                 if (currentIdentityAuthorizedBcId) creative.identity_authorized_bc_id = currentIdentityAuthorizedBcId
 
-                if (isShoppingAg && catalogIdToUse) {
-                  creative.catalog_id = catalogIdToUse;
+                if (isShoppingAg) {
+                  if (catalogIdToUse) creative.catalog_id = catalogIdToUse;
                   if (skuIdToUse) creative.sku_id = skuIdToUse;
                   if (itemGroupIdToUse) creative.item_group_id = itemGroupIdToUse;
+                  if (productSource === 'SHOWCASE') {
+                    creative.store_id = formStoreId || adGroupObj?.store_id || null;
+                  }
                 }
 
                 creatives.push(creative)
@@ -1601,10 +1607,13 @@ export default function TikTokAdCreationForm({
                   if (currentIdentityId) creative.identity_id = currentIdentityId
                   if (currentIdentityAuthorizedBcId) creative.identity_authorized_bc_id = currentIdentityAuthorizedBcId
 
-                  if (isShoppingAg && catalogIdToUse) {
-                    creative.catalog_id = catalogIdToUse;
+                  if (isShoppingAg) {
+                    if (catalogIdToUse) creative.catalog_id = catalogIdToUse;
                     if (skuIdToUse) creative.sku_id = skuIdToUse;
                     if (itemGroupIdToUse) creative.item_group_id = itemGroupIdToUse;
+                    if (productSource === 'SHOWCASE') {
+                      creative.store_id = formStoreId || adGroupObj?.store_id || null;
+                    }
                   }
 
                   creatives.push(creative)
