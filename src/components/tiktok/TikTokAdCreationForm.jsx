@@ -970,13 +970,6 @@ export default function TikTokAdCreationForm({
 
   // ── Showcase Store & Store Products computation and fetches ──
 
-  const showStoreProductSelection = useMemo(() => {
-    return selectedAdGroup.some(agId => {
-      const agObj = adGroups.find(g => g.adgroup_id === agId);
-      return agObj && agObj.product_source === 'SHOWCASE';
-    });
-  }, [selectedAdGroup, adGroups]);
-
   const activeFormStoreProductImage = useMemo(() => {
     const firstId = Array.isArray(formStoreProductId) ? formStoreProductId[0] : formStoreProductId;
     if (!firstId) return null;
