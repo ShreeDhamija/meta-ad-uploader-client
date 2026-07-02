@@ -4802,6 +4802,12 @@ export default function TikTokAdCreationForm({
 
               {/* 4. Ad Copy / Caption with template picker */}
               {adType !== 'SPARK' && (
+                <div className="space-y-4">
+                  <div className="space-y-3">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Label className="flex items-center gap-2 mb-0">
+                          <TemplateIcon className="w-4 h-4 text-zinc-600" />
                           Select a Copy Template
                         </Label>
 
