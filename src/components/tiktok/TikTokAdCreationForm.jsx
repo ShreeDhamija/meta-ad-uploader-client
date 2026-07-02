@@ -42,7 +42,9 @@ import {
   CopyIcon,
   ArrowUpDown,
   Info,
-  Search
+  Search,
+  BookOpen,
+  Store
 } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useDropzone } from "react-dropzone"
@@ -5298,7 +5300,7 @@ export default function TikTokAdCreationForm({
                 <div className="border-t border-gray-100 pt-6 space-y-4">
                   <div className="flex flex-col gap-1">
                     <Label className="flex items-center gap-2 font-semibold text-sm">
-                      <Info className="w-4 h-4 text-gray-500" />
+                      <BookOpen className="w-4 h-4 text-gray-500" />
                       Product Information
                     </Label>
                     <span className="text-xs text-gray-500 leading-relaxed">
@@ -5445,7 +5447,7 @@ export default function TikTokAdCreationForm({
                 <div className="border-t border-gray-100 pt-6 space-y-4">
                   <div className="flex flex-col gap-1">
                     <Label className="flex items-center gap-2 font-semibold text-sm">
-                      <Info className="w-4 h-4 text-gray-500" />
+                      <Store className="w-4 h-4 text-gray-500" />
                       Showcase Product Information <span className="text-gray-400 font-normal text-xs">• Optional</span>
                     </Label>
                     <span className="text-xs text-gray-500 leading-relaxed">
