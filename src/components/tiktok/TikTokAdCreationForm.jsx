@@ -767,14 +767,10 @@ export default function TikTokAdCreationForm({
 
     if (activeAdGroups.length === 0) return false;
 
-    // Only return true (disappear/hide landing URL) if ALL selected ad groups are product_source: "SHOWCASE" or "STORE"
+    // Only return true (disappear/hide landing URL) if ALL selected ad groups are product_source: "SHOWCASE"
     return activeAdGroups.every(agId => {
       const agObj = adGroups.find(g => g.adgroup_id === agId);
-      if (!agObj) return false;
-      return agObj.product_source && (
-        String(agObj.product_source).toUpperCase() === 'SHOWCASE' ||
-        String(agObj.product_source).toUpperCase() === 'STORE'
-      );
+      return agObj && agObj.product_source === 'SHOWCASE';
     });
   }, [selectedAdGroup, adGroups, showDuplicateAdGroupBlock, duplicateAdGroup]);
 
