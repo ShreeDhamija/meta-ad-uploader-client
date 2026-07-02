@@ -3859,7 +3859,7 @@ export default function TikTokAdCreationForm({
                 Ad Account Configuration
               </div>
             </CardTitle>
-            <CardDescription>Select your ad account, campaign and ad set</CardDescription>
+            <CardDescription>Select your ad account, campaign and ad group</CardDescription>
           </CardHeader>
           <CardContent className="p-6 pt-0 space-y-6">
 
@@ -3887,7 +3887,7 @@ export default function TikTokAdCreationForm({
                           const found = advertisers.find(a => String(a.advertiser_id || a.id) === String(selectedAdvertiser));
                           return found ? (found.advertiser_name || found.name || selectedAdvertiser) : selectedAdvertiser;
                         })()
-                        : "Select Ad Account"}
+                        : "Select an Ad Account"}
                     </span>
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
@@ -3972,16 +3972,18 @@ export default function TikTokAdCreationForm({
                           <span className="block truncate flex-1 text-left text-gray-500">Fetching campaigns...</span>
                         </>
                       ) : (
-                        <span className="truncate text-sm font-medium flex-1 text-left">
-                          {(() => {
-                            // Only count/display IDs that actually exist in the current campaigns list
-                            const validSelected = selectedCampaign.filter(id => campaigns.some(c => c.campaign_id === id));
-                            if (validSelected.length === 0) return "Select Campaigns";
-                            if (validSelected.length === 1) {
-                              return campaigns.find(c => c.campaign_id === validSelected[0])?.campaign_name || validSelected[0];
-                            }
-                            return `${validSelected.length} campaigns selected`;
-                          })()}
+                        <span className="block truncate flex-1 text-left text-sm font-medium">
+                          {selectedAdvertiser && campaigns.length === 0
+                            ? "No campaigns exist in this ad account. Try selecting a different account."
+                            : selectedCampaign.length === 0
+                              ? "Select campaigns"
+                              : (() => {
+                                const validSelected = selectedCampaign.filter(id => campaigns.some(c => c.campaign_id === id));
+                                if (validSelected.length === 1) {
+                                  return campaigns.find(c => c.campaign_id === validSelected[0])?.campaign_name || validSelected[0];
+                                }
+                                return `${validSelected.length} campaigns selected`;
+                              })()}
                         </span>
                       )}
                     </div>
@@ -4244,12 +4246,14 @@ export default function TikTokAdCreationForm({
                           <span className="block truncate flex-1 text-left text-gray-500">Fetching ad groups...</span>
                         </>
                       ) : (
-                        <span className="truncate text-sm font-medium flex-1 text-left">
-                          {selectedAdGroup.length === 0
-                            ? "Select Ad Groups"
-                            : selectedAdGroup.length === 1
-                              ? adGroups.find(ag => ag.adgroup_id === selectedAdGroup[0])?.adgroup_name || selectedAdGroup[0]
-                              : `${selectedAdGroup.length} ad groups selected`}
+                        <span className="block truncate flex-1 text-left text-sm font-medium">
+                          {showDuplicateAdGroupBlock
+                            ? "New Ad Group"
+                            : selectedCampaign.length > 0 && adGroups.length === 0
+                              ? "No ad groups exist in this campaign. Select a different campaign"
+                              : selectedAdGroup.length > 0
+                                ? `${selectedAdGroup.length} ad group${selectedAdGroup.length > 1 ? "s" : ""} selected`
+                                : "Select Ad Groups"}
                         </span>
                       )}
                     </div>
@@ -4264,10 +4268,10 @@ export default function TikTokAdCreationForm({
                       onValueChange={setAdGroupSearch}
                       className="bg-transparent border-none focus:ring-0"
                     />
-                    <CommandEmpty>No ad group found.</CommandEmpty>
+                    <CommandEmpty>No ad groups exist in this campaign. Select a different campaign</CommandEmpty>
                     <CommandList className="max-h-[300px] overflow-y-auto rounded-2xl custom-scrollbar">
                       {filteredAdGroups.length > 0 && (
-                        <CommandGroup>
+                        <CommandGroup heading="Launch in an existing ad group">
                           {(() => {
                             const groupedByCampaign = filteredAdGroups.reduce((acc, adgroup) => {
                               const campaignId = adgroup.campaignId || 'unknown';
@@ -4397,7 +4401,7 @@ export default function TikTokAdCreationForm({
                       <Label className="flex items-center gap-2">
                         {renderDiffMark("duplicateAdGroup")}
                         <Copy className="w-4 h-4 text-gray-700 shrink-0" />
-                        Select an ad set shell to duplicate
+                        Select an ad group shell to duplicate
                       </Label>
                       <Label className="text-gray-500 text-[12px] font-regular">We’ll retain all targeting settings and replace the creative</Label>
                     </div>
@@ -4437,14 +4441,21 @@ export default function TikTokAdCreationForm({
                             onValueChange={setDuplicateAdGroupSearchValue}
                             className="bg-transparent border-none focus:ring-0"
                           />
-                          <CommandEmpty>No ad groups found.</CommandEmpty>
+                          <CommandEmpty>No ad groups exist in this campaign. Select a different campaign</CommandEmpty>
                           <CommandList className="max-h-[220px] overflow-y-auto rounded-2xl custom-scrollbar">
                             <CommandGroup>
-                              {adGroups
-                                .filter((ag) =>
+                              {(() => {
+                                const filtered = adGroups.filter((ag) =>
                                   (ag.adgroup_name || ag.adgroup_id || '').toLowerCase().includes(duplicateAdGroupSearchValue.toLowerCase())
-                                )
-                                .map((ag) => (
+                                );
+                                if (filtered.length === 0) {
+                                  return (
+                                    <CommandItem disabled className="opacity-50 cursor-not-allowed">
+                                      No ad groups found.
+                                    </CommandItem>
+                                  );
+                                }
+                                return filtered.map((ag) => (
                                   <CommandItem
                                     key={ag.adgroup_id}
                                     value={ag.adgroup_id}
@@ -4467,7 +4478,8 @@ export default function TikTokAdCreationForm({
                                       </div>
                                     </div>
                                   </CommandItem>
-                                ))}
+                                ));
+                              })()}
                             </CommandGroup>
                           </CommandList>
                         </Command>
@@ -4480,7 +4492,7 @@ export default function TikTokAdCreationForm({
                         <div className="space-y-1.5">
                           <Label htmlFor="newAdGroupName" className="text-xs font-semibold text-gray-700">
                             {renderDiffMark("newAdGroupName")}
-                            <span>New ad set name</span>
+                            <span>New ad group name</span>
                           </Label>
                           <Input
                             id="newAdGroupName"
@@ -4542,7 +4554,7 @@ export default function TikTokAdCreationForm({
                               value="NORMAL"
                               className="rounded-xl data-[highlighted]:bg-gray-100 data-[state=checked]:bg-gray-100 transition-all my-0.5"
                             >
-                              Video/Image Ad
+                              Image / Video
                             </SelectItem>
                             <SelectItem
                               value="SPARK"
@@ -5088,7 +5100,7 @@ export default function TikTokAdCreationForm({
                   <div className="space-y-3">
                     <Label className="flex items-center gap-1.5">
                       {renderDiffMark("adTexts")}
-                      <span className="font-semibold text-sm">Text</span>
+                      <span className="font-semibold text-sm">Primary Text</span>
                       {adType === 'SPARK' && <span className="text-gray-400 font-normal text-xs">(Optional)</span>}
                     </Label>
 
@@ -5103,7 +5115,7 @@ export default function TikTokAdCreationForm({
                             onChange={(e) => {
                               setAdTexts([e.target.value]);
                             }}
-                            placeholder="Enter Caption"
+                            placeholder="Add text option"
                             minRows={2}
                             maxRows={8}
                             className={`${formTextareaChrome} ${(adTexts[0] || "").length > 100 ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]" : ""}`}
@@ -5127,7 +5139,7 @@ export default function TikTokAdCreationForm({
                   <Label className="flex items-center gap-2">
                     {renderDiffMark("cta")}
                     <CTAIcon className="w-4 h-4" />
-                    Call to Action
+                    Call-to-Action (CTA)
                   </Label>
                   <Popover open={openCta} onOpenChange={setOpenCta}>
                     <PopoverTrigger asChild>
@@ -5139,7 +5151,7 @@ export default function TikTokAdCreationForm({
                         <span className="text-sm truncate">
                           {Array.isArray(cta) && cta.length > 0
                             ? cta.map(v => CTA_OPTIONS.find(o => o.value === v)?.label || v).join(", ")
-                            : "None selected"}
+                            : "Select a CTA"}
                         </span>
                         <ChevronsUpDown className="w-4 h-4 opacity-50 shrink-0" />
                       </Button>
@@ -5187,7 +5199,7 @@ export default function TikTokAdCreationForm({
                       <Label className="flex items-center gap-1.5">
                         {renderDiffMark("landingUrl")}
                         <LinkIcon className="w-4 h-4 text-gray-500" />
-                        Landing Page URL
+                        Link (URL)
                       </Label>
 
                       <div className="flex items-center gap-1 bg-gray-50 p-1 rounded-xl">
@@ -5254,7 +5266,7 @@ export default function TikTokAdCreationForm({
                                   value={landingUrl}
                                   onChange={(e) => setLandingUrl(e.target.value)}
                                   className={cn("w-full", formInputChrome)}
-                                  placeholder="https://myshop.com/product"
+                                  placeholder="https://example.com"
                                   disabled={!advertiserId}
                                   required
                                 />
@@ -5608,7 +5620,7 @@ export default function TikTokAdCreationForm({
                       <div className="flex items-center justify-between">
                         <Label className="flex items-center gap-2">
                           {renderDiffMark("videoFile")}
-                          Video (.mp4, .mov)
+                          Upload Media
                         </Label>
                         <Popover open={uploadSourcesOpen} onOpenChange={handleUploadSourcesOpenChange}>
                           <PopoverTrigger asChild>
@@ -5724,7 +5736,7 @@ export default function TikTokAdCreationForm({
                     {isQueueingJobs ? (
                       <div className="flex items-center justify-center gap-2">
                         <Loader className="w-5 h-5 animate-spin" />
-                        Queueing Ads...
+                        Publishing Ads...
                       </div>
                     ) : (
                       'Publish Ads'
@@ -5748,7 +5760,7 @@ export default function TikTokAdCreationForm({
                     return false;
                   })() && (
                       <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
-                        Landing Page URL must be a valid URL starting with http:// or https://
+                        Link (URL) must be a valid URL starting with http:// or https://
                       </div>
                     )}
                 </div>
