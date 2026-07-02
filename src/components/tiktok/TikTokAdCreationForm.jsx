@@ -25,7 +25,7 @@ import {
   Loader,
   Plus,
   RefreshCcw,
-  Type as TemplateIcon,
+
   Trash,
   Trash2,
   Upload,
@@ -66,10 +66,11 @@ import { useAppData } from "@/lib/AppContext"
 import DesktopIcon from '@/assets/Desktop.webp'
 import DropboxIcon from '@/assets/Dropbox.png'
 import AdAccountIcon from '@/assets/icons/adaccount.svg?react'
-import { default as CogIcon, default as ConfigIcon } from '@/assets/icons/cog.svg?react'
+import CogIcon from '@/assets/icons/cog.svg?react'
+import ConfigIcon from '@/assets/icons/plus.svg?react'
 import CampaignIcon from '@/assets/icons/folder.svg?react'
 import AdSetIcon from '@/assets/icons/grid.svg?react'
-import PlusIcon from '@/assets/icons/plus.svg?react'
+import TemplateIcon from '@/assets/icons/file.svg?react'
 import RocketIcon2 from '@/assets/icons/rocket.svg?react'
 import CheckIcon from '@/assets/icons/check.svg?react'
 import UploadIcon from '@/assets/icons/upload.svg?react'
@@ -759,13 +760,11 @@ export default function TikTokAdCreationForm({
 
     if (activeAdGroups.length === 0) return false;
 
+    // Only return true (disappear/hide landing URL) if ALL selected ad groups are product_source: "STORE"
     return activeAdGroups.every(agId => {
       const agObj = adGroups.find(g => g.adgroup_id === agId);
       if (!agObj) return false;
-      return !!(
-        (agObj.shopping_ads_type && agObj.shopping_ads_type !== 'UNSET') ||
-        (agObj.product_source && agObj.product_source !== 'UNSET')
-      );
+      return agObj.product_source && String(agObj.product_source).toUpperCase() === 'STORE';
     });
   }, [selectedAdGroup, adGroups, showDuplicateAdGroupBlock, duplicateAdGroup]);
 
@@ -4269,7 +4268,38 @@ export default function TikTokAdCreationForm({
                       className="bg-transparent border-none focus:ring-0"
                     />
                     <CommandEmpty>No ad groups exist in this campaign. Select a different campaign</CommandEmpty>
-                    <CommandList className="max-h-[300px] overflow-y-auto rounded-2xl custom-scrollbar">
+                    <CommandList className="max-h-[300px] overflow-y-auto rounded-2xl custom-scrollbar px-2" selectOnFocus={false}>
+                      <CommandGroup>
+                        <CommandItem
+                          key="create-new-adgroup"
+                          value="create-new-adgroup"
+                          disabled={selectedCampaign.length !== 1}
+                          onSelect={() => {
+                            if (selectedCampaign.length === 1) {
+                              setShowDuplicateAdGroupBlock(true);
+                              setSelectedAdGroup([]);
+                              setOpenAdGroup(false);
+                            }
+                          }}
+                          className={`
+                            h-10 w-full px-4 py-3 m-1 rounded-2xl 
+                            ${selectedCampaign.length !== 1 ? '!bg-zinc-800 !text-zinc-500' : '!bg-zinc-700 !text-white'}
+                            shadow-md 
+                            flex items-center justify-center 
+                            text-sm font-semibold 
+                            ${selectedCampaign.length !== 1 ? 'cursor-not-allowed' : 'cursor-pointer'}
+                            transition-all duration-150 
+                            ${selectedCampaign.length === 1 ? 'hover:!bg-black' : ''}
+                          `}
+                        >
+                          🚀 Launch in a New Ad Group
+                          {selectedCampaign.length !== 1 && (
+                            <span className="ml-2 text-xs text-zinc-400">
+                              (Please select 1 campaign)
+                            </span>
+                          )}
+                        </CommandItem>
+                      </CommandGroup>
                       {filteredAdGroups.length > 0 && (
                         <CommandGroup heading="Launch in an existing ad group">
                           {(() => {
@@ -4322,11 +4352,16 @@ export default function TikTokAdCreationForm({
                                           />
                                           <div className="flex-1 min-w-0 flex items-center justify-between">
                                             <span className={cn("text-sm font-medium truncate flex-1", (ag.operation_status === "DISABLE" || ag.operation_status === false || ag.operation_status === "false" || (!isSelected && isFull)) && "text-gray-400")}>
-                                              {ag.adgroup_name} {ag.ad_count !== undefined && `(${ag.ad_count}/50)`}
+                                              {ag.adgroup_name}
                                             </span>
-                                            {(ag.operation_status === "ENABLE" || ag.operation_status === true || ag.operation_status === "true") && (
-                                              <span className="ml-2 w-2 h-2 rounded-full bg-green-500 shrink-0" />
-                                            )}
+                                            <span className="flex items-center">
+                                              {ag.ad_count !== undefined && (
+                                                <span className="text-xs text-gray-400 mr-1.5">({ag.ad_count} {ag.ad_count === 1 ? 'Ad' : 'Ads'})</span>
+                                              )}
+                                              {(ag.operation_status === "ENABLE" || ag.operation_status === true || ag.operation_status === "true") && (
+                                                <span className="ml-0 w-2 h-2 rounded-full bg-green-500 shrink-0" />
+                                              )}
+                                            </span>
                                           </div>
                                         </div>
                                       </CommandItem>
@@ -4339,20 +4374,6 @@ export default function TikTokAdCreationForm({
                         </CommandGroup>
                       )}
                     </CommandList>
-
-                    <div className="p-2 border-t border-gray-100">
-                      <Button
-                        type="button"
-                        disabled={campaigns.length === 0}
-                        onClick={() => {
-                          setShowDuplicateAdGroupBlock(true);
-                          setOpenAdGroup(false);
-                        }}
-                        className="h-10 w-full px-4 py-3 rounded-2xl bg-zinc-800 text-white hover:!bg-black hover:!text-white shadow-md flex items-center justify-center text-xs font-semibold cursor-pointer transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed border-none"
-                      >
-                        🚀 Launch in a New Ad Group
-                      </Button>
-                    </div>
                   </Command>
                 </PopoverContent>
               </Popover>
@@ -4520,7 +4541,7 @@ export default function TikTokAdCreationForm({
           <CardHeader>
             <CardTitle className="flex flex-col md:flex-row items-start md:items-center justify-between w-full gap-4 md:gap-2">
               <div className="flex items-center gap-2">
-                <ConfigIcon className="w-5 h-5 text-gray-500" />
+                <ConfigIcon className="w-5 h-5" />
                 Select ad preferences
               </div>
               <div className="flex flex-wrap items-center justify-end gap-2">
@@ -4844,7 +4865,7 @@ export default function TikTokAdCreationForm({
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
                         <Label className="flex items-center gap-2 mb-0">
-                          <TemplateIcon className="w-4 h-4 text-zinc-600" />
+                          <TemplateIcon className="w-4 h-4" />
                           Select a Copy Template
                         </Label>
 
