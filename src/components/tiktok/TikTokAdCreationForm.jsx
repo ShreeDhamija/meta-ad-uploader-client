@@ -1394,6 +1394,8 @@ export default function TikTokAdCreationForm({
       launchPaused,
     } = jobToProcess.formData
 
+    const campaignObj = campaigns.find(c => c.campaign_id === selectedCampaign[0])
+
     setProgress(0)
     setProgressMessage('Starting TikTok ad creation...')
 
@@ -1802,8 +1804,6 @@ export default function TikTokAdCreationForm({
       }
 
       updateProgress(45, 'Creating tiktok ads')
-
-      const campaignObj = campaigns.find(c => c.campaign_id === selectedCampaign[0])
 
       const createPayload = {
         advertiserId: selectedAdvertiser,
