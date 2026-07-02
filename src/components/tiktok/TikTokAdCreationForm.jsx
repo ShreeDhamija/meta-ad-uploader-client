@@ -777,7 +777,8 @@ export default function TikTokAdCreationForm({
   const showStoreProductSelection = useMemo(() => {
     return selectedAdGroup.some(agId => {
       const agObj = adGroups.find(g => g.adgroup_id === agId);
-      return agObj && agObj.product_source === 'SHOWCASE';
+      const obj = String(agObj?.virtual_objective_type || agObj?.objective_type || agObj?.objective || "").toUpperCase();
+      return agObj && (obj === 'SALES' || obj === 'PRODUCT_SALES');
     });
   }, [selectedAdGroup, adGroups]);
 
@@ -5206,7 +5207,7 @@ export default function TikTokAdCreationForm({
               )}
 
               {/* Optional Section: Add Store & Product Information (Showcase) */}
-              {isShoppingAdGroup && showStoreProductSelection && (
+              {showStoreProductSelection && (
                 <div className="pt-6 space-y-4">
                   <div className="flex flex-col gap-1">
                     <Label className="flex items-center gap-2 font-semibold text-sm">
