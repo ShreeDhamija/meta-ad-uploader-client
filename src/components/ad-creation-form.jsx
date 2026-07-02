@@ -3155,11 +3155,11 @@ export default function AdCreationForm({
   const campaignSupportsFlexibleAds = campaignObjective.length > 0 &&
     campaignObjective.every(obj => ["OUTCOME_SALES", "OUTCOME_APP_PROMOTION"].includes(obj));
 
-  // For OUTCOME_SALES campaigns, BOOK_NOW must be sent to the server as BOOK_TRAVEL.
+  // For OUTCOME_SALES / OUTCOME_LEADS campaigns, BOOK_NOW must be sent to the server as BOOK_TRAVEL.
   const resolveCtaForServer = (ctaValue) =>
     ctaValue === "BOOK_NOW" &&
     campaignObjective.length > 0 &&
-    campaignObjective.every(obj => obj === "OUTCOME_SALES")
+    campaignObjective.every(obj => obj === "OUTCOME_SALES" || obj === "OUTCOME_LEADS")
       ? "BOOK_TRAVEL"
       : ctaValue;
 
