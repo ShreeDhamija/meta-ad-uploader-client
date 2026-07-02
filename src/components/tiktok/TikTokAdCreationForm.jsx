@@ -1036,6 +1036,8 @@ export default function TikTokAdCreationForm({
   }, [identities, selectedIdentity]);
 
   // Fetch store or showcase products list
+  // NOTE: intentionally omits selectedIdentityObj (unstable object ref) and selectedLocationIds
+  // from deps to avoid spurious refetches when the user selects/deselects products.
   useEffect(() => {
     if (!selectedAdvertiser) {
       setFormStoreProducts([]);
@@ -1050,7 +1052,9 @@ export default function TikTokAdCreationForm({
       setLoadingFormStoreProducts(true);
       const uid = localStorage.getItem('tiktok_uid');
       const token = localStorage.getItem('tiktok_token');
-      const identityType = selectedIdentityObj?.identity_type || 'BC_AUTH_TT';
+      // Derive identityType inline to avoid depending on the unstable selectedIdentityObj reference
+      const identityObj = identities.find(i => i.identity_id === selectedIdentity);
+      const identityType = identityObj?.identity_type || 'BC_AUTH_TT';
       const url = `${API_BASE_URL}/api/tiktok/showcase/products?advertiserId=${selectedAdvertiser}&identityId=${selectedIdentity}&identityType=${identityType}`;
 
       fetch(url, {
@@ -1104,7 +1108,8 @@ export default function TikTokAdCreationForm({
         .catch(err => console.warn('[CreationForm] Failed to load store products:', err.message))
         .finally(() => setLoadingFormStoreProducts(false));
     }
-  }, [selectedAdvertiser, selectedIdentity, selectedIdentityObj, selectedLocationIds, showStoreProductSelection, formStoreId, formStoreBcId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedAdvertiser, selectedIdentity, showStoreProductSelection, formStoreId, formStoreBcId, identities]);
 
 
 
@@ -2088,14 +2093,15 @@ export default function TikTokAdCreationForm({
       .finally(() => setLoadingPages(false))
   }, [selectedAdvertiser, tiktokFetch])
 
-  // Sync advertiser preferences for Ad Name Formula
+  // Sync advertiser preferences for Ad Name Formula — only update when the formula actually changes
   useEffect(() => {
     if (advertiserPrefs) {
-      if (advertiserPrefs.adNameFormulaV2) {
-        setAdNameFormulaV2(advertiserPrefs.adNameFormulaV2);
-      } else {
-        setAdNameFormulaV2({ rawInput: "" });
-      }
+      const incoming = advertiserPrefs.adNameFormulaV2 || { rawInput: "" };
+      setAdNameFormulaV2(prev => {
+        const prevStr = JSON.stringify(prev);
+        const nextStr = JSON.stringify(incoming);
+        return prevStr === nextStr ? prev : incoming;
+      });
     }
   }, [advertiserPrefs]);
 
@@ -5279,13 +5285,13 @@ export default function TikTokAdCreationForm({
                 </div>
               </div>
 
-              {/* Optional Section: Add Product Information */}
-              {isShoppingAdGroup && showProductCatalog && (
+              {/* Optional Section: Add Product Information — only shown when ad group has a catalog */}
+              {isShoppingAdGroup && showProductCatalog && formCatalogId && (
                 <div className="border-t border-gray-100 pt-6 space-y-4">
                   <div className="flex flex-col gap-1">
                     <Label className="flex items-center gap-2 font-semibold text-sm">
                       <Info className="w-4 h-4 text-gray-500" />
-                      Product Information <span className="text-gray-400 font-normal text-xs">• Optional</span>
+                      Product Information
                     </Label>
                     <span className="text-xs text-gray-500 leading-relaxed">
                       Select a product to promote from the auto-selected catalog.
@@ -5302,7 +5308,7 @@ export default function TikTokAdCreationForm({
                       className="w-full justify-between border border-gray-300 rounded-2xl bg-gray-50 shadow flex items-center px-3 py-4.5 cursor-not-allowed opacity-90 text-left"
                     >
                       <span className="text-sm font-medium text-gray-700 truncate">
-                        {formCatalogName || (formCatalogId ? `Catalog ${formCatalogId}` : 'No Catalog associated with Ad Group')}
+                        {formCatalogName || `Catalog ${formCatalogId}`}
                       </span>
                     </Button>
                   </div>
