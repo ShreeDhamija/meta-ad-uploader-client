@@ -775,6 +775,8 @@ export default function TikTokAdCreationForm({
   }, [selectedAdGroup, adGroups, showDuplicateAdGroupBlock, duplicateAdGroup]);
 
   const showProductCatalog = useMemo(() => {
+    if (showStoreProductSelection) return true;
+
     if (selectedCampaign && selectedCampaign.length > 0) {
       const hasSalesCampaign = selectedCampaign.some(campId => {
         const c = campaigns.find(x => x.campaign_id === campId);
@@ -796,7 +798,7 @@ export default function TikTokAdCreationForm({
     }
 
     return false;
-  }, [selectedCampaign, campaigns, selectedAdGroup, showDuplicateAdGroupBlock, duplicateAdGroup, adGroups]);
+  }, [selectedCampaign, campaigns, selectedAdGroup, showDuplicateAdGroupBlock, duplicateAdGroup, adGroups, showStoreProductSelection]);
 
   const isSalesCampaignSelected = useMemo(() => {
     if (selectedCampaign && selectedCampaign.length > 0) {
@@ -830,15 +832,28 @@ export default function TikTokAdCreationForm({
       return;
     }
     const agObj = adGroups.find(g => g.adgroup_id === activeAgId);
-    if (agObj && agObj.catalog_id) {
-      setFormCatalogId(agObj.catalog_id);
-      const matched = formCatalogs.find(c => c.catalog_id === agObj.catalog_id);
-      setFormCatalogName(matched ? matched.catalog_name : `Catalog ${agObj.catalog_id}`);
-    } else {
-      setFormCatalogId(null);
-      setFormCatalogName(null);
+    if (agObj) {
+      if (agObj.catalog_id) {
+        setFormCatalogId(agObj.catalog_id);
+        const matched = formCatalogs.find(c => c.catalog_id === agObj.catalog_id);
+        setFormCatalogName(matched ? matched.catalog_name : `Catalog ${agObj.catalog_id}`);
+      } else if (agObj.product_source === 'SHOWCASE') {
+        const matchedStore = formStores.find(s => s.store_id === agObj.store_id);
+        const cid = matchedStore?.catalog_id || formStoreCatalogId;
+        if (cid) {
+          setFormCatalogId(cid);
+          const matchedCat = formCatalogs.find(c => c.catalog_id === cid);
+          setFormCatalogName(matchedCat ? matchedCat.catalog_name : `Catalog ${cid}`);
+        } else {
+          setFormCatalogId(null);
+          setFormCatalogName(null);
+        }
+      } else {
+        setFormCatalogId(null);
+        setFormCatalogName(null);
+      }
     }
-  }, [selectedAdGroup, adGroups, showDuplicateAdGroupBlock, duplicateAdGroup, formCatalogs]);
+  }, [selectedAdGroup, adGroups, showDuplicateAdGroupBlock, duplicateAdGroup, formCatalogs, formStores, formStoreCatalogId]);
 
   useEffect(() => {
     if (formCatalogId && formCatalogs.length > 0) {
