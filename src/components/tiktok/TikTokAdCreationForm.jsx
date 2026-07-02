@@ -3470,7 +3470,7 @@ export default function TikTokAdCreationForm({
 
     if (!areAllSelectedAdGroupsShopping && urlMode === 'WEBSITE') {
       if (!landingUrl || !landingUrl.trim()) {
-        errors.push("Landing Page URL is required")
+        errors.push("Link (URL) is required")
       } else {
         let isValidUrl = false
         try {
@@ -3481,8 +3481,18 @@ export default function TikTokAdCreationForm({
           }
         } catch (_) { }
         if (!isValidUrl) {
-          errors.push("Landing Page URL must be a valid URL starting with http:// or https://")
+          errors.push("Link (URL) must be a valid URL starting with http:// or https://")
         }
+      }
+    }
+
+    if (areAllSelectedAdGroupsShopping) {
+      if (!formStoreId) {
+        errors.push("Store is required")
+      }
+      const productIds = Array.isArray(formStoreProductId) ? formStoreProductId : (formStoreProductId ? [formStoreProductId] : [])
+      if (productIds.length === 0) {
+        errors.push("Showcase Product is required")
       }
     }
 
@@ -3491,7 +3501,8 @@ export default function TikTokAdCreationForm({
     selectedAdvertiser, selectedCampaign, showDuplicateAdGroupBlock, duplicateAdGroup,
     selectedAdGroup, newAdGroupName, selectedIdentity, adType, importedPosts,
     adTexts, adNameFormulaV2, adName, cta, urlMode, landingUrl,
-    files, driveFiles, dropboxFiles, tiktokLibraryFiles, areAllSelectedAdGroupsShopping
+    files, driveFiles, dropboxFiles, tiktokLibraryFiles, areAllSelectedAdGroupsShopping,
+    formStoreId, formStoreProductId
   ])
 
   const validationErrors = getValidationErrors()
@@ -5443,26 +5454,17 @@ export default function TikTokAdCreationForm({
                     )}
                   </Button>
 
-                  {!areAllSelectedAdGroupsShopping && urlMode === 'WEBSITE' && !landingUrl?.trim() && (
+                  {areAllSelectedAdGroupsShopping && !formStoreId && (
                     <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
-                      Please provide a link URL
+                      Please select a store
                     </div>
                   )}
 
-                  {!areAllSelectedAdGroupsShopping && urlMode === 'WEBSITE' && landingUrl?.trim() && !(() => {
-                    try {
-                      const urlString = landingUrl.trim();
-                      if (/^https?:\/\//i.test(urlString)) {
-                        new URL(urlString);
-                        return true;
-                      }
-                    } catch (_) { }
-                    return false;
-                  })() && (
-                      <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
-                        Link (URL) must be a valid URL starting with http:// or https://
-                      </div>
-                    )}
+                  {areAllSelectedAdGroupsShopping && (!formStoreProductId || (Array.isArray(formStoreProductId) && formStoreProductId.length === 0)) && (
+                    <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                      Please select a showcase product
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex flex-col gap-2">
