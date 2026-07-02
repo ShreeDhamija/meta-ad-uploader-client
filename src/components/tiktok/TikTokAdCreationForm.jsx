@@ -5045,7 +5045,7 @@ export default function TikTokAdCreationForm({
 
               {/* Optional Section: Add Product Information — only shown when ad group has a catalog */}
               {isShoppingAdGroup && showProductCatalog && formCatalogId && (
-                <div className="border-t border-gray-100 pt-6 space-y-4">
+                <div className="pt-6 space-y-4">
                   <div className="flex flex-col gap-1">
                     <Label className="flex items-center gap-2 font-semibold text-sm">
                       <BookOpen className="w-4 h-4" />
@@ -5192,7 +5192,7 @@ export default function TikTokAdCreationForm({
 
               {/* Optional Section: Add Store & Product Information (Showcase) */}
               {isShoppingAdGroup && showStoreProductSelection && (
-                <div className="border-t border-gray-100 pt-6 space-y-4">
+                <div className="pt-6 space-y-4">
                   <div className="flex flex-col gap-1">
                     <Label className="flex items-center gap-2 font-semibold text-sm">
                       <Store className="w-4 h-4" />
