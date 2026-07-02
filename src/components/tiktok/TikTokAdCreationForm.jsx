@@ -94,7 +94,7 @@ function VariantDot({ variantId, variants }) {
 const isSalesObjective = (c) => {
   if (!c) return false;
   const obj = String(c.virtual_objective_type || c.objective_type || c.objective || "").toUpperCase();
-  return obj === 'SALES' || obj === 'PRODUCT_SALES';
+  return obj === 'SALES' || obj === 'PRODUCT_SALES' || obj === 'CATALOG_SALES';
 };
 
 const CTA_ASSET_MAPPING = {
@@ -750,14 +750,19 @@ export default function TikTokAdCreationForm({
   const [formStoreProductSearch, setFormStoreProductSearch] = useState("")
 
   const isShoppingAdGroup = useMemo(() => {
-    const activeAgId = selectedAdGroup?.[0] || (showDuplicateAdGroupBlock ? duplicateAdGroup : null);
-    if (!activeAgId) return false;
-    const agObj = adGroups.find(g => g.adgroup_id === activeAgId);
-    if (!agObj) return false;
-    return !!(
-      (agObj.shopping_ads_type && agObj.shopping_ads_type !== 'UNSET') ||
-      (agObj.product_source && agObj.product_source !== 'UNSET')
-    );
+    const activeAdGroups = showDuplicateAdGroupBlock && duplicateAdGroup
+      ? [duplicateAdGroup]
+      : (selectedAdGroup || []);
+
+    if (activeAdGroups.length === 0) return false;
+
+    return activeAdGroups.some(agId => {
+      const agObj = adGroups.find(g => g.adgroup_id === agId);
+      return agObj && (
+        (agObj.shopping_ads_type && agObj.shopping_ads_type !== 'UNSET') ||
+        (agObj.product_source && agObj.product_source !== 'UNSET')
+      );
+    });
   }, [selectedAdGroup, adGroups, showDuplicateAdGroupBlock, duplicateAdGroup]);
 
   const areAllSelectedAdGroupsShopping = useMemo(() => {
@@ -775,14 +780,21 @@ export default function TikTokAdCreationForm({
   }, [selectedAdGroup, adGroups, showDuplicateAdGroupBlock, duplicateAdGroup]);
 
   const showStoreProductSelection = useMemo(() => {
-    return selectedAdGroup.some(agId => {
+    const activeAdGroups = showDuplicateAdGroupBlock && duplicateAdGroup
+      ? [duplicateAdGroup]
+      : (selectedAdGroup || []);
+
+    return activeAdGroups.some(agId => {
       const agObj = adGroups.find(g => g.adgroup_id === agId);
-      const obj = String(agObj?.virtual_objective_type || agObj?.objective_type || agObj?.objective || "").toUpperCase();
-      return agObj && (obj === 'SALES' || obj === 'PRODUCT_SALES');
+      return agObj && (
+        agObj.product_source === 'SHOWCASE' ||
+        agObj.product_source === 'STORE'
+      );
     });
-  }, [selectedAdGroup, adGroups]);
+  }, [selectedAdGroup, adGroups, showDuplicateAdGroupBlock, duplicateAdGroup]);
 
   const showProductCatalog = useMemo(() => {
+    if (isShoppingAdGroup) return true;
     if (showStoreProductSelection) return true;
 
     if (selectedCampaign && selectedCampaign.length > 0) {
@@ -797,6 +809,8 @@ export default function TikTokAdCreationForm({
     if (activeAgId) {
       const agObj = adGroups.find(g => g.adgroup_id === activeAgId);
       if (agObj) {
+        if (agObj.catalog_id) return true;
+
         const campId = agObj.campaignId || agObj.campaign_id;
         const c = campaigns.find(x => x.campaign_id === campId);
         if (isSalesObjective(c)) {
@@ -806,7 +820,7 @@ export default function TikTokAdCreationForm({
     }
 
     return false;
-  }, [selectedCampaign, campaigns, selectedAdGroup, showDuplicateAdGroupBlock, duplicateAdGroup, adGroups, showStoreProductSelection]);
+  }, [selectedCampaign, campaigns, selectedAdGroup, showDuplicateAdGroupBlock, duplicateAdGroup, adGroups, showStoreProductSelection, isShoppingAdGroup]);
 
   const isSalesCampaignSelected = useMemo(() => {
     if (selectedCampaign && selectedCampaign.length > 0) {
@@ -833,19 +847,36 @@ export default function TikTokAdCreationForm({
   }, [selectedCampaign, campaigns, selectedAdGroup, showDuplicateAdGroupBlock, duplicateAdGroup, adGroups]);
 
   useEffect(() => {
-    const activeAgId = selectedAdGroup?.[0] || (showDuplicateAdGroupBlock ? duplicateAdGroup : null);
-    if (!activeAgId) {
+    const activeAdGroups = showDuplicateAdGroupBlock && duplicateAdGroup
+      ? [duplicateAdGroup]
+      : (selectedAdGroup || []);
+
+    if (activeAdGroups.length === 0) {
       setFormCatalogId(null);
       setFormCatalogName(null);
       return;
     }
-    const agObj = adGroups.find(g => g.adgroup_id === activeAgId);
-    if (agObj) {
-      if (agObj.catalog_id) {
-        setFormCatalogId(agObj.catalog_id);
-        const matched = formCatalogs.find(c => c.catalog_id === agObj.catalog_id);
-        setFormCatalogName(matched ? matched.catalog_name : `Catalog ${agObj.catalog_id}`);
-      } else if (agObj.product_source === 'SHOWCASE') {
+
+    // Find the first selected ad group that has a catalog_id (catalog-based)
+    const catalogAgId = activeAdGroups.find(agId => {
+      const agObj = adGroups.find(g => g.adgroup_id === agId);
+      return agObj && agObj.catalog_id;
+    });
+
+    if (catalogAgId) {
+      const agObj = adGroups.find(g => g.adgroup_id === catalogAgId);
+      setFormCatalogId(agObj.catalog_id);
+      const matched = formCatalogs.find(c => c.catalog_id === agObj.catalog_id);
+      setFormCatalogName(matched ? matched.catalog_name : `Catalog ${agObj.catalog_id}`);
+    } else {
+      // Fallback: if no direct catalog ad group, but there is a showcase ad group with a store catalog
+      const showcaseAgId = activeAdGroups.find(agId => {
+        const agObj = adGroups.find(g => g.adgroup_id === agId);
+        return agObj && (agObj.product_source === 'SHOWCASE' || agObj.product_source === 'STORE');
+      });
+
+      if (showcaseAgId) {
+        const agObj = adGroups.find(g => g.adgroup_id === showcaseAgId);
         const matchedStore = formStores.find(s => s.store_id === agObj.store_id);
         const cid = matchedStore?.catalog_id || formStoreCatalogId;
         if (cid) {
@@ -1019,10 +1050,20 @@ export default function TikTokAdCreationForm({
 
   // Sync selected adgroup's store preferences if they are modified on ad group select
   useEffect(() => {
-    const activeAgId = selectedAdGroup?.[0] || (showDuplicateAdGroupBlock ? duplicateAdGroup : null);
-    if (!activeAgId) return;
-    const agObj = adGroups.find(g => g.adgroup_id === activeAgId);
-    if (agObj && agObj.product_source === 'SHOWCASE') {
+    const activeAdGroups = showDuplicateAdGroupBlock && duplicateAdGroup
+      ? [duplicateAdGroup]
+      : (selectedAdGroup || []);
+
+    if (activeAdGroups.length === 0) return;
+
+    // Find the first selected ad group that is a showcase ad group
+    const showcaseAgId = activeAdGroups.find(agId => {
+      const agObj = adGroups.find(g => g.adgroup_id === agId);
+      return agObj && (agObj.product_source === 'SHOWCASE' || agObj.product_source === 'STORE');
+    });
+
+    if (showcaseAgId) {
+      const agObj = adGroups.find(g => g.adgroup_id === showcaseAgId);
       // Find matches in formStores if loaded
       const matched = formStores.find(s => s.store_id === agObj.store_id);
       if (matched) {
@@ -5207,7 +5248,7 @@ export default function TikTokAdCreationForm({
               )}
 
               {/* Optional Section: Add Store & Product Information (Showcase) */}
-              {showStoreProductSelection && (
+              {isShoppingAdGroup && showStoreProductSelection && (
                 <div className="pt-6 space-y-4">
                   <div className="flex flex-col gap-1">
                     <Label className="flex items-center gap-2 font-semibold text-sm">
