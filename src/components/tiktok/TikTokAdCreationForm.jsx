@@ -1035,81 +1035,78 @@ export default function TikTokAdCreationForm({
     return identities.find(i => i.identity_id === selectedIdentity) || null;
   }, [identities, selectedIdentity]);
 
-  // Fetch store or showcase products list
-  // NOTE: intentionally omits selectedIdentityObj (unstable object ref) and selectedLocationIds
-  // from deps to avoid spurious refetches when the user selects/deselects products.
+  // Effect 1: Fetch SHOWCASE products (identity-based).
+  // Intentionally does NOT depend on formStoreId so that setFormStoreId() called
+  // during product selection never re-triggers this fetch.
   useEffect(() => {
-    if (!selectedAdvertiser) {
+    if (!selectedAdvertiser || !showStoreProductSelection) return;
+    if (!selectedIdentity) {
       setFormStoreProducts([]);
       return;
     }
+    setLoadingFormStoreProducts(true);
+    const uid = localStorage.getItem('tiktok_uid');
+    const token = localStorage.getItem('tiktok_token');
+    const identityObj = identities.find(i => i.identity_id === selectedIdentity);
+    const identityType = identityObj?.identity_type || 'BC_AUTH_TT';
+    const url = `${API_BASE_URL}/api/tiktok/showcase/products?advertiserId=${selectedAdvertiser}&identityId=${selectedIdentity}&identityType=${identityType}`;
 
-    if (showStoreProductSelection) {
-      if (!selectedIdentity) {
-        setFormStoreProducts([]);
-        return;
+    fetch(url, {
+      credentials: 'include',
+      headers: {
+        ...(uid && { 'x-tiktok-user-id': uid }),
+        ...(token && { 'x-tiktok-token': token }),
       }
-      setLoadingFormStoreProducts(true);
-      const uid = localStorage.getItem('tiktok_uid');
-      const token = localStorage.getItem('tiktok_token');
-      // Derive identityType inline to avoid depending on the unstable selectedIdentityObj reference
-      const identityObj = identities.find(i => i.identity_id === selectedIdentity);
-      const identityType = identityObj?.identity_type || 'BC_AUTH_TT';
-      const url = `${API_BASE_URL}/api/tiktok/showcase/products?advertiserId=${selectedAdvertiser}&identityId=${selectedIdentity}&identityType=${identityType}`;
-
-      fetch(url, {
-        credentials: 'include',
-        headers: {
-          ...(uid && { 'x-tiktok-user-id': uid }),
-          ...(token && { 'x-tiktok-token': token }),
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          const mappedProducts = (data.products || []).map(p => ({
+            item_group_id: p.item_group_id || p.product_id || p.id,
+            title: p.title || p.product_name || p.name || 'Unnamed Product',
+            product_image_url: p.product_image_url || p.image_url || p.logo_url || (p.image_info?.web_uri) || null,
+            store_id: p.store_id || null,
+            min_price: p.min_price || null,
+            currency: p.currency || null
+          }));
+          setFormStoreProducts(mappedProducts);
         }
       })
-        .then(res => res.json())
-        .then(data => {
-          if (data.success) {
-            const mappedProducts = (data.products || []).map(p => ({
-              item_group_id: p.item_group_id || p.product_id || p.id,
-              title: p.title || p.product_name || p.name || 'Unnamed Product',
-              product_image_url: p.product_image_url || p.image_url || p.logo_url || (p.image_info?.web_uri) || null,
-              store_id: p.store_id || null,
-              min_price: p.min_price || null,
-              currency: p.currency || null
-            }));
-            setFormStoreProducts(mappedProducts);
-          }
-        })
-        .catch(err => console.warn('[CreationForm] Failed to load showcase products:', err.message))
-        .finally(() => setLoadingFormStoreProducts(false));
-    } else {
-      if (!formStoreId) {
-        setFormStoreProducts([]);
-        return;
-      }
-      setLoadingFormStoreProducts(true);
-      const uid = localStorage.getItem('tiktok_uid');
-      const token = localStorage.getItem('tiktok_token');
-      let url = `${API_BASE_URL}/api/tiktok/store/products?advertiserId=${selectedAdvertiser}&store_id=${formStoreId}`;
-      if (formStoreBcId) {
-        url += `&bc_id=${formStoreBcId}`;
-      }
-      fetch(url, {
-        credentials: 'include',
-        headers: {
-          ...(uid && { 'x-tiktok-user-id': uid }),
-          ...(token && { 'x-tiktok-token': token }),
-        }
-      })
-        .then(res => res.json())
-        .then(data => {
-          if (data.success) {
-            setFormStoreProducts(data.products || []);
-          }
-        })
-        .catch(err => console.warn('[CreationForm] Failed to load store products:', err.message))
-        .finally(() => setLoadingFormStoreProducts(false));
+      .catch(err => console.warn('[CreationForm] Failed to load showcase products:', err.message))
+      .finally(() => setLoadingFormStoreProducts(false));
+  }, [selectedAdvertiser, showStoreProductSelection, selectedIdentity, identities]);
+
+  // Effect 2: Fetch regular STORE products (store-based).
+  // Only runs when NOT in showcase mode, so identity/showcase changes don't re-trigger this.
+  useEffect(() => {
+    if (!selectedAdvertiser || showStoreProductSelection) return;
+    if (!formStoreId) {
+      setFormStoreProducts([]);
+      return;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedAdvertiser, selectedIdentity, showStoreProductSelection, formStoreId, formStoreBcId, identities]);
+    setLoadingFormStoreProducts(true);
+    const uid = localStorage.getItem('tiktok_uid');
+    const token = localStorage.getItem('tiktok_token');
+    let url = `${API_BASE_URL}/api/tiktok/store/products?advertiserId=${selectedAdvertiser}&store_id=${formStoreId}`;
+    if (formStoreBcId) {
+      url += `&bc_id=${formStoreBcId}`;
+    }
+    fetch(url, {
+      credentials: 'include',
+      headers: {
+        ...(uid && { 'x-tiktok-user-id': uid }),
+        ...(token && { 'x-tiktok-token': token }),
+      }
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          setFormStoreProducts(data.products || []);
+        }
+      })
+      .catch(err => console.warn('[CreationForm] Failed to load store products:', err.message))
+      .finally(() => setLoadingFormStoreProducts(false));
+  }, [selectedAdvertiser, showStoreProductSelection, formStoreId, formStoreBcId]);
 
 
 
