@@ -774,6 +774,13 @@ export default function TikTokAdCreationForm({
     });
   }, [selectedAdGroup, adGroups, showDuplicateAdGroupBlock, duplicateAdGroup]);
 
+  const showStoreProductSelection = useMemo(() => {
+    return selectedAdGroup.some(agId => {
+      const agObj = adGroups.find(g => g.adgroup_id === agId);
+      return agObj && agObj.product_source === 'SHOWCASE';
+    });
+  }, [selectedAdGroup, adGroups]);
+
   const showProductCatalog = useMemo(() => {
     if (showStoreProductSelection) return true;
 
