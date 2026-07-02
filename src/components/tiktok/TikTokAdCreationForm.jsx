@@ -267,7 +267,7 @@ const UPLOAD_SOURCE_OPTIONS = [
     name: 'My Computer',
     icon: DesktopIcon,
     fullLabel: 'Upload from Computer',
-    compactLabel: 'Computer'
+    compactLabel: 'Local PC'
   },
   {
     id: 'drive',
@@ -4604,7 +4604,7 @@ export default function TikTokAdCreationForm({
               <div className="flex items-center justify-between">
                 <Label className="flex items-center gap-2">
                   {renderDiffMark("selectedIdentity")}
-                  <Users className="w-4 h-4 text-gray-500" />
+                  <Users className="w-4 h-4" />
                   {adType === 'NORMAL' ? 'Identity' : 'Promote From'}
                 </Label>
                 <div className="flex items-center gap-2">
@@ -4699,7 +4699,7 @@ export default function TikTokAdCreationForm({
               <div className="space-y-4">
                 <div className="flex items-center justify-between gap-3 flex-wrap">
                   <Label className="flex items-center gap-2 font-semibold">
-                    <Zap className="w-4 h-4 text-gray-500" />
+                    <Zap className="w-4 h-4" />
                     Spark Ads Video Sourcing
                   </Label>
 
@@ -5121,7 +5121,7 @@ export default function TikTokAdCreationForm({
                   <div className="space-y-3">
                     <Label className="flex items-center gap-1.5">
                       {renderDiffMark("adTexts")}
-                      <span className="font-semibold text-sm">Primary Text</span>
+                      <span className="font-semibold text-sm">Ad Text</span>
                       {adType === 'SPARK' && <span className="text-gray-400 font-normal text-xs">(Optional)</span>}
                     </Label>
 
@@ -5155,71 +5155,13 @@ export default function TikTokAdCreationForm({
               {/* 5. Call to Action & Landing Page URL Stacked */}
               <div className="space-y-6">
 
-                {/* Call to Action Multi Selector */}
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    {renderDiffMark("cta")}
-                    <CTAIcon className="w-4 h-4" />
-                    Call-to-Action (CTA)
-                  </Label>
-                  <Popover open={openCta} onOpenChange={setOpenCta}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="w-full justify-between border border-gray-300 rounded-2xl bg-white shadow hover:bg-white px-3 py-4.5"
-                      >
-                        <span className="text-sm truncate">
-                          {Array.isArray(cta) && cta.length > 0
-                            ? cta.map(v => CTA_OPTIONS.find(o => o.value === v)?.label || v).join(", ")
-                            : "Select a CTA"}
-                        </span>
-                        <ChevronsUpDown className="w-4 h-4 opacity-50 shrink-0" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="p-0 bg-white rounded-2xl shadow-xl border border-gray-100" align="start" side="bottom" avoidCollisions={false} style={{ width: 'var(--radix-popover-trigger-width)' }}>
-                      <Command>
-                        <CommandList className="max-h-[220px] overflow-y-auto rounded-2xl custom-scrollbar">
-                          <CommandGroup>
-                            {CTA_OPTIONS.map((opt) => {
-                              const isSelected = Array.isArray(cta) && cta.includes(opt.value);
-                              return (
-                                <CommandItem
-                                  key={opt.value}
-                                  value={opt.value}
-                                  onSelect={() => {
-                                    const prev = Array.isArray(cta) ? cta : [];
-                                    const next = prev.includes(opt.value)
-                                      ? prev.filter(v => v !== opt.value)
-                                      : [...prev, opt.value];
-                                    setCta(next);
-                                  }}
-                                  className="flex items-center gap-2 p-2 rounded-xl hover:bg-gray-50 cursor-pointer"
-                                >
-                                  <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${isSelected ? "bg-black border-black text-white" : "border-gray-200"}`}>
-                                    {isSelected && <Check className="w-3 h-3" />}
-                                  </div>
-                                  <span className="text-sm font-medium">{opt.label}</span>
-                                </CommandItem>
-                              );
-                            })}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-                  {(!cta || cta.length === 0) && (
-                    <p className="text-xs text-red-500 font-medium mt-1">Please select at least one Call to Action</p>
-                  )}
-                </div>
-
                 {/* Landing URL Selector */}
                 {!areAllSelectedAdGroupsShopping && (
                   <div className="space-y-2">
                     <div className="flex items-center justify-between m-0">
                       <Label className="flex items-center gap-1.5">
                         {renderDiffMark("landingUrl")}
-                        <LinkIcon className="w-4 h-4 text-gray-500" />
+                        <LinkIcon className="w-4 h-4" />
                         Link (URL)
                       </Label>
 
@@ -5351,6 +5293,64 @@ export default function TikTokAdCreationForm({
 
                   </div>
                 )}
+
+                {/* Call to Action Multi Selector */}
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    {renderDiffMark("cta")}
+                    <CTAIcon className="w-4 h-4" />
+                    Call-to-Action (CTA)
+                  </Label>
+                  <Popover open={openCta} onOpenChange={setOpenCta}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full justify-between border border-gray-300 rounded-2xl bg-white shadow hover:bg-white px-3 py-4.5"
+                      >
+                        <span className="text-sm truncate">
+                          {Array.isArray(cta) && cta.length > 0
+                            ? cta.map(v => CTA_OPTIONS.find(o => o.value === v)?.label || v).join(", ")
+                            : "Select a CTA"}
+                        </span>
+                        <ChevronsUpDown className="w-4 h-4 opacity-50 shrink-0" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="p-0 bg-white rounded-2xl shadow-xl border border-gray-100" align="start" side="bottom" avoidCollisions={false} style={{ width: 'var(--radix-popover-trigger-width)' }}>
+                      <Command>
+                        <CommandList className="max-h-[220px] overflow-y-auto rounded-2xl custom-scrollbar">
+                          <CommandGroup>
+                            {CTA_OPTIONS.map((opt) => {
+                              const isSelected = Array.isArray(cta) && cta.includes(opt.value);
+                              return (
+                                <CommandItem
+                                  key={opt.value}
+                                  value={opt.value}
+                                  onSelect={() => {
+                                    const prev = Array.isArray(cta) ? cta : [];
+                                    const next = prev.includes(opt.value)
+                                      ? prev.filter(v => v !== opt.value)
+                                      : [...prev, opt.value];
+                                    setCta(next);
+                                  }}
+                                  className="flex items-center gap-2 p-2 rounded-xl hover:bg-gray-50 cursor-pointer"
+                                >
+                                  <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${isSelected ? "bg-black border-black text-white" : "border-gray-200"}`}>
+                                    {isSelected && <Check className="w-3 h-3" />}
+                                  </div>
+                                  <span className="text-sm font-medium">{opt.label}</span>
+                                </CommandItem>
+                              );
+                            })}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                  {(!cta || cta.length === 0) && (
+                    <p className="text-xs text-red-500 font-medium mt-1">Please select at least one Call to Action</p>
+                  )}
+                </div>
               </div>
 
               {/* Optional Section: Add Product Information — only shown when ad group has a catalog */}
@@ -5358,7 +5358,7 @@ export default function TikTokAdCreationForm({
                 <div className="border-t border-gray-100 pt-6 space-y-4">
                   <div className="flex flex-col gap-1">
                     <Label className="flex items-center gap-2 font-semibold text-sm">
-                      <BookOpen className="w-4 h-4 text-gray-500" />
+                      <BookOpen className="w-4 h-4" />
                       Product Information
                     </Label>
                     <span className="text-xs text-gray-500 leading-relaxed">
@@ -5505,7 +5505,7 @@ export default function TikTokAdCreationForm({
                 <div className="border-t border-gray-100 pt-6 space-y-4">
                   <div className="flex flex-col gap-1">
                     <Label className="flex items-center gap-2 font-semibold text-sm">
-                      <Store className="w-4 h-4 text-gray-500" />
+                      <Store className="w-4 h-4" />
                       Showcase Product Information <span className="text-gray-400 font-normal text-xs">• Optional</span>
                     </Label>
                     <span className="text-xs text-gray-500 leading-relaxed">

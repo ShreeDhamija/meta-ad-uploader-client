@@ -1,6 +1,6 @@
 import DesktopIcon from '@/assets/Desktop.webp'
 import Header from '@/components/header'
-import MediaPreview from '@/components/media-preview'
+import TikTokMediaPreview from '@/components/tiktok/TikTokMediaPreview'
 import TikTokAdCreationForm from '@/components/tiktok/TikTokAdCreationForm'
 import { useTikTokAuth } from '@/lib/TikTokAuthContext'
 import { useAuth } from '@/lib/AuthContext'
@@ -577,20 +577,20 @@ export default function TikTokAds() {
         setLandingUrl(defaultLink.url);
       }
 
-       // 4. Default Ad Text — use default template if set, otherwise fall back to first available template
-       if (adTexts.length === 1 && adTexts[0] === '' && advertiserPrefs.copyTemplates) {
-         const templateName = advertiserPrefs.defaultTemplateName
-           || Object.keys(advertiserPrefs.copyTemplates)[0]
-           || '';
-         const template = templateName ? advertiserPrefs.copyTemplates[templateName] : null;
-         if (template) {
-           if (template.texts?.length > 0) {
-             setAdTexts([...template.texts]);
-           } else if (template.text) {
-             setAdTexts([template.text]);
-           }
-         }
-       }
+      // 4. Default Ad Text — use default template if set, otherwise fall back to first available template
+      if (adTexts.length === 1 && adTexts[0] === '' && advertiserPrefs.copyTemplates) {
+        const templateName = advertiserPrefs.defaultTemplateName
+          || Object.keys(advertiserPrefs.copyTemplates)[0]
+          || '';
+        const template = templateName ? advertiserPrefs.copyTemplates[templateName] : null;
+        if (template) {
+          if (template.texts?.length > 0) {
+            setAdTexts([...template.texts]);
+          } else if (template.text) {
+            setAdTexts([template.text]);
+          }
+        }
+      }
 
       // Mark as restored
       restoredDefaultsRef.current[selectedAdvertiser] = true;
@@ -1001,7 +1001,7 @@ export default function TikTokAds() {
             <div className={`flex-1 lg:flex-[45] min-w-0 ${(!userHasActiveAccess || !isTikTokLoggedIn) ? 'pointer-events-none opacity-40 cursor-not-allowed select-none' : ''}`}>
               <div className="sticky top-6">
                 <ErrorBoundary>
-                  <MediaPreview
+                  <TikTokMediaPreview
                     files={[...files, ...driveFiles.map((f) => ({ ...f, isDrive: true }))]}
                     setFiles={setFiles}
                     importedPosts={importedPosts}
