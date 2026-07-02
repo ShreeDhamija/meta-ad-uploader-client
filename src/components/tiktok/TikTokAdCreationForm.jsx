@@ -3120,9 +3120,9 @@ export default function TikTokAdCreationForm({
           }
         }
 
-        if (fd.urlMode === 'WEBSITE') {
+        if (fd.urlMode === 'WEBSITE' && !isAllSelectedAdGroupsShopping) {
           if (!fd.landingUrl || !fd.landingUrl.trim()) {
-            toast.error(`${variant.name}: Landing Page URL is required`);
+            toast.error(`${variant.name}: Link (URL) is required`);
             return;
           }
 
