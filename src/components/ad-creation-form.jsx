@@ -21,7 +21,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Checkbox } from "@/components/ui/checkbox"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Users, ChevronDown, Loader, Plus, Trash2, Upload, ChevronsUpDown, RefreshCcw, CircleX, AlertTriangle, RotateCcw, Eye, FileText, X, Clock, ChevronLeft, ChevronRight, Ban, Phone, ArrowUpDown, Check, Info, CloudUpload, BicepsFlexed } from "lucide-react"
+import { Users, ChevronDown, Loader, Plus, Trash2, Upload, ChevronsUpDown, RefreshCcw, CircleX, AlertTriangle, RotateCcw, Eye, FileText, X, Clock, ChevronLeft, ChevronRight, Ban, Phone, ArrowUpDown, Check, Info, CloudUpload, BicepsFlexed, Pencil, ArrowLeft } from "lucide-react"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useAuth } from "@/lib/AuthContext"
@@ -955,6 +955,14 @@ export default function AdCreationForm({
   const [activeImportedPostIndex, setActiveImportedPostIndex] = useState(0);
   const [importedPostAdNames, setImportedPostAdNames] = useState({});
 
+  // "Edit Ad Creative" mode: keep useExistingPosts on, but instead of duplicating
+  // the imported ads verbatim, convert them into Meta Media Library-style media
+  // (image hash / video id) so the user can build a fresh creative around them.
+  const [editAdCreativeMode, setEditAdCreativeMode] = useState(false);
+  // True while we are showing the PostIDSelector duplication UI (as opposed to
+  // the regular creative form fields reached via "Edit Ad Creative").
+  const isDuplicationMode = useExistingPosts && !editAdCreativeMode;
+
   const getImportedPostKey = (post) => post?.ad_id || post?.post_id || post?.id || '';
 
   useEffect(() => {
@@ -965,6 +973,75 @@ export default function AdCreationForm({
       setActiveImportedPostIndex(0);
     }
   }, [importedPosts.length]);
+
+  // Enter "Edit Ad Creative": convert imported ads -> Meta library-style media
+  // (reusing the imported ad's existing image hash / video id). The original post
+  // is stashed on each media item so the toggle is fully reversible.
+  const enterEditAdCreativeMode = () => {
+    const derived = [];
+    const skipped = [];
+    importedPosts.forEach((post) => {
+      if (post.video_id) {
+        derived.push({
+          type: 'video',
+          id: post.video_id,
+          name: post.ad_name,
+          previewUrl: post.image_url,
+          thumbnail_url: post.image_url,
+          sourcePost: post,
+        });
+      } else if (post.image_hash) {
+        derived.push({
+          type: 'image',
+          hash: post.image_hash,
+          name: post.ad_name,
+          previewUrl: post.image_url,
+          url: post.image_url,
+          sourcePost: post,
+        });
+      } else {
+        skipped.push(post.ad_name || post.ad_id);
+      }
+    });
+
+    if (derived.length === 0) {
+      toast.error("None of the imported ads have a reusable image or video. Carousel and dynamic-creative ads can't be edited this way.");
+      return;
+    }
+
+    if (skipped.length > 0) {
+      toast.warning(`Skipped ${skipped.length} ad${skipped.length > 1 ? 's' : ''} without a single reusable image/video (carousel or dynamic creative).`);
+    }
+
+    setImportedFiles(derived);
+    setImportedPosts([]);
+    setEditAdCreativeMode(true);
+  };
+
+  // Exit "Edit Ad Creative": restore the imported ads from the stashed source
+  // posts and drop the derived media, returning to the duplication view.
+  const exitEditAdCreativeMode = () => {
+    setImportedPosts(importedFiles.map((f) => f.sourcePost).filter(Boolean));
+    setImportedFiles([]);
+    setEditAdCreativeMode(false);
+  };
+
+  // Safety net: if we leave Use Existing Posts or switch ad account while in
+  // edit-creative mode, reset the mode and drop the (now stale) derived media.
+  const editModeAdAccountRef = useRef(selectedAdAccount);
+  useEffect(() => {
+    if (!editAdCreativeMode) {
+      editModeAdAccountRef.current = selectedAdAccount;
+      return;
+    }
+    const accountChanged = editModeAdAccountRef.current !== selectedAdAccount;
+    if (!useExistingPosts || accountChanged) {
+      setEditAdCreativeMode(false);
+      setImportedFiles([]);
+    }
+    editModeAdAccountRef.current = selectedAdAccount;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [useExistingPosts, selectedAdAccount]);
 
 
 
@@ -3406,7 +3483,7 @@ export default function AdCreationForm({
 
   const showShopDestinationSelector = hasShopAutomaticAdSets && pageId;
   const showPhoneNumberField = areAllAdSetsPhoneCall();
-  const requiresDestinationValue = importedPosts.length === 0 && !useExistingPosts;
+  const requiresDestinationValue = importedPosts.length === 0 && !isDuplicationMode;
   const isMissingDestinationValue = requiresDestinationValue && (
     showPhoneNumberField
       ? !phoneNumber.trim()
@@ -5049,7 +5126,7 @@ export default function AdCreationForm({
 
 
 
-      if (importedPosts && importedPosts.length > 0) {
+      if (importedPosts && importedPosts.length > 0 && !editAdCreativeMode) {
         // For each adset, create ads from each imported post
         const adSetIdsToUse = [...dynamicAdSetIds, ...nonDynamicAdSetIds];
         const jobImportedPostAdNames = jobData.formData.importedPostAdNames || {};
@@ -6315,7 +6392,7 @@ export default function AdCreationForm({
         return;
       }
 
-      if (!job.formData.pageId && !useExistingPosts) {
+      if (!job.formData.pageId && !isDuplicationMode) {
         toast.error(`${variant.name}: please select a Facebook page`);
         return;
       }
@@ -6370,7 +6447,7 @@ export default function AdCreationForm({
       : `${prefix} ${summary}`;
   };
 
-  const isPageMissing = !pageId && !useExistingPosts;
+  const isPageMissing = !pageId && !isDuplicationMode;
   // Missing ad set is pulled out of the bundled blocking flag below so we can
   // surface a dedicated message only when it's the sole remaining issue.
   const isAdSetMissing = variants.length <= 1 && selectedAdSets.length === 0 && !duplicateAdSet;
@@ -6395,7 +6472,7 @@ export default function AdCreationForm({
     );
   const publishDisabled = hasPublishBlockingIssueBeforePage || isAdSetMissing || isPageMissing;
 
-  const showImportedPostMode = useExistingPosts && importedPosts.length > 0;
+  const showImportedPostMode = isDuplicationMode && importedPosts.length > 0;
   const importedSafeIndex = showImportedPostMode
     ? Math.min(activeImportedPostIndex, importedPosts.length - 1)
     : 0;
@@ -6853,7 +6930,7 @@ export default function AdCreationForm({
             <ConfigIcon className="w-5 h-5" />
             Select ad preferences
           </div>
-          {!(useExistingPosts || selectedIgOrganicPosts.length > 0) && (
+          {!(isDuplicationMode || selectedIgOrganicPosts.length > 0) && (
             <div className="flex flex-wrap items-center justify-end gap-2">
               <Label htmlFor="ad-type" className="text-sm whitespace-nowrap">
                 Ad Type:
@@ -6982,7 +7059,25 @@ export default function AdCreationForm({
           }}
           className="space-y-6">
           <div className="space-y-10 overflow-hidden">
-            {useExistingPosts ? (
+            {useExistingPosts && !usePostID && (
+              <div className="flex justify-end">
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={editAdCreativeMode ? exitEditAdCreativeMode : enterEditAdCreativeMode}
+                  disabled={!editAdCreativeMode && importedPosts.length === 0}
+                  className="px-3 py-3 bg-white text-black border border-gray-300 rounded-[14px] hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {editAdCreativeMode ? (
+                    <ArrowLeft className="h-3.5 w-3.5 mr-1" />
+                  ) : (
+                    <Pencil className="h-3.5 w-3.5 mr-1" />
+                  )}
+                  {editAdCreativeMode ? "Back to Ad Duplication" : "Edit Ad Creative"}
+                </Button>
+              </div>
+            )}
+            {isDuplicationMode ? (
               <div className="relative space-y-6">
                 {adNameSection}
                 <PostSelectorInline
@@ -8897,7 +8992,7 @@ export default function AdCreationForm({
               </div>
             )}
 
-            {!useExistingPosts && !hasPublishBlockingIssueBeforePage && isPageMissing && (
+            {!isDuplicationMode && !hasPublishBlockingIssueBeforePage && isPageMissing && (
               <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
                 Please select a Facebook page to publish ads
               </div>
@@ -8909,7 +9004,7 @@ export default function AdCreationForm({
               </div>
             )}
 
-            {!useExistingPosts && !publishDisabled && !hasAdNameFormulaConfigured && adName === "Ad Generated Through Blip" && !(showShopDestinationSelector && !selectedShopDestination) && !(!isCarouselAd && hasDuplicates) && !isMissingDestinationValue && !(shouldShowLeadFormSelector && !selectedForm) && (
+            {!isDuplicationMode && !publishDisabled && !hasAdNameFormulaConfigured && adName === "Ad Generated Through Blip" && !(showShopDestinationSelector && !selectedShopDestination) && !(!isCarouselAd && hasDuplicates) && !isMissingDestinationValue && !(shouldShowLeadFormSelector && !selectedForm) && (
               <div className="text-xs text-orange-700 text-left p-2 bg-orange-50 border border-orange-200 rounded-xl">
                 Your ads will be named "Ad Generated Through Blip" since no ad name formula is set.{' '}
                 <button
