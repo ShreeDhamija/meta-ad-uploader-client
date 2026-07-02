@@ -4802,12 +4802,6 @@ export default function TikTokAdCreationForm({
 
               {/* 4. Ad Copy / Caption with template picker */}
               {adType !== 'SPARK' && (
-                <div className="space-y-4">
-                  <div className="space-y-3">
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Label className="flex items-center gap-2 mb-0">
-                          <TemplateIcon className="w-4 h-4 text-zinc-600" />
                           Select a Copy Template
                         </Label>
 
@@ -5574,115 +5568,117 @@ export default function TikTokAdCreationForm({
               )}
 
               {/* 6. Media Section or Spark Info Card */}
-              <div className="border-t border-gray-100 pt-6">
-                {adType !== 'SPARK' && (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <Label className="flex items-center gap-2">
-                        {renderDiffMark("videoFile")}
-                        Video (.mp4, .mov)
-                      </Label>
-                      <Popover open={uploadSourcesOpen} onOpenChange={handleUploadSourcesOpenChange}>
-                        <PopoverTrigger asChild>
-                          <Button
-                            type="button"
-                            size="sm"
-                            className={cn(
-                              "h-9 px-3 flex items-center gap-1.5 text-black hover:bg-white border !border-gray-200",
-                              formFieldChrome
+              {adType !== 'SPARK' && (
+                <div className="pt-6">
+                  {(
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <Label className="flex items-center gap-2">
+                          {renderDiffMark("videoFile")}
+                          Video (.mp4, .mov)
+                        </Label>
+                        <Popover open={uploadSourcesOpen} onOpenChange={handleUploadSourcesOpenChange}>
+                          <PopoverTrigger asChild>
+                            <Button
+                              type="button"
+                              size="sm"
+                              className={cn(
+                                "h-9 px-3 flex items-center gap-1.5 text-black hover:bg-white border !border-gray-200",
+                                formFieldChrome
+                              )}
+                            >
+                              <CloudUpload className="h-4 w-4" />
+                              Manage Sources
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent align="end" side="bottom" avoidCollisions={false} className="bg-white rounded-xl p-2 w-64 border border-gray-200 shadow-lg">
+                            <div className="flex flex-col">
+                              {UPLOAD_SOURCE_OPTIONS.map((src) => {
+                                const checked = uploadSources.includes(src.id)
+                                return (
+                                  <label
+                                    key={src.id}
+                                    className="flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer hover:bg-gray-100"
+                                  >
+                                    <Checkbox
+                                      checked={checked}
+                                      onCheckedChange={() => toggleUploadSource(src.id)}
+                                    />
+                                    <img
+                                      src={src.icon}
+                                      alt=""
+                                      className={'h-4 w-4 object-contain'}
+                                    />
+                                    <span className="text-sm text-gray-800">{src.compactLabel}</span>
+                                  </label>
+                                )
+                              })}
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+
+                      {uploadSources.includes('local') && !driveFiles.length && !dropboxFiles.length && (
+                        <div
+                          {...getRootProps()}
+                          className={`group cursor-pointer border-2 border-dashed rounded-2xl p-6 text-center transition-colors ${isDragActive ? "border-primary bg-primary/5" : "border-gray-300 hover:border-primary/50"
+                            }`}
+                        >
+                          <input {...getInputProps()} />
+                          <div className="flex flex-col items-center gap-2">
+                            <Upload className="h-6 w-6 text-gray-500 group-hover:text-black" />
+                            {isDragActive ? (
+                              <p className="text-sm text-gray-500 group-hover:text-black">Drop files here ...</p>
+                            ) : (
+                              <p className="text-sm text-gray-500 group-hover:text-black">
+                                Drag & drop files here, or click to select files
+                              </p>
                             )}
-                          >
-                            <CloudUpload className="h-4 w-4" />
-                            Manage Sources
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent align="end" side="bottom" avoidCollisions={false} className="bg-white rounded-xl p-2 w-64 border border-gray-200 shadow-lg">
-                          <div className="flex flex-col">
-                            {UPLOAD_SOURCE_OPTIONS.map((src) => {
-                              const checked = uploadSources.includes(src.id)
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Cloud Source Buttons */}
+                      {(() => {
+                        const rowSources = uploadSources.filter((s) => s !== 'local')
+                        if (rowSources.length === 0) return null
+
+                        return (
+                          <div className={cn("grid gap-2", rowSources.length === 1 ? "grid-cols-1" : "grid-cols-2")}>
+                            {rowSources.map((id) => {
+                              const src = UPLOAD_SOURCE_OPTIONS.find((o) => o.id === id)
+                              if (!src) return null
+
+                              let onClick
+                              if (id === 'drive') onClick = handleDriveClick
+                              else if (id === 'dropbox') onClick = handleDropboxClick
+
                               return (
-                                <label
-                                  key={src.id}
-                                  className="flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer hover:bg-gray-100"
+                                <Button
+                                  key={id}
+                                  type="button"
+                                  onClick={onClick}
+                                  className="bg-black hover:bg-zinc-800 text-white rounded-2xl h-[48px] flex items-center justify-center gap-2 px-3 transition-all active:scale-95"
                                 >
-                                  <Checkbox
-                                    checked={checked}
-                                    onCheckedChange={() => toggleUploadSource(src.id)}
-                                  />
                                   <img
-                                    src={src.icon}
-                                    alt=""
-                                    className={'h-4 w-4 object-contain'}
+                                    src={typeof src.icon === 'string' ? src.icon : undefined}
+                                    alt={src.name}
+                                    className="h-4 w-4 object-contain"
+                                    style={typeof src.icon !== 'string' ? { display: 'none' } : {}}
                                   />
-                                  <span className="text-sm text-gray-800">{src.compactLabel}</span>
-                                </label>
+                                  {typeof src.icon === 'function' && <src.icon className="h-4 w-4" />}
+                                  <span className="truncate text-xs font-semibold">{src.fullLabel}</span>
+                                </Button>
                               )
                             })}
                           </div>
-                        </PopoverContent>
-                      </Popover>
+                        )
+                      })()}
+
                     </div>
-
-                    {uploadSources.includes('local') && !driveFiles.length && !dropboxFiles.length && (
-                      <div
-                        {...getRootProps()}
-                        className={`group cursor-pointer border-2 border-dashed rounded-2xl p-6 text-center transition-colors ${isDragActive ? "border-primary bg-primary/5" : "border-gray-300 hover:border-primary/50"
-                          }`}
-                      >
-                        <input {...getInputProps()} />
-                        <div className="flex flex-col items-center gap-2">
-                          <Upload className="h-6 w-6 text-gray-500 group-hover:text-black" />
-                          {isDragActive ? (
-                            <p className="text-sm text-gray-500 group-hover:text-black">Drop files here ...</p>
-                          ) : (
-                            <p className="text-sm text-gray-500 group-hover:text-black">
-                              Drag & drop files here, or click to select files
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Cloud Source Buttons */}
-                    {(() => {
-                      const rowSources = uploadSources.filter((s) => s !== 'local')
-                      if (rowSources.length === 0) return null
-
-                      return (
-                        <div className={cn("grid gap-2", rowSources.length === 1 ? "grid-cols-1" : "grid-cols-2")}>
-                          {rowSources.map((id) => {
-                            const src = UPLOAD_SOURCE_OPTIONS.find((o) => o.id === id)
-                            if (!src) return null
-
-                            let onClick
-                            if (id === 'drive') onClick = handleDriveClick
-                            else if (id === 'dropbox') onClick = handleDropboxClick
-
-                            return (
-                              <Button
-                                key={id}
-                                type="button"
-                                onClick={onClick}
-                                className="bg-black hover:bg-zinc-800 text-white rounded-2xl h-[48px] flex items-center justify-center gap-2 px-3 transition-all active:scale-95"
-                              >
-                                <img
-                                  src={typeof src.icon === 'string' ? src.icon : undefined}
-                                  alt={src.name}
-                                  className="h-4 w-4 object-contain"
-                                  style={typeof src.icon !== 'string' ? { display: 'none' } : {}}
-                                />
-                                {typeof src.icon === 'function' && <src.icon className="h-4 w-4" />}
-                                <span className="truncate text-xs font-semibold">{src.fullLabel}</span>
-                              </Button>
-                            )
-                          })}
-                        </div>
-                      )
-                    })()}
-
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
+              )}
 
               {/* Submit Button */}
               <div className="space-y-4">
