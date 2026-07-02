@@ -91,6 +91,12 @@ function VariantDot({ variantId, variants }) {
   return <span className="inline-block h-2 w-2 rounded-full shrink-0" style={{ background: color }} />
 }
 
+const isSalesObjective = (c) => {
+  if (!c) return false;
+  const obj = String(c.virtual_objective_type || c.objective_type || c.objective || "").toUpperCase();
+  return obj === 'SALES' || obj === 'PRODUCT_SALES';
+};
+
 const CTA_ASSET_MAPPING = {
   LEARN_MORE: {
     asset_content: "Learn more ",
@@ -761,11 +767,14 @@ export default function TikTokAdCreationForm({
 
     if (activeAdGroups.length === 0) return false;
 
-    // Only return true (disappear/hide landing URL) if ALL selected ad groups are product_source: "STORE"
+    // Only return true (disappear/hide landing URL) if ALL selected ad groups are product_source: "SHOWCASE" or "STORE"
     return activeAdGroups.every(agId => {
       const agObj = adGroups.find(g => g.adgroup_id === agId);
       if (!agObj) return false;
-      return agObj.product_source && String(agObj.product_source).toUpperCase() === 'STORE';
+      return agObj.product_source && (
+        String(agObj.product_source).toUpperCase() === 'SHOWCASE' ||
+        String(agObj.product_source).toUpperCase() === 'STORE'
+      );
     });
   }, [selectedAdGroup, adGroups, showDuplicateAdGroupBlock, duplicateAdGroup]);
 
@@ -773,7 +782,7 @@ export default function TikTokAdCreationForm({
     if (selectedCampaign && selectedCampaign.length > 0) {
       const hasSalesCampaign = selectedCampaign.some(campId => {
         const c = campaigns.find(x => x.campaign_id === campId);
-        return c && String(c.virtual_objective_type).toUpperCase() === 'SALES';
+        return isSalesObjective(c);
       });
       if (hasSalesCampaign) return true;
     }
@@ -784,7 +793,7 @@ export default function TikTokAdCreationForm({
       if (agObj) {
         const campId = agObj.campaignId || agObj.campaign_id;
         const c = campaigns.find(x => x.campaign_id === campId);
-        if (c && String(c.virtual_objective_type).toUpperCase() === 'SALES') {
+        if (isSalesObjective(c)) {
           return true;
         }
       }
@@ -797,7 +806,7 @@ export default function TikTokAdCreationForm({
     if (selectedCampaign && selectedCampaign.length > 0) {
       const hasSalesCampaign = selectedCampaign.some(campId => {
         const c = campaigns.find(x => x.campaign_id === campId);
-        return c && String(c.virtual_objective_type).toUpperCase() === 'SALES';
+        return isSalesObjective(c);
       });
       if (hasSalesCampaign) return true;
     }
@@ -808,7 +817,7 @@ export default function TikTokAdCreationForm({
       if (agObj) {
         const campId = agObj.campaignId || agObj.campaign_id;
         const c = campaigns.find(x => x.campaign_id === campId);
-        if (c && String(c.virtual_objective_type).toUpperCase() === 'SALES') {
+        if (isSalesObjective(c)) {
           return true;
         }
       }
@@ -1500,8 +1509,7 @@ export default function TikTokAdCreationForm({
             (productSource && productSource !== 'UNSET')
           )
 
-          const campaignObj = campaigns.find(c => c.campaign_id === adGroupObj?.campaignId || c.campaign_id === selectedCampaign[0])
-          const showProductCatalogForAdGroup = campaignObj && String(campaignObj.virtual_objective_type).toUpperCase() === 'SALES'
+          const showProductCatalogForAdGroup = campaignObj && isSalesObjective(campaignObj)
 
           let catalogIdToUse = null
           let skuIdToUse = null
@@ -1574,7 +1582,7 @@ export default function TikTokAdCreationForm({
           }
 
           const isSalesCampaign = !!(
-            (campaignObj && String(campaignObj.virtual_objective_type).toUpperCase() === 'SALES') ||
+            (campaignObj && isSalesObjective(campaignObj)) ||
             isShoppingAg
           )
           let creativeCTAs = Array.isArray(cta) ? cta : [cta]
@@ -5181,7 +5189,7 @@ export default function TikTokAdCreationForm({
                   <div className="flex flex-col gap-1">
                     <Label className="flex items-center gap-2 font-semibold text-sm">
                       <Store className="w-4 h-4" />
-                      Showcase Product Information <span className="text-gray-400 font-normal text-xs">• Optional</span>
+                      Showcase Product Information
                     </Label>
                     <span className="text-xs text-gray-500 leading-relaxed">
                       Select a showcase product to promote.
