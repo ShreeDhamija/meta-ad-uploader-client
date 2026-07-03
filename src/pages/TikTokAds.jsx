@@ -476,6 +476,7 @@ export default function TikTokAds() {
 
   // Load preferences for selected advertiser
   const { settings: advertiserPrefs, refetch: refetchAdvertiserPrefs, loading: loadingPrefs, documentExists } = useTikTokAdvertiserSettings(selectedAdvertiser)
+  const lastLoadedAdvertiserRef = useRef(null);
 
   // Sync files with videoFile/videoPreview for backend submissions and video uploading hooks
   useEffect(() => {
@@ -556,41 +557,45 @@ export default function TikTokAds() {
 
   // Sync state with preferences when they load (mirrors Meta's Home.jsx pattern)
   useEffect(() => {
-    if (!selectedAdvertiser) return;
+    if (!selectedAdvertiser) {
+      lastLoadedAdvertiserRef.current = null;
+      return;
+    }
 
-    // 1. Default Identity
-    setSelectedIdentity(advertiserPrefs?.defaultIdentityId || "");
+    if (!loadingPrefs && lastLoadedAdvertiserRef.current !== selectedAdvertiser) {
+      // 1. Default Identity
+      setSelectedIdentity(advertiserPrefs?.defaultIdentityId || "");
 
-    // 2. Default CTA
-    setCta(advertiserPrefs?.defaultCTAs || ["SHOP_NOW"]);
+      // 2. Default CTA
+      setCta(advertiserPrefs?.defaultCTAs || ["SHOP_NOW"]);
 
-    // 3. Default Landing URL
-    const defaultLink = advertiserPrefs?.links?.find(l => l.isDefault) || advertiserPrefs?.links?.[0];
-    setLandingUrl(defaultLink?.url || "");
+      // 3. Default Landing URL
+      const defaultLink = advertiserPrefs?.links?.find(l => l.isDefault) || advertiserPrefs?.links?.[0];
+      setLandingUrl(defaultLink?.url || "");
 
-    // 4. Default Ad Text
-    const templateName = advertiserPrefs?.defaultTemplateName
-      || (advertiserPrefs?.copyTemplates ? Object.keys(advertiserPrefs.copyTemplates)[0] : '')
-      || '';
-    const template = templateName ? advertiserPrefs?.copyTemplates?.[templateName] : null;
-    if (template) {
-      if (template.texts?.length > 0) {
-        setAdTexts([...template.texts]);
-      } else if (template.text) {
-        setAdTexts([template.text]);
+      // 4. Default Ad Text
+      const templateName = advertiserPrefs?.defaultTemplateName
+        || (advertiserPrefs?.copyTemplates ? Object.keys(advertiserPrefs.copyTemplates)[0] : '')
+        || '';
+      const template = templateName ? advertiserPrefs?.copyTemplates?.[templateName] : null;
+      if (template) {
+        if (template.texts?.length > 0) {
+          setAdTexts([...template.texts]);
+        } else if (template.text) {
+          setAdTexts([template.text]);
+        } else {
+          setAdTexts([""]);
+        }
       } else {
         setAdTexts([""]);
       }
-    } else {
-      setAdTexts([""]);
+
+      lastLoadedAdvertiserRef.current = selectedAdvertiser;
     }
   }, [
     selectedAdvertiser,
-    advertiserPrefs?.defaultIdentityId,
-    advertiserPrefs?.defaultCTAs,
-    advertiserPrefs?.links,
-    advertiserPrefs?.defaultTemplateName,
-    advertiserPrefs?.copyTemplates
+    loadingPrefs,
+    advertiserPrefs
   ]);
 
   // Reset form fields when selected advertiser is cleared (mirrors Meta's Home.jsx pattern)
@@ -598,12 +603,13 @@ export default function TikTokAds() {
     if (selectedAdvertiser) return;
 
     setSelectedIdentity("");
-    setLandingUrl("");
     setCta(["SHOP_NOW"]);
+    setLandingUrl("");
     setAdTexts([""]);
     setProductName("");
     setProductImageUrl("");
     setSelectedSavedProductId("");
+    lastLoadedAdvertiserRef.current = null;
   }, [selectedAdvertiser]);
 
   // Auto-populate product from saved catalog selection in Firebase

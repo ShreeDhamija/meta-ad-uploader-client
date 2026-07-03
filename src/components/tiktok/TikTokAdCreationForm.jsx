@@ -2082,16 +2082,19 @@ export default function TikTokAdCreationForm({
   // Automatically update selectedIdentity when adType or identities list changes
   useEffect(() => {
     if (identities.length > 0) {
-      const best = identities.find(i => i.identity_type === 'BC_AUTH_TT') ||
-        identities[0]
-      setSelectedIdentity(best?.identity_id || '')
+      const currentExists = identities.some(i => i.identity_id === selectedIdentity);
+      if (!selectedIdentity || !currentExists) {
+        const best = identities.find(i => i.identity_type === 'BC_AUTH_TT') ||
+          identities[0]
+        setSelectedIdentity(best?.identity_id || '')
+      }
     } else {
       setSelectedIdentity('')
       if (adType === 'SPARK') {
         setAdType('NORMAL')
       }
     }
-  }, [identities, adType, setSelectedIdentity, setAdType])
+  }, [identities, adType, setSelectedIdentity, setAdType, selectedIdentity])
 
   // Fetch Ad Groups on Campaign change
   useEffect(() => {
@@ -3570,7 +3573,7 @@ export default function TikTokAdCreationForm({
 
   return (
     <>
-      <form onSubmit={handleQueueJob} className="space-y-6">
+      <form onSubmit={handleQueueJob} className="space-y-4">
 
         <TikTokJobQueue
           hasStartedAnyJob={hasStartedAnyJob}
@@ -3609,7 +3612,7 @@ export default function TikTokAdCreationForm({
             </CardTitle>
             <CardDescription>Select your ad account, campaign and ad group</CardDescription>
           </CardHeader>
-          <CardContent className="p-6 pt-0 space-y-6">
+          <CardContent className="p-6 pt-0 space-y-4">
 
             {/* 1. Advertiser Account Combobox */}
             <div className="space-y-2">
@@ -3691,7 +3694,7 @@ export default function TikTokAdCreationForm({
               )}
 
               {selectedAdvertiser && !loadingPrefs && !documentExists && (
-                <div className="flex items-center gap-1 p-1 pl-2 bg-orange-50 border border-orange-200 rounded-2xl mt-2">
+                <div className="flex items-center gap-1 p-1 pl-2 bg-orange-50 border border-orange-200 rounded-2xl">
                   <CogIcon className="w-4 h-4 text-orange-700" />
                   <Label className="text-xs text-orange-700 flex-1">
                     Add default settings for this account to speed up your workflow
@@ -4332,11 +4335,14 @@ export default function TikTokAdCreationForm({
                           onValueChange={(value) => {
                             if (activeVariantId !== 'default') return;
                             setAdType(value);
-                            const firstLinked = identities.find(i => i.identity_type === 'BC_AUTH_TT') || identities[0];
-                            if (firstLinked) {
-                              setSelectedIdentity(firstLinked.identity_id);
-                            } else {
-                              setSelectedIdentity('');
+                            const currentExists = identities.some(i => i.identity_id === selectedIdentity);
+                            if (!selectedIdentity || !currentExists) {
+                              const firstLinked = identities.find(i => i.identity_type === 'BC_AUTH_TT') || identities[0];
+                              if (firstLinked) {
+                                setSelectedIdentity(firstLinked.identity_id);
+                              } else {
+                                setSelectedIdentity('');
+                              }
                             }
                           }}
                           disabled={activeVariantId !== 'default'}
@@ -4371,7 +4377,7 @@ export default function TikTokAdCreationForm({
               </div>
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-6 pt-0 space-y-6">
+          <CardContent className="p-6 pt-0 space-y-4">
 
             {/* 2. Identity / Promote From (Linked Account) */}
             <div className="space-y-2">
@@ -4582,7 +4588,7 @@ export default function TikTokAdCreationForm({
             )}
 
             {/* Creative Fields - Visible for both Normal and Spark Ad types */}
-            <div className="space-y-6">
+            <div className="space-y-4">
               {/* 3. Ad Name */}
               <div id="adName" className="space-y-1">
                 <Label htmlFor="adName" className="flex items-center justify-between w-full">
@@ -4927,7 +4933,7 @@ export default function TikTokAdCreationForm({
               )}
 
               {/* 5. Call to Action & Landing Page URL Stacked */}
-              <div className="space-y-6">
+              <div className="space-y-4">
 
                 {/* Landing URL Selector */}
                 {!areAllSelectedAdGroupsShopping && (
@@ -5129,7 +5135,7 @@ export default function TikTokAdCreationForm({
 
               {/* Optional Section: Add Product Information — only shown when ad group has a catalog */}
               {isShoppingAdGroup && showProductCatalog && formCatalogId && (
-                <div className="pt-6 space-y-4">
+                <div className="space-y-4">
                   <div className="flex flex-col gap-1">
                     <Label className="flex items-center gap-2 font-semibold text-sm">
                       <BookOpen className="w-4 h-4" />
@@ -5276,7 +5282,7 @@ export default function TikTokAdCreationForm({
 
               {/* Optional Section: Add Store & Product Information (Showcase) */}
               {isShoppingAdGroup && showStoreProductSelection && (
-                <div className="pt-6 space-y-4">
+                <div className="space-y-4">
                   <div className="flex flex-col gap-1">
                     <Label className="flex items-center gap-2 font-semibold text-sm">
                       <Store className="w-4 h-4" />
@@ -5409,7 +5415,7 @@ export default function TikTokAdCreationForm({
 
               {/* 6. Media Section or Spark Info Card */}
               {adType !== 'SPARK' && (
-                <div className="pt-6">
+                <div>
                   {(
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
