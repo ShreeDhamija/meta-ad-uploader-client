@@ -1448,11 +1448,11 @@ transition-all duration-150 hover:!bg-black
                   ) : (
                     <Pencil className="h-3.5 w-3.5 mr-1" />
                   )}
-                  {editAdCreativeMode ? "Disable Ad Creative Editing" : "Edit Ad Creative while Duplicating"}
+                  {editAdCreativeMode ? "Disable Ad Creative Editing" : "Edit Ad Creative While Duplicating"}
                 </Button>
               )}
             </div>
-            {useExistingPosts && (
+            {editAdCreativeMode && (
               <p className="text-xs text-gray-500 mt-1">Ad Media will be duplicated with the creative details you fill below</p>
             )}
             {useExistingPosts && !selectedAdAccount && (

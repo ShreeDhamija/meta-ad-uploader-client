@@ -618,12 +618,12 @@ function PostSelectorInline({
                             </div>
 
                             {/* View Mode Toggle Buttons - 3 tabs */}
-                            <div className="flex items-center gap-1 border border-gray-300 rounded-full p-1">
+                            <div className="flex items-center gap-1 bg-gray-100 rounded-full p-1">
                                 <button
                                     type="button"
                                     onClick={() => handleViewModeChange('list')}
                                     className={`flex items-center justify-center h-7 w-7 rounded-full transition-colors ${viewMode === 'list'
-                                        ? 'bg-gray-700 text-white'
+                                        ? 'bg-gray-500 text-white shadow-sm'
                                         : 'bg-transparent text-gray-400 hover:text-gray-600'
                                         }`}
                                     title="Top spending ads"
@@ -634,7 +634,7 @@ function PostSelectorInline({
                                     type="button"
                                     onClick={() => handleViewModeChange('search')}
                                     className={`flex items-center justify-center h-7 w-7 rounded-full transition-colors ${viewMode === 'search'
-                                        ? 'bg-gray-700 text-white'
+                                        ? 'bg-gray-500 text-white shadow-sm'
                                         : 'bg-transparent text-gray-400 hover:text-gray-600'
                                         }`}
                                     title="Search ads by name"
@@ -645,7 +645,7 @@ function PostSelectorInline({
                                     type="button"
                                     onClick={() => handleViewModeChange('adset')}
                                     className={`flex items-center justify-center h-7 w-7 rounded-full transition-colors ${viewMode === 'adset'
-                                        ? 'bg-gray-700 text-white'
+                                        ? 'bg-gray-500 text-white shadow-sm'
                                         : 'bg-transparent text-gray-400 hover:text-gray-600'
                                         }`}
                                     title="Browse by campaign & ad set"
