@@ -20,6 +20,7 @@ import {
     DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
@@ -618,41 +619,19 @@ function PostSelectorInline({
                             </div>
 
                             {/* View Mode Toggle Buttons - 3 tabs */}
-                            <div className="flex items-center gap-1 bg-gray-100 rounded-full p-1">
-                                <button
-                                    type="button"
-                                    onClick={() => handleViewModeChange('list')}
-                                    className={`flex items-center justify-center h-7 w-7 rounded-full transition-colors ${viewMode === 'list'
-                                        ? 'bg-gray-500 text-white shadow-sm'
-                                        : 'bg-transparent text-gray-400 hover:text-gray-600'
-                                        }`}
-                                    title="Top spending ads"
-                                >
-                                    <DollarSign className="h-4 w-4" />
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => handleViewModeChange('search')}
-                                    className={`flex items-center justify-center h-7 w-7 rounded-full transition-colors ${viewMode === 'search'
-                                        ? 'bg-gray-500 text-white shadow-sm'
-                                        : 'bg-transparent text-gray-400 hover:text-gray-600'
-                                        }`}
-                                    title="Search ads by name"
-                                >
-                                    <Search className="h-4 w-4" />
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => handleViewModeChange('adset')}
-                                    className={`flex items-center justify-center h-7 w-7 rounded-full transition-colors ${viewMode === 'adset'
-                                        ? 'bg-gray-500 text-white shadow-sm'
-                                        : 'bg-transparent text-gray-400 hover:text-gray-600'
-                                        }`}
-                                    title="Browse by campaign & ad set"
-                                >
-                                    <List className="h-4 w-4" />
-                                </button>
-                            </div>
+                            <Tabs value={viewMode} onValueChange={handleViewModeChange}>
+                                <TabsList className="rounded-full">
+                                    <TabsTrigger value="list" className="rounded-full px-2.5" title="Top spending ads">
+                                        <DollarSign className="h-4 w-4" />
+                                    </TabsTrigger>
+                                    <TabsTrigger value="search" className="rounded-full px-2.5" title="Search ads by name">
+                                        <Search className="h-4 w-4" />
+                                    </TabsTrigger>
+                                    <TabsTrigger value="adset" className="rounded-full px-2.5" title="Browse by campaign & ad set">
+                                        <List className="h-4 w-4" />
+                                    </TabsTrigger>
+                                </TabsList>
+                            </Tabs>
                         </div>
 
                         {/* Search Bar - Only visible in search mode */}
