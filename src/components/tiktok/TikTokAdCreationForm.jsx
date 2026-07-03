@@ -1981,18 +1981,6 @@ export default function TikTokAdCreationForm({
 
       addCompletedJob(completedJob)
 
-      // Clear cache and refresh ad groups to get the new ad counts from TikTok
-      if (Array.isArray(selectedCampaign)) {
-        selectedCampaign.forEach(campId => {
-          clearCache(`tiktok_adgroups_${campId}`);
-        });
-      }
-      try {
-        forceRefreshAdGroups(null, false);
-      } catch (refreshErr) {
-        console.warn('[TikTokAdCreationForm] Failed to refresh ad groups on job completion:', refreshErr);
-      }
-
       // Advance queue
       setJobQueue(prev => prev.slice(1))
       setCurrentJob(null)
