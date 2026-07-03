@@ -230,7 +230,9 @@ export default function TikTokJobQueue({
                             const errorGroups = job.errorMessages.reduce((acc, item) => {
                               const key = item.error;
                               if (!acc[key]) acc[key] = { error: item.error, fileNames: [] };
-                              if (item.fileName) acc[key].fileNames.push(item.fileName);
+                              if (item.fileName && item.fileName.toLowerCase() !== 'ad') {
+                                acc[key].fileNames.push(item.fileName);
+                              }
                               return acc;
                             }, {});
 
@@ -348,7 +350,9 @@ export default function TikTokJobQueue({
                           const errorGroups = liveProgress.errors.reduce((acc, item) => {
                             const key = item.error;
                             if (!acc[key]) acc[key] = { error: item.error, fileNames: [] };
-                            if (item.fileName) acc[key].fileNames.push(item.fileName);
+                            if (item.fileName && item.fileName.toLowerCase() !== 'ad') {
+                              acc[key].fileNames.push(item.fileName);
+                            }
                             return acc;
                           }, {});
 
