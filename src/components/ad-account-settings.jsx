@@ -1452,6 +1452,9 @@ transition-all duration-150 hover:!bg-black
                 </Button>
               )}
             </div>
+            {useExistingPosts && (
+              <p className="text-xs text-gray-500 mt-1">Ad Media will be duplicated with the creative details you fill below</p>
+            )}
             {useExistingPosts && !selectedAdAccount && (
               <p className="text-xs text-amber-600 mt-1">Select an ad account to fetch ads</p>
             )}

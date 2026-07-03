@@ -26,6 +26,11 @@ import { cn } from "@/lib/utils"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
+// Session cache of the list-view ads per ad account so returning to the
+// duplication view (e.g. after toggling "Edit Ad Creative while Duplicating"
+// off) rehydrates instantly instead of re-fetching and showing a spinner.
+const listAdsCache = new Map();
+
 const DATE_PRESETS = [
     { label: '1 Day', value: 'yesterday' },
     { label: '3 Days', value: 'last_3d' },
@@ -354,17 +359,39 @@ function PostSelectorInline({
     }, [])
 
     useEffect(() => {
-        if (adAccountId && viewMode === 'list') {
-            fetchAds(null, datePreset)
-        }
         // Reset adset browse state when ad account changes
         setAdsetBrowseCampaignId('')
         setAdsetBrowseAdSets([])
         setAdsetBrowseSelectedAdSetId('')
-        setAds([])
-        setHasFetched(false)
         setError(null)
+
+        if (adAccountId && viewMode === 'list') {
+            const cached = listAdsCache.get(adAccountId)
+            if (cached) {
+                // Rehydrate from cache — no spinner, no refetch
+                setAds(cached.ads)
+                setNextCursor(cached.nextCursor)
+                setHasMore(cached.hasMore)
+                setDatePreset(cached.datePreset)
+                setHasFetched(true)
+                return
+            }
+            setAds([])
+            setHasFetched(false)
+            fetchAds(null, datePreset)
+        } else {
+            setAds([])
+            setHasFetched(false)
+        }
     }, [adAccountId])
+
+    // Keep the list-view cache in sync with the latest fetched ads so a later
+    // remount can rehydrate instantly.
+    useEffect(() => {
+        if (viewMode === 'list' && adAccountId && hasFetched && !isLoading) {
+            listAdsCache.set(adAccountId, { ads, nextCursor, hasMore, datePreset })
+        }
+    }, [ads, nextCursor, hasMore, viewMode, adAccountId, hasFetched, isLoading, datePreset])
 
     useEffect(() => {
         if (importedPosts && importedPosts.length === 0) {
@@ -591,37 +618,35 @@ function PostSelectorInline({
                             </div>
 
                             {/* View Mode Toggle Buttons - 3 tabs */}
-                            <div className="flex items-center border border-gray-300 rounded-xl overflow-hidden h-8">
+                            <div className="flex items-center gap-1 border border-gray-300 rounded-full p-1">
                                 <button
                                     type="button"
                                     onClick={() => handleViewModeChange('list')}
-                                    className={`flex items-center justify-center px-2.5 h-full transition-colors ${viewMode === 'list'
-                                        ? 'bg-black text-white'
-                                        : 'bg-white text-gray-400'
+                                    className={`flex items-center justify-center h-7 w-7 rounded-full transition-colors ${viewMode === 'list'
+                                        ? 'bg-gray-700 text-white'
+                                        : 'bg-transparent text-gray-400 hover:text-gray-600'
                                         }`}
                                     title="Top spending ads"
                                 >
                                     <DollarSign className="h-4 w-4" />
                                 </button>
-                                <div className="w-px h-full bg-gray-300" />
                                 <button
                                     type="button"
                                     onClick={() => handleViewModeChange('search')}
-                                    className={`flex items-center justify-center px-2.5 h-full transition-colors ${viewMode === 'search'
-                                        ? 'bg-black text-white'
-                                        : 'bg-white text-gray-400'
+                                    className={`flex items-center justify-center h-7 w-7 rounded-full transition-colors ${viewMode === 'search'
+                                        ? 'bg-gray-700 text-white'
+                                        : 'bg-transparent text-gray-400 hover:text-gray-600'
                                         }`}
                                     title="Search ads by name"
                                 >
                                     <Search className="h-4 w-4" />
                                 </button>
-                                <div className="w-px h-full bg-gray-300" />
                                 <button
                                     type="button"
                                     onClick={() => handleViewModeChange('adset')}
-                                    className={`flex items-center justify-center px-2.5 h-full transition-colors ${viewMode === 'adset'
-                                        ? 'bg-black text-white'
-                                        : 'bg-white text-gray-400'
+                                    className={`flex items-center justify-center h-7 w-7 rounded-full transition-colors ${viewMode === 'adset'
+                                        ? 'bg-gray-700 text-white'
+                                        : 'bg-transparent text-gray-400 hover:text-gray-600'
                                         }`}
                                     title="Browse by campaign & ad set"
                                 >
