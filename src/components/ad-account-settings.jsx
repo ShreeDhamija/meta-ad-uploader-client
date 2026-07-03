@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Check, ChevronsUpDown, RefreshCcw, X, Loader, AlertTriangle, Upload } from "lucide-react"
+import { Check, ChevronsUpDown, RefreshCcw, X, Loader, AlertTriangle, Upload, Ban } from "lucide-react"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { useAuth } from "@/lib/AuthContext"
 import { Input } from "@/components/ui/input"
@@ -76,6 +76,11 @@ export default function AdAccountSettings({
   sortCampaigns,
   useExistingPosts,
   setUseExistingPosts,
+  usePostID,
+  importedPosts = [],
+  editAdCreativeMode,
+  enterEditAdCreativeMode,
+  exitEditAdCreativeMode,
   isFormFieldModified,
   variants = [],
   activeVariantId = 'default',
@@ -1427,6 +1432,19 @@ transition-all duration-150 hover:!bg-black
                 checked={useExistingPosts}
                 onCheckedChange={setUseExistingPosts}
               />
+              {useExistingPosts && !usePostID && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={editAdCreativeMode ? exitEditAdCreativeMode : enterEditAdCreativeMode}
+                  disabled={!editAdCreativeMode && importedPosts.length === 0}
+                  className="ml-auto px-3 border border-red-500 text-red-600 hover:text-red-600 hover:bg-red-50 rounded-[14px] disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Ban className="h-3.5 w-3.5 mr-1 text-red-600" />
+                  {editAdCreativeMode ? "Disable Ad Creative Editing" : "Edit Ad Creative while Duplicating"}
+                </Button>
+              )}
             </div>
             {useExistingPosts && !selectedAdAccount && (
               <p className="text-xs text-amber-600 mt-1">Select an ad account to fetch ads</p>

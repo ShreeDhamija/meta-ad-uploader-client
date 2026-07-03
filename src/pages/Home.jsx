@@ -218,6 +218,12 @@ export default function Home() {
     const [selectedFiles, setSelectedFiles] = useState(new Set());
     const [useExistingPosts, setUseExistingPosts] = useState(false);
     const [usePostID, setUsePostID] = useState(false);
+    // "Edit Ad Creative while Duplicating": keep useExistingPosts on, but convert
+    // the imported ads into Meta Media Library-style media (image hash / video id)
+    // so the user builds a fresh creative around them. editCreativeBackupPosts holds
+    // the full original import (incl. unsupported ones) so the toggle is reversible.
+    const [editAdCreativeMode, setEditAdCreativeMode] = useState(false);
+    const [editCreativeBackupPosts, setEditCreativeBackupPosts] = useState([]);
     const [selectedIgOrganicPosts, setSelectedIgOrganicPosts] = useState([]);
     const [isLaunchingMediaPreview, setIsLaunchingMediaPreview] = useState(false);
     const [selectedForm, setSelectedForm] = useState(null);
@@ -246,6 +252,63 @@ export default function Home() {
             }
         };
     }, []);
+
+    // Enter "Edit Ad Creative while Duplicating": convert imported ads -> Meta
+    // library-style media (reusing each ad's existing image hash / video id).
+    // Ads without a single reusable asset (carousel / flex / IG boosted posts)
+    // can't be edited this way and are set aside, then restored on exit.
+    const enterEditAdCreativeMode = useCallback(() => {
+        const derived = [];
+        let skippedCount = 0;
+        importedPosts.forEach((post) => {
+            if (post.video_id) {
+                derived.push({ type: 'video', id: post.video_id, name: post.ad_name, previewUrl: post.image_url, thumbnail_url: post.image_url });
+            } else if (post.image_hash) {
+                derived.push({ type: 'image', hash: post.image_hash, name: post.ad_name, previewUrl: post.image_url, url: post.image_url });
+            } else {
+                skippedCount += 1;
+            }
+        });
+
+        if (skippedCount > 0) {
+            toast[derived.length === 0 ? 'error' : 'warning'](
+                `${skippedCount} ads might have been carousel/flex or instagram boosted posts for which editing is not yet supported.`
+            );
+        }
+
+        if (derived.length === 0) return;
+
+        setEditCreativeBackupPosts(importedPosts);
+        setImportedFiles(derived);
+        setImportedPosts([]);
+        setEditAdCreativeMode(true);
+    }, [importedPosts]);
+
+    // Exit back to the ad duplication view: restore the full original import
+    // (including the ads that couldn't be edited) and drop the derived media.
+    const exitEditAdCreativeMode = useCallback(() => {
+        setImportedPosts(editCreativeBackupPosts);
+        setEditCreativeBackupPosts([]);
+        setImportedFiles([]);
+        setEditAdCreativeMode(false);
+    }, [editCreativeBackupPosts]);
+
+    // Safety net: if we leave Use Existing Posts or switch ad account while in
+    // edit-creative mode, reset the mode and drop the (now stale) derived media.
+    const editModeAdAccountRef = useRef(selectedAdAccount);
+    useEffect(() => {
+        if (!editAdCreativeMode) {
+            editModeAdAccountRef.current = selectedAdAccount;
+            return;
+        }
+        if (!useExistingPosts || editModeAdAccountRef.current !== selectedAdAccount) {
+            setEditAdCreativeMode(false);
+            setEditCreativeBackupPosts([]);
+            setImportedFiles([]);
+        }
+        editModeAdAccountRef.current = selectedAdAccount;
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [useExistingPosts, selectedAdAccount]);
 
     const blocker = useBlocker(({ currentLocation, nextLocation }) => {
         if (!adLaunchInProgress) return false;
@@ -1429,6 +1492,11 @@ export default function Home() {
                             sortCampaigns={sortCampaigns}
                             useExistingPosts={useExistingPosts}
                             setUseExistingPosts={setUseExistingPosts}
+                            usePostID={usePostID}
+                            importedPosts={importedPosts}
+                            editAdCreativeMode={editAdCreativeMode}
+                            enterEditAdCreativeMode={enterEditAdCreativeMode}
+                            exitEditAdCreativeMode={exitEditAdCreativeMode}
                             isFormFieldModified={isFormFieldModified}
                             variants={variants}
                             activeVariantId={activeVariantId}
@@ -1530,6 +1598,7 @@ export default function Home() {
                             selectedFiles={selectedFiles}
                             setSelectedFiles={setSelectedFiles}
                             useExistingPosts={useExistingPosts}
+                            editAdCreativeMode={editAdCreativeMode}
                             usePostID={usePostID}
                             setUsePostID={setUsePostID}
                             refetchCopyTemplates={refetchCopyTemplates}

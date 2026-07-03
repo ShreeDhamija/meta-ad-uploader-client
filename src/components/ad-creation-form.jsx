@@ -21,7 +21,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Checkbox } from "@/components/ui/checkbox"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Users, ChevronDown, Loader, Plus, Trash2, Upload, ChevronsUpDown, RefreshCcw, CircleX, AlertTriangle, RotateCcw, Eye, FileText, X, Clock, ChevronLeft, ChevronRight, Ban, Phone, ArrowUpDown, Check, Info, CloudUpload, BicepsFlexed, Pencil, ArrowLeft } from "lucide-react"
+import { Users, ChevronDown, Loader, Plus, Trash2, Upload, ChevronsUpDown, RefreshCcw, CircleX, AlertTriangle, RotateCcw, Eye, FileText, X, Clock, ChevronLeft, ChevronRight, Ban, Phone, ArrowUpDown, Check, Info, CloudUpload, BicepsFlexed } from "lucide-react"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useAuth } from "@/lib/AuthContext"
@@ -730,6 +730,7 @@ export default function AdCreationForm({
   selectedFiles,
   setSelectedFiles,
   useExistingPosts,
+  editAdCreativeMode,
   usePostID,
   setUsePostID,
   refetchCopyTemplates,
@@ -955,12 +956,10 @@ export default function AdCreationForm({
   const [activeImportedPostIndex, setActiveImportedPostIndex] = useState(0);
   const [importedPostAdNames, setImportedPostAdNames] = useState({});
 
-  // "Edit Ad Creative" mode: keep useExistingPosts on, but instead of duplicating
-  // the imported ads verbatim, convert them into Meta Media Library-style media
-  // (image hash / video id) so the user can build a fresh creative around them.
-  const [editAdCreativeMode, setEditAdCreativeMode] = useState(false);
   // True while we are showing the PostIDSelector duplication UI (as opposed to
-  // the regular creative form fields reached via "Edit Ad Creative").
+  // the regular creative form fields reached via "Edit Ad Creative"). The
+  // editAdCreativeMode flag and its enter/exit handlers live in Home.jsx so the
+  // toggle button can sit next to the "Duplicate Existing ads" switch.
   const isDuplicationMode = useExistingPosts && !editAdCreativeMode;
 
   const getImportedPostKey = (post) => post?.ad_id || post?.post_id || post?.id || '';
@@ -974,74 +973,6 @@ export default function AdCreationForm({
     }
   }, [importedPosts.length]);
 
-  // Enter "Edit Ad Creative": convert imported ads -> Meta library-style media
-  // (reusing the imported ad's existing image hash / video id). The original post
-  // is stashed on each media item so the toggle is fully reversible.
-  const enterEditAdCreativeMode = () => {
-    const derived = [];
-    const skipped = [];
-    importedPosts.forEach((post) => {
-      if (post.video_id) {
-        derived.push({
-          type: 'video',
-          id: post.video_id,
-          name: post.ad_name,
-          previewUrl: post.image_url,
-          thumbnail_url: post.image_url,
-          sourcePost: post,
-        });
-      } else if (post.image_hash) {
-        derived.push({
-          type: 'image',
-          hash: post.image_hash,
-          name: post.ad_name,
-          previewUrl: post.image_url,
-          url: post.image_url,
-          sourcePost: post,
-        });
-      } else {
-        skipped.push(post.ad_name || post.ad_id);
-      }
-    });
-
-    if (derived.length === 0) {
-      toast.error("None of the imported ads have a reusable image or video. Carousel and dynamic-creative ads can't be edited this way.");
-      return;
-    }
-
-    if (skipped.length > 0) {
-      toast.warning(`Skipped ${skipped.length} ad${skipped.length > 1 ? 's' : ''} without a single reusable image/video (carousel or dynamic creative).`);
-    }
-
-    setImportedFiles(derived);
-    setImportedPosts([]);
-    setEditAdCreativeMode(true);
-  };
-
-  // Exit "Edit Ad Creative": restore the imported ads from the stashed source
-  // posts and drop the derived media, returning to the duplication view.
-  const exitEditAdCreativeMode = () => {
-    setImportedPosts(importedFiles.map((f) => f.sourcePost).filter(Boolean));
-    setImportedFiles([]);
-    setEditAdCreativeMode(false);
-  };
-
-  // Safety net: if we leave Use Existing Posts or switch ad account while in
-  // edit-creative mode, reset the mode and drop the (now stale) derived media.
-  const editModeAdAccountRef = useRef(selectedAdAccount);
-  useEffect(() => {
-    if (!editAdCreativeMode) {
-      editModeAdAccountRef.current = selectedAdAccount;
-      return;
-    }
-    const accountChanged = editModeAdAccountRef.current !== selectedAdAccount;
-    if (!useExistingPosts || accountChanged) {
-      setEditAdCreativeMode(false);
-      setImportedFiles([]);
-    }
-    editModeAdAccountRef.current = selectedAdAccount;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [useExistingPosts, selectedAdAccount]);
 
 
 
@@ -7059,24 +6990,6 @@ export default function AdCreationForm({
           }}
           className="space-y-6">
           <div className="space-y-10 overflow-hidden">
-            {useExistingPosts && !usePostID && (
-              <div className="flex justify-end">
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={editAdCreativeMode ? exitEditAdCreativeMode : enterEditAdCreativeMode}
-                  disabled={!editAdCreativeMode && importedPosts.length === 0}
-                  className="px-3 py-3 bg-white text-black border border-gray-300 rounded-[14px] hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {editAdCreativeMode ? (
-                    <ArrowLeft className="h-3.5 w-3.5 mr-1" />
-                  ) : (
-                    <Pencil className="h-3.5 w-3.5 mr-1" />
-                  )}
-                  {editAdCreativeMode ? "Back to Ad Duplication" : "Edit Ad Creative"}
-                </Button>
-              </div>
-            )}
             {isDuplicationMode ? (
               <div className="relative space-y-6">
                 {adNameSection}
