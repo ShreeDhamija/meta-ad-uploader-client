@@ -781,19 +781,31 @@ export default function TikTokAdCreationForm({
     });
   }, [selectedAdGroup, adGroups, showDuplicateAdGroupBlock, duplicateAdGroup]);
 
-  const showStoreProductSelection = useMemo(() => {
+  const isShowcaseSelection = useMemo(() => {
     const activeAdGroups = showDuplicateAdGroupBlock && duplicateAdGroup
       ? [duplicateAdGroup]
       : (selectedAdGroup || []);
 
     return activeAdGroups.some(agId => {
       const agObj = adGroups.find(g => g.adgroup_id === agId);
-      return agObj && (
-        agObj.product_source === 'SHOWCASE' ||
-        agObj.product_source === 'STORE'
-      );
+      return agObj && agObj.product_source === 'SHOWCASE';
     });
   }, [selectedAdGroup, adGroups, showDuplicateAdGroupBlock, duplicateAdGroup]);
+
+  const isStoreSelection = useMemo(() => {
+    const activeAdGroups = showDuplicateAdGroupBlock && duplicateAdGroup
+      ? [duplicateAdGroup]
+      : (selectedAdGroup || []);
+
+    return activeAdGroups.some(agId => {
+      const agObj = adGroups.find(g => g.adgroup_id === agId);
+      return agObj && agObj.product_source === 'STORE';
+    });
+  }, [selectedAdGroup, adGroups, showDuplicateAdGroupBlock, duplicateAdGroup]);
+
+  const showStoreProductSelection = useMemo(() => {
+    return isShowcaseSelection || isStoreSelection;
+  }, [isShowcaseSelection, isStoreSelection]);
 
   const showProductCatalog = useMemo(() => {
     if (isShoppingAdGroup) return true;
@@ -1122,7 +1134,7 @@ export default function TikTokAdCreationForm({
   // Intentionally does NOT depend on formStoreId so that setFormStoreId() called
   // during product selection never re-triggers this fetch.
   useEffect(() => {
-    if (!selectedAdvertiser || !showStoreProductSelection) return;
+    if (!selectedAdvertiser || !isShowcaseSelection) return;
     if (!selectedIdentity) {
       setFormStoreProducts([]);
       return;
@@ -1163,12 +1175,12 @@ export default function TikTokAdCreationForm({
       })
       .catch(err => console.warn('[CreationForm] Failed to load showcase products:', err.message))
       .finally(() => setLoadingFormStoreProducts(false));
-  }, [selectedAdvertiser, showStoreProductSelection, selectedIdentity, identities]);
+  }, [selectedAdvertiser, isShowcaseSelection, selectedIdentity, identities]);
 
   // Effect 2: Fetch regular STORE products (store-based).
   // Only runs when NOT in showcase mode, so identity/showcase changes don't re-trigger this.
   useEffect(() => {
-    if (!selectedAdvertiser || showStoreProductSelection) return;
+    if (!selectedAdvertiser || !isStoreSelection) return;
     if (!formStoreId) {
       setFormStoreProducts([]);
       return;
@@ -1200,7 +1212,7 @@ export default function TikTokAdCreationForm({
       })
       .catch(err => console.warn('[CreationForm] Failed to load store products:', err.message))
       .finally(() => setLoadingFormStoreProducts(false));
-  }, [selectedAdvertiser, showStoreProductSelection, formStoreId, formStoreBcId]);
+  }, [selectedAdvertiser, isStoreSelection, formStoreId, formStoreBcId]);
 
 
 
@@ -2076,13 +2088,13 @@ export default function TikTokAdCreationForm({
           identities[0]
         setSelectedIdentity(best?.identity_id || '')
       }
-    } else {
+    } else if (!loadingIdentities) {
       setSelectedIdentity('')
       if (adType === 'SPARK') {
         setAdType('NORMAL')
       }
     }
-  }, [identities, adType, setSelectedIdentity, setAdType, selectedIdentity])
+  }, [identities, adType, setSelectedIdentity, setAdType, selectedIdentity, loadingIdentities])
 
   // Fetch Ad Groups on Campaign change
   useEffect(() => {
@@ -2498,7 +2510,7 @@ export default function TikTokAdCreationForm({
     const uid = localStorage.getItem('tiktok_uid');
     const token = localStorage.getItem('tiktok_token');
 
-    if (showStoreProductSelection) {
+    if (isShowcaseSelection) {
       if (!selectedIdentity) {
         setFormStoreProducts([]);
         setLoadingFormStoreProducts(false);
@@ -3029,10 +3041,16 @@ export default function TikTokAdCreationForm({
   const computeAdNameFromFormula = useCallback((file, iterationIndex = 0, link = "", formula = null, adType = "") => {
     const formulaToUse = formula || adNameFormulaV2;
     if (!formulaToUse?.rawInput?.trim()) {
-      if (adType === "SPARK" && (!adName || adName === "Ad Generated Through Blip")) {
+      if (adType === "SPARK") {
         return " ";
       }
-      return adName || "Ad Generated Through Blip";
+      if (adName && adName.trim() !== "") {
+        return adName;
+      }
+      if (file && file.name) {
+        return file.name.replace(/\.[^/.]+$/, "");
+      }
+      return "Ad Generated Through Blip";
     }
 
     let fileName = "";
@@ -5640,7 +5658,7 @@ export default function TikTokAdCreationForm({
 
                   {areAllSelectedAdGroupsShopping && !formStoreId && (
                     <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
-                      Please select a store
+                      Please select a store proudct
                     </div>
                   )}
 
