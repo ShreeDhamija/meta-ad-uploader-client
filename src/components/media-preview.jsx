@@ -394,7 +394,8 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
         ? file.frameioId
         : (file.isDrive ? file.id : file.uniqueId || file.name);
 
-  const isSelectable = (enablePlacementCustomization || adType === 'flexible' || isCarouselAd) && groupNumber == null;
+  const isFlexLikeAdType = adType === 'flexible' || adType === 'multi_media';
+  const isSelectable = (enablePlacementCustomization || isFlexLikeAdType || isCarouselAd) && groupNumber == null;
   const hasMetaSourceLink = file.isMetaLibrary && file.source;
 
   const openMetaSourceLink = (event) => {
@@ -650,6 +651,7 @@ export default function MediaPreview({
   const [removingMediaIds, setRemovingMediaIds] = useState(new Set());
 
   const sensors = useSensors(useSensor(PointerSensor));
+  const isFlexLikeAdType = adType === 'flexible' || adType === 'multi_media';
   const hideUngroupedVariantDropdowns = isCarouselAd;
 
   const groupedFileIds = useMemo(
@@ -692,12 +694,12 @@ export default function MediaPreview({
   }, [files, driveFiles, dropboxFiles, frameioFiles, importedFiles, importedPosts, selectedIgOrganicPosts]);
 
   const canGroupFiles = useMemo(() => {
-    const maxGroupSize = (adType === 'flexible' || isCarouselAd) ? 10 : 3;
+    const maxGroupSize = (isFlexLikeAdType || isCarouselAd) ? 10 : 3;
     if (selectedFiles.size >= 2 && selectedFiles.size <= maxGroupSize) return true;
     // Exactly 2 total files and fewer than 2 selected — allow one-click grouping
     if (enablePlacementCustomization && totalFileCount === 2 && ungroupedFiles.length === 2 && selectedFiles.size === 0) return true;
     return false;
-  }, [selectedFiles.size, adType, isCarouselAd, enablePlacementCustomization, totalFileCount, ungroupedFiles.length]);
+  }, [selectedFiles.size, isFlexLikeAdType, isCarouselAd, enablePlacementCustomization, totalFileCount, ungroupedFiles.length]);
 
 
 
@@ -838,7 +840,7 @@ export default function MediaPreview({
   }, [selectedAdSets, adSets, duplicateAdSet]);
 
   const showPlacementCustomizationRow = !isCarouselAd &&
-    adType !== 'flexible' &&
+    !isFlexLikeAdType &&
     importedPosts.length === 0 &&
     selectedIgOrganicPosts.length === 0;
   const showVariantSetupButton = variants.length > 1 || totalFileCount >= 1;
@@ -986,9 +988,9 @@ export default function MediaPreview({
   }, [setSelectedFiles]);
 
   const handleGroupAds = useCallback(() => {
-    if (adType === 'flexible' || isCarouselAd) {
+    if (isFlexLikeAdType || isCarouselAd) {
       if (selectedFiles.size > 10) {
-        alert(isCarouselAd ? "Carousel ads can have maximum 10 cards" : "Flexible ad groups can contain maximum 10 files");
+        alert(isCarouselAd ? "Carousel ads can have maximum 10 cards" : "This ad type can contain maximum 10 files");
         return;
       }
       if (isCarouselAd && selectedFiles.size < 2) {
@@ -1480,7 +1482,7 @@ export default function MediaPreview({
                 </div>
 
                 <div className="flex shrink-0 gap-2">
-                  {(enablePlacementCustomization || adType === 'flexible' || isCarouselAd) && (
+                  {(enablePlacementCustomization || isFlexLikeAdType || isCarouselAd) && (
                     <>
                       <Button
                         variant="outline"
@@ -1493,7 +1495,7 @@ export default function MediaPreview({
                         Group Ads
                       </Button>
 
-                      {adType !== 'flexible' && !isCarouselAd && (
+                      {!isFlexLikeAdType && !isCarouselAd && (
                         <Button
                           variant="outline"
                           size="sm"
@@ -1517,7 +1519,7 @@ export default function MediaPreview({
                     </>
                   )}
 
-                  {adType === 'flexible' && (
+                  {isFlexLikeAdType && (
                     <Button
                       variant="outline"
                       size="sm"
@@ -1776,7 +1778,7 @@ export default function MediaPreview({
                         const fileId = getFileId(file);  // ✅ Use the helper that handles all file types
                         const assignedVariantId = fileVariantMap[fileId] || 'default';
                         const isDimmed = !isSingleMediaSplit && !enablePlacementCustomization && assignedVariantId !== activeVariantId;
-                        const showVariantDropdown = variants.length > 1 && !hideUngroupedVariantDropdowns && !(adType === 'flexible' && fileGroups.length > 0) && !isSingleMediaSplit;
+                        const showVariantDropdown = variants.length > 1 && !hideUngroupedVariantDropdowns && !(isFlexLikeAdType && fileGroups.length > 0) && !isSingleMediaSplit;
                         return (
                           <div
                             key={fileId}

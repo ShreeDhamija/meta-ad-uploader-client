@@ -773,6 +773,7 @@ export default function AdCreationForm({
   const formInputChrome = `${formFieldChrome} focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0`;
   const formDropdownTriggerChrome = `${formFieldChrome} hover:bg-white`;
   const formTextareaChrome = "w-full border border-gray-300 rounded-2xl bg-white px-3 pt-2.5 pb-2.5 text-sm leading-5 resize-none shadow focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0";
+  const isFlexLikeAdType = adType === 'flexible' || adType === 'multi_media';
   const isPlacementCustomizedSingleDescription = enablePlacementCustomization && !isCarouselAd;
   const hasPlacementCustomizationExtraDescriptions = isPlacementCustomizedSingleDescription && descriptions.length > 1;
   const renderDiffMark = (fieldKeys) => (
@@ -1207,7 +1208,7 @@ export default function AdCreationForm({
       return formData.fileGroups.length + ungroupedCount;
     }
 
-    if (formData.adType === 'flexible') {
+    if (formData.adType === 'flexible' || formData.adType === 'multi_media') {
       return formData.fileGroups.length > 0
         ? formData.fileGroups.length * (formData.selectedAdSets.length || 1)
         : (formData.selectedAdSets.length || 1);
@@ -1249,7 +1250,7 @@ export default function AdCreationForm({
     ).length;
     const postsForVariant = importedPostsForVariant + igOrganicPostsForVariant;
 
-    if (isCarouselAd || enablePlacementCustomization || adType === 'flexible') {
+    if (isCarouselAd || enablePlacementCustomization || isFlexLikeAdType) {
       const defaultOnly = variantId === 'default'
         ? [
           ...files,
@@ -1260,7 +1261,7 @@ export default function AdCreationForm({
         ].filter((file) => !groupedFileIds.has(getFileId(file))).length
         : 0;
 
-      return variantGroups.length + (adType === 'flexible' && fileGroups.length === 0 ? ungroupedCount : defaultOnly) +
+      return variantGroups.length + (isFlexLikeAdType && fileGroups.length === 0 ? ungroupedCount : defaultOnly) +
         postsForVariant;
     }
 
@@ -1302,7 +1303,7 @@ export default function AdCreationForm({
         return (groupVariantMap[owningGroup.id] || 'default') === variantId;
       }
 
-      if (adType === 'flexible' && fileGroups.length > 0) {
+      if (isFlexLikeAdType && fileGroups.length > 0) {
         return false;
       }
 
@@ -1517,7 +1518,7 @@ export default function AdCreationForm({
       }).length;
       // ungrouped files pair up as placement groups of 2
       newAdsPerAdSet = fileGroups.length + Math.ceil(ungroupedCount / 2);
-    } else if (adType === 'flexible') {
+    } else if (isFlexLikeAdType) {
       newAdsPerAdSet = fileGroups.length > 0 ? fileGroups.length : 1;
     } else if (selectedIgOrganicPosts.length > 0) {
       newAdsPerAdSet = selectedIgOrganicPosts.length;
@@ -1533,7 +1534,7 @@ export default function AdCreationForm({
     if (overLimitAdSets.length === 0) return null;
 
     return overLimitAdSets.map(a => a.name || a.id);
-  }, [selectedAdSets, adSets, importedPosts, isCarouselAd, fileGroups, fileGroupsAsArrays, enablePlacementCustomization, files, driveFiles, dropboxFiles, frameioFiles, importedFiles, adType, selectedIgOrganicPosts]);
+  }, [selectedAdSets, adSets, importedPosts, isCarouselAd, fileGroups, fileGroupsAsArrays, enablePlacementCustomization, files, driveFiles, dropboxFiles, frameioFiles, importedFiles, adType, isFlexLikeAdType, selectedIgOrganicPosts]);
 
 
   // Add this helper function
@@ -3294,6 +3295,8 @@ export default function AdCreationForm({
       try {
         if (adType === 'flexible')
           adTypeLabel = 'FLEX';
+        else if (adType === 'multi_media')
+          adTypeLabel = 'MULTI';
         else if (adType === 'carousel')
           adTypeLabel = 'CAR';
         else adTypeLabel = fileType;
@@ -3702,7 +3705,7 @@ export default function AdCreationForm({
     );
 
     const groupsToCheck =
-      (isCarouselAd || adType === 'flexible') && fileGroupsAsArrays.length === 0
+      (isCarouselAd || isFlexLikeAdType) && fileGroupsAsArrays.length === 0
         ? [mediaFileEntries.map((file) => file.id)]
         : fileGroupsAsArrays;
 
@@ -3711,6 +3714,7 @@ export default function AdCreationForm({
     return findDuplicateFileNameWarnings(groupsToCheck, fileEntriesById);
   }, [
     adType,
+    isFlexLikeAdType,
     driveFiles,
     dropboxFiles,
     fileGroupsAsArrays,
@@ -4183,20 +4187,20 @@ export default function AdCreationForm({
       }
     }
 
-    // Add flexible ads validation
-    if (adType === 'flexible') {
+    // Add flex-like ads validation
+    if (isFlexLikeAdType) {
       const totalFiles = files.length + driveFiles.length + dropboxFiles.length + frameioFiles.length + (importedFiles?.length || 0);
 
 
       // If no groups, validate single ad
       if (fileGroups.length === 0) {
         if (totalFiles > 10) {
-          toast.error("Flexible ads can have maximum 10 files per ad. Use grouping to create multiple ads.");
+          toast.error("This ad type can have maximum 10 files per ad. Use grouping to create multiple ads.");
           setIsLoading(false);
           return;
         }
         if (totalFiles < 1) {
-          toast.error("Flexible ads require at least 1 file");
+          toast.error("This ad type requires at least 1 file");
           setIsLoading(false);
           return;
         }
@@ -4204,7 +4208,7 @@ export default function AdCreationForm({
         // Validate groups
         const hasInvalidGroup = fileGroups.some(group => group.length > 10);
         if (hasInvalidGroup) {
-          toast.error("Each flexible ad group can have maximum 10 files");
+          toast.error("Each ad group can have maximum 10 files");
           setIsLoading(false);
           return;
         }
@@ -5340,9 +5344,9 @@ export default function AdCreationForm({
       }
 
       // ============================================================================
-      // SECTION 2: FLEXIBLE ADS TO NON-DYNAMIC AD SETS
+      // SECTION 2: FLEX-LIKE ADS TO NON-DYNAMIC AD SETS
       // ============================================================================
-      if (adType === 'flexible' && nonDynamicAdSetIds.length > 0) {
+      if (isFlexLikeAdType && nonDynamicAdSetIds.length > 0) {
 
 
         if (fileGroups.length > 0) {
@@ -5401,7 +5405,7 @@ export default function AdCreationForm({
 
               // Append flexible ad fields
               appendFlexibleAdFields(formData, {
-                adType: "flexible",
+                adType,
                 totalGroups: fileGroups.length,
                 currentGroupIndex: groupIndex + 1
               });
@@ -5471,7 +5475,7 @@ export default function AdCreationForm({
             });
 
             // Append flexible ad fields
-            appendFlexibleAdFields(formData, { adType: "flexible" });
+            appendFlexibleAdFields(formData, { adType });
 
             // Append all media files
             appendAllMediaFiles(formData, {
@@ -5542,8 +5546,13 @@ export default function AdCreationForm({
             adScheduleEndTime,
           });
 
-          // Append dynamic ad set fields
-          appendDynamicAdSetFields(formData, { isCarouselAd, thumbnail });
+          // Append dynamic ad set fields. Multi-media ads intentionally keep the
+          // flex-like request shape so the server can build media_sourcing_spec.
+          if (adType === 'multi_media') {
+            appendFlexibleAdFields(formData, { adType });
+          } else {
+            appendDynamicAdSetFields(formData, { isCarouselAd, thumbnail });
+          }
 
           // Append all media files
           appendAllMediaFiles(formData, {
@@ -5569,7 +5578,7 @@ export default function AdCreationForm({
       // ============================================================================
       // SECTION 4: NON-DYNAMIC AD SETS (Non-Carousel, Non-Flexible)
       // ============================================================================
-      if (nonDynamicAdSetIds.length > 0 && !isCarouselAd && adType !== 'flexible') {
+      if (nonDynamicAdSetIds.length > 0 && !isCarouselAd && !isFlexLikeAdType) {
         nonDynamicAdSetIds.forEach((adSetId) => {
           const groupedFileIds = enablePlacementCustomization ? new Set(fileGroups.flat()) : new Set();
           const hasUngroupedFiles = (
@@ -6394,7 +6403,7 @@ export default function AdCreationForm({
       (files.length === 0 && driveFiles.length === 0 && dropboxFiles.length === 0 && frameioFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0 && selectedIgOrganicPosts.length === 0) ||
       (duplicateAdSet && (!newAdSetName || newAdSetName.trim() === "")) ||
       (adType === 'carousel' && (files.length + driveFiles.length + importedFiles.length + dropboxFiles.length + frameioFiles.length) < 2) ||
-      (adType === 'flexible' && fileGroups.length === 0 && (files.length + driveFiles.length + importedFiles.length + dropboxFiles.length + frameioFiles.length) > 10) ||
+      (isFlexLikeAdType && fileGroups.length === 0 && (files.length + driveFiles.length + importedFiles.length + dropboxFiles.length + frameioFiles.length) > 10) ||
       (showShopDestinationSelector && !selectedShopDestination) ||
       isMissingDestinationValue ||
       (selectedFiles.size > 0) ||
@@ -6964,6 +6973,13 @@ export default function AdCreationForm({
                               )}
                             </Tooltip>
                           </TooltipProvider>
+
+                          <SelectItem
+                            value="multi_media"
+                            className="rounded-xl data-[highlighted]:bg-gray-100 data-[state=checked]:bg-gray-100 transition-all my-0.5"
+                          >
+                            Multi-Media Ad
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                     </span>
@@ -8894,7 +8910,7 @@ export default function AdCreationForm({
                 {showPhoneNumberField ? 'Please provide a phone number' : 'Please provide a link URL'}
               </div>
             )}
-            {enablePlacementCustomization && !isCarouselAd && adType !== 'flexible' && selectedFiles && (selectedFiles.size > 1) && (
+            {enablePlacementCustomization && !isCarouselAd && !isFlexLikeAdType && selectedFiles && (selectedFiles.size > 1) && (
               <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
                 You have ungrouped files for placement customization. Use the group ads button on the top right to group files               </div>
             )}
