@@ -2499,6 +2499,101 @@ export default function TikTokAdCreationForm({
       .catch(() => toast.error('Failed to refresh identities'))
   }
 
+  const forceRefreshStoreProducts = (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    if (!selectedAdvertiser || loadingFormStoreProducts) return;
+
+    setLoadingFormStoreProducts(true);
+    const uid = localStorage.getItem('tiktok_uid');
+    const token = localStorage.getItem('tiktok_token');
+
+    if (showStoreProductSelection) {
+      if (!selectedIdentity) {
+        setFormStoreProducts([]);
+        setLoadingFormStoreProducts(false);
+        return;
+      }
+      const identityObj = identities.find(i => i.identity_id === selectedIdentity);
+      const identityType = identityObj?.identity_type || 'BC_AUTH_TT';
+      const url = `${API_BASE_URL}/api/tiktok/showcase/products?advertiserId=${selectedAdvertiser}&identityId=${selectedIdentity}&identityType=${identityType}`;
+
+      fetch(url, {
+        credentials: 'include',
+        headers: {
+          ...(uid && { 'x-tiktok-user-id': uid }),
+          ...(token && { 'x-tiktok-token': token }),
+        }
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            const mappedProducts = (data.products || [])
+              .filter(p => {
+                const status = (p.status || p.product_status || '').toUpperCase();
+                return !status || status === 'AVAILABLE';
+              })
+              .map(p => ({
+                item_group_id: p.item_group_id || p.product_id || p.id,
+                title: p.title || p.product_name || p.name || 'Unnamed Product',
+                product_image_url: p.product_image_url || p.image_url || p.logo_url || (p.image_info?.web_uri) || null,
+                store_id: p.store_id || null,
+                min_price: p.min_price || null,
+                currency: p.currency || null
+              }));
+            setFormStoreProducts(mappedProducts);
+            toast.success('Showcase products refreshed!');
+          } else {
+            toast.error('Failed to refresh showcase products');
+          }
+        })
+        .catch(err => {
+          console.warn('[CreationForm] Failed to refresh showcase products:', err.message);
+          toast.error('Failed to refresh showcase products');
+        })
+        .finally(() => setLoadingFormStoreProducts(false));
+    } else {
+      if (!formStoreId) {
+        setFormStoreProducts([]);
+        setLoadingFormStoreProducts(false);
+        return;
+      }
+      let url = `${API_BASE_URL}/api/tiktok/store/products?advertiserId=${selectedAdvertiser}&store_id=${formStoreId}`;
+      if (formStoreBcId) {
+        url += `&bc_id=${formStoreBcId}`;
+      }
+
+      fetch(url, {
+        credentials: 'include',
+        headers: {
+          ...(uid && { 'x-tiktok-user-id': uid }),
+          ...(token && { 'x-tiktok-token': token }),
+        }
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            const availableProducts = (data.products || [])
+              .filter(p => {
+                const status = (p.status || p.product_status || '').toUpperCase();
+                return !status || status === 'AVAILABLE';
+              });
+            setFormStoreProducts(availableProducts);
+            toast.success('Store products refreshed!');
+          } else {
+            toast.error('Failed to refresh store products');
+          }
+        })
+        .catch(err => {
+          console.warn('[CreationForm] Failed to refresh store products:', err.message);
+          toast.error('Failed to refresh store products');
+        })
+        .finally(() => setLoadingFormStoreProducts(false));
+    }
+  }
+
   // Handle Campaign Duplication request
   const handleDuplicateCampaign = useCallback(async (campaignId) => {
     if (!campaignId || !selectedAdvertiser || !newCampaignName.trim()) return
@@ -5283,14 +5378,25 @@ export default function TikTokAdCreationForm({
               {/* Optional Section: Add Store & Product Information (Showcase) */}
               {isShoppingAdGroup && showStoreProductSelection && (
                 <div className="space-y-4">
-                  <div className="flex flex-col gap-1">
-                    <Label className="flex items-center gap-2 font-semibold text-sm">
-                      <Store className="w-4 h-4" />
-                      Showcase Product Information
-                    </Label>
-                    <span className="text-xs text-gray-500 leading-relaxed">
-                      Select a showcase product to promote.
-                    </span>
+                  <div className="flex items-center justify-between">
+                    <div className="flex flex-col gap-1">
+                      <Label className="flex items-center gap-2 font-semibold text-sm">
+                        <Store className="w-4 h-4" />
+                        Showcase Product Information
+                      </Label>
+                      <span className="text-xs text-gray-500 leading-relaxed">
+                        Select a showcase product to promote.
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={forceRefreshStoreProducts}
+                      disabled={loadingFormStoreProducts}
+                      title="Refresh products"
+                      className="p-1 text-gray-400 hover:text-gray-900 transition-colors disabled:opacity-50"
+                    >
+                      <RefreshCcw className={cn("w-3 h-3", loadingFormStoreProducts && "animate-spin")} />
+                    </button>
                   </div>
 
                   {/* Showcase Product Selection */}
