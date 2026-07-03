@@ -517,6 +517,8 @@ export default function TikTokAdCreationForm({
   onAdvertiserChange,
   advertiserPrefs,
   refetchAdvertiserPrefs,
+  documentExists,
+  loadingPrefs,
 
   // Lifted Form State
   adName, setAdName,
@@ -3679,6 +3681,31 @@ export default function TikTokAdCreationForm({
               </Popover>
               {!selectedAdvertiser && (
                 <p className="text-xs text-red-500 font-medium mt-1">Please select an advertiser account</p>
+              )}
+
+              {selectedAdvertiser && loadingPrefs && (
+                <div className="flex items-center gap-2 text-xs text-gray-500 mt-2">
+                  <Loader className="h-3 w-3 animate-spin" />
+                  Loading Ad Account Preferences...
+                </div>
+              )}
+
+              {selectedAdvertiser && !loadingPrefs && !documentExists && (
+                <div className="flex items-center gap-1 p-1 pl-2 bg-orange-50 border border-orange-200 rounded-2xl mt-2">
+                  <CogIcon className="w-4 h-4 text-orange-700" />
+                  <Label className="text-xs text-orange-700 flex-1">
+                    Add default settings for this account to speed up your workflow
+                  </Label>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => navigate(`/settings?tab=tiktok&adsaccount=${selectedAdvertiser}`)}
+                    className="text-xs px-3 py-0.25 border-orange-300 text-orange-700 bg-orange-300 rounded-xl hover:text-orange-800 hover:bg-orange-400"
+                  >
+                    Add Settings
+                  </Button>
+                </div>
               )}
             </div>
 

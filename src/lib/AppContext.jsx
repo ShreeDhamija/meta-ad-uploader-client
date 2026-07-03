@@ -148,9 +148,16 @@ export const AppProvider = ({ children }) => {
       });
       const data = await res.json();
       const settings = data.settings || {};
+      const documentExists = data.documentExists ?? false;
 
       setTiktokSettings(prev => {
-        const updated = { ...prev, [advertiserId]: settings };
+        const updated = {
+          ...prev,
+          [advertiserId]: {
+            ...settings,
+            _documentExists: documentExists
+          }
+        };
         writeCache('tiktokSettings', updated);
         return updated;
       });

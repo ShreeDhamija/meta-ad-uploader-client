@@ -475,7 +475,7 @@ export default function TikTokAds() {
 
 
   // Load preferences for selected advertiser
-  const { settings: advertiserPrefs, refetch: refetchAdvertiserPrefs } = useTikTokAdvertiserSettings(selectedAdvertiser)
+  const { settings: advertiserPrefs, refetch: refetchAdvertiserPrefs, loading: loadingPrefs, documentExists } = useTikTokAdvertiserSettings(selectedAdvertiser)
 
   // Sync files with videoFile/videoPreview for backend submissions and video uploading hooks
   useEffect(() => {
@@ -554,48 +554,57 @@ export default function TikTokAds() {
     } catch (e) { }
   }, [selectedAdvertiser, campaigns, selectedCampaign, adGroups, selectedAdGroup]);
 
-  // Sync state with preferences when they load
-  const restoredDefaultsRef = useRef({});
+  // Sync state with preferences when they load (mirrors Meta's Home.jsx pattern)
   useEffect(() => {
-    if (advertiserPrefs && selectedAdvertiser) {
-      // Check if we already restored defaults for this advertiser
-      if (restoredDefaultsRef.current[selectedAdvertiser]) return;
+    if (!selectedAdvertiser) return;
 
-      // 1. Default Identity (only if not already set)
-      if (!selectedIdentity && advertiserPrefs.defaultIdentityId) {
-        setSelectedIdentity(advertiserPrefs.defaultIdentityId);
+    // 1. Default Identity
+    setSelectedIdentity(advertiserPrefs?.defaultIdentityId || "");
+
+    // 2. Default CTA
+    setCta(advertiserPrefs?.defaultCTAs || ["SHOP_NOW"]);
+
+    // 3. Default Landing URL
+    const defaultLink = advertiserPrefs?.links?.find(l => l.isDefault) || advertiserPrefs?.links?.[0];
+    setLandingUrl(defaultLink?.url || "");
+
+    // 4. Default Ad Text
+    const templateName = advertiserPrefs?.defaultTemplateName
+      || (advertiserPrefs?.copyTemplates ? Object.keys(advertiserPrefs.copyTemplates)[0] : '')
+      || '';
+    const template = templateName ? advertiserPrefs?.copyTemplates?.[templateName] : null;
+    if (template) {
+      if (template.texts?.length > 0) {
+        setAdTexts([...template.texts]);
+      } else if (template.text) {
+        setAdTexts([template.text]);
+      } else {
+        setAdTexts([""]);
       }
-
-      // 2. Default CTA
-      if (Array.isArray(cta) && cta.length === 1 && cta[0] === 'SHOP_NOW' && advertiserPrefs.defaultCTAs?.length > 0) {
-        setCta(advertiserPrefs.defaultCTAs);
-      }
-
-      // 3. Default Landing URL
-      if (!landingUrl && advertiserPrefs.links?.length > 0) {
-        const defaultLink = advertiserPrefs.links.find(l => l.isDefault) || advertiserPrefs.links[0];
-        setLandingUrl(defaultLink.url);
-      }
-
-      // 4. Default Ad Text — use default template if set, otherwise fall back to first available template
-      if (adTexts.length === 1 && adTexts[0] === '' && advertiserPrefs.copyTemplates) {
-        const templateName = advertiserPrefs.defaultTemplateName
-          || Object.keys(advertiserPrefs.copyTemplates)[0]
-          || '';
-        const template = templateName ? advertiserPrefs.copyTemplates[templateName] : null;
-        if (template) {
-          if (template.texts?.length > 0) {
-            setAdTexts([...template.texts]);
-          } else if (template.text) {
-            setAdTexts([template.text]);
-          }
-        }
-      }
-
-      // Mark as restored
-      restoredDefaultsRef.current[selectedAdvertiser] = true;
+    } else {
+      setAdTexts([""]);
     }
-  }, [advertiserPrefs, selectedAdvertiser]);
+  }, [
+    selectedAdvertiser,
+    advertiserPrefs?.defaultIdentityId,
+    advertiserPrefs?.defaultCTAs,
+    advertiserPrefs?.links,
+    advertiserPrefs?.defaultTemplateName,
+    advertiserPrefs?.copyTemplates
+  ]);
+
+  // Reset form fields when selected advertiser is cleared (mirrors Meta's Home.jsx pattern)
+  useEffect(() => {
+    if (selectedAdvertiser) return;
+
+    setSelectedIdentity("");
+    setLandingUrl("");
+    setCta(["SHOP_NOW"]);
+    setAdTexts([""]);
+    setProductName("");
+    setProductImageUrl("");
+    setSelectedSavedProductId("");
+  }, [selectedAdvertiser]);
 
   // Auto-populate product from saved catalog selection in Firebase
   const catalogRestoredRef = useRef({});
@@ -945,6 +954,8 @@ export default function TikTokAds() {
                 onAdvertiserChange={setSelectedAdvertiser}
                 advertiserPrefs={advertiserPrefs}
                 refetchAdvertiserPrefs={refetchAdvertiserPrefs}
+                documentExists={documentExists}
+                loadingPrefs={loadingPrefs}
 
                 // Lifted Form State
                 adName={adName} setAdName={setAdName}

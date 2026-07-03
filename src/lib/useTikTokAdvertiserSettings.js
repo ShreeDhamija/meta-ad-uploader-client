@@ -29,7 +29,7 @@ export default function useTikTokAdvertiserSettings(advertiserId) {
     if (advertiserId) {
       const current = tiktokSettings[advertiserId] || {};
       const updated = typeof nextVal === 'function' ? nextVal(current) : nextVal;
-      updateTikTokSettingsCache(advertiserId, updated);
+      updateTikTokSettingsCache(advertiserId, { ...updated, _documentExists: true });
     }
   };
 
@@ -39,5 +39,7 @@ export default function useTikTokAdvertiserSettings(advertiserId) {
     }
   };
 
-  return { settings, setSettings, loading, refetch };
+  const documentExists = settings ? (settings._documentExists ?? false) : false;
+
+  return { settings, setSettings, loading, refetch, documentExists };
 }
