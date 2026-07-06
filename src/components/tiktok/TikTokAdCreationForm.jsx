@@ -2676,11 +2676,43 @@ export default function TikTokAdCreationForm({
     return map[ext] || 'application/octet-stream'
   }
 
+  // Supported TikTok file types
+  const TIKTOK_SUPPORTED_EXTENSIONS = /\.(mp4|mov|webm|jpg|jpeg|png|gif)$/i;
+  const TIKTOK_SUPPORTED_MIME = /^(video\/(mp4|quicktime|webm)|image\/(jpeg|png|gif))$/;
+
+  const isTikTokSupportedFile = (file) => {
+    const nameOk = TIKTOK_SUPPORTED_EXTENSIONS.test(file.name);
+    const mimeOk = file.type ? TIKTOK_SUPPORTED_MIME.test(file.type) : nameOk;
+    return nameOk || mimeOk;
+  };
+
   const handleVideoSelect = (e) => {
     const selectedFiles = Array.from(e.target.files)
     if (selectedFiles.length === 0) return
 
+    // Filter out unsupported file types
+    const supportedFiles = [];
+    const rejectedFiles = [];
     selectedFiles.forEach((file) => {
+      if (isTikTokSupportedFile(file)) {
+        supportedFiles.push(file);
+      } else {
+        rejectedFiles.push(file);
+      }
+    });
+
+    if (rejectedFiles.length > 0) {
+      rejectedFiles.forEach((file) => {
+        toast.error(`Job Failed: The type of file is not supported. (${file.name})`, { duration: 6000 });
+      });
+    }
+
+    if (supportedFiles.length === 0) {
+      e.target.value = "";
+      return;
+    }
+
+    supportedFiles.forEach((file) => {
       if (file.type.startsWith("video/") || /\.(mp4|mov|webm)$/i.test(file.name)) {
         const url = URL.createObjectURL(file);
         const tempVideo = document.createElement("video");
@@ -2701,7 +2733,7 @@ export default function TikTokAdCreationForm({
       }
     });
 
-    const taggedFiles = selectedFiles.map(file => {
+    const taggedFiles = supportedFiles.map(file => {
       if (file.uniqueId) return file;
       file.uniqueId = `${file.name}-${file.lastModified || Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
       return file;
@@ -2719,7 +2751,26 @@ export default function TikTokAdCreationForm({
   const onDrop = useCallback((acceptedFiles) => {
     if (acceptedFiles.length === 0) return
 
+    // Filter out unsupported file types and show error for rejected ones
+    const supportedFiles = [];
+    const rejectedFiles = [];
     acceptedFiles.forEach((file) => {
+      if (isTikTokSupportedFile(file)) {
+        supportedFiles.push(file);
+      } else {
+        rejectedFiles.push(file);
+      }
+    });
+
+    if (rejectedFiles.length > 0) {
+      rejectedFiles.forEach((file) => {
+        toast.error(`Job Failed: The type of file is not supported. (${file.name})`, { duration: 6000 });
+      });
+    }
+
+    if (supportedFiles.length === 0) return;
+
+    supportedFiles.forEach((file) => {
       if (file.type.startsWith("video/") || /\.(mp4|mov|webm)$/i.test(file.name)) {
         const url = URL.createObjectURL(file);
         const tempVideo = document.createElement("video");
@@ -2740,7 +2791,7 @@ export default function TikTokAdCreationForm({
       }
     });
 
-    const taggedFiles = acceptedFiles.map(file => {
+    const taggedFiles = supportedFiles.map(file => {
       if (file.uniqueId) return file;
       file.uniqueId = `${file.name}-${file.lastModified || Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
       return file;
@@ -2757,14 +2808,8 @@ export default function TikTokAdCreationForm({
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     multiple: true,
-    accept: {
-      'video/mp4': ['.mp4'],
-      'video/quicktime': ['.mov'],
-      'video/webm': ['.webm'],
-      'image/jpeg': ['.jpeg', '.jpg'],
-      'image/png': ['.png'],
-      'image/gif': ['.gif']
-    }
+    // No 'accept' filter — unsupported types are handled manually inside onDrop
+    // so the user gets a proper error message instead of silent rejection
   })
 
   const applyUtmsToUrl = (url, pairs = []) => {
