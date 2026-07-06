@@ -106,7 +106,7 @@ export default function TikTokAds() {
   const [videoPreview, setVideoPreview] = useState(null)
   const [driveFiles, setDriveFiles] = useState([])
   const [dropboxFiles, setDropboxFiles] = useState([])
-  const [selectedIdentity, setSelectedIdentity] = useState('')
+  const [selectedIdentity, setSelectedIdentity] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.selectedIdentity : null) || '')
   const [sparkAuthCodes, setSparkAuthCodes] = useState([''])
   const [urlMode, setUrlMode] = useState('WEBSITE')
   const [adType, setAdType] = useState('NORMAL')
@@ -548,12 +548,13 @@ export default function TikTokAds() {
       selectedCampaign,
       adGroups,
       selectedAdGroup,
+      selectedIdentity,
       timestamp: Date.now(),
     };
     try {
       localStorage.setItem(TIKTOK_CACHE_KEY, JSON.stringify(cacheData));
     } catch (e) { }
-  }, [selectedAdvertiser, campaigns, selectedCampaign, adGroups, selectedAdGroup]);
+  }, [selectedAdvertiser, campaigns, selectedCampaign, adGroups, selectedAdGroup, selectedIdentity]);
 
   // Sync state with preferences when they load (mirrors Meta's Home.jsx pattern)
   useEffect(() => {
@@ -563,8 +564,9 @@ export default function TikTokAds() {
     }
 
     if (!loadingPrefs && lastLoadedAdvertiserRef.current !== selectedAdvertiser) {
-      // 1. Default Identity
-      setSelectedIdentity(advertiserPrefs?.defaultIdentityId || "");
+      // 1. Default Identity (prioritize cached selection if exists)
+      const cachedVal = _tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.selectedIdentity : null;
+      setSelectedIdentity(cachedVal || advertiserPrefs?.defaultIdentityId || "");
 
       // 2. Default CTA
       setCta(advertiserPrefs?.defaultCTAs || ["SHOP_NOW"]);
