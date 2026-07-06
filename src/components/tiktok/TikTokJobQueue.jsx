@@ -219,7 +219,7 @@ export default function TikTokJobQueue({
                   </div>
 
                   {/* Error details (moved outside the flex row) */}
-                  {(job.status === 'partial-success' || job.status === 'cancelled' || job.status === 'error') && job.errorMessages?.length > 0 && (
+                  {(job.status === 'partial-success' || job.status === 'cancelled') && job.errorMessages?.length > 0 && (
                     <div className="mt-2 ml-9">
                       <details className="text-xs">
                         <summary className="cursor-pointer text-[#FF0000] font-medium">
@@ -230,9 +230,7 @@ export default function TikTokJobQueue({
                             const errorGroups = job.errorMessages.reduce((acc, item) => {
                               const key = item.error;
                               if (!acc[key]) acc[key] = { error: item.error, fileNames: [] };
-                              if (item.fileName && item.fileName.toLowerCase() !== 'ad') {
-                                acc[key].fileNames.push(item.fileName);
-                              }
+                              if (item.fileName) acc[key].fileNames.push(item.fileName);
                               return acc;
                             }, {});
 
@@ -350,9 +348,7 @@ export default function TikTokJobQueue({
                           const errorGroups = liveProgress.errors.reduce((acc, item) => {
                             const key = item.error;
                             if (!acc[key]) acc[key] = { error: item.error, fileNames: [] };
-                            if (item.fileName && item.fileName.toLowerCase() !== 'ad') {
-                              acc[key].fileNames.push(item.fileName);
-                            }
+                            if (item.fileName) acc[key].fileNames.push(item.fileName);
                             return acc;
                           }, {});
 
