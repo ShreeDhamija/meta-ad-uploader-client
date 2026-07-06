@@ -1901,10 +1901,12 @@ export default function TikTokAdCreationForm({
     setCurrentJob(jobToProcess)
     setHasStartedAnyJob(true)
 
+    resetProgress()
     setProgress(0)
     setProgressMessage('Initializing...')
     setJobId(jobToProcess.id)
     setIsCancelling(false)
+    setLiveProgress({ completed: 0, succeeded: 0, failed: 0, total: 0, errors: [] })
 
     handleCreateAd(jobToProcess).catch(err => {
       const failedJob = {
