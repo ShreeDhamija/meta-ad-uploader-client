@@ -5385,7 +5385,7 @@ export default function TikTokAdCreationForm({
 
               {/* Optional Section: Add Store & Product Information (Showcase) */}
               {isShoppingAdGroup && showStoreProductSelection && (
-                <div className="space-y-4">
+                <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex flex-col m-0 pt-1">
                       <Label className="flex items-center gap-2 font-semibold text-sm">
@@ -5409,7 +5409,6 @@ export default function TikTokAdCreationForm({
 
                   {/* Showcase Product Selection */}
                   <div className="space-y-1">
-                    <Label className="text-xs font-semibold text-gray-700">Showcase Product</Label>
                     <Popover open={openFormStoreProduct} onOpenChange={(open) => {
                       setOpenFormStoreProduct(open);
                       if (!open) setFormStoreProductSearch("");
