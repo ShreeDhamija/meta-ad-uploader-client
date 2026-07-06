@@ -4261,6 +4261,11 @@ export default function TikTokAdCreationForm({
                                               return toast.error(`Cannot select ad group "${ag.adgroup_name}". It already has ${ag.ad_count} ads, which is the limit of 50.`);
                                             }
                                             setSelectedAdGroup(prev => [...prev, ag.adgroup_id])
+                                            if (showDuplicateAdGroupBlock) {
+                                              setShowDuplicateAdGroupBlock(false);
+                                              setDuplicateAdGroup("");
+                                              setNewAdGroupName("");
+                                            }
                                           }
                                         }}
                                         className={cn(
