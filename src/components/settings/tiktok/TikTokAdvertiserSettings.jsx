@@ -155,12 +155,13 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
             if (data.success) {
                 setCatalogs(data.catalogs || []);
             } else {
-                setCatalogError(data.error || 'Failed to load catalogs');
+                console.error('[Catalogs] Failed to load catalogs:', data.error || 'Unknown error');
+                setCatalogError('No catalogs found.');
                 setCatalogs([]);
             }
         } catch (err) {
             console.error("❌ [Client fetchCatalogs] Error caught during fetch:", err);
-            setCatalogError(err.message);
+            setCatalogError('No catalogs found.');
             setCatalogs([]);
         } finally {
             setLoadingCatalogs(false);
@@ -855,7 +856,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                         {catalogError && (
                             <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl p-3">
                                 <Info className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
-                                <p className="text-xs text-red-600">{catalogError}</p>
+                                <p className="text-xs text-red-600">No catalogs found.</p>
                             </div>
                         )}
 
