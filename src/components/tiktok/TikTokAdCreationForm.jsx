@@ -2100,21 +2100,42 @@ export default function TikTokAdCreationForm({
   }, [selectedAdvertiser, tiktokIdentities, setIdentities]);
 
   // Automatically update selectedIdentity when adType or identities list changes
+  // Use a ref to avoid overriding the parent's cached/default value on the very first
+  // identities population — the parent sets selectedIdentity via a separate render cycle,
+  // so on the first run we only auto-select if the parent explicitly left it empty.
+  const identityAutoSelectRef = useRef(false);
+
   useEffect(() => {
     const isFetched = tiktokIdentities[selectedAdvertiser] !== undefined;
 
     if (identities.length > 0) {
       const currentExists = identities.some(i => i.identity_id === selectedIdentity);
-      if (!selectedIdentity || !currentExists) {
-        const best = identities.find(i => i.identity_type === 'BC_AUTH_TT') ||
-          identities[0]
-        setSelectedIdentity(best?.identity_id || '')
+
+      if (currentExists) {
+        // The selected identity is valid — mark auto-select as done
+        identityAutoSelectRef.current = true;
+        return;
       }
+
+      if (!selectedIdentity) {
+        // selectedIdentity is empty — auto-select the best match
+        const best = identities.find(i => i.identity_type === 'BC_AUTH_TT') || identities[0];
+        setSelectedIdentity(best?.identity_id || '');
+        identityAutoSelectRef.current = true;
+      } else if (identityAutoSelectRef.current) {
+        // Already ran once before AND the current value doesn't exist in the list
+        // (e.g. user switched advertisers) — override with best match
+        const best = identities.find(i => i.identity_type === 'BC_AUTH_TT') || identities[0];
+        setSelectedIdentity(best?.identity_id || '');
+      }
+      // else: first run, selectedIdentity is non-empty but not in identities yet
+      //   → skip, let the parent's cached/default value settle in next render
     } else if (!loadingIdentities && isFetched) {
       setSelectedIdentity('')
       if (adType === 'SPARK') {
         setAdType('NORMAL')
       }
+      identityAutoSelectRef.current = true;
     }
   }, [identities, adType, setSelectedIdentity, setAdType, selectedIdentity, loadingIdentities, tiktokIdentities, selectedAdvertiser])
 
