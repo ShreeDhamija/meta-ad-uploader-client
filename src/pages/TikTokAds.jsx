@@ -122,6 +122,12 @@ export default function TikTokAds() {
   const [driveFiles, setDriveFiles] = useState([])
   const [dropboxFiles, setDropboxFiles] = useState([])
   const [selectedIdentity, setSelectedIdentity] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.selectedIdentity : null) || '')
+  const [formStoreId, setFormStoreId] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.formStoreId : null) || null)
+  const [formStoreName, setFormStoreName] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.formStoreName : null) || null)
+  const [formStoreProductId, setFormStoreProductId] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.formStoreProductId : null) || [])
+  const [formStoreProductName, setFormStoreProductName] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.formStoreProductName : null) || null)
+  const [formStoreBcId, setFormStoreBcId] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.formStoreBcId : null) || null)
+  const [formStoreCatalogId, setFormStoreCatalogId] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.formStoreCatalogId : null) || null)
   const [sparkAuthCodes, setSparkAuthCodes] = useState([''])
   const [urlMode, setUrlMode] = useState('WEBSITE')
   const [adType, setAdType] = useState('NORMAL')
@@ -548,12 +554,31 @@ export default function TikTokAds() {
       adGroups,
       selectedAdGroup,
       selectedIdentity,
+      formStoreId,
+      formStoreName,
+      formStoreProductId,
+      formStoreProductName,
+      formStoreBcId,
+      formStoreCatalogId,
       timestamp: Date.now(),
     };
     try {
       localStorage.setItem(TIKTOK_CACHE_KEY, JSON.stringify(cacheData));
     } catch (e) { }
-  }, [selectedAdvertiser, campaigns, selectedCampaign, adGroups, selectedAdGroup, selectedIdentity]);
+  }, [
+    selectedAdvertiser,
+    campaigns,
+    selectedCampaign,
+    adGroups,
+    selectedAdGroup,
+    selectedIdentity,
+    formStoreId,
+    formStoreName,
+    formStoreProductId,
+    formStoreProductName,
+    formStoreBcId,
+    formStoreCatalogId,
+  ]);
 
   // Sync state with preferences when they load (mirrors Meta's Home.jsx pattern)
   useEffect(() => {
@@ -612,6 +637,12 @@ export default function TikTokAds() {
     setProductName("");
     setProductImageUrl("");
     setSelectedSavedProductId("");
+    setFormStoreId(null);
+    setFormStoreName(null);
+    setFormStoreProductId([]);
+    setFormStoreProductName(null);
+    setFormStoreBcId(null);
+    setFormStoreCatalogId(null);
     lastLoadedAdvertiserRef.current = null;
   }, [selectedAdvertiser]);
 
@@ -980,6 +1011,12 @@ export default function TikTokAds() {
                 driveFiles={driveFiles} setDriveFiles={setDriveFiles}
                 dropboxFiles={dropboxFiles} setDropboxFiles={setDropboxFiles}
                 selectedIdentity={selectedIdentity} setSelectedIdentity={setSelectedIdentity}
+                formStoreId={formStoreId} setFormStoreId={setFormStoreId}
+                formStoreName={formStoreName} setFormStoreName={setFormStoreName}
+                formStoreProductId={formStoreProductId} setFormStoreProductId={setFormStoreProductId}
+                formStoreProductName={formStoreProductName} setFormStoreProductName={setFormStoreProductName}
+                formStoreBcId={formStoreBcId} setFormStoreBcId={setFormStoreBcId}
+                formStoreCatalogId={formStoreCatalogId} setFormStoreCatalogId={setFormStoreCatalogId}
                 sparkAuthCodes={sparkAuthCodes} setSparkAuthCodes={setSparkAuthCodes}
                 urlMode={urlMode} setUrlMode={setUrlMode}
                 adType={adType} setAdType={setAdType}
