@@ -2147,13 +2147,15 @@ export default function TikTokAdCreationForm({
         //   → skip, let the parent's cached/default value settle in next render
         console.log('[IDENTITY DEBUG] → SKIPPING (first run, waiting for parent value to settle). selectedIdentity=', selectedIdentity);
       }
-    } else if (!loadingIdentities && isFetched) {
-      console.log('[IDENTITY DEBUG] → identities empty & fetched, clearing');
+    } else if (!loadingIdentities && isFetched && identityAutoSelectRef.current) {
+      // Only clear if auto-select already ran once (identities were populated then went empty,
+      // e.g. advertiser switch). On first render, identities state is [] even though
+      // tiktokIdentities context has data — the setIdentities call is still pending.
+      console.log('[IDENTITY DEBUG] → identities empty & fetched & autoSelectDone, clearing');
       setSelectedIdentity('')
       if (adType === 'SPARK') {
         setAdType('NORMAL')
       }
-      identityAutoSelectRef.current = true;
     }
   }, [identities, adType, setSelectedIdentity, setAdType, selectedIdentity, loadingIdentities, tiktokIdentities, selectedAdvertiser])
 
