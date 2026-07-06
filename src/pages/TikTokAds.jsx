@@ -77,6 +77,21 @@ export default function TikTokAds() {
   const userHasActiveAccess = hasActiveAccess ? hasActiveAccess() : true
   const { showMessenger, hideMessenger } = useIntercom()
 
+  // Read the 24-hour cache once at component creation (mirrors Meta's Home.jsx pattern).
+  // Defined as a plain function — not a hook — so it's safe to call here before useState.
+  const _readTikTokCache = () => {
+    try {
+      const raw = localStorage.getItem(TIKTOK_CACHE_KEY);
+      if (!raw) return null;
+      const data = JSON.parse(raw);
+      if (Date.now() - data.timestamp < 24 * 60 * 60 * 1000) return data;
+    } catch (e) {
+      console.error('Failed to parse TikTok ads cache:', e);
+    }
+    return null;
+  };
+  const _tiktokCache = _readTikTokCache();
+
   const [selectedAdvertiser, setSelectedAdvertiser] = useState(() => {
     // 1. Check URL query parameter
     const urlParams = new URLSearchParams(window.location.search);
@@ -115,22 +130,6 @@ export default function TikTokAds() {
   const [productImageUrl, setProductImageUrl] = useState("")
   const [sellingPoints, setSellingPoints] = useState([])
   const [selectedSavedProductId, setSelectedSavedProductId] = useState("")
-
-
-  // Read the 24-hour cache once at component creation (mirrors Meta's Home.jsx pattern).
-  // Defined as a plain function — not a hook — so it's safe to call here before useState.
-  const _readTikTokCache = () => {
-    try {
-      const raw = localStorage.getItem(TIKTOK_CACHE_KEY);
-      if (!raw) return null;
-      const data = JSON.parse(raw);
-      if (Date.now() - data.timestamp < 24 * 60 * 60 * 1000) return data;
-    } catch (e) {
-      console.error('Failed to parse TikTok ads cache:', e);
-    }
-    return null;
-  };
-  const _tiktokCache = _readTikTokCache();
 
   // Only restore campaign/ad-group cache if it belongs to the same advertiser
   const _cacheMatchesAdvertiser = _tiktokCache?.selectedAdvertiser === (_tiktokCache?.selectedAdvertiser && selectedAdvertiser
