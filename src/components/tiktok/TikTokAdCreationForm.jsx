@@ -2101,6 +2101,8 @@ export default function TikTokAdCreationForm({
 
   // Automatically update selectedIdentity when adType or identities list changes
   useEffect(() => {
+    const isFetched = tiktokIdentities[selectedAdvertiser] !== undefined;
+
     if (identities.length > 0) {
       const currentExists = identities.some(i => i.identity_id === selectedIdentity);
       if (!selectedIdentity || !currentExists) {
@@ -2108,13 +2110,13 @@ export default function TikTokAdCreationForm({
           identities[0]
         setSelectedIdentity(best?.identity_id || '')
       }
-    } else if (!loadingIdentities) {
+    } else if (!loadingIdentities && isFetched) {
       setSelectedIdentity('')
       if (adType === 'SPARK') {
         setAdType('NORMAL')
       }
     }
-  }, [identities, adType, setSelectedIdentity, setAdType, selectedIdentity, loadingIdentities])
+  }, [identities, adType, setSelectedIdentity, setAdType, selectedIdentity, loadingIdentities, tiktokIdentities, selectedAdvertiser])
 
   // Fetch Ad Groups on Campaign change
   useEffect(() => {
