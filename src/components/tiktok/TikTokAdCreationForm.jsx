@@ -5658,12 +5658,6 @@ export default function TikTokAdCreationForm({
                     )}
                   </Button>
 
-                  {areAllSelectedAdGroupsShopping && !formStoreId && (
-                    <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
-                      Please select a store proudct
-                    </div>
-                  )}
-
                   {areAllSelectedAdGroupsShopping && (!formStoreProductId || (Array.isArray(formStoreProductId) && formStoreProductId.length === 0)) && (
                     <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
                       Please select a showcase product
