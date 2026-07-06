@@ -323,6 +323,7 @@ const useAdCreationProgress = (jobId) => {
     setProgress(0);
     setMessage('');
     setStatus('idle');
+    setMetadata({});
   }, []);
 
   useEffect(() => {
