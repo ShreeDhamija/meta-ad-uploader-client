@@ -1139,6 +1139,14 @@ export default function TikTokAdCreationForm({
       setFormStoreProducts([]);
       return;
     }
+
+    const cacheKey = `tiktok_showcase_products_${selectedAdvertiser}_${selectedIdentity}`;
+    const cached = readCache(cacheKey);
+    if (cached) {
+      setFormStoreProducts(cached);
+      return;
+    }
+
     setLoadingFormStoreProducts(true);
     const uid = localStorage.getItem('tiktok_uid');
     const token = localStorage.getItem('tiktok_token');
@@ -1171,6 +1179,7 @@ export default function TikTokAdCreationForm({
               currency: p.currency || null
             }));
           setFormStoreProducts(mappedProducts);
+          writeCache(cacheKey, mappedProducts);
         }
       })
       .catch(err => console.warn('[CreationForm] Failed to load showcase products:', err.message))
@@ -1185,6 +1194,14 @@ export default function TikTokAdCreationForm({
       setFormStoreProducts([]);
       return;
     }
+
+    const cacheKey = `tiktok_store_products_${selectedAdvertiser}_${formStoreId}`;
+    const cached = readCache(cacheKey);
+    if (cached) {
+      setFormStoreProducts(cached);
+      return;
+    }
+
     setLoadingFormStoreProducts(true);
     const uid = localStorage.getItem('tiktok_uid');
     const token = localStorage.getItem('tiktok_token');
@@ -1208,6 +1225,7 @@ export default function TikTokAdCreationForm({
               return !status || status === 'AVAILABLE';
             });
           setFormStoreProducts(availableProducts);
+          writeCache(cacheKey, availableProducts);
         }
       })
       .catch(err => console.warn('[CreationForm] Failed to load store products:', err.message))
@@ -2546,6 +2564,7 @@ export default function TikTokAdCreationForm({
                 currency: p.currency || null
               }));
             setFormStoreProducts(mappedProducts);
+            writeCache(`tiktok_showcase_products_${selectedAdvertiser}_${selectedIdentity}`, mappedProducts);
             toast.success('Showcase products refreshed!');
           } else {
             toast.error('Failed to refresh showcase products');
@@ -2583,6 +2602,7 @@ export default function TikTokAdCreationForm({
                 return !status || status === 'AVAILABLE';
               });
             setFormStoreProducts(availableProducts);
+            writeCache(`tiktok_store_products_${selectedAdvertiser}_${formStoreId}`, availableProducts);
             toast.success('Store products refreshed!');
           } else {
             toast.error('Failed to refresh store products');
