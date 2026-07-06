@@ -565,7 +565,9 @@ export default function TikTokAds() {
     if (!loadingPrefs && lastLoadedAdvertiserRef.current !== selectedAdvertiser) {
       // 1. Default Identity (prioritize cached selection if exists)
       const cachedVal = _tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.selectedIdentity : null;
-      setSelectedIdentity(cachedVal || advertiserPrefs?.defaultIdentityId || "");
+      const resolvedIdentity = cachedVal || advertiserPrefs?.defaultIdentityId || "";
+      console.log('[IDENTITY DEBUG] TikTokAds pref sync:', { cachedVal, defaultIdentityId: advertiserPrefs?.defaultIdentityId, resolvedIdentity, selectedAdvertiser });
+      setSelectedIdentity(resolvedIdentity);
 
       // 2. Default CTA
       setCta(advertiserPrefs?.defaultCTAs || ["SHOP_NOW"]);

@@ -2088,14 +2088,18 @@ export default function TikTokAdCreationForm({
     }
 
     fetchTikTokIdentities(selectedAdvertiser).then(list => {
-      setIdentities((list || []).filter(i => i.identity_type === 'BC_AUTH_TT'))
+      const filtered = (list || []).filter(i => i.identity_type === 'BC_AUTH_TT');
+      console.log('[IDENTITY DEBUG] fetchTikTokIdentities .then:', { count: filtered.length, selectedIdentity, ids: filtered.map(i => i.identity_id).slice(0, 3) });
+      setIdentities(filtered)
     })
   }, [selectedAdvertiser, setIdentities, fetchTikTokIdentities])
 
   // Automatically sync identities from context cache when selectedAdvertiser or context value changes
   useEffect(() => {
     if (selectedAdvertiser && tiktokIdentities[selectedAdvertiser]) {
-      setIdentities(tiktokIdentities[selectedAdvertiser].filter(i => i.identity_type === 'BC_AUTH_TT'));
+      const filtered = tiktokIdentities[selectedAdvertiser].filter(i => i.identity_type === 'BC_AUTH_TT');
+      console.log('[IDENTITY DEBUG] context sync:', { count: filtered.length, selectedIdentity, ids: filtered.map(i => i.identity_id).slice(0, 3) });
+      setIdentities(filtered);
     }
   }, [selectedAdvertiser, tiktokIdentities, setIdentities]);
 
@@ -2108,11 +2112,20 @@ export default function TikTokAdCreationForm({
   useEffect(() => {
     const isFetched = tiktokIdentities[selectedAdvertiser] !== undefined;
 
+    console.log('[IDENTITY DEBUG] auto-update effect:', {
+      identitiesCount: identities.length,
+      selectedIdentity,
+      isFetched,
+      loadingIdentities,
+      autoSelectDone: identityAutoSelectRef.current,
+    });
+
     if (identities.length > 0) {
       const currentExists = identities.some(i => i.identity_id === selectedIdentity);
 
       if (currentExists) {
         // The selected identity is valid — mark auto-select as done
+        console.log('[IDENTITY DEBUG] → currentExists=true, keeping:', selectedIdentity);
         identityAutoSelectRef.current = true;
         return;
       }
@@ -2120,17 +2133,22 @@ export default function TikTokAdCreationForm({
       if (!selectedIdentity) {
         // selectedIdentity is empty — auto-select the best match
         const best = identities.find(i => i.identity_type === 'BC_AUTH_TT') || identities[0];
+        console.log('[IDENTITY DEBUG] → empty, auto-selecting:', best?.identity_id);
         setSelectedIdentity(best?.identity_id || '');
         identityAutoSelectRef.current = true;
       } else if (identityAutoSelectRef.current) {
         // Already ran once before AND the current value doesn't exist in the list
         // (e.g. user switched advertisers) — override with best match
         const best = identities.find(i => i.identity_type === 'BC_AUTH_TT') || identities[0];
+        console.log('[IDENTITY DEBUG] → not found & autoSelectDone, overriding to:', best?.identity_id);
         setSelectedIdentity(best?.identity_id || '');
+      } else {
+        // first run, selectedIdentity is non-empty but not in identities yet
+        //   → skip, let the parent's cached/default value settle in next render
+        console.log('[IDENTITY DEBUG] → SKIPPING (first run, waiting for parent value to settle). selectedIdentity=', selectedIdentity);
       }
-      // else: first run, selectedIdentity is non-empty but not in identities yet
-      //   → skip, let the parent's cached/default value settle in next render
     } else if (!loadingIdentities && isFetched) {
+      console.log('[IDENTITY DEBUG] → identities empty & fetched, clearing');
       setSelectedIdentity('')
       if (adType === 'SPARK') {
         setAdType('NORMAL')
