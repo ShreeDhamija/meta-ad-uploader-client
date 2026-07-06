@@ -1994,7 +1994,6 @@ export default function TikTokAdCreationForm({
       if (trackedStatus === 'complete') {
         completedJob.status = 'success'
         completedJob.message = `${currentJob.adCount || 1} Ad${currentJob.adCount !== 1 ? 's' : ''} successfully posted to ${currentJob.adGroupDisplayName}`
-        toast.success(completedJob.message)
       } else if (trackedStatus === 'partial-success') {
         completedJob.status = 'partial-success'
         completedJob.message = `${successCount} Ad${successCount !== 1 ? 's' : ''} successfully posted to ${currentJob.adGroupDisplayName} (with ${failureCount} failure${failureCount !== 1 ? 's' : ''})`
@@ -2002,7 +2001,6 @@ export default function TikTokAdCreationForm({
       } else if (trackedStatus === 'cancelled') {
         completedJob.status = 'cancelled'
         completedJob.message = trackedMessage || 'Job cancelled.'
-        toast.info('Job cancelled.')
       } else if (trackedStatus === 'job-not-found') {
         completedJob.status = 'retry'
         completedJob.message = 'Job timed out. Refresh page to try again.'
