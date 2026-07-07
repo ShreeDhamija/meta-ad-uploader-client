@@ -1927,7 +1927,7 @@ export default function TikTokAdCreationForm({
 
       if (setAdGroups) {
         setAdGroups(prevAdGroups => {
-          return prevAdGroups.map(ag => {
+          const updatedAdGroups = prevAdGroups.map(ag => {
             const adGroupPay = adGroupsPayload.find(pay => pay.adgroupId === ag.adgroup_id)
             if (adGroupPay) {
               return {
@@ -1936,7 +1936,37 @@ export default function TikTokAdCreationForm({
               }
             }
             return ag;
-          })
+          });
+
+          // Proactively update local cache so refreshes or navigation retain updated counts
+          try {
+            const campaignsToUpdate = [...new Set(adGroupsPayload.map(pay => {
+              const match = prevAdGroups.find(ag => ag.adgroup_id === pay.adgroupId);
+              return match?.campaignId || match?.campaign_id || null;
+            }).filter(Boolean))];
+
+            campaignsToUpdate.forEach(campId => {
+              const cacheKey = `tiktok_adgroups_${campId}`;
+              const cachedList = readCache(cacheKey);
+              if (cachedList && Array.isArray(cachedList)) {
+                const updatedCacheList = cachedList.map(ag => {
+                  const adGroupPay = adGroupsPayload.find(pay => pay.adgroupId === ag.adgroup_id);
+                  if (adGroupPay) {
+                    return {
+                      ...ag,
+                      ad_count: (ag.ad_count || 0) + adGroupPay.creatives.length
+                    };
+                  }
+                  return ag;
+                });
+                writeCache(cacheKey, updatedCacheList);
+              }
+            });
+          } catch (cacheErr) {
+            console.warn("Failed to synchronize localStorage cache for ad groups:", cacheErr);
+          }
+
+          return updatedAdGroups;
         })
       }
 
@@ -2099,16 +2129,6 @@ export default function TikTokAdCreationForm({
         toast.error(completedJob.message)
       }
 
-      if (trackedStatus === 'complete' || trackedStatus === 'partial-success') {
-        const campaignsToClear = currentJob.formData?.selectedCampaign || [];
-        campaignsToClear.forEach(campId => {
-          clearCache(`tiktok_adgroups_${campId}`);
-        });
-        setTimeout(() => {
-          forceRefreshAdGroups(null, false);
-        }, 1500); // 1.5s delay to allow TikTok API indexing of new ads
-      }
-
       addCompletedJob(completedJob)
 
       // Advance queue
@@ -2117,7 +2137,7 @@ export default function TikTokAdCreationForm({
       setIsProcessingQueue(false)
       setIsCancelling(false)
     }
-  }, [trackedStatus, trackedMessage, trackedMetaData, isProcessingQueue, currentJob, addCompletedJob, forceRefreshAdGroups])
+  }, [trackedStatus, trackedMessage, trackedMetaData, isProcessingQueue, currentJob, addCompletedJob])
 
   // Sync SSE metadata updates to liveProgress
   useEffect(() => {
