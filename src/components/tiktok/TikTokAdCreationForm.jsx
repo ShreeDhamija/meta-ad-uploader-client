@@ -2510,7 +2510,7 @@ export default function TikTokAdCreationForm({
       .finally(() => setLoadingCampaigns(false))
   }
 
-  const forceRefreshAdGroups = (e, showToast = true) => {
+  function forceRefreshAdGroups(e, showToast = true) {
     if (e && typeof e.stopPropagation === 'function') {
       e.stopPropagation();
     }
