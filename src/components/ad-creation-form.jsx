@@ -774,6 +774,7 @@ export default function AdCreationForm({
   const formDropdownTriggerChrome = `${formFieldChrome} hover:bg-white`;
   const formTextareaChrome = "w-full border border-gray-300 rounded-2xl bg-white px-3 pt-2.5 pb-2.5 text-sm leading-5 resize-none shadow focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0";
   const isFlexLikeAdType = adType === 'flexible' || adType === 'multi_media';
+  const isCatalogueAd = adType === 'catalogue';
   const isPlacementCustomizedSingleDescription = enablePlacementCustomization && !isCarouselAd;
   const hasPlacementCustomizationExtraDescriptions = isPlacementCustomizedSingleDescription && descriptions.length > 1;
   const renderDiffMark = (fieldKeys) => (
@@ -1158,6 +1159,7 @@ export default function AdCreationForm({
   }, [activeVariantId, liveVariantSnapshot, variants]);
 
   const hasMediaInFormData = useCallback((formData) => (
+    formData.adType === 'catalogue' ||
     (formData.files?.length || 0) > 0 ||
     (formData.driveFiles?.length || 0) > 0 ||
     (formData.dropboxFiles?.length || 0) > 0 ||
@@ -1169,6 +1171,10 @@ export default function AdCreationForm({
 
   const computeAdCount = useCallback((formData) => {
     if (!hasMediaInFormData(formData)) return 0;
+
+    if (formData.adType === 'catalogue') {
+      return (formData.selectedAdSets?.length || 0) || (formData.duplicateAdSet ? 1 : 0);
+    }
 
     const isDynamicAdSet = () => {
       if (formData.duplicateAdSet) {
@@ -3164,6 +3170,23 @@ export default function AdCreationForm({
   const campaignSupportsFlexibleAds = campaignObjective.length > 0 &&
     campaignObjective.every(obj => ["OUTCOME_SALES", "OUTCOME_APP_PROMOTION"].includes(obj));
 
+  const getAdSetProductSetId = useCallback((adSetId) => {
+    const adset = adSets.find((entry) => entry.id === adSetId);
+    return adset?.promoted_object?.product_set_id || null;
+  }, [adSets]);
+
+  const hasCatalogueEligibleAdSets = useMemo(() => {
+    if (duplicateAdSet) {
+      return Boolean(getAdSetProductSetId(duplicateAdSet));
+    }
+
+    if (selectedAdSets.length === 0) {
+      return false;
+    }
+
+    return selectedAdSets.every((adSetId) => Boolean(getAdSetProductSetId(adSetId)));
+  }, [duplicateAdSet, getAdSetProductSetId, selectedAdSets]);
+
   // For OUTCOME_SALES / OUTCOME_LEADS campaigns, BOOK_NOW must be sent to the server as BOOK_TRAVEL.
   const resolveCtaForServer = (ctaValue) =>
     ctaValue === "BOOK_NOW" &&
@@ -3178,6 +3201,12 @@ export default function AdCreationForm({
       setAdType('regular');
     }
   }, [campaignSupportsFlexibleAds, adType, setAdType]);
+
+  useEffect(() => {
+    if (adType === 'catalogue' && !hasCatalogueEligibleAdSets) {
+      setAdType('regular');
+    }
+  }, [adType, hasCatalogueEligibleAdSets, setAdType]);
 
 
   // Replace the existing function with this
@@ -3297,6 +3326,8 @@ export default function AdCreationForm({
           adTypeLabel = 'FLEX';
         else if (adType === 'multi_media')
           adTypeLabel = 'MULTI';
+        else if (adType === 'catalogue')
+          adTypeLabel = 'CAT';
         else if (adType === 'carousel')
           adTypeLabel = 'CAR';
         else adTypeLabel = fileType;
@@ -3417,7 +3448,7 @@ export default function AdCreationForm({
 
   const showShopDestinationSelector = hasShopAutomaticAdSets && pageId;
   const showPhoneNumberField = areAllAdSetsPhoneCall();
-  const requiresDestinationValue = importedPosts.length === 0 && !isDuplicationMode;
+  const requiresDestinationValue = importedPosts.length === 0 && !isDuplicationMode && !isCatalogueAd;
   const isMissingDestinationValue = requiresDestinationValue && (
     showPhoneNumberField
       ? !phoneNumber.trim()
@@ -3793,6 +3824,14 @@ export default function AdCreationForm({
       adSets
     } = jobData.formData;
 
+    const isCatalogueJob = adType === 'catalogue';
+    const getJobAdSetProductSetId = (adSetId) => {
+      const adset = (adSets || []).find((entry) => entry.id === adSetId);
+      return adset?.promoted_object?.product_set_id || null;
+    };
+    const hasCatalogueProductSetForJob = duplicateAdSet
+      ? Boolean(getJobAdSetProductSetId(duplicateAdSet))
+      : selectedAdSets.length > 0 && selectedAdSets.every((adSetId) => Boolean(getJobAdSetProductSetId(adSetId)));
 
 
     setIsCreatingAds(true);
@@ -3811,8 +3850,13 @@ export default function AdCreationForm({
       return;
     }
 
-    if (files.length === 0 && driveFiles.length === 0 && dropboxFiles.length === 0 && frameioFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0 && (!selectedIgOrganicPosts || selectedIgOrganicPosts.length === 0)) {
+    if (!isCatalogueJob && files.length === 0 && driveFiles.length === 0 && dropboxFiles.length === 0 && frameioFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0 && (!selectedIgOrganicPosts || selectedIgOrganicPosts.length === 0)) {
       toast.error("Please upload at least one file or import from Drive");
+      return;
+    }
+
+    if (isCatalogueJob && !hasCatalogueProductSetForJob) {
+      toast.error("Catalogue ads require selected ad sets with a product set ID");
       return;
     }
 
@@ -5059,6 +5103,47 @@ export default function AdCreationForm({
       // SECTION 1: CAROUSEL ADS
       // ============================================================================
 
+      if (isCatalogueJob) {
+        const adSetIdsToUse = [...dynamicAdSetIds, ...nonDynamicAdSetIds];
+
+        adSetIdsToUse.forEach((adSetId, adSetIndex) => {
+          const productSetId = getJobAdSetProductSetId(adSetId) || (duplicateAdSet ? getJobAdSetProductSetId(duplicateAdSet) : null);
+          if (!productSetId) {
+            return;
+          }
+
+          const formData = new FormData();
+          appendCommonFields(formData, {
+            adName: computeAdNameFromFormula(null, adSetIndex, link[0], jobData.formData.adNameFormulaV2, adType),
+            headlinesJSON: commonPrecomputed.headlinesJSON,
+            descriptionsJSON: commonPrecomputed.descriptionsJSON,
+            messagesJSON: commonPrecomputed.messagesJSON,
+            selectedAdAccount,
+            adSetId,
+            pageId,
+            instagramAccountId,
+            linkJSON: commonPrecomputed.linkJSON,
+            phoneNumber,
+            usePhoneNumberField: false,
+            cta,
+            launchPaused,
+            jobId: frontendJobId,
+            selectedForm,
+            isPartnershipAd,
+            partnerIgAccountId,
+            partnerFbPageId,
+            partnershipIdentityMode,
+            partnershipPrimaryIdentity,
+            adScheduleStartTime,
+            adScheduleEndTime,
+          });
+          formData.append("adType", "catalogue");
+          formData.append("productSetId", productSetId);
+
+          queueCreateAdPromise(formData, { fileName: "Catalogue Ad" });
+        });
+      }
+
 
 
       if (importedPosts && importedPosts.length > 0 && !editAdCreativeMode) {
@@ -5159,7 +5244,7 @@ export default function AdCreationForm({
       }
 
 
-      if (isCarouselAd && dynamicAdSetIds.length === 0) {
+      if (!isCatalogueJob && isCarouselAd && dynamicAdSetIds.length === 0) {
         if (selectedAdSets.length === 0 && !duplicateAdSet) {
           toast.error("Please select at least one ad set for carousel");
           return;
@@ -5346,7 +5431,7 @@ export default function AdCreationForm({
       // ============================================================================
       // SECTION 2: FLEX-LIKE ADS TO NON-DYNAMIC AD SETS
       // ============================================================================
-      if (isFlexLikeAdType && nonDynamicAdSetIds.length > 0) {
+      if (!isCatalogueJob && isFlexLikeAdType && nonDynamicAdSetIds.length > 0) {
 
 
         if (fileGroups.length > 0) {
@@ -5507,7 +5592,7 @@ export default function AdCreationForm({
       // ============================================================================
       // SECTION 3: DYNAMIC AD SETS
       // ============================================================================
-      if (dynamicAdSetIds.length > 0) {
+      if (!isCatalogueJob && dynamicAdSetIds.length > 0) {
         // Pre-compute ad name for dynamic ads
         const dynamicAdName = computeAdNameFromFormula(
           files[0] || driveFiles[0] || dropboxFiles[0] || frameioFiles[0],
@@ -5578,7 +5663,7 @@ export default function AdCreationForm({
       // ============================================================================
       // SECTION 4: NON-DYNAMIC AD SETS (Non-Carousel, Non-Flexible)
       // ============================================================================
-      if (nonDynamicAdSetIds.length > 0 && !isCarouselAd && !isFlexLikeAdType) {
+      if (!isCatalogueJob && nonDynamicAdSetIds.length > 0 && !isCarouselAd && !isFlexLikeAdType) {
         nonDynamicAdSetIds.forEach((adSetId) => {
           const groupedFileIds = enablePlacementCustomization ? new Set(fileGroups.flat()) : new Set();
           const hasUngroupedFiles = (
@@ -6304,7 +6389,7 @@ export default function AdCreationForm({
       return;
     }
 
-    if (files.length === 0 && driveFiles.length === 0 && dropboxFiles.length === 0 && frameioFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0 && selectedIgOrganicPosts.length === 0) {
+    if (!isCatalogueAd && files.length === 0 && driveFiles.length === 0 && dropboxFiles.length === 0 && frameioFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0 && selectedIgOrganicPosts.length === 0) {
       toast.error("Please upload at least one file");
       return;
     }
@@ -6394,16 +6479,17 @@ export default function AdCreationForm({
   const hasPublishBlockingIssueBeforePage = variants.length > 1
     ? (
       !isLoggedIn ||
-      (files.length === 0 && driveFiles.length === 0 && dropboxFiles.length === 0 && frameioFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0 && selectedIgOrganicPosts.length === 0) ||
+      (!isCatalogueAd && files.length === 0 && driveFiles.length === 0 && dropboxFiles.length === 0 && frameioFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0 && selectedIgOrganicPosts.length === 0) ||
       (selectedFiles.size > 0) ||
       (!isCarouselAd && hasDuplicates)
     )
     : (
       !isLoggedIn ||
-      (files.length === 0 && driveFiles.length === 0 && dropboxFiles.length === 0 && frameioFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0 && selectedIgOrganicPosts.length === 0) ||
+      (!isCatalogueAd && files.length === 0 && driveFiles.length === 0 && dropboxFiles.length === 0 && frameioFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0 && selectedIgOrganicPosts.length === 0) ||
       (duplicateAdSet && (!newAdSetName || newAdSetName.trim() === "")) ||
       (adType === 'carousel' && (files.length + driveFiles.length + importedFiles.length + dropboxFiles.length + frameioFiles.length) < 2) ||
       (isFlexLikeAdType && fileGroups.length === 0 && (files.length + driveFiles.length + importedFiles.length + dropboxFiles.length + frameioFiles.length) > 10) ||
+      (isCatalogueAd && !hasCatalogueEligibleAdSets) ||
       (showShopDestinationSelector && !selectedShopDestination) ||
       isMissingDestinationValue ||
       (selectedFiles.size > 0) ||
@@ -6891,6 +6977,11 @@ export default function AdCreationForm({
                             return;
                           }
 
+                          if (value === 'catalogue' && !hasCatalogueEligibleAdSets) {
+                            setAdType('regular');
+                            return;
+                          }
+
                           if (activeVariantId !== 'default') {
                             return;
                           }
@@ -6980,6 +7071,15 @@ export default function AdCreationForm({
                           >
                             Multi-Media Ad
                           </SelectItem>
+
+                          {hasCatalogueEligibleAdSets && (
+                            <SelectItem
+                              value="catalogue"
+                              className="rounded-xl data-[highlighted]:bg-gray-100 data-[state=checked]:bg-gray-100 transition-all my-0.5"
+                            >
+                              Catalogue
+                            </SelectItem>
+                          )}
                         </SelectContent>
                       </Select>
                     </span>
@@ -8214,7 +8314,8 @@ export default function AdCreationForm({
                 }
 
                 <div className="space-y-3">
-                  <div className="space-y-2">
+                  {!isCatalogueAd && (
+                    <div className="space-y-2">
                     <Label className="flex items-center justify-between">
                       <span className="flex items-center gap-2">
                         {renderDiffMark(showPhoneNumberField ? "phoneNumber" : "link")}
@@ -8465,6 +8566,7 @@ export default function AdCreationForm({
                       </div>
                     )}
                   </div>
+                  )}
 
                   <div className="space-y-2">
                     <Label htmlFor="cta" className="flex items-center gap-2">
@@ -8587,7 +8689,8 @@ export default function AdCreationForm({
                   </div>
                 )}
 
-                <div className="space-y-4">
+                {!isCatalogueAd && (
+                  <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <Label className="block">Upload Media</Label>
 
@@ -8765,6 +8868,7 @@ export default function AdCreationForm({
                     );
                   })()}
                 </div>
+                )}
 
                 <FrameioPickerModal
                   open={frameioPickerOpen}
