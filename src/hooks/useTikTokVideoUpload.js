@@ -179,7 +179,7 @@ export function useTikTokVideoUpload(advertiserId) {
    * @param {AbortSignal} [signal]
    * @returns {Promise<{ videoId: string, s3Url: string, fileName: string, data: object } | null>}
    */
-  const uploadVideo = async (file, signal = null) => {
+  const uploadVideo = async (file, signal = null, onProgress = null) => {
     if (!advertiserId) {
       toast.error("No advertiser selected");
       return null;
@@ -194,6 +194,7 @@ export function useTikTokVideoUpload(advertiserId) {
       console.log(`[useTikTokVideoUpload] File size (${file.size} bytes) exceeds threshold. Using S3 chunked upload...`);
       setUploading(true);
       setUploadProgress(0);
+      if (onProgress) onProgress(0);
 
       const totalChunks = Math.ceil(file.size / (10 * 1024 * 1024));
       let uploadedChunks = 0;
@@ -203,8 +204,9 @@ export function useTikTokVideoUpload(advertiserId) {
           file,
           () => {
             uploadedChunks++;
-            const pct = Math.round((uploadedChunks / totalChunks) * 90); // Use 0-90% for S3 upload
+            const pct = Math.round((uploadedChunks / totalChunks) * 100);
             setUploadProgress(pct);
+            if (onProgress) onProgress(pct);
           },
           file.name + "-" + file.size,
           2,
@@ -216,10 +218,10 @@ export function useTikTokVideoUpload(advertiserId) {
         }
 
         // Hit the new S3-specific video sync route
-        const tiktokToken  = localStorage.getItem("tiktok_token") ||
-                             localStorage.getItem("tiktokAccessToken");
+        const tiktokToken = localStorage.getItem("tiktok_token") ||
+          localStorage.getItem("tiktokAccessToken");
         const tiktokUserId = localStorage.getItem("tiktok_uid") ||
-                             localStorage.getItem("tiktokUserId");
+          localStorage.getItem("tiktokUserId");
 
         const response = await fetch(
           `${API_BASE_URL}/api/tiktok/upload-video-s3?advertiserId=${encodeURIComponent(advertiserId)}`,
@@ -228,7 +230,7 @@ export function useTikTokVideoUpload(advertiserId) {
             credentials: "include",
             headers: {
               "Content-Type": "application/json",
-              ...(tiktokToken  && { "x-tiktok-token":   tiktokToken }),
+              ...(tiktokToken && { "x-tiktok-token": tiktokToken }),
               ...(tiktokUserId && { "x-tiktok-user-id": tiktokUserId }),
             },
             body: JSON.stringify({
@@ -245,9 +247,11 @@ export function useTikTokVideoUpload(advertiserId) {
         }
 
         setUploadProgress(100);
+        if (onProgress) onProgress(100);
         return data; // { videoId, s3Url, fileName, data }
       } catch (err) {
         setUploadProgress(0);
+        if (onProgress) onProgress(0);
         if (err.name === "AbortError" || axios.isCancel(err) || signal?.aborted) {
           console.log("[useTikTokVideoUpload] Chunked S3 upload aborted successfully");
           throw new DOMException("Upload aborted", "AbortError");
@@ -263,6 +267,7 @@ export function useTikTokVideoUpload(advertiserId) {
     console.log(`[useTikTokVideoUpload] File size (${file.size} bytes) is below threshold. Using standard upload...`);
     setUploading(true);
     setUploadProgress(0);
+    if (onProgress) onProgress(0);
 
     return new Promise((resolve, reject) => {
       const formData = new FormData();
@@ -282,6 +287,7 @@ export function useTikTokVideoUpload(advertiserId) {
         if (e.lengthComputable) {
           const pct = Math.round((e.loaded / e.total) * 100);
           setUploadProgress(pct);
+          if (onProgress) onProgress(pct);
         }
       });
 
@@ -299,22 +305,26 @@ export function useTikTokVideoUpload(advertiserId) {
           } catch {
             const msg = "Server returned non-JSON response";
             toast.error(msg);
+            if (onProgress) onProgress(0);
             return reject(new Error(msg));
           }
 
           if (data.success && data.videoId) {
+            if (onProgress) onProgress(100);
             return resolve(data);
           }
 
           const msg = data.error || "Upload failed";
           toast.error(msg);
+          if (onProgress) onProgress(0);
           reject(new Error(msg));
         } else {
           let errMsg = "Upload failed";
           try {
             errMsg = JSON.parse(xhr.responseText)?.error || errMsg;
-          } catch {}
+          } catch { }
           toast.error(errMsg);
+          if (onProgress) onProgress(0);
           reject(new Error(errMsg));
         }
       });
@@ -325,6 +335,7 @@ export function useTikTokVideoUpload(advertiserId) {
         }
         setUploading(false);
         setUploadProgress(0);
+        if (onProgress) onProgress(0);
         toast.error("Network error during upload");
         reject(new Error("Network error"));
       });
@@ -335,6 +346,7 @@ export function useTikTokVideoUpload(advertiserId) {
         }
         setUploading(false);
         setUploadProgress(0);
+        if (onProgress) onProgress(0);
         reject(new DOMException("Upload aborted", "AbortError"));
       });
 
@@ -344,11 +356,11 @@ export function useTikTokVideoUpload(advertiserId) {
       );
 
       const tiktokUserId = localStorage.getItem("tiktok_uid") ||
-                           localStorage.getItem("tiktokUserId");
-      const tiktokToken  = localStorage.getItem("tiktok_token") ||
-                           localStorage.getItem("tiktokAccessToken");
+        localStorage.getItem("tiktokUserId");
+      const tiktokToken = localStorage.getItem("tiktok_token") ||
+        localStorage.getItem("tiktokAccessToken");
       if (tiktokUserId) xhr.setRequestHeader("x-tiktok-user-id", tiktokUserId);
-      if (tiktokToken)  xhr.setRequestHeader("x-tiktok-token", tiktokToken);
+      if (tiktokToken) xhr.setRequestHeader("x-tiktok-token", tiktokToken);
 
       xhr.withCredentials = true;
       xhr.send(formData);
@@ -377,10 +389,10 @@ export function useTikTokVideoUpload(advertiserId) {
     setUploadProgress(0);
 
     try {
-      const tiktokToken  = localStorage.getItem("tiktok_token") ||
-                           localStorage.getItem("tiktokAccessToken");
+      const tiktokToken = localStorage.getItem("tiktok_token") ||
+        localStorage.getItem("tiktokAccessToken");
       const tiktokUserId = localStorage.getItem("tiktok_uid") ||
-                           localStorage.getItem("tiktokUserId");
+        localStorage.getItem("tiktokUserId");
 
       const response = await fetch(
         `${API_BASE_URL}/api/tiktok/upload-video-url?advertiserId=${encodeURIComponent(advertiserId)}`,
@@ -389,7 +401,7 @@ export function useTikTokVideoUpload(advertiserId) {
           credentials: "include",
           headers: {
             "Content-Type": "application/json",
-            ...(tiktokToken  && { "x-tiktok-token":   tiktokToken }),
+            ...(tiktokToken && { "x-tiktok-token": tiktokToken }),
             ...(tiktokUserId && { "x-tiktok-user-id": tiktokUserId }),
           },
           body: JSON.stringify({ videoUrl, fileName }),

@@ -61,6 +61,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import axios from "axios"
+import pLimit from "p-limit"
 import { useAppData } from "@/lib/AppContext"
 
 import DesktopIcon from '@/assets/Desktop.webp'
@@ -1399,6 +1400,7 @@ export default function TikTokAdCreationForm({
   ])
 
   // Sequentially process the publishing job queue
+  // Sequentially process the publishing job queue
   const handleCreateAd = async (jobToProcess) => {
     const abortController = new AbortController()
     const signal = abortController.signal
@@ -1474,72 +1476,119 @@ export default function TikTokAdCreationForm({
       const uploadedItems = []
       const uploadErrors = []
 
-      // Stage 1: Upload media files
-      for (let i = 0; i < itemsToUpload.length; i++) {
-        if (signal.aborted) throw new DOMException('Job cancelled.', 'AbortError')
-        const item = itemsToUpload[i]
-        let videoId = null
-        let currentS3Url = null
-
-        const progressBase = Math.round((i / itemsToUpload.length) * 40) // Spend up to 40% on uploading
-        updateProgress(progressBase, `Uploading media ${i + 1}/${itemsToUpload.length}: ${item.file.name}...`)
-
-        try {
-          if (adType === 'SPARK') {
-            videoId = item.file.id
-          } else if (item.type === 'local') {
-            const uploadResult = await uploadVideoToTikTok(item.file, signal)
-            if (!uploadResult?.videoId) {
-              throw new Error(`Video upload failed for "${item.file.name}"`)
-            }
-            videoId = uploadResult.videoId
-            currentS3Url = uploadResult.s3Url || null
-          } else if (item.type === 'drive' || item.type === 'dropbox') {
-            const formData = new FormData()
-            if (item.type === 'drive') {
-              formData.append('driveFile', JSON.stringify(item.file))
-            } else {
-              formData.append('dropboxFile', JSON.stringify(item.file))
-            }
-
-            const uploadParams = new URLSearchParams({ advertiserId: selectedAdvertiser })
-            const uploadUrl = `${API_BASE_URL}/api/tiktok/upload-video?${uploadParams}`
-            const sourceName = item.type === 'drive' ? 'Google Drive' : 'Dropbox'
-
-            updateProgress(progressBase + 5, `Downloading "${item.file.name}" from ${sourceName}...`)
-            const uploadRes = await tiktokFetch(uploadUrl, { method: 'POST', body: formData, signal })
-            const uploadData = await uploadRes.json()
-            if (!uploadRes.ok || !uploadData.success || !uploadData.videoId) {
-              throw new Error(uploadData.error || `Upload failed for "${item.file.name}"`)
-            }
-            videoId = uploadData.videoId
-            currentS3Url = uploadData.s3Url || null
-          } else if (item.type === 'library') {
-            videoId = item.file.videoId
-          }
-
-          uploadedItems.push({
-            item,
-            videoId,
-            s3Url: currentS3Url
-          })
-        } catch (err) {
-          if (err.name === 'AbortError' || signal.aborted) {
-            throw err
-          }
-          console.error(`Upload failed for ${item.file.name}:`, err)
-          const errDetail = err.message || 'Upload failed'
-          const failedAdCount = isDuplicatingAdGroupMode ? 1 : selectedAdGroup.length
-
-          uploadErrors.push({ error: errDetail, fileName: item.file.name })
-          setLiveProgress(prev => ({
-            ...prev,
-            completed: prev.completed + failedAdCount,
-            failed: prev.failed + failedAdCount,
-            errors: [...prev.errors, { error: errDetail, fileName: item.file.name }]
-          }))
+      // Calculate total chunks to track upload progress across parallel uploads
+      const totalChunks = itemsToUpload.reduce((sum, item) => {
+        if (adType === 'SPARK' || item.type === 'library') return sum;
+        if (item.type === 'local') {
+          return sum + Math.ceil((item.file.size || 0) / (10 * 1024 * 1024));
         }
-      }
+        return sum + 1; // Google Drive / Dropbox are counted as 1 step
+      }, 0);
+
+      let uploadedChunks = 0;
+
+      const handleChunkUploaded = () => {
+        if (signal.aborted) return;
+        uploadedChunks++;
+        const percent = totalChunks > 0 ? Math.min(Math.round((uploadedChunks / totalChunks) * 100), 100) : 100;
+        setProgress(percent);
+        setProgressMessage(`Uploading media: ${percent}%...`);
+      };
+
+      // Stage 1: Upload media files in parallel using pLimit(3)
+      const limit = pLimit(3);
+      const uploadPromises = itemsToUpload.map((item) =>
+        limit(async () => {
+          if (signal.aborted) throw new DOMException('Job cancelled.', 'AbortError');
+
+          let videoId = null;
+          let currentS3Url = null;
+
+          try {
+            if (adType === 'SPARK') {
+              videoId = item.file.id;
+            } else if (item.type === 'local') {
+              const uploadResult = await uploadVideoToTikTok(item.file, signal, handleChunkUploaded);
+              if (!uploadResult?.videoId) {
+                throw new Error(`Video upload failed for "${item.file.name}"`);
+              }
+              videoId = uploadResult.videoId;
+              currentS3Url = uploadResult.s3Url || null;
+            } else if (item.type === 'drive' || item.type === 'dropbox') {
+              const formData = new FormData();
+              if (item.type === 'drive') {
+                formData.append('driveFile', JSON.stringify(item.file));
+              } else {
+                formData.append('dropboxFile', JSON.stringify(item.file));
+              }
+
+              const uploadParams = new URLSearchParams({ advertiserId: selectedAdvertiser });
+              const uploadUrl = `${API_BASE_URL}/api/tiktok/upload-video?${uploadParams}`;
+
+              const uploadRes = await tiktokFetch(uploadUrl, { method: 'POST', body: formData, signal });
+              const uploadData = await uploadRes.json();
+              if (!uploadRes.ok || !uploadData.success || !uploadData.videoId) {
+                throw new Error(uploadData.error || `Upload failed for "${item.file.name}"`);
+              }
+              videoId = uploadData.videoId;
+              currentS3Url = uploadData.s3Url || null;
+              handleChunkUploaded();
+            } else if (item.type === 'library') {
+              videoId = item.file.videoId;
+            }
+
+            return {
+              item,
+              videoId,
+              s3Url: currentS3Url,
+              success: true
+            };
+          } catch (err) {
+            if (err.name === 'AbortError' || signal.aborted) {
+              throw err;
+            }
+            console.error(`Upload failed for ${item.file.name}:`, err);
+            const errDetail = err.message || 'Upload failed';
+            const failedAdCount = isDuplicatingAdGroupMode ? 1 : selectedAdGroup.length;
+
+            setLiveProgress(prev => ({
+              ...prev,
+              completed: prev.completed + failedAdCount,
+              failed: prev.failed + failedAdCount,
+              errors: [...prev.errors, { error: errDetail, fileName: item.file.name }]
+            }));
+
+            return {
+              item,
+              error: errDetail,
+              success: false
+            };
+          }
+        })
+      );
+
+      const uploadResults = await Promise.all(uploadPromises);
+
+      uploadResults.forEach(res => {
+        if (res.success) {
+          uploadedItems.push({
+            item: res.item,
+            videoId: res.videoId,
+            s3Url: res.s3Url
+          });
+        } else {
+          uploadErrors.push({ error: res.error, fileName: res.item.file.name });
+        }
+      });
+
+      if (signal.aborted) throw new DOMException('Job cancelled.', 'AbortError');
+      setProgress(100);
+      setProgressMessage('File upload complete! Creating ads...');
+
+      // Connect SSE tracking now that uploading is finished
+      setJobId(jobToProcess.id);
+      // Small delay to let SSE connect
+      await new Promise(resolve => setTimeout(resolve, 100));
 
       // Stage 2: Compilation & bulk ad group submission
       updateProgress(40, 'Compiling ad groups payload...')
@@ -1904,6 +1953,7 @@ export default function TikTokAdCreationForm({
           })
         }).catch(() => { })
       }
+      throw err;
     } finally {
       setCurrentAbortController(null)
       currentJobIdRef.current = null
@@ -1924,11 +1974,34 @@ export default function TikTokAdCreationForm({
     resetProgress()
     setProgress(0)
     setProgressMessage('Initializing...')
-    setJobId(jobToProcess.id)
+    setJobId(null)
     setIsCancelling(false)
     setLiveProgress({ completed: 0, succeeded: 0, failed: 0, total: 0, errors: [] })
 
     handleCreateAd(jobToProcess).catch(err => {
+      // Don't treat cancellation as a critical error
+      if (err.name === 'AbortError' || axios.isCancel(err) || signal?.aborted) {
+        const cancelledJob = {
+          id: jobToProcess.id,
+          message: 'Job cancelled. Some Ads might still have been made.',
+          completedAt: Date.now(),
+          status: 'cancelled',
+          formData: jobToProcess.formData,
+          selectedAdvertiser: jobToProcess.formData?.selectedAdvertiser || "",
+          selectedAdGroup: jobToProcess.formData?.selectedAdGroup || [],
+          successCount: 0,
+          failureCount: 0,
+          totalCount: jobToProcess.adCount,
+          errorMessages: [],
+        }
+        addCompletedJob(cancelledJob)
+        setJobQueue(prev => prev.slice(1))
+        setCurrentJob(null)
+        setIsProcessingQueue(false)
+        setIsCancelling(false)
+        return
+      }
+
       const failedJob = {
         id: jobToProcess.id,
         message: `Job Failed: ${err.message || 'An initialization error occurred.'}`,
