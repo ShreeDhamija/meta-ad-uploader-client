@@ -613,6 +613,21 @@ export default function TikTokAdCreationForm({
   const { tiktokIdentities, tiktokIdentitiesLoading, fetchTikTokIdentities } = useAppData()
 
   const [selectedAdvertiser, setSelectedAdvertiser] = useState(advertiserId || '')
+  const [refreshingAdvertisers, setRefreshingAdvertisers] = useState(false)
+
+  const handleRefreshAdvertisers = async () => {
+    setRefreshingAdvertisers(true)
+    try {
+      await refreshTikTokUser()
+      toast.success("Advertiser list refreshed successfully.")
+    } catch (err) {
+      console.error("Failed to refresh advertiser list:", err)
+      toast.error("Failed to refresh advertiser list.")
+    } finally {
+      setRefreshingAdvertisers(false)
+    }
+  }
+
   const [adNameFormulaV2, setAdNameFormulaV2] = useState({ rawInput: "" })
   const [newSellingPoint, setNewSellingPoint] = useState("")
 
@@ -3940,7 +3955,15 @@ export default function TikTokAdCreationForm({
                   <AdAccountIcon className="w-4 h-4" />
                   Ad Account
                 </Label>
-                {authLoading && <Loader className="w-3 h-3 animate-spin text-gray-400" />}
+                <RefreshCcw
+                  className={cn(
+                    "h-4 w-4 cursor-pointer transition-all duration-200",
+                    refreshingAdvertisers
+                      ? "h-3.5 w-3.5 text-gray-300 animate-[spin_3s_linear_infinite]"
+                      : "text-gray-500 hover:text-gray-700"
+                  )}
+                  onClick={handleRefreshAdvertisers}
+                />
               </div>
               <Popover open={openAdvertiser} onOpenChange={setOpenAdvertiser}>
                 <PopoverTrigger asChild>
@@ -3964,37 +3987,48 @@ export default function TikTokAdCreationForm({
                 <PopoverContent className="p-0 bg-white shadow-lg rounded-2xl" align="start" side="bottom" avoidCollisions={false} style={{ width: 'var(--radix-popover-trigger-width)' }}>
                   <Command>
                     <CommandInput
-                      placeholder="Search Advertiser..."
+                      placeholder="Search ad accounts..."
                       value={advertiserSearch}
                       onValueChange={setAdvertiserSearch}
                       className="bg-transparent border-none focus:ring-0"
                     />
-                    <CommandEmpty>No advertiser found.</CommandEmpty>
+                    {/* <CommandEmpty>No advertiser found.</CommandEmpty> */}
                     <CommandList className="max-h-[300px] overflow-y-auto rounded-2xl custom-scrollbar">
                       <CommandGroup>
-                        {advertisers?.filter(adv =>
-                          (adv.advertiser_name || adv.name || '').toLowerCase().includes(advertiserSearch.toLowerCase()) ||
-                          (adv.advertiser_id || adv.id || '').toLowerCase().includes(advertiserSearch.toLowerCase())
-                        ).map((a) => {
-                          const id = a.advertiser_id || a.id
-                          return (
-                            <CommandItem
-                              key={id}
-                              value={id}
-                              onSelect={() => {
-                                handleAdvertiserChange(id)
-                                setOpenAdvertiser(false)
-                              }}
-                              className={cn(
-                                "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
-                                selectedAdvertiser === id ? "bg-gray-100 font-semibold" : "hover:bg-gray-50"
-                              )}
-                            >
-                              <span className="text-sm font-medium">{a.advertiser_name || a.name || id}</span>
-                              {selectedAdvertiser === id && <Check className="ml-auto h-4 w-4 text-black" />}
-                            </CommandItem>
-                          )
-                        })}
+                        {(() => {
+                          const filtered = advertisers?.filter(adv =>
+                            (adv.advertiser_name || adv.name || '').toLowerCase().includes(advertiserSearch.toLowerCase()) ||
+                            (adv.advertiser_id || adv.id || '').toLowerCase().includes(advertiserSearch.toLowerCase())
+                          ) || [];
+
+                          if (filtered.length > 0) {
+                            return filtered.map((a) => {
+                              const id = a.advertiser_id || a.id
+                              return (
+                                <CommandItem
+                                  key={id}
+                                  value={id}
+                                  onSelect={() => {
+                                    handleAdvertiserChange(id)
+                                    setOpenAdvertiser(false)
+                                  }}
+                                  className={cn(
+                                    "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
+                                    selectedAdvertiser === id ? "bg-gray-100 font-semibold" : "hover:bg-gray-50"
+                                  )}
+                                >
+                                  <span className="text-sm font-medium">{a.advertiser_name || a.name || id}</span>
+                                </CommandItem>
+                              )
+                            });
+                          } else {
+                            return (
+                              <CommandItem disabled className="opacity-50 cursor-not-allowed text-left px-4 py-2 text-sm font-medium">
+                                No ad account found.
+                              </CommandItem>
+                            );
+                          }
+                        })()}
                       </CommandGroup>
                     </CommandList>
                   </Command>
@@ -4038,17 +4072,15 @@ export default function TikTokAdCreationForm({
                   <CampaignIcon className="w-4 h-4" />
                   Select a Campaign to launch Ads in
                 </Label>
-                <div className="flex items-center gap-2">
-                  {loadingCampaigns && <Loader className="w-3 h-3 animate-spin text-gray-400" />}
-                  <button
-                    type="button"
-                    onClick={forceRefreshCampaigns}
-                    className="text-gray-400 hover:text-gray-600 transition-colors"
-                    title="Refresh campaigns"
-                  >
-                    <RefreshCcw className="w-3 h-3" />
-                  </button>
-                </div>
+                <RefreshCcw
+                  className={cn(
+                    "h-4 w-4 cursor-pointer transition-all duration-200",
+                    loadingCampaigns
+                      ? "h-3.5 w-3.5 text-gray-300 animate-[spin_3s_linear_infinite]"
+                      : "text-gray-500 hover:text-gray-700"
+                  )}
+                  onClick={forceRefreshCampaigns}
+                />
               </div>
               <Popover open={openCampaign} onOpenChange={setOpenCampaign}>
                 <PopoverTrigger asChild>
@@ -4092,7 +4124,7 @@ export default function TikTokAdCreationForm({
                       onValueChange={setCampaignSearch}
                       className="bg-transparent border-none focus:ring-0"
                     />
-                    <CommandEmpty>No campaign found.</CommandEmpty>
+                    <CommandEmpty>No campaigns exist in this ad account. Try selecting a different account.</CommandEmpty>
                     <CommandList className="max-h-[220px] overflow-y-auto rounded-2xl custom-scrollbar">
                       <CommandGroup>
                         {filteredCampaigns.map((c) => {
@@ -4160,7 +4192,7 @@ export default function TikTokAdCreationForm({
                           setShowDuplicateCampaignBlock(true);
                           setOpenCampaign(false);
                         }}
-                        className="h-10 w-full px-4 py-3 rounded-2xl bg-zinc-800 text-white hover:!bg-black hover:!text-white shadow-md flex items-center justify-center text-xs font-semibold cursor-pointer transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed border-none"
+                        className="h-10 w-full px-4 py-3 m-1 rounded-2xl !bg-zinc-700 !text-white shadow-md flex items-center justify-center text-sm font-semibold cursor-pointer transition-all duration-150 hover:!bg-black"
                       >
                         <CampaignIcon className="mr-2 h-4 w-4 text-white" />
                         Launch in a New Campaign
@@ -4228,7 +4260,7 @@ export default function TikTokAdCreationForm({
                             onValueChange={setDuplicateCampaignSearchValue}
                             className="bg-transparent border-none focus:ring-0"
                           />
-                          <CommandEmpty>No campaigns found.</CommandEmpty>
+                          <CommandEmpty>No campaigns exist in this ad account. Try selecting a different account.</CommandEmpty>
                           <CommandList className="max-h-[220px] overflow-y-auto rounded-2xl custom-scrollbar">
                             <CommandGroup>
                               {campaigns
@@ -4312,17 +4344,15 @@ export default function TikTokAdCreationForm({
                   <AdSetIcon className="w-4 h-4" />
                   Launch in a new or existing ad group
                 </Label>
-                <div className="flex items-center gap-2">
-                  {loadingAdGroups && <Loader className="w-3 h-3 animate-spin text-gray-400" />}
-                  <button
-                    type="button"
-                    onClick={forceRefreshAdGroups}
-                    className="text-gray-400 hover:text-gray-600 transition-colors"
-                    title="Refresh ad groups"
-                  >
-                    <RefreshCcw className="w-3 h-3" />
-                  </button>
-                </div>
+                <RefreshCcw
+                  className={cn(
+                    "h-4 w-4 cursor-pointer transition-all duration-200",
+                    loadingAdGroups
+                      ? "h-3.5 w-3.5 text-gray-300 animate-[spin_3s_linear_infinite]"
+                      : "text-gray-500 hover:text-gray-700"
+                  )}
+                  onClick={forceRefreshAdGroups}
+                />
               </div>
               <Popover open={openAdGroup} onOpenChange={(v) => { if (!v || (!loadingAdGroups && selectedCampaign.length > 0)) setOpenAdGroup(v) }}>
                 <PopoverTrigger asChild>
@@ -4710,18 +4740,16 @@ export default function TikTokAdCreationForm({
                   <Users className="w-4 h-4" />
                   {adType === 'NORMAL' ? 'Identity' : 'Promote From'}
                 </Label>
-                <div className="flex items-center gap-2">
-                  {loadingIdentities && <Loader className="w-3 h-3 animate-spin text-gray-400" />}
-                  <button
-                    type="button"
-                    onClick={forceRefreshIdentities}
-                    className="text-gray-400 hover:text-gray-600 transition-colors"
-                    title="Refresh identities"
-                    disabled={!selectedAdvertiser || loadingIdentities}
-                  >
-                    <RefreshCcw className="w-3 h-3" />
-                  </button>
-                </div>
+                <RefreshCcw
+                  className={cn(
+                    "h-4 w-4 cursor-pointer transition-all duration-200",
+                    loadingIdentities
+                      ? "h-3.5 w-3.5 text-gray-300 animate-[spin_3s_linear_infinite]"
+                      : "text-gray-500 hover:text-gray-700",
+                    (!selectedAdvertiser || loadingIdentities) && "opacity-50 cursor-not-allowed pointer-events-none"
+                  )}
+                  onClick={forceRefreshIdentities}
+                />
               </div>
               <Popover open={openIdentity} onOpenChange={setOpenIdentity}>
                 <PopoverTrigger asChild>

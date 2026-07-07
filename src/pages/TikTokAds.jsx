@@ -980,7 +980,7 @@ export default function TikTokAds() {
 
         <Header showMessenger={showMessenger} hideMessenger={hideMessenger} />
 
-        <main className="pt-4 pb-20">
+        <main className="pb-20">
           <div className="flex flex-col lg:flex-row gap-6 min-w-0">
             {/* Left Column: Form and Duplicator (55% width) */}
             <div className={`flex-1 lg:flex-[55] min-w-0 space-y-6 ${(!userHasActiveAccess || !isTikTokLoggedIn) ? 'pointer-events-none opacity-40 cursor-not-allowed select-none' : ''}`}>
