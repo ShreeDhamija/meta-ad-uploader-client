@@ -5402,9 +5402,7 @@ export default function TikTokAdCreationForm({
                           </div>
                         </div>
 
-                        {!areAllSelectedAdGroupsShopping && (!landingUrl || !landingUrl.trim()) && (
-                          <p className="text-xs text-red-500 font-medium mt-1">Link (URL) is required</p>
-                        )}
+
                         {!areAllSelectedAdGroupsShopping && landingUrl && landingUrl.trim() && (() => {
                           try {
                             const urlString = landingUrl.trim();
@@ -5929,6 +5927,12 @@ export default function TikTokAdCreationForm({
                       'Publish Ads'
                     )}
                   </Button>
+
+                  {!areAllSelectedAdGroupsShopping && (!landingUrl || !landingUrl.trim()) && (
+                    <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                      Please provide a link URL
+                    </div>
+                  )}
 
                   {areAllSelectedAdGroupsShopping && (!formStoreProductId || (Array.isArray(formStoreProductId) && formStoreProductId.length === 0)) && (
                     <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
