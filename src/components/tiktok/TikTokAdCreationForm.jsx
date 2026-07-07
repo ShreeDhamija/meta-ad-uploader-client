@@ -1507,7 +1507,7 @@ export default function TikTokAdCreationForm({
         uploadedChunks++;
         const percent = totalChunks > 0 ? Math.min(Math.round((uploadedChunks / totalChunks) * 100), 100) : 100;
         setProgress(percent);
-        setProgressMessage(`Uploading media: ${percent}%...`);
+        setProgressMessage('Uploading files for processing...');
       };
 
       // Stage 1: Upload media files in parallel using pLimit(3)
