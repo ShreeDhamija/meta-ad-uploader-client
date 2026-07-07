@@ -3414,6 +3414,19 @@ export default function TikTokAdCreationForm({
           }
         }
 
+        if (fd.urlMode === 'INSTANT_PAGE' && !areAllSelectedAdGroupsShopping) {
+          if (!fd.landingUrl || !fd.landingUrl.trim()) {
+            toast.error(`${variant.name}: Instant Page is required`);
+            return;
+          }
+
+          const isNumeric = /^\d+$/.test(fd.landingUrl.trim());
+          if (!isNumeric) {
+            toast.error(`${variant.name}: Instant Page ID must be a valid integer`);
+            return;
+          }
+        }
+
         newJobs.push(job);
       }
 
@@ -3755,6 +3768,17 @@ export default function TikTokAdCreationForm({
         } catch (_) { }
         if (!isValidUrl) {
           errors.push("Link (URL) must be a valid URL starting with http:// or https://")
+        }
+      }
+    }
+
+    if (!areAllSelectedAdGroupsShopping && urlMode === 'INSTANT_PAGE') {
+      if (!landingUrl || !landingUrl.trim()) {
+        errors.push("Instant Page is required")
+      } else {
+        const isNumeric = /^\d+$/.test(landingUrl.trim())
+        if (!isNumeric) {
+          errors.push("Instant Page ID must be a valid integer")
         }
       }
     }
@@ -5166,14 +5190,21 @@ export default function TikTokAdCreationForm({
                       <div className="flex items-center gap-1 bg-gray-50 p-1 rounded-xl">
                         <button
                           type="button"
-                          onClick={() => setUrlMode('WEBSITE')}
+                          onClick={() => {
+                            setUrlMode('WEBSITE');
+                            const defaultLink = advertiserPrefs?.links?.find(l => l.isDefault) || advertiserPrefs?.links?.[0];
+                            setLandingUrl(showCustomLink ? "" : (defaultLink?.url || ""));
+                          }}
                           className={cn("px-2 py-1 text-[10px] font-bold rounded-lg transition-all", urlMode === 'WEBSITE' ? "bg-white shadow-sm text-zinc-900" : "text-gray-400")}
                         >
                           Website
                         </button>
                         <button
                           type="button"
-                          onClick={() => setUrlMode('INSTANT_PAGE')}
+                          onClick={() => {
+                            setUrlMode('INSTANT_PAGE');
+                            setLandingUrl(instantPages[0]?.page_id || "");
+                          }}
                           className={cn("px-2 py-1 text-[10px] font-bold rounded-lg transition-all", urlMode === 'INSTANT_PAGE' ? "bg-white shadow-sm text-zinc-900" : "text-gray-400")}
                         >
                           Instant Page
