@@ -1530,17 +1530,33 @@ export default function TikTokAdCreationForm({
               videoId = uploadResult.videoId;
               currentS3Url = uploadResult.s3Url || null;
             } else if (item.type === 'drive' || item.type === 'dropbox') {
-              const formData = new FormData();
+              const uploadParams = new URLSearchParams({ advertiserId: selectedAdvertiser });
+
+              let uploadUrl, uploadBody;
               if (item.type === 'drive') {
-                formData.append('driveFile', JSON.stringify(item.file));
+                uploadUrl = `${API_BASE_URL}/api/tiktok/upload-from-drive?${uploadParams}`;
+                uploadBody = JSON.stringify({
+                  driveFileUrl: `https://www.googleapis.com/drive/v3/files/${item.file.id}?alt=media`,
+                  fileName: item.file.name,
+                  mimeType: item.file.mimeType,
+                  googleAccessToken: item.file.accessToken,
+                  size: item.file.size,
+                });
               } else {
-                formData.append('dropboxFile', JSON.stringify(item.file));
+                uploadUrl = `${API_BASE_URL}/api/tiktok/upload-from-dropbox?${uploadParams}`;
+                uploadBody = JSON.stringify({
+                  fileId: item.file.dropboxId,
+                  fileName: item.file.name,
+                  dropboxAccessToken: item.file.accessToken,
+                });
               }
 
-              const uploadParams = new URLSearchParams({ advertiserId: selectedAdvertiser });
-              const uploadUrl = `${API_BASE_URL}/api/tiktok/upload-video?${uploadParams}`;
-
-              const uploadRes = await tiktokFetch(uploadUrl, { method: 'POST', body: formData, signal });
+              const uploadRes = await tiktokFetch(uploadUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: uploadBody,
+                signal,
+              });
               const uploadData = await uploadRes.json();
               if (!uploadRes.ok || !uploadData.success || !uploadData.videoId) {
                 throw new Error(uploadData.error || `Upload failed for "${item.file.name}"`);
