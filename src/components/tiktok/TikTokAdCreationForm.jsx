@@ -281,14 +281,14 @@ const UPLOAD_SOURCE_OPTIONS = [
     id: 'drive',
     name: 'Google Drive',
     icon: 'https://api.withblip.com/googledrive.png',
-    fullLabel: 'Choose Files from Google Drive',
+    fullLabel: 'Google Drive',
     compactLabel: 'Google Drive'
   },
   {
     id: 'dropbox',
     name: 'Dropbox',
     icon: DropboxIcon,
-    fullLabel: 'Choose Files from Dropbox',
+    fullLabel: 'Dropbox',
     compactLabel: 'Dropbox'
   },
 ]
@@ -2367,13 +2367,9 @@ export default function TikTokAdCreationForm({
       const availableLinks = advertiserPrefs?.links || [];
       if (availableLinks.length === 0) {
         setShowCustomLink(true);
-      } else {
-        if (!landingUrl) {
-          setShowCustomLink(false);
-        } else {
-          const exists = availableLinks.some(l => l.url === landingUrl);
-          setShowCustomLink(!exists);
-        }
+      } else if (landingUrl) {
+        const exists = availableLinks.some(l => l.url === landingUrl);
+        setShowCustomLink(!exists);
       }
     } else {
       setShowCustomLink(false);
@@ -3985,7 +3981,13 @@ export default function TikTokAdCreationForm({
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="p-0 bg-white shadow-lg rounded-2xl" align="start" side="bottom" avoidCollisions={false} style={{ width: 'var(--radix-popover-trigger-width)' }}>
-                  <Command>
+                  <Command
+                    filter={(value, search) => {
+                      return 1
+                    }}
+                    loop={false}
+                    defaultValue={selectedAdvertiser}
+                  >
                     <CommandInput
                       placeholder="Search ad accounts..."
                       value={advertiserSearch}
@@ -4939,7 +4941,7 @@ export default function TikTokAdCreationForm({
             )}
 
             {/* Creative Fields - Visible for both Normal and Spark Ad types */}
-            <div className="space-y-4">
+            <div className="space-y-10">
               {/* 3. Ad Name */}
               <div id="adName" className="space-y-1">
                 <Label htmlFor="adName" className="flex items-center justify-between w-full">
@@ -4954,7 +4956,7 @@ export default function TikTokAdCreationForm({
                       size="sm"
                       variant="outline"
                       onClick={() => navigate(`/settings?tab=tiktok&adsaccount=${selectedAdvertiser}`)}
-                      className="text-xs px-3 pl-2 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900 ml-auto h-7 flex items-center gap-1 font-medium"
+                      className="text-xs px-3 pl-2 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900 ml-auto"
                       title="Configure ad name formula in settings"
                     >
                       <CogIcon className="w-3 h-3 text-white mr-1" />
@@ -5009,7 +5011,7 @@ export default function TikTokAdCreationForm({
                             size="sm"
                             variant="outline"
                             onClick={() => navigate(`/settings?tab=tiktok&adsaccount=${selectedAdvertiser}`)}
-                            className="text-xs px-3 pl-2 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900 ml-auto h-7 flex items-center gap-1 font-medium"
+                            className="text-xs px-3 pl-2 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900 ml-auto"
                           >
                             <CogIcon className="w-3 h-3 text-white mr-1" />
                             Set Up Templates
@@ -5025,7 +5027,7 @@ export default function TikTokAdCreationForm({
                               variant="outline"
                               disabled={isSavingNew || isUpdatingTemplate || !!existingDuplicateTemplate}
                               onClick={() => setShowSaveNewDialog(true)}
-                              className="text-xs px-3 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900 h-7 flex items-center gap-1 font-medium"
+                              className="text-xs px-3 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900"
                             >
                               {isSavingNew ? (
                                 <Loader className="w-3 h-3 animate-spin" />
@@ -5047,7 +5049,7 @@ export default function TikTokAdCreationForm({
                               variant="outline"
                               disabled={isSavingNew || isUpdatingTemplate || !!existingDuplicateTemplate}
                               onClick={() => setShowSaveNewDialog(true)}
-                              className="text-xs px-3 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900 h-7 flex items-center gap-1 font-medium"
+                              className="text-xs px-3 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900"
                             >
                               {isSavingNew ? (
                                 <Loader className="w-3 h-3 animate-spin" />
@@ -5064,7 +5066,7 @@ export default function TikTokAdCreationForm({
                                 variant="outline"
                                 disabled={isUpdatingTemplate || isSavingNew || !!existingDuplicateTemplate}
                                 onClick={handleUpdateSelectedTemplate}
-                                className="text-xs px-3 py-0.5 border-gray-300 text-white bg-blue-600 rounded-xl hover:text-white hover:bg-blue-700 animate-in fade-in slide-in-from-bottom-1 duration-500 ease-out fill-mode-both delay-200 h-7 flex items-center gap-1 font-medium"
+                                className="text-xs px-3 py-0.5 border-gray-300 text-white bg-blue-600 rounded-xl hover:text-white hover:bg-blue-700 animate-in fade-in slide-in-from-bottom-1 duration-500 ease-out fill-mode-both delay-200"
                               >
                                 {isUpdatingTemplate ? (
                                   <>
@@ -5099,7 +5101,7 @@ export default function TikTokAdCreationForm({
                           >
                             <span className="truncate">
                               {Object.keys(copyTemplates).length === 0
-                                ? "No templates available for selected advertiser"
+                                ? "No templates available for selected ad account"
                                 : selectedTemplate || "Choose a Template"}
                             </span>
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -5399,6 +5401,20 @@ export default function TikTokAdCreationForm({
                             )}
                           </div>
                         </div>
+
+                        {!areAllSelectedAdGroupsShopping && (!landingUrl || !landingUrl.trim()) && (
+                          <p className="text-xs text-red-500 font-medium mt-1">Link (URL) is required</p>
+                        )}
+                        {!areAllSelectedAdGroupsShopping && landingUrl && landingUrl.trim() && (() => {
+                          try {
+                            const urlString = landingUrl.trim();
+                            if (/^https?:\/\//i.test(urlString)) {
+                              new URL(urlString);
+                              return null;
+                            }
+                          } catch (_) { }
+                          return <p className="text-xs text-red-500 font-medium mt-1">Link (URL) must be a valid URL starting with http:// or https://</p>;
+                        })()}
                       </div>
                     ) : (
                       <div className="space-y-3">
@@ -5804,7 +5820,7 @@ export default function TikTokAdCreationForm({
                               )}
                             >
                               <CloudUpload className="h-4 w-4" />
-                              Manage Sources
+                              Manage Upload Sources
                             </Button>
                           </PopoverTrigger>
                           <PopoverContent align="end" side="bottom" avoidCollisions={false} className="bg-white rounded-xl p-2 w-64 border border-gray-200 shadow-lg">
