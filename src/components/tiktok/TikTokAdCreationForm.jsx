@@ -1606,7 +1606,7 @@ export default function TikTokAdCreationForm({
       await new Promise(resolve => setTimeout(resolve, 100));
 
       // Stage 2: Compilation & bulk ad group submission
-      updateProgress(40, 'Compiling ad groups payload...')
+      setProgressMessage('Compiling ad groups payload...')
 
       const selectedIdentityObj = identities.find(i => i.identity_id === selectedIdentity)
       const isCustomized = !selectedIdentity || selectedIdentity === 'CUSTOMIZED_USER'
@@ -1617,7 +1617,7 @@ export default function TikTokAdCreationForm({
       let adGroupIdsToSubmit = [...selectedAdGroup]
 
       if (isDuplicatingAdGroupMode && uploadedItems.length > 0) {
-        updateProgress(42, 'Duplicating ad group on-the-fly...')
+        setProgressMessage('Duplicating ad group on-the-fly...')
         const dupRes = await tiktokFetch(`${API_BASE_URL}/api/tiktok/adgroup/duplicate`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1901,7 +1901,7 @@ export default function TikTokAdCreationForm({
         throw new Error('All video uploads failed. Cannot create TikTok ads.')
       }
 
-      updateProgress(45, 'Creating tiktok ads')
+      setProgressMessage('Creating TikTok ads...')
 
       const createPayload = {
         advertiserId: selectedAdvertiser,

@@ -273,13 +273,13 @@ export default function TikTokJobQueue({
                   <p className="flex-1 text-sm font-medium text-gray-700 break-all">
                     {formatQueuedJobLabel(currentJob, 'Posting')}
                   </p>
-                  <span className="text-sm font-semibold text-gray-900">{Math.round(videoUploading ? videoUploadProgress : (progress || trackedProgress || 0))}%</span>
+                  <span className="text-sm font-semibold text-gray-900">{Math.round(progress || trackedProgress || 0)}%</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="flex-1 bg-gray-200 rounded-full h-2">
                     <div
                       className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${videoUploading ? videoUploadProgress : (progress || trackedProgress || 0)}%` }}
+                      style={{ width: `${(progress || trackedProgress || 0)}%` }}
                     />
                   </div>
                   <button
@@ -313,7 +313,7 @@ export default function TikTokJobQueue({
                       <span className="text-xs text-red-400">Cancelling...</span>
                     </div>
                   ) : (
-                    <p className="text-xs text-gray-500">{videoUploading ? 'Uploading video to TikTok...' : (progressMessage || trackedMessage)}</p>
+                    <p className="text-xs text-gray-500">{progressMessage || trackedMessage}</p>
                   )}
                   <div className="flex items-center gap-2">
                     {(progressMessage || trackedMessage) && liveProgress.total > 0 && (
