@@ -121,7 +121,7 @@ export default function TikTokAds() {
   const [videoPreview, setVideoPreview] = useState(null)
   const [driveFiles, setDriveFiles] = useState([])
   const [dropboxFiles, setDropboxFiles] = useState([])
-  const [selectedIdentity, setSelectedIdentity] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.selectedIdentity : null) || '')
+  const [selectedIdentity, setSelectedIdentity] = useState('')
   const [formStoreId, setFormStoreId] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.formStoreId : null) || null)
   const [formStoreName, setFormStoreName] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.formStoreName : null) || null)
   const [formStoreProductId, setFormStoreProductId] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.formStoreProductId : null) || [])
@@ -553,7 +553,6 @@ export default function TikTokAds() {
       selectedCampaign,
       adGroups,
       selectedAdGroup,
-      selectedIdentity,
       formStoreId,
       formStoreName,
       formStoreProductId,
@@ -571,7 +570,6 @@ export default function TikTokAds() {
     selectedCampaign,
     adGroups,
     selectedAdGroup,
-    selectedIdentity,
     formStoreId,
     formStoreName,
     formStoreProductId,
@@ -588,10 +586,8 @@ export default function TikTokAds() {
     }
 
     if (!loadingPrefs && lastLoadedAdvertiserRef.current !== selectedAdvertiser) {
-      // 1. Default Identity (prioritize cached selection if exists)
-      const cachedVal = _tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.selectedIdentity : null;
-      const resolvedIdentity = cachedVal || advertiserPrefs?.defaultIdentityId || "";
-      console.log('[IDENTITY DEBUG] TikTokAds pref sync:', { cachedVal, defaultIdentityId: advertiserPrefs?.defaultIdentityId, resolvedIdentity, selectedAdvertiser });
+      // 1. Default Identity (always prioritize preference over cache, matching Meta page selection)
+      const resolvedIdentity = advertiserPrefs?.defaultIdentityId || "";
       setSelectedIdentity(resolvedIdentity);
 
       // 2. Default CTA

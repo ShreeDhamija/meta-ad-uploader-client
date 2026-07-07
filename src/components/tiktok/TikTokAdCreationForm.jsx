@@ -4813,17 +4813,19 @@ export default function TikTokAdCreationForm({
                     <LabelIcon className="w-4 h-4" />
                     <span className="font-semibold text-sm">Ad Name</span>
                   </div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() => navigate(`/settings?tab=tiktok&adsaccount=${selectedAdvertiser}`)}
-                    className="text-xs px-3 pl-2 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900 ml-auto h-7 flex items-center gap-1 font-medium"
-                    title="Configure ad name formula in settings"
-                  >
-                    <CogIcon className="w-3 h-3 text-white mr-1" />
-                    Set Up Ad Name Formula
-                  </Button>
+                  {selectedAdvertiser && !advertiserPrefs?.adNameFormulaV2?.rawInput && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => navigate(`/settings?tab=tiktok&adsaccount=${selectedAdvertiser}`)}
+                      className="text-xs px-3 pl-2 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900 ml-auto h-7 flex items-center gap-1 font-medium"
+                      title="Configure ad name formula in settings"
+                    >
+                      <CogIcon className="w-3 h-3 text-white mr-1" />
+                      Set Up Ad Name Formula
+                    </Button>
+                  )}
                 </Label>
 
                 <ReorderAdNameParts
