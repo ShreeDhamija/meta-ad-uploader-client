@@ -2011,6 +2011,16 @@ export default function TikTokAdCreationForm({
         toast.error(completedJob.message)
       }
 
+      if (trackedStatus === 'complete' || trackedStatus === 'partial-success') {
+        const campaignsToClear = currentJob.formData?.selectedCampaign || [];
+        campaignsToClear.forEach(campId => {
+          clearCache(`tiktok_adgroups_${campId}`);
+        });
+        setTimeout(() => {
+          forceRefreshAdGroups(null, false);
+        }, 1500); // 1.5s delay to allow TikTok API indexing of new ads
+      }
+
       addCompletedJob(completedJob)
 
       // Advance queue
@@ -2019,7 +2029,7 @@ export default function TikTokAdCreationForm({
       setIsProcessingQueue(false)
       setIsCancelling(false)
     }
-  }, [trackedStatus, trackedMessage, trackedMetaData, isProcessingQueue, currentJob, addCompletedJob])
+  }, [trackedStatus, trackedMessage, trackedMetaData, isProcessingQueue, currentJob, addCompletedJob, forceRefreshAdGroups])
 
   // Sync SSE metadata updates to liveProgress
   useEffect(() => {
