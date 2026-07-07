@@ -2984,7 +2984,7 @@ export default function TikTokAdCreationForm({
               pickerThumbnail: thumb
             }
           })
-          setDriveFiles(selected)
+          setDriveFiles((prev) => [...prev, ...selected])
           if (selected.length > 0) {
             setVideoFile(null)
             setDropboxFiles([])
@@ -3072,7 +3072,7 @@ export default function TikTokAdCreationForm({
           isDrive: true,
           pickerThumbnail: data.thumbnailLink || null
         }
-        setDriveFiles([newFile])
+        setDriveFiles((prev) => [...prev, newFile])
         setVideoFile(null)
         setDropboxFiles([])
         setShowFolderInput(false)
@@ -3114,7 +3114,7 @@ export default function TikTokAdCreationForm({
           mimeType: getMimeFromName(file.name),
           accessToken
         }))
-        setDropboxFiles(dropboxFilesData)
+        setDropboxFiles((prev) => [...prev, ...dropboxFilesData])
         if (dropboxFilesData.length > 0) {
           setVideoFile(null)
           setDriveFiles([])
