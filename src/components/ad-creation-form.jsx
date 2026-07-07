@@ -797,6 +797,7 @@ export default function AdCreationForm({
   const [showFrameioConnectDialog, setShowFrameioConnectDialog] = useState(false);
   const [showFrameioConnectHelp, setShowFrameioConnectHelp] = useState(false);
   const pickerInstanceRef = useRef(null);
+  const [productExtensionProductSetId, setProductExtensionProductSetId] = useState("");
 
   //gogle drive pickers
   const [accessToken, setAccessToken] = useState(null)
@@ -1110,6 +1111,7 @@ export default function AdCreationForm({
     instagramAccountId,
     selectedShopDestination,
     selectedShopDestinationType,
+    productExtensionProductSetId,
     selectedForm,
     selectedTemplate,
     isPartnershipAd,
@@ -1139,6 +1141,7 @@ export default function AdCreationForm({
     instagramAccountId,
     selectedShopDestination,
     selectedShopDestinationType,
+    productExtensionProductSetId,
     selectedForm,
     selectedTemplate,
     isPartnershipAd,
@@ -1372,6 +1375,7 @@ export default function AdCreationForm({
       fileGroups: variantFileGroups.map((group) => [...getGroupFileIds(group)]),
       selectedShopDestination: variantState.selectedShopDestination || '',
       selectedShopDestinationType: variantState.selectedShopDestinationType || '',
+      productExtensionProductSetId: variantState.productExtensionProductSetId || '',
       selectedForm: variantState.selectedForm || null,
       selectedTemplate: variantState.selectedTemplate || '',
       isPartnershipAd: Boolean(variantState.isPartnershipAd),
@@ -1479,6 +1483,7 @@ export default function AdCreationForm({
 
     setSelectedShopDestination(d.selectedShopDestination || '');
     setSelectedShopDestinationType(d.selectedShopDestinationType || '');
+    setProductExtensionProductSetId(d.productExtensionProductSetId || '');
     setSelectedForm(d.selectedForm || null);
     setSelectedTemplate(d.selectedTemplate || '');
     setIsPartnershipAd(Boolean(d.isPartnershipAd));
@@ -3447,6 +3452,10 @@ export default function AdCreationForm({
   }, [duplicateAdSet, selectedAdSets, adSets]);
 
   const showShopDestinationSelector = hasShopAutomaticAdSets && pageId;
+  const showProductExtensionSelector = Boolean(adAccountSettings?.creativeEnhancements?.catalogItems) &&
+    pageId &&
+    campaignObjective.length > 0 &&
+    campaignObjective.every((objective) => ["OUTCOME_SALES", "OUTCOME_TRAFFIC"].includes(objective));
   const showPhoneNumberField = areAllAdSetsPhoneCall();
   const requiresDestinationValue = importedPosts.length === 0 && !isDuplicationMode && !isCatalogueAd;
   const isMissingDestinationValue = requiresDestinationValue && (
@@ -3472,6 +3481,12 @@ export default function AdCreationForm({
       setCta(defaultCta);
     }
   }, [showPhoneNumberField, cta, setCta, adAccountSettings?.defaultCTA]);
+
+  useEffect(() => {
+    if (!showProductExtensionSelector && productExtensionProductSetId) {
+      setProductExtensionProductSetId("");
+    }
+  }, [productExtensionProductSetId, showProductExtensionSelector]);
 
 
   const shouldShowLeadFormSelector = useMemo(() => {
@@ -3807,6 +3822,7 @@ export default function AdCreationForm({
       // Shop
       selectedShopDestination,
       selectedShopDestinationType,
+      productExtensionProductSetId,
       selectedForm,
       //partnership ads
       isPartnershipAd,
@@ -3862,6 +3878,10 @@ export default function AdCreationForm({
 
     if (showShopDestinationSelector && !selectedShopDestination) {
       toast.error("Please select a shop destination for shop ads")
+      return
+    }
+    if (showProductExtensionSelector && !productExtensionProductSetId) {
+      toast.error("Please select a product catalog for product extensions")
       return
     }
     if (duplicateAdSet && (!newAdSetName || newAdSetName.trim() === "")) {
@@ -5074,6 +5094,9 @@ export default function AdCreationForm({
       const promises = [];
       const promiseMetadata = []; // ADD THIS
       const queueCreateAdPromise = (formData, metadata = {}) => {
+        if (productExtensionProductSetId && !formData.has("productExtensionProductSetId")) {
+          formData.append("productExtensionProductSetId", productExtensionProductSetId);
+        }
         promises.push(createAdApiCall(formData, API_BASE_URL, signal));
         promiseMetadata.push({
           adSetId: formData.get("adSetId"),
@@ -6422,6 +6445,11 @@ export default function AdCreationForm({
         return;
       }
 
+      if (showProductExtensionSelector && !job.formData.productExtensionProductSetId) {
+        toast.error(`${variant.name}: please select a product catalog for product extensions`);
+        return;
+      }
+
       newJobs.push(job);
     }
 
@@ -6480,6 +6508,7 @@ export default function AdCreationForm({
     ? (
       !isLoggedIn ||
       (!isCatalogueAd && files.length === 0 && driveFiles.length === 0 && dropboxFiles.length === 0 && frameioFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0 && selectedIgOrganicPosts.length === 0) ||
+      (showProductExtensionSelector && !productExtensionProductSetId) ||
       (selectedFiles.size > 0) ||
       (!isCarouselAd && hasDuplicates)
     )
@@ -6491,6 +6520,7 @@ export default function AdCreationForm({
       (isFlexLikeAdType && fileGroups.length === 0 && (files.length + driveFiles.length + importedFiles.length + dropboxFiles.length + frameioFiles.length) > 10) ||
       (isCatalogueAd && !hasCatalogueEligibleAdSets) ||
       (showShopDestinationSelector && !selectedShopDestination) ||
+      (showProductExtensionSelector && !productExtensionProductSetId) ||
       isMissingDestinationValue ||
       (selectedFiles.size > 0) ||
       (shouldShowLeadFormSelector && !selectedForm) ||
@@ -8610,6 +8640,20 @@ export default function AdCreationForm({
                     isFieldModified={() => isFormFieldModified?.(["selectedShopDestination", "selectedShopDestinationType"])}
                     isVisible={showShopDestinationSelector}
                   />
+                  <ShopDestinationSelector
+                    pageId={pageId}
+                    selectedShopDestination={productExtensionProductSetId}
+                    setSelectedShopDestination={setProductExtensionProductSetId}
+                    setSelectedShopDestinationType={() => {}}
+                    isFieldModified={() => isFormFieldModified?.("productExtensionProductSetId")}
+                    isVisible={showProductExtensionSelector}
+                    allowedTypes={["product_set"]}
+                    label="Product Catalog"
+                    description="Select the product set to show with product extensions"
+                    placeholder="Select product catalog"
+                    searchPlaceholder="Search product catalogs..."
+                    emptyLabel="No product catalogs available"
+                  />
                 </div>
 
                 {shouldShowLeadFormSelector && (
@@ -8991,6 +9035,12 @@ export default function AdCreationForm({
             {showShopDestinationSelector && !selectedShopDestination && (
               <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
                 Please select a shop destination
+              </div>
+            )}
+
+            {showProductExtensionSelector && !productExtensionProductSetId && (
+              <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                Please select a product catalog for product extensions
               </div>
             )}
 
