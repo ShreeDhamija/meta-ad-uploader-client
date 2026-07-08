@@ -458,11 +458,8 @@ const useAdCreationProgress = (jobId) => {
             if (isSubscribed) {
               retryCount = 0;
               jobNotFoundCount = 0;
-              const backendProgress = data.progress ?? 0;
-              const scaledProgress = backendProgress >= 50
-                ? Math.min(100, Math.round((backendProgress - 50) * 2))
-                : 0;
-              setProgress(scaledProgress);
+
+              setProgress(data.progress);
               setMessage(data.message);
               setStatus(data.status);
               setMetadata({
@@ -717,14 +714,7 @@ export default function TikTokAdCreationForm({
   const [jobId, setJobId] = useState(null)
   const [progress, setProgress] = useState(0)
   const [progressMessage, setProgressMessage] = useState('')
-  const [status, setStatus] = useState('idle')
-  const {
-    progress: trackedProgress,
-    message: trackedMessage,
-    status: trackedStatus,
-    metaData: trackedMetaData,
-    resetProgress
-  } = useAdCreationProgress(jobId)
+  const { progress: trackedProgress, message: trackedMessage, status, metaData, resetProgress } = useAdCreationProgress(jobId)
 
   const [jobQueue, setJobQueue] = useState([])
   const [currentJob, setCurrentJob] = useState(null)
@@ -1991,7 +1981,6 @@ export default function TikTokAdCreationForm({
 
     } catch (err) {
       if (err.name === 'AbortError' || signal.aborted) {
-        setStatus('cancelled')
         updateProgress(100, 'Job cancelled.')
 
         await fetch(`${API_BASE_URL}/auth/cancel-job`, {
@@ -2000,7 +1989,6 @@ export default function TikTokAdCreationForm({
           body: JSON.stringify({ jobId: jobToProcess.id })
         }).catch(() => { })
       } else {
-        setStatus('error')
         updateProgress(100, `Job Failed: ${err.message}`)
 
         await fetch(`${API_BASE_URL}/auth/complete-job`, {
@@ -2029,18 +2017,20 @@ export default function TikTokAdCreationForm({
       return
     }
 
+    // ✅ Reset first, before setting the job (matches reference)
+    resetProgress()
+    setLiveProgress({ completed: 0, succeeded: 0, failed: 0, total: 0, errors: [] })
+
     const jobToProcess = jobQueue[0]
 
     setIsProcessingQueue(true)
     setCurrentJob(jobToProcess)
     setHasStartedAnyJob(true)
 
-    resetProgress()
     setProgress(0)
     setProgressMessage('Initializing...')
     setJobId(null)
     setIsCancelling(false)
-    setLiveProgress({ completed: 0, succeeded: 0, failed: 0, total: 0, errors: [] })
 
     handleCreateAd(jobToProcess).catch(err => {
       // Don't treat cancellation as a critical error
@@ -2087,13 +2077,13 @@ export default function TikTokAdCreationForm({
     })
   }, [jobQueue, isProcessingQueue])
 
-  // Sync SSE progress to local progress state
+  // This useEffect now only handles the UI updates for the progress bar.
   useEffect(() => {
-    if (currentJob && trackedStatus !== 'idle') {
+    if (currentJob) {
       setProgress(trackedProgress)
       setProgressMessage(trackedMessage)
     }
-  }, [trackedProgress, trackedMessage, currentJob, trackedStatus])
+  }, [trackedProgress, trackedMessage, currentJob])
 
   // Listen to final status updates from SSE to complete the job and advance the queue
   useEffect(() => {
@@ -2101,21 +2091,23 @@ export default function TikTokAdCreationForm({
       return
     }
 
-    if (trackedStatus === 'idle') {
+    // Guard clause to ignore stale status after a reset.
+    if (status === 'idle') {
       return
     }
 
+    // Only act on the final states reported by the SSE hook
     if (
-      trackedStatus === 'complete' ||
-      trackedStatus === 'partial-success' ||
-      trackedStatus === 'error' ||
-      trackedStatus === 'job-not-found' ||
-      trackedStatus === 'cancelled'
+      status === 'complete' ||
+      status === 'partial-success' ||
+      status === 'error' ||
+      status === 'job-not-found' ||
+      status === 'cancelled'
     ) {
-      const successCount = trackedMetaData?.successCount || 0
-      const failureCount = trackedMetaData?.failureCount || 0
-      const totalCount = trackedMetaData?.totalCount || currentJob.adCount || 1
-      const errorMessages = trackedMetaData?.errorMessages || []
+      const successCount = metaData?.successCount || 0
+      const failureCount = metaData?.failureCount || 0
+      const totalCount = metaData?.totalCount || currentJob.adCount || 1
+      const errorMessages = metaData?.errorMessages || []
 
       let completedJob = {
         id: currentJob.id,
@@ -2129,17 +2121,17 @@ export default function TikTokAdCreationForm({
         errorMessages: errorMessages.map(msg => typeof msg === 'string' ? { error: msg } : msg)
       }
 
-      if (trackedStatus === 'complete') {
+      if (status === 'complete') {
         completedJob.status = 'success'
         completedJob.message = `${currentJob.adCount || 1} Ad${currentJob.adCount !== 1 ? 's' : ''} successfully posted to ${currentJob.adGroupDisplayName}`
-      } else if (trackedStatus === 'partial-success') {
+      } else if (status === 'partial-success') {
         completedJob.status = 'partial-success'
         completedJob.message = `${successCount} Ad${successCount !== 1 ? 's' : ''} successfully posted to ${currentJob.adGroupDisplayName} (with ${failureCount} failure${failureCount !== 1 ? 's' : ''})`
         toast.warning(completedJob.message)
-      } else if (trackedStatus === 'cancelled') {
+      } else if (status === 'cancelled') {
         completedJob.status = 'cancelled'
         completedJob.message = trackedMessage || 'Job cancelled.'
-      } else if (trackedStatus === 'job-not-found') {
+      } else if (status === 'job-not-found') {
         completedJob.status = 'retry'
         completedJob.message = 'Job timed out. Refresh page to try again.'
       } else {
@@ -2156,20 +2148,20 @@ export default function TikTokAdCreationForm({
       setIsProcessingQueue(false)
       setIsCancelling(false)
     }
-  }, [trackedStatus, trackedMessage, trackedMetaData, isProcessingQueue, currentJob, addCompletedJob])
+  }, [status, isProcessingQueue, currentJob])
 
   // Sync SSE metadata updates to liveProgress
   useEffect(() => {
-    if (currentJob && trackedMetaData && (trackedMetaData.successCount !== undefined || trackedMetaData.failureCount !== undefined)) {
+    if (currentJob && metaData && (metaData.successCount !== undefined || metaData.failureCount !== undefined)) {
       setLiveProgress(prev => ({
         ...prev,
-        succeeded: trackedMetaData.successCount || 0,
-        failed: trackedMetaData.failureCount || 0,
-        completed: (trackedMetaData.successCount || 0) + (trackedMetaData.failureCount || 0),
-        errors: (trackedMetaData.errorMessages || []).map(err => typeof err === 'string' ? { error: err } : err)
+        succeeded: metaData.successCount || 0,
+        failed: metaData.failureCount || 0,
+        completed: (metaData.successCount || 0) + (metaData.failureCount || 0),
+        errors: (metaData.errorMessages || []).map(err => typeof err === 'string' ? { error: err } : err)
       }))
     }
-  }, [trackedMetaData, currentJob])
+  }, [metaData, currentJob])
 
   // Handle advertiser account change
   const handleAdvertiserChange = useCallback((value) => {
