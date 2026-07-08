@@ -4,13 +4,12 @@ import axios from "axios";
 import pLimit from "p-limit";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "https://api.withblip.com";
-const S3_UPLOAD_THRESHOLD = 1 * 1024 * 1024; // 1 MB
 
 /**
  * Hook for uploading videos to TikTok via the backend upload pipeline.
  *
  * Supports two modes:
- *  - uploadVideo(file, signal)   — local File object, uses chunked S3 direct or XHR upload
+ *  - uploadVideo(file, signal)   — local File object, uses chunked S3 direct upload
  *  - uploadVideoFromUrl(url)     — remote URL, asks the server to download & forward it
  *
  * @param {string} advertiserId  TikTok advertiser account ID
@@ -189,182 +188,76 @@ export function useTikTokVideoUpload(advertiserId) {
       return null;
     }
 
-    // --- S3 DIRECT CHUNKED PATH FOR LARGE FILES ---
-    if (file.size > S3_UPLOAD_THRESHOLD) {
-      console.log(`[useTikTokVideoUpload] File size (${file.size} bytes) exceeds threshold. Using S3 chunked upload...`);
-      setUploading(true);
-      setUploadProgress(0);
-      if (onProgress) onProgress(0);
-
-      const totalChunks = Math.ceil(file.size / (10 * 1024 * 1024));
-      let uploadedChunks = 0;
-
-      try {
-        const s3Result = await uploadToS3(
-          file,
-          () => {
-            uploadedChunks++;
-            const pct = Math.round((uploadedChunks / totalChunks) * 100);
-            setUploadProgress(pct);
-            if (onProgress) onProgress(pct);
-          },
-          file.name + "-" + file.size,
-          2,
-          signal
-        );
-
-        if (signal?.aborted) {
-          throw new DOMException("Upload aborted", "AbortError");
-        }
-
-        // Hit the new S3-specific video sync route
-        const tiktokToken = localStorage.getItem("tiktok_token") ||
-          localStorage.getItem("tiktokAccessToken");
-        const tiktokUserId = localStorage.getItem("tiktok_uid") ||
-          localStorage.getItem("tiktokUserId");
-
-        const response = await fetch(
-          `${API_BASE_URL}/api/tiktok/upload-video-s3?advertiserId=${encodeURIComponent(advertiserId)}`,
-          {
-            method: "POST",
-            credentials: "include",
-            headers: {
-              "Content-Type": "application/json",
-              ...(tiktokToken && { "x-tiktok-token": tiktokToken }),
-              ...(tiktokUserId && { "x-tiktok-user-id": tiktokUserId }),
-            },
-            body: JSON.stringify({
-              s3Url: s3Result.s3Url,
-              fileName: file.name
-            }),
-            signal
-          }
-        );
-
-        const data = await response.json();
-        if (!response.ok || !data.success) {
-          throw new Error(data.error || "TikTok registration failed");
-        }
-
-        setUploadProgress(100);
-        if (onProgress) onProgress(100);
-        return data; // { videoId, s3Url, fileName, data }
-      } catch (err) {
-        setUploadProgress(0);
-        if (onProgress) onProgress(0);
-        if (err.name === "AbortError" || axios.isCancel(err) || signal?.aborted) {
-          console.log("[useTikTokVideoUpload] Chunked S3 upload aborted successfully");
-          throw new DOMException("Upload aborted", "AbortError");
-        }
-        toast.error(err.message || "S3 Upload failed");
-        throw err;
-      } finally {
-        setUploading(false);
-      }
-    }
-
-    // --- STANDARD XHR PATH FOR SMALL FILES ---
-    console.log(`[useTikTokVideoUpload] File size (${file.size} bytes) is below threshold. Using standard upload...`);
+    console.log(`[useTikTokVideoUpload] Using S3 direct upload for file: ${file.name}`);
     setUploading(true);
     setUploadProgress(0);
     if (onProgress) onProgress(0);
 
-    return new Promise((resolve, reject) => {
-      const formData = new FormData();
-      formData.append("videoFile", file);
+    const totalChunks = Math.ceil(file.size / (10 * 1024 * 1024));
+    let uploadedChunks = 0;
 
-      const xhr = new XMLHttpRequest();
-
-      const onAbortHandler = () => {
-        xhr.abort();
-      };
-
-      if (signal) {
-        signal.addEventListener("abort", onAbortHandler);
-      }
-
-      xhr.upload.addEventListener("progress", (e) => {
-        if (e.lengthComputable) {
-          const pct = Math.round((e.loaded / e.total) * 100);
+    try {
+      const s3Result = await uploadToS3(
+        file,
+        () => {
+          uploadedChunks++;
+          const pct = Math.round((uploadedChunks / totalChunks) * 100);
           setUploadProgress(pct);
           if (onProgress) onProgress(pct);
-        }
-      });
-
-      xhr.addEventListener("load", () => {
-        if (signal) {
-          signal.removeEventListener("abort", onAbortHandler);
-        }
-        setUploading(false);
-        setUploadProgress(0);
-
-        if (xhr.status === 200) {
-          let data;
-          try {
-            data = JSON.parse(xhr.responseText);
-          } catch {
-            const msg = "Server returned non-JSON response";
-            toast.error(msg);
-            if (onProgress) onProgress(0);
-            return reject(new Error(msg));
-          }
-
-          if (data.success && data.videoId) {
-            if (onProgress) onProgress(100);
-            return resolve(data);
-          }
-
-          const msg = data.error || "Upload failed";
-          toast.error(msg);
-          if (onProgress) onProgress(0);
-          reject(new Error(msg));
-        } else {
-          let errMsg = "Upload failed";
-          try {
-            errMsg = JSON.parse(xhr.responseText)?.error || errMsg;
-          } catch { }
-          toast.error(errMsg);
-          if (onProgress) onProgress(0);
-          reject(new Error(errMsg));
-        }
-      });
-
-      xhr.addEventListener("error", () => {
-        if (signal) {
-          signal.removeEventListener("abort", onAbortHandler);
-        }
-        setUploading(false);
-        setUploadProgress(0);
-        if (onProgress) onProgress(0);
-        toast.error("Network error during upload");
-        reject(new Error("Network error"));
-      });
-
-      xhr.addEventListener("abort", () => {
-        if (signal) {
-          signal.removeEventListener("abort", onAbortHandler);
-        }
-        setUploading(false);
-        setUploadProgress(0);
-        if (onProgress) onProgress(0);
-        reject(new DOMException("Upload aborted", "AbortError"));
-      });
-
-      xhr.open(
-        "POST",
-        `${API_BASE_URL}/api/tiktok/upload-video?advertiserId=${encodeURIComponent(advertiserId)}`
+        },
+        file.name + "-" + file.size,
+        2,
+        signal
       );
 
-      const tiktokUserId = localStorage.getItem("tiktok_uid") ||
-        localStorage.getItem("tiktokUserId");
+      if (signal?.aborted) {
+        throw new DOMException("Upload aborted", "AbortError");
+      }
+
+      // Hit the new S3-specific video sync route
       const tiktokToken = localStorage.getItem("tiktok_token") ||
         localStorage.getItem("tiktokAccessToken");
-      if (tiktokUserId) xhr.setRequestHeader("x-tiktok-user-id", tiktokUserId);
-      if (tiktokToken) xhr.setRequestHeader("x-tiktok-token", tiktokToken);
+      const tiktokUserId = localStorage.getItem("tiktok_uid") ||
+        localStorage.getItem("tiktokUserId");
 
-      xhr.withCredentials = true;
-      xhr.send(formData);
-    });
+      const response = await fetch(
+        `${API_BASE_URL}/api/tiktok/upload-video-s3?advertiserId=${encodeURIComponent(advertiserId)}`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            ...(tiktokToken && { "x-tiktok-token": tiktokToken }),
+            ...(tiktokUserId && { "x-tiktok-user-id": tiktokUserId }),
+          },
+          body: JSON.stringify({
+            s3Url: s3Result.s3Url,
+            fileName: file.name
+          }),
+          signal
+        }
+      );
+
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || "TikTok registration failed");
+      }
+
+      setUploadProgress(100);
+      if (onProgress) onProgress(100);
+      return data; // { videoId, s3Url, fileName, data }
+    } catch (err) {
+      setUploadProgress(0);
+      if (onProgress) onProgress(0);
+      if (err.name === "AbortError" || axios.isCancel(err) || signal?.aborted) {
+        console.log("[useTikTokVideoUpload] S3 upload aborted successfully");
+        throw new DOMException("Upload aborted", "AbortError");
+      }
+      toast.error(err.message || "S3 Upload failed");
+      throw err;
+    } finally {
+      setUploading(false);
+    }
   };
 
   /**

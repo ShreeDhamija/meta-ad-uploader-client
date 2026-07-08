@@ -458,8 +458,11 @@ const useAdCreationProgress = (jobId) => {
             if (isSubscribed) {
               retryCount = 0;
               jobNotFoundCount = 0;
-
-              setProgress(data.progress);
+              const backendProgress = data.progress ?? 0;
+              const scaledProgress = backendProgress >= 50
+                ? Math.min(100, Math.round((backendProgress - 50) * 2))
+                : 0;
+              setProgress(scaledProgress);
               setMessage(data.message);
               setStatus(data.status);
               setMetadata({
