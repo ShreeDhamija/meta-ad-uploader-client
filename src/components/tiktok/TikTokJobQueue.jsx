@@ -38,8 +38,6 @@ export default function TikTokJobQueue({
   setCompletedJobs,
   progress,
   trackedProgress,
-  videoUploading,
-  videoUploadProgress,
   isCancelling,
   setIsCancelling,
   currentAbortController,
