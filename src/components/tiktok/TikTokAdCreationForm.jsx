@@ -5965,7 +5965,7 @@ export default function TikTokAdCreationForm({
                         </Popover>
                       </div>
 
-                      {uploadSources.includes('local') && !driveFiles.length && !dropboxFiles.length && (
+                      {uploadSources.includes('local') && (
                         <div
                           {...getRootProps()}
                           className={`group cursor-pointer border-2 border-dashed rounded-2xl p-6 text-center transition-colors ${isDragActive ? "border-primary bg-primary/5" : "border-gray-300 hover:border-primary/50"
