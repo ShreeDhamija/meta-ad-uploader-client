@@ -1341,6 +1341,18 @@ export default function TikTokAdCreationForm({
       productName: variantState.productName || productName || '',
       productImageUrl: variantState.productImageUrl || productImageUrl || '',
       sellingPoints: variantState.sellingPoints || sellingPoints || [],
+
+      adNameFormulaV2: variantState.adNameFormulaV2 || adNameFormulaV2 || null,
+      formCatalogId: variantState.formCatalogId || formCatalogId || null,
+      formCatalogName: variantState.formCatalogName || formCatalogName || null,
+      formProductId: variantState.formProductId || formProductId || [],
+      formProductName: variantState.formProductName || formProductName || null,
+      formCatalogProducts: variantState.formCatalogProducts || formCatalogProducts || [],
+      formStoreId: variantState.formStoreId || formStoreId || null,
+      formStoreName: variantState.formStoreName || formStoreName || null,
+      formStoreProductId: variantState.formStoreProductId || formStoreProductId || [],
+      formStoreProductName: variantState.formStoreProductName || formStoreProductName || null,
+      formStoreCatalogId: variantState.formStoreCatalogId || formStoreCatalogId || null,
     }
 
     let fileCount = formData.files.length + formData.driveFiles.length + formData.dropboxFiles.length + formData.tiktokLibraryFiles.length
@@ -1442,6 +1454,17 @@ export default function TikTokAdCreationForm({
       newAdGroupName,
       selectedIdentity,
       launchPaused,
+      adNameFormulaV2: jobAdNameFormula,
+      formCatalogId: jobFormCatalogId,
+      formCatalogName: jobFormCatalogName,
+      formProductId: jobFormProductId,
+      formProductName: jobFormProductName,
+      formCatalogProducts: jobFormCatalogProducts,
+      formStoreId: jobFormStoreId,
+      formStoreName: jobFormStoreName,
+      formStoreProductId: jobFormStoreProductId,
+      formStoreProductName: jobFormStoreProductName,
+      formStoreCatalogId: jobFormStoreCatalogId,
     } = jobToProcess.formData
 
     const campaignObj = campaigns.find(c => c.campaign_id === selectedCampaign[0])
@@ -1665,8 +1688,9 @@ export default function TikTokAdCreationForm({
           item.file,
           idx,
           landingUrl,
-          adNameFormulaV2,
-          adType
+          jobAdNameFormula,
+          adType,
+          adName
         )
 
         for (const adgroupId of adGroupIdsToSubmit) {
@@ -1686,19 +1710,19 @@ export default function TikTokAdCreationForm({
 
           if (isShoppingAg) {
             if (productSource === 'SHOWCASE') {
-              catalogIdToUse = formStoreCatalogId || adGroupObj?.catalog_id || null
-              const productIds = Array.isArray(formStoreProductId) ? formStoreProductId : (formStoreProductId ? [formStoreProductId] : [])
+              catalogIdToUse = jobFormStoreCatalogId || adGroupObj?.catalog_id || null
+              const productIds = Array.isArray(jobFormStoreProductId) ? jobFormStoreProductId : (jobFormStoreProductId ? [jobFormStoreProductId] : [])
               if (productIds.length > 0) {
                 skuIdToUse = productIds.join(',')
               }
-            } else if (showProductCatalogForAdGroup && formCatalogId) {
-              catalogIdToUse = formCatalogId
-              const productIds = Array.isArray(formProductId) ? formProductId : (formProductId ? [formProductId] : [])
+            } else if (showProductCatalogForAdGroup && jobFormCatalogId) {
+              catalogIdToUse = jobFormCatalogId
+              const productIds = Array.isArray(jobFormProductId) ? jobFormProductId : (jobFormProductId ? [jobFormProductId] : [])
               const skuIds = []
               const itemGroupIds = []
 
               productIds.forEach(id => {
-                const matchedProd = formCatalogProducts.find(p => p.product_id === id)
+                const matchedProd = jobFormCatalogProducts.find(p => p.product_id === id)
                 if (matchedProd) {
                   if (matchedProd.item_group_id) {
                     itemGroupIds.push(matchedProd.item_group_id)
@@ -1795,7 +1819,7 @@ export default function TikTokAdCreationForm({
               if (skuIdToUse) creative.sku_id = skuIdToUse;
               if (itemGroupIdToUse) creative.item_group_id = itemGroupIdToUse;
               if (productSource === 'SHOWCASE') {
-                creative.store_id = formStoreId || adGroupObj?.store_id || null;
+                creative.store_id = jobFormStoreId || adGroupObj?.store_id || null;
               }
             }
 
@@ -1837,7 +1861,7 @@ export default function TikTokAdCreationForm({
                   if (skuIdToUse) creative.sku_id = skuIdToUse;
                   if (itemGroupIdToUse) creative.item_group_id = itemGroupIdToUse;
                   if (productSource === 'SHOWCASE') {
-                    creative.store_id = formStoreId || adGroupObj?.store_id || null;
+                    creative.store_id = jobFormStoreId || adGroupObj?.store_id || null;
                   }
                 }
 
@@ -1886,7 +1910,7 @@ export default function TikTokAdCreationForm({
                     if (skuIdToUse) creative.sku_id = skuIdToUse;
                     if (itemGroupIdToUse) creative.item_group_id = itemGroupIdToUse;
                     if (productSource === 'SHOWCASE') {
-                      creative.store_id = formStoreId || adGroupObj?.store_id || null;
+                      creative.store_id = jobFormStoreId || adGroupObj?.store_id || null;
                     }
                   }
 
@@ -3278,14 +3302,15 @@ export default function TikTokAdCreationForm({
     window.addEventListener('message', handleMessage)
   }, [openDropboxChooser])
 
-  const computeAdNameFromFormula = useCallback((file, iterationIndex = 0, link = "", formula = null, adType = "") => {
+  const computeAdNameFromFormula = useCallback((file, iterationIndex = 0, link = "", formula = null, adType = "", staticAdName = null) => {
     const formulaToUse = formula || adNameFormulaV2;
     if (!formulaToUse?.rawInput?.trim()) {
       if (adType === "SPARK") {
         return " ";
       }
-      if (adName && adName.trim() !== "") {
-        return adName;
+      const nameToUse = staticAdName !== null ? staticAdName : adName;
+      if (nameToUse && nameToUse.trim() !== "") {
+        return nameToUse;
       }
       if (file && file.name) {
         return file.name.replace(/\.[^/.]+$/, "");
