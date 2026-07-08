@@ -628,6 +628,13 @@ export default function TikTokAdCreationForm({
   }
 
   const [adNameFormulaV2, setAdNameFormulaV2] = useState({ rawInput: "" })
+
+  // ---------------------------------------------------------------------------
+  // formStateRef — always mirrors the latest form state so that
+  // captureFormDataAsJob() reads the EXACT values present at publish-click time,
+  // regardless of React's useCallback closure staleness.
+  // ---------------------------------------------------------------------------
+  const formStateRef = useRef({})
   const [newSellingPoint, setNewSellingPoint] = useState("")
 
   const campaignsLoadedForAdvertiserRef = useRef(campaigns.length > 0 ? selectedAdvertiser : null)
@@ -1287,9 +1294,58 @@ export default function TikTokAdCreationForm({
     return file.id || file.name || file.videoId || ''
   }
 
+  // Keep formStateRef in sync with every render so captureFormDataAsJob always
+  // reads the absolutely latest values — not stale useCallback closure values.
+  formStateRef.current = {
+    adName,
+    adTexts,
+    cta,
+    landingUrl,
+    sparkAuthCodes,
+    urlMode,
+    adType,
+    files,
+    driveFiles,
+    dropboxFiles,
+    tiktokLibraryFiles,
+    importedPosts,
+    selectedAdvertiser,
+    selectedCampaign,
+    selectedAdGroup,
+    showDuplicateAdGroupBlock,
+    duplicateAdGroup,
+    newAdGroupName,
+    selectedIdentity,
+    launchPaused,
+    productName,
+    productImageUrl,
+    sellingPoints,
+    adNameFormulaV2,
+    formCatalogId,
+    formCatalogName,
+    formProductId,
+    formProductName,
+    formCatalogProducts,
+    formStoreId,
+    formStoreName,
+    formStoreProductId,
+    formStoreProductName,
+    formStoreCatalogId,
+    variants,
+    fileVariantMap,
+    postVariantMap,
+    adGroups,
+  }
+
+  // captureFormDataAsJob reads exclusively from formStateRef.current so it
+  // always captures the EXACT state present at publish-click time, immune to
+  // useCallback closure staleness.
   const captureFormDataAsJob = useCallback((variantId = 'default') => {
+    // Read from the ref for guaranteed freshness
+    const s = formStateRef.current
+
     const getVariantState = (vid) => {
-      const v = variants.find(val => val.id === vid)
+      const v = (s.variants || []).find(val => val.id === vid)
       if (!v) return null
       return v.state || v.snapshot || v
     }
@@ -1299,28 +1355,28 @@ export default function TikTokAdCreationForm({
 
     const filterFiles = (items) => items.filter((file) => {
       const fileId = getFileId(file)
-      return (fileVariantMap[fileId] || 'default') === variantId
+      return ((s.fileVariantMap || {})[fileId] || 'default') === variantId
     })
 
     const filterPosts = (items) => items.filter((post) => {
       const postKey = `post:${post.id}`
-      return (postVariantMap[postKey] || 'default') === variantId
+      return ((s.postVariantMap || {})[postKey] || 'default') === variantId
     })
 
-    const variantFiles = filterFiles(files || [])
-    const variantDriveFiles = filterFiles(driveFiles || []).map(f => ({ ...f, isDrive: true }))
-    const variantDropboxFiles = filterFiles(dropboxFiles || []).map(f => ({ ...f, isDropbox: true }))
-    const variantLibraryFiles = filterFiles(tiktokLibraryFiles || [])
-    const variantImportedPosts = filterPosts(importedPosts || [])
+    const variantFiles = filterFiles(s.files || [])
+    const variantDriveFiles = filterFiles(s.driveFiles || []).map(f => ({ ...f, isDrive: true }))
+    const variantDropboxFiles = filterFiles(s.dropboxFiles || []).map(f => ({ ...f, isDropbox: true }))
+    const variantLibraryFiles = filterFiles(s.tiktokLibraryFiles || [])
+    const variantImportedPosts = filterPosts(s.importedPosts || [])
 
     const formData = {
-      adName: variantState.adName || adName || '',
-      adTexts: variantState.adTexts || (variantState.adText ? [variantState.adText] : null) || adTexts || [''],
-      cta: variantState.cta || cta || ['SHOP_NOW'],
-      landingUrl: variantState.landingUrl || landingUrl || '',
-      sparkAuthCodes: variantState.sparkAuthCodes || sparkAuthCodes || [''],
-      urlMode: variantState.urlMode || urlMode || 'WEBSITE',
-      adType: variantState.adType || adType || 'NORMAL',
+      adName: variantState.adName || s.adName || '',
+      adTexts: variantState.adTexts || (variantState.adText ? [variantState.adText] : null) || s.adTexts || [''],
+      cta: variantState.cta || s.cta || ['SHOP_NOW'],
+      landingUrl: variantState.landingUrl || s.landingUrl || '',
+      sparkAuthCodes: variantState.sparkAuthCodes || s.sparkAuthCodes || [''],
+      urlMode: variantState.urlMode || s.urlMode || 'WEBSITE',
+      adType: variantState.adType || s.adType || 'NORMAL',
 
       files: [...variantFiles],
       driveFiles: [...variantDriveFiles],
@@ -1328,31 +1384,31 @@ export default function TikTokAdCreationForm({
       tiktokLibraryFiles: [...variantLibraryFiles],
       importedPosts: [...variantImportedPosts],
 
-      selectedAdvertiser,
-      selectedCampaign,
-      selectedAdGroup,
+      selectedAdvertiser: s.selectedAdvertiser,
+      selectedCampaign: [...(s.selectedCampaign || [])],
+      selectedAdGroup: [...(s.selectedAdGroup || [])],
 
-      isDuplicatingAdGroupMode: showDuplicateAdGroupBlock && duplicateAdGroup,
-      duplicateAdGroup,
-      newAdGroupName,
-      selectedIdentity,
-      launchPaused,
+      isDuplicatingAdGroupMode: s.showDuplicateAdGroupBlock && s.duplicateAdGroup,
+      duplicateAdGroup: s.duplicateAdGroup,
+      newAdGroupName: s.newAdGroupName,
+      selectedIdentity: s.selectedIdentity,
+      launchPaused: s.launchPaused,
 
-      productName: variantState.productName || productName || '',
-      productImageUrl: variantState.productImageUrl || productImageUrl || '',
-      sellingPoints: variantState.sellingPoints || sellingPoints || [],
+      productName: variantState.productName || s.productName || '',
+      productImageUrl: variantState.productImageUrl || s.productImageUrl || '',
+      sellingPoints: variantState.sellingPoints || s.sellingPoints || [],
 
-      adNameFormulaV2: variantState.adNameFormulaV2 || adNameFormulaV2 || null,
-      formCatalogId: variantState.formCatalogId || formCatalogId || null,
-      formCatalogName: variantState.formCatalogName || formCatalogName || null,
-      formProductId: variantState.formProductId || formProductId || [],
-      formProductName: variantState.formProductName || formProductName || null,
-      formCatalogProducts: variantState.formCatalogProducts || formCatalogProducts || [],
-      formStoreId: variantState.formStoreId || formStoreId || null,
-      formStoreName: variantState.formStoreName || formStoreName || null,
-      formStoreProductId: variantState.formStoreProductId || formStoreProductId || [],
-      formStoreProductName: variantState.formStoreProductName || formStoreProductName || null,
-      formStoreCatalogId: variantState.formStoreCatalogId || formStoreCatalogId || null,
+      adNameFormulaV2: variantState.adNameFormulaV2 || s.adNameFormulaV2 || null,
+      formCatalogId: variantState.formCatalogId || s.formCatalogId || null,
+      formCatalogName: variantState.formCatalogName || s.formCatalogName || null,
+      formProductId: variantState.formProductId || s.formProductId || [],
+      formProductName: variantState.formProductName || s.formProductName || null,
+      formCatalogProducts: variantState.formCatalogProducts || s.formCatalogProducts || [],
+      formStoreId: variantState.formStoreId || s.formStoreId || null,
+      formStoreName: variantState.formStoreName || s.formStoreName || null,
+      formStoreProductId: variantState.formStoreProductId || s.formStoreProductId || [],
+      formStoreProductName: variantState.formStoreProductName || s.formStoreProductName || null,
+      formStoreCatalogId: variantState.formStoreCatalogId || s.formStoreCatalogId || null,
     }
 
     let fileCount = formData.files.length + formData.driveFiles.length + formData.dropboxFiles.length + formData.tiktokLibraryFiles.length
@@ -1361,27 +1417,21 @@ export default function TikTokAdCreationForm({
     }
 
     const activeAdGroups = formData.selectedAdGroup || []
-    const adGroupDisplayName = (showDuplicateAdGroupBlock && duplicateAdGroup)
-      ? (newAdGroupName || 'New Ad Group')
+    const adGroupDisplayName = (s.showDuplicateAdGroupBlock && s.duplicateAdGroup)
+      ? (s.newAdGroupName || 'New Ad Group')
       : activeAdGroups.length === 1
-        ? (adGroups.find(ag => ag.adgroup_id === activeAdGroups[0])?.adgroup_name || 'selected ad group')
+        ? ((s.adGroups || []).find(ag => ag.adgroup_id === activeAdGroups[0])?.adgroup_name || 'selected ad group')
         : `${activeAdGroups.length} ad groups`
 
     return {
       id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       variantId,
-      variantName: variants.find(v => v.id === variantId)?.name || 'Default',
+      variantName: (s.variants || []).find(v => v.id === variantId)?.name || 'Default',
       adCount: fileCount * (formData.selectedAdGroup?.length || 1),
       adGroupDisplayName,
       formData,
     }
-  }, [
-    variants, adName, adTexts, cta, landingUrl, sparkAuthCodes, urlMode, adType,
-    files, driveFiles, dropboxFiles, tiktokLibraryFiles, importedPosts, selectedAdvertiser,
-    selectedCampaign, selectedAdGroup, showDuplicateAdGroupBlock, duplicateAdGroup,
-    newAdGroupName, selectedIdentity, fileVariantMap, postVariantMap, launchPaused,
-    productName, productImageUrl, sellingPoints, adGroups
-  ])
+  }, []) // No deps — reads exclusively from formStateRef.current at call time
 
   const addCompletedJob = useCallback((completedJob) => {
     setCompletedJobs(prev => {
@@ -2045,6 +2095,12 @@ export default function TikTokAdCreationForm({
     }
   }
 
+  // Store handleCreateAd in a ref so the queue-processor useEffect always
+  // invokes the latest version of the function, preventing stale closures from
+  // bleeding in live-state values that belong to a later job.
+  const handleCreateAdRef = useRef(handleCreateAd)
+  handleCreateAdRef.current = handleCreateAd
+
   useEffect(() => {
     if (jobQueue.length === 0 || isProcessingQueue) {
       return
@@ -2063,7 +2119,7 @@ export default function TikTokAdCreationForm({
     setIsCancelling(false)
     setLiveProgress({ completed: 0, succeeded: 0, failed: 0, total: 0, errors: [] })
 
-    handleCreateAd(jobToProcess).catch(err => {
+    handleCreateAdRef.current(jobToProcess).catch(err => {
       // Don't treat cancellation as a critical error
       if (err.name === 'AbortError' || axios.isCancel(err) || signal?.aborted) {
         const cancelledJob = {
