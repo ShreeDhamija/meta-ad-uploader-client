@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { toast } from 'sonner';
 import { ChevronDown, CirclePlus, GripVertical, Loader2, Rocket, Trash } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -22,6 +23,69 @@ function withUniqueId(file) {
   file.uniqueId = `${file.name}-${file.lastModified || Date.now()}-${uuidv4()}`;
   return file;
 }
+
+const getImageDimensions = (file) => {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve({ width: img.naturalWidth, height: img.naturalHeight });
+    };
+    img.onerror = (err) => {
+      URL.revokeObjectURL(url);
+      reject(err);
+    };
+    img.src = url;
+  });
+};
+
+const validateDroppedFiles = async (droppedFiles) => {
+  const validFiles = [];
+  const errors = [];
+
+  for (const file of droppedFiles) {
+    const isImg = file.type?.startsWith("image/") || /\.(png|jpg|jpeg)$/i.test(file.name);
+
+    if (isImg) {
+      const hasValidExt = /\.(png|jpg|jpeg)$/i.test(file.name) || file.type === "image/png" || file.type === "image/jpeg";
+      if (!hasValidExt) {
+        errors.push(`"${file.name}" has an invalid image format. Supported formats: JPG, JPEG, PNG.`);
+        continue;
+      }
+
+      const MAX_SIZE = 100 * 1024 * 1024;
+      if (file.size > MAX_SIZE) {
+        errors.push(`"${file.name}" exceeds the 100MB size limit.`);
+        continue;
+      }
+
+      try {
+        const dimensions = await getImageDimensions(file);
+        const isValidResolution = [
+          { w: 720, h: 1280 },
+          { w: 1200, h: 628 },
+          { w: 640, h: 640 },
+          { w: 640, h: 100 },
+          { w: 600, h: 500 },
+          { w: 640, h: 200 }
+        ].some(res => res.w === dimensions.width && res.h === dimensions.height);
+
+        if (!isValidResolution) {
+          errors.push(`"${file.name}" has an unsupported resolution (${dimensions.width}x${dimensions.height}). Supported resolutions: 720x1280, 1200x628, 640x640, 640x100, 600x500, 640x200.`);
+          continue;
+        }
+      } catch (err) {
+        errors.push(`Could not read dimensions of image "${file.name}".`);
+        continue;
+      }
+    }
+
+    validFiles.push(file);
+  }
+
+  return { validFiles, errors };
+};
 
 // Helper function to get unique file ID
 const getFileId = (file) => {
@@ -449,6 +513,22 @@ export default function MediaPreview({
   const [isFlexAutoGrouping, setIsFlexAutoGrouping] = useState(false);
   const [showDisableVariantsDialog, setShowDisableVariantsDialog] = useState(false);
   const [removingMediaIds, setRemovingMediaIds] = useState(new Set());
+
+  const handleFileDrop = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const droppedFiles = Array.from(e.dataTransfer.files).map(withUniqueId);
+
+    const { validFiles, errors } = await validateDroppedFiles(droppedFiles);
+
+    if (errors.length > 0) {
+      errors.forEach(err => toast.error(err, { duration: 5000 }));
+    }
+
+    if (validFiles.length > 0) {
+      setFiles(prev => [...prev, ...validFiles]);
+    }
+  };
 
   const sensors = useSensors(useSensor(PointerSensor));
   const hideUngroupedVariantDropdowns = isCarouselAd || enablePlacementCustomization;
@@ -1153,12 +1233,7 @@ export default function MediaPreview({
               e.preventDefault();
               e.stopPropagation();
             }}
-            onDrop={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              const droppedFiles = Array.from(e.dataTransfer.files).map(withUniqueId);
-              setFiles(prev => [...prev, ...droppedFiles]);
-            }}
+            onDrop={handleFileDrop}
           >
             <CardHeader className={`w-full ${showVariantButtonInHeader || showPlacementCustomizationRow ? 'pb-4' : ''}`}>
               <div className="flex w-full items-start justify-between gap-3 flex-nowrap">
@@ -1681,12 +1756,7 @@ export default function MediaPreview({
               e.preventDefault();
               e.stopPropagation();
             }}
-            onDrop={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              const droppedFiles = Array.from(e.dataTransfer.files).map(withUniqueId);
-              setFiles(prev => [...prev, ...droppedFiles]);
-            }}
+            onDrop={handleFileDrop}
           >
             <div className="bg-white rounded-2xl shadow-md p-8 max-w-sm w-full mx-4 text-center min-h-[500px] border border-gray-100 flex flex-col justify-center">
               <div className="mb-8">
