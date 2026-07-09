@@ -5440,9 +5440,12 @@ export default function TikTokAdCreationForm({
                         <button
                           type="button"
                           onClick={() => {
-                            setUrlMode('WEBSITE');
-                            const defaultLink = advertiserPrefs?.links?.find(l => l.isDefault) || advertiserPrefs?.links?.[0];
-                            setLandingUrl(showCustomLink ? "" : (defaultLink?.url || ""));
+                            if (urlMode !== 'WEBSITE') {
+                              setUrlMode('WEBSITE');
+                              setShowCustomLink(false);
+                              const defaultLink = advertiserPrefs?.links?.find(l => l.isDefault) || advertiserPrefs?.links?.[0];
+                              setLandingUrl(defaultLink?.url || "");
+                            }
                           }}
                           className={cn("px-2 py-1 text-[10px] font-bold rounded-lg transition-all", urlMode === 'WEBSITE' ? "bg-white shadow-sm text-zinc-900" : "text-gray-400")}
                         >
@@ -5451,8 +5454,10 @@ export default function TikTokAdCreationForm({
                         <button
                           type="button"
                           onClick={() => {
-                            setUrlMode('INSTANT_PAGE');
-                            setLandingUrl(instantPages[0]?.page_id || "");
+                            if (urlMode !== 'INSTANT_PAGE') {
+                              setUrlMode('INSTANT_PAGE');
+                              setLandingUrl(instantPages[0]?.page_id || "");
+                            }
                           }}
                           className={cn("px-2 py-1 text-[10px] font-bold rounded-lg transition-all", urlMode === 'INSTANT_PAGE' ? "bg-white shadow-sm text-zinc-900" : "text-gray-400")}
                         >
