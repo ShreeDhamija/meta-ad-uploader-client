@@ -1582,124 +1582,139 @@ export default function TikTokAdCreationForm({
         return sum + 1; // Google Drive / Dropbox are counted as 1 step
       }, 0);
 
-      let uploadedChunks = 0;
+      if (totalChunks > 0) {
+        let uploadedChunks = 0;
 
-      const handleChunkUploaded = (pct) => {
-        if (signal.aborted) return;
-        if (pct === 0) return; // Ignore initial 0% progress call from uploadVideo
-        uploadedChunks++;
-        const percent = totalChunks > 0 ? Math.min(Math.round((uploadedChunks / totalChunks) * 100), 100) : 100;
-        setProgress(percent);
-        setProgressMessage('Uploading files for processing...');
-      };
+        const handleChunkUploaded = (pct) => {
+          if (signal.aborted) return;
+          if (pct === 0) return; // Ignore initial 0% progress call from uploadVideo
+          uploadedChunks++;
+          const percent = totalChunks > 0 ? Math.min(Math.round((uploadedChunks / totalChunks) * 100), 100) : 100;
+          setProgress(percent);
+          setProgressMessage('Uploading files for processing...');
+        };
 
-      // Stage 1: Upload media files in parallel using pLimit(3)
-      const limit = pLimit(3);
-      const uploadPromises = itemsToUpload.map((item) =>
-        limit(async () => {
-          if (signal.aborted) throw new DOMException('Job cancelled.', 'AbortError');
+        // Stage 1: Upload media files in parallel using pLimit(3)
+        const limit = pLimit(3);
+        const uploadPromises = itemsToUpload.map((item) =>
+          limit(async () => {
+            if (signal.aborted) throw new DOMException('Job cancelled.', 'AbortError');
 
-          let videoId = null;
-          let currentS3Url = null;
+            let videoId = null;
+            let currentS3Url = null;
 
-          try {
-            if (adType === 'SPARK') {
-              videoId = item.file.id;
-            } else if (item.type === 'local') {
-              const uploadResult = await uploadVideoToTikTok(item.file, signal, handleChunkUploaded);
-              if (!uploadResult?.videoId) {
-                throw new Error(`Video upload failed for "${item.file.name}"`);
-              }
-              videoId = uploadResult.videoId;
-              currentS3Url = uploadResult.s3Url || null;
-            } else if (item.type === 'drive' || item.type === 'dropbox') {
-              const uploadParams = new URLSearchParams({ advertiserId: selectedAdvertiser });
+            try {
+              if (item.type === 'local') {
+                const uploadResult = await uploadVideoToTikTok(item.file, signal, handleChunkUploaded);
+                if (!uploadResult?.videoId) {
+                  throw new Error(`Video upload failed for "${item.file.name}"`);
+                }
+                videoId = uploadResult.videoId;
+                currentS3Url = uploadResult.s3Url || null;
+              } else if (item.type === 'drive' || item.type === 'dropbox') {
+                const uploadParams = new URLSearchParams({ advertiserId: selectedAdvertiser });
 
-              let uploadUrl, uploadBody;
-              if (item.type === 'drive') {
-                uploadUrl = `${API_BASE_URL}/api/tiktok/upload-from-drive?${uploadParams}`;
-                uploadBody = JSON.stringify({
-                  driveFileUrl: `https://www.googleapis.com/drive/v3/files/${item.file.id}?alt=media`,
-                  fileName: item.file.name,
-                  mimeType: item.file.mimeType,
-                  googleAccessToken: item.file.accessToken,
-                  size: item.file.size,
+                let uploadUrl, uploadBody;
+                if (item.type === 'drive') {
+                  uploadUrl = `${API_BASE_URL}/api/tiktok/upload-from-drive?${uploadParams}`;
+                  uploadBody = JSON.stringify({
+                    driveFileUrl: `https://www.googleapis.com/drive/v3/files/${item.file.id}?alt=media`,
+                    fileName: item.file.name,
+                    mimeType: item.file.mimeType,
+                    googleAccessToken: item.file.accessToken,
+                    size: item.file.size,
+                  });
+                } else {
+                  uploadUrl = `${API_BASE_URL}/api/tiktok/upload-from-dropbox?${uploadParams}`;
+                  uploadBody = JSON.stringify({
+                    fileId: item.file.dropboxId,
+                    fileName: item.file.name,
+                    dropboxAccessToken: item.file.accessToken,
+                  });
+                }
+
+                const uploadRes = await tiktokFetch(uploadUrl, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: uploadBody,
+                  signal,
                 });
-              } else {
-                uploadUrl = `${API_BASE_URL}/api/tiktok/upload-from-dropbox?${uploadParams}`;
-                uploadBody = JSON.stringify({
-                  fileId: item.file.dropboxId,
-                  fileName: item.file.name,
-                  dropboxAccessToken: item.file.accessToken,
-                });
+                const uploadData = await uploadRes.json();
+                if (!uploadRes.ok || !uploadData.success || !uploadData.videoId) {
+                  throw new Error(uploadData.error || `Upload failed for "${item.file.name}"`);
+                }
+                videoId = uploadData.videoId;
+                currentS3Url = uploadData.s3Url || null;
+                handleChunkUploaded();
+              } else if (item.type === 'library') {
+                videoId = item.file.videoId;
               }
 
-              const uploadRes = await tiktokFetch(uploadUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: uploadBody,
-                signal,
-              });
-              const uploadData = await uploadRes.json();
-              if (!uploadRes.ok || !uploadData.success || !uploadData.videoId) {
-                throw new Error(uploadData.error || `Upload failed for "${item.file.name}"`);
+              return {
+                item,
+                videoId,
+                s3Url: currentS3Url,
+                success: true
+              };
+            } catch (err) {
+              if (err.name === 'AbortError' || signal.aborted) {
+                throw err;
               }
-              videoId = uploadData.videoId;
-              currentS3Url = uploadData.s3Url || null;
-              handleChunkUploaded();
-            } else if (item.type === 'library') {
-              videoId = item.file.videoId;
+              console.error(`Upload failed for ${item.file.name}:`, err);
+              const errDetail = err.message || 'Upload failed';
+              const failedAdCount = isDuplicatingAdGroupMode ? 1 : selectedAdGroup.length;
+
+              setLiveProgress(prev => ({
+                ...prev,
+                completed: prev.completed + failedAdCount,
+                failed: prev.failed + failedAdCount,
+                errors: [...prev.errors, { error: errDetail, fileName: item.file.name }]
+              }));
+
+              return {
+                item,
+                error: errDetail,
+                success: false
+              };
             }
+          })
+        );
 
-            return {
-              item,
-              videoId,
-              s3Url: currentS3Url,
-              success: true
-            };
-          } catch (err) {
-            if (err.name === 'AbortError' || signal.aborted) {
-              throw err;
-            }
-            console.error(`Upload failed for ${item.file.name}:`, err);
-            const errDetail = err.message || 'Upload failed';
-            const failedAdCount = isDuplicatingAdGroupMode ? 1 : selectedAdGroup.length;
+        const uploadResults = await Promise.all(uploadPromises);
 
-            setLiveProgress(prev => ({
-              ...prev,
-              completed: prev.completed + failedAdCount,
-              failed: prev.failed + failedAdCount,
-              errors: [...prev.errors, { error: errDetail, fileName: item.file.name }]
-            }));
-
-            return {
-              item,
-              error: errDetail,
-              success: false
-            };
+        uploadResults.forEach(res => {
+          if (res.success) {
+            uploadedItems.push({
+              item: res.item,
+              videoId: res.videoId,
+              s3Url: res.s3Url
+            });
+          } else {
+            uploadErrors.push({ error: res.error, fileName: res.item.file.name });
           }
-        })
-      );
+        });
 
-      const uploadResults = await Promise.all(uploadPromises);
-
-      uploadResults.forEach(res => {
-        if (res.success) {
+        if (signal.aborted) throw new DOMException('Job cancelled.', 'AbortError');
+        setProgress(100);
+        setProgressMessage('File upload complete! Creating ads...');
+      } else {
+        // No uploading needed (Spark Ads or TikTok Library files)
+        itemsToUpload.forEach(item => {
+          let videoId = null;
+          if (adType === 'SPARK') {
+            videoId = item.file.id;
+          } else if (item.type === 'library') {
+            videoId = item.file.videoId;
+          }
           uploadedItems.push({
-            item: res.item,
-            videoId: res.videoId,
-            s3Url: res.s3Url
+            item,
+            videoId,
+            s3Url: null
           });
-        } else {
-          uploadErrors.push({ error: res.error, fileName: res.item.file.name });
-        }
-      });
+        });
+      }
 
-      if (signal.aborted) throw new DOMException('Job cancelled.', 'AbortError');
-      setProgress(100);
-      setProgressMessage('File upload complete! Creating ads...');
-
-      // Connect SSE tracking now that uploading is finished
+      // Connect SSE tracking now that uploading is finished/skipped
       setJobId(jobToProcess.id);
       // Small delay to let SSE connect
       await new Promise(resolve => setTimeout(resolve, 100));
