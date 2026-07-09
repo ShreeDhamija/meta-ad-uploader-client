@@ -643,6 +643,8 @@ export default function TikTokAdCreationForm({
       ? `${selectedAdvertiser}:${JSON.stringify([...selectedCampaign].sort())}`
       : ""
   )
+  const campaignsRef = useRef(campaigns)
+  campaignsRef.current = campaigns
 
 
   useEffect(() => {
@@ -2448,7 +2450,7 @@ export default function TikTokAdCreationForm({
         return Promise.resolve(cached.map(ag => ({
           ...ag,
           campaignId: campId,
-          campaignName: campaigns.find(c => c.campaign_id === campId)?.campaign_name || campId
+          campaignName: campaignsRef.current.find(c => c.campaign_id === campId)?.campaign_name || campId
         })))
       } else {
         return tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-adgroups?advertiserId=${selectedAdvertiser}&campaignId=${campId}`)
@@ -2459,7 +2461,7 @@ export default function TikTokAdCreationForm({
             return list.map(ag => ({
               ...ag,
               campaignId: campId,
-              campaignName: campaigns.find(c => c.campaign_id === campId)?.campaign_name || campId
+              campaignName: campaignsRef.current.find(c => c.campaign_id === campId)?.campaign_name || campId
             }))
           })
       }
@@ -2498,7 +2500,7 @@ export default function TikTokAdCreationForm({
     return () => {
       active = false
     }
-  }, [selectedCampaign, selectedAdvertiser, campaigns, tiktokFetch, setAdGroups, setSelectedAdGroup])
+  }, [selectedCampaign, selectedAdvertiser, tiktokFetch, setAdGroups, setSelectedAdGroup])
 
   // Fetch Instant Pages when advertiser changes or urlMode switches to INSTANT_PAGE
   useEffect(() => {
