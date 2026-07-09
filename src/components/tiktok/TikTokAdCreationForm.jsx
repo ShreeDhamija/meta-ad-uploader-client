@@ -1243,13 +1243,21 @@ export default function TikTokAdCreationForm({
       .then(res => res.json())
       .then(data => {
         if (data.success) {
-          const availableProducts = (data.products || [])
+          const mappedProducts = (data.products || [])
             .filter(p => {
               const status = (p.status || p.product_status || '').toUpperCase();
               return !status || status === 'AVAILABLE';
-            });
-          setFormStoreProducts(availableProducts);
-          writeCache(cacheKey, availableProducts);
+            })
+            .map(p => ({
+              item_group_id: p.item_group_id || p.product_id || p.id,
+              title: p.title || p.product_name || p.name || 'Unnamed Product',
+              product_image_url: p.product_image_url || p.image_url || p.logo_url || (p.image_info?.web_uri) || null,
+              store_id: p.store_id || null,
+              min_price: p.min_price || null,
+              currency: p.currency || null
+            }));
+          setFormStoreProducts(mappedProducts);
+          writeCache(cacheKey, mappedProducts);
         }
       })
       .catch(err => console.warn('[CreationForm] Failed to load store products:', err.message))
@@ -2849,13 +2857,21 @@ export default function TikTokAdCreationForm({
         .then(res => res.json())
         .then(data => {
           if (data.success) {
-            const availableProducts = (data.products || [])
+            const mappedProducts = (data.products || [])
               .filter(p => {
                 const status = (p.status || p.product_status || '').toUpperCase();
                 return !status || status === 'AVAILABLE';
-              });
-            setFormStoreProducts(availableProducts);
-            writeCache(`tiktok_store_products_${selectedAdvertiser}_${formStoreId}`, availableProducts);
+              })
+              .map(p => ({
+                item_group_id: p.item_group_id || p.product_id || p.id,
+                title: p.title || p.product_name || p.name || 'Unnamed Product',
+                product_image_url: p.product_image_url || p.image_url || p.logo_url || (p.image_info?.web_uri) || null,
+                store_id: p.store_id || null,
+                min_price: p.min_price || null,
+                currency: p.currency || null
+              }));
+            setFormStoreProducts(mappedProducts);
+            writeCache(`tiktok_store_products_${selectedAdvertiser}_${formStoreId}`, mappedProducts);
             toast.success('Store products refreshed!');
           } else {
             toast.error('Failed to refresh store products');
