@@ -1874,7 +1874,7 @@ export default function TikTokAdCreationForm({
             const creative = {
               adFormat: isImage ? 'SINGLE_IMAGE' : 'SINGLE_VIDEO',
               ...(isImage
-                ? { image_ids: videoId }
+                ? { image_ids: [videoId] }
                 : { video_id: videoId }
               ),
               ad_texts: finalCaptions,
@@ -1921,7 +1921,7 @@ export default function TikTokAdCreationForm({
                 const creative = {
                   adFormat: isImage ? 'SINGLE_IMAGE' : 'SINGLE_VIDEO',
                   ...(isImage
-                    ? { image_ids: videoId }
+                    ? { image_ids: [videoId] }
                     : { video_id: videoId }
                   ),
                   ad_text: singleCaption,
@@ -1973,7 +1973,7 @@ export default function TikTokAdCreationForm({
                   const creative = {
                     adFormat: isImage ? 'SINGLE_IMAGE' : 'SINGLE_VIDEO',
                     ...(isImage
-                      ? { image_ids: videoId }
+                      ? { image_ids: [videoId] }
                       : { video_id: videoId }
                     ),
                     ad_text: singleCaption,
