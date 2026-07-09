@@ -980,126 +980,122 @@ export default function TikTokAds() {
 
         <Header showMessenger={showMessenger} hideMessenger={hideMessenger} />
 
-        <main className="pb-20">
-          <div className="flex flex-col lg:flex-row gap-6 min-w-0">
-            {/* Left Column: Form and Duplicator (55% width) */}
-            <div className={`flex-1 lg:flex-[55] min-w-0 space-y-6 ${(!userHasActiveAccess || !isTikTokLoggedIn) ? 'pointer-events-none opacity-40 cursor-not-allowed select-none' : ''}`}>
-              <TikTokAdCreationForm
-                advertiserId={selectedAdvertiser}
-                advertisers={tiktokAdvertisers}
-                onAdvertiserChange={setSelectedAdvertiser}
-                advertiserPrefs={advertiserPrefs}
-                refetchAdvertiserPrefs={refetchAdvertiserPrefs}
-                documentExists={documentExists}
-                loadingPrefs={loadingPrefs}
+        <div className="flex flex-col lg:flex-row gap-6 min-w-0">
+          {/* Left Column: Form and Duplicator (55% width) */}
+          <div className={`flex-1 lg:flex-[55] min-w-0 space-y-6 ${(!userHasActiveAccess || !isTikTokLoggedIn) ? 'pointer-events-none opacity-40 cursor-not-allowed select-none' : ''}`}>
+            <TikTokAdCreationForm
+              advertiserId={selectedAdvertiser}
+              advertisers={tiktokAdvertisers}
+              onAdvertiserChange={setSelectedAdvertiser}
+              advertiserPrefs={advertiserPrefs}
+              refetchAdvertiserPrefs={refetchAdvertiserPrefs}
+              documentExists={documentExists}
+              loadingPrefs={loadingPrefs}
 
-                // Lifted Form State
-                adName={adName} setAdName={setAdName}
-                adTexts={adTexts} setAdTexts={setAdTexts}
-                cta={cta} setCta={setCta}
-                landingUrl={landingUrl} setLandingUrl={setLandingUrl}
-                productName={productName} setProductName={setProductName}
-                productImageUrl={productImageUrl} setProductImageUrl={setProductImageUrl}
-                sellingPoints={sellingPoints} setSellingPoints={setSellingPoints}
-                selectedSavedProductId={selectedSavedProductId} setSelectedSavedProductId={setSelectedSavedProductId}
-                videoFile={videoFile} setVideoFile={setVideoFile}
-                videoPreview={videoPreview} setVideoPreview={setVideoPreview}
-                driveFiles={driveFiles} setDriveFiles={setDriveFiles}
-                dropboxFiles={dropboxFiles} setDropboxFiles={setDropboxFiles}
-                selectedIdentity={selectedIdentity} setSelectedIdentity={setSelectedIdentity}
-                formStoreId={formStoreId} setFormStoreId={setFormStoreId}
-                formStoreName={formStoreName} setFormStoreName={setFormStoreName}
-                formStoreProductId={formStoreProductId} setFormStoreProductId={setFormStoreProductId}
-                formStoreProductName={formStoreProductName} setFormStoreProductName={setFormStoreProductName}
-                formStoreBcId={formStoreBcId} setFormStoreBcId={setFormStoreBcId}
-                formStoreCatalogId={formStoreCatalogId} setFormStoreCatalogId={setFormStoreCatalogId}
-                sparkAuthCodes={sparkAuthCodes} setSparkAuthCodes={setSparkAuthCodes}
-                urlMode={urlMode} setUrlMode={setUrlMode}
-                adType={adType} setAdType={setAdType}
-                importedPosts={importedPosts} setImportedPosts={setImportedPosts}
+              // Lifted Form State
+              adName={adName} setAdName={setAdName}
+              adTexts={adTexts} setAdTexts={setAdTexts}
+              cta={cta} setCta={setCta}
+              landingUrl={landingUrl} setLandingUrl={setLandingUrl}
+              productName={productName} setProductName={setProductName}
+              productImageUrl={productImageUrl} setProductImageUrl={setProductImageUrl}
+              sellingPoints={sellingPoints} setSellingPoints={setSellingPoints}
+              selectedSavedProductId={selectedSavedProductId} setSelectedSavedProductId={setSelectedSavedProductId}
+              videoFile={videoFile} setVideoFile={setVideoFile}
+              videoPreview={videoPreview} setVideoPreview={setVideoPreview}
+              driveFiles={driveFiles} setDriveFiles={setDriveFiles}
+              dropboxFiles={dropboxFiles} setDropboxFiles={setDropboxFiles}
+              selectedIdentity={selectedIdentity} setSelectedIdentity={setSelectedIdentity}
+              formStoreId={formStoreId} setFormStoreId={setFormStoreId}
+              formStoreName={formStoreName} setFormStoreName={setFormStoreName}
+              formStoreProductId={formStoreProductId} setFormStoreProductId={setFormStoreProductId}
+              formStoreProductName={formStoreProductName} setFormStoreProductName={setFormStoreProductName}
+              formStoreBcId={formStoreBcId} setFormStoreBcId={setFormStoreBcId}
+              formStoreCatalogId={formStoreCatalogId} setFormStoreCatalogId={setFormStoreCatalogId}
+              sparkAuthCodes={sparkAuthCodes} setSparkAuthCodes={setSparkAuthCodes}
+              urlMode={urlMode} setUrlMode={setUrlMode}
+              adType={adType} setAdType={setAdType}
+              importedPosts={importedPosts} setImportedPosts={setImportedPosts}
 
-                // Form Fetching States
-                campaigns={campaigns} setCampaigns={setCampaigns}
-                adGroups={adGroups} setAdGroups={setAdGroups}
-                selectedCampaign={selectedCampaign} setSelectedCampaign={setSelectedCampaign}
-                selectedAdGroup={selectedAdGroup} setSelectedAdGroup={setSelectedAdGroup}
-                duplicateAdGroup={duplicateAdGroup} setDuplicateAdGroup={setDuplicateAdGroup}
-                newAdGroupName={newAdGroupName} setNewAdGroupName={setNewAdGroupName}
-                identities={identities} setIdentities={setIdentities}
-                files={files} setFiles={setFiles}
+              // Form Fetching States
+              campaigns={campaigns} setCampaigns={setCampaigns}
+              adGroups={adGroups} setAdGroups={setAdGroups}
+              selectedCampaign={selectedCampaign} setSelectedCampaign={setSelectedCampaign}
+              selectedAdGroup={selectedAdGroup} setSelectedAdGroup={setSelectedAdGroup}
+              duplicateAdGroup={duplicateAdGroup} setDuplicateAdGroup={setDuplicateAdGroup}
+              newAdGroupName={newAdGroupName} setNewAdGroupName={setNewAdGroupName}
+              identities={identities} setIdentities={setIdentities}
+              files={files} setFiles={setFiles}
 
-                // Variants Props
+              // Variants Props
+              variants={variants}
+              setVariants={setVariants}
+              activeVariantId={activeVariantId}
+              setActiveVariantId={setActiveVariantId}
+              switchVariant={switchVariant}
+              handleAddVariant={handleAddVariant}
+              handleDeleteVariant={handleDeleteVariant}
+              handleDeleteAllVariants={handleDeleteAllVariants}
+              isFormFieldModified={isFormFieldModified}
+              fileVariantMap={fileVariantMap}
+              setFileVariantMap={setFileVariantMap}
+              groupVariantMap={groupVariantMap}
+              setGroupVariantMap={setGroupVariantMap}
+              postVariantMap={postVariantMap}
+              setPostVariantMap={setPostVariantMap}
+              selectedFiles={selectedFiles}
+              setSelectedFiles={setSelectedFiles}
+              onBeforeMediaClear={triggerMediaPreviewLaunch}
+            />
+          </div>
+
+          {/* Right Column: Media Preview (45% width) */}
+          <div className={`flex-1 lg:flex-[45] min-w-0 ${(!userHasActiveAccess || !isTikTokLoggedIn) ? 'pointer-events-none opacity-40 cursor-not-allowed select-none' : ''}`}>
+            <ErrorBoundary>
+              <TikTokMediaPreview
+                files={[...files, ...driveFiles.map((f) => ({ ...f, isDrive: true }))]}
+                setFiles={setFiles}
+                importedPosts={importedPosts}
+                setImportedPosts={setImportedPosts}
+                driveFiles={driveFiles}
+                setDriveFiles={setDriveFiles}
+                dropboxFiles={dropboxFiles}
+                setDropboxFiles={setDropboxFiles}
+                frameioFiles={frameioFiles}
+                setFrameioFiles={setFrameioFiles}
+                importedFiles={importedFiles}
+                setImportedFiles={setImportedFiles}
+                videoThumbs={videoThumbs}
+                isCarouselAd={isCarouselAd}
+                adType={adType} // Pass adType to MediaPreview ('NORMAL' or 'SPARK')
+                enablePlacementCustomization={enablePlacementCustomization}
+                setEnablePlacementCustomization={setEnablePlacementCustomization}
+                fileGroups={fileGroups}
+                setFileGroups={setFileGroups}
+                selectedAdSets={selectedAdSets}
+                adSets={adSets}
+                duplicateAdSet={duplicateAdSet}
+                selectedFiles={selectedFiles}
+                setSelectedFiles={setSelectedFiles}
+                selectedIgOrganicPosts={selectedIgOrganicPosts}
+                setSelectedIgOrganicPosts={setSelectedIgOrganicPosts}
                 variants={variants}
-                setVariants={setVariants}
                 activeVariantId={activeVariantId}
-                setActiveVariantId={setActiveVariantId}
-                switchVariant={switchVariant}
-                handleAddVariant={handleAddVariant}
-                handleDeleteVariant={handleDeleteVariant}
+                handleAddVariant={() => { }} // Safe no-op to disable adding variants in TikTok
                 handleDeleteAllVariants={handleDeleteAllVariants}
-                isFormFieldModified={isFormFieldModified}
                 fileVariantMap={fileVariantMap}
                 setFileVariantMap={setFileVariantMap}
                 groupVariantMap={groupVariantMap}
                 setGroupVariantMap={setGroupVariantMap}
                 postVariantMap={postVariantMap}
                 setPostVariantMap={setPostVariantMap}
-                selectedFiles={selectedFiles}
-                setSelectedFiles={setSelectedFiles}
-                onBeforeMediaClear={triggerMediaPreviewLaunch}
+                hasSeenPowerupPopup={hasSeenPowerupPopup}
+                setShowPowerupPopup={setShowPowerupPopup}
+                isLaunchingMedia={isLaunchingMediaPreview}
               />
-            </div>
-
-            {/* Right Column: Media Preview (45% width) */}
-            <div className={`flex-1 lg:flex-[45] min-w-0 ${(!userHasActiveAccess || !isTikTokLoggedIn) ? 'pointer-events-none opacity-40 cursor-not-allowed select-none' : ''}`}>
-              <div className="sticky top-6">
-                <ErrorBoundary>
-                  <TikTokMediaPreview
-                    files={[...files, ...driveFiles.map((f) => ({ ...f, isDrive: true }))]}
-                    setFiles={setFiles}
-                    importedPosts={importedPosts}
-                    setImportedPosts={setImportedPosts}
-                    driveFiles={driveFiles}
-                    setDriveFiles={setDriveFiles}
-                    dropboxFiles={dropboxFiles}
-                    setDropboxFiles={setDropboxFiles}
-                    frameioFiles={frameioFiles}
-                    setFrameioFiles={setFrameioFiles}
-                    importedFiles={importedFiles}
-                    setImportedFiles={setImportedFiles}
-                    videoThumbs={videoThumbs}
-                    isCarouselAd={isCarouselAd}
-                    adType={adType} // Pass adType to MediaPreview ('NORMAL' or 'SPARK')
-                    enablePlacementCustomization={enablePlacementCustomization}
-                    setEnablePlacementCustomization={setEnablePlacementCustomization}
-                    fileGroups={fileGroups}
-                    setFileGroups={setFileGroups}
-                    selectedAdSets={selectedAdSets}
-                    adSets={adSets}
-                    duplicateAdSet={duplicateAdSet}
-                    selectedFiles={selectedFiles}
-                    setSelectedFiles={setSelectedFiles}
-                    selectedIgOrganicPosts={selectedIgOrganicPosts}
-                    setSelectedIgOrganicPosts={setSelectedIgOrganicPosts}
-                    variants={variants}
-                    activeVariantId={activeVariantId}
-                    handleAddVariant={() => { }} // Safe no-op to disable adding variants in TikTok
-                    handleDeleteAllVariants={handleDeleteAllVariants}
-                    fileVariantMap={fileVariantMap}
-                    setFileVariantMap={setFileVariantMap}
-                    groupVariantMap={groupVariantMap}
-                    setGroupVariantMap={setGroupVariantMap}
-                    postVariantMap={postVariantMap}
-                    setPostVariantMap={setPostVariantMap}
-                    hasSeenPowerupPopup={hasSeenPowerupPopup}
-                    setShowPowerupPopup={setShowPowerupPopup}
-                    isLaunchingMedia={isLaunchingMediaPreview}
-                  />
-                </ErrorBoundary>
-              </div>
-            </div>
+            </ErrorBoundary>
           </div>
-        </main>
+        </div>
       </div>
     </>
   )
