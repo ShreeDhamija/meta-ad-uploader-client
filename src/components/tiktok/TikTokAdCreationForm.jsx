@@ -684,7 +684,7 @@ export default function TikTokAdCreationForm({
   const [newTemplateNameInput, setNewTemplateNameInput] = useState("")
 
   // Duplication local states
-  const [duplicateIncludeAds, setDuplicateIncludeAds] = useState(true)
+  const [duplicateIncludeAds, setDuplicateIncludeAds] = useState(false)
   const [newCampaignName, setNewCampaignName] = useState('')
   const [isDuplicating, setIsDuplicating] = useState(false)
   const [showDuplicateCampaignBlock, setShowDuplicateCampaignBlock] = useState(false)
