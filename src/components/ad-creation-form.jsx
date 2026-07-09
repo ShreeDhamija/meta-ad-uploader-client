@@ -63,6 +63,47 @@ const TEMPLATE_LINK_SYNC_USER_ID = "929470643071391";
 // pages/Login.jsx: prefer the env var, but fall back to a URL substring
 // check so the gate still works on staging deploys with missing env vars.
 const IS_STAGING = import.meta.env.VITE_ENV === 'staging' || API_BASE_URL.includes('staging');
+const PRE_JOB_RESIZE_TIMEOUT_MS = 2 * 60 * 1000;
+const DUPLICATE_AD_SET_TIMEOUT_MS = 90 * 1000;
+
+function createTimeoutError(message) {
+  const error = new Error(message);
+  error.name = 'TimeoutError';
+  return error;
+}
+
+function withTimeout(promise, timeoutMs, timeoutMessage, signal) {
+  let timeoutId;
+  let abortHandler;
+
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(createTimeoutError(timeoutMessage));
+    }, timeoutMs);
+  });
+
+  const abortPromise = signal
+    ? new Promise((_, reject) => {
+      if (signal.aborted) {
+        reject(new DOMException('Job cancelled. Some Ads might still have been made.', 'AbortError'));
+        return;
+      }
+
+      abortHandler = () => {
+        reject(new DOMException('Job cancelled. Some Ads might still have been made.', 'AbortError'));
+      };
+      signal.addEventListener('abort', abortHandler, { once: true });
+    })
+    : null;
+
+  return Promise.race(abortPromise ? [promise, timeoutPromise, abortPromise] : [promise, timeoutPromise])
+    .finally(() => {
+      clearTimeout(timeoutId);
+      if (signal && abortHandler) {
+        signal.removeEventListener('abort', abortHandler);
+      }
+    });
+}
 
 const UPLOAD_SOURCE_OPTIONS = [
   {
@@ -3394,6 +3435,10 @@ export default function AdCreationForm({
   }, [adSets]);
 
   const hasCatalogueEligibleAdSets = useMemo(() => {
+    if (!IS_STAGING) {
+      return false;
+    }
+
     if (duplicateAdSet) {
       return Boolean(getAdSetProductSetId(duplicateAdSet));
     }
@@ -3408,8 +3453,8 @@ export default function AdCreationForm({
   // For OUTCOME_SALES / OUTCOME_LEADS campaigns, BOOK_NOW must be sent to the server as BOOK_TRAVEL.
   const resolveCtaForServer = (ctaValue) =>
     ctaValue === "BOOK_NOW" &&
-    campaignObjective.length > 0 &&
-    campaignObjective.every(obj => obj === "OUTCOME_SALES" || obj === "OUTCOME_LEADS")
+      campaignObjective.length > 0 &&
+      campaignObjective.every(obj => obj === "OUTCOME_SALES" || obj === "OUTCOME_LEADS")
       ? "BOOK_TRAVEL"
       : ctaValue;
 
@@ -3627,11 +3672,11 @@ export default function AdCreationForm({
   ]);
 
 
-  const duplicateAdSetRequest = async (adSetId, campaignId, adAccountId, adSetName) => {
+  const duplicateAdSetRequest = async (adSetId, campaignId, adAccountId, adSetName, signal = null) => {
     const response = await axios.post(
       `${API_BASE_URL}/auth/duplicate-adset`,
       { adSetId, campaignId, adAccountId, newAdSetName: adSetName ?? newAdSetName },
-      { withCredentials: true },
+      { withCredentials: true, signal, timeout: DUPLICATE_AD_SET_TIMEOUT_MS },
     )
     return response.data.copied_adset_id
   }
@@ -4076,47 +4121,47 @@ export default function AdCreationForm({
     if (uploadingToS3) {
       setPublishPending(true);
       toast.info("Waiting for video upload to finish...");
-      return;
+      throw new Error('A video upload was still in progress. Please try publishing this job again.');
     }
 
     if (selectedAdSets.length === 0 && !duplicateAdSet) {
       toast.error("Please select at least one ad set");
-      return;
+      throw new Error("Please select at least one ad set");
     }
 
     if (!isCatalogueJob && files.length === 0 && driveFiles.length === 0 && dropboxFiles.length === 0 && frameioFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0 && (!selectedIgOrganicPosts || selectedIgOrganicPosts.length === 0)) {
       toast.error("Please upload at least one file or import from Drive");
-      return;
+      throw new Error("Please upload at least one file or import from Drive");
     }
 
     if (isCatalogueJob && !hasCatalogueProductSetForJob) {
       toast.error("Catalogue ads require selected ad sets with a product set ID");
-      return;
+      throw new Error("Catalogue ads require selected ad sets with a product set ID");
     }
 
     if (isCatalogueJob) {
       const catalogueMedia = [...files, ...driveFiles, ...dropboxFiles, ...(frameioFiles || []), ...(importedFiles || [])];
       if (catalogueMedia.length > 1) {
         toast.error("Catalogue ads can use only one coupon image");
-        return;
+        throw new Error("Catalogue ads can use only one coupon image");
       }
       if (catalogueMedia.some((file) => isVideoFile(file) || isGifFile(file) || !isImageFile(file))) {
         toast.error("Catalogue coupon cards require one static image. Videos and GIFs are not supported.");
-        return;
+        throw new Error("Catalogue coupon cards require one static image. Videos and GIFs are not supported.");
       }
     }
 
     if (showShopDestinationSelector && !selectedShopDestination) {
       toast.error("Please select a shop destination for shop ads")
-      return
+      throw new Error("Please select a shop destination for shop ads")
     }
     if (showProductExtensionSelector && !productExtensionProductSetId) {
       toast.error("Please select a product catalog for product extensions")
-      return
+      throw new Error("Please select a product catalog for product extensions")
     }
     if (duplicateAdSet && (!newAdSetName || newAdSetName.trim() === "")) {
       toast.error("Please enter a name for the new ad set")
-      return
+      throw new Error("Please enter a name for the new ad set")
     }
 
 
@@ -4128,9 +4173,14 @@ export default function AdCreationForm({
     // forwarded to the Meta API.
     if (files.some(f => f && typeof f.type === 'string' && f.type.startsWith('image/'))) {
       try {
-        files = await resizeOversizedImages(files, null, signal);
+        files = await withTimeout(
+          resizeOversizedImages(files, null, signal),
+          PRE_JOB_RESIZE_TIMEOUT_MS,
+          'Image resizing took too long. Please try again with fewer or smaller images.',
+          signal
+        );
       } catch (err) {
-        if (err?.name === 'AbortError') throw err;
+        if (err?.name === 'AbortError' || err?.name === 'TimeoutError') throw err;
         console.error('Image resize failed, falling back to originals:', err);
       }
       throwIfCancelled();
@@ -4410,7 +4460,7 @@ export default function AdCreationForm({
     if (duplicateAdSet) {
       try {
         throwIfCancelled();
-        const newAdSetId = await duplicateAdSetRequest(duplicateAdSet, selectedCampaign[0], selectedAdAccount, newAdSetName.trim());
+        const newAdSetId = await duplicateAdSetRequest(duplicateAdSet, selectedCampaign[0], selectedAdAccount, newAdSetName.trim(), signal);
         finalAdSetIds = [newAdSetId];
         jobData.formData.selectedAdSets = [newAdSetId];
         onAdSetCreated?.({
@@ -4421,6 +4471,9 @@ export default function AdCreationForm({
         });
 
       } catch (error) {
+        if (signal.aborted || error?.name === 'AbortError' || axios.isCancel(error)) {
+          throw new DOMException('Job cancelled. Some Ads might still have been made.', 'AbortError');
+        }
         const errorMessage = error.response?.data?.error || error.message || "Unknown error";
         setIsLoading(false);
         throw new Error("Error duplicating ad set: " + (errorMessage || "Unknown error"));
@@ -4458,12 +4511,12 @@ export default function AdCreationForm({
           if (group.length < 2) {
             toast.error(`Carousel group ${i + 1} needs at least 2 cards`);
             setIsLoading(false);
-            return;
+            throw new Error(`Carousel group ${i + 1} needs at least 2 cards`);
           }
           if (group.length > 10) {
             toast.error(`Carousel group ${i + 1} can have maximum 10 cards`);
             setIsLoading(false);
-            return;
+            throw new Error(`Carousel group ${i + 1} can have maximum 10 cards`);
           }
         }
       } else {
@@ -4471,12 +4524,12 @@ export default function AdCreationForm({
         if (totalFiles < 2) {
           toast.error("Carousel ads require at least 2 files");
           setIsLoading(false);
-          return;
+          throw new Error("Carousel ads require at least 2 files");
         }
         if (totalFiles > 10) {
           toast.error("Carousel ads can have maximum 10 cards");
           setIsLoading(false);
-          return;
+          throw new Error("Carousel ads can have maximum 10 cards");
         }
       }
     }
@@ -4491,12 +4544,12 @@ export default function AdCreationForm({
         if (totalFiles > 10) {
           toast.error("This ad type can have maximum 10 files per ad. Use grouping to create multiple ads.");
           setIsLoading(false);
-          return;
+          throw new Error("This ad type can have maximum 10 files per ad. Use grouping to create multiple ads.");
         }
         if (totalFiles < 1) {
           toast.error("This ad type requires at least 1 file");
           setIsLoading(false);
-          return;
+          throw new Error("This ad type requires at least 1 file");
         }
       } else {
         // Validate groups
@@ -4504,7 +4557,7 @@ export default function AdCreationForm({
         if (hasInvalidGroup) {
           toast.error("Each ad group can have maximum 10 files");
           setIsLoading(false);
-          return;
+          throw new Error("Each ad group can have maximum 10 files");
         }
       }
     }
@@ -5512,7 +5565,7 @@ export default function AdCreationForm({
       if (!isCatalogueJob && isCarouselAd && dynamicAdSetIds.length === 0) {
         if (selectedAdSets.length === 0 && !duplicateAdSet) {
           toast.error("Please select at least one ad set for carousel");
-          return;
+          throw new Error("Please select at least one ad set for carousel");
         }
 
         // Determine groups: if user grouped files, use those. Otherwise treat all files as 1 group.
@@ -6597,11 +6650,11 @@ export default function AdCreationForm({
         // Notify backend to mark job as cancelled
         try {
           await axios.post(`${API_BASE_URL}/auth/cancel-job`,
-            { jobId: currentJob?.id },
+            { jobId: currentJobIdRef.current || jobId || currentJob?.id },
             { withCredentials: true, timeout: 3000 }
           );
         } catch (e) { /* best-effort */ }
-        return; // Don't throw — let the status useEffect handle it via SSE
+        throw error; // Let the queue starter clear this job if SSE never existed.
       }
 
       let errorMessage = "Unknown error occurred";
@@ -8262,24 +8315,24 @@ export default function AdCreationForm({
                                   <TextareaAutosize
                                     value={value}
                                     onChange={(e) => {
-                                    if (isCarouselAd && applyTextToAllCards) {
-                                      setMessages(new Array(messages.length).fill(e.target.value));
-                                    } else {
-                                      updateField(setMessages, messages, index, e.target.value);
-                                    }
-                                  }}
-                                  placeholder={isCarouselAd ? `Headline for card ${index + 1}` : "Add text option"}
-                                  disabled={!isLoggedIn}
-                                  minRows={2}
-                                  maxRows={10}
-                                  className={`${formTextareaChrome} ${duplicateIndices.messages.has(index)
-                                    ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]"
-                                    : ""
-                                    }`}
-                                  style={{
-                                    scrollbarWidth: 'thin',
-                                    scrollbarColor: '#c7c7c7 transparent'
-                                  }}
+                                      if (isCarouselAd && applyTextToAllCards) {
+                                        setMessages(new Array(messages.length).fill(e.target.value));
+                                      } else {
+                                        updateField(setMessages, messages, index, e.target.value);
+                                      }
+                                    }}
+                                    placeholder={isCarouselAd ? `Headline for card ${index + 1}` : "Add text option"}
+                                    disabled={!isLoggedIn}
+                                    minRows={2}
+                                    maxRows={10}
+                                    className={`${formTextareaChrome} ${duplicateIndices.messages.has(index)
+                                      ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]"
+                                      : ""
+                                      }`}
+                                    style={{
+                                      scrollbarWidth: 'thin',
+                                      scrollbarColor: '#c7c7c7 transparent'
+                                    }}
                                   />
                                 )}
                                 {duplicateIndices.messages.has(index) && (
@@ -8378,25 +8431,25 @@ export default function AdCreationForm({
                                 <TextareaAutosize
                                   value={value}
                                   onChange={(e) => {
-                                  if (isCarouselAd && applyHeadlinesToAllCards) {
-                                    const newHeadlines = new Array(headlines.length).fill(e.target.value);
-                                    setHeadlines(newHeadlines);
-                                  } else {
-                                    updateField(setHeadlines, headlines, index, e.target.value);
-                                  }
-                                }}
-                                minRows={1}
-                                maxRows={10}
-                                className={`${formTextareaChrome} ${duplicateIndices.headlines.has(index)
-                                  ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]"
-                                  : ""
-                                  }`}
-                                style={{
-                                  scrollbarWidth: 'thin',
-                                  scrollbarColor: '#c7c7c7 transparent'
-                                }}
-                                placeholder={isCarouselAd ? `Description for card ${index + 1}` : "Enter headline"}
-                                disabled={!isLoggedIn}
+                                    if (isCarouselAd && applyHeadlinesToAllCards) {
+                                      const newHeadlines = new Array(headlines.length).fill(e.target.value);
+                                      setHeadlines(newHeadlines);
+                                    } else {
+                                      updateField(setHeadlines, headlines, index, e.target.value);
+                                    }
+                                  }}
+                                  minRows={1}
+                                  maxRows={10}
+                                  className={`${formTextareaChrome} ${duplicateIndices.headlines.has(index)
+                                    ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]"
+                                    : ""
+                                    }`}
+                                  style={{
+                                    scrollbarWidth: 'thin',
+                                    scrollbarColor: '#c7c7c7 transparent'
+                                  }}
+                                  placeholder={isCarouselAd ? `Description for card ${index + 1}` : "Enter headline"}
+                                  disabled={!isLoggedIn}
                                 />
                               )}
                               {duplicateIndices.headlines.has(index) && (
@@ -8964,7 +9017,7 @@ export default function AdCreationForm({
                     pageId={pageId}
                     selectedShopDestination={productExtensionProductSetId}
                     setSelectedShopDestination={setProductExtensionProductSetId}
-                    setSelectedShopDestinationType={() => {}}
+                    setSelectedShopDestinationType={() => { }}
                     isFieldModified={() => isFormFieldModified?.("productExtensionProductSetId")}
                     isVisible={showProductExtensionSelector}
                     allowedTypes={["product_set"]}
