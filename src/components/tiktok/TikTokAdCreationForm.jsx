@@ -2487,35 +2487,70 @@ export default function TikTokAdCreationForm({
     }
   }, [advertiserPrefs]);
 
-  // Sync showCustomLink depending on selected landingUrl
+  // Consolidated Landing URL & Tab Switch Synchronization Hook
   useEffect(() => {
-    if (urlMode === 'WEBSITE') {
-      const availableLinks = advertiserPrefs?.links || [];
-      if (availableLinks.length === 0) {
-        setShowCustomLink(true);
-      } else if (landingUrl) {
-        const exists = availableLinks.some(l => l.url === landingUrl);
-        setShowCustomLink(!exists);
-      }
-    } else {
-      setShowCustomLink(false);
-    }
-  }, [landingUrl, advertiserPrefs?.links, urlMode]);
+    const availableLinks = advertiserPrefs?.links || [];
+    const isUrl = /^https?:\/\//i.test(landingUrl || "");
+    const isWebsiteUrl = availableLinks.some(l => l.url === landingUrl);
 
-  // Keep track of the last selected website URL and instant page ID to preserve selection on tab switch
-  useEffect(() => {
+    console.log("[URL_MODE_DEBUG] Synchronization triggered:", {
+      urlMode,
+      landingUrl,
+      showCustomLink,
+      isUrl,
+      isWebsiteUrl,
+      lastWebsiteUrl,
+      lastInstantPageId,
+      availableLinksCount: availableLinks.length,
+      instantPagesCount: instantPages.length,
+      advertiserId
+    });
+
     if (urlMode === 'WEBSITE') {
-      const isInstantPageId = instantPages.some(p => p.page_id === landingUrl);
-      if (landingUrl && !isInstantPageId) {
-        setLastWebsiteUrl(landingUrl);
+      const defaultLink = availableLinks.find(l => l.isDefault) || availableLinks[0];
+      const defaultUrl = defaultLink?.url || "";
+
+      // If WEBSITE mode but landingUrl is empty (and not in custom input mode), or is an instant page ID, or not matching dropdown and not custom
+      if ((!landingUrl && !showCustomLink) || !isUrl || (!isWebsiteUrl && !showCustomLink)) {
+        const urlToRestore = lastWebsiteUrl || defaultUrl;
+        console.log("[URL_MODE_DEBUG] Restoring Website URL to:", urlToRestore);
+        setLandingUrl(urlToRestore);
+        setShowCustomLink(false);
+      } else {
+        // Valid website URL (dropdown or custom input)
+        if (landingUrl) {
+          console.log("[URL_MODE_DEBUG] Saving lastWebsiteUrl:", landingUrl);
+          setLastWebsiteUrl(landingUrl);
+          setShowCustomLink(!isWebsiteUrl);
+        }
       }
     } else if (urlMode === 'INSTANT_PAGE') {
-      const isWebsiteUrl = (advertiserPrefs?.links || []).some(l => l.url === landingUrl);
-      if (landingUrl && !isWebsiteUrl) {
-        setLastInstantPageId(landingUrl);
+      const defaultPageId = instantPages[0]?.page_id || "";
+
+      // If INSTANT_PAGE mode but landingUrl is empty or is a website URL
+      if (!landingUrl || isUrl) {
+        const idToRestore = lastInstantPageId || defaultPageId;
+        console.log("[URL_MODE_DEBUG] Restoring Instant Page ID to:", idToRestore);
+        setLandingUrl(idToRestore);
+      } else {
+        // Valid instant page ID
+        if (landingUrl) {
+          console.log("[URL_MODE_DEBUG] Saving lastInstantPageId:", landingUrl);
+          setLastInstantPageId(landingUrl);
+        }
       }
+      setShowCustomLink(false);
     }
-  }, [landingUrl, urlMode, advertiserPrefs?.links, instantPages]);
+  }, [
+    urlMode,
+    landingUrl,
+    advertiserPrefs?.links,
+    instantPages,
+    showCustomLink,
+    lastWebsiteUrl,
+    lastInstantPageId,
+    advertiserId
+  ]);
 
   // Sync copy templates — use defaultTemplateName if set, otherwise fall back to first template
   useEffect(() => {
@@ -5459,9 +5494,6 @@ export default function TikTokAdCreationForm({
                           onClick={() => {
                             if (urlMode !== 'WEBSITE') {
                               setUrlMode('WEBSITE');
-                              setShowCustomLink(false);
-                              const defaultLink = advertiserPrefs?.links?.find(l => l.isDefault) || advertiserPrefs?.links?.[0];
-                              setLandingUrl(lastWebsiteUrl || defaultLink?.url || "");
                             }
                           }}
                           className={cn("px-2 py-1 text-[10px] font-bold rounded-lg transition-all", urlMode === 'WEBSITE' ? "bg-white shadow-sm text-zinc-900" : "text-gray-400")}
@@ -5473,7 +5505,6 @@ export default function TikTokAdCreationForm({
                           onClick={() => {
                             if (urlMode !== 'INSTANT_PAGE') {
                               setUrlMode('INSTANT_PAGE');
-                              setLandingUrl(lastInstantPageId || instantPages[0]?.page_id || "");
                             }
                           }}
                           className={cn("px-2 py-1 text-[10px] font-bold rounded-lg transition-all", urlMode === 'INSTANT_PAGE' ? "bg-white shadow-sm text-zinc-900" : "text-gray-400")}
