@@ -1872,8 +1872,11 @@ export default function TikTokAdCreationForm({
           if (useMultipleTextsNative) {
             const singleCta = creativeCTAs[0] || 'SHOP_NOW';
             const creative = {
-              video_id: videoId,
               adFormat: isImage ? 'SINGLE_IMAGE' : 'SINGLE_VIDEO',
+              ...(isImage
+                ? { image_ids: [videoId] }
+                : { video_id: videoId }
+              ),
               ad_texts: finalCaptions,
               call_to_action: singleCta,
               ad_name: finalAdName,
@@ -1916,8 +1919,11 @@ export default function TikTokAdCreationForm({
                 }
 
                 const creative = {
-                  video_id: videoId,
                   adFormat: isImage ? 'SINGLE_IMAGE' : 'SINGLE_VIDEO',
+                  ...(isImage
+                    ? { image_ids: [videoId] }
+                    : { video_id: videoId }
+                  ),
                   ad_text: singleCaption,
                   ad_name: creativeAdName,
                   identity_type: currentIdentityType,
@@ -1965,8 +1971,11 @@ export default function TikTokAdCreationForm({
                   }
 
                   const creative = {
-                    video_id: videoId,
                     adFormat: isImage ? 'SINGLE_IMAGE' : 'SINGLE_VIDEO',
+                    ...(isImage
+                      ? { image_ids: [videoId] }
+                      : { video_id: videoId }
+                    ),
                     ad_text: singleCaption,
                     call_to_action: singleCta,
                     ad_name: creativeAdName,
