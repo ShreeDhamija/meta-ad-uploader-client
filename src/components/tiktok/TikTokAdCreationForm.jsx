@@ -2029,6 +2029,9 @@ export default function TikTokAdCreationForm({
         s3Urls: uploadedItems.map(item => item.s3Url).filter(Boolean)
       }
 
+      console.log("🔍 [TikTokAdCreationForm] Submitting create-ads request payload:", createPayload);
+      console.log("📋 [TikTokAdCreationForm] Copyable JSON Payload:", JSON.stringify(createPayload, null, 2));
+
       const createRes = await tiktokFetch(`${API_BASE_URL}/api/tiktok/create-ads`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
