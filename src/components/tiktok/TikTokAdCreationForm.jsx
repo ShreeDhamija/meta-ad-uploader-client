@@ -1755,6 +1755,12 @@ export default function TikTokAdCreationForm({
       for (let idx = 0; idx < uploadedItems.length; idx++) {
         const { item, videoId, s3Url } = uploadedItems[idx]
 
+        const isImage = !!(
+          (item.file?.type?.startsWith('image/')) ||
+          (item.file?.mimeType?.startsWith('image/')) ||
+          (/\.(png|jpg|jpeg|gif|webp|bmp)($|\?)/i.test(item.file?.name || ''))
+        )
+
         const currentIdentityId = adType === 'SPARK' ? item.file.identityId : (isCustomized ? undefined : selectedIdentity)
         const currentIdentityType = adType === 'SPARK' ? item.file.identityType : (isCustomized ? 'CUSTOMIZED_USER' : (selectedIdentityObj?.identity_type || 'TT_USER'))
         const currentIdentityAuthorizedBcId = adType === 'SPARK' ? item.file.identityAuthorizedBcId : (isCustomized ? undefined : (selectedIdentityObj?.identity_authorized_bc_id || ''))
@@ -1867,6 +1873,7 @@ export default function TikTokAdCreationForm({
             const singleCta = creativeCTAs[0] || 'SHOP_NOW';
             const creative = {
               video_id: videoId,
+              adFormat: isImage ? 'SINGLE_IMAGE' : 'SINGLE_VIDEO',
               ad_texts: finalCaptions,
               call_to_action: singleCta,
               ad_name: finalAdName,
@@ -1910,6 +1917,7 @@ export default function TikTokAdCreationForm({
 
                 const creative = {
                   video_id: videoId,
+                  adFormat: isImage ? 'SINGLE_IMAGE' : 'SINGLE_VIDEO',
                   ad_text: singleCaption,
                   ad_name: creativeAdName,
                   identity_type: currentIdentityType,
@@ -1958,6 +1966,7 @@ export default function TikTokAdCreationForm({
 
                   const creative = {
                     video_id: videoId,
+                    adFormat: isImage ? 'SINGLE_IMAGE' : 'SINGLE_VIDEO',
                     ad_text: singleCaption,
                     call_to_action: singleCta,
                     ad_name: creativeAdName,
