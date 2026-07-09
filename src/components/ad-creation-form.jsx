@@ -372,11 +372,171 @@ const getFileId = (file) => {
 const isVideoFile = (file) => {
   if (!file) return false;
   const type = file.type || file.mimeType || "";
+  if (type === "video") return true;
   if (type.startsWith("video/") || type === "video/quicktime") return true;
 
   const name = file.name || file.originalname || "";
   return /\.(mov|mp4|avi|webm|mkv|m4v)$/i.test(name);
 };
+
+const isGifFile = (file) => {
+  if (!file) return false;
+  const type = file.type || file.mimeType || "";
+  if (type === "image/gif") return true;
+
+  const name = file.name || file.originalname || "";
+  return /\.gif$/i.test(name);
+};
+
+const isImageFile = (file) => {
+  if (!file) return false;
+  const type = file.type || file.mimeType || "";
+  if (type === "image") return true;
+  if (type.startsWith("image/")) return true;
+
+  const name = file.name || file.originalname || "";
+  return /\.(jpg|jpeg|png|gif)$/i.test(name);
+};
+
+const CATALOGUE_TEMPLATE_VARIABLES = [
+  { name: "brand", description: "Brand" },
+  { name: "current_price", description: "Current price" },
+  { name: "description", description: "Description" },
+  { name: "name", description: "Name" },
+  { name: "price", description: "Price" },
+  { name: "retailer_id", description: "Retailer ID" },
+  { name: "url", description: "URL" },
+  { name: "custom_label_0", description: "Custom label 0" },
+  { name: "custom_label_1", description: "Custom label 1" },
+  { name: "custom_label_2", description: "Custom label 2" },
+  { name: "custom_label_3", description: "Custom label 3" },
+  { name: "custom_label_4", description: "Custom label 4" },
+];
+
+function CatalogueVariableField({
+  value,
+  onValueChange,
+  placeholder,
+  disabled,
+  className,
+  multiline = false,
+  minRows = 1,
+  maxRows = 10,
+  style,
+  type = "text",
+}) {
+  const [showVariables, setShowVariables] = useState(false);
+  const inputRef = useRef(null);
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        showVariables &&
+        inputRef.current &&
+        !inputRef.current.contains(event.target) &&
+        menuRef.current &&
+        !menuRef.current.contains(event.target)
+      ) {
+        setShowVariables(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showVariables]);
+
+  const handleChange = (event) => {
+    const nextValue = event.target.value;
+    const cursorPosition = event.target.selectionStart || nextValue.length;
+    onValueChange(nextValue);
+
+    const textBeforeCursor = nextValue.substring(0, cursorPosition);
+    const lastOpen = textBeforeCursor.lastIndexOf("{{");
+    const lastClose = textBeforeCursor.lastIndexOf("}}");
+    const insideTemplateToken = lastOpen > lastClose;
+
+    setShowVariables(nextValue[cursorPosition - 1] === "/" && !insideTemplateToken);
+  };
+
+  const insertVariable = (variableName) => {
+    const input = inputRef.current;
+    const cursorPosition = input?.selectionStart ?? (value || "").length;
+    const textBeforeCursor = (value || "").substring(0, cursorPosition);
+    const lastSlashIndex = textBeforeCursor.lastIndexOf("/");
+    const insertAt = lastSlashIndex >= 0 ? lastSlashIndex : cursorPosition;
+    const token = `{{product.${variableName}}}`;
+    const nextValue = `${(value || "").substring(0, insertAt)}${token}${(value || "").substring(cursorPosition)}`;
+
+    onValueChange(nextValue);
+    setShowVariables(false);
+
+    setTimeout(() => {
+      const nextCursorPosition = insertAt + token.length;
+      input?.setSelectionRange(nextCursorPosition, nextCursorPosition);
+      input?.focus();
+    }, 0);
+  };
+
+  const commonProps = {
+    ref: inputRef,
+    value,
+    onChange: handleChange,
+    placeholder,
+    disabled,
+    className,
+    style,
+  };
+
+  return (
+    <div className="relative w-full space-y-1.5">
+      {multiline ? (
+        <TextareaAutosize
+          {...commonProps}
+          minRows={minRows}
+          maxRows={maxRows}
+        />
+      ) : (
+        <Input
+          {...commonProps}
+          type={type}
+        />
+      )}
+      <p className="text-gray-500 text-[12px] leading-5">
+        Type <span className="inline-block mx-1 px-1.5 py-0.5 bg-white border border-gray-300 rounded-md shadow-xs text-black">/</span>
+        to see catalog variables.
+      </p>
+      {showVariables && (
+        <div
+          ref={menuRef}
+          className="absolute left-0 top-full z-50 mt-1 w-full max-w-sm rounded-xl border border-gray-200 bg-white p-1 shadow-lg"
+        >
+          <Command>
+            <CommandList className="max-h-64 outline-none">
+              <CommandGroup heading="Product variables">
+                {CATALOGUE_TEMPLATE_VARIABLES.map((variable) => (
+                  <CommandItem
+                    key={variable.name}
+                    value={variable.name}
+                    onSelect={() => insertVariable(variable.name)}
+                    className="cursor-pointer rounded-lg px-2 py-2"
+                  >
+                    <span className="flex w-full items-center justify-between gap-3">
+                      <span className="text-sm text-gray-800">{variable.description}</span>
+                      <span className="shrink-0 font-mono text-xs text-gray-500">
+                        {`{{product.${variable.name}}}`}
+                      </span>
+                    </span>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </div>
+      )}
+    </div>
+  );
+}
 
 
 
@@ -859,6 +1019,37 @@ export default function AdCreationForm({
     }
     setDescriptions([""]);
   }, [descriptions.length, setDescriptions]);
+
+  const getCatalogueMediaCount = useCallback(() => (
+    files.length +
+    driveFiles.length +
+    dropboxFiles.length +
+    (frameioFiles?.length || 0) +
+    importedFiles.length
+  ), [files.length, driveFiles.length, dropboxFiles.length, frameioFiles?.length, importedFiles.length]);
+
+  const filterCatalogueCouponFiles = useCallback((incomingFiles, existingCount = getCatalogueMediaCount()) => {
+    if (!isCatalogueAd) return incomingFiles;
+
+    const incoming = Array.from(incomingFiles || []);
+    const rejectedVideos = incoming.filter((file) => isVideoFile(file) || isGifFile(file));
+    const rejectedNonImages = incoming.filter((file) => !isVideoFile(file) && !isGifFile(file) && !isImageFile(file));
+    const imageFiles = incoming.filter((file) => isImageFile(file) && !isVideoFile(file) && !isGifFile(file));
+    const availableSlots = Math.max(0, 1 - existingCount);
+    const accepted = imageFiles.slice(0, availableSlots);
+
+    if (rejectedVideos.length > 0) {
+      toast.error("Catalogue coupon cards require one static image. Videos and GIFs are not supported.");
+    }
+    if (rejectedNonImages.length > 0) {
+      toast.error("Catalogue coupon cards require an image file.");
+    }
+    if (imageFiles.length > accepted.length || existingCount >= 1) {
+      toast.error("Catalogue ads can use only one coupon image.");
+    }
+
+    return accepted;
+  }, [getCatalogueMediaCount, isCatalogueAd]);
   const renderErrorSupportLink = () => (
     <p className="mt-2 text-xs font-medium text-red-800">
       Confused by the error?{" "}
@@ -2347,7 +2538,10 @@ export default function AdCreationForm({
             };
           });
 
-          setDriveFiles((prev) => [...prev, ...selected]);
+          setDriveFiles((prev) => [
+            ...prev,
+            ...filterCatalogueCouponFiles(selected, getCatalogueMediaCount())
+          ]);
         }
 
         if (data.action === "picked" || data.action === "cancel") {
@@ -2371,7 +2565,7 @@ export default function AdCreationForm({
     const picker = pickerBuilder.build();
     pickerInstanceRef.current = picker;
     picker.setVisible(true);
-  }, [setDriveFiles, setShowFolderInput, setFolderLinkValue]);
+  }, [setDriveFiles, setShowFolderInput, setFolderLinkValue, filterCatalogueCouponFiles, getCatalogueMediaCount]);
 
 
 
@@ -2414,7 +2608,10 @@ export default function AdCreationForm({
           pickerThumbnail: data.thumbnailLink || null // Automatically hooks into our new thumbnail logic!
         };
 
-        setDriveFiles((prev) => [...prev, newFile]);
+        const acceptedFiles = filterCatalogueCouponFiles([newFile], getCatalogueMediaCount());
+        if (acceptedFiles.length === 0) return;
+
+        setDriveFiles((prev) => [...prev, ...acceptedFiles]);
         setShowFolderInput(false);
         setFolderLinkValue("");
         toast.success(`Successfully imported: ${data.name}`);
@@ -2445,7 +2642,9 @@ export default function AdCreationForm({
     createPicker,
     setDriveFiles,
     setShowFolderInput,
-    setFolderLinkValue
+    setFolderLinkValue,
+    filterCatalogueCouponFiles,
+    getCatalogueMediaCount
   ]);
 
   const openPicker = useCallback((token) => {
@@ -2578,7 +2777,10 @@ export default function AdCreationForm({
           mimeType: getMimeFromName(file.name),
         }));
 
-        setDropboxFiles(prev => [...prev, ...dropboxFilesData]);
+        setDropboxFiles(prev => [
+          ...prev,
+          ...filterCatalogueCouponFiles(dropboxFilesData, getCatalogueMediaCount())
+        ]);
       },
       cancel: () => {
         console.log('Dropbox picker cancelled');
@@ -2589,7 +2791,7 @@ export default function AdCreationForm({
       folderselect: false,
       sizeLimit: 1024 * 1024 * 1024
     });
-  }, [setDropboxFiles]);
+  }, [setDropboxFiles, filterCatalogueCouponFiles, getCatalogueMediaCount]);
 
   const handleDropboxClick = useCallback(async () => {
     // Check if Dropbox SDK is loaded
@@ -2717,9 +2919,12 @@ export default function AdCreationForm({
       width: f.width,
       height: f.height,
     }));
-    setFrameioFiles(prev => [...prev, ...mapped]);
+    setFrameioFiles(prev => [
+      ...prev,
+      ...filterCatalogueCouponFiles(mapped, getCatalogueMediaCount())
+    ]);
     setFrameioPickerOpen(false);
-  }, [setFrameioFiles]);
+  }, [setFrameioFiles, filterCatalogueCouponFiles, getCatalogueMediaCount]);
 
 
   // Dropzone logic
@@ -2735,11 +2940,13 @@ export default function AdCreationForm({
       toast.error("WebP and HEIC files are not supported by Facebook");
     }
 
+    const couponFiles = filterCatalogueCouponFiles(filteredFiles, getCatalogueMediaCount());
+
     setFiles(prev => [
       ...prev,
-      ...filteredFiles.map(withUniqueId)
+      ...couponFiles.map(withUniqueId)
     ]);
-  }, []);
+  }, [filterCatalogueCouponFiles, getCatalogueMediaCount]);
 
 
 
@@ -2747,7 +2954,13 @@ export default function AdCreationForm({
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    multiple: true,
+    multiple: !isCatalogueAd,
+    accept: isCatalogueAd
+      ? {
+        "image/jpeg": [".jpg", ".jpeg"],
+        "image/png": [".png"],
+      }
+      : undefined,
   })
 
 
@@ -3457,6 +3670,11 @@ export default function AdCreationForm({
     campaignObjective.length > 0 &&
     campaignObjective.every((objective) => ["OUTCOME_SALES", "OUTCOME_TRAFFIC"].includes(objective));
   const showPhoneNumberField = areAllAdSetsPhoneCall();
+  const catalogueCouponMediaCount = files.length + driveFiles.length + dropboxFiles.length + (frameioFiles?.length || 0) + importedFiles.length;
+  const hasCatalogueInvalidCouponMedia = isCatalogueAd && (
+    catalogueCouponMediaCount > 1 ||
+    [...files, ...driveFiles, ...dropboxFiles, ...(frameioFiles || []), ...importedFiles].some((file) => isVideoFile(file) || isGifFile(file) || !isImageFile(file))
+  );
   const requiresDestinationValue = importedPosts.length === 0 && !isDuplicationMode && !isCatalogueAd;
   const isMissingDestinationValue = requiresDestinationValue && (
     showPhoneNumberField
@@ -3874,6 +4092,18 @@ export default function AdCreationForm({
     if (isCatalogueJob && !hasCatalogueProductSetForJob) {
       toast.error("Catalogue ads require selected ad sets with a product set ID");
       return;
+    }
+
+    if (isCatalogueJob) {
+      const catalogueMedia = [...files, ...driveFiles, ...dropboxFiles, ...(frameioFiles || []), ...(importedFiles || [])];
+      if (catalogueMedia.length > 1) {
+        toast.error("Catalogue ads can use only one coupon image");
+        return;
+      }
+      if (catalogueMedia.some((file) => isVideoFile(file) || isGifFile(file) || !isImageFile(file))) {
+        toast.error("Catalogue coupon cards require one static image. Videos and GIFs are not supported.");
+        return;
+      }
     }
 
     if (showShopDestinationSelector && !selectedShopDestination) {
@@ -5162,6 +5392,18 @@ export default function AdCreationForm({
           });
           formData.append("adType", "catalogue");
           formData.append("productSetId", productSetId);
+
+          if (files[0]) {
+            appendSingleImageFile(formData, { file: files[0], thumbnail: null });
+          } else if (driveFiles[0]) {
+            appendSingleDriveFile(formData, driveFiles[0]);
+          } else if (dropboxFiles[0]) {
+            appendSingleDropboxFile(formData, dropboxFiles[0]);
+          } else if (frameioFiles[0]) {
+            appendSingleFrameioFile(formData, frameioFiles[0]);
+          } else if (importedFiles[0]?.type === 'image') {
+            appendMetaImageFile(formData, importedFiles[0]);
+          }
 
           queueCreateAdPromise(formData, { fileName: "Catalogue Ad" });
         });
@@ -6508,6 +6750,7 @@ export default function AdCreationForm({
     ? (
       !isLoggedIn ||
       (!isCatalogueAd && files.length === 0 && driveFiles.length === 0 && dropboxFiles.length === 0 && frameioFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0 && selectedIgOrganicPosts.length === 0) ||
+      hasCatalogueInvalidCouponMedia ||
       (showProductExtensionSelector && !productExtensionProductSetId) ||
       (selectedFiles.size > 0) ||
       (!isCarouselAd && hasDuplicates)
@@ -6519,6 +6762,7 @@ export default function AdCreationForm({
       (adType === 'carousel' && (files.length + driveFiles.length + importedFiles.length + dropboxFiles.length + frameioFiles.length) < 2) ||
       (isFlexLikeAdType && fileGroups.length === 0 && (files.length + driveFiles.length + importedFiles.length + dropboxFiles.length + frameioFiles.length) > 10) ||
       (isCatalogueAd && !hasCatalogueEligibleAdSets) ||
+      hasCatalogueInvalidCouponMedia ||
       (showShopDestinationSelector && !selectedShopDestination) ||
       (showProductExtensionSelector && !productExtensionProductSetId) ||
       isMissingDestinationValue ||
@@ -7994,9 +8238,30 @@ export default function AdCreationForm({
                           {messages.map((value, index) => (
                             <div key={index} className={`flex items-start gap-2 ${isCarouselAd && applyTextToAllCards && index > 0 ? 'hidden' : ''}`}>
                               <div className="flex flex-col w-full">
-                                <TextareaAutosize
-                                  value={value}
-                                  onChange={(e) => {
+                                {isCatalogueAd ? (
+                                  <CatalogueVariableField
+                                    value={value}
+                                    onValueChange={(nextValue) => {
+                                      updateField(setMessages, messages, index, nextValue);
+                                    }}
+                                    placeholder="Add text option"
+                                    disabled={!isLoggedIn}
+                                    multiline
+                                    minRows={2}
+                                    maxRows={10}
+                                    className={`${formTextareaChrome} ${duplicateIndices.messages.has(index)
+                                      ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]"
+                                      : ""
+                                      }`}
+                                    style={{
+                                      scrollbarWidth: 'thin',
+                                      scrollbarColor: '#c7c7c7 transparent'
+                                    }}
+                                  />
+                                ) : (
+                                  <TextareaAutosize
+                                    value={value}
+                                    onChange={(e) => {
                                     if (isCarouselAd && applyTextToAllCards) {
                                       setMessages(new Array(messages.length).fill(e.target.value));
                                     } else {
@@ -8015,7 +8280,8 @@ export default function AdCreationForm({
                                     scrollbarWidth: 'thin',
                                     scrollbarColor: '#c7c7c7 transparent'
                                   }}
-                                />
+                                  />
+                                )}
                                 {duplicateIndices.messages.has(index) && (
                                   <p className="text-xs text-red-500 mt-1">Duplicate values can cause errors when making ads</p>
                                 )}
@@ -8088,9 +8354,30 @@ export default function AdCreationForm({
                         {headlines.map((value, index) => (
                           <div key={index} className={`flex items-center gap-2 ${isCarouselAd && applyHeadlinesToAllCards && index > 0 ? 'hidden' : ''}`}>
                             <div className="flex flex-col w-full">
-                              <TextareaAutosize
-                                value={value}
-                                onChange={(e) => {
+                              {isCatalogueAd ? (
+                                <CatalogueVariableField
+                                  value={value}
+                                  onValueChange={(nextValue) => {
+                                    updateField(setHeadlines, headlines, index, nextValue);
+                                  }}
+                                  minRows={1}
+                                  maxRows={10}
+                                  className={`${formTextareaChrome} ${duplicateIndices.headlines.has(index)
+                                    ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]"
+                                    : ""
+                                    }`}
+                                  style={{
+                                    scrollbarWidth: 'thin',
+                                    scrollbarColor: '#c7c7c7 transparent'
+                                  }}
+                                  placeholder="Enter headline"
+                                  disabled={!isLoggedIn}
+                                  multiline
+                                />
+                              ) : (
+                                <TextareaAutosize
+                                  value={value}
+                                  onChange={(e) => {
                                   if (isCarouselAd && applyHeadlinesToAllCards) {
                                     const newHeadlines = new Array(headlines.length).fill(e.target.value);
                                     setHeadlines(newHeadlines);
@@ -8110,7 +8397,8 @@ export default function AdCreationForm({
                                 }}
                                 placeholder={isCarouselAd ? `Description for card ${index + 1}` : "Enter headline"}
                                 disabled={!isLoggedIn}
-                              />
+                                />
+                              )}
                               {duplicateIndices.headlines.has(index) && (
                                 <p className="text-xs text-red-500 mt-1">Duplicate values can cause errors when making ads</p>
                               )}
@@ -8198,22 +8486,42 @@ export default function AdCreationForm({
                                 return (
                                   <div key={index} className={`flex items-center gap-2 ${isInactivePlacementDescription ? "opacity-60" : ""}`}>
                                     <div className="flex flex-col w-full">
-                                      <TextareaAutosize
-                                        value={value}
-                                        onChange={(e) => updateField(setDescriptions, descriptions, index, e.target.value)}
-                                        minRows={1}
-                                        maxRows={10}
-                                        className={`${formTextareaChrome} ${duplicateIndices.descriptions.has(index)
-                                          ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]"
-                                          : ""
-                                          } ${isInactivePlacementDescription ? "!bg-gray-100 text-gray-500 cursor-not-allowed" : ""}`}
-                                        style={{
-                                          scrollbarWidth: 'thin',
-                                          scrollbarColor: '#c7c7c7 transparent'
-                                        }}
-                                        placeholder="Enter description"
-                                        disabled={!isLoggedIn || isInactivePlacementDescription}
-                                      />
+                                      {isCatalogueAd ? (
+                                        <CatalogueVariableField
+                                          value={value}
+                                          onValueChange={(nextValue) => updateField(setDescriptions, descriptions, index, nextValue)}
+                                          minRows={1}
+                                          maxRows={10}
+                                          className={`${formTextareaChrome} ${duplicateIndices.descriptions.has(index)
+                                            ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]"
+                                            : ""
+                                            } ${isInactivePlacementDescription ? "!bg-gray-100 text-gray-500 cursor-not-allowed" : ""}`}
+                                          style={{
+                                            scrollbarWidth: 'thin',
+                                            scrollbarColor: '#c7c7c7 transparent'
+                                          }}
+                                          placeholder="Enter description"
+                                          disabled={!isLoggedIn || isInactivePlacementDescription}
+                                          multiline
+                                        />
+                                      ) : (
+                                        <TextareaAutosize
+                                          value={value}
+                                          onChange={(e) => updateField(setDescriptions, descriptions, index, e.target.value)}
+                                          minRows={1}
+                                          maxRows={10}
+                                          className={`${formTextareaChrome} ${duplicateIndices.descriptions.has(index)
+                                            ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]"
+                                            : ""
+                                            } ${isInactivePlacementDescription ? "!bg-gray-100 text-gray-500 cursor-not-allowed" : ""}`}
+                                          style={{
+                                            scrollbarWidth: 'thin',
+                                            scrollbarColor: '#c7c7c7 transparent'
+                                          }}
+                                          placeholder="Enter description"
+                                          disabled={!isLoggedIn || isInactivePlacementDescription}
+                                        />
+                                      )}
                                       {duplicateIndices.descriptions.has(index) && (
                                         <p className="text-xs text-red-500 mt-1">Duplicate values can cause errors when making ads</p>
                                       )}
@@ -8344,19 +8652,18 @@ export default function AdCreationForm({
                 }
 
                 <div className="space-y-3">
-                  {!isCatalogueAd && (
-                    <div className="space-y-2">
+                  <div className="space-y-2">
                     <Label className="flex items-center justify-between">
                       <span className="flex items-center gap-2">
-                        {renderDiffMark(showPhoneNumberField ? "phoneNumber" : "link")}
-                        {showPhoneNumberField ? (
+                        {renderDiffMark(isCatalogueAd ? "link" : (showPhoneNumberField ? "phoneNumber" : "link"))}
+                        {!isCatalogueAd && showPhoneNumberField ? (
                           <Phone className="w-4 h-4" />
                         ) : (
                           <LinkIcon className="w-4 h-4" />
                         )}
-                        {showPhoneNumberField ? "Phone Number" : "Link (URL)"}
+                        {!isCatalogueAd && showPhoneNumberField ? "Phone Number" : "Link (URL)"}
                       </span>
-                      {isCarouselAd && !showPhoneNumberField && (
+                      {isCarouselAd && !showPhoneNumberField && !isCatalogueAd && (
                         <div className="flex items-center space-x-1">
                           <Checkbox
                             id="apply-link-all"
@@ -8379,17 +8686,31 @@ export default function AdCreationForm({
                       )}
                     </Label>
                     <p className="text-gray-500 text-[12px] font-regular">
-                      {showPhoneNumberField ? (
+                      {!isCatalogueAd && showPhoneNumberField ? (
                         <>
                           This phone number will be used for your call ads.{" "}
                           <span className="font-semibold">Please add country code as well</span>
                         </>
+                      ) : isCatalogueAd ? (
+                        "Optional. Use {{product.url}} if you want the product feed URL."
                       ) : (
                         "Your UTMs will be auto applied from Preferences"
                       )}
                     </p>
 
-                    {showPhoneNumberField ? (
+                    {isCatalogueAd ? (
+                      <CatalogueVariableField
+                        type="text"
+                        value={link[0] || ""}
+                        onValueChange={(nextValue) => {
+                          setCustomLink(nextValue);
+                          setLink([nextValue]);
+                        }}
+                        className={cn("w-full", formInputChrome)}
+                        placeholder="https://example.com or {{product.url}}"
+                        disabled={!isLoggedIn}
+                      />
+                    ) : showPhoneNumberField ? (
                       <div className="space-y-3">
                         <Input
                           type="tel"
@@ -8596,7 +8917,6 @@ export default function AdCreationForm({
                       </div>
                     )}
                   </div>
-                  )}
 
                   <div className="space-y-2">
                     <Label htmlFor="cta" className="flex items-center gap-2">
@@ -8649,7 +8969,12 @@ export default function AdCreationForm({
                     isVisible={showProductExtensionSelector}
                     allowedTypes={["product_set"]}
                     label="Product Catalog"
-                    description="Select the product set to show with product extensions"
+                    description={(
+                      <>
+                        <span className="font-semibold text-gray-700">You are seeing this because the catalog items creative enhancement is enabled.</span>{" "}
+                        Not selecting a catalog here can lead to Meta errors.
+                      </>
+                    )}
                     placeholder="Select product catalog"
                     searchPlaceholder="Search product catalogs..."
                     emptyLabel="No product catalogs available"
@@ -8733,10 +9058,16 @@ export default function AdCreationForm({
                   </div>
                 )}
 
-                {!isCatalogueAd && (
-                  <div className="space-y-4">
+                <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <Label className="block">Upload Media</Label>
+                    <div>
+                      <Label className="block">Upload Media</Label>
+                      {isCatalogueAd && (
+                        <p className="mt-1 text-xs text-gray-500">
+                          Optional: add one static image to use as the first coupon card.
+                        </p>
+                      )}
+                    </div>
 
                     <div className="flex items-center gap-2">
                       {/* "Get Top Ads For Flex" — only when the user has chosen the
@@ -8823,7 +9154,9 @@ export default function AdCreationForm({
                           <p className="text-sm text-gray-500 group-hover:text-black">Drop files here ...</p>
                         ) : (
                           <p className="text-sm text-gray-500 group-hover:text-black">
-                            Drag & drop files here, or click to select files
+                            {isCatalogueAd
+                              ? "Drag & drop one image here, or click to select an image"
+                              : "Drag & drop files here, or click to select files"}
                           </p>
                         )}
                       </div>
@@ -8831,7 +9164,11 @@ export default function AdCreationForm({
                   )}
 
                   {(() => {
-                    const rowSources = uploadSources.filter((s) => s !== 'local');
+                    const rowSources = uploadSources.filter((s) => {
+                      if (s === 'local') return false;
+                      if (isCatalogueAd && (s === 'instagram' || s === 'meta_library')) return false;
+                      return true;
+                    });
                     if (rowSources.length === 0) return null;
                     const mode = rowSources.length <= 2 ? 'full' : rowSources.length === 3 ? 'compact' : 'icon';
 
@@ -8912,7 +9249,6 @@ export default function AdCreationForm({
                     );
                   })()}
                 </div>
-                )}
 
                 <FrameioPickerModal
                   open={frameioPickerOpen}
@@ -9041,6 +9377,12 @@ export default function AdCreationForm({
             {showProductExtensionSelector && !productExtensionProductSetId && (
               <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
                 Please select a product catalog for product extensions
+              </div>
+            )}
+
+            {hasCatalogueInvalidCouponMedia && (
+              <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                Catalogue ads can include at most one static coupon image. Remove videos, GIFs, or extra files before publishing.
               </div>
             )}
 
