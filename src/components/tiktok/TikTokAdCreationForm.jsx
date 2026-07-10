@@ -543,6 +543,10 @@ export default function TikTokAdCreationForm({
   selectedAdGroup, setSelectedAdGroup,
   duplicateAdGroup, setDuplicateAdGroup,
   newAdGroupName, setNewAdGroupName,
+  showDuplicateAdGroupBlock, setShowDuplicateAdGroupBlock,
+  duplicateCampaign, setDuplicateCampaign,
+  newCampaignName, setNewCampaignName,
+  showDuplicateCampaignBlock, setShowDuplicateCampaignBlock,
   identities, setIdentities,
   files, setFiles,
 
@@ -685,13 +689,9 @@ export default function TikTokAdCreationForm({
 
   // Duplication local states
   const [duplicateIncludeAds, setDuplicateIncludeAds] = useState(false)
-  const [newCampaignName, setNewCampaignName] = useState('')
   const [isDuplicating, setIsDuplicating] = useState(false)
-  const [showDuplicateCampaignBlock, setShowDuplicateCampaignBlock] = useState(false)
-  const [duplicateCampaign, setDuplicateCampaign] = useState('')
   const [openDuplicateCampaign, setOpenDuplicateCampaign] = useState(false)
   const [duplicateCampaignSearchValue, setDuplicateCampaignSearchValue] = useState('')
-  const [showDuplicateAdGroupBlock, setShowDuplicateAdGroupBlock] = useState(false)
   const [openDuplicateAdGroup, setOpenDuplicateAdGroup] = useState(false)
   const [duplicateAdGroupSearchValue, setDuplicateAdGroupSearchValue] = useState('')
 
