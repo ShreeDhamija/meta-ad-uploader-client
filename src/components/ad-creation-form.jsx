@@ -467,6 +467,7 @@ function CatalogueVariableField({
   type = "text",
 }) {
   const [showVariables, setShowVariables] = useState(false);
+  const [activeVariableIndex, setActiveVariableIndex] = useState(0);
   const inputRef = useRef(null);
   const menuRef = useRef(null);
 
@@ -497,7 +498,32 @@ function CatalogueVariableField({
     const lastClose = textBeforeCursor.lastIndexOf("}}");
     const insideTemplateToken = lastOpen > lastClose;
 
-    setShowVariables(nextValue[cursorPosition - 1] === "/" && !insideTemplateToken);
+    const shouldShowVariables = nextValue[cursorPosition - 1] === "/" && !insideTemplateToken;
+    setShowVariables(shouldShowVariables);
+    if (shouldShowVariables) {
+      setActiveVariableIndex(0);
+    }
+  };
+
+  const handleKeyDown = (event) => {
+    if (!showVariables) return;
+
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      const direction = event.key === "ArrowDown" ? 1 : -1;
+      setActiveVariableIndex((currentIndex) => (
+        (currentIndex + direction + CATALOGUE_TEMPLATE_VARIABLES.length) % CATALOGUE_TEMPLATE_VARIABLES.length
+      ));
+      return;
+    }
+
+    if (event.key === "Enter") {
+      event.preventDefault();
+      insertVariable(CATALOGUE_TEMPLATE_VARIABLES[activeVariableIndex].name);
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      setShowVariables(false);
+    }
   };
 
   const insertVariable = (variableName) => {
@@ -523,6 +549,7 @@ function CatalogueVariableField({
     ref: inputRef,
     value,
     onChange: handleChange,
+    onKeyDown: handleKeyDown,
     placeholder,
     disabled,
     className,
@@ -531,6 +558,10 @@ function CatalogueVariableField({
 
   return (
     <div className="relative w-full space-y-1.5">
+      <p className="text-gray-500 text-[12px] leading-5">
+        Type <span className="inline-block mx-1 px-1.5 py-0.5 bg-white border border-gray-300 rounded-md shadow-xs text-black">/</span>
+        to see catalog variables.
+      </p>
       {multiline ? (
         <TextareaAutosize
           {...commonProps}
@@ -543,16 +574,20 @@ function CatalogueVariableField({
           type={type}
         />
       )}
-      <p className="text-gray-500 text-[12px] leading-5">
-        Type <span className="inline-block mx-1 px-1.5 py-0.5 bg-white border border-gray-300 rounded-md shadow-xs text-black">/</span>
-        to see catalog variables.
-      </p>
       {showVariables && (
         <div
           ref={menuRef}
           className="absolute left-0 top-full z-50 mt-1 w-full max-w-sm rounded-xl border border-gray-200 bg-white p-1 shadow-lg"
         >
-          <Command>
+          <Command
+            value={CATALOGUE_TEMPLATE_VARIABLES[activeVariableIndex].name}
+            onValueChange={(variableName) => {
+              const nextIndex = CATALOGUE_TEMPLATE_VARIABLES.findIndex((variable) => variable.name === variableName);
+              if (nextIndex >= 0) {
+                setActiveVariableIndex(nextIndex);
+              }
+            }}
+          >
             <CommandList className="max-h-64 outline-none">
               <CommandGroup heading="Product variables">
                 {CATALOGUE_TEMPLATE_VARIABLES.map((variable) => (
@@ -9078,13 +9113,14 @@ export default function AdCreationForm({
                     label="Product Catalog"
                     description={(
                       <>
-                        <span className="font-semibold text-gray-700">You are seeing this because the catalog items creative enhancement is enabled.</span>{" "}
+                        <span className="text-gray-400">You are seeing this because the catalog items creative enhancement is enabled.</span>{" "}
                         Not selecting a catalog here can lead to Meta errors.
                       </>
                     )}
                     placeholder="Select product catalog"
                     searchPlaceholder="Search product catalogs..."
                     emptyLabel="No product catalogs available"
+                    triggerClassName={formFieldChrome}
                   />
                 </div>
 

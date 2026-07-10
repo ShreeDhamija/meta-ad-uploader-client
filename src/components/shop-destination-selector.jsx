@@ -23,6 +23,7 @@ export default function ShopDestinationSelector({
     placeholder = "Select shop destination",
     searchPlaceholder = "Search shop destinations...",
     emptyLabel = "No shop destinations available",
+    triggerClassName,
 }) {
     const [open, setOpen] = useState(false)
     const [searchValue, setSearchValue] = useState("")
@@ -134,7 +135,10 @@ export default function ShopDestinationSelector({
                         role="combobox"
                         aria-expanded={open}
                         disabled={isLoading || allOptions.length === 0}
-                        className="w-full justify-between border border-gray-400 rounded-xl bg-white shadow hover:bg-white"
+                        className={cn(
+                            "w-full justify-between border border-gray-400 rounded-xl bg-white shadow hover:bg-white",
+                            triggerClassName,
+                        )}
                     >
                         {isLoading
                             ? "Loading shop destinations..."
