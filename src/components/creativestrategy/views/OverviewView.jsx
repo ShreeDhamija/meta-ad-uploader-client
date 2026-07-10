@@ -3,12 +3,14 @@
 // pipeline counts (trending / research / library), recent generated statics,
 // and quick shortcuts into the heavy actions. Brand-level cards render with
 // just a brand; product-level cards (KPIs, winners, statics) need a product.
-// LLM spend lives in the top-bar CostTracker, so it isn't repeated here.
+// Visual language (per Figma): gray borderless cards on the white page, white
+// borderless tiles inside them, solid colored icon circles with a soft ring,
+// mono numerals. LLM spend lives in the top-bar CostTracker, not repeated here.
 import { useEffect, useState } from "react";
 import PropTypes from "prop-types";
 import {
   Layers, Box, Flame, Zap, MousePointerClick, SearchCheck, BookOpen,
-  TrendingUp, DollarSign, ArrowRight, ArrowUpRight, Percent, Target, Trophy, Plus,
+  TrendingUp, DollarSign, ArrowRight, ArrowUpRight, Percent, Radio, Sun, Plus,
 } from "lucide-react";
 import { creativeApi } from "@/lib/creativeApi";
 import { Button } from "@/components/ui/button";
@@ -20,24 +22,24 @@ const money = (n) => `$${Math.round(n || 0).toLocaleString()}`;
 const mean = (arr) => (arr.length ? arr.reduce((s, x) => s + x, 0) / arr.length : null);
 const gradeRank = (g) => ({ A: 4, B: 3, C: 2, D: 1 }[g] || 0);
 
-// Icon-chip tints for KPI cards / quick actions (soft bg + saturated icon).
-const TINTS = {
-  blue: "bg-blue-100 text-blue-600",
-  emerald: "bg-emerald-100 text-emerald-600",
-  orange: "bg-orange-100 text-orange-600",
-  amber: "bg-amber-100 text-amber-600",
-  purple: "bg-purple-100 text-purple-600",
-  pink: "bg-pink-100 text-pink-600",
-  neutral: "bg-neutral-100 text-neutral-600",
+// Solid icon circles with a soft same-hue ring (Figma's icon treatment).
+const CIRCLES = {
+  blue: "bg-blue-500 text-white ring-4 ring-blue-500/15",
+  emerald: "bg-emerald-500 text-white ring-4 ring-emerald-500/15",
+  orange: "bg-orange-500 text-white ring-4 ring-orange-500/15",
+  amber: "bg-amber-400 text-white ring-4 ring-amber-400/20",
+  purple: "bg-purple-500 text-white ring-4 ring-purple-500/15",
+  red: "bg-red-500 text-white ring-4 ring-red-500/15",
+  neutral: "bg-neutral-400 text-white ring-4 ring-neutral-400/15",
 };
 
-// Weekly concept tiers → pill colors (keys match the weekly strategist output).
+// Weekly concept tiers → solid pill colors (keys match strategist output).
 const TIER_PILLS = {
-  iteration: "bg-blue-100 text-blue-700",
-  format_transformation: "bg-orange-100 text-orange-700",
-  inspired: "bg-purple-100 text-purple-700",
-  big_swing: "bg-pink-100 text-pink-700",
-  net_new: "bg-emerald-100 text-emerald-700",
+  iteration: "bg-amber-400 text-white",
+  format_transformation: "bg-orange-500 text-white",
+  inspired: "bg-purple-500 text-white",
+  big_swing: "bg-pink-500 text-white",
+  net_new: "bg-emerald-500 text-white",
 };
 const TIER_LABELS = {
   iteration: "Iteration",
@@ -105,10 +107,10 @@ export default function OverviewView({ ctx }) {
       {/* KPI strip */}
       {selectedProductId ? (
         <div className="grid grid-cols-4 gap-4 max-lg:grid-cols-2">
-          <KpiCard tint="blue" icon={DollarSign} label="Ad spend analyzed" value={money(totalSpend)} sub={`${ads.length} ads`} />
-          <KpiCard tint="emerald" icon={Percent} label="Avg ROAS" value={avgRoas ? `${avgRoas.toFixed(2)}x` : "—"} />
-          <KpiCard tint="orange" icon={Target} label="Avg CPA" value={avgCpa ? money(avgCpa) : "—"} />
-          <KpiCard tint="amber" icon={Trophy} label="Winners" value={abWinners} sub={`A/B of ${ads.length}`} />
+          <KpiCard circle="blue" icon={DollarSign} label="Ad spend" value={money(totalSpend)} />
+          <KpiCard circle="emerald" icon={Percent} label="ROAS" value={avgRoas ? avgRoas.toFixed(1) : "—"} />
+          <KpiCard circle="orange" icon={Radio} label="CPA" value={avgCpa ? money(avgCpa) : "—"} />
+          <KpiCard circle="amber" icon={Sun} label="Winners" value={abWinners} />
         </div>
       ) : (
         <EmptyState icon={Box} title="Pick a product for performance"
@@ -118,25 +120,24 @@ export default function OverviewView({ ctx }) {
 
       {/* Main row: winners (left) · concepts + quick actions (right) */}
       <div className="grid grid-cols-2 gap-4 max-lg:grid-cols-1">
-        <OverviewCard title="Top winners" icon={Flame} onOpen={() => goTo("intelligence")}>
+        <OverviewCard title="Top Winners" circle="blue" icon={Flame} onOpen={() => goTo("intelligence")}>
           {winners.length === 0 ? (
             <Hint>No analyzed ads yet. Run analysis in Intelligence to surface winners here.</Hint>
           ) : (
             <div className="space-y-2">
-              {winners.map((w, i) => (
-                <div key={w.adId} className="flex items-center gap-3 rounded-xl border border-neutral-200 bg-neutral-50/50 p-2">
-                  <span className="text-xs text-neutral-300 tabular-nums w-4 text-center shrink-0">{i + 1}</span>
+              {winners.map((w) => (
+                <div key={w.adId} className="flex items-center gap-3 rounded-xl bg-white p-2">
                   {(w.imageUrl || w.thumbnailUrl)
                     ? <img src={w.imageUrl || w.thumbnailUrl} alt="" className="w-12 h-12 rounded-lg object-cover bg-neutral-100 shrink-0" />
                     : <div className="w-12 h-12 rounded-lg bg-neutral-100 shrink-0" />}
                   <div className="min-w-0 flex-1">
-                    <div className="text-sm font-medium truncate">{w.adName || "(unnamed)"}</div>
+                    <div className="text-sm font-semibold text-neutral-900 truncate">{w.adName || "(unnamed)"}</div>
                     <div className="text-xs text-neutral-400 tabular-nums">{money(w.spend)}{w.roas ? ` · ROAS ${w.roas.toFixed(2)}` : ""}</div>
                   </div>
                   {w.grade && (
                     <span className={cn(
                       "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold",
-                      gradeRank(w.grade) >= 3 ? "bg-emerald-100 text-emerald-700" : "bg-neutral-100 text-neutral-600",
+                      gradeRank(w.grade) >= 3 ? "bg-emerald-500 text-white" : "bg-neutral-200 text-neutral-600",
                     )}>{w.grade}</span>
                   )}
                 </div>
@@ -146,17 +147,16 @@ export default function OverviewView({ ctx }) {
         </OverviewCard>
 
         <div className="space-y-4">
-          <OverviewCard title="This week's concepts" icon={MousePointerClick}
-            hint={pending.length ? `${pending.length} pending` : null} onOpen={() => goTo("weekly")}>
+          <OverviewCard title="This Week's Concepts" onOpen={() => goTo("weekly")}>
             {topConcepts.length === 0 ? (
               <Hint>No pending concepts. Run the weekly strategist to generate new ones.</Hint>
             ) : (
-              <ul className="space-y-1.5">
+              <ul className="space-y-2">
                 {topConcepts.map((c) => (
-                  <li key={c.id} className="flex items-center gap-2 text-sm text-neutral-700 min-w-0">
+                  <li key={c.id} className="flex items-center gap-2 text-sm text-neutral-500 min-w-0">
                     <span className={cn(
-                      "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium",
-                      TIER_PILLS[c.tier] || "bg-neutral-100 text-neutral-600",
+                      "shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-semibold",
+                      TIER_PILLS[c.tier] || "bg-neutral-400 text-white",
                     )}>{TIER_LABELS[c.tier] || c.tier}</span>
                     <span className="truncate">{c.title}</span>
                   </li>
@@ -164,16 +164,16 @@ export default function OverviewView({ ctx }) {
               </ul>
             )}
             {weekly?.costCents != null && (
-              <p className="text-xs text-neutral-400 mt-2">Last run cost {money(weekly.costCents / 100)}</p>
+              <p className="text-xs text-neutral-400 mt-3">Last run cost {money(weekly.costCents / 100)}{pending.length ? ` · ${pending.length} pending` : ""}</p>
             )}
           </OverviewCard>
 
-          <OverviewCard title="Quick actions" icon={Zap}>
-            <div className="grid grid-cols-2 gap-2">
-              <ActionBtn tint="pink" icon={Flame} label="Generate static" onClick={() => goTo("generate")} />
-              <ActionBtn tint="blue" icon={Zap} label="Run analysis" onClick={() => goTo("intelligence")} />
-              <ActionBtn tint="purple" icon={MousePointerClick} label="Weekly strategy" onClick={() => goTo("weekly")} />
-              <ActionBtn tint="emerald" icon={SearchCheck} label="Research" onClick={() => goTo("research")} />
+          <OverviewCard title="Quick Actions">
+            <div className="grid grid-cols-2 gap-3">
+              <ActionBtn circle="red" icon={Radio} label="Generate Statics" onClick={() => goTo("generate")} />
+              <ActionBtn circle="purple" icon={Zap} label="Run Analysis" onClick={() => goTo("intelligence")} />
+              <ActionBtn circle="blue" icon={MousePointerClick} label="Weekly Strategy" onClick={() => goTo("weekly")} />
+              <ActionBtn circle="emerald" icon={SearchCheck} label="Research" onClick={() => goTo("research")} />
             </div>
           </OverviewCard>
         </div>
@@ -193,24 +193,22 @@ export default function OverviewView({ ctx }) {
 
       {/* Recent statics strip */}
       {selectedProductId && (
-        <OverviewCard title="Recent statics" icon={BookOpen}
-          hint={generated.length ? `${generated.length} generated` : null}
-          onOpen={generated.length ? () => goTo("generate") : undefined}>
-          <div className="flex gap-3 overflow-x-auto pb-1">
+        <div className="rounded-2xl bg-neutral-100 p-4">
+          <div className="flex gap-4 overflow-x-auto pb-1">
             {recentStatics.map((g) => (
               <button key={g.id || g.imageUrl} onClick={() => goTo("generate")}
-                className="shrink-0 w-32 h-32 rounded-xl overflow-hidden border border-neutral-200 bg-neutral-50 hover:shadow-sm transition-shadow"
+                className="shrink-0 w-40 h-40 rounded-xl overflow-hidden bg-white hover:shadow-sm transition-shadow"
                 title={g.formatSlug || "Generated static"}>
                 <img src={g.imageUrl} alt={g.formatSlug || "Generated static"} className="w-full h-full object-cover" />
               </button>
             ))}
             <button onClick={() => goTo("generate")}
-              className="shrink-0 w-32 h-32 rounded-xl border border-dashed border-neutral-300 bg-white hover:bg-neutral-50 transition-colors flex flex-col items-center justify-center gap-1.5 text-neutral-500">
-              <span className="w-7 h-7 rounded-full bg-neutral-100 grid place-items-center"><Plus className="w-4 h-4" /></span>
-              <span className="text-xs font-medium">Create new static</span>
+              className="shrink-0 w-40 h-40 rounded-xl border-2 border-dashed border-neutral-300 bg-white hover:bg-neutral-50 transition-colors flex items-center justify-center gap-2 text-neutral-700 px-4">
+              <Plus className="w-4 h-4 shrink-0" />
+              <span className="text-sm font-medium">Create New Static</span>
             </button>
           </div>
-        </OverviewCard>
+        </div>
       )}
 
       <p className="text-xs text-neutral-400">{selectedBrand?.name}{selectedProduct ? ` · ${selectedProduct.name}` : ""}</p>
@@ -221,36 +219,45 @@ OverviewView.propTypes = { ctx: PropTypes.object.isRequired };
 
 // ── Building blocks ───────────────────────────────────────────────────────────
 
-function KpiCard({ tint, icon: Icon, label, value, sub }) {
+function IconCircle({ circle, icon: Icon, size = "md" }) {
   return (
-    <div className="rounded-2xl border border-neutral-200 bg-white shadow-xs p-4">
-      <div className="flex items-center gap-2 mb-3">
-        <span className={cn("w-7 h-7 rounded-full grid place-items-center shrink-0", TINTS[tint])}>
-          <Icon className="w-3.5 h-3.5" />
-        </span>
-        <span className="text-xs font-medium text-neutral-500">{label}</span>
+    <span className={cn(
+      "rounded-full grid place-items-center shrink-0",
+      size === "md" ? "w-7 h-7" : "w-5 h-5",
+      CIRCLES[circle] || CIRCLES.neutral,
+    )}>
+      <Icon className={size === "md" ? "w-3.5 h-3.5" : "w-3 h-3"} />
+    </span>
+  );
+}
+IconCircle.propTypes = { circle: PropTypes.string, icon: PropTypes.elementType, size: PropTypes.string };
+
+function KpiCard({ circle, icon, label, value }) {
+  return (
+    <div className="rounded-2xl bg-neutral-100 p-5">
+      <div className="flex items-center gap-2.5 mb-4">
+        <IconCircle circle={circle} icon={icon} />
+        <span className="text-sm font-semibold text-neutral-900">{label}</span>
       </div>
-      <div className="text-2xl font-semibold tabular-nums tracking-tight">{value}</div>
-      {sub && <div className="text-xs text-neutral-400 mt-0.5">{sub}</div>}
+      <div className="text-3xl font-semibold font-mono tabular-nums tracking-tight text-neutral-900">{value}</div>
     </div>
   );
 }
 KpiCard.propTypes = {
-  tint: PropTypes.string, icon: PropTypes.elementType,
-  label: PropTypes.node, value: PropTypes.node, sub: PropTypes.node,
+  circle: PropTypes.string, icon: PropTypes.elementType,
+  label: PropTypes.node, value: PropTypes.node,
 };
 
-function OverviewCard({ title, icon: Icon, hint, onOpen, children }) {
+function OverviewCard({ title, circle, icon, onOpen, children }) {
   return (
-    <div className="rounded-2xl border border-neutral-200 bg-white shadow-xs p-4 flex flex-col">
+    <div className="rounded-2xl bg-neutral-100 p-4 flex flex-col">
       <div className="flex items-center justify-between gap-2 mb-3">
-        <div className="flex items-center gap-1.5 min-w-0">
-          {Icon && <Icon className="w-4 h-4 text-neutral-400 shrink-0" />}
-          <span className="text-sm font-semibold text-neutral-800 truncate">{title}</span>
-          {hint && <span className="text-xs text-neutral-400 truncate">· {hint}</span>}
+        <div className="flex items-center gap-2 min-w-0">
+          {icon && <IconCircle circle={circle} icon={icon} size="sm" />}
+          <span className="text-sm font-semibold text-neutral-900 truncate">{title}</span>
         </div>
         {onOpen && (
-          <button onClick={onOpen} className="text-neutral-300 hover:text-neutral-700 transition-colors" title={`Open ${title}`}>
+          <button onClick={onOpen} className="text-neutral-700 hover:text-neutral-400 transition-colors" title={`Open ${title}`}>
             <ArrowUpRight className="w-4 h-4" />
           </button>
         )}
@@ -260,38 +267,36 @@ function OverviewCard({ title, icon: Icon, hint, onOpen, children }) {
   );
 }
 OverviewCard.propTypes = {
-  title: PropTypes.string.isRequired, icon: PropTypes.elementType,
-  hint: PropTypes.node, onOpen: PropTypes.func, children: PropTypes.node,
+  title: PropTypes.string.isRequired, circle: PropTypes.string, icon: PropTypes.elementType,
+  onOpen: PropTypes.func, children: PropTypes.node,
 };
 
-function ActionBtn({ tint, icon: Icon, label, onClick }) {
+function ActionBtn({ circle, icon, label, onClick }) {
   return (
     <button onClick={onClick}
-      className="flex items-center gap-2 rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-sm font-medium text-neutral-700 hover:bg-neutral-50 hover:shadow-xs transition-all text-left">
-      <span className={cn("w-7 h-7 rounded-full grid place-items-center shrink-0", TINTS[tint])}>
-        <Icon className="w-3.5 h-3.5" />
-      </span>
+      className="flex items-center gap-2.5 rounded-xl bg-white px-3 py-3 text-sm font-medium text-neutral-900 hover:shadow-sm transition-shadow text-left">
+      <IconCircle circle={circle} icon={icon} />
       <span className="truncate">{label}</span>
     </button>
   );
 }
-ActionBtn.propTypes = { tint: PropTypes.string, icon: PropTypes.elementType, label: PropTypes.string, onClick: PropTypes.func };
+ActionBtn.propTypes = { circle: PropTypes.string, icon: PropTypes.elementType, label: PropTypes.string, onClick: PropTypes.func };
 
 function PipelineTile({ icon: Icon, label, value, sub, onClick }) {
   return (
     <button onClick={onClick}
-      className="group rounded-2xl border border-neutral-200 bg-white shadow-xs px-4 py-3 text-left hover:shadow-sm transition-shadow flex items-center gap-3">
-      <span className="w-8 h-8 rounded-full bg-neutral-100 grid place-items-center shrink-0">
-        <Icon className="w-4 h-4 text-neutral-500" />
+      className="group rounded-2xl bg-neutral-100 px-4 py-3 text-left hover:bg-neutral-200/70 transition-colors flex items-center gap-3">
+      <span className="w-8 h-8 rounded-full bg-white grid place-items-center shrink-0">
+        <Icon className="w-4 h-4 text-neutral-600" />
       </span>
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline gap-1.5">
-          <span className="text-lg font-semibold tabular-nums">{value}</span>
+          <span className="text-lg font-semibold font-mono tabular-nums">{value}</span>
           <span className="text-xs font-medium text-neutral-500 truncate">{label}</span>
         </div>
         <div className="text-xs text-neutral-400 truncate">{sub}</div>
       </div>
-      <ArrowRight className="w-4 h-4 text-neutral-200 group-hover:text-neutral-500 transition-colors shrink-0" />
+      <ArrowRight className="w-4 h-4 text-neutral-300 group-hover:text-neutral-600 transition-colors shrink-0" />
     </button>
   );
 }
@@ -306,18 +311,18 @@ function OverviewSkeleton() {
     <div className="space-y-4">
       <div className="grid grid-cols-4 gap-4 max-lg:grid-cols-2">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="rounded-2xl border border-neutral-200 bg-white shadow-xs p-4 space-y-3">
-            <Skeleton className="h-7 w-7 rounded-full" />
-            <Skeleton className="h-7 w-24" />
+          <div key={i} className="rounded-2xl bg-neutral-100 p-5 space-y-4">
+            <Skeleton className="h-7 w-7 rounded-full bg-neutral-200" />
+            <Skeleton className="h-8 w-24 bg-neutral-200" />
           </div>
         ))}
       </div>
       <div className="grid grid-cols-2 gap-4 max-lg:grid-cols-1">
         {Array.from({ length: 2 }).map((_, i) => (
-          <div key={i} className="rounded-2xl border border-neutral-200 bg-white shadow-xs p-4 space-y-3">
-            <Skeleton className="h-4 w-1/3" />
-            <Skeleton className="h-14 w-full rounded-xl" />
-            <Skeleton className="h-14 w-full rounded-xl" />
+          <div key={i} className="rounded-2xl bg-neutral-100 p-4 space-y-3">
+            <Skeleton className="h-4 w-1/3 bg-neutral-200" />
+            <Skeleton className="h-14 w-full rounded-xl bg-neutral-200" />
+            <Skeleton className="h-14 w-full rounded-xl bg-neutral-200" />
           </div>
         ))}
       </div>

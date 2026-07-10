@@ -597,11 +597,9 @@ export default function MetaMediaLibraryModal({
         }
     };
 
-    if (!isOpen) {
-        if (renderTrigger) {
-            return renderTrigger(openWithSource);
-        }
-        return (
+    const trigger = renderTrigger
+        ? renderTrigger(openWithSource)
+        : (
             <div className="p-[1.5px] rounded-2xl bg-gradient-to-r from-blue-400 to-purple-400 shadow-xs">
                 <Button
                     type="button"
@@ -622,18 +620,20 @@ export default function MetaMediaLibraryModal({
                 </Button>
             </div>
         );
-    }
 
     return (
         <>
-            {/* Overlay */}
-            <div
-                className="fixed inset-0 bg-black/50 z-50"
-                onClick={() => setIsOpen(false)}
-            />
+            {trigger}
+            {isOpen && (
+                <>
+                    {/* Overlay */}
+                    <div
+                        className="fixed inset-0 bg-black/50 z-50"
+                        onClick={() => setIsOpen(false)}
+                    />
 
-            {/* Modal */}
-            <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-5xl max-h-[90vh] rounded-3xl bg-white p-6 shadow-lg flex flex-col">
+                    {/* Modal */}
+                    <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-5xl max-h-[90vh] rounded-3xl bg-white p-6 shadow-lg flex flex-col">
 
                 {/* Header */}
                 <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -929,7 +929,9 @@ export default function MetaMediaLibraryModal({
                         </Button>
                     </div>
                 </div>
-            </div >
+                    </div>
+                </>
+            )}
         </>
     );
 }

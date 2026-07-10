@@ -9292,7 +9292,11 @@ export default function AdCreationForm({
                     >
                       <input {...getInputProps()} disabled={!isLoggedIn || isImportingCsv} />
                       <div className="flex flex-col items-center gap-2">
-                        <Upload className="h-6 w-6 text-gray-500 group-hover:text-black" />
+                        {isImportingCsv ? (
+                          <Loader className="h-6 w-6 animate-spin text-blue-600" />
+                        ) : (
+                          <Upload className="h-6 w-6 text-gray-500 group-hover:text-black" />
+                        )}
                         {isDragActive ? (
                           <p className="text-sm text-gray-500 group-hover:text-black">Drop files here ...</p>
                         ) : (
