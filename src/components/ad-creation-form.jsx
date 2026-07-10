@@ -6452,7 +6452,7 @@ export default function AdCreationForm({
             {useExistingPosts ? (
               <div
                 className="relative overflow-hidden"
-                style={{ height: 'min(600px, calc(100vh - 400px))', contain: 'strict' }}
+                style={{ height: 'clamp(400px, calc(100vh - 400px), 600px)', contain: 'strict' }}
               >
                 <PostSelectorInline
                   adAccountId={selectedAdAccount}

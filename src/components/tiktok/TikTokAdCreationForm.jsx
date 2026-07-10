@@ -5144,7 +5144,7 @@ export default function TikTokAdCreationForm({
                 ) : (
                   <div
                     className="relative border border-gray-200 rounded-2xl p-4 bg-white overflow-hidden flex flex-col shadow-xs"
-                    style={{ height: 'min(600px, calc(100vh - 400px))', contain: 'strict' }}
+                    style={{ height: 'clamp(400px, calc(100vh - 400px), 600px)', contain: 'strict' }}
                   >
                     {(!selectedIdentity || selectedIdentity === 'CUSTOMIZED_USER') ? (
                       <div className="flex flex-col items-center justify-center text-center p-8 flex-1 text-gray-500">
