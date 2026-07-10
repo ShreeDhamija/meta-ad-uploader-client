@@ -3025,7 +3025,7 @@ export default function TikTokAdCreationForm({
       if (!res.ok || !data.success) {
         throw new Error(data.error || 'Duplication failed')
       }
-      toast.success('🎉 Campaign duplicated successfully!')
+      toast.success('Campaign duplicated successfully!')
       setNewCampaignName('')
       setDuplicateCampaign('')
       setShowDuplicateCampaignBlock(false)
@@ -3621,12 +3621,12 @@ export default function TikTokAdCreationForm({
         const fd = job.formData;
 
         if (!fd.selectedAdvertiser) {
-          toast.error(`${variant.name}: Please select an advertiser account`);
+          toast.error(`${variant.name}: please select an advertiser account`);
           return;
         }
 
         if (!fd.isDuplicatingAdGroupMode && (!fd.selectedAdGroup || fd.selectedAdGroup.length === 0)) {
-          toast.error(`${variant.name}: Please select at least one ad group`);
+          toast.error(`${variant.name}: please select at least one ad group`);
           return;
         }
 
@@ -3640,7 +3640,7 @@ export default function TikTokAdCreationForm({
         const adsToBeCreated = fileCount * captionCount;
 
         if (adsToBeCreated > 50) {
-          toast.error(`${variant.name}: You cannot launch more than 50 ads at once (current selection: ${adsToBeCreated} ads).`);
+          toast.error(`${variant.name}: you cannot launch more than 50 ads at once (current selection: ${adsToBeCreated} ads).`);
           return;
         }
 
@@ -3681,9 +3681,9 @@ export default function TikTokAdCreationForm({
 
               if (currentAdCount + queuedAdsCount + adsToBeCreated > 50) {
                 if (queuedAdsCount > 0) {
-                  toast.error(`${variant.name}: Cannot launch ads. Ad group "${agObj.adgroup_name}" currently has ${currentAdCount} ads and ${queuedAdsCount} ads pending in the job queue. Adding ${adsToBeCreated} more would exceed the limit of 50 ads per ad group.`);
+                  toast.error(`${variant.name}: cannot launch ads. Ad group "${agObj.adgroup_name}" currently has ${currentAdCount} ads and ${queuedAdsCount} ads pending in the job queue. Adding ${adsToBeCreated} more would exceed the limit of 50 ads per ad group.`);
                 } else {
-                  toast.error(`${variant.name}: Cannot launch ads. Ad group "${agObj.adgroup_name}" currently has ${currentAdCount} ads. Adding ${adsToBeCreated} more would exceed the limit of 50 ads per ad group.`);
+                  toast.error(`${variant.name}: cannot launch ads. Ad group "${agObj.adgroup_name}" currently has ${currentAdCount} ads. Adding ${adsToBeCreated} more would exceed the limit of 50 ads per ad group.`);
                 }
                 return;
               }
@@ -3692,45 +3692,45 @@ export default function TikTokAdCreationForm({
         }
 
         if (fd.isDuplicatingAdGroupMode && !fd.newAdGroupName.trim()) {
-          toast.error(`${variant.name}: Please enter a name for the new duplicated ad group`);
+          toast.error(`${variant.name}: please enter a name for the new duplicated ad group`);
           return;
         }
 
         if (!fd.selectedIdentity || fd.selectedIdentity === 'CUSTOMIZED_USER') {
           toast.error(fd.adType === 'NORMAL'
-            ? `${variant.name}: Identity is required. Please select one.`
-            : `${variant.name}: Promote From is required. Please select a linked TikTok account.`
+            ? `${variant.name}: please select a TikTok identity`
+            : `${variant.name}: please select a linked TikTok account`
           );
           return;
         }
 
         if (fd.adType === 'SPARK') {
           if (!fd.importedPosts || fd.importedPosts.length === 0) {
-            toast.error(`${variant.name}: Spark Ads require at least one selected organic post.`);
+            toast.error(`${variant.name}: spark ads require at least one selected organic post.`);
             return;
           }
         }
 
         const hasFormula = adNameFormulaV2?.rawInput?.trim();
         if (!hasFormula && !fd.adName.trim()) {
-          toast.error(`${variant.name}: Ad name is required`);
+          toast.error(`${variant.name}: ad name is required`);
           return;
         }
 
         if (!fd.cta || fd.cta.length === 0) {
-          toast.error(`${variant.name}: Please select at least one Call to Action`);
+          toast.error(`${variant.name}: please select at least one Call to Action`);
           return;
         }
 
         if (fd.adType !== 'SPARK') {
           const activeTexts = fd.adTexts ? fd.adTexts.filter(t => t.trim() !== '') : [];
           if (activeTexts.length === 0) {
-            toast.error(`${variant.name}: Please enter ad text`);
+            toast.error(`${variant.name}: please enter ad text`);
             return;
           }
           for (const singleText of activeTexts) {
             if (singleText.length > 100) {
-              toast.error(`${variant.name}: Text cannot exceed 100 characters ("${singleText.substring(0, 15)}...")`);
+              toast.error(`${variant.name}: text cannot exceed 100 characters ("${singleText.substring(0, 15)}...")`);
               return;
             }
           }
@@ -3738,7 +3738,7 @@ export default function TikTokAdCreationForm({
 
         if (fd.urlMode === 'WEBSITE' && !areAllSelectedAdGroupsShopping) {
           if (!fd.landingUrl || !fd.landingUrl.trim()) {
-            toast.error(`${variant.name}: Link (URL) is required`);
+            toast.error(`${variant.name}: link (URL) is required`);
             return;
           }
 
@@ -3752,20 +3752,20 @@ export default function TikTokAdCreationForm({
           } catch (_) { }
 
           if (!isValidUrl) {
-            toast.error(`${variant.name}: Please enter a valid Landing Page URL starting with http:// or https://`);
+            toast.error(`${variant.name}: please enter a valid Landing Page URL starting with http:// or https://`);
             return;
           }
         }
 
         if (fd.urlMode === 'INSTANT_PAGE' && !areAllSelectedAdGroupsShopping) {
           if (!fd.landingUrl || !fd.landingUrl.trim()) {
-            toast.error(`${variant.name}: Instant Page is required`);
+            toast.error(`${variant.name}: instant page is required`);
             return;
           }
 
           const isNumeric = /^\d+$/.test(fd.landingUrl.trim());
           if (!isNumeric) {
-            toast.error(`${variant.name}: Instant Page ID must be a valid integer`);
+            toast.error(`${variant.name}: instant page ID must be a valid integer`);
             return;
           }
         }
@@ -3774,7 +3774,7 @@ export default function TikTokAdCreationForm({
       }
 
       if (newJobs.length === 0) {
-        toast.error('No variants have files assigned or required fields filled. Nothing to publish.');
+        toast.error('No variants have files assigned. Nothing to publish.');
         return;
       }
 
