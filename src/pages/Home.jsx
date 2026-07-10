@@ -686,6 +686,7 @@ export default function Home() {
     };
 
     const captureCurrentSnapshot = useCallback(() => ({
+        adName,
         headlines: cloneSnapshotValue(headlines),
         descriptions: cloneSnapshotValue(descriptions),
         messages: cloneSnapshotValue(messages),
@@ -722,6 +723,7 @@ export default function Home() {
         adScheduleEndTime,
         launchPaused,
     }), [
+        adName,
         headlines,
         descriptions,
         messages,
@@ -762,6 +764,7 @@ export default function Home() {
     const hydrateFromSnapshot = useCallback((snapshot) => {
         if (!snapshot) return;
 
+        setAdName(snapshot.adName || "");
         setHeadlines(cloneSnapshotValue(snapshot.headlines) || [""]);
         setDescriptions(cloneSnapshotValue(snapshot.descriptions) || [""]);
         setMessages(cloneSnapshotValue(snapshot.messages) || [""]);
@@ -800,6 +803,7 @@ export default function Home() {
         setAdScheduleEndTime(snapshot.adScheduleEndTime || null);
         setLaunchPaused(Boolean(snapshot.launchPaused));
     }, [
+        setAdName,
         setHeadlines,
         setDescriptions,
         setMessages,
@@ -1500,7 +1504,6 @@ export default function Home() {
                             isFormFieldModified={isFormFieldModified}
                             variants={variants}
                             activeVariantId={activeVariantId}
-                            onImportCsv={handleImportCsv}
                         />
 
                         <AdCreationForm
@@ -1634,6 +1637,7 @@ export default function Home() {
                             setGroupVariantMap={setGroupVariantMap}
                             postVariantMap={postVariantMap}
                             setPostVariantMap={setPostVariantMap}
+                            onImportCsv={handleImportCsv}
                             onBeforeMediaClear={triggerMediaPreviewLaunch}
                             onAdLaunchInProgressChange={setAdLaunchInProgress}
 

@@ -9,6 +9,7 @@ export default function useGlobalSettings() {
     const [hasSeenAnalyticsOnboarding, setHasSeenAnalyticsOnboarding] = useState(false);
     const [hasSeenAnalyticsHomePopup, setHasSeenAnalyticsHomePopup] = useState(false);
     const [hasSeenPowerupPopup, setHasSeenPowerupPopup] = useState(false);
+    const [hasImportedCsv, setHasImportedCsv] = useState(false);
     const [seenOnboardingCards, setSeenOnboardingCards] = useState([]);
     const [selectedAdAccountIds, setSelectedAdAccountIds] = useState([])
     const [uploadSources, setUploadSources] = useState(['local', 'drive', 'dropbox']);
@@ -35,6 +36,7 @@ export default function useGlobalSettings() {
             setHasSeenAnalyticsOnboarding(data?.settings?.hasSeenAnalyticsOnboarding || false);
             setHasSeenAnalyticsHomePopup(data?.settings?.hasSeenAnalyticsHomePopup || false);
             setHasSeenPowerupPopup(data?.settings?.hasSeenPowerupPopup || false);
+            setHasImportedCsv(data?.settings?.hasImportedCsv || false);
             setSeenOnboardingCards(
                 Array.isArray(data?.settings?.seenOnboardingCards)
                     ? data.settings.seenOnboardingCards
@@ -55,6 +57,7 @@ export default function useGlobalSettings() {
             setHasSeenAnalyticsOnboarding(false);
             setHasSeenAnalyticsHomePopup(false);
             setHasSeenPowerupPopup(false);
+            setHasImportedCsv(false);
             setSeenOnboardingCards([]);
             setUploadSources(['local', 'drive', 'dropbox']);
         } finally {
@@ -104,6 +107,8 @@ export default function useGlobalSettings() {
         setHasSeenAnalyticsHomePopup,
         hasSeenPowerupPopup,
         setHasSeenPowerupPopup,
+        hasImportedCsv,
+        setHasImportedCsv,
         seenOnboardingCards,
         setSeenOnboardingCards,
         effectiveSeenOnboardingIds,

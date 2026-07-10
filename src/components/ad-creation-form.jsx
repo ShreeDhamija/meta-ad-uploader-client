@@ -967,6 +967,7 @@ export default function AdCreationForm({
   setGroupVariantMap,
   postVariantMap,
   setPostVariantMap,
+  onImportCsv,
   onBeforeMediaClear,
   onAdLaunchInProgressChange
 }) {
@@ -1109,10 +1110,14 @@ export default function AdCreationForm({
   const {
     uploadSources: globalUploadSources,
     setUploadSources: setGlobalUploadSources,
+    hasImportedCsv,
+    setHasImportedCsv,
   } = useGlobalSettings();
   const [uploadSources, setUploadSourcesLocal] = useState(globalUploadSources);
   const [uploadSourcesDirty, setUploadSourcesDirty] = useState(false);
   const [uploadSourcesOpen, setUploadSourcesOpen] = useState(false);
+  const [pendingCsvFile, setPendingCsvFile] = useState(null);
+  const [isImportingCsv, setIsImportingCsv] = useState(false);
   // Modal for "Get Top Ads For Flex" — only opened when adType === 'flexible'.
   // Imports selected ads' image hashes / video IDs into importedFiles, which
   // the existing flexible-ad launch path then bundles into asset_feed_spec.
@@ -2969,15 +2974,63 @@ export default function AdCreationForm({
 
 
   // Dropzone logic
+  const importCsvFile = useCallback(async (file) => {
+    if (!file || !onImportCsv || isImportingCsv) return;
+
+    setIsImportingCsv(true);
+    try {
+      const result = await onImportCsv(file);
+      if (result?.created > 0 && !hasImportedCsv) {
+        setHasImportedCsv(true);
+        try {
+          await saveSettings({ globalSettings: { hasImportedCsv: true } });
+          window.dispatchEvent(new Event('globalSettingsUpdated'));
+        } catch (err) {
+          console.error('Failed to save CSV import status:', err);
+        }
+      }
+    } finally {
+      setIsImportingCsv(false);
+      setPendingCsvFile(null);
+    }
+  }, [hasImportedCsv, isImportingCsv, onImportCsv, setHasImportedCsv]);
+
   const onDrop = useCallback((acceptedFiles) => {
+    const csvFiles = acceptedFiles.filter((file) =>
+      file.name?.toLowerCase().endsWith('.csv') || file.type === 'text/csv'
+    );
+    const mediaFiles = acceptedFiles.filter((file) => !csvFiles.includes(file));
+
+    if (csvFiles.length > 0) {
+      if (csvFiles.length > 1 || mediaFiles.length > 0) {
+        toast.error("Choose one CSV by itself, without media files");
+        return;
+      }
+      if (getCatalogueMediaCount() > 0 || importedPosts.length > 0) {
+        toast.error("Remove existing media before importing a CSV");
+        return;
+      }
+      if (!onImportCsv) {
+        toast.error("CSV import is not available right now");
+        return;
+      }
+
+      if (hasImportedCsv) {
+        void importCsvFile(csvFiles[0]);
+      } else {
+        setPendingCsvFile(csvFiles[0]);
+      }
+      return;
+    }
+
     // 🚫 Filter out .webp and .heic files
-    const filteredFiles = acceptedFiles.filter(
+    const filteredFiles = mediaFiles.filter(
       (file) =>
         !file.name.toLowerCase().endsWith(".webp") &&
         !file.name.toLowerCase().endsWith(".heic")
     );
 
-    if (filteredFiles.length < acceptedFiles.length) {
+    if (filteredFiles.length < mediaFiles.length) {
       toast.error("WebP and HEIC files are not supported by Facebook");
     }
 
@@ -2987,7 +3040,7 @@ export default function AdCreationForm({
       ...prev,
       ...couponFiles.map(withUniqueId)
     ]);
-  }, [filterCatalogueCouponFiles, getCatalogueMediaCount]);
+  }, [filterCatalogueCouponFiles, getCatalogueMediaCount, hasImportedCsv, importCsvFile, importedPosts.length, onImportCsv]);
 
 
 
@@ -3000,6 +3053,7 @@ export default function AdCreationForm({
       ? {
         "image/jpeg": [".jpg", ".jpeg"],
         "image/png": [".png"],
+        "text/csv": [".csv"],
       }
       : undefined,
   })
@@ -9200,16 +9254,18 @@ export default function AdCreationForm({
                       className={`group cursor-pointer border-2 border-dashed rounded-2xl p-6 text-center transition-colors ${isDragActive ? "border-primary bg-primary/5" : "border-gray-300 hover:border-primary/50"
                         }`}
                     >
-                      <input {...getInputProps()} disabled={!isLoggedIn} />
+                      <input {...getInputProps()} disabled={!isLoggedIn || isImportingCsv} />
                       <div className="flex flex-col items-center gap-2">
                         <Upload className="h-6 w-6 text-gray-500 group-hover:text-black" />
                         {isDragActive ? (
                           <p className="text-sm text-gray-500 group-hover:text-black">Drop files here ...</p>
                         ) : (
                           <p className="text-sm text-gray-500 group-hover:text-black">
-                            {isCatalogueAd
+                            {isImportingCsv
+                              ? "Importing CSV…"
+                              : isCatalogueAd
                               ? "Drag & drop one image here, or click to select an image"
-                              : "Drag & drop files here, or click to select files"}
+                              : "Drag & drop media or one CSV here, or click to select files"}
                           </p>
                         )}
                       </div>
@@ -9735,6 +9791,61 @@ export default function AdCreationForm({
                 ) : (
                   "Save"
                 )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+      {pendingCsvFile && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/35"
+            onClick={() => setPendingCsvFile(null)}
+          />
+          <div
+            className="relative w-[min(34rem,calc(100vw-2rem))] rounded-[28px] border border-gray-200 bg-white p-6 shadow-xl"
+            style={{ animation: 'templateBtnIn 0.2s ease-out forwards' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <FileText className="h-6 w-6 text-blue-600" />
+                <h3 className="text-lg font-semibold text-gray-900">Import ad variants from CSV</h3>
+              </div>
+              <p className="text-sm text-gray-600">
+                Each non-empty row becomes one variant. The first row fills Default and every later row creates a new variant.
+              </p>
+            </div>
+
+            <div className="mt-4 space-y-3 rounded-2xl bg-gray-50 p-4 text-sm text-gray-700">
+              <div>
+                <p className="font-semibold text-gray-900">Supported columns (all optional)</p>
+                <p>Campaign Name, Ad Set Name, Ad Name, Primary Text, Headline, Website URL, and a Google Drive file link in any column.</p>
+              </div>
+              <p className="text-xs text-gray-500">
+                Missing values inherit the current form, including its selected campaign and ad set. Column order and capitalization do not matter. Common singular/plural forms and minor header typos are accepted.
+              </p>
+            </div>
+
+            <p className="mt-3 truncate text-xs text-gray-500">Selected: {pendingCsvFile.name}</p>
+
+            <div className="mt-5 flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="rounded-xl"
+                onClick={() => setPendingCsvFile(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                className="rounded-xl bg-blue-600 text-white hover:bg-blue-700"
+                disabled={isImportingCsv}
+                onClick={() => void importCsvFile(pendingCsvFile)}
+              >
+                {isImportingCsv && <Loader className="mr-2 h-4 w-4 animate-spin" />}
+                Import CSV
               </Button>
             </div>
           </div>

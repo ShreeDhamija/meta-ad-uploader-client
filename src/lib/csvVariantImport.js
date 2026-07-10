@@ -45,6 +45,46 @@ function levenshtein(a, b) {
   return prev[b.length];
 }
 
+// Header matching is a little more forgiving than campaign/ad-set value
+// matching. It ignores punctuation, spacing, case and simple plurals, then
+// allows one small typo when the result is unambiguous.
+function normalizeHeader(value = "") {
+  return normalizeName(value)
+    .replace(/[^a-z0-9 ]/g, " ")
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word) => (word.length > 3 && word.endsWith("s") ? word.slice(0, -1) : word))
+    .join(" ");
+}
+
+function findHeaderKey(keys, candidates) {
+  const normalizedKeys = keys.map((key) => ({ key, normalized: normalizeHeader(key) }));
+
+  for (const candidate of candidates) {
+    const wanted = normalizeHeader(candidate);
+    const exact = normalizedKeys.find(({ normalized }) => normalized === wanted);
+    if (exact) return exact.key;
+  }
+
+  const fuzzyMatches = [];
+  for (const candidate of candidates) {
+    const wanted = normalizeHeader(candidate);
+    if (wanted.length < 4) continue;
+    for (const entry of normalizedKeys) {
+      const tolerance = Math.max(1, Math.floor(wanted.length * 0.15));
+      const distance = levenshtein(wanted, entry.normalized);
+      if (distance <= tolerance) fuzzyMatches.push({ ...entry, distance });
+    }
+  }
+
+  fuzzyMatches.sort((a, b) => a.distance - b.distance);
+  if (fuzzyMatches.length === 0) return null;
+  if (fuzzyMatches.length > 1 && fuzzyMatches[0].distance === fuzzyMatches[1].distance && fuzzyMatches[0].key !== fuzzyMatches[1].key) {
+    return null;
+  }
+  return fuzzyMatches[0].key;
+}
+
 // Find the closest item whose name matches `target`. Tries, in order: exact
 // normalised equality, unique containment either direction, then smallest edit
 // distance within a length-relative tolerance. Returns { item, exact } or null.
@@ -83,26 +123,32 @@ export function findClosestMatch(target, items, getName = (x) => x.name) {
 // Read a field from a parsed row, tolerant of header spelling/spacing/case.
 function readField(row, candidates) {
   const keys = Object.keys(row);
-  for (const candidate of candidates) {
-    const want = normalizeName(candidate);
-    const key = keys.find((k) => normalizeName(k) === want);
-    if (key != null && row[key] != null && String(row[key]).trim() !== "") {
-      return String(row[key]).trim();
-    }
+  const key = findHeaderKey(keys, candidates);
+  if (key != null && row[key] != null && String(row[key]).trim() !== "") {
+    return String(row[key]).trim();
   }
   return "";
 }
 
+const CSV_COLUMNS = {
+  campaignName: ["Campaign Name", "Campaign"],
+  adSetName: ["Ad Set Name", "Ad Set", "Ad Sets", "Adset Name", "Adset"],
+  adName: ["Ad Name", "Ad"],
+  primaryText: ["Primary Text", "Primary", "Body", "Message"],
+  headline: ["Headline", "Title"],
+  websiteUrl: ["Website URL", "Website", "Destination URL", "URL"],
+};
+
 export function extractRowFields(row) {
   return {
-    campaignName: readField(row, ["Campaign Name", "Campaign"]),
-    adSetName: readField(row, ["Ad Set Name", "Ad Set", "Adset Name", "Adset"]),
-    adName: readField(row, ["Ad Name", "Ad"]),
-    primaryText: readField(row, ["Primary Text", "Primary", "Body", "Message"]),
-    headline: readField(row, ["Headline", "Title"]),
+    campaignName: readField(row, CSV_COLUMNS.campaignName),
+    adSetName: readField(row, CSV_COLUMNS.adSetName),
+    adName: readField(row, CSV_COLUMNS.adName),
+    primaryText: readField(row, CSV_COLUMNS.primaryText),
+    headline: readField(row, CSV_COLUMNS.headline),
     // The ad's destination. (The CSV's "Display Link" is an ad-account-level
     // setting, not a per-variant field, so it isn't imported here.)
-    websiteUrl: readField(row, ["Website URL", "Website", "Destination URL", "URL"]),
+    websiteUrl: readField(row, CSV_COLUMNS.websiteUrl),
   };
 }
 
@@ -233,8 +279,14 @@ export async function importVariantsFromCsv(file, ctx) {
   const rows = (parsed.data || [])
     .map((raw) => ({ fields: extractRowFields(raw), driveFileId: findDriveFileIdInRow(raw) }))
     .filter(
-      ({ fields }) =>
-        fields.primaryText || fields.headline || fields.campaignName || fields.adSetName
+      ({ fields, driveFileId }) =>
+        fields.primaryText ||
+        fields.headline ||
+        fields.campaignName ||
+        fields.adSetName ||
+        fields.adName ||
+        fields.websiteUrl ||
+        driveFileId
     );
 
   if (rows.length === 0) {
@@ -246,7 +298,14 @@ export async function importVariantsFromCsv(file, ctx) {
 
   // Resolve each unique campaign name once, and fetch its ad sets once, so ad-set
   // names can be matched within the right campaign (names repeat across campaigns).
-  const uniqueCampaignNames = [...new Set(rows.map((r) => r.fields.campaignName).filter(Boolean))];
+  const uniqueCampaignNames = [
+    ...new Map(
+      rows
+        .map((r) => r.fields.campaignName)
+        .filter(Boolean)
+        .map((name) => [normalizeName(name), name])
+    ).values(),
+  ];
   const campaignByCsvName = {};
   const adSetsByCampaignId = {};
 
@@ -254,7 +313,7 @@ export async function importVariantsFromCsv(file, ctx) {
     uniqueCampaignNames.map(async (csvName) => {
       const match = findClosestMatch(csvName, campaigns);
       if (!match) return;
-      campaignByCsvName[csvName] = match.item;
+      campaignByCsvName[normalizeName(csvName)] = match.item;
       if (match.item.id in adSetsByCampaignId) return;
       try {
         const res = await fetch(`${apiBaseUrl}/auth/fetch-adsets?campaignId=${match.item.id}`, {
@@ -291,8 +350,9 @@ export async function importVariantsFromCsv(file, ctx) {
     const rowNum = idx + 1;
     const snap = cloneSnapshotValue(baseSnapshot);
 
-    snap.messages = [fields.primaryText || ""];
-    snap.headlines = [fields.headline || ""];
+    if (fields.primaryText) snap.messages = [fields.primaryText];
+    if (fields.headline) snap.headlines = [fields.headline];
+    if (fields.adName) snap.adName = fields.adName;
     if (fields.websiteUrl) {
       // Drive the website through the custom-link path so the exact CSV URL is
       // used (an arbitrary CSV URL won't necessarily be one of the account's
@@ -302,29 +362,44 @@ export async function importVariantsFromCsv(file, ctx) {
       snap.showCustomLink = true;
     }
 
-    const campaign = fields.campaignName ? campaignByCsvName[fields.campaignName] : null;
-    if (campaign) {
-      snap.selectedCampaign = [campaign.id];
-      const campaignAdSets = adSetsByCampaignId[campaign.id] || [];
-      snap.adSets = campaignAdSets;
-      const adsetMatch = fields.adSetName ? findClosestMatch(fields.adSetName, campaignAdSets) : null;
+    if (fields.campaignName) {
+      const campaign = campaignByCsvName[normalizeName(fields.campaignName)];
+      if (campaign) {
+        const baseAlreadyUsesCampaign = (baseSnapshot.selectedCampaign || []).includes(campaign.id);
+        const campaignAdSets = adSetsByCampaignId[campaign.id] || [];
+        snap.selectedCampaign = [campaign.id];
+        snap.adSets = campaignAdSets;
+
+        if (fields.adSetName) {
+          const adsetMatch = findClosestMatch(fields.adSetName, campaignAdSets);
+          if (adsetMatch) {
+            snap.selectedAdSets = [adsetMatch.item.id];
+          } else {
+            snap.selectedAdSets = [];
+            warnings.push(`Row ${rowNum}: ad set "${fields.adSetName}" not found in "${campaign.name}"`);
+          }
+        } else if (baseAlreadyUsesCampaign) {
+          const validAdSetIds = new Set(campaignAdSets.map((adSet) => adSet.id));
+          snap.selectedAdSets = (baseSnapshot.selectedAdSets || []).filter((id) => validAdSetIds.has(id));
+        } else {
+          snap.selectedAdSets = [];
+        }
+      } else {
+        snap.selectedCampaign = [];
+        snap.selectedAdSets = [];
+        snap.adSets = [];
+        warnings.push(`Row ${rowNum}: campaign "${fields.campaignName}" not found`);
+      }
+    } else if (fields.adSetName) {
+      // With no campaign in the row, match against the campaign/ad-set context
+      // already selected in the form and keep that campaign unchanged.
+      const adsetMatch = findClosestMatch(fields.adSetName, snap.adSets || []);
       if (adsetMatch) {
         snap.selectedAdSets = [adsetMatch.item.id];
       } else {
         snap.selectedAdSets = [];
-        if (fields.adSetName) {
-          warnings.push(`Row ${rowNum}: ad set "${fields.adSetName}" not found in "${campaign.name}"`);
-        }
+        warnings.push(`Row ${rowNum}: ad set "${fields.adSetName}" not found in the selected campaign`);
       }
-    } else {
-      snap.selectedCampaign = [];
-      snap.selectedAdSets = [];
-      snap.adSets = [];
-      warnings.push(
-        fields.campaignName
-          ? `Row ${rowNum}: campaign "${fields.campaignName}" not found`
-          : `Row ${rowNum}: no campaign specified`
-      );
     }
 
     // Row 0 populates the existing Default variant; the rest become new variants.

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useCallback, useEffect, useRef } from "react"
+import { useState, useMemo, useCallback, useEffect } from "react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Check, ChevronsUpDown, RefreshCcw, X, Loader, AlertTriangle, Upload, Ban, Pencil } from "lucide-react"
+import { Check, ChevronsUpDown, RefreshCcw, X, Loader, AlertTriangle, Ban, Pencil } from "lucide-react"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { useAuth } from "@/lib/AuthContext"
 import { Input } from "@/components/ui/input"
@@ -27,10 +27,6 @@ import { useAppData } from "@/lib/AppContext"
 
 // Add constant
 const ADVANTAGE_PLUS_TYPES = ["AUTOMATED_SHOPPING_ADS", "SMART_APP_PROMOTION"];
-// Gate the "Import CSV" feature to a single user on staging while it's in beta.
-// Mirror the staging check used elsewhere so it still works when VITE_ENV is unset.
-const CSV_IMPORT_USER_ID = "10236978990363167";
-const IS_STAGING = import.meta.env.VITE_ENV === 'staging' || API_BASE_URL.includes('staging');
 const DROPDOWN_MAX_WIDTH = "min(calc(100vw - 2rem), 850px)";
 const dropdownContentStyle = {
   minWidth: "var(--radix-popover-trigger-width)",
@@ -83,29 +79,14 @@ export default function AdAccountSettings({
   exitEditAdCreativeMode,
   isFormFieldModified,
   variants = [],
-  activeVariantId = 'default',
-  onImportCsv
+  activeVariantId = 'default'
 
 }) {
   const renderDiffMark = (fieldKeys) => (
     isFormFieldModified?.(fieldKeys) ? <span className="text-red-500 font-semibold">*</span> : null
   );
   // Local state for comboboxes
-  const { isLoggedIn, userId } = useAuth()
-  const canImportCsv = IS_STAGING && String(userId || "") === CSV_IMPORT_USER_ID
-  const csvInputRef = useRef(null)
-  const [isImportingCsv, setIsImportingCsv] = useState(false)
-  const handleCsvFileSelected = useCallback(async (event) => {
-    const file = event.target.files?.[0]
-    event.target.value = "" // allow re-selecting the same file
-    if (!file || !onImportCsv) return
-    setIsImportingCsv(true)
-    try {
-      await onImportCsv(file)
-    } finally {
-      setIsImportingCsv(false)
-    }
-  }, [onImportCsv])
+  const { isLoggedIn } = useAuth()
   const [open, setOpen] = useState(false)
   const [searchValue, setSearchValue] = useState("")
   const [openCampaign, setOpenCampaign] = useState(false)
@@ -536,32 +517,6 @@ export default function AdAccountSettings({
             <CogIcon className="w-5 h-5" />
             Ad Account Configuration
           </div>
-          {canImportCsv && (
-            <>
-              <input
-                ref={csvInputRef}
-                type="file"
-                accept=".csv,text/csv"
-                className="hidden"
-                onChange={handleCsvFileSelected}
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={isImportingCsv}
-                onClick={() => csvInputRef.current?.click()}
-                className="rounded-xl bg-white font-normal"
-              >
-                {isImportingCsv ? (
-                  <Loader className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Upload className="mr-2 h-4 w-4" />
-                )}
-                {isImportingCsv ? "Importing…" : "Import CSV"}
-              </Button>
-            </>
-          )}
         </CardTitle>
         <CardDescription>Select your ad account, campaign and ad set</CardDescription>
       </CardHeader>
