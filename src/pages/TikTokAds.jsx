@@ -160,8 +160,8 @@ export default function TikTokAds() {
   const [selectedAdSets, setSelectedAdSets] = useState([])
   const [adSets, setAdSets] = useState([])
   const [duplicateAdSet, setDuplicateAdSet] = useState('')
-  const [duplicateAdGroup, setDuplicateAdGroup] = useState('')
-  const [newAdGroupName, setNewAdGroupName] = useState('')
+  const [duplicateAdGroup, setDuplicateAdGroup] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.duplicateAdGroup : null) || '')
+  const [newAdGroupName, setNewAdGroupName] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.newAdGroupName : null) || '')
   const [selectedFiles, setSelectedFiles] = useState(new Set())
   const [selectedIgOrganicPosts, setSelectedIgOrganicPosts] = useState([])
   const [hasSeenPowerupPopup, setHasSeenPowerupPopup] = useState(false)
@@ -559,6 +559,8 @@ export default function TikTokAds() {
       formStoreProductName,
       formStoreBcId,
       formStoreCatalogId,
+      duplicateAdGroup,
+      newAdGroupName,
       timestamp: Date.now(),
     };
     try {
@@ -576,6 +578,8 @@ export default function TikTokAds() {
     formStoreProductName,
     formStoreBcId,
     formStoreCatalogId,
+    duplicateAdGroup,
+    newAdGroupName,
   ]);
 
   // Sync state with preferences when they load (mirrors Meta's Home.jsx pattern)
