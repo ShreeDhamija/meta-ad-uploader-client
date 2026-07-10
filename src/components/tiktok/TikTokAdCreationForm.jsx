@@ -1607,12 +1607,37 @@ export default function TikTokAdCreationForm({
 
             try {
               if (item.type === 'local') {
-                const uploadResult = await uploadVideoToTikTok(item.file, signal, handleChunkUploaded);
-                if (!uploadResult?.videoId) {
-                  throw new Error(`Video upload failed for "${item.file.name}"`);
+                const isImage = !!(
+                  (item.file?.type?.startsWith('image/')) ||
+                  (/\.(png|jpg|jpeg|gif|webp|bmp)($|\?)/i.test(item.file?.name || ''))
+                )
+
+                if (isImage) {
+                  const uploadParams = new URLSearchParams({ advertiserId: selectedAdvertiser })
+                  const bodyFormData = new FormData()
+                  bodyFormData.append("image", item.file)
+
+                  const uploadRes = await fetch(`${API_BASE_URL}/api/tiktok/upload-image?${uploadParams}`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    body: bodyFormData,
+                    signal,
+                  })
+                  const uploadData = await uploadRes.json()
+                  if (!uploadRes.ok || !uploadData.success) {
+                    throw new Error(uploadData.error || `Image upload failed for "${item.file.name}"`)
+                  }
+                  videoId = uploadData.imageId || uploadData.image_id
+                  currentS3Url = null
+                  handleChunkUploaded()
+                } else {
+                  const uploadResult = await uploadVideoToTikTok(item.file, signal, handleChunkUploaded)
+                  if (!uploadResult?.videoId) {
+                    throw new Error(`Video upload failed for "${item.file.name}"`)
+                  }
+                  videoId = uploadResult.videoId
+                  currentS3Url = uploadResult.s3Url || null
                 }
-                videoId = uploadResult.videoId;
-                currentS3Url = uploadResult.s3Url || null;
               } else if (item.type === 'drive' || item.type === 'dropbox') {
                 const uploadParams = new URLSearchParams({ advertiserId: selectedAdvertiser });
 
@@ -1876,7 +1901,7 @@ export default function TikTokAdCreationForm({
             const creative = {
               adFormat: isImage ? 'SINGLE_IMAGE' : 'SINGLE_VIDEO',
               ...(isImage
-                ? { image_ids: [videoId] }
+                ? { image_ids: videoId }
                 : { video_id: videoId }
               ),
               ad_texts: finalCaptions,
@@ -1923,7 +1948,7 @@ export default function TikTokAdCreationForm({
                 const creative = {
                   adFormat: isImage ? 'SINGLE_IMAGE' : 'SINGLE_VIDEO',
                   ...(isImage
-                    ? { image_ids: [videoId] }
+                    ? { image_ids: videoId }
                     : { video_id: videoId }
                   ),
                   ad_text: singleCaption,
@@ -1975,7 +2000,7 @@ export default function TikTokAdCreationForm({
                   const creative = {
                     adFormat: isImage ? 'SINGLE_IMAGE' : 'SINGLE_VIDEO',
                     ...(isImage
-                      ? { image_ids: [videoId] }
+                      ? { image_ids: videoId }
                       : { video_id: videoId }
                     ),
                     ad_text: singleCaption,
