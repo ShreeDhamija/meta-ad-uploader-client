@@ -207,12 +207,12 @@ export default function TikTokCampaignDuplicator({ advertiserId }) {
                           >
                             <div className="flex items-center justify-between w-full">
                               <div className="flex flex-col">
-                                <span className={cn("font-medium", c.operation_status === "DISABLE" && "text-gray-400")}>{c.campaign_name}</span>
-                                <span className="text-[10px] text-gray-400 font-mono">ID: {c.campaign_id}</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                {c.operation_status === "ENABLE" && <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />}
-                                {selectedCampaign === c.campaign_id && <Check className="h-4 w-4 text-black shrink-0" />}
+                                 <span className={cn("font-medium", (c.operation_status === "DISABLE" || c.operation_status === "disable" || String(c.operation_status).toUpperCase() === "DISABLE" || String(c.secondary_status).includes("DISABLE")) && "text-gray-400")}>{c.campaign_name}</span>
+                                 <span className="text-[10px] text-gray-400 font-mono">ID: {c.campaign_id}</span>
+                               </div>
+                               <div className="flex items-center gap-2">
+                                 {(c.operation_status === "ENABLE" || c.operation_status === "enable" || String(c.operation_status).toUpperCase() === "ENABLE" || String(c.secondary_status).includes("ENABLE") || c.operation_status === true || c.operation_status === "true") && <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />}
+                                 {selectedCampaign === c.campaign_id && <Check className="h-4 w-4 text-black shrink-0" />}
                               </div>
                             </div>
                           </CommandItem>

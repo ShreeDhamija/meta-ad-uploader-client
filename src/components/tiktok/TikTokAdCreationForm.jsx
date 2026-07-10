@@ -543,6 +543,10 @@ export default function TikTokAdCreationForm({
   selectedAdGroup, setSelectedAdGroup,
   duplicateAdGroup, setDuplicateAdGroup,
   newAdGroupName, setNewAdGroupName,
+  showDuplicateAdGroupBlock, setShowDuplicateAdGroupBlock,
+  duplicateCampaign, setDuplicateCampaign,
+  newCampaignName, setNewCampaignName,
+  showDuplicateCampaignBlock, setShowDuplicateCampaignBlock,
   identities, setIdentities,
   files, setFiles,
 
@@ -684,14 +688,10 @@ export default function TikTokAdCreationForm({
   const [newTemplateNameInput, setNewTemplateNameInput] = useState("")
 
   // Duplication local states
-  const [duplicateIncludeAds, setDuplicateIncludeAds] = useState(true)
-  const [newCampaignName, setNewCampaignName] = useState('')
+  const [duplicateIncludeAds, setDuplicateIncludeAds] = useState(false)
   const [isDuplicating, setIsDuplicating] = useState(false)
-  const [showDuplicateCampaignBlock, setShowDuplicateCampaignBlock] = useState(false)
-  const [duplicateCampaign, setDuplicateCampaign] = useState('')
   const [openDuplicateCampaign, setOpenDuplicateCampaign] = useState(false)
   const [duplicateCampaignSearchValue, setDuplicateCampaignSearchValue] = useState('')
-  const [showDuplicateAdGroupBlock, setShowDuplicateAdGroupBlock] = useState(false)
   const [openDuplicateAdGroup, setOpenDuplicateAdGroup] = useState(false)
   const [duplicateAdGroupSearchValue, setDuplicateAdGroupSearchValue] = useState('')
 
@@ -724,7 +724,6 @@ export default function TikTokAdCreationForm({
   const [jobId, setJobId] = useState(null)
   const [progress, setProgress] = useState(0)
   const [progressMessage, setProgressMessage] = useState('')
-  const [status, setStatus] = useState('idle')
   const {
     progress: trackedProgress,
     message: trackedMessage,
@@ -743,6 +742,7 @@ export default function TikTokAdCreationForm({
   const [currentAbortController, setCurrentAbortController] = useState(null)
   const [isQueueingJobs, setIsQueueingJobs] = useState(false)
   const currentJobIdRef = useRef(null)
+  const isInPromisePhase = useRef(false)
   const [launchPaused, setLaunchPaused] = useState(false)
 
   const [liveProgress, setLiveProgress] = useState({
@@ -1607,12 +1607,37 @@ export default function TikTokAdCreationForm({
 
             try {
               if (item.type === 'local') {
-                const uploadResult = await uploadVideoToTikTok(item.file, signal, handleChunkUploaded);
-                if (!uploadResult?.videoId) {
-                  throw new Error(`Video upload failed for "${item.file.name}"`);
+                const isImage = !!(
+                  (item.file?.type?.startsWith('image/')) ||
+                  (/\.(png|jpg|jpeg|gif|webp|bmp)($|\?)/i.test(item.file?.name || ''))
+                )
+
+                if (isImage) {
+                  const uploadParams = new URLSearchParams({ advertiserId: selectedAdvertiser })
+                  const bodyFormData = new FormData()
+                  bodyFormData.append("image", item.file)
+
+                  const uploadRes = await fetch(`${API_BASE_URL}/api/tiktok/upload-image?${uploadParams}`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    body: bodyFormData,
+                    signal,
+                  })
+                  const uploadData = await uploadRes.json()
+                  if (!uploadRes.ok || !uploadData.success) {
+                    throw new Error(uploadData.error || `Image upload failed for "${item.file.name}"`)
+                  }
+                  videoId = uploadData.imageId || uploadData.image_id
+                  currentS3Url = null
+                  handleChunkUploaded()
+                } else {
+                  const uploadResult = await uploadVideoToTikTok(item.file, signal, handleChunkUploaded)
+                  if (!uploadResult?.videoId) {
+                    throw new Error(`Video upload failed for "${item.file.name}"`)
+                  }
+                  videoId = uploadResult.videoId
+                  currentS3Url = uploadResult.s3Url || null
                 }
-                videoId = uploadResult.videoId;
-                currentS3Url = uploadResult.s3Url || null;
               } else if (item.type === 'drive' || item.type === 'dropbox') {
                 const uploadParams = new URLSearchParams({ advertiserId: selectedAdvertiser });
 
@@ -1717,6 +1742,7 @@ export default function TikTokAdCreationForm({
       }
 
       // Connect SSE tracking now that uploading is finished/skipped
+      isInPromisePhase.current = true;
       setJobId(jobToProcess.id);
       // Small delay to let SSE connect
       await new Promise(resolve => setTimeout(resolve, 100));
@@ -1876,7 +1902,7 @@ export default function TikTokAdCreationForm({
             const creative = {
               adFormat: isImage ? 'SINGLE_IMAGE' : 'SINGLE_VIDEO',
               ...(isImage
-                ? { image_ids: [videoId] }
+                ? { image_ids: videoId }
                 : { video_id: videoId }
               ),
               ad_texts: finalCaptions,
@@ -1923,7 +1949,7 @@ export default function TikTokAdCreationForm({
                 const creative = {
                   adFormat: isImage ? 'SINGLE_IMAGE' : 'SINGLE_VIDEO',
                   ...(isImage
-                    ? { image_ids: [videoId] }
+                    ? { image_ids: videoId }
                     : { video_id: videoId }
                   ),
                   ad_text: singleCaption,
@@ -1975,7 +2001,7 @@ export default function TikTokAdCreationForm({
                   const creative = {
                     adFormat: isImage ? 'SINGLE_IMAGE' : 'SINGLE_VIDEO',
                     ...(isImage
-                      ? { image_ids: [videoId] }
+                      ? { image_ids: videoId }
                       : { video_id: videoId }
                     ),
                     ad_text: singleCaption,
@@ -2110,7 +2136,6 @@ export default function TikTokAdCreationForm({
 
     } catch (err) {
       if (err.name === 'AbortError' || signal.aborted) {
-        setStatus('cancelled')
         updateProgress(100, 'Job cancelled.')
 
         await fetch(`${API_BASE_URL}/auth/cancel-job`, {
@@ -2119,7 +2144,6 @@ export default function TikTokAdCreationForm({
           body: JSON.stringify({ jobId: jobToProcess.id })
         }).catch(() => { })
       } else {
-        setStatus('error')
         updateProgress(100, `Job Failed: ${err.message}`)
 
         await fetch(`${API_BASE_URL}/auth/complete-job`, {
@@ -2138,6 +2162,7 @@ export default function TikTokAdCreationForm({
       }
       throw err;
     } finally {
+      isInPromisePhase.current = false
       setCurrentAbortController(null)
       currentJobIdRef.current = null
     }
@@ -2169,7 +2194,7 @@ export default function TikTokAdCreationForm({
 
     handleCreateAdRef.current(jobToProcess).catch(err => {
       // Don't treat cancellation as a critical error
-      if (err.name === 'AbortError' || axios.isCancel(err) || signal?.aborted) {
+      if (err.name === 'AbortError' || axios.isCancel(err)) {
         const cancelledJob = {
           id: jobToProcess.id,
           message: 'Job cancelled. Some Ads might still have been made.',
@@ -2210,7 +2235,7 @@ export default function TikTokAdCreationForm({
       setIsProcessingQueue(false)
       setIsCancelling(false)
     })
-  }, [jobQueue, isProcessingQueue])
+  }, [jobQueue, isProcessingQueue, resetProgress])
 
   // Sync SSE progress to local progress state
   useEffect(() => {
@@ -2262,6 +2287,9 @@ export default function TikTokAdCreationForm({
         completedJob.message = `${successCount} Ad${successCount !== 1 ? 's' : ''} successfully posted to ${currentJob.adGroupDisplayName} (with ${failureCount} failure${failureCount !== 1 ? 's' : ''})`
         toast.warning(completedJob.message)
       } else if (trackedStatus === 'cancelled') {
+        if (isInPromisePhase.current) {
+          return // Let the promise .catch() handler handle it
+        }
         completedJob.status = 'cancelled'
         completedJob.message = trackedMessage || 'Job cancelled.'
       } else if (trackedStatus === 'job-not-found') {
@@ -3000,14 +3028,15 @@ export default function TikTokAdCreationForm({
       if (!res.ok || !data.success) {
         throw new Error(data.error || 'Duplication failed')
       }
-      toast.success('🎉 Campaign duplicated successfully!')
+      toast.success('Campaign duplicated successfully!')
       setNewCampaignName('')
       setDuplicateCampaign('')
       setShowDuplicateCampaignBlock(false)
 
       const newCampaignObj = {
         campaign_id: data.new_campaign_id,
-        campaign_name: duplicatedName
+        campaign_name: duplicatedName,
+        operation_status: "DISABLE"
       }
 
       if (data.new_campaign_id) {
@@ -3595,12 +3624,12 @@ export default function TikTokAdCreationForm({
         const fd = job.formData;
 
         if (!fd.selectedAdvertiser) {
-          toast.error(`${variant.name}: Please select an advertiser account`);
+          toast.error(`${variant.name}: please select an advertiser account`);
           return;
         }
 
         if (!fd.isDuplicatingAdGroupMode && (!fd.selectedAdGroup || fd.selectedAdGroup.length === 0)) {
-          toast.error(`${variant.name}: Please select at least one ad group`);
+          toast.error(`${variant.name}: please select at least one ad group`);
           return;
         }
 
@@ -3614,7 +3643,7 @@ export default function TikTokAdCreationForm({
         const adsToBeCreated = fileCount * captionCount;
 
         if (adsToBeCreated > 50) {
-          toast.error(`${variant.name}: You cannot launch more than 50 ads at once (current selection: ${adsToBeCreated} ads).`);
+          toast.error(`${variant.name}: you cannot launch more than 50 ads at once (current selection: ${adsToBeCreated} ads).`);
           return;
         }
 
@@ -3655,9 +3684,9 @@ export default function TikTokAdCreationForm({
 
               if (currentAdCount + queuedAdsCount + adsToBeCreated > 50) {
                 if (queuedAdsCount > 0) {
-                  toast.error(`${variant.name}: Cannot launch ads. Ad group "${agObj.adgroup_name}" currently has ${currentAdCount} ads and ${queuedAdsCount} ads pending in the job queue. Adding ${adsToBeCreated} more would exceed the limit of 50 ads per ad group.`);
+                  toast.error(`${variant.name}: cannot launch ads. Ad group "${agObj.adgroup_name}" currently has ${currentAdCount} ads and ${queuedAdsCount} ads pending in the job queue. Adding ${adsToBeCreated} more would exceed the limit of 50 ads per ad group.`);
                 } else {
-                  toast.error(`${variant.name}: Cannot launch ads. Ad group "${agObj.adgroup_name}" currently has ${currentAdCount} ads. Adding ${adsToBeCreated} more would exceed the limit of 50 ads per ad group.`);
+                  toast.error(`${variant.name}: cannot launch ads. Ad group "${agObj.adgroup_name}" currently has ${currentAdCount} ads. Adding ${adsToBeCreated} more would exceed the limit of 50 ads per ad group.`);
                 }
                 return;
               }
@@ -3666,45 +3695,45 @@ export default function TikTokAdCreationForm({
         }
 
         if (fd.isDuplicatingAdGroupMode && !fd.newAdGroupName.trim()) {
-          toast.error(`${variant.name}: Please enter a name for the new duplicated ad group`);
+          toast.error(`${variant.name}: please enter a name for the new duplicated ad group`);
           return;
         }
 
         if (!fd.selectedIdentity || fd.selectedIdentity === 'CUSTOMIZED_USER') {
           toast.error(fd.adType === 'NORMAL'
-            ? `${variant.name}: Identity is required. Please select one.`
-            : `${variant.name}: Promote From is required. Please select a linked TikTok account.`
+            ? `${variant.name}: please select a TikTok identity`
+            : `${variant.name}: please select a linked TikTok account`
           );
           return;
         }
 
         if (fd.adType === 'SPARK') {
           if (!fd.importedPosts || fd.importedPosts.length === 0) {
-            toast.error(`${variant.name}: Spark Ads require at least one selected organic post.`);
+            toast.error(`${variant.name}: spark ads require at least one selected organic post.`);
             return;
           }
         }
 
         const hasFormula = adNameFormulaV2?.rawInput?.trim();
         if (!hasFormula && !fd.adName.trim()) {
-          toast.error(`${variant.name}: Ad name is required`);
+          toast.error(`${variant.name}: ad name is required`);
           return;
         }
 
         if (!fd.cta || fd.cta.length === 0) {
-          toast.error(`${variant.name}: Please select at least one Call to Action`);
+          toast.error(`${variant.name}: please select at least one Call to Action`);
           return;
         }
 
         if (fd.adType !== 'SPARK') {
           const activeTexts = fd.adTexts ? fd.adTexts.filter(t => t.trim() !== '') : [];
           if (activeTexts.length === 0) {
-            toast.error(`${variant.name}: Please enter ad text`);
+            toast.error(`${variant.name}: please enter ad text`);
             return;
           }
           for (const singleText of activeTexts) {
             if (singleText.length > 100) {
-              toast.error(`${variant.name}: Text cannot exceed 100 characters ("${singleText.substring(0, 15)}...")`);
+              toast.error(`${variant.name}: text cannot exceed 100 characters ("${singleText.substring(0, 15)}...")`);
               return;
             }
           }
@@ -3712,7 +3741,7 @@ export default function TikTokAdCreationForm({
 
         if (fd.urlMode === 'WEBSITE' && !areAllSelectedAdGroupsShopping) {
           if (!fd.landingUrl || !fd.landingUrl.trim()) {
-            toast.error(`${variant.name}: Link (URL) is required`);
+            toast.error(`${variant.name}: link (URL) is required`);
             return;
           }
 
@@ -3726,20 +3755,20 @@ export default function TikTokAdCreationForm({
           } catch (_) { }
 
           if (!isValidUrl) {
-            toast.error(`${variant.name}: Please enter a valid Landing Page URL starting with http:// or https://`);
+            toast.error(`${variant.name}: please enter a valid Landing Page URL starting with http:// or https://`);
             return;
           }
         }
 
         if (fd.urlMode === 'INSTANT_PAGE' && !areAllSelectedAdGroupsShopping) {
           if (!fd.landingUrl || !fd.landingUrl.trim()) {
-            toast.error(`${variant.name}: Instant Page is required`);
+            toast.error(`${variant.name}: instant page is required`);
             return;
           }
 
           const isNumeric = /^\d+$/.test(fd.landingUrl.trim());
           if (!isNumeric) {
-            toast.error(`${variant.name}: Instant Page ID must be a valid integer`);
+            toast.error(`${variant.name}: instant page ID must be a valid integer`);
             return;
           }
         }
@@ -3748,7 +3777,7 @@ export default function TikTokAdCreationForm({
       }
 
       if (newJobs.length === 0) {
-        toast.error('No variants have files assigned or required fields filled. Nothing to publish.');
+        toast.error('No variants have files assigned. Nothing to publish.');
         return;
       }
 
@@ -4377,10 +4406,10 @@ export default function TikTokAdCreationForm({
                                   className="w-4 h-4 bg-white border border-gray-300 rounded-[6px] data-[state=checked]:bg-zinc-800 data-[state=checked]:text-white pointer-events-none"
                                 />
                                 <div className="flex-1 min-w-0 flex items-center justify-between">
-                                  <span className={cn("text-sm font-medium truncate flex-1", (c.operation_status === "DISABLE" || c.operation_status === false || c.operation_status === "false") && "text-gray-400")}>
+                                  <span className={cn("text-sm font-medium truncate flex-1", (c.operation_status === "DISABLE" || c.operation_status === "disable" || String(c.operation_status).toUpperCase() === "DISABLE" || String(c.secondary_status).includes("DISABLE") || c.operation_status === false || c.operation_status === "false") && "text-gray-400")}>
                                     {c.campaign_name}
                                   </span>
-                                  {(c.operation_status === "ENABLE" || c.operation_status === true || c.operation_status === "true") && (
+                                  {(c.operation_status === "ENABLE" || c.operation_status === "enable" || String(c.operation_status).toUpperCase() === "ENABLE" || String(c.secondary_status).includes("ENABLE") || c.operation_status === true || c.operation_status === "true") && (
                                     <span className="ml-2 w-2 h-2 rounded-full bg-green-500 shrink-0" />
                                   )}
                                 </div>
@@ -4509,11 +4538,11 @@ export default function TikTokAdCreationForm({
                                     )}
                                   >
                                     <div className="flex items-center justify-between w-full">
-                                      <span className={cn("text-sm font-medium", (c.operation_status === "DISABLE" || c.operation_status === false || c.operation_status === "false") && "text-gray-400")}>
+                                      <span className={cn("text-sm font-medium", (c.operation_status === "DISABLE" || c.operation_status === "disable" || String(c.operation_status).toUpperCase() === "DISABLE" || String(c.secondary_status).includes("DISABLE") || c.operation_status === false || c.operation_status === "false") && "text-gray-400")}>
                                         {c.campaign_name}
                                       </span>
                                       <div className="flex items-center gap-2">
-                                        {(c.operation_status === "ENABLE" || c.operation_status === true || c.operation_status === "true") && <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />}
+                                        {(c.operation_status === "ENABLE" || c.operation_status === "enable" || String(c.operation_status).toUpperCase() === "ENABLE" || String(c.secondary_status).includes("ENABLE") || c.operation_status === true || c.operation_status === "true") && <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />}
                                         {duplicateCampaign === c.campaign_id && <Check className="h-4 w-4 text-black shrink-0" />}
                                       </div>
                                     </div>
@@ -4706,14 +4735,14 @@ export default function TikTokAdCreationForm({
                                             className="w-4 h-4 bg-white border border-gray-300 rounded-[6px] data-[state=checked]:bg-zinc-800 data-[state=checked]:text-white pointer-events-none"
                                           />
                                           <div className="flex-1 min-w-0 flex items-center justify-between">
-                                            <span className={cn("text-sm font-medium truncate flex-1", (ag.operation_status === "DISABLE" || ag.operation_status === false || ag.operation_status === "false" || (!isSelected && isFull)) && "text-gray-400")}>
+                                            <span className={cn("text-sm font-medium truncate flex-1", (ag.operation_status === "DISABLE" || ag.operation_status === "disable" || String(ag.operation_status).toUpperCase() === "DISABLE" || String(ag.secondary_status).includes("DISABLE") || ag.operation_status === false || ag.operation_status === "false" || (!isSelected && isFull)) && "text-gray-400")}>
                                               {ag.adgroup_name}
                                             </span>
                                             <span className="flex items-center">
                                               {ag.ad_count !== undefined && (
                                                 <span className="text-xs text-gray-400 mr-1.5">({ag.ad_count} {ag.ad_count === 1 ? 'Ad' : 'Ads'})</span>
                                               )}
-                                              {(ag.operation_status === "ENABLE" || ag.operation_status === true || ag.operation_status === "true") && (
+                                              {(ag.operation_status === "ENABLE" || ag.operation_status === "enable" || String(ag.operation_status).toUpperCase() === "ENABLE" || String(ag.secondary_status).includes("ENABLE") || ag.operation_status === true || ag.operation_status === "true") && (
                                                 <span className="ml-0 w-2 h-2 rounded-full bg-green-500 shrink-0" />
                                               )}
                                             </span>
@@ -4845,11 +4874,11 @@ export default function TikTokAdCreationForm({
                                     )}
                                   >
                                     <div className="flex items-center justify-between w-full">
-                                      <span className={cn("text-sm font-medium", (ag.operation_status === "DISABLE" || ag.operation_status === false || ag.operation_status === "false") && "text-gray-400")}>
+                                      <span className={cn("text-sm font-medium", (ag.operation_status === "DISABLE" || ag.operation_status === "disable" || String(ag.operation_status).toUpperCase() === "DISABLE" || String(ag.secondary_status).includes("DISABLE") || ag.operation_status === false || ag.operation_status === "false") && "text-gray-400")}>
                                         {ag.adgroup_name}
                                       </span>
                                       <div className="flex items-center gap-2">
-                                        {(ag.operation_status === "ENABLE" || ag.operation_status === true || ag.operation_status === "true") && <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />}
+                                        {(ag.operation_status === "ENABLE" || ag.operation_status === "enable" || String(ag.operation_status).toUpperCase() === "ENABLE" || String(ag.secondary_status).includes("ENABLE") || ag.operation_status === true || ag.operation_status === "true") && <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />}
                                         {duplicateAdGroup === ag.adgroup_id && <Check className="h-4 w-4 text-black shrink-0" />}
                                       </div>
                                     </div>

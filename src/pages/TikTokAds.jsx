@@ -160,8 +160,12 @@ export default function TikTokAds() {
   const [selectedAdSets, setSelectedAdSets] = useState([])
   const [adSets, setAdSets] = useState([])
   const [duplicateAdSet, setDuplicateAdSet] = useState('')
-  const [duplicateAdGroup, setDuplicateAdGroup] = useState('')
-  const [newAdGroupName, setNewAdGroupName] = useState('')
+  const [duplicateAdGroup, setDuplicateAdGroup] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.duplicateAdGroup : null) || '')
+  const [newAdGroupName, setNewAdGroupName] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.newAdGroupName : null) || '')
+  const [showDuplicateCampaignBlock, setShowDuplicateCampaignBlock] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.showDuplicateCampaignBlock : null) || false)
+  const [duplicateCampaign, setDuplicateCampaign] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.duplicateCampaign : null) || '')
+  const [newCampaignName, setNewCampaignName] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.newCampaignName : null) || '')
+  const [showDuplicateAdGroupBlock, setShowDuplicateAdGroupBlock] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.showDuplicateAdGroupBlock : null) || false)
   const [selectedFiles, setSelectedFiles] = useState(new Set())
   const [selectedIgOrganicPosts, setSelectedIgOrganicPosts] = useState([])
   const [hasSeenPowerupPopup, setHasSeenPowerupPopup] = useState(false)
@@ -511,7 +515,7 @@ export default function TikTokAds() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     if (params.get('connected') === 'true') {
-      toast.success('🎉 TikTok connected successfully!')
+      toast.success('TikTok connected successfully!')
       refreshTikTokUser()
       window.history.replaceState({}, '', '/tiktok-ads')
     }
@@ -559,6 +563,12 @@ export default function TikTokAds() {
       formStoreProductName,
       formStoreBcId,
       formStoreCatalogId,
+      duplicateAdGroup,
+      newAdGroupName,
+      showDuplicateAdGroupBlock,
+      duplicateCampaign,
+      newCampaignName,
+      showDuplicateCampaignBlock,
       timestamp: Date.now(),
     };
     try {
@@ -576,6 +586,12 @@ export default function TikTokAds() {
     formStoreProductName,
     formStoreBcId,
     formStoreCatalogId,
+    duplicateAdGroup,
+    newAdGroupName,
+    showDuplicateAdGroupBlock,
+    duplicateCampaign,
+    newCampaignName,
+    showDuplicateCampaignBlock,
   ]);
 
   // Sync state with preferences when they load (mirrors Meta's Home.jsx pattern)
@@ -639,6 +655,13 @@ export default function TikTokAds() {
     setFormStoreProductName(null);
     setFormStoreBcId(null);
     setFormStoreCatalogId(null);
+    setDuplicateAdGroup("");
+    setNewAdGroupName("");
+    setShowDuplicateAdGroupBlock(false);
+    setDuplicateCampaign("");
+    setNewCampaignName("");
+    setShowDuplicateCampaignBlock(false);
+    setFormStoreCatalogId(null);
     lastLoadedAdvertiserRef.current = null;
   }, [selectedAdvertiser]);
 
@@ -695,6 +718,10 @@ export default function TikTokAds() {
     selectedAdGroup,
     duplicateAdGroup,
     newAdGroupName,
+    showDuplicateAdGroupBlock,
+    duplicateCampaign,
+    newCampaignName,
+    showDuplicateCampaignBlock,
     productName,
     productImageUrl,
     sellingPoints,
@@ -711,6 +738,10 @@ export default function TikTokAds() {
     selectedAdGroup,
     duplicateAdGroup,
     newAdGroupName,
+    showDuplicateAdGroupBlock,
+    duplicateCampaign,
+    newCampaignName,
+    showDuplicateCampaignBlock,
     productName,
     productImageUrl,
     sellingPoints,
@@ -733,6 +764,10 @@ export default function TikTokAds() {
     setSelectedAdGroup(Array.isArray(rawAdGroup) ? rawAdGroup : (rawAdGroup ? [rawAdGroup] : []));
     setDuplicateAdGroup(snapshot.duplicateAdGroup || "");
     setNewAdGroupName(snapshot.newAdGroupName || "");
+    setShowDuplicateAdGroupBlock(Boolean(snapshot.showDuplicateAdGroupBlock));
+    setDuplicateCampaign(snapshot.duplicateCampaign || "");
+    setNewCampaignName(snapshot.newCampaignName || "");
+    setShowDuplicateCampaignBlock(Boolean(snapshot.showDuplicateCampaignBlock));
     setProductName(snapshot.productName || "");
     setProductImageUrl(snapshot.productImageUrl || "");
     setSellingPoints(snapshot.sellingPoints || []);
@@ -1024,6 +1059,10 @@ export default function TikTokAds() {
               selectedAdGroup={selectedAdGroup} setSelectedAdGroup={setSelectedAdGroup}
               duplicateAdGroup={duplicateAdGroup} setDuplicateAdGroup={setDuplicateAdGroup}
               newAdGroupName={newAdGroupName} setNewAdGroupName={setNewAdGroupName}
+              showDuplicateAdGroupBlock={showDuplicateAdGroupBlock} setShowDuplicateAdGroupBlock={setShowDuplicateAdGroupBlock}
+              duplicateCampaign={duplicateCampaign} setDuplicateCampaign={setDuplicateCampaign}
+              newCampaignName={newCampaignName} setNewCampaignName={setNewCampaignName}
+              showDuplicateCampaignBlock={showDuplicateCampaignBlock} setShowDuplicateCampaignBlock={setShowDuplicateCampaignBlock}
               identities={identities} setIdentities={setIdentities}
               files={files} setFiles={setFiles}
 
