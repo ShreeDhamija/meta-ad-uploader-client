@@ -724,7 +724,6 @@ export default function TikTokAdCreationForm({
   const [jobId, setJobId] = useState(null)
   const [progress, setProgress] = useState(0)
   const [progressMessage, setProgressMessage] = useState('')
-  const [status, setStatus] = useState('idle')
   const {
     progress: trackedProgress,
     message: trackedMessage,
@@ -743,6 +742,7 @@ export default function TikTokAdCreationForm({
   const [currentAbortController, setCurrentAbortController] = useState(null)
   const [isQueueingJobs, setIsQueueingJobs] = useState(false)
   const currentJobIdRef = useRef(null)
+  const isInPromisePhase = useRef(false)
   const [launchPaused, setLaunchPaused] = useState(false)
 
   const [liveProgress, setLiveProgress] = useState({
@@ -1742,6 +1742,7 @@ export default function TikTokAdCreationForm({
       }
 
       // Connect SSE tracking now that uploading is finished/skipped
+      isInPromisePhase.current = true;
       setJobId(jobToProcess.id);
       // Small delay to let SSE connect
       await new Promise(resolve => setTimeout(resolve, 100));
@@ -2135,7 +2136,6 @@ export default function TikTokAdCreationForm({
 
     } catch (err) {
       if (err.name === 'AbortError' || signal.aborted) {
-        setStatus('cancelled')
         updateProgress(100, 'Job cancelled.')
 
         await fetch(`${API_BASE_URL}/auth/cancel-job`, {
@@ -2144,7 +2144,6 @@ export default function TikTokAdCreationForm({
           body: JSON.stringify({ jobId: jobToProcess.id })
         }).catch(() => { })
       } else {
-        setStatus('error')
         updateProgress(100, `Job Failed: ${err.message}`)
 
         await fetch(`${API_BASE_URL}/auth/complete-job`, {
@@ -2163,6 +2162,7 @@ export default function TikTokAdCreationForm({
       }
       throw err;
     } finally {
+      isInPromisePhase.current = false
       setCurrentAbortController(null)
       currentJobIdRef.current = null
     }
@@ -2194,7 +2194,7 @@ export default function TikTokAdCreationForm({
 
     handleCreateAdRef.current(jobToProcess).catch(err => {
       // Don't treat cancellation as a critical error
-      if (err.name === 'AbortError' || axios.isCancel(err) || signal?.aborted) {
+      if (err.name === 'AbortError' || axios.isCancel(err)) {
         const cancelledJob = {
           id: jobToProcess.id,
           message: 'Job cancelled. Some Ads might still have been made.',
@@ -2235,7 +2235,7 @@ export default function TikTokAdCreationForm({
       setIsProcessingQueue(false)
       setIsCancelling(false)
     })
-  }, [jobQueue, isProcessingQueue])
+  }, [jobQueue, isProcessingQueue, resetProgress])
 
   // Sync SSE progress to local progress state
   useEffect(() => {
@@ -2287,6 +2287,9 @@ export default function TikTokAdCreationForm({
         completedJob.message = `${successCount} Ad${successCount !== 1 ? 's' : ''} successfully posted to ${currentJob.adGroupDisplayName} (with ${failureCount} failure${failureCount !== 1 ? 's' : ''})`
         toast.warning(completedJob.message)
       } else if (trackedStatus === 'cancelled') {
+        if (isInPromisePhase.current) {
+          return // Let the promise .catch() handler handle it
+        }
         completedJob.status = 'cancelled'
         completedJob.message = trackedMessage || 'Job cancelled.'
       } else if (trackedStatus === 'job-not-found') {
