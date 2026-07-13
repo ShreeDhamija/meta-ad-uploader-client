@@ -578,6 +578,10 @@ export default function TikTokAdCreationForm({
   formStoreProductName, setFormStoreProductName,
   formStoreBcId, setFormStoreBcId,
   formStoreCatalogId, setFormStoreCatalogId,
+  formCatalogId, setFormCatalogId,
+  formCatalogName, setFormCatalogName,
+  formProductId, setFormProductId,
+  formProductName, setFormProductName,
   selectedFiles,
   setSelectedFiles,
   onBeforeMediaClear
@@ -753,11 +757,6 @@ export default function TikTokAdCreationForm({
     errors: []
   })
   const [preserveMedia, setPreserveMedia] = useState(false)
-
-  const [formCatalogId, setFormCatalogId] = useState(null)
-  const [formCatalogName, setFormCatalogName] = useState(null)
-  const [formProductId, setFormProductId] = useState([])
-  const [formProductName, setFormProductName] = useState(null)
 
   const [formCatalogs, setFormCatalogs] = useState([])
   const [formCatalogProducts, setFormCatalogProducts] = useState([])

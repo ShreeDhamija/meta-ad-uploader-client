@@ -128,6 +128,10 @@ export default function TikTokAds() {
   const [formStoreProductName, setFormStoreProductName] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.formStoreProductName : null) || null)
   const [formStoreBcId, setFormStoreBcId] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.formStoreBcId : null) || null)
   const [formStoreCatalogId, setFormStoreCatalogId] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.formStoreCatalogId : null) || null)
+  const [formCatalogId, setFormCatalogId] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.formCatalogId : null) || null)
+  const [formCatalogName, setFormCatalogName] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.formCatalogName : null) || null)
+  const [formProductId, setFormProductId] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.formProductId : null) || [])
+  const [formProductName, setFormProductName] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.formProductName : null) || null)
   const [sparkAuthCodes, setSparkAuthCodes] = useState([''])
   const [urlMode, setUrlMode] = useState('WEBSITE')
   const [adType, setAdType] = useState('NORMAL')
@@ -563,6 +567,10 @@ export default function TikTokAds() {
       formStoreProductName,
       formStoreBcId,
       formStoreCatalogId,
+      formCatalogId,
+      formCatalogName,
+      formProductId,
+      formProductName,
       duplicateAdGroup,
       newAdGroupName,
       showDuplicateAdGroupBlock,
@@ -586,6 +594,10 @@ export default function TikTokAds() {
     formStoreProductName,
     formStoreBcId,
     formStoreCatalogId,
+    formCatalogId,
+    formCatalogName,
+    formProductId,
+    formProductName,
     duplicateAdGroup,
     newAdGroupName,
     showDuplicateAdGroupBlock,
@@ -655,13 +667,16 @@ export default function TikTokAds() {
     setFormStoreProductName(null);
     setFormStoreBcId(null);
     setFormStoreCatalogId(null);
+    setFormCatalogId(null);
+    setFormCatalogName(null);
+    setFormProductId([]);
+    setFormProductName(null);
     setDuplicateAdGroup("");
     setNewAdGroupName("");
     setShowDuplicateAdGroupBlock(false);
     setDuplicateCampaign("");
     setNewCampaignName("");
     setShowDuplicateCampaignBlock(false);
-    setFormStoreCatalogId(null);
     lastLoadedAdvertiserRef.current = null;
   }, [selectedAdvertiser]);
 
@@ -726,6 +741,16 @@ export default function TikTokAds() {
     productImageUrl,
     sellingPoints,
     selectedSavedProductId,
+    formCatalogId,
+    formCatalogName,
+    formProductId: Array.isArray(formProductId) ? [...formProductId] : formProductId,
+    formProductName,
+    formStoreId,
+    formStoreName,
+    formStoreProductId: Array.isArray(formStoreProductId) ? [...formStoreProductId] : formStoreProductId,
+    formStoreProductName,
+    formStoreBcId,
+    formStoreCatalogId,
   }), [
     adName,
     adTexts,
@@ -746,6 +771,16 @@ export default function TikTokAds() {
     productImageUrl,
     sellingPoints,
     selectedSavedProductId,
+    formCatalogId,
+    formCatalogName,
+    formProductId,
+    formProductName,
+    formStoreId,
+    formStoreName,
+    formStoreProductId,
+    formStoreProductName,
+    formStoreBcId,
+    formStoreCatalogId,
   ]);
 
   const hydrateFromSnapshot = useCallback((snapshot) => {
@@ -772,6 +807,18 @@ export default function TikTokAds() {
     setProductImageUrl(snapshot.productImageUrl || "");
     setSellingPoints(snapshot.sellingPoints || []);
     setSelectedSavedProductId(snapshot.selectedSavedProductId || "");
+    setFormCatalogId(snapshot.formCatalogId ?? null);
+    setFormCatalogName(snapshot.formCatalogName ?? null);
+    const rawProductId = snapshot.formProductId;
+    setFormProductId(Array.isArray(rawProductId) ? rawProductId : (rawProductId ? [rawProductId] : []));
+    setFormProductName(snapshot.formProductName ?? null);
+    setFormStoreId(snapshot.formStoreId ?? null);
+    setFormStoreName(snapshot.formStoreName ?? null);
+    const rawStoreProductId = snapshot.formStoreProductId;
+    setFormStoreProductId(Array.isArray(rawStoreProductId) ? rawStoreProductId : (rawStoreProductId ? [rawStoreProductId] : []));
+    setFormStoreProductName(snapshot.formStoreProductName ?? null);
+    setFormStoreBcId(snapshot.formStoreBcId ?? null);
+    setFormStoreCatalogId(snapshot.formStoreCatalogId ?? null);
   }, []);
 
   const switchVariant = useCallback((targetId) => {
@@ -1047,6 +1094,10 @@ export default function TikTokAds() {
               formStoreProductName={formStoreProductName} setFormStoreProductName={setFormStoreProductName}
               formStoreBcId={formStoreBcId} setFormStoreBcId={setFormStoreBcId}
               formStoreCatalogId={formStoreCatalogId} setFormStoreCatalogId={setFormStoreCatalogId}
+              formCatalogId={formCatalogId} setFormCatalogId={setFormCatalogId}
+              formCatalogName={formCatalogName} setFormCatalogName={setFormCatalogName}
+              formProductId={formProductId} setFormProductId={setFormProductId}
+              formProductName={formProductName} setFormProductName={setFormProductName}
               sparkAuthCodes={sparkAuthCodes} setSparkAuthCodes={setSparkAuthCodes}
               urlMode={urlMode} setUrlMode={setUrlMode}
               adType={adType} setAdType={setAdType}
