@@ -9885,7 +9885,7 @@ export default function AdCreationForm({
               </div>
             </div>
 
-            <div className="mt-4 rounded-2xl bg-gray-50 p-5 text-sm leading-6 text-gray-700">
+            <div className="mt-4 text-left text-sm leading-6 text-gray-700">
               <ul className="list-disc space-y-2 pl-5">
                 <li>Each row becomes a new form variant.</li>
                 <li>Columns Supported: Campaign Name, Ad Set Name, Ad Name, Facebook Page, URL, Google Drive Link, Primary Text and Headlines 1 through 5.</li>
@@ -9906,7 +9906,7 @@ export default function AdCreationForm({
               </Button>
               <Button
                 type="button"
-                className="h-12 w-full rounded-2xl bg-blue-600 text-white hover:bg-blue-700"
+                className="h-12 w-full rounded-2xl bg-zinc-900 text-white hover:bg-zinc-800"
                 disabled={isImportingCsv}
                 onClick={() => void importCsvFile(pendingCsvFile)}
               >
