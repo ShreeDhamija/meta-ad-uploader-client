@@ -3048,6 +3048,30 @@ export default function TikTokAdCreationForm({
       }
 
       if (data.new_campaign_id) {
+        // Cache the mapped ad groups for the new campaign so that when selectedCampaign updates,
+        // it reads from cache immediately instead of hitting the empty API response due to API lag.
+        const sourceAdGroups = adGroups.filter(ag => ag.campaignId === campaignId || ag.campaign_id === campaignId)
+        if (sourceAdGroups.length > 0 && data.mapping?.adgroups) {
+          const mappedNewAdGroups = sourceAdGroups.map(ag => {
+            const newId = data.mapping.adgroups[ag.adgroup_id]
+            if (!newId) return null
+            return {
+              ...ag,
+              adgroup_id: newId,
+              campaignId: data.new_campaign_id,
+              campaign_id: data.new_campaign_id,
+              campaignName: duplicatedName,
+              operation_status: "DISABLE",
+              secondary_status: "DISABLE"
+            }
+          }).filter(Boolean)
+
+          if (mappedNewAdGroups.length > 0) {
+            writeCache(`tiktok_adgroups_${data.new_campaign_id}`, mappedNewAdGroups)
+            setAdGroups(mappedNewAdGroups)
+          }
+        }
+
         setCampaigns(prev => {
           if (prev.some(c => c.campaign_id === data.new_campaign_id)) return prev;
           return [newCampaignObj, ...prev];
@@ -3076,7 +3100,7 @@ export default function TikTokAdCreationForm({
     } finally {
       setIsDuplicating(false)
     }
-  }, [selectedAdvertiser, campaigns, duplicateIncludeAds, newCampaignName, tiktokFetch, setCampaigns, setSelectedCampaign, setSelectedAdGroup])
+  }, [selectedAdvertiser, campaigns, duplicateIncludeAds, newCampaignName, tiktokFetch, setCampaigns, setSelectedCampaign, setSelectedAdGroup, adGroups, setAdGroups])
 
   const getMimeFromName = (name) => {
     const ext = name.split('.').pop().toLowerCase()
