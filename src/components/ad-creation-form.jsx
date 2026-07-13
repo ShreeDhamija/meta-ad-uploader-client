@@ -39,6 +39,7 @@ import ConfigIcon from '@/assets/icons/plus.svg?react';
 import FacebookIcon from '@/assets/icons/fb.svg?react';
 import InstagramIcon from '@/assets/icons/ig.svg?react';
 import DropboxIcon from '@/assets/Dropbox.png';
+import CsvFileIcon from '@/assets/csv-file.png';
 import FrameIcon from '@/assets/icons/Frame.webp';
 import DesktopIcon from '@/assets/Desktop.webp';
 import MetaIcon from '@/assets/icons/MetaTag.svg';
@@ -112,6 +113,13 @@ const UPLOAD_SOURCE_OPTIONS = [
     icon: DesktopIcon,
     fullLabel: 'Local PC',
     compactLabel: 'Local PC',
+  },
+  {
+    id: 'csv',
+    name: 'CSV Sheet',
+    icon: CsvFileIcon,
+    fullLabel: 'Import CSV Sheet',
+    compactLabel: 'CSV Sheet',
   },
   {
     id: 'drive',
@@ -1146,7 +1154,9 @@ export default function AdCreationForm({
   const [uploadSourcesDirty, setUploadSourcesDirty] = useState(false);
   const [uploadSourcesOpen, setUploadSourcesOpen] = useState(false);
   const [pendingCsvFile, setPendingCsvFile] = useState(null);
+  const [showCsvImportGuide, setShowCsvImportGuide] = useState(false);
   const [isImportingCsv, setIsImportingCsv] = useState(false);
+  const csvFileInputRef = useRef(null);
   const downloadCsvTemplate = useCallback(async () => {
     const templateUrl = 'https://api.withblip.com/csv-variant-import-template.csv';
     try {
@@ -3057,8 +3067,49 @@ export default function AdCreationForm({
     } finally {
       setIsImportingCsv(false);
       setPendingCsvFile(null);
+      setShowCsvImportGuide(false);
     }
   }, [hasImportedCsv, isImportingCsv, onImportCsv, setHasImportedCsv]);
+
+  const handleCsvSelection = useCallback((file) => {
+    if (!file) return;
+    if (!file.name?.toLowerCase().endsWith('.csv') && file.type !== 'text/csv') {
+      toast.error('Please choose a CSV file');
+      return;
+    }
+    if (getCatalogueMediaCount() > 0 || importedPosts.length > 0) {
+      toast.error("Remove existing media before importing a CSV");
+      return;
+    }
+    if (!onImportCsv) {
+      toast.error("CSV import is not available right now");
+      return;
+    }
+
+    if (hasImportedCsv) {
+      void importCsvFile(file);
+    } else {
+      setPendingCsvFile(file);
+    }
+  }, [getCatalogueMediaCount, hasImportedCsv, importCsvFile, importedPosts.length, onImportCsv]);
+
+  const handleCsvSourceClick = useCallback(() => {
+    if (isImportingCsv) return;
+    // The dedicated CSV source introduces the flow before the native picker so
+    // first-time users know what their sheet needs before choosing a file.
+    if (!hasImportedCsv) {
+      setShowCsvImportGuide(true);
+      return;
+    }
+    csvFileInputRef.current?.click();
+  }, [hasImportedCsv, isImportingCsv]);
+
+  const handleCsvFilePickerChange = useCallback((event) => {
+    const file = event.target.files?.[0];
+    // Allow selecting the same file again after cancelling or completing an import.
+    event.target.value = '';
+    handleCsvSelection(file);
+  }, [handleCsvSelection]);
 
   const onDrop = useCallback((acceptedFiles) => {
     const csvFiles = acceptedFiles.filter((file) =>
@@ -3071,20 +3122,7 @@ export default function AdCreationForm({
         toast.error("Choose one CSV by itself, without media files");
         return;
       }
-      if (getCatalogueMediaCount() > 0 || importedPosts.length > 0) {
-        toast.error("Remove existing media before importing a CSV");
-        return;
-      }
-      if (!onImportCsv) {
-        toast.error("CSV import is not available right now");
-        return;
-      }
-
-      if (hasImportedCsv) {
-        void importCsvFile(csvFiles[0]);
-      } else {
-        setPendingCsvFile(csvFiles[0]);
-      }
+      handleCsvSelection(csvFiles[0]);
       return;
     }
 
@@ -3105,7 +3143,7 @@ export default function AdCreationForm({
       ...prev,
       ...catalogueImageFiles.map(withUniqueId)
     ]);
-  }, [filterCatalogueImageFiles, getCatalogueMediaCount, hasImportedCsv, importCsvFile, importedPosts.length, onImportCsv]);
+  }, [filterCatalogueImageFiles, handleCsvSelection]);
 
 
 
@@ -9396,6 +9434,13 @@ export default function AdCreationForm({
 
                     return (
                       <div className="mb-2 space-y-1">
+                        <input
+                          ref={csvFileInputRef}
+                          type="file"
+                          accept=".csv,text/csv"
+                          className="hidden"
+                          onChange={handleCsvFilePickerChange}
+                        />
                         <div className="flex gap-2">
                           {rowSources.map((id) => {
                             const src = UPLOAD_SOURCE_OPTIONS.find((o) => o.id === id);
@@ -9422,7 +9467,8 @@ export default function AdCreationForm({
                             }
 
                             const clickHandler =
-                              id === 'drive' ? handleDriveClick :
+                              id === 'csv' ? handleCsvSourceClick :
+                                id === 'drive' ? handleDriveClick :
                                 id === 'dropbox' ? handleDropboxClick :
                                   id === 'frameio' ? handleFrameioClick :
                                     () => { };
@@ -9882,11 +9928,14 @@ export default function AdCreationForm({
           </div>
         </div>
       )}
-      {pendingCsvFile && (
+      {(showCsvImportGuide || pendingCsvFile) && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
           <div
             className="absolute inset-0 bg-black/35"
-            onClick={() => setPendingCsvFile(null)}
+            onClick={() => {
+              setPendingCsvFile(null);
+              setShowCsvImportGuide(false);
+            }}
           />
           <div
             className="relative w-[min(34rem,calc(100vw-2rem))] rounded-[28px] border border-gray-200 bg-white p-6 shadow-xl"
@@ -9897,7 +9946,10 @@ export default function AdCreationForm({
               type="button"
               aria-label="Close CSV import guide"
               className="absolute right-4 top-4 rounded-full p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-black"
-              onClick={() => setPendingCsvFile(null)}
+              onClick={() => {
+                setPendingCsvFile(null);
+                setShowCsvImportGuide(false);
+              }}
             >
               <X className="h-4 w-4" />
             </button>
@@ -9920,7 +9972,9 @@ export default function AdCreationForm({
               </ul>
             </div>
 
-            <p className="mt-3 truncate text-xs text-gray-500">Selected: {pendingCsvFile.name}</p>
+            {pendingCsvFile && (
+              <p className="mt-3 truncate text-xs text-gray-500">Selected: {pendingCsvFile.name}</p>
+            )}
 
             <div className="mt-5 grid grid-cols-2 gap-3">
               <Button
@@ -9934,7 +9988,13 @@ export default function AdCreationForm({
                 type="button"
                 className="h-12 w-full rounded-2xl bg-zinc-900 text-white hover:bg-zinc-800"
                 disabled={isImportingCsv}
-                onClick={() => void importCsvFile(pendingCsvFile)}
+                onClick={() => {
+                  if (pendingCsvFile) {
+                    void importCsvFile(pendingCsvFile);
+                  } else {
+                    csvFileInputRef.current?.click();
+                  }
+                }}
               >
                 {isImportingCsv && <Loader className="mr-2 h-4 w-4 animate-spin" />}
                 Import CSV
