@@ -1105,28 +1105,22 @@ export default function AdCreationForm({
     importedFiles.length
   ), [files.length, driveFiles.length, dropboxFiles.length, frameioFiles?.length, importedFiles.length]);
 
-  const filterCatalogueCouponFiles = useCallback((incomingFiles, existingCount = getCatalogueMediaCount()) => {
+  const filterCatalogueImageFiles = useCallback((incomingFiles) => {
     if (!isCatalogueAd) return incomingFiles;
 
     const incoming = Array.from(incomingFiles || []);
     const rejectedVideos = incoming.filter((file) => isVideoFile(file) || isGifFile(file));
     const rejectedNonImages = incoming.filter((file) => !isVideoFile(file) && !isGifFile(file) && !isImageFile(file));
     const imageFiles = incoming.filter((file) => isImageFile(file) && !isVideoFile(file) && !isGifFile(file));
-    const availableSlots = Math.max(0, 1 - existingCount);
-    const accepted = imageFiles.slice(0, availableSlots);
-
     if (rejectedVideos.length > 0) {
-      toast.error("Catalogue coupon cards require one static image. Videos and GIFs are not supported.");
+      toast.error("Catalogue ads support image files only. Videos and GIFs are not supported.");
     }
     if (rejectedNonImages.length > 0) {
-      toast.error("Catalogue coupon cards require an image file.");
-    }
-    if (imageFiles.length > accepted.length || existingCount >= 1) {
-      toast.error("Catalogue ads can use only one coupon image.");
+      toast.error("Catalogue ads support image files only.");
     }
 
-    return accepted;
-  }, [getCatalogueMediaCount, isCatalogueAd]);
+    return imageFiles;
+  }, [isCatalogueAd]);
   const renderErrorSupportLink = () => (
     <p className="mt-2 text-xs font-medium text-red-800">
       Confused by the error?{" "}
@@ -1471,7 +1465,14 @@ export default function AdCreationForm({
     if (!hasMediaInFormData(formData)) return 0;
 
     if (formData.adType === 'catalogue') {
-      return (formData.selectedAdSets?.length || 0) || (formData.duplicateAdSet ? 1 : 0);
+      const adSetCount = (formData.selectedAdSets?.length || 0) || (formData.duplicateAdSet ? 1 : 0);
+      const mediaCount =
+        (formData.files?.length || 0) +
+        (formData.driveFiles?.length || 0) +
+        (formData.dropboxFiles?.length || 0) +
+        (formData.frameioFiles?.length || 0) +
+        (formData.importedFiles?.filter((file) => file.type === 'image').length || 0);
+      return adSetCount * Math.max(mediaCount, 1);
     }
 
     const isDynamicAdSet = () => {
@@ -2644,7 +2645,7 @@ export default function AdCreationForm({
 
           setDriveFiles((prev) => [
             ...prev,
-            ...filterCatalogueCouponFiles(selected, getCatalogueMediaCount())
+            ...filterCatalogueImageFiles(selected)
           ]);
         }
 
@@ -2669,7 +2670,7 @@ export default function AdCreationForm({
     const picker = pickerBuilder.build();
     pickerInstanceRef.current = picker;
     picker.setVisible(true);
-  }, [setDriveFiles, setShowFolderInput, setFolderLinkValue, filterCatalogueCouponFiles, getCatalogueMediaCount]);
+  }, [setDriveFiles, setShowFolderInput, setFolderLinkValue, filterCatalogueImageFiles]);
 
 
 
@@ -2712,7 +2713,7 @@ export default function AdCreationForm({
           pickerThumbnail: data.thumbnailLink || null // Automatically hooks into our new thumbnail logic!
         };
 
-        const acceptedFiles = filterCatalogueCouponFiles([newFile], getCatalogueMediaCount());
+        const acceptedFiles = filterCatalogueImageFiles([newFile]);
         if (acceptedFiles.length === 0) return;
 
         setDriveFiles((prev) => [...prev, ...acceptedFiles]);
@@ -2747,8 +2748,7 @@ export default function AdCreationForm({
     setDriveFiles,
     setShowFolderInput,
     setFolderLinkValue,
-    filterCatalogueCouponFiles,
-    getCatalogueMediaCount
+    filterCatalogueImageFiles
   ]);
 
   const openPicker = useCallback((token) => {
@@ -2883,7 +2883,7 @@ export default function AdCreationForm({
 
         setDropboxFiles(prev => [
           ...prev,
-          ...filterCatalogueCouponFiles(dropboxFilesData, getCatalogueMediaCount())
+          ...filterCatalogueImageFiles(dropboxFilesData)
         ]);
       },
       cancel: () => {
@@ -2895,7 +2895,7 @@ export default function AdCreationForm({
       folderselect: false,
       sizeLimit: 1024 * 1024 * 1024
     });
-  }, [setDropboxFiles, filterCatalogueCouponFiles, getCatalogueMediaCount]);
+  }, [setDropboxFiles, filterCatalogueImageFiles]);
 
   const handleDropboxClick = useCallback(async () => {
     // Check if Dropbox SDK is loaded
@@ -3025,10 +3025,10 @@ export default function AdCreationForm({
     }));
     setFrameioFiles(prev => [
       ...prev,
-      ...filterCatalogueCouponFiles(mapped, getCatalogueMediaCount())
+      ...filterCatalogueImageFiles(mapped)
     ]);
     setFrameioPickerOpen(false);
-  }, [setFrameioFiles, filterCatalogueCouponFiles, getCatalogueMediaCount]);
+  }, [setFrameioFiles, filterCatalogueImageFiles]);
 
 
   // Dropzone logic
@@ -3092,13 +3092,13 @@ export default function AdCreationForm({
       toast.error("WebP and HEIC files are not supported by Facebook");
     }
 
-    const couponFiles = filterCatalogueCouponFiles(filteredFiles, getCatalogueMediaCount());
+    const catalogueImageFiles = filterCatalogueImageFiles(filteredFiles);
 
     setFiles(prev => [
       ...prev,
-      ...couponFiles.map(withUniqueId)
+      ...catalogueImageFiles.map(withUniqueId)
     ]);
-  }, [filterCatalogueCouponFiles, getCatalogueMediaCount, hasImportedCsv, importCsvFile, importedPosts.length, onImportCsv]);
+  }, [filterCatalogueImageFiles, getCatalogueMediaCount, hasImportedCsv, importCsvFile, importedPosts.length, onImportCsv]);
 
 
 
@@ -3106,7 +3106,7 @@ export default function AdCreationForm({
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    multiple: !isCatalogueAd,
+    multiple: true,
     accept: isCatalogueAd
       ? {
         "image/jpeg": [".jpg", ".jpeg"],
@@ -3827,9 +3827,7 @@ export default function AdCreationForm({
     campaignObjective.length > 0 &&
     campaignObjective.every((objective) => ["OUTCOME_SALES", "OUTCOME_TRAFFIC"].includes(objective));
   const showPhoneNumberField = areAllAdSetsPhoneCall();
-  const catalogueCouponMediaCount = files.length + driveFiles.length + dropboxFiles.length + (frameioFiles?.length || 0) + importedFiles.length;
-  const hasCatalogueInvalidCouponMedia = isCatalogueAd && (
-    catalogueCouponMediaCount > 1 ||
+  const hasCatalogueInvalidMedia = isCatalogueAd && (
     [...files, ...driveFiles, ...dropboxFiles, ...(frameioFiles || []), ...importedFiles].some((file) => isVideoFile(file) || isGifFile(file) || !isImageFile(file))
   );
   const requiresDestinationValue = importedPosts.length === 0 && !isDuplicationMode && !isCatalogueAd;
@@ -4253,13 +4251,9 @@ export default function AdCreationForm({
 
     if (isCatalogueJob) {
       const catalogueMedia = [...files, ...driveFiles, ...dropboxFiles, ...(frameioFiles || []), ...(importedFiles || [])];
-      if (catalogueMedia.length > 1) {
-        toast.error("Catalogue ads can use only one coupon image");
-        throw new Error("Catalogue ads can use only one coupon image");
-      }
       if (catalogueMedia.some((file) => isVideoFile(file) || isGifFile(file) || !isImageFile(file))) {
-        toast.error("Catalogue coupon cards require one static image. Videos and GIFs are not supported.");
-        throw new Error("Catalogue coupon cards require one static image. Videos and GIFs are not supported.");
+        toast.error("Catalogue ads support image files only. Videos and GIFs are not supported.");
+        throw new Error("Catalogue ads support image files only. Videos and GIFs are not supported.");
       }
     }
 
@@ -5523,54 +5517,68 @@ export default function AdCreationForm({
 
       if (isCatalogueJob) {
         const adSetIdsToUse = [...dynamicAdSetIds, ...nonDynamicAdSetIds];
+        const catalogueMedia = [
+          ...files.map((file) => ({ source: 'local', file })),
+          ...driveFiles.map((file) => ({ source: 'drive', file })),
+          ...dropboxFiles.map((file) => ({ source: 'dropbox', file })),
+          ...(frameioFiles || []).map((file) => ({ source: 'frameio', file })),
+          ...importedFiles
+            .filter((file) => file.type === 'image')
+            .map((file) => ({ source: 'meta', file })),
+        ];
+        const catalogueAdsToCreate = catalogueMedia.length > 0 ? catalogueMedia : [null];
+        let catalogueAdIndex = 0;
 
-        adSetIdsToUse.forEach((adSetId, adSetIndex) => {
+        adSetIdsToUse.forEach((adSetId) => {
           const productSetId = getJobAdSetProductSetId(adSetId) || (duplicateAdSet ? getJobAdSetProductSetId(duplicateAdSet) : null);
           if (!productSetId) {
             return;
           }
 
-          const formData = new FormData();
-          appendCommonFields(formData, {
-            adName: computeAdNameFromFormula(null, adSetIndex, link[0], jobData.formData.adNameFormulaV2, adType),
-            headlinesJSON: commonPrecomputed.headlinesJSON,
-            descriptionsJSON: commonPrecomputed.descriptionsJSON,
-            messagesJSON: commonPrecomputed.messagesJSON,
-            selectedAdAccount,
-            adSetId,
-            pageId,
-            instagramAccountId,
-            linkJSON: commonPrecomputed.linkJSON,
-            phoneNumber,
-            usePhoneNumberField: false,
-            cta,
-            launchPaused,
-            jobId: frontendJobId,
-            selectedForm,
-            isPartnershipAd,
-            partnerIgAccountId,
-            partnerFbPageId,
-            partnershipIdentityMode,
-            partnershipPrimaryIdentity,
-            adScheduleStartTime,
-            adScheduleEndTime,
+          catalogueAdsToCreate.forEach((media) => {
+            const formData = new FormData();
+            appendCommonFields(formData, {
+              adName: computeAdNameFromFormula(media?.file || null, catalogueAdIndex, link[0], jobData.formData.adNameFormulaV2, adType),
+              headlinesJSON: commonPrecomputed.headlinesJSON,
+              descriptionsJSON: commonPrecomputed.descriptionsJSON,
+              messagesJSON: commonPrecomputed.messagesJSON,
+              selectedAdAccount,
+              adSetId,
+              pageId,
+              instagramAccountId,
+              linkJSON: commonPrecomputed.linkJSON,
+              phoneNumber,
+              usePhoneNumberField: false,
+              cta,
+              launchPaused,
+              jobId: frontendJobId,
+              selectedForm,
+              isPartnershipAd,
+              partnerIgAccountId,
+              partnerFbPageId,
+              partnershipIdentityMode,
+              partnershipPrimaryIdentity,
+              adScheduleStartTime,
+              adScheduleEndTime,
+            });
+            formData.append("adType", "catalogue");
+            formData.append("productSetId", productSetId);
+
+            if (media?.source === 'local') {
+              appendSingleImageFile(formData, { file: media.file, thumbnail: null });
+            } else if (media?.source === 'drive') {
+              appendSingleDriveFile(formData, media.file);
+            } else if (media?.source === 'dropbox') {
+              appendSingleDropboxFile(formData, media.file);
+            } else if (media?.source === 'frameio') {
+              appendSingleFrameioFile(formData, media.file);
+            } else if (media?.source === 'meta') {
+              appendMetaImageFile(formData, media.file);
+            }
+
+            queueCreateAdPromise(formData, { fileName: media?.file?.name || "Catalogue Ad" });
+            catalogueAdIndex += 1;
           });
-          formData.append("adType", "catalogue");
-          formData.append("productSetId", productSetId);
-
-          if (files[0]) {
-            appendSingleImageFile(formData, { file: files[0], thumbnail: null });
-          } else if (driveFiles[0]) {
-            appendSingleDriveFile(formData, driveFiles[0]);
-          } else if (dropboxFiles[0]) {
-            appendSingleDropboxFile(formData, dropboxFiles[0]);
-          } else if (frameioFiles[0]) {
-            appendSingleFrameioFile(formData, frameioFiles[0]);
-          } else if (importedFiles[0]?.type === 'image') {
-            appendMetaImageFile(formData, importedFiles[0]);
-          }
-
-          queueCreateAdPromise(formData, { fileName: "Catalogue Ad" });
         });
       }
 
@@ -6915,7 +6923,7 @@ export default function AdCreationForm({
     ? (
       !isLoggedIn ||
       (!isCatalogueAd && files.length === 0 && driveFiles.length === 0 && dropboxFiles.length === 0 && frameioFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0 && selectedIgOrganicPosts.length === 0) ||
-      hasCatalogueInvalidCouponMedia ||
+      hasCatalogueInvalidMedia ||
       (showProductExtensionSelector && !productExtensionProductSetId) ||
       (selectedFiles.size > 0) ||
       (!isCarouselAd && hasDuplicates)
@@ -6927,7 +6935,7 @@ export default function AdCreationForm({
       (adType === 'carousel' && (files.length + driveFiles.length + importedFiles.length + dropboxFiles.length + frameioFiles.length) < 2) ||
       (isFlexLikeAdType && fileGroups.length === 0 && (files.length + driveFiles.length + importedFiles.length + dropboxFiles.length + frameioFiles.length) > 10) ||
       (isCatalogueAd && !hasCatalogueEligibleAdSets) ||
-      hasCatalogueInvalidCouponMedia ||
+      hasCatalogueInvalidMedia ||
       (showShopDestinationSelector && !selectedShopDestination) ||
       (showProductExtensionSelector && !productExtensionProductSetId) ||
       isMissingDestinationValue ||
@@ -8857,22 +8865,22 @@ export default function AdCreationForm({
                           <span className="font-semibold">Please add country code as well</span>
                         </>
                       ) : isCatalogueAd ? (
-                        "Optional. Use {{product.url}} if you want the product feed URL."
+                        "Optional destination URL for the catalogue creative."
                       ) : (
                         "Your UTMs will be auto applied from Preferences"
                       )}
                     </p>
 
                     {isCatalogueAd ? (
-                      <CatalogueVariableField
+                      <Input
                         type="text"
                         value={link[0] || ""}
-                        onValueChange={(nextValue) => {
-                          setCustomLink(nextValue);
-                          setLink([nextValue]);
+                        onChange={(event) => {
+                          setCustomLink(event.target.value);
+                          setLink([event.target.value]);
                         }}
                         className={cn("w-full", formInputChrome)}
-                        placeholder="https://example.com or {{product.url}}"
+                        placeholder="https://example.com"
                         disabled={!isLoggedIn}
                       />
                     ) : showPhoneNumberField ? (
@@ -9230,7 +9238,7 @@ export default function AdCreationForm({
                       <Label className="block">Upload Media</Label>
                       {isCatalogueAd && (
                         <p className="mt-1 text-xs text-gray-500">
-                          Optional: add one static image to use as the first coupon card.
+                          Optional: add static images. Each image creates a separate catalogue ad.
                         </p>
                       )}
                     </div>
@@ -9552,9 +9560,9 @@ export default function AdCreationForm({
               </div>
             )}
 
-            {hasCatalogueInvalidCouponMedia && (
+            {hasCatalogueInvalidMedia && (
               <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
-                Catalogue ads can include at most one static coupon image. Remove videos, GIFs, or extra files before publishing.
+                Catalogue ads support image files only. Remove videos, GIFs, or unsupported files before publishing.
               </div>
             )}
 
