@@ -318,8 +318,7 @@ export async function importVariantsFromCsv(file, ctx) {
     parsed = await new Promise((resolve, reject) => {
       Papa.parse(file, { header: true, skipEmptyLines: true, complete: resolve, error: reject });
     });
-  } catch (err) {
-    console.error("CSV parse error:", err);
+  } catch {
     toast.error("Could not parse CSV file");
     return;
   }
@@ -358,6 +357,12 @@ export async function importVariantsFromCsv(file, ctx) {
   ];
   const campaignByCsvName = {};
   const adSetsByCampaignId = {};
+  const warnings = [];
+  const warningColumns = new Set();
+  const addWarning = (columnName, message) => {
+    warningColumns.add(columnName);
+    warnings.push(message);
+  };
 
   await Promise.all(
     uniqueCampaignNames.map(async (csvName) => {
@@ -375,8 +380,7 @@ export async function importVariantsFromCsv(file, ctx) {
           campaignId: match.item.id,
           campaignName: match.item.name,
         }));
-      } catch (err) {
-        console.error(`Failed to fetch ad sets for ${match.item.name}:`, err);
+      } catch {
         adSetsByCampaignId[match.item.id] = [];
       }
     })
@@ -387,7 +391,6 @@ export async function importVariantsFromCsv(file, ctx) {
     ? await fetchGoogleAccessToken(apiBaseUrl)
     : null;
 
-  const warnings = [];
   const nextLetter = makeLetterAllocator(existingVariants);
 
   const newVariants = [];      // variants for rows 1..N (row 0 → Default)
@@ -419,7 +422,7 @@ export async function importVariantsFromCsv(file, ctx) {
       } else {
         snap.pageId = "";
         snap.instagramAccountId = "";
-        warnings.push(`Row ${rowNum}: Facebook Page "${fields.facebookPage}" not found`);
+        addWarning("Facebook Page", `Row ${rowNum}: Facebook Page "${fields.facebookPage}" not found`);
       }
     }
     if (fields.websiteUrl) {
@@ -445,7 +448,7 @@ export async function importVariantsFromCsv(file, ctx) {
             snap.selectedAdSets = [adsetMatch.item.id];
           } else {
             snap.selectedAdSets = [];
-            warnings.push(`Row ${rowNum}: ad set "${fields.adSetName}" not found in "${campaign.name}"`);
+            addWarning("Ad Set Name", `Row ${rowNum}: ad set "${fields.adSetName}" not found in "${campaign.name}"`);
           }
         } else if (baseAlreadyUsesCampaign) {
           const validAdSetIds = new Set(campaignAdSets.map((adSet) => adSet.id));
@@ -457,7 +460,7 @@ export async function importVariantsFromCsv(file, ctx) {
         snap.selectedCampaign = [];
         snap.selectedAdSets = [];
         snap.adSets = [];
-        warnings.push(`Row ${rowNum}: campaign "${fields.campaignName}" not found`);
+        addWarning("Campaign Name", `Row ${rowNum}: campaign "${fields.campaignName}" not found`);
       }
     } else if (fields.adSetName) {
       // With no campaign in the row, match against the campaign/ad-set context
@@ -467,7 +470,7 @@ export async function importVariantsFromCsv(file, ctx) {
         snap.selectedAdSets = [adsetMatch.item.id];
       } else {
         snap.selectedAdSets = [];
-        warnings.push(`Row ${rowNum}: ad set "${fields.adSetName}" not found in the selected campaign`);
+        addWarning("Ad Set Name", `Row ${rowNum}: ad set "${fields.adSetName}" not found in the selected campaign`);
       }
     }
 
@@ -476,15 +479,14 @@ export async function importVariantsFromCsv(file, ctx) {
 
     if (driveFileId) {
       if (!googleToken) {
-        warnings.push(`Row ${rowNum}: Google Drive not connected — file skipped`);
+        addWarning("Google Drive Link", `Row ${rowNum}: Google Drive not connected — file skipped`);
       } else {
         try {
           const driveFile = await fetchDriveFileMeta(driveFileId, googleToken);
           newDriveFiles.push(driveFile);
           fileVariantAssignments[driveFile.id] = variantId;
-        } catch (err) {
-          console.error(`Row ${rowNum} Drive fetch failed:`, err);
-          warnings.push(`Row ${rowNum}: couldn't fetch Drive file (check sharing/permissions)`);
+        } catch {
+          addWarning("Google Drive Link", `Row ${rowNum}: couldn't fetch Drive file (check sharing/permissions)`);
         }
       }
     }
@@ -526,9 +528,8 @@ export async function importVariantsFromCsv(file, ctx) {
   );
 
   if (warnings.length > 0) {
-    console.warn("CSV import warnings:\n" + warnings.join("\n"));
     toast.error(
-      `${warnings.length} item${warnings.length !== 1 ? "s" : ""} need attention — see console for details`,
+      `Check ${Array.from(warningColumns).join(", ")} in your CSV`,
       { duration: 7000 }
     );
   }
