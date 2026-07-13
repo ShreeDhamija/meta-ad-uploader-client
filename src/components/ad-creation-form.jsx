@@ -2518,6 +2518,13 @@ export default function AdCreationForm({
     }
   }, [isCarouselAd, descriptions]);
 
+  useEffect(() => {
+    if (!isCatalogueAd) return;
+    if (messages.length > 1) setMessages([messages[0] || ""]);
+    if (headlines.length > 1) setHeadlines([headlines[0] || ""]);
+    if (descriptions.length > 1) setDescriptions([descriptions[0] || ""]);
+  }, [descriptions, headlines, isCatalogueAd, messages, setDescriptions, setHeadlines, setMessages]);
+
 
 
   // Drive Picker setup
@@ -3830,6 +3837,9 @@ export default function AdCreationForm({
   const hasCatalogueInvalidMedia = isCatalogueAd && (
     [...files, ...driveFiles, ...dropboxFiles, ...(frameioFiles || []), ...importedFiles].some((file) => isVideoFile(file) || isGifFile(file) || !isImageFile(file))
   );
+  const hasCatalogueStaticCardVariableWarning = isCatalogueAd &&
+    getCatalogueMediaCount() > 0 &&
+    [...headlines, ...descriptions].some((value) => /\{\{[^}]+\}\}/.test(value || ""));
   const requiresDestinationValue = importedPosts.length === 0 && !isDuplicationMode && !isCatalogueAd;
   const isMissingDestinationValue = requiresDestinationValue && (
     showPhoneNumberField
@@ -8459,7 +8469,7 @@ export default function AdCreationForm({
                                   <p className="text-xs text-red-500 mt-1">Duplicate values can cause errors when making ads</p>
                                 )}
                               </div>
-                              {messages.length > 1 && !(isCarouselAd && applyTextToAllCards) && (
+                              {!isCatalogueAd && messages.length > 1 && !(isCarouselAd && applyTextToAllCards) && (
                                 <Button
                                   type="button"
                                   variant="ghost"
@@ -8474,7 +8484,7 @@ export default function AdCreationForm({
                               )}
                             </div>
                           ))}
-                          {messages.length < (isCarouselAd ? 10 : 5) && !(isCarouselAd && applyTextToAllCards) && (
+                          {!isCatalogueAd && messages.length < (isCarouselAd ? 10 : 5) && !(isCarouselAd && applyTextToAllCards) && (
                             <Button
                               type="button"
                               size="sm"
@@ -8576,7 +8586,7 @@ export default function AdCreationForm({
                                 <p className="text-xs text-red-500 mt-1">Duplicate values can cause errors when making ads</p>
                               )}
                             </div>
-                            {headlines.length > 1 && !(isCarouselAd && applyHeadlinesToAllCards) && (
+                            {!isCatalogueAd && headlines.length > 1 && !(isCarouselAd && applyHeadlinesToAllCards) && (
                               <Button
                                 type="button"
                                 variant="ghost"
@@ -8591,7 +8601,7 @@ export default function AdCreationForm({
                             )}
                           </div>
                         ))}
-                        {headlines.length < (isCarouselAd ? 10 : 5) && !(isCarouselAd && applyHeadlinesToAllCards) && (
+                        {!isCatalogueAd && headlines.length < (isCarouselAd ? 10 : 5) && !(isCarouselAd && applyHeadlinesToAllCards) && (
                           <Button
                             type="button"
                             size="sm"
@@ -8699,7 +8709,7 @@ export default function AdCreationForm({
                                         <p className="text-xs text-red-500 mt-1">Duplicate values can cause errors when making ads</p>
                                       )}
                                     </div>
-                                    {descriptions.length > 1 && (
+                                    {!isCatalogueAd && descriptions.length > 1 && (
                                       <Button
                                         type="button"
                                         variant="ghost"
@@ -8714,7 +8724,7 @@ export default function AdCreationForm({
                                   </div>
                                 )
                               })}
-                              {descriptions.length < 5 && (
+                              {!isCatalogueAd && descriptions.length < 5 && (
                                 isPlacementCustomizedSingleDescription ? (
                                   descriptions.length <= 1 ? (
                                     <TooltipProvider delayDuration={0}>
@@ -8766,6 +8776,11 @@ export default function AdCreationForm({
                       </div>
                     )}
 
+                    {hasCatalogueStaticCardVariableWarning && (
+                      <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                        Catalog variables in the headline or description work on product cards, but they will not resolve on the uploaded static card.
+                      </div>
+                    )}
 
                   </div>
                 ) : (
