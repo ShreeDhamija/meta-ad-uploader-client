@@ -2101,9 +2101,12 @@ export default function TikTokAdCreationForm({
         initialFailureCount: uploadErrors.length * (isDuplicatingAdGroupMode ? 1 : selectedAdGroup.length),
         initialErrorMessages: uploadErrors.map(e => ({ error: e.error, fileName: e.fileName })),
         adGroups: adGroupsPayload,
-        s3Urls: uploadedItems.map(item => item.s3Url).filter(Boolean)
+        s3Urls: uploadedItems.map(item => item.s3Url).filter(Boolean),
+        campaignId: selectedCampaign[0],
+        campaignName: campaignObj?.campaign_name || "Unknown Campaign"
       }
 
+      console.log(`[TikTok create-ads frontend] Campaign: "${createPayload.campaignName}" (ID: ${createPayload.campaignId}), CTA: [${createPayload.cta.join(", ")}]`);
       console.log("🔍 [TikTokAdCreationForm] Submitting create-ads request payload:", createPayload);
       console.log("📋 [TikTokAdCreationForm] Copyable JSON Payload:", JSON.stringify(createPayload, null, 2));
 
