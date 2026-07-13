@@ -1154,7 +1154,7 @@ export default function AdCreationForm({
   const [pendingCsvFile, setPendingCsvFile] = useState(null);
   const [isImportingCsv, setIsImportingCsv] = useState(false);
   const downloadCsvTemplate = useCallback(async () => {
-    const templateUrl = 'https://stagingapi.withblip.com/csv-variant-import-template.csv';
+    const templateUrl = 'https://api.withblip.com/csv-variant-import-template.csv';
     try {
       const response = await fetch(templateUrl);
       if (!response.ok) throw new Error(`Template download failed (${response.status})`);
