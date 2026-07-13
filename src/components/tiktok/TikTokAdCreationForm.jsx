@@ -1775,6 +1775,36 @@ export default function TikTokAdCreationForm({
           throw new Error(dupData.error || 'Ad group duplication failed')
         }
         adGroupIdsToSubmit = [dupData.copied_adgroup_id]
+
+        // Proactively add the newly duplicated ad group to local state and cache with ad_count = 0
+        const sourceAg = adGroups.find(ag => ag.adgroup_id === duplicateAdGroup)
+        if (sourceAg) {
+          const newAgObj = {
+            ...sourceAg,
+            adgroup_id: dupData.copied_adgroup_id,
+            adgroup_name: dupData.adgroup_name || newAdGroupName.trim(),
+            campaignId: selectedCampaign[0],
+            campaign_id: selectedCampaign[0],
+            campaignName: campaigns.find(c => c.campaign_id === selectedCampaign[0])?.campaign_name || sourceAg.campaignName,
+            ad_count: 0,
+            operation_status: "DISABLE",
+            secondary_status: "DISABLE"
+          }
+          if (setAdGroups) {
+            setAdGroups(prev => {
+              if (prev.some(ag => ag.adgroup_id === newAgObj.adgroup_id)) return prev;
+              return [newAgObj, ...prev];
+            })
+          }
+          const campId = selectedCampaign[0]
+          if (campId) {
+            const cacheKey = `tiktok_adgroups_${campId}`;
+            const cachedList = readCache(cacheKey) || [];
+            if (!cachedList.some(ag => ag.adgroup_id === newAgObj.adgroup_id)) {
+              writeCache(cacheKey, [newAgObj, ...cachedList]);
+            }
+          }
+        }
       }
 
       const adGroupsMap = {}
@@ -3061,7 +3091,8 @@ export default function TikTokAdCreationForm({
               campaign_id: data.new_campaign_id,
               campaignName: duplicatedName,
               operation_status: "DISABLE",
-              secondary_status: "DISABLE"
+              secondary_status: "DISABLE",
+              ad_count: 0
             }
           }).filter(Boolean)
 
