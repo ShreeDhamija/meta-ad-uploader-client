@@ -1157,6 +1157,7 @@ export default function AdCreationForm({
   const [showCsvImportGuide, setShowCsvImportGuide] = useState(false);
   const [isImportingCsv, setIsImportingCsv] = useState(false);
   const csvFileInputRef = useRef(null);
+  const importCsvAfterPickerRef = useRef(false);
   const downloadCsvTemplate = useCallback(async () => {
     const templateUrl = 'https://api.withblip.com/csv-variant-import-template.csv';
     try {
@@ -3103,10 +3104,16 @@ export default function AdCreationForm({
 
   const handleCsvFilePickerChange = useCallback((event) => {
     const file = event.target.files?.[0];
+    const importImmediately = importCsvAfterPickerRef.current;
+    importCsvAfterPickerRef.current = false;
     // Allow selecting the same file again after cancelling or completing an import.
     event.target.value = '';
+    if (importImmediately) {
+      if (file) void importCsvFile(file);
+      return;
+    }
     handleCsvSelection(file);
-  }, [handleCsvSelection]);
+  }, [handleCsvSelection, importCsvFile]);
 
   const onDrop = useCallback((acceptedFiles) => {
     const csvFiles = acceptedFiles.filter((file) =>
@@ -9990,6 +9997,8 @@ export default function AdCreationForm({
                   if (pendingCsvFile) {
                     void importCsvFile(pendingCsvFile);
                   } else {
+                    importCsvAfterPickerRef.current = true;
+                    setShowCsvImportGuide(false);
                     csvFileInputRef.current?.click();
                   }
                 }}
