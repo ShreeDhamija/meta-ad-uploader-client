@@ -1153,6 +1153,24 @@ export default function AdCreationForm({
   const [uploadSourcesOpen, setUploadSourcesOpen] = useState(false);
   const [pendingCsvFile, setPendingCsvFile] = useState(null);
   const [isImportingCsv, setIsImportingCsv] = useState(false);
+  const downloadCsvTemplate = useCallback(async () => {
+    const templateUrl = 'https://stagingapi.withblip.com/csv-variant-import-template.csv';
+    try {
+      const response = await fetch(templateUrl);
+      if (!response.ok) throw new Error(`Template download failed (${response.status})`);
+      const blobUrl = URL.createObjectURL(await response.blob());
+      const anchor = document.createElement('a');
+      anchor.href = blobUrl;
+      anchor.download = 'csv-variant-import-template.csv';
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      console.error('Failed to download CSV template:', error);
+      window.open(templateUrl, '_blank', 'noopener,noreferrer');
+    }
+  }, []);
   // Modal for "Get Top Ads For Flex" — only opened when adType === 'flexible'.
   // Imports selected ads' image hashes / video IDs into importedFiles, which
   // the existing flexible-ad launch path then bundles into asset_feed_spec.
@@ -1201,6 +1219,11 @@ export default function AdCreationForm({
   const [addDescriptions, setAddDescriptions] = useState(() =>
     (descriptions || []).some((description) => description !== "")
   );
+  useEffect(() => {
+    if ((descriptions || []).some((description) => description !== "")) {
+      setAddDescriptions(true);
+    }
+  }, [descriptions]);
   const showDescriptions = isCarouselAd || addDescriptions;
   const S3_UPLOAD_THRESHOLD = 1 * 1024 * 1024; // 40 MB
   const [leadgenForms, setLeadgenForms] = useState([]);
@@ -9847,40 +9870,43 @@ export default function AdCreationForm({
             style={{ animation: 'templateBtnIn 0.2s ease-out forwards' }}
             onClick={(e) => e.stopPropagation()}
           >
+            <button
+              type="button"
+              aria-label="Close CSV import guide"
+              className="absolute right-4 top-4 rounded-full p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-black"
+              onClick={() => setPendingCsvFile(null)}
+            >
+              <X className="h-4 w-4" />
+            </button>
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <FileText className="h-6 w-6 text-blue-600" />
-                <h3 className="text-lg font-semibold text-gray-900">Import ad variants from CSV</h3>
+                <h3 className="pr-10 text-lg font-semibold text-gray-900">Import ad variants from CSV</h3>
               </div>
-              <p className="text-sm text-gray-600">
-                Each non-empty row becomes one variant. The first row fills Default and every later row creates a new variant.
-              </p>
             </div>
 
-            <div className="mt-4 space-y-3 rounded-2xl bg-gray-50 p-4 text-sm text-gray-700">
-              <div>
-                <p className="font-semibold text-gray-900">Supported columns (all optional)</p>
-                <p>Campaign Name, Ad Set Name, Ad Name, Primary Text, Headline, Website URL, and a Google Drive file link in any column.</p>
-              </div>
-              <p className="text-xs text-gray-500">
-                Missing values inherit the current form, including its selected campaign and ad set. Column order and capitalization do not matter. Common singular/plural forms and minor header typos are accepted.
-              </p>
+            <div className="mt-4 rounded-2xl bg-gray-50 p-5 text-sm leading-6 text-gray-700">
+              <ul className="list-disc space-y-2 pl-5">
+                <li>Each row becomes a new form variant.</li>
+                <li>Columns Supported: Campaign Name, Ad Set Name, Ad Name, Facebook Page, URL, Google Drive Link, Primary Text and Headlines 1 through 5.</li>
+                <li>You can leave out Ad name and Facebook page if setup in preferences.</li>
+                <li>You can locally upload creatives and assign them to variants as well.</li>
+              </ul>
             </div>
 
             <p className="mt-3 truncate text-xs text-gray-500">Selected: {pendingCsvFile.name}</p>
 
-            <div className="mt-5 flex justify-end gap-2">
+            <div className="mt-5 grid grid-cols-2 gap-3">
               <Button
                 type="button"
-                variant="outline"
-                className="rounded-xl"
-                onClick={() => setPendingCsvFile(null)}
+                className="h-12 w-full rounded-2xl bg-gray-100 text-black shadow-none hover:bg-gray-200 hover:text-black"
+                onClick={() => void downloadCsvTemplate()}
               >
-                Cancel
+                Download Template
               </Button>
               <Button
                 type="button"
-                className="rounded-xl bg-blue-600 text-white hover:bg-blue-700"
+                className="h-12 w-full rounded-2xl bg-blue-600 text-white hover:bg-blue-700"
                 disabled={isImportingCsv}
                 onClick={() => void importCsvFile(pendingCsvFile)}
               >

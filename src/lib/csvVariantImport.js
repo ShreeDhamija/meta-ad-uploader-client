@@ -3,10 +3,10 @@
 // Parses a campaign/ad-set/copy CSV and turns each row into a "variant" snapshot
 // (the same shape Home.jsx captures for its variant tabs). Campaign and ad-set
 // NAMES from the CSV are fuzzy-matched to the real IDs in the selected ad
-// account; primary text / headline / links come straight from the row; Facebook
-// page, Instagram, CTA, UTMs and everything else are inherited from the current
-// form state (the base snapshot). Optionally, a Google Drive file link found in
-// any cell is fetched and auto-assigned to that row's variant.
+// account; copy, links and optional Facebook Page overrides come from the row;
+// Instagram, CTA, UTMs and everything else are inherited from the current form
+// state (the base snapshot). Optionally, a Google Drive file link found in any
+// cell is fetched and auto-assigned to that row's variant.
 //
 // Everything here is framework-agnostic: the orchestrator receives the React
 // state + setters it needs via `ctx`, so Home.jsx stays a thin wrapper.
@@ -85,6 +85,11 @@ function findHeaderKey(keys, candidates) {
   return fuzzyMatches[0].key;
 }
 
+function findExactHeaderKey(keys, candidates) {
+  const normalizedCandidates = new Set(candidates.map(normalizeHeader));
+  return keys.find((key) => normalizedCandidates.has(normalizeHeader(key))) || null;
+}
+
 // Find the closest item whose name matches `target`. Tries, in order: exact
 // normalised equality, unique containment either direction, then smallest edit
 // distance within a length-relative tolerance. Returns { item, exact } or null.
@@ -130,22 +135,50 @@ function readField(row, candidates) {
   return "";
 }
 
+function readNumberedFields(row, candidates, maxFields = 5) {
+  const keys = Object.keys(row);
+  const values = [];
+
+  for (let index = 1; index <= maxFields; index++) {
+    const numberedCandidates = candidates.flatMap((candidate) => [
+      `${candidate} ${index}`,
+      `${candidate} #${index}`,
+    ]);
+
+    const key = findExactHeaderKey(keys, numberedCandidates)
+      || (index === 1 ? findExactHeaderKey(keys, candidates) : null);
+    if (key != null && row[key] != null && String(row[key]).trim() !== "") {
+      values.push(String(row[key]).trim());
+    }
+  }
+
+  return values;
+}
+
 const CSV_COLUMNS = {
   campaignName: ["Campaign Name", "Campaign"],
   adSetName: ["Ad Set Name", "Ad Set", "Ad Sets", "Adset Name", "Adset"],
   adName: ["Ad Name", "Ad"],
   primaryText: ["Primary Text", "Primary", "Body", "Message"],
   headline: ["Headline", "Title"],
+  description: ["Description", "Descriptions"],
+  facebookPage: ["Facebook Page", "Facebook Page Name", "Page Name", "Page"],
   websiteUrl: ["Website URL", "Website", "Destination URL", "URL"],
 };
 
 export function extractRowFields(row) {
+  const primaryTexts = readNumberedFields(row, CSV_COLUMNS.primaryText);
+  const headlines = readNumberedFields(row, CSV_COLUMNS.headline);
+  const descriptions = readNumberedFields(row, CSV_COLUMNS.description);
+
   return {
     campaignName: readField(row, CSV_COLUMNS.campaignName),
     adSetName: readField(row, CSV_COLUMNS.adSetName),
     adName: readField(row, CSV_COLUMNS.adName),
-    primaryText: readField(row, CSV_COLUMNS.primaryText),
-    headline: readField(row, CSV_COLUMNS.headline),
+    primaryTexts,
+    headlines,
+    descriptions,
+    facebookPage: readField(row, CSV_COLUMNS.facebookPage),
     // The ad's destination. (The CSV's "Display Link" is an ad-account-level
     // setting, not a per-variant field, so it isn't imported here.)
     websiteUrl: readField(row, CSV_COLUMNS.websiteUrl),
@@ -233,7 +266,7 @@ function makeLetterAllocator(existingVariants) {
 }
 
 // ctx: {
-//   campaigns, selectedAdAccount, apiBaseUrl,
+//   campaigns, pages, selectedAdAccount, apiBaseUrl,
 //   captureCurrentSnapshot, cloneSnapshotValue, hydrateFromSnapshot, makeId,
 //   existingVariants,
 //   setVariants, setActiveVariantId, setFileVariantMap, setDriveFiles, toast,
@@ -241,6 +274,7 @@ function makeLetterAllocator(existingVariants) {
 export async function importVariantsFromCsv(file, ctx) {
   const {
     campaigns,
+    pages,
     selectedAdAccount,
     apiBaseUrl,
     captureCurrentSnapshot,
@@ -280,11 +314,13 @@ export async function importVariantsFromCsv(file, ctx) {
     .map((raw) => ({ fields: extractRowFields(raw), driveFileId: findDriveFileIdInRow(raw) }))
     .filter(
       ({ fields, driveFileId }) =>
-        fields.primaryText ||
-        fields.headline ||
+        fields.primaryTexts.length > 0 ||
+        fields.headlines.length > 0 ||
+        fields.descriptions.length > 0 ||
         fields.campaignName ||
         fields.adSetName ||
         fields.adName ||
+        fields.facebookPage ||
         fields.websiteUrl ||
         driveFileId
     );
@@ -350,9 +386,28 @@ export async function importVariantsFromCsv(file, ctx) {
     const rowNum = idx + 1;
     const snap = cloneSnapshotValue(baseSnapshot);
 
-    if (fields.primaryText) snap.messages = [fields.primaryText];
-    if (fields.headline) snap.headlines = [fields.headline];
-    if (fields.adName) snap.adName = fields.adName;
+    if (fields.primaryTexts.length > 0) snap.messages = fields.primaryTexts;
+    if (fields.headlines.length > 0) snap.headlines = fields.headlines;
+    if (fields.descriptions.length > 0) snap.descriptions = fields.descriptions;
+    if (fields.adName) {
+      snap.adName = fields.adName;
+      // The launch path derives names from this formula. A literal CSV value
+      // must replace the saved formula as well as the current preview value.
+      snap.adNameFormulaV2 = { rawInput: fields.adName };
+    }
+    if (fields.facebookPage) {
+      const pageMatch = (pages || []).find((page) => String(page.id) === fields.facebookPage)
+        || findClosestMatch(fields.facebookPage, pages || []);
+      const matchedPage = pageMatch?.item || pageMatch;
+      if (matchedPage) {
+        snap.pageId = matchedPage.id;
+        snap.instagramAccountId = matchedPage.instagramAccount?.id || "";
+      } else {
+        snap.pageId = "";
+        snap.instagramAccountId = "";
+        warnings.push(`Row ${rowNum}: Facebook Page "${fields.facebookPage}" not found`);
+      }
+    }
     if (fields.websiteUrl) {
       // Drive the website through the custom-link path so the exact CSV URL is
       // used (an arbitrary CSV URL won't necessarily be one of the account's

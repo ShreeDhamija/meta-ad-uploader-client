@@ -915,6 +915,7 @@ export default function Home() {
     const handleImportCsv = useCallback((file) => {
         return importVariantsFromCsv(file, {
             campaigns,
+            pages,
             selectedAdAccount,
             apiBaseUrl: API_BASE_URL,
             captureCurrentSnapshot,
@@ -928,7 +929,7 @@ export default function Home() {
             setDriveFiles,
             toast,
         });
-    }, [campaigns, selectedAdAccount, captureCurrentSnapshot, hydrateFromSnapshot, variants, setVariants, setActiveVariantId, setFileVariantMap, setDriveFiles]);
+    }, [campaigns, pages, selectedAdAccount, captureCurrentSnapshot, hydrateFromSnapshot, variants, setVariants, setActiveVariantId, setFileVariantMap, setDriveFiles]);
 
     const handleDeleteVariant = useCallback((variantId) => {
         if (variantId === "default") return;
