@@ -888,11 +888,20 @@ export default function Home() {
                 .filter((variant) => variant.id !== "default")
                 .map((variant) => variant.name.replace(/^(Form|Variant)\s+/, ""))
         );
-        const nextLetter = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").find((letter) => !usedLetters.has(letter));
+        let letterIndex = 0;
+        let nextLetter = "";
+        while (!nextLetter) {
+            let current = letterIndex;
+            let candidate = "";
+            do {
+                candidate = String.fromCharCode(65 + (current % 26)) + candidate;
+                current = Math.floor(current / 26) - 1;
+            } while (current >= 0);
+            letterIndex += 1;
 
-        if (!nextLetter) {
-            toast.error("Maximum 26 Variants");
-            return;
+            if (!usedLetters.has(candidate)) {
+                nextLetter = candidate;
+            }
         }
 
         const currentSnapshot = captureCurrentSnapshot();

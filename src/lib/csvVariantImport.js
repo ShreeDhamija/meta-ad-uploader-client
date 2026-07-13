@@ -253,15 +253,29 @@ function makeLetterAllocator(existingVariants) {
       .filter((v) => v.id !== "default")
       .map((v) => (v.name || "").replace(/^(Form|Variant)\s+/, ""))
   );
+  let index = 0;
+
+  // Excel-style sequence: A…Z, AA…AZ, BA…, so large CSVs retain short,
+  // stable and unique labels instead of falling back to timestamps.
+  const getLetterSequence = (value) => {
+    let result = "";
+    let current = value;
+    do {
+      result = String.fromCharCode(65 + (current % 26)) + result;
+      current = Math.floor(current / 26) - 1;
+    } while (current >= 0);
+    return result;
+  };
+
   return () => {
-    for (let i = 0; i < 26; i++) {
-      const letter = String.fromCharCode(65 + i);
+    while (true) {
+      const letter = getLetterSequence(index);
+      index += 1;
       if (!used.has(letter)) {
         used.add(letter);
         return letter;
       }
     }
-    return String(Date.now()).slice(-4);
   };
 }
 
