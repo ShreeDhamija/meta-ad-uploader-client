@@ -2363,7 +2363,19 @@ export default function TikTokAdCreationForm({
     setSelectedAdGroup([])
     setCampaigns([])
     setAdGroups([])
-  }, [onAdvertiserChange, setCampaigns, setAdGroups, setSelectedCampaign, setSelectedAdGroup])
+
+    // Reset duplicate states
+    setShowDuplicateAdGroupBlock(false)
+    setDuplicateAdGroup("")
+    setNewAdGroupName("")
+    setShowDuplicateCampaignBlock(false)
+    setDuplicateCampaign("")
+    setNewCampaignName("")
+  }, [
+    onAdvertiserChange, setCampaigns, setAdGroups, setSelectedCampaign, setSelectedAdGroup,
+    setShowDuplicateAdGroupBlock, setDuplicateAdGroup, setNewAdGroupName,
+    setShowDuplicateCampaignBlock, setDuplicateCampaign, setNewCampaignName
+  ])
 
   // Fetch Campaigns on Advertiser change
   useEffect(() => {
@@ -4455,6 +4467,12 @@ export default function TikTokAdCreationForm({
                                 } else {
                                   setSelectedCampaign(prev => [...prev, c.campaign_id])
                                 }
+                                setShowDuplicateAdGroupBlock(false)
+                                setDuplicateAdGroup("")
+                                setNewAdGroupName("")
+                                setShowDuplicateCampaignBlock(false)
+                                setDuplicateCampaign("")
+                                setNewCampaignName("")
                               }}
                               className={cn(
                                 "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
