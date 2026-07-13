@@ -12,7 +12,7 @@ export default function useGlobalSettings() {
     const [hasImportedCsv, setHasImportedCsv] = useState(false);
     const [seenOnboardingCards, setSeenOnboardingCards] = useState([]);
     const [selectedAdAccountIds, setSelectedAdAccountIds] = useState([])
-    const [uploadSources, setUploadSources] = useState(['local', 'drive', 'dropbox', 'csv']);
+    const [uploadSources, setUploadSources] = useState(['local', 'drive', 'dropbox']);
 
     const fetchSettings = async () => {
         try {
@@ -46,7 +46,7 @@ export default function useGlobalSettings() {
             setUploadSources(
                 Array.isArray(data?.settings?.uploadSources)
                     ? data.settings.uploadSources
-                    : ['local', 'drive', 'dropbox', 'csv']
+                    : ['local', 'drive', 'dropbox']
             );
 
         } catch (err) {
@@ -59,7 +59,7 @@ export default function useGlobalSettings() {
             setHasSeenPowerupPopup(false);
             setHasImportedCsv(false);
             setSeenOnboardingCards([]);
-            setUploadSources(['local', 'drive', 'dropbox', 'csv']);
+            setUploadSources(['local', 'drive', 'dropbox']);
         } finally {
             setLoading(false);
         }

@@ -1187,11 +1187,15 @@ export default function AdCreationForm({
   }, [globalUploadSources, uploadSourcesDirty]);
 
   const toggleUploadSource = useCallback((id) => {
+    const isBeingEnabled = !uploadSources.includes(id);
     setUploadSourcesDirty(true);
     setUploadSourcesLocal((prev) =>
       prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]
     );
-  }, []);
+    if (id === 'csv' && isBeingEnabled && !hasImportedCsv) {
+      setShowCsvImportGuide(true);
+    }
+  }, [hasImportedCsv, uploadSources]);
 
   const handleUploadSourcesOpenChange = useCallback(async (open) => {
     setUploadSourcesOpen(open);
@@ -3094,15 +3098,8 @@ export default function AdCreationForm({
   }, [getCatalogueMediaCount, hasImportedCsv, importCsvFile, importedPosts.length, onImportCsv]);
 
   const handleCsvSourceClick = useCallback(() => {
-    if (isImportingCsv) return;
-    // The dedicated CSV source introduces the flow before the native picker so
-    // first-time users know what their sheet needs before choosing a file.
-    if (!hasImportedCsv) {
-      setShowCsvImportGuide(true);
-      return;
-    }
-    csvFileInputRef.current?.click();
-  }, [hasImportedCsv, isImportingCsv]);
+    if (!isImportingCsv) csvFileInputRef.current?.click();
+  }, [isImportingCsv]);
 
   const handleCsvFilePickerChange = useCallback((event) => {
     const file = event.target.files?.[0];
@@ -9955,7 +9952,7 @@ export default function AdCreationForm({
             </button>
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <FileText className="h-6 w-6 text-blue-600" />
+                <img src={CsvFileIcon} alt="" className="h-6 w-6 object-contain" />
                 <h3 className="pr-10 text-lg font-semibold text-gray-900">Import ad variants from CSV</h3>
               </div>
             </div>
