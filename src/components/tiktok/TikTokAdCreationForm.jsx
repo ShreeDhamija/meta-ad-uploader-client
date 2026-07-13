@@ -1906,7 +1906,7 @@ export default function TikTokAdCreationForm({
               ),
               ad_texts: finalCaptions,
               call_to_action: singleCta,
-              ad_name: finalAdName,
+              ad_name: adType === 'SPARK' ? ' ' : finalAdName,
               identity_type: currentIdentityType,
               landing_page_type: urlMode === 'WEBSITE' ? 'EXTERNAL_WEBSITE' : 'INSTANT_PAGE',
               operation_status: launchPaused ? 'DISABLE' : 'ENABLE',
@@ -1952,7 +1952,7 @@ export default function TikTokAdCreationForm({
                     : { video_id: videoId }
                   ),
                   ad_text: singleCaption,
-                  ad_name: creativeAdName,
+                  ad_name: adType === 'SPARK' ? ' ' : creativeAdName,
                   identity_type: currentIdentityType,
                   landing_page_type: urlMode === 'WEBSITE' ? 'EXTERNAL_WEBSITE' : 'INSTANT_PAGE',
                   operation_status: launchPaused ? 'DISABLE' : 'ENABLE',
@@ -2005,7 +2005,7 @@ export default function TikTokAdCreationForm({
                     ),
                     ad_text: singleCaption,
                     call_to_action: singleCta,
-                    ad_name: creativeAdName,
+                    ad_name: adType === 'SPARK' ? ' ' : creativeAdName,
                     identity_type: currentIdentityType,
                     landing_page_type: urlMode === 'WEBSITE' ? 'EXTERNAL_WEBSITE' : 'INSTANT_PAGE',
                     operation_status: launchPaused ? 'DISABLE' : 'ENABLE',
@@ -2044,7 +2044,7 @@ export default function TikTokAdCreationForm({
             const adGroupObj = adGroups.find(ag => ag.adgroup_id === adgroupId)
             adGroupsMap[adgroupId] = {
               adgroupId: adgroupId,
-              adName: finalAdName,
+              adName: adType === 'SPARK' ? ' ' : finalAdName,
               adType: adType,
               s3Url: s3Url,
               ad_count: adGroupObj?.ad_count !== undefined ? adGroupObj.ad_count : 0,
@@ -3525,11 +3525,11 @@ export default function TikTokAdCreationForm({
   }, [openDropboxChooser])
 
   const computeAdNameFromFormula = useCallback((file, iterationIndex = 0, link = "", formula = null, adType = "", staticAdName = null) => {
+    if (adType === "SPARK") {
+      return " ";
+    }
     const formulaToUse = formula || adNameFormulaV2;
     if (!formulaToUse?.rawInput?.trim()) {
-      if (adType === "SPARK") {
-        return " ";
-      }
       const nameToUse = staticAdName !== null ? staticAdName : adName;
       if (nameToUse && nameToUse.trim() !== "") {
         return nameToUse;
