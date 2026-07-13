@@ -2797,7 +2797,11 @@ export default function TikTokAdCreationForm({
       const campId = selectedCampaign[0]
       const camp = campaigns.find(c => c.campaign_id === campId)
       if (camp) {
-        setNewCampaignName((camp.campaign_name || '') + "_copy")
+        let generatedName = (camp.campaign_name || '') + "_Copy"
+        while (campaigns.some(c => c.campaign_name === generatedName)) {
+          generatedName += "_Copy"
+        }
+        setNewCampaignName(generatedName)
       }
     } else {
       setNewCampaignName('')
@@ -2809,7 +2813,11 @@ export default function TikTokAdCreationForm({
     if (duplicateAdGroup) {
       const adGroup = adGroups.find(ag => ag.adgroup_id === duplicateAdGroup)
       if (adGroup) {
-        setNewAdGroupName((adGroup.adgroup_name || '') + "_copy")
+        let generatedName = (adGroup.adgroup_name || '') + "_Copy"
+        while (adGroups.some(ag => ag.adgroup_name === generatedName)) {
+          generatedName += "_Copy"
+        }
+        setNewAdGroupName(generatedName)
       }
     } else {
       setNewAdGroupName('')
@@ -4437,7 +4445,11 @@ export default function TikTokAdCreationForm({
                             setDuplicateCampaign(campId);
                             const camp = campaigns.find(c => c.campaign_id === campId);
                             if (camp) {
-                              setNewCampaignName((camp.campaign_name || '') + "_copy");
+                              let generatedName = (camp.campaign_name || '') + "_Copy";
+                              while (campaigns.some(c => c.campaign_name === generatedName)) {
+                                generatedName += "_Copy";
+                              }
+                              setNewCampaignName(generatedName);
                             }
                           } else {
                             setDuplicateCampaign("");
@@ -4529,7 +4541,11 @@ export default function TikTokAdCreationForm({
                                     value={c.campaign_id}
                                     onSelect={() => {
                                       setDuplicateCampaign(c.campaign_id);
-                                      setNewCampaignName((c.campaign_name || '') + "_copy");
+                                      let generatedName = (c.campaign_name || '') + "_Copy";
+                                      while (campaigns.some(camp => camp.campaign_name === generatedName)) {
+                                        generatedName += "_Copy";
+                                      }
+                                      setNewCampaignName(generatedName);
                                       setOpenDuplicateCampaign(false);
                                     }}
                                     className={cn(
