@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { readCache, writeCache, clearCache } from '@/lib/dataCache'
+import { useAuth } from './AuthContext'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com'
 
@@ -9,6 +10,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com'
 const TikTokAuthContext = createContext(null)
 
 export function TikTokAuthProvider({ children }) {
+  const { isLoggedIn, authLoading: metaAuthLoading } = useAuth()
   const [tiktokUser, setTikTokUser] = useState(() => {
     try {
       const stored = localStorage.getItem('tiktok_user')
@@ -32,23 +34,23 @@ export function TikTokAuthProvider({ children }) {
     setIsTikTokLoggedIn(true)
     setTikTokUser(user)
     if (user) {
-      try { localStorage.setItem('tiktok_user', JSON.stringify(user)) } catch (_) {}
+      try { localStorage.setItem('tiktok_user', JSON.stringify(user)) } catch (_) { }
     }
     setTikTokAdvertisers(advertisers)
     writeCache('tiktokAdvertisers', advertisers)
     setIsLoading(false)
     // Persist auth data to localStorage so the server can recover the session from Firestore
     if (user?.tiktokId) {
-      try { localStorage.setItem('tiktok_uid', user.tiktokId) } catch (_) {}
+      try { localStorage.setItem('tiktok_uid', user.tiktokId) } catch (_) { }
     }
     if (accessToken) {
-      try { localStorage.setItem('tiktok_token', accessToken) } catch (_) {}
+      try { localStorage.setItem('tiktok_token', accessToken) } catch (_) { }
     }
     if (advertisers?.length > 0) {
       try {
         const ids = advertisers.map(a => a.advertiser_id || a.id).filter(Boolean)
         if (ids.length) localStorage.setItem('tiktok_advertiser_ids', JSON.stringify(ids))
-      } catch (_) {}
+      } catch (_) { }
     }
   }
 
@@ -81,6 +83,10 @@ export function TikTokAuthProvider({ children }) {
         console.error('❌ [TikTok Auth] Failed to parse JSON response:', parseErr, '\nRaw body:', rawText)
         setIsTikTokLoggedIn(false)
         setTikTokUser(null)
+        try { localStorage.removeItem('tiktok_uid') } catch (_) { }
+        try { localStorage.removeItem('tiktok_token') } catch (_) { }
+        try { localStorage.removeItem('tiktok_advertiser_ids') } catch (_) { }
+        try { localStorage.removeItem('tiktok_user') } catch (_) { }
         setTikTokAdvertisers([])
         return
       }
@@ -89,27 +95,30 @@ export function TikTokAuthProvider({ children }) {
         if (data.connected && data.user) {
           setIsTikTokLoggedIn(true)
           setTikTokUser(data.user)
-          try { localStorage.setItem('tiktok_user', JSON.stringify(data.user)) } catch (_) {}
+          try { localStorage.setItem('tiktok_user', JSON.stringify(data.user)) } catch (_) { }
           setTikTokAdvertisers(data.advertisers || [])
           writeCache('tiktokAdvertisers', data.advertisers || [])
           // Keep localStorage in sync
           if (data.user?.tiktokId) {
-            try { localStorage.setItem('tiktok_uid', data.user.tiktokId) } catch (_) {}
+            try { localStorage.setItem('tiktok_uid', data.user.tiktokId) } catch (_) { }
           }
           if (data.accessToken) {
-            try { localStorage.setItem('tiktok_token', data.accessToken) } catch (_) {}
+            try { localStorage.setItem('tiktok_token', data.accessToken) } catch (_) { }
           }
           if (data.advertisers?.length > 0) {
             try {
               const ids = data.advertisers.map(a => a.advertiser_id || a.id).filter(Boolean)
               if (ids.length) localStorage.setItem('tiktok_advertiser_ids', JSON.stringify(ids))
-            } catch (_) {}
+            } catch (_) { }
           }
         } else {
           console.warn('⚠️ [TikTok Auth] Response OK but connected=false. Reason:', data.error || 'unknown')
           setIsTikTokLoggedIn(false)
           setTikTokUser(null)
-          try { localStorage.removeItem('tiktok_user') } catch (_) {}
+          try { localStorage.removeItem('tiktok_uid') } catch (_) { }
+          try { localStorage.removeItem('tiktok_token') } catch (_) { }
+          try { localStorage.removeItem('tiktok_advertiser_ids') } catch (_) { }
+          try { localStorage.removeItem('tiktok_user') } catch (_) { }
           setTikTokAdvertisers([])
           writeCache('tiktokAdvertisers', [])
         }
@@ -117,7 +126,10 @@ export function TikTokAuthProvider({ children }) {
         console.warn('⚠️ [TikTok Auth] Non-OK HTTP status:', res.status, '| body:', rawText)
         setIsTikTokLoggedIn(false)
         setTikTokUser(null)
-        try { localStorage.removeItem('tiktok_user') } catch (_) {}
+        try { localStorage.removeItem('tiktok_uid') } catch (_) { }
+        try { localStorage.removeItem('tiktok_token') } catch (_) { }
+        try { localStorage.removeItem('tiktok_advertiser_ids') } catch (_) { }
+        try { localStorage.removeItem('tiktok_user') } catch (_) { }
         setTikTokAdvertisers([])
         writeCache('tiktokAdvertisers', [])
       }
@@ -125,7 +137,10 @@ export function TikTokAuthProvider({ children }) {
       console.error('❌ [TikTok Auth] Network/fetch error calling', endpoint, err)
       setIsTikTokLoggedIn(false)
       setTikTokUser(null)
-      try { localStorage.removeItem('tiktok_user') } catch (_) {}
+      try { localStorage.removeItem('tiktok_uid') } catch (_) { }
+      try { localStorage.removeItem('tiktok_token') } catch (_) { }
+      try { localStorage.removeItem('tiktok_advertiser_ids') } catch (_) { }
+      try { localStorage.removeItem('tiktok_user') } catch (_) { }
       setTikTokAdvertisers([])
       writeCache('tiktokAdvertisers', [])
     } finally {
@@ -141,10 +156,10 @@ export function TikTokAuthProvider({ children }) {
       })
       if (res.ok) {
         // Clear tokens FIRST to prevent auto-recovery
-        try { localStorage.removeItem('tiktok_uid') } catch (_) {}
-        try { localStorage.removeItem('tiktok_token') } catch (_) {}
-        try { localStorage.removeItem('tiktok_advertiser_ids') } catch (_) {}
-        try { localStorage.removeItem('tiktok_user') } catch (_) {}
+        try { localStorage.removeItem('tiktok_uid') } catch (_) { }
+        try { localStorage.removeItem('tiktok_token') } catch (_) { }
+        try { localStorage.removeItem('tiktok_advertiser_ids') } catch (_) { }
+        try { localStorage.removeItem('tiktok_user') } catch (_) { }
 
         clearCache('tiktokAdvertisers')
         clearCache('tiktokIdentities')
@@ -153,7 +168,7 @@ export function TikTokAuthProvider({ children }) {
         setIsTikTokLoggedIn(false)
         setTikTokUser(null)
         setTikTokAdvertisers([])
-        
+
         // Navigate to login page after state and storage are cleared
         window.location.href = '/tiktok-login'
       } else {
@@ -188,8 +203,21 @@ export function TikTokAuthProvider({ children }) {
   }
 
   useEffect(() => {
-    refreshTikTokUser()
-  }, [])
+    if (metaAuthLoading) return
+
+    if (isLoggedIn) {
+      refreshTikTokUser()
+    } else {
+      // Clear TikTok session since primary user is not logged in
+      try { localStorage.removeItem('tiktok_uid') } catch (_) { }
+      try { localStorage.removeItem('tiktok_token') } catch (_) { }
+      try { localStorage.removeItem('tiktok_advertiser_ids') } catch (_) { }
+      try { localStorage.removeItem('tiktok_user') } catch (_) { }
+      setIsTikTokLoggedIn(false)
+      setTikTokUser(null)
+      setTikTokAdvertisers([])
+    }
+  }, [isLoggedIn, metaAuthLoading])
 
   return (
     <TikTokAuthContext.Provider
