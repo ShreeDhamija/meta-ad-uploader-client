@@ -8,9 +8,7 @@ import { useAppData } from "./AppContext";
 export default function useTikTokAdvertiserSettings(advertiserId) {
   const { tiktokSettings, tiktokSettingsLoading, fetchTikTokSettings, updateTikTokSettingsCache } = useAppData();
 
-  const getLocalData = localStorage.getItem("tiktokAdvertiserSettings_draft");
-  const settings = getLocalData ? JSON.parse(getLocalData) : advertiserId ? tiktokSettings[advertiserId] || null : null;
-  // const settings = advertiserId ? (tiktokSettings[advertiserId] || null) : null;
+  const settings = advertiserId ? (tiktokSettings[advertiserId] || null) : null;
   const loading = advertiserId ? tiktokSettingsLoading[advertiserId] || false : false;
 
   const lastFetchedIdRef = useRef(null);
