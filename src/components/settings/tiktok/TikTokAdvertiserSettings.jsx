@@ -52,6 +52,8 @@ const CTA_OPTIONS = [
     { value: 'JOIN_THIS_HASHTAG', label: 'Join this hashtag' },
 ];
 
+const DRAFT_CACHE_KEY = 'tiktokAdvertiserSettings_draft';
+
 export default function TikTokAdvertiserSettings({ advertisers = [] }) {
     const [selectedAdvertiser, setSelectedAdvertiser] = useState(() => {
         // 1. Check URL query parameter
@@ -88,6 +90,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
     // Ref to prevent initialSettings from being clobbered when a template/default
     // save triggers a settings cache update (mirrors Meta's skipFormResetRef)
     const skipSettingsResetRef = useRef(false);
+    const cacheRestoredRef = useRef(false);
 
     // Derived — computed every render so there's never a stale-state race
     const hasChanges = Boolean(
@@ -234,24 +237,92 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
         }
     };
 
-    // Track initial settings for dirty detection.
+    // Track initial settings for dirty detection & draft cache restoration.
     // When skipSettingsResetRef is set (template/default saves), only sync
     // initialSettings to the incoming server data — don't reset the form.
     useEffect(() => {
-        if (!settings) return;
+        if (!settings) {
+            console.log("[TikTokAdvertiserSettings] useEffect: settings is not loaded yet.");
+            return;
+        }
+        console.log("[TikTokAdvertiserSettings] useEffect settings updated/loaded:", {
+            hasSettings: !!settings,
+            hasInitialSettings: !!initialSettings,
+            skipSettingsReset: skipSettingsResetRef.current,
+            hasChanges: settings && initialSettings ? (JSON.stringify(settings) !== JSON.stringify(initialSettings)) : false
+        });
         if (skipSettingsResetRef.current) {
+            console.log("[TikTokAdvertiserSettings] useEffect: skipSettingsReset is true. Syncing initialSettings directly.");
             skipSettingsResetRef.current = false;
             setInitialSettings(JSON.parse(JSON.stringify(settings)));
             return;
         }
+
+        // Try to restore from draft cache if cache has not been restored yet for this advertiser
+        if (!cacheRestoredRef.current) {
+            try {
+                const cachedDraft = localStorage.getItem(DRAFT_CACHE_KEY);
+                if (cachedDraft) {
+                    const draft = JSON.parse(cachedDraft);
+                    const isForCurrentAccount = draft.advertiserId === selectedAdvertiser;
+                    const isRecent = Date.now() - draft.timestamp < 24 * 60 * 60 * 1000;
+
+                    if (isForCurrentAccount && isRecent) {
+                        console.log("[TikTokAdvertiserSettings] useEffect: Restoring settings from local draft cache:", draft.settings);
+                        setSettings(draft.settings);
+                        setInitialSettings(JSON.parse(JSON.stringify(settings))); // server values
+                        cacheRestoredRef.current = true;
+                        return;
+                    }
+                }
+            } catch (e) {
+                console.error('[TikTokAdvertiserSettings] Failed to parse cached draft:', e);
+            }
+        }
+
         if (!initialSettings) {
+            console.log("[TikTokAdvertiserSettings] useEffect: initializing initialSettings with current settings.");
             setInitialSettings(JSON.parse(JSON.stringify(settings)));
         }
-    }, [settings, initialSettings]);
+    }, [settings, initialSettings, selectedAdvertiser]);
+
+    // Effect to save drafts of changes to localStorage (matching Meta's AdAccountSettings.jsx)
+    useEffect(() => {
+        if (!selectedAdvertiser || !settings || !initialSettings) return;
+
+        if (hasChanges) {
+            const draft = {
+                advertiserId: selectedAdvertiser,
+                settings,
+                timestamp: Date.now()
+            };
+            try {
+                console.log("[TikTokAdvertiserSettings] Saving draft cache to localStorage:", draft);
+                localStorage.setItem(DRAFT_CACHE_KEY, JSON.stringify(draft));
+            } catch (e) {
+                console.error("[TikTokAdvertiserSettings] Failed to save draft to localStorage:", e);
+            }
+        } else {
+            // Clear cache if no unsaved changes (and cache was for this account)
+            try {
+                const cached = localStorage.getItem(DRAFT_CACHE_KEY);
+                if (cached) {
+                    const draft = JSON.parse(cached);
+                    if (draft.advertiserId === selectedAdvertiser) {
+                        console.log("[TikTokAdvertiserSettings] Clearing draft cache from localStorage as hasChanges is false.");
+                        localStorage.removeItem(DRAFT_CACHE_KEY);
+                    }
+                }
+            } catch (e) {
+                // Ignore parse errors
+            }
+        }
+    }, [selectedAdvertiser, settings, initialSettings, hasChanges]);
 
     // Fetch identities + catalogs when advertiser changes
     useEffect(() => {
         if (selectedAdvertiser) {
+            console.log(`[TikTokAdvertiserSettings] selectedAdvertiser changed to ${selectedAdvertiser}. Resetting catalogs, products, and draft cache ref.`);
             fetchTikTokIdentities(selectedAdvertiser);
             // Reset catalog state
             setCatalogs([]);
@@ -259,6 +330,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
             setCatalogError(null);
             setProductError(null);
             fetchCatalogs(selectedAdvertiser);
+            cacheRestoredRef.current = false; // Reset on advertiser change
         }
     }, [selectedAdvertiser, fetchTikTokIdentities, fetchCatalogs]);
 
@@ -301,31 +373,50 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
     const handleSave = async (updatedSettings = settings) => {
         if (!selectedAdvertiser) return;
         setIsSaving(true);
+        console.log(`[TikTokAdvertiserSettings] handleSave initiating save for advertiser: ${selectedAdvertiser}`, updatedSettings);
         try {
             await saveTikTokSettings(selectedAdvertiser, updatedSettings);
             toast.success("Settings saved successfully");
+            console.log(`[TikTokAdvertiserSettings] handleSave success. Syncing initialSettings.`);
+            
+            // Clear the cached draft
+            try {
+                localStorage.removeItem(DRAFT_CACHE_KEY);
+                console.log("[TikTokAdvertiserSettings] handleSave: Cleared draft cache.");
+            } catch (e) {}
+
             // Sync initialSettings to exactly what we saved — hasChanges will
             // immediately compute to false on the next render (no effect lag).
             setInitialSettings(JSON.parse(JSON.stringify(updatedSettings)));
         } catch (err) {
+            console.error(`[TikTokAdvertiserSettings] handleSave error:`, err);
             toast.error("Failed to save settings");
-            console.error(err);
         } finally {
             setIsSaving(false);
         }
     };
 
     const handleDismiss = () => {
+        console.log(`[TikTokAdvertiserSettings] handleDismiss clicked. Reverting to initialSettings:`, initialSettings);
         if (initialSettings) {
             setSettings(JSON.parse(JSON.stringify(initialSettings)));
         }
+        
+        // Clear the cached draft
+        try {
+            localStorage.removeItem(DRAFT_CACHE_KEY);
+            console.log("[TikTokAdvertiserSettings] handleDismiss: Cleared draft cache.");
+        } catch (e) {}
+
         // hasChanges is derived — resetting settings above will recompute it to false
     };
 
     const handleAdvertiserChange = (id) => {
+        console.log(`[TikTokAdvertiserSettings] handleAdvertiserChange clicked. Switching to advertiser: ${id}`);
         setSelectedAdvertiser(id);
         setOpenAdvertiser(false);
         setInitialSettings(null);
+        cacheRestoredRef.current = false; // Reset on advertiser change
         // Reset catalog dropdowns on advertiser change
         setSettings(prev => ({
             ...prev,
@@ -575,6 +666,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                                                 type="button"
                                                                 key={i.identity_id}
                                                                 onClick={() => {
+                                                                    console.log(`[TikTokAdvertiserSettings] Selecting identity: display_name="${i.display_name}", identity_id="${i.identity_id}"`);
                                                                     setSettings({
                                                                         ...currentSettings,
                                                                         defaultIdentityId: i.identity_id,
@@ -615,6 +707,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                         templates={currentSettings.copyTemplates || {}}
                         defaultName={currentSettings.defaultTemplateName || ""}
                         onSaveTemplate={async (name, data, oldName) => {
+                            console.log(`[TikTokAdvertiserSettings] onSaveTemplate called. name: "${name}", oldName: "${oldName}", data:`, data);
                             const updated = { ...currentSettings.copyTemplates };
                             if (oldName && oldName !== name) delete updated[oldName];
                             updated[name] = data;
@@ -626,6 +719,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                             };
 
                             const next = { ...currentSettings, ...partialUpdate };
+                            console.log("[TikTokAdvertiserSettings] onSaveTemplate computed next settings:", next);
 
                             // Prevent the settings cache update from re-triggering
                             // a dirty-state check and re-showing the save bar
@@ -633,36 +727,37 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                             setSettings(next);
 
                             try {
-                                await saveTikTokSettings(selectedAdvertiser, partialUpdate);
-                                setInitialSettings((prev) => {
-                                    if (!prev) return null;
-                                    return { ...prev, ...partialUpdate };
-                                });
+                                await saveTikTokSettings(selectedAdvertiser, next);
+                                setInitialSettings(JSON.parse(JSON.stringify(next)));
+                                console.log("[TikTokAdvertiserSettings] onSaveTemplate successfully saved and synced settings.");
                             } catch (err) {
-                                console.error("Failed to save template:", err);
+                                console.error("[TikTokAdvertiserSettings] Failed to save template:", err);
                                 toast.error("Failed to save template");
                                 // Roll back the skip flag on failure
                                 skipSettingsResetRef.current = false;
                             }
                         }}
                         onSetDefault={async (name) => {
+                            console.log(`[TikTokAdvertiserSettings] onSetDefault called. name: "${name}"`);
+                            const next = { ...currentSettings, defaultTemplateName: name };
+                            console.log("[TikTokAdvertiserSettings] onSetDefault computed next settings:", next);
+
                             // Prevent the settings cache update from re-showing the save bar
                             skipSettingsResetRef.current = true;
-                            setSettings({ ...currentSettings, defaultTemplateName: name });
+                            setSettings(next);
 
                             try {
-                                await saveTikTokSettings(selectedAdvertiser, { defaultTemplateName: name });
-                                setInitialSettings((prev) => {
-                                    if (!prev) return null;
-                                    return { ...prev, defaultTemplateName: name };
-                                });
+                                await saveTikTokSettings(selectedAdvertiser, next);
+                                setInitialSettings(JSON.parse(JSON.stringify(next)));
+                                console.log("[TikTokAdvertiserSettings] onSetDefault successfully saved and synced settings.");
                             } catch (err) {
-                                console.error("Failed to set default template:", err);
+                                console.error("[TikTokAdvertiserSettings] Failed to set default template:", err);
                                 toast.error("Failed to set default template");
                                 skipSettingsResetRef.current = false;
                             }
                         }}
                         onDeleteTemplate={async (name) => {
+                            console.log(`[TikTokAdvertiserSettings] onDeleteTemplate called. name: "${name}"`);
                             const updated = { ...currentSettings.copyTemplates };
                             delete updated[name];
 
@@ -672,21 +767,21 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                 ...(wasDefault && { defaultTemplateName: "" })
                             };
 
+                            const next = { ...currentSettings, ...partialUpdate };
+                            console.log("[TikTokAdvertiserSettings] onDeleteTemplate computed next settings:", next);
+
                             // Prevent the settings cache update from re-showing the save bar
                             skipSettingsResetRef.current = true;
-                            setSettings({ ...currentSettings, ...partialUpdate });
+                            setSettings(next);
 
                             try {
-                                await saveTikTokSettings(selectedAdvertiser, partialUpdate);
+                                await saveTikTokSettings(selectedAdvertiser, next);
+                                setInitialSettings(JSON.parse(JSON.stringify(next)));
+                                console.log("[TikTokAdvertiserSettings] onDeleteTemplate successfully saved and synced settings.");
                             } catch (err) {
-                                console.error("Failed to delete template:", err);
+                                console.error("[TikTokAdvertiserSettings] Failed to delete template:", err);
                                 skipSettingsResetRef.current = false;
                             }
-
-                            setInitialSettings((prev) => {
-                                if (!prev) return null;
-                                return { ...prev, ...partialUpdate };
-                            });
                         }}
                     />
 

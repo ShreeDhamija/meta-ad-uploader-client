@@ -29,6 +29,7 @@ export default function useTikTokAdvertiserSettings(advertiserId) {
     if (advertiserId) {
       const current = tiktokSettings[advertiserId] || {};
       const updated = typeof nextVal === 'function' ? nextVal(current) : nextVal;
+      console.log(`[useTikTokAdvertiserSettings] setSettings called for advertiserId: ${advertiserId}. current:`, current, "updated:", updated);
       updateTikTokSettingsCache(advertiserId, { ...updated, _documentExists: true });
     }
   };
