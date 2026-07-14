@@ -2361,6 +2361,7 @@ export default function TikTokAdCreationForm({
       .then(d => {
         const list = d.campaigns || []
         setCampaigns(list)
+        setSelectedCampaign(prev => prev.filter(id => list.some(c => c.campaign_id === id)))
         campaignsLoadedForAdvertiserRef.current = selectedAdvertiser
       })
       .catch(() => toast.error('Failed to load campaigns'))
