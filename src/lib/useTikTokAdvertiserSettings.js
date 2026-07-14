@@ -16,7 +16,7 @@ export default function useTikTokAdvertiserSettings(advertiserId) {
   useEffect(() => {
     if (advertiserId && advertiserId !== lastFetchedIdRef.current) {
       lastFetchedIdRef.current = advertiserId;
-      fetchTikTokSettings(advertiserId, true);
+      fetchTikTokSettings(advertiserId, false);
     }
   }, [advertiserId, fetchTikTokSettings]);
 

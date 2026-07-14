@@ -399,6 +399,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
         setIsSaving(true);
         try {
             await saveTikTokSettings(selectedAdvertiser, updatedSettings);
+            setServerSettings(updatedSettings);
             toast.success("Settings saved successfully");
             
             // Clear the cached draft
@@ -737,6 +738,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
 
                             try {
                                 await saveTikTokSettings(selectedAdvertiser, next);
+                                setServerSettings(next);
                                 setInitialSettings(JSON.parse(JSON.stringify(next)));
                                 setSettings(prev => ({
                                     ...prev,
@@ -752,6 +754,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
 
                             try {
                                 await saveTikTokSettings(selectedAdvertiser, next);
+                                setServerSettings(next);
                                 setInitialSettings(JSON.parse(JSON.stringify(next)));
                                 setSettings(prev => ({
                                     ...prev,
@@ -775,6 +778,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
 
                             try {
                                 await saveTikTokSettings(selectedAdvertiser, next);
+                                setServerSettings(next);
                                 setInitialSettings(JSON.parse(JSON.stringify(next)));
                                 setSettings(prev => ({
                                     ...prev,
