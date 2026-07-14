@@ -3552,7 +3552,7 @@ export default function TikTokAdCreationForm({
         }
       },
       linkType: 'direct',
-      multiselect: false,
+      multiselect: true,
       extensions: ['.mp4', '.mov', '.webm'],
     })
   }, [setDropboxFiles, setVideoFile, setDriveFiles])
