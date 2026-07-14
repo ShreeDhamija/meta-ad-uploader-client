@@ -673,6 +673,7 @@ export default function TikTokAdCreationForm({
   const [openIdentity, setOpenIdentity] = useState(false)
   const [openCta, setOpenCta] = useState(false)
   const [showCustomLink, setShowCustomLink] = useState(false)
+  const [customLink, setCustomLink] = useState("")
   const [templateDropdownOpen, setTemplateDropdownOpen] = useState(false)
 
   // Copy template state
@@ -2582,6 +2583,7 @@ export default function TikTokAdCreationForm({
           }
         }
       } else {
+        // Only auto-restore if the user is NOT in custom-link typing mode
         if (!showCustomLink) {
           const urlToRestore = lastWebsiteUrl && /^https?:\/\//i.test(lastWebsiteUrl) ? lastWebsiteUrl : defaultUrl;
           console.log("[URL_MODE_DEBUG] Restoring Website URL to:", urlToRestore);
@@ -3530,9 +3532,7 @@ export default function TikTokAdCreationForm({
       if (nameToUse && nameToUse.trim() !== "") {
         return nameToUse;
       }
-      if (file && file.name) {
-        return file.name.replace(/\.[^/.]+$/, "");
-      }
+      // No formula and no ad name entered — never fall back to file name
       return "Ad Generated Through Blip";
     }
 
@@ -5670,12 +5670,16 @@ export default function TikTokAdCreationForm({
 
                         <div className="flex items-center space-x-2">
                           <div className="space-y-2 w-full">
+                            {/* Custom link input — shown when user checks the checkbox or there are no saved links */}
                             {(showCustomLink || !advertiserPrefs?.links || advertiserPrefs.links.length === 0) && (
                               <div className="w-full">
                                 <Input
                                   type="text"
-                                  value={landingUrl}
-                                  onChange={(e) => setLandingUrl(e.target.value)}
+                                  value={customLink}
+                                  onChange={(e) => {
+                                    setCustomLink(e.target.value);
+                                    setLandingUrl(e.target.value);
+                                  }}
                                   className={cn("w-full", formInputChrome)}
                                   placeholder="https://example.com"
                                   disabled={!advertiserId}
@@ -5684,6 +5688,7 @@ export default function TikTokAdCreationForm({
                               </div>
                             )}
 
+                            {/* Checkbox toggle — only shown when there are saved links in preferences */}
                             {advertiserPrefs?.links?.length > 0 && (
                               <div className="flex items-center space-x-2">
                                 <Checkbox
@@ -5691,11 +5696,15 @@ export default function TikTokAdCreationForm({
                                   checked={showCustomLink}
                                   onCheckedChange={(checked) => {
                                     setShowCustomLink(checked);
-                                    if (checked) {
-                                      setLandingUrl("");
-                                    } else {
+                                    if (!checked) {
+                                      // Going back to dropdown — clear custom input and restore the dropdown selection
+                                      setCustomLink("");
                                       const defaultLink = advertiserPrefs.links.find(l => l.isDefault) || advertiserPrefs.links[0];
                                       setLandingUrl(defaultLink?.url || "");
+                                    } else {
+                                      // Entering custom mode — clear landingUrl so user starts fresh
+                                      setCustomLink("");
+                                      setLandingUrl("");
                                     }
                                   }}
                                   className="border-gray-300 w-4 h-4 rounded-md"
