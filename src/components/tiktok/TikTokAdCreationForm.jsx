@@ -1065,10 +1065,11 @@ export default function TikTokAdCreationForm({
       if (storeSel && storeSel.product_id === productIds[0]) {
         return storeSel.product_name || productIds[0];
       }
+      if (formStoreProductName) return formStoreProductName;
       return productIds[0];
     }
     return `${productIds.length} Products Selected`;
-  }, [formStoreProductId, formStoreProducts, advertiserPrefs]);
+  }, [formStoreProductId, formStoreProducts, advertiserPrefs, formStoreProductName]);
 
   const formStoreInitRef = useRef({});
   useEffect(() => {
@@ -4623,15 +4624,15 @@ export default function TikTokAdCreationForm({
                         </>
                       ) : (
                         <span className="block truncate flex-1 text-left text-sm font-medium">
-                          {duplicateCampaign 
-                          ? "Finish Creating Campaign to select an ad set" 
-                          : showDuplicateAdGroupBlock
-                            ? "New Ad Group"
-                            : selectedCampaign.length > 0 && adGroups.length === 0
-                              ? "No ad groups exist in this campaign. Select a different campaign"
-                              : selectedAdGroup.length > 0
-                                ? `${selectedAdGroup.length} ad group${selectedAdGroup.length > 1 ? "s" : ""} selected`
-                                : "Select Ad Groups"}
+                          {duplicateCampaign
+                            ? "Finish Creating Campaign to select an ad set"
+                            : showDuplicateAdGroupBlock
+                              ? "New Ad Group"
+                              : selectedCampaign.length > 0 && adGroups.length === 0
+                                ? "No ad groups exist in this campaign. Select a different campaign"
+                                : selectedAdGroup.length > 0
+                                  ? `${selectedAdGroup.length} ad group${selectedAdGroup.length > 1 ? "s" : ""} selected`
+                                  : "Select Ad Groups"}
                         </span>
                       )}
                     </div>
@@ -6026,7 +6027,15 @@ export default function TikTokAdCreationForm({
                                       onClick={() => {
                                         setFormStoreProductId(prev => {
                                           const current = Array.isArray(prev) ? prev : (prev ? [prev] : []);
-                                          return current.includes(prod.item_group_id)
+                                          const isSelected = current.includes(prod.item_group_id);
+                                          if (isSelected) {
+                                            if (current.length <= 1) {
+                                              setFormStoreProductName(null);
+                                            }
+                                          } else {
+                                            setFormStoreProductName(prod.title || null);
+                                          }
+                                          return isSelected
                                             ? current.filter(id => id !== prod.item_group_id)
                                             : [...current, prod.item_group_id];
                                         });
