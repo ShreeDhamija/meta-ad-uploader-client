@@ -186,9 +186,20 @@ export default function TikTokCopyTemplates({
         }
     }, [selectedName, templates]);
 
+    const lastAdvertiserRef = useRef(null);
     const lastInitializedAdvertiserRef = useRef(null);
 
-    // Initial default selection
+    // Reset state on advertiser change
+    useEffect(() => {
+        if (advertiserId !== lastAdvertiserRef.current) {
+            lastAdvertiserRef.current = advertiserId;
+            setSelectedName("");
+            setTemplateName("");
+            setText("");
+        }
+    }, [advertiserId]);
+
+    // Initial default selection when templates load
     useEffect(() => {
         if (advertiserId !== lastInitializedAdvertiserRef.current && Object.keys(templates).length > 0) {
             if (defaultName && templates[defaultName]) {

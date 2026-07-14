@@ -435,12 +435,10 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
         setSelectedAdvertiser(id);
         setOpenAdvertiser(false);
         setInitialSettings(null);
+        setLocalSettings(null);
         cacheRestoredRef.current = false; // Reset on advertiser change
         // Reset catalog dropdowns on advertiser change
-        setSettings(prev => ({
-            ...prev,
-            catalogSelection: null
-        }));
+
         setCatalogs([]);
         setCatalogProducts([]);
         try {
