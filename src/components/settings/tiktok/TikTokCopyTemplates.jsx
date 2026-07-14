@@ -193,6 +193,7 @@ export default function TikTokCopyTemplates({
     useEffect(() => {
         if (advertiserId !== lastAdvertiserRef.current) {
             lastAdvertiserRef.current = advertiserId;
+            lastInitializedAdvertiserRef.current = null; // Force re-initialization
             setSelectedName("");
             setTemplateName("");
             setText("");
