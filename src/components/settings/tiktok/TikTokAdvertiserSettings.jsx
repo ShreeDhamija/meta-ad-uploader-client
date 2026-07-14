@@ -76,7 +76,16 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
 
         return null;
     });
-    const { settings, setSettings, loading } = useTikTokAdvertiserSettings(selectedAdvertiser);
+    const { settings: serverSettings, setSettings: setServerSettings, loading } = useTikTokAdvertiserSettings(selectedAdvertiser);
+    const [localSettings, setLocalSettings] = useState(null);
+    const settings = localSettings;
+    const setSettings = (nextVal) => {
+        setLocalSettings(prev => {
+            const current = prev || {};
+            const updated = typeof nextVal === 'function' ? nextVal(current) : nextVal;
+            return updated;
+        });
+    };
     const { isTikTokLoggedIn, refreshTikTokUser } = useTikTokAuth();
     const [refreshingAdvertisers, setRefreshingAdvertisers] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -91,7 +100,6 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
     // save triggers a settings cache update (mirrors Meta's skipFormResetRef)
     const skipSettingsResetRef = useRef(false);
     const cacheRestoredRef = useRef(false);
-    const draftRestoredRef = useRef(false);
 
     // Derived — computed every render so there's never a stale-state race
     const hasChanges = Boolean(
@@ -238,64 +246,48 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
         }
     };
 
-    // Track initial settings for dirty detection & draft cache restoration.
-    // When skipSettingsResetRef is set (template/default saves), only sync
-    // initialSettings to the incoming server data — don't reset the form.
+    // Track initial settings & form settings (matching Meta's AdAccountSettings.jsx)
     useEffect(() => {
-        if (!settings) return;
+        if (!selectedAdvertiser || !serverSettings) return;
+
+        const initial = JSON.parse(JSON.stringify(serverSettings));
+
         if (skipSettingsResetRef.current) {
             skipSettingsResetRef.current = false;
-            setInitialSettings(JSON.parse(JSON.stringify(settings)));
+            setInitialSettings(initial);
             return;
         }
 
-        // Try to restore from draft cache if cache has not been checked yet for this advertiser
-        if (!cacheRestoredRef.current) {
-            cacheRestoredRef.current = true; // Mark as checked so we never do this check again for this mount
-            try {
-                const cachedDraft = localStorage.getItem(DRAFT_CACHE_KEY);
-                if (cachedDraft) {
-                    const draft = JSON.parse(cachedDraft);
-                    const isForCurrentAccount = draft.advertiserId === selectedAdvertiser;
-                    const isRecent = Date.now() - draft.timestamp < 24 * 60 * 60 * 1000;
-
-                    if (isForCurrentAccount && isRecent) {
-                        setSettings(draft.settings);
-                        setInitialSettings(JSON.parse(JSON.stringify(settings))); // server values
-                        draftRestoredRef.current = true; // Mark that draft was loaded
-                        return;
-                    }
-                }
-            } catch (e) {
-                // Ignore parse errors
-            }
-        } else if (draftRestoredRef.current && !loading) {
-            // Draft was loaded, and backend fetch just completed.
-            // We want to update initialSettings to the server values (S),
-            // and restore settings to the draft values (X).
-            try {
-                const cachedDraft = localStorage.getItem(DRAFT_CACHE_KEY);
-                if (cachedDraft) {
-                    const draft = JSON.parse(cachedDraft);
-                    const isForCurrentAccount = draft.advertiserId === selectedAdvertiser;
-                    const isRecent = Date.now() - draft.timestamp < 24 * 60 * 60 * 1000;
-
-                    if (isForCurrentAccount && isRecent) {
-                        setSettings(draft.settings);
-                        setInitialSettings(JSON.parse(JSON.stringify(settings))); // server values (S)
-                    }
-                }
-            } catch (e) {
-                // Ignore
-            }
-            draftRestoredRef.current = false; // Done syncing with server fetch!
+        // If cache was already restored, only update initialSettings (for hasChanges comparison)
+        // but don't overwrite the form values
+        if (cacheRestoredRef.current) {
+            setInitialSettings(initial);
             return;
         }
 
-        if (!initialSettings) {
-            setInitialSettings(JSON.parse(JSON.stringify(settings)));
+        // Try to restore from cache
+        try {
+            const cachedDraft = localStorage.getItem(DRAFT_CACHE_KEY);
+            if (cachedDraft) {
+                const draft = JSON.parse(cachedDraft);
+                const isForCurrentAccount = draft.advertiserId === selectedAdvertiser;
+                const isRecent = Date.now() - draft.timestamp < 24 * 60 * 60 * 1000;
+
+                if (isForCurrentAccount && isRecent) {
+                    setLocalSettings(draft.settings);
+                    setInitialSettings(initial);
+                    cacheRestoredRef.current = true;
+                    return;
+                }
+            }
+        } catch (e) {
+            // Ignore
         }
-    }, [settings, initialSettings, selectedAdvertiser, loading]);
+
+        // No valid cache, use server values
+        setLocalSettings(initial);
+        setInitialSettings(initial);
+    }, [serverSettings, selectedAdvertiser]);
 
     // Effect to save drafts of changes to localStorage (matching Meta's AdAccountSettings.jsx)
     useEffect(() => {
@@ -338,8 +330,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
             setCatalogError(null);
             setProductError(null);
             fetchCatalogs(selectedAdvertiser);
-            cacheRestoredRef.current = false; // Reset on advertiser change
-            draftRestoredRef.current = false; // Reset on advertiser change
+            cacheRestoredRef.current = false;
         }
     }, [selectedAdvertiser, fetchTikTokIdentities, fetchCatalogs]);
 
@@ -419,7 +410,6 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
         setOpenAdvertiser(false);
         setInitialSettings(null);
         cacheRestoredRef.current = false; // Reset on advertiser change
-        draftRestoredRef.current = false; // Reset on advertiser change
         // Reset catalog dropdowns on advertiser change
         setSettings(prev => ({
             ...prev,
