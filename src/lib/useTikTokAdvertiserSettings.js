@@ -1,22 +1,17 @@
-import { useEffect, useRef } from 'react';
-import { useAppData } from './AppContext';
+import { useEffect, useRef } from "react";
+import { useAppData } from "./AppContext";
 
 /**
  * Fetches and caches TikTok advertiser preferences globally in AppContext.
  * Avoids redundant backend calls and instantly resolves preferences on mount.
  */
 export default function useTikTokAdvertiserSettings(advertiserId) {
-  const {
-    tiktokSettings,
-    tiktokSettingsLoading,
-    fetchTikTokSettings,
-    updateTikTokSettingsCache
-  } = useAppData();
+  const { tiktokSettings, tiktokSettingsLoading, fetchTikTokSettings, updateTikTokSettingsCache } = useAppData();
 
-  const getLocalData = localStorage.getItem('tiktokAdvertiserSettings_draft');
-  const settings = getLocalData ? JSON.parse(getLocalData) : null;
+  const getLocalData = localStorage.getItem("tiktokAdvertiserSettings_draft");
+  const settings = getLocalData ? JSON.parse(getLocalData) : advertiserId ? tiktokSettings[advertiserId] || null : null;
   // const settings = advertiserId ? (tiktokSettings[advertiserId] || null) : null;
-  const loading = advertiserId ? (tiktokSettingsLoading[advertiserId] || false) : false;
+  const loading = advertiserId ? tiktokSettingsLoading[advertiserId] || false : false;
 
   const lastFetchedIdRef = useRef(null);
 
@@ -30,7 +25,7 @@ export default function useTikTokAdvertiserSettings(advertiserId) {
   const setSettings = (nextVal) => {
     if (advertiserId) {
       const current = tiktokSettings[advertiserId] || {};
-      const updated = typeof nextVal === 'function' ? nextVal(current) : nextVal;
+      const updated = typeof nextVal === "function" ? nextVal(current) : nextVal;
       updateTikTokSettingsCache(advertiserId, { ...updated, _documentExists: true });
     }
   };
