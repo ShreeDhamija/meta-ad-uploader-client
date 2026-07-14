@@ -4649,7 +4649,7 @@ export default function TikTokAdCreationForm({
                   onClick={forceRefreshAdGroups}
                 />
               </div>
-              <Popover open={openAdGroup} onOpenChange={(v) => { if (!v || (!loadingAdGroups && selectedCampaign.length > 0)) setOpenAdGroup(v) }}>
+              <Popover disabled={isDuplicating || loadingAdGroups} open={openAdGroup} onOpenChange={(v) => { if (!v || (!loadingAdGroups && selectedCampaign.length > 0)) setOpenAdGroup(v) }}>
                 <PopoverTrigger asChild>
                   <Button
                     type="button"
@@ -5117,11 +5117,11 @@ export default function TikTokAdCreationForm({
                   </Command>
                 </PopoverContent>
               </Popover>
-              {(!selectedIdentity || selectedIdentity === 'CUSTOMIZED_USER') && (
+              {/* {(!selectedIdentity || selectedIdentity === 'CUSTOMIZED_USER') && (
                 <p className="text-xs text-red-500 font-medium mt-1">
                   {adType === 'NORMAL' ? "Please select an identity" : "Please select an account to Promote From"}
                 </p>
-              )}
+              )} */}
             </div>
 
             {/* Organic Post to Boost for Spark Ads */}

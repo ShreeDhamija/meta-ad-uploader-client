@@ -289,6 +289,30 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
         setInitialSettings(initial);
     }, [serverSettings, selectedAdvertiser]);
 
+    // Auto-select the first linked identity if none is set in database yet (matching launcher auto-select)
+    useEffect(() => {
+        if (localSettings && !localSettings.defaultIdentityId && identities.length > 0) {
+            const best = identities[0]; // identities is already filtered to BC_AUTH_TT!
+            if (best) {
+                setLocalSettings(prev => ({
+                    ...prev,
+                    defaultIdentityId: best.identity_id,
+                    defaultIdentityName: best.display_name
+                }));
+                setInitialSettings(prev => {
+                    if (prev) {
+                        return {
+                            ...prev,
+                            defaultIdentityId: best.identity_id,
+                            defaultIdentityName: best.display_name
+                        };
+                    }
+                    return prev;
+                });
+            }
+        }
+    }, [identities, localSettings]);
+
     // Effect to save drafts of changes to localStorage (matching Meta's AdAccountSettings.jsx)
     useEffect(() => {
         if (!selectedAdvertiser || !settings || !initialSettings) return;
@@ -677,7 +701,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                                                     />
                                                                     <div className="flex flex-col min-w-0">
                                                                         <span className="text-sm font-semibold text-gray-900 truncate">{i.display_name}</span>
-                                                                        <span className="text-xs text-gray-400 font-normal shrink-0 truncate">{i.identity_id}</span>
+                                                                        <span className="text-xs text-gray-400 font-normal shrink-0 truncate">{i.username || i.identity_id}</span>
                                                                     </div>
                                                                 </div>
                                                                 {currentSettings.defaultIdentityId === i.identity_id && <Check className="ml-auto w-4 h-4 text-black shrink-0" />}
