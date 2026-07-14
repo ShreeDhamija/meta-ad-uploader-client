@@ -2394,12 +2394,7 @@ export default function TikTokAdCreationForm({
     }
   }, [selectedAdvertiser, tiktokIdentities, setIdentities]);
 
-  // Automatically update selectedIdentity when adType or identities list changes
-  // Use a ref to avoid overriding the parent's cached/default value on the very first
-  // identities population — the parent sets selectedIdentity via a separate render cycle,
-  // so on the first run we only auto-select if the parent explicitly left it empty.
-  const identityAutoSelectRef = useRef(false);
-
+  // Clear selectedIdentity if it is no longer valid or if identities list went empty
   useEffect(() => {
     const isFetched = tiktokIdentities[selectedAdvertiser] !== undefined;
 
@@ -2414,35 +2409,10 @@ export default function TikTokAdCreationForm({
     if (identities.length > 0) {
       const currentExists = identities.some(i => i.identity_id === selectedIdentity);
 
-      if (currentExists) {
-        // The selected identity is valid — mark auto-select as done
-        // DISABLED: console.log('[IDENTITY DEBUG] → currentExists=true, keeping:', selectedIdentity);
-        identityAutoSelectRef.current = true;
-        return;
+      if (!currentExists && selectedIdentity && selectedIdentity !== 'CUSTOMIZED_USER') {
+        setSelectedIdentity('');
       }
-
-      if (!selectedIdentity) {
-        // selectedIdentity is empty — auto-select the best match
-        const best = identities.find(i => i.identity_type === 'BC_AUTH_TT') || identities[0];
-        // DISABLED: console.log('[IDENTITY DEBUG] → empty, auto-selecting:', best?.identity_id);
-        setSelectedIdentity(best?.identity_id || '');
-        identityAutoSelectRef.current = true;
-      } else if (identityAutoSelectRef.current) {
-        // Already ran once before AND the current value doesn't exist in the list
-        // (e.g. user switched advertisers) — override with best match
-        const best = identities.find(i => i.identity_type === 'BC_AUTH_TT') || identities[0];
-        // DISABLED: console.log('[IDENTITY DEBUG] → not found & autoSelectDone, overriding to:', best?.identity_id);
-        setSelectedIdentity(best?.identity_id || '');
-      } else {
-        // first run, selectedIdentity is non-empty but not in identities yet
-        //   → skip, let the parent's cached/default value settle in next render
-        // DISABLED: console.log('[IDENTITY DEBUG] → SKIPPING (first run, waiting for parent value to settle). selectedIdentity=', selectedIdentity);
-      }
-    } else if (!loadingIdentities && isFetched && identityAutoSelectRef.current) {
-      // Only clear if auto-select already ran once (identities were populated then went empty,
-      // e.g. advertiser switch). On first render, identities state is [] even though
-      // tiktokIdentities context has data — the setIdentities call is still pending.
-      // DISABLED: console.log('[IDENTITY DEBUG] → identities empty & fetched & autoSelectDone, clearing');
+    } else if (!loadingIdentities && isFetched) {
       setSelectedIdentity('')
       if (adType === 'SPARK') {
         setAdType('NORMAL')
@@ -4642,7 +4612,7 @@ export default function TikTokAdCreationForm({
                   onClick={forceRefreshAdGroups}
                 />
               </div>
-              <Popover disabled={isDuplicating || loadingAdGroups} open={openAdGroup} onOpenChange={(v) => { if (!v || (!loadingAdGroups && selectedCampaign.length > 0)) setOpenAdGroup(v) }}>
+              <Popover disabled={loadingAdGroups} open={openAdGroup} onOpenChange={(v) => { if (!v || (!loadingAdGroups && selectedCampaign.length > 0)) setOpenAdGroup(v) }}>
                 <PopoverTrigger asChild>
                   <Button
                     type="button"
@@ -4977,13 +4947,8 @@ export default function TikTokAdCreationForm({
                             if (activeVariantId !== 'default') return;
                             setAdType(value);
                             const currentExists = identities.some(i => i.identity_id === selectedIdentity);
-                            if (!selectedIdentity || !currentExists) {
-                              const firstLinked = identities.find(i => i.identity_type === 'BC_AUTH_TT') || identities[0];
-                              if (firstLinked) {
-                                setSelectedIdentity(firstLinked.identity_id);
-                              } else {
-                                setSelectedIdentity('');
-                              }
+                            if (!currentExists && selectedIdentity && selectedIdentity !== 'CUSTOMIZED_USER') {
+                              setSelectedIdentity('');
                             }
                           }}
                           disabled={activeVariantId !== 'default'}
