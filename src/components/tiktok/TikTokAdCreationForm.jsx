@@ -6144,34 +6144,45 @@ export default function TikTokAdCreationForm({
                         const rowSources = uploadSources.filter((s) => s !== 'local')
                         if (rowSources.length === 0) return null
 
+                        const hasFastUploadSource = rowSources.some((id) =>
+                          ['drive', 'dropbox'].includes(id)
+                        );
+
                         return (
-                          <div className={cn("grid gap-2", rowSources.length === 1 ? "grid-cols-1" : "grid-cols-2")}>
-                            {rowSources.map((id) => {
-                              const src = UPLOAD_SOURCE_OPTIONS.find((o) => o.id === id)
-                              if (!src) return null
+                          <div className="space-y-1">
+                            <div className={cn("grid gap-2", rowSources.length === 1 ? "grid-cols-1" : "grid-cols-2")}>
+                              {rowSources.map((id) => {
+                                const src = UPLOAD_SOURCE_OPTIONS.find((o) => o.id === id)
+                                if (!src) return null
 
-                              let onClick
-                              if (id === 'drive') onClick = handleDriveClick
-                              else if (id === 'dropbox') onClick = handleDropboxClick
+                                let onClick
+                                if (id === 'drive') onClick = handleDriveClick
+                                else if (id === 'dropbox') onClick = handleDropboxClick
 
-                              return (
-                                <Button
-                                  key={id}
-                                  type="button"
-                                  onClick={onClick}
-                                  className="bg-black hover:bg-zinc-800 text-white rounded-2xl h-[48px] flex items-center justify-center gap-2 px-3 transition-all active:scale-95"
-                                >
-                                  <img
-                                    src={typeof src.icon === 'string' ? src.icon : undefined}
-                                    alt={src.name}
-                                    className="h-4 w-4 object-contain"
-                                    style={typeof src.icon !== 'string' ? { display: 'none' } : {}}
-                                  />
-                                  {typeof src.icon === 'function' && <src.icon className="h-4 w-4" />}
-                                  <span className="truncate text-xs font-semibold">{src.fullLabel}</span>
-                                </Button>
-                              )
-                            })}
+                                return (
+                                  <Button
+                                    key={id}
+                                    type="button"
+                                    onClick={onClick}
+                                    className="bg-black hover:bg-zinc-800 text-white rounded-2xl h-[48px] flex items-center justify-center gap-2 px-3 transition-all active:scale-95"
+                                  >
+                                    <img
+                                      src={typeof src.icon === 'string' ? src.icon : undefined}
+                                      alt={src.name}
+                                      className="h-4 w-4 object-contain"
+                                      style={typeof src.icon !== 'string' ? { display: 'none' } : {}}
+                                    />
+                                    {typeof src.icon === 'function' && <src.icon className="h-4 w-4" />}
+                                    <span className="truncate text-xs font-semibold">{src.fullLabel}</span>
+                                  </Button>
+                                )
+                              })}
+                            </div>
+                            {hasFastUploadSource && (
+                              <p className="px-1 text-[11px] leading-tight text-gray-500">
+                                Google Drive/Dropbox/Frame files upload 5X faster
+                              </p>
+                            )}
                           </div>
                         )
                       })()}
