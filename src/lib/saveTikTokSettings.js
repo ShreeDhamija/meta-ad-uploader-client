@@ -17,29 +17,19 @@ export async function saveTikTokSettings(advertiserId, settings) {
     ...(tiktokToken && { 'x-tiktok-token': tiktokToken }),
   };
 
-  console.log(`[saveTikTokSettings] Saving settings for advertiserId: ${advertiserId}`, settings);
+  const response = await fetch(`${API_BASE_URL}/api/tiktok/settings/save`, {
+    method: 'POST',
+    credentials: 'include',
+    headers,
+    body: JSON.stringify({ advertiserId, settings }),
+  });
 
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/tiktok/settings/save`, {
-      method: 'POST',
-      credentials: 'include',
-      headers,
-      body: JSON.stringify({ advertiserId, settings }),
-    });
-
-    if (!response.ok) {
-      const err = await response.text();
-      console.error(`[saveTikTokSettings] Server returned non-OK status: ${response.status}`, err);
-      throw new Error(err || 'Failed to save TikTok settings');
-    }
-
-    const data = await response.json();
-    console.log(`[saveTikTokSettings] Successfully saved settings for advertiserId: ${advertiserId}`, data);
-    return data;
-  } catch (err) {
-    console.error(`[saveTikTokSettings] Error catching during fetch for advertiserId: ${advertiserId}:`, err);
-    throw err;
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(err || 'Failed to save TikTok settings');
   }
+
+  return response.json();
 }
 
 /**
@@ -55,27 +45,17 @@ export async function deleteTikTokCopyTemplate(advertiserId, templateName) {
     ...(tiktokToken && { 'x-tiktok-token': tiktokToken }),
   };
 
-  console.log(`[deleteTikTokCopyTemplate] Deleting template "${templateName}" for advertiserId: ${advertiserId}`);
+  const response = await fetch(`${API_BASE_URL}/api/tiktok/settings/copy-template`, {
+    method: 'DELETE',
+    credentials: 'include',
+    headers,
+    body: JSON.stringify({ advertiserId, templateName }),
+  });
 
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/tiktok/settings/copy-template`, {
-      method: 'DELETE',
-      credentials: 'include',
-      headers,
-      body: JSON.stringify({ advertiserId, templateName }),
-    });
-
-    if (!response.ok) {
-      const err = await response.text();
-      console.error(`[deleteTikTokCopyTemplate] Server returned non-OK status: ${response.status}`, err);
-      throw new Error(err || 'Failed to delete TikTok copy template');
-    }
-
-    const data = await response.json();
-    console.log(`[deleteTikTokCopyTemplate] Successfully deleted template "${templateName}" for advertiserId: ${advertiserId}`, data);
-    return data;
-  } catch (err) {
-    console.error(`[deleteTikTokCopyTemplate] Error catching during fetch for advertiserId: ${advertiserId}:`, err);
-    throw err;
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(err || 'Failed to delete TikTok copy template');
   }
+
+  return response.json();
 }

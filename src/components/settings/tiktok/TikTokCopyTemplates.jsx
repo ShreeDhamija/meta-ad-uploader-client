@@ -10,6 +10,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import TextareaAutosize from 'react-textarea-autosize'
 import { RotateLoader } from "react-spinners"
 import { deleteTikTokCopyTemplate } from "@/lib/saveTikTokSettings"
+import { useBlocker } from "react-router-dom"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 const settingsFieldChrome = "rounded-2xl border border-gray-300 py-4.5 bg-white shadow";
@@ -159,6 +160,19 @@ export default function TikTokCopyTemplates({
             trimmedText !== originalText
         );
     }, [templateName, selectedName, templates, text]);
+
+    const blocker = useBlocker(templateChanged);
+
+    useEffect(() => {
+        const handler = (e) => {
+            if (templateChanged) {
+                e.preventDefault();
+                e.returnValue = ''; // Chrome requires this
+            }
+        };
+        window.addEventListener('beforeunload', handler);
+        return () => window.removeEventListener('beforeunload', handler);
+    }, [templateChanged]);
 
     // Sync with props
     useEffect(() => {
@@ -647,6 +661,53 @@ export default function TikTokCopyTemplates({
                                     variant="outline"
                                     className="rounded-xl w-full border-gray-300"
                                     onClick={() => setShowUnsavedChangesDialog(false)}
+                                >
+                                    Cancel
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {blocker.state === "blocked" && (
+                <div
+                    className="fixed inset-0 z-[9999] bg-black/30 flex justify-center items-center"
+                    style={{ top: -20, left: 0, right: 0, bottom: 0, position: 'fixed' }}
+                    onClick={() => blocker.reset()}
+                >
+                    <div
+                        className="bg-white rounded-2xl w-[500px] shadow-xl relative border border-gray-200"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="p-8">
+                            <h2 className="text-xl font-semibold mb-2 text-zinc-950">Unsaved Template Changes</h2>
+                            <p className="text-sm text-gray-600 mb-6">
+                                You have unsaved changes in your template. What would you like to do?
+                            </p>
+
+                            <div className="flex flex-col gap-3">
+                                <Button
+                                    className="bg-blue-500 text-white rounded-xl hover:bg-blue-600 w-full"
+                                    onClick={async () => {
+                                        const saved = await handleSaveTemplate();
+                                        if (saved) {
+                                            blocker.proceed();
+                                        }
+                                    }}
+                                >
+                                    Save & Continue
+                                </Button>
+                                <Button
+                                    className="rounded-xl bg-rose-500 text-white hover:bg-red-600 w-full"
+                                    onClick={() => blocker.proceed()}
+                                >
+                                    Discard Changes and Proceed
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    className="rounded-xl w-full border-gray-300"
+                                    onClick={() => blocker.reset()}
                                 >
                                     Cancel
                                 </Button>

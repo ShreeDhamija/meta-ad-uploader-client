@@ -128,11 +128,8 @@ export const AppProvider = ({ children }) => {
   const fetchTikTokSettings = useCallback(async (advertiserId, force = false) => {
     if (!advertiserId) return null;
 
-    console.log(`[AppContext] fetchTikTokSettings called for advertiserId: ${advertiserId}, force: ${force}`);
-
     if (!force) {
       if (tiktokSettings[advertiserId]) {
-        console.log(`[AppContext] fetchTikTokSettings using cached settings for advertiserId: ${advertiserId}`, tiktokSettings[advertiserId]);
         return tiktokSettings[advertiserId];
       }
     }
@@ -153,8 +150,6 @@ export const AppProvider = ({ children }) => {
       const settings = data.settings || {};
       const documentExists = data.documentExists ?? false;
 
-      console.log(`[AppContext] fetchTikTokSettings server response for advertiserId: ${advertiserId}:`, data);
-
       setTiktokSettings(prev => {
         const updated = {
           ...prev,
@@ -168,7 +163,7 @@ export const AppProvider = ({ children }) => {
       });
       return settings;
     } catch (err) {
-      console.error(`[AppContext] Failed to fetch TikTok settings for advertiserId: ${advertiserId}:`, err);
+      console.error("Failed to fetch TikTok settings:", err);
       return null;
     } finally {
       setTiktokSettingsLoading(prev => ({ ...prev, [advertiserId]: false }));
@@ -177,7 +172,6 @@ export const AppProvider = ({ children }) => {
 
   const updateTikTokSettingsCache = useCallback((advertiserId, nextSettings) => {
     if (!advertiserId) return;
-    console.log(`[AppContext] updateTikTokSettingsCache called for advertiserId: ${advertiserId}:`, nextSettings);
     setTiktokSettings(prev => {
       const updated = { ...prev, [advertiserId]: nextSettings };
       writeCache('tiktokSettings', updated);
