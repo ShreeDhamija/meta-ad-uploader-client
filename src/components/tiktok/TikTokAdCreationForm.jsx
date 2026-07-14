@@ -1154,10 +1154,6 @@ export default function TikTokAdCreationForm({
     return Array.from(locs);
   }, [selectedAdGroup, adGroups]);
 
-  const selectedIdentityObj = useMemo(() => {
-    return identities.find(i => i.identity_id === selectedIdentity) || null;
-  }, [identities, selectedIdentity]);
-
   // Effect 1: Fetch SHOWCASE products (identity-based).
   // Intentionally does NOT depend on formStoreId so that setFormStoreId() called
   // during product selection never re-triggers this fetch.
@@ -4137,6 +4133,7 @@ export default function TikTokAdCreationForm({
 
   const validationErrors = getValidationErrors()
   const isFormValid = validationErrors.length === 0
+  const isIdentityMissing = !selectedIdentity || selectedIdentity === 'CUSTOMIZED_USER'
   const publishDisabled = !isFormValid || (selectedFiles && selectedFiles.size > 0)
 
   return (
@@ -4610,12 +4607,12 @@ export default function TikTokAdCreationForm({
                 />
               </div>
               <Popover open={openAdGroup} onOpenChange={(v) => { if (!v || (!loadingAdGroups && selectedCampaign.length > 0)) setOpenAdGroup(v) }}>
-                <PopoverTrigger asChild disabled={isDuplicating}>
+                <PopoverTrigger asChild>
                   <Button
                     type="button"
                     variant="outline"
                     role="combobox"
-                    disabled={selectedCampaign.length === 0 || loadingAdGroups}
+                    disabled={selectedCampaign.length === 0 || loadingAdGroups || isDuplicating}
                     className="w-full justify-between border border-gray-300 rounded-2xl py-4.5 bg-white shadow group-data-[state=open]:border-blue-500 transition-colors duration-150 hover:bg-white disabled:opacity-60 disabled:bg-gray-50 disabled:cursor-not-allowed"
                   >
                     <div className="w-full overflow-hidden flex items-center gap-2">
@@ -6209,6 +6206,12 @@ export default function TikTokAdCreationForm({
                   {areAllSelectedAdGroupsShopping && (!formStoreProductId || (Array.isArray(formStoreProductId) && formStoreProductId.length === 0)) && (
                     <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
                       Please select a showcase product
+                    </div>
+                  )}
+
+                  {isIdentityMissing && (
+                    <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                      {adType === 'NORMAL' ? "Please select a TikTok Identity to publish ads" : "Please select an account to Promote From to publish ads"}
                     </div>
                   )}
                 </div>
