@@ -4612,7 +4612,7 @@ export default function TikTokAdCreationForm({
                     type="button"
                     variant="outline"
                     role="combobox"
-                    disabled={selectedCampaign.length === 0 || loadingAdGroups || isDuplicating}
+                    disabled={selectedCampaign.length === 0 || loadingAdGroups || duplicateCampaign}
                     className="w-full justify-between border border-gray-300 rounded-2xl py-4.5 bg-white shadow group-data-[state=open]:border-blue-500 transition-colors duration-150 hover:bg-white disabled:opacity-60 disabled:bg-gray-50 disabled:cursor-not-allowed"
                   >
                     <div className="w-full overflow-hidden flex items-center gap-2">
@@ -5024,7 +5024,7 @@ export default function TikTokAdCreationForm({
                               />
                               <span className="font-semibold text-gray-900">{found.display_name}</span>
                             </span>
-                          ) : <span>{selectedIdentity}</span>;
+                          ) : <span className="text-gray-400 font-normal">Select Identity</span>;
                         })()
                         : <span>{adType === 'NORMAL' ? "Select Identity" : "Select account to Promote From"}</span>}
                     </span>
