@@ -1796,14 +1796,6 @@ export default function TikTokAdCreationForm({
               return [newAgObj, ...prev];
             })
           }
-          const campId = selectedCampaign[0]
-          if (campId) {
-            const cacheKey = `tiktok_adgroups_${campId}`;
-            const cachedList = readCache(cacheKey) || [];
-            if (!cachedList.some(ag => ag.adgroup_id === newAgObj.adgroup_id)) {
-              writeCache(cacheKey, [newAgObj, ...cachedList]);
-            }
-          }
         }
       }
 
@@ -2134,34 +2126,6 @@ export default function TikTokAdCreationForm({
             return ag;
           });
 
-          // Proactively update local cache so refreshes or navigation retain updated counts
-          try {
-            const campaignsToUpdate = [...new Set(adGroupsPayload.map(pay => {
-              const match = prevAdGroups.find(ag => ag.adgroup_id === pay.adgroupId);
-              return match?.campaignId || match?.campaign_id || null;
-            }).filter(Boolean))];
-
-            campaignsToUpdate.forEach(campId => {
-              const cacheKey = `tiktok_adgroups_${campId}`;
-              const cachedList = readCache(cacheKey);
-              if (cachedList && Array.isArray(cachedList)) {
-                const updatedCacheList = cachedList.map(ag => {
-                  const adGroupPay = adGroupsPayload.find(pay => pay.adgroupId === ag.adgroup_id);
-                  if (adGroupPay) {
-                    return {
-                      ...ag,
-                      ad_count: (ag.ad_count || 0) + adGroupPay.creatives.length
-                    };
-                  }
-                  return ag;
-                });
-                writeCache(cacheKey, updatedCacheList);
-              }
-            });
-          } catch (cacheErr) {
-            console.warn("Failed to synchronize localStorage cache for ad groups:", cacheErr);
-          }
-
           return updatedAdGroups;
         })
       }
@@ -2393,25 +2357,17 @@ export default function TikTokAdCreationForm({
       return
     }
 
-    const cacheKey = `tiktok_campaigns_${selectedAdvertiser}`
-    const cached = readCache(cacheKey)
-    if (cached) {
-      setCampaigns(cached)
-      campaignsLoadedForAdvertiserRef.current = selectedAdvertiser
-    } else {
-      setLoadingCampaigns(true)
-      const params = new URLSearchParams({ advertiserId: selectedAdvertiser, page: '1', pageSize: '100' })
-      tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-campaigns?${params}`)
-        .then(r => r.json())
-        .then(d => {
-          const list = d.campaigns || []
-          setCampaigns(list)
-          writeCache(cacheKey, list)
-          campaignsLoadedForAdvertiserRef.current = selectedAdvertiser
-        })
-        .catch(() => toast.error('Failed to load campaigns'))
-        .finally(() => setLoadingCampaigns(false))
-    }
+    setLoadingCampaigns(true)
+    const params = new URLSearchParams({ advertiserId: selectedAdvertiser, page: '1', pageSize: '100' })
+    tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-campaigns?${params}`)
+      .then(r => r.json())
+      .then(d => {
+        const list = d.campaigns || []
+        setCampaigns(list)
+        campaignsLoadedForAdvertiserRef.current = selectedAdvertiser
+      })
+      .catch(() => toast.error('Failed to load campaigns'))
+      .finally(() => setLoadingCampaigns(false))
   }, [selectedAdvertiser, setCampaigns, setSelectedCampaign, tiktokFetch])
 
   // Fetch Identities on Advertiser change
@@ -2516,27 +2472,16 @@ export default function TikTokAdCreationForm({
     setAdGroups([]) // Clear old ad groups immediately to avoid showing stale data from the previous campaign!
 
     const fetchPromises = selectedCampaign.map(campId => {
-      const cacheKey = `tiktok_adgroups_${campId}`
-      const cached = readCache(cacheKey)
-      if (cached) {
-        return Promise.resolve(cached.map(ag => ({
-          ...ag,
-          campaignId: campId,
-          campaignName: campaignsRef.current.find(c => c.campaign_id === campId)?.campaign_name || campId
-        })))
-      } else {
-        return tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-adgroups?advertiserId=${selectedAdvertiser}&campaignId=${campId}`)
-          .then(r => r.json())
-          .then(d => {
-            const list = d.adGroups || d.adgroups || []
-            writeCache(cacheKey, list)
-            return list.map(ag => ({
-              ...ag,
-              campaignId: campId,
-              campaignName: campaignsRef.current.find(c => c.campaign_id === campId)?.campaign_name || campId
-            }))
-          })
-      }
+      return tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-adgroups?advertiserId=${selectedAdvertiser}&campaignId=${campId}`)
+        .then(r => r.json())
+        .then(d => {
+          const list = d.adGroups || d.adgroups || []
+          return list.map(ag => ({
+            ...ag,
+            campaignId: campId,
+            campaignName: campaignsRef.current.find(c => c.campaign_id === campId)?.campaign_name || campId
+          }))
+        })
     })
 
     Promise.all(fetchPromises)
@@ -2890,7 +2835,6 @@ export default function TikTokAdCreationForm({
         setCampaigns(list)
         // Prune any selectedCampaign IDs that no longer exist in the fresh list
         setSelectedCampaign(prev => prev.filter(id => list.some(c => c.campaign_id === id)))
-        writeCache(`tiktok_campaigns_${selectedAdvertiser}`, list)
         toast.success('Campaigns refreshed!')
       })
       .catch(() => toast.error('Failed to refresh campaigns'))
@@ -2909,7 +2853,6 @@ export default function TikTokAdCreationForm({
         .then(r => r.json())
         .then(d => {
           const list = d.adGroups || d.adgroups || []
-          writeCache(`tiktok_adgroups_${campId}`, list)
           return list.map(ag => ({
             ...ag,
             campaignId: campId,
@@ -3101,8 +3044,7 @@ export default function TikTokAdCreationForm({
       }
 
       if (data.new_campaign_id) {
-        // Cache the mapped ad groups for the new campaign so that when selectedCampaign updates,
-        // it reads from cache immediately instead of hitting the empty API response due to API lag.
+        // Map the ad groups for the new campaign directly to state so they update immediately
         const sourceAdGroups = adGroups.filter(ag => ag.campaignId === campaignId || ag.campaign_id === campaignId)
         if (sourceAdGroups.length > 0 && data.mapping?.adgroups) {
           const mappedNewAdGroups = sourceAdGroups.map(ag => {
@@ -3121,8 +3063,8 @@ export default function TikTokAdCreationForm({
           }).filter(Boolean)
 
           if (mappedNewAdGroups.length > 0) {
-            writeCache(`tiktok_adgroups_${data.new_campaign_id}`, mappedNewAdGroups)
             setAdGroups(mappedNewAdGroups)
+            adGroupsLoadedForSelectionRef.current = `${selectedAdvertiser}:${JSON.stringify([data.new_campaign_id])}`
           }
         }
 
@@ -3145,7 +3087,6 @@ export default function TikTokAdCreationForm({
           ...list.filter(c => c.campaign_id !== data.new_campaign_id)
         ]
         setCampaigns(mergedList)
-        writeCache(`tiktok_campaigns_${selectedAdvertiser}`, mergedList)
       } catch (err) {
         console.error('Failed to refetch campaigns:', err)
       }
