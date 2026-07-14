@@ -1,7 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { readCache, writeCache, clearCache } from '@/lib/dataCache'
-import { useAuth } from './AuthContext'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com'
 
@@ -10,7 +9,6 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com'
 const TikTokAuthContext = createContext(null)
 
 export function TikTokAuthProvider({ children }) {
-  const { isLoggedIn, authLoading: metaAuthLoading } = useAuth()
   const [tiktokUser, setTikTokUser] = useState(() => {
     try {
       const stored = localStorage.getItem('tiktok_user')
@@ -203,21 +201,8 @@ export function TikTokAuthProvider({ children }) {
   }
 
   useEffect(() => {
-    if (metaAuthLoading) return
-
-    if (isLoggedIn) {
-      refreshTikTokUser()
-    } else {
-      // Clear TikTok session since primary user is not logged in
-      try { localStorage.removeItem('tiktok_uid') } catch (_) { }
-      try { localStorage.removeItem('tiktok_token') } catch (_) { }
-      try { localStorage.removeItem('tiktok_advertiser_ids') } catch (_) { }
-      try { localStorage.removeItem('tiktok_user') } catch (_) { }
-      setIsTikTokLoggedIn(false)
-      setTikTokUser(null)
-      setTikTokAdvertisers([])
-    }
-  }, [isLoggedIn, metaAuthLoading])
+    refreshTikTokUser()
+  }, [])
 
   return (
     <TikTokAuthContext.Provider
