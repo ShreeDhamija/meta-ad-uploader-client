@@ -1154,10 +1154,6 @@ export default function TikTokAdCreationForm({
     return Array.from(locs);
   }, [selectedAdGroup, adGroups]);
 
-  const selectedIdentityObj = useMemo(() => {
-    return identities.find(i => i.identity_id === selectedIdentity) || null;
-  }, [identities, selectedIdentity]);
-
   // Effect 1: Fetch SHOWCASE products (identity-based).
   // Intentionally does NOT depend on formStoreId so that setFormStoreId() called
   // during product selection never re-triggers this fetch.
@@ -2394,61 +2390,28 @@ export default function TikTokAdCreationForm({
     }
   }, [selectedAdvertiser, tiktokIdentities, setIdentities]);
 
-  // Automatically update selectedIdentity when adType or identities list changes
-  // Use a ref to avoid overriding the parent's cached/default value on the very first
-  // identities population — the parent sets selectedIdentity via a separate render cycle,
-  // so on the first run we only auto-select if the parent explicitly left it empty.
-  const identityAutoSelectRef = useRef(false);
-
+  // Clear selectedIdentity if it is no longer valid or if identities list went empty
   useEffect(() => {
+    if (loadingPrefs) return;
+
     const isFetched = tiktokIdentities[selectedAdvertiser] !== undefined;
+    const rawList = tiktokIdentities[selectedAdvertiser] || [];
+    const filteredList = rawList.filter(i => i.identity_type === 'BC_AUTH_TT');
 
-    // DISABLED: console.log('[IDENTITY DEBUG] auto-update effect:', {
-    // DISABLED:   identitiesCount: identities.length,
-    // DISABLED:   selectedIdentity,
-    // DISABLED:   isFetched,
-    // DISABLED:   loadingIdentities,
-    // DISABLED:   autoSelectDone: identityAutoSelectRef.current,
-    // DISABLED: });
-
-    if (identities.length > 0) {
-      const currentExists = identities.some(i => i.identity_id === selectedIdentity);
-
-      if (currentExists) {
-        // The selected identity is valid — mark auto-select as done
-        // DISABLED: console.log('[IDENTITY DEBUG] → currentExists=true, keeping:', selectedIdentity);
-        identityAutoSelectRef.current = true;
-        return;
-      }
-
-      if (!selectedIdentity) {
-        // selectedIdentity is empty — auto-select the best match
-        const best = identities.find(i => i.identity_type === 'BC_AUTH_TT') || identities[0];
-        // DISABLED: console.log('[IDENTITY DEBUG] → empty, auto-selecting:', best?.identity_id);
-        setSelectedIdentity(best?.identity_id || '');
-        identityAutoSelectRef.current = true;
-      } else if (identityAutoSelectRef.current) {
-        // Already ran once before AND the current value doesn't exist in the list
-        // (e.g. user switched advertisers) — override with best match
-        const best = identities.find(i => i.identity_type === 'BC_AUTH_TT') || identities[0];
-        // DISABLED: console.log('[IDENTITY DEBUG] → not found & autoSelectDone, overriding to:', best?.identity_id);
-        setSelectedIdentity(best?.identity_id || '');
-      } else {
-        // first run, selectedIdentity is non-empty but not in identities yet
-        //   → skip, let the parent's cached/default value settle in next render
-        // DISABLED: console.log('[IDENTITY DEBUG] → SKIPPING (first run, waiting for parent value to settle). selectedIdentity=', selectedIdentity);
-      }
-    } else if (!loadingIdentities && isFetched && identityAutoSelectRef.current) {
-      // Only clear if auto-select already ran once (identities were populated then went empty,
-      // e.g. advertiser switch). On first render, identities state is [] even though
-      // tiktokIdentities context has data — the setIdentities call is still pending.
-      // DISABLED: console.log('[IDENTITY DEBUG] → identities empty & fetched & autoSelectDone, clearing');
-      setSelectedIdentity('')
-      if (adType === 'SPARK') {
-        setAdType('NORMAL')
+    if (isFetched) {
+      if (filteredList.length > 0) {
+        const currentExists = filteredList.some(i => i.identity_id === selectedIdentity);
+        if (!currentExists && selectedIdentity && selectedIdentity !== 'CUSTOMIZED_USER') {
+          setSelectedIdentity('');
+        }
+      } else if (!loadingIdentities) {
+        setSelectedIdentity('');
+        if (adType === 'SPARK') {
+          setAdType('NORMAL');
+        }
       }
     }
-  }, [identities, adType, setSelectedIdentity, setAdType, selectedIdentity, loadingIdentities, tiktokIdentities, selectedAdvertiser])
+  }, [selectedAdvertiser, tiktokIdentities, loadingIdentities, selectedIdentity, adType, setSelectedIdentity, setAdType, loadingPrefs]);
 
   // Fetch Ad Groups on Campaign change
   useEffect(() => {
@@ -4170,6 +4133,7 @@ export default function TikTokAdCreationForm({
 
   const validationErrors = getValidationErrors()
   const isFormValid = validationErrors.length === 0
+  const isIdentityMissing = !selectedIdentity || selectedIdentity === 'CUSTOMIZED_USER'
   const publishDisabled = !isFormValid || (selectedFiles && selectedFiles.size > 0)
 
   return (
@@ -4648,7 +4612,7 @@ export default function TikTokAdCreationForm({
                     type="button"
                     variant="outline"
                     role="combobox"
-                    disabled={selectedCampaign.length === 0 || loadingAdGroups}
+                    disabled={selectedCampaign.length === 0 || loadingAdGroups || duplicateCampaign}
                     className="w-full justify-between border border-gray-300 rounded-2xl py-4.5 bg-white shadow group-data-[state=open]:border-blue-500 transition-colors duration-150 hover:bg-white disabled:opacity-60 disabled:bg-gray-50 disabled:cursor-not-allowed"
                   >
                     <div className="w-full overflow-hidden flex items-center gap-2">
@@ -4659,7 +4623,9 @@ export default function TikTokAdCreationForm({
                         </>
                       ) : (
                         <span className="block truncate flex-1 text-left text-sm font-medium">
-                          {showDuplicateAdGroupBlock
+                          {duplicateCampaign 
+                          ? "Finish Creating Campaign to select an ad set" 
+                          : showDuplicateAdGroupBlock
                             ? "New Ad Group"
                             : selectedCampaign.length > 0 && adGroups.length === 0
                               ? "No ad groups exist in this campaign. Select a different campaign"
@@ -4977,13 +4943,8 @@ export default function TikTokAdCreationForm({
                             if (activeVariantId !== 'default') return;
                             setAdType(value);
                             const currentExists = identities.some(i => i.identity_id === selectedIdentity);
-                            if (!selectedIdentity || !currentExists) {
-                              const firstLinked = identities.find(i => i.identity_type === 'BC_AUTH_TT') || identities[0];
-                              if (firstLinked) {
-                                setSelectedIdentity(firstLinked.identity_id);
-                              } else {
-                                setSelectedIdentity('');
-                              }
+                            if (!currentExists && selectedIdentity && selectedIdentity !== 'CUSTOMIZED_USER') {
+                              setSelectedIdentity('');
                             }
                           }}
                           disabled={activeVariantId !== 'default'}
@@ -5045,11 +5006,13 @@ export default function TikTokAdCreationForm({
                     type="button"
                     variant="outline"
                     role="combobox"
-                    disabled={!selectedAdvertiser || loadingIdentities}
+                    disabled={!selectedAdvertiser || loadingIdentities || loadingPrefs}
                     className="w-full justify-between border border-gray-300 rounded-2xl py-4.5 bg-white shadow transition-colors duration-150 hover:bg-white disabled:opacity-60 disabled:bg-gray-50 disabled:cursor-not-allowed"
                   >
                     <span className="truncate text-sm font-medium flex items-center gap-1.5">
-                      {selectedIdentity && selectedIdentity !== 'CUSTOMIZED_USER'
+                      {loadingPrefs ? (
+                        <span className="text-gray-400 font-normal">Loading preferences...</span>
+                      ) : selectedIdentity && selectedIdentity !== 'CUSTOMIZED_USER'
                         ? (() => {
                           const found = identities.find(i => i.identity_id === selectedIdentity);
                           return found ? (
@@ -5063,7 +5026,7 @@ export default function TikTokAdCreationForm({
                               />
                               <span className="font-semibold text-gray-900">{found.display_name}</span>
                             </span>
-                          ) : <span>{selectedIdentity}</span>;
+                          ) : <span className="text-gray-400 font-normal">Select Identity</span>;
                         })()
                         : <span>{adType === 'NORMAL' ? "Select Identity" : "Select account to Promote From"}</span>}
                     </span>
@@ -5110,11 +5073,11 @@ export default function TikTokAdCreationForm({
                   </Command>
                 </PopoverContent>
               </Popover>
-              {(!selectedIdentity || selectedIdentity === 'CUSTOMIZED_USER') && (
+              {/* {(!selectedIdentity || selectedIdentity === 'CUSTOMIZED_USER') && (
                 <p className="text-xs text-red-500 font-medium mt-1">
                   {adType === 'NORMAL' ? "Please select an identity" : "Please select an account to Promote From"}
                 </p>
-              )}
+              )} */}
             </div>
 
             {/* Organic Post to Boost for Spark Ads */}
@@ -6245,6 +6208,12 @@ export default function TikTokAdCreationForm({
                   {areAllSelectedAdGroupsShopping && (!formStoreProductId || (Array.isArray(formStoreProductId) && formStoreProductId.length === 0)) && (
                     <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
                       Please select a showcase product
+                    </div>
+                  )}
+
+                  {isIdentityMissing && (
+                    <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                      {adType === 'NORMAL' ? "Please select a TikTok Identity to publish ads" : "Please select an account to Promote From to publish ads"}
                     </div>
                   )}
                 </div>

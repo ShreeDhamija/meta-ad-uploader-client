@@ -607,13 +607,11 @@ export default function TikTokAds() {
   ]);
 
   // Sync state with preferences when they load (mirrors Meta's Home.jsx pattern)
+  // Sync state with preferences when they load (mirrors Meta's Home.jsx pattern)
   useEffect(() => {
-    if (!selectedAdvertiser) {
-      lastLoadedAdvertiserRef.current = null;
-      return;
-    }
+    if (!selectedAdvertiser) return;
 
-    if (!loadingPrefs && lastLoadedAdvertiserRef.current !== selectedAdvertiser) {
+    if (!loadingPrefs) {
       // 1. Default Identity (always prioritize preference over cache, matching Meta page selection)
       const resolvedIdentity = advertiserPrefs?.defaultIdentityId || "";
       setSelectedIdentity(resolvedIdentity);
@@ -641,13 +639,15 @@ export default function TikTokAds() {
       } else {
         setAdTexts([""]);
       }
-
-      lastLoadedAdvertiserRef.current = selectedAdvertiser;
     }
   }, [
     selectedAdvertiser,
     loadingPrefs,
-    advertiserPrefs
+    advertiserPrefs?.defaultIdentityId,
+    advertiserPrefs?.defaultCTAs,
+    advertiserPrefs?.links,
+    advertiserPrefs?.defaultTemplateName,
+    advertiserPrefs?.copyTemplates
   ]);
 
   // Reset form fields when selected advertiser is cleared (mirrors Meta's Home.jsx pattern)
@@ -1035,7 +1035,7 @@ export default function TikTokAds() {
     })
   }, [files, driveFiles, dropboxFiles])
 
-  if (authLoading || metaAuthLoading || subscriptionLoading) return null
+  if (authLoading || metaAuthLoading) return null
 
   return (
     <>
