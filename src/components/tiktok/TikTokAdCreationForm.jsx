@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import TikTokPostSelectorInline from "./TikTokPostSelectorInline"
-import ReorderAdNameParts from "@/components/ui/ReorderAdNameParts"
+import TikTokReorderAdNameParts from "@/components/ui/TikTokReorderAdNameParts"
 import { useNavigate } from "react-router-dom"
 
 import { useTikTokVideoUpload } from "@/hooks/useTikTokVideoUpload"
@@ -2620,18 +2620,27 @@ export default function TikTokAdCreationForm({
       const defaultLink = availableLinks.find(l => l.isDefault) || availableLinks[0];
       const defaultUrl = defaultLink?.url || "";
 
-      // If WEBSITE mode but landingUrl is empty (and not in custom input mode), or is an instant page ID, or not matching dropdown and not custom
-      if ((!landingUrl && !showCustomLink) || !isUrl || (!isWebsiteUrl && !showCustomLink)) {
-        const urlToRestore = lastWebsiteUrl || defaultUrl;
-        console.log("[URL_MODE_DEBUG] Restoring Website URL to:", urlToRestore);
-        setLandingUrl(urlToRestore);
-        setShowCustomLink(false);
+      if (isUrl) {
+        if (isWebsiteUrl) {
+          if (landingUrl !== lastWebsiteUrl) {
+            setLastWebsiteUrl(landingUrl);
+          }
+          if (showCustomLink) {
+            setShowCustomLink(false);
+          }
+        } else {
+          if (landingUrl !== lastWebsiteUrl) {
+            setLastWebsiteUrl(landingUrl);
+          }
+          if (!showCustomLink) {
+            setShowCustomLink(true);
+          }
+        }
       } else {
-        // Valid website URL (dropdown or custom input)
-        if (landingUrl) {
-          console.log("[URL_MODE_DEBUG] Saving lastWebsiteUrl:", landingUrl);
-          setLastWebsiteUrl(landingUrl);
-          setShowCustomLink(!isWebsiteUrl);
+        if (!showCustomLink) {
+          const urlToRestore = lastWebsiteUrl && /^https?:\/\//i.test(lastWebsiteUrl) ? lastWebsiteUrl : defaultUrl;
+          console.log("[URL_MODE_DEBUG] Restoring Website URL to:", urlToRestore);
+          setLandingUrl(urlToRestore);
         }
       }
     } else if (urlMode === 'INSTANT_PAGE') {
@@ -5291,7 +5300,7 @@ export default function TikTokAdCreationForm({
               {/* 3. Ad Name */}
               <div id="adName" className="space-y-1">
                 <Label htmlFor="adName" className="flex items-center justify-between w-full">
-                  <div className="flex items-center gap-2">
+                  <div className={cn("flex items-center gap-2", adType === 'SPARK' && "opacity-50")}>
                     {renderDiffMark("adNameFormulaV2")}
                     <LabelIcon className="w-4 h-4" />
                     <span className="font-semibold text-sm">Ad Name</span>
@@ -5301,8 +5310,12 @@ export default function TikTokAdCreationForm({
                       type="button"
                       size="sm"
                       variant="outline"
+                      disabled={adType === 'SPARK'}
                       onClick={() => navigate(`/settings?tab=tiktok&adsaccount=${selectedAdvertiser}`)}
-                      className="text-xs px-3 pl-2 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900 ml-auto"
+                      className={cn(
+                        "text-xs px-3 pl-2 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900 ml-auto",
+                        adType === 'SPARK' && "opacity-50 cursor-not-allowed bg-zinc-700 hover:bg-zinc-700 hover:text-white"
+                      )}
                       title="Configure ad name formula in settings"
                     >
                       <CogIcon className="w-3 h-3 text-white mr-1" />
@@ -5311,28 +5324,29 @@ export default function TikTokAdCreationForm({
                   )}
                 </Label>
 
-                <ReorderAdNameParts
+                <TikTokReorderAdNameParts
                   formulaInput={adNameFormulaV2?.rawInput || ""}
                   onFormulaChange={(newRawInput) => {
                     setAdNameFormulaV2({ rawInput: newRawInput });
                   }}
                   variant="home"
                   customVariables={advertiserPrefs?.customVariables || []}
+                  disabled={adType === 'SPARK'}
                 />
                 <div className="mt-1">
-                  <Label className="text-xs text-gray-500">
+                  <Label className={cn("text-xs text-gray-500", adType === 'SPARK' && "opacity-50")}>
                     Ad Name Preview: {
-                      (files?.length > 0 || videoFile || driveFiles?.length > 0 || dropboxFiles?.length > 0 || (adType === 'SPARK' && importedPosts?.length > 0))
-                        ? computeAdNameFromFormula(
-                          (adType === 'SPARK' && importedPosts?.length > 0)
-                            ? { name: importedPosts[0].ad_name || 'Spark Ad' }
-                            : (files[0] || videoFile || driveFiles[0] || dropboxFiles[0]),
-                          0,
-                          landingUrl,
-                          null,
-                          adType
-                        )
-                        : "Upload a file to see example"
+                      adType === 'SPARK'
+                        ? "Not applicable for Spark Ads"
+                        : (files?.length > 0 || videoFile || driveFiles?.length > 0 || dropboxFiles?.length > 0)
+                          ? computeAdNameFromFormula(
+                            files[0] || videoFile || driveFiles[0] || dropboxFiles[0],
+                            0,
+                            landingUrl,
+                            null,
+                            adType
+                          )
+                          : "Upload a file to see example"
                     }
                   </Label>
                 </div>
