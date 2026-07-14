@@ -2396,29 +2396,26 @@ export default function TikTokAdCreationForm({
 
   // Clear selectedIdentity if it is no longer valid or if identities list went empty
   useEffect(() => {
+    if (loadingPrefs) return;
+
     const isFetched = tiktokIdentities[selectedAdvertiser] !== undefined;
+    const rawList = tiktokIdentities[selectedAdvertiser] || [];
+    const filteredList = rawList.filter(i => i.identity_type === 'BC_AUTH_TT');
 
-    // DISABLED: console.log('[IDENTITY DEBUG] auto-update effect:', {
-    // DISABLED:   identitiesCount: identities.length,
-    // DISABLED:   selectedIdentity,
-    // DISABLED:   isFetched,
-    // DISABLED:   loadingIdentities,
-    // DISABLED:   autoSelectDone: identityAutoSelectRef.current,
-    // DISABLED: });
-
-    if (identities.length > 0) {
-      const currentExists = identities.some(i => i.identity_id === selectedIdentity);
-
-      if (!currentExists && selectedIdentity && selectedIdentity !== 'CUSTOMIZED_USER') {
+    if (isFetched) {
+      if (filteredList.length > 0) {
+        const currentExists = filteredList.some(i => i.identity_id === selectedIdentity);
+        if (!currentExists && selectedIdentity && selectedIdentity !== 'CUSTOMIZED_USER') {
+          setSelectedIdentity('');
+        }
+      } else if (!loadingIdentities) {
         setSelectedIdentity('');
-      }
-    } else if (!loadingIdentities && isFetched) {
-      setSelectedIdentity('')
-      if (adType === 'SPARK') {
-        setAdType('NORMAL')
+        if (adType === 'SPARK') {
+          setAdType('NORMAL');
+        }
       }
     }
-  }, [identities, adType, setSelectedIdentity, setAdType, selectedIdentity, loadingIdentities, tiktokIdentities, selectedAdvertiser])
+  }, [selectedAdvertiser, tiktokIdentities, loadingIdentities, selectedIdentity, adType, setSelectedIdentity, setAdType, loadingPrefs]);
 
   // Fetch Ad Groups on Campaign change
   useEffect(() => {
@@ -4612,8 +4609,8 @@ export default function TikTokAdCreationForm({
                   onClick={forceRefreshAdGroups}
                 />
               </div>
-              <Popover disabled={loadingAdGroups} open={openAdGroup} onOpenChange={(v) => { if (!v || (!loadingAdGroups && selectedCampaign.length > 0)) setOpenAdGroup(v) }}>
-                <PopoverTrigger asChild>
+              <Popover open={openAdGroup} onOpenChange={(v) => { if (!v || (!loadingAdGroups && selectedCampaign.length > 0)) setOpenAdGroup(v) }}>
+                <PopoverTrigger asChild disabled={isDuplicating}>
                   <Button
                     type="button"
                     variant="outline"
@@ -5010,11 +5007,13 @@ export default function TikTokAdCreationForm({
                     type="button"
                     variant="outline"
                     role="combobox"
-                    disabled={!selectedAdvertiser || loadingIdentities}
+                    disabled={!selectedAdvertiser || loadingIdentities || loadingPrefs}
                     className="w-full justify-between border border-gray-300 rounded-2xl py-4.5 bg-white shadow transition-colors duration-150 hover:bg-white disabled:opacity-60 disabled:bg-gray-50 disabled:cursor-not-allowed"
                   >
                     <span className="truncate text-sm font-medium flex items-center gap-1.5">
-                      {selectedIdentity && selectedIdentity !== 'CUSTOMIZED_USER'
+                      {loadingPrefs ? (
+                        <span className="text-gray-400 font-normal">Loading preferences...</span>
+                      ) : selectedIdentity && selectedIdentity !== 'CUSTOMIZED_USER'
                         ? (() => {
                           const found = identities.find(i => i.identity_id === selectedIdentity);
                           return found ? (
