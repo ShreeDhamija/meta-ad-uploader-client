@@ -3046,28 +3046,21 @@ export default function TikTokAdCreationForm({
       }
 
       if (data.new_campaign_id) {
-        // Map the ad groups for the new campaign directly to state so they update immediately
-        const sourceAdGroups = adGroups.filter(ag => ag.campaignId === campaignId || ag.campaign_id === campaignId)
-        if (sourceAdGroups.length > 0 && data.mapping?.adgroups) {
-          const mappedNewAdGroups = sourceAdGroups.map(ag => {
-            const newId = data.mapping.adgroups[ag.adgroup_id]
-            if (!newId) return null
+        if (data.new_adgroups && data.new_adgroups.length > 0) {
+          const mappedNewAdGroups = data.new_adgroups.map(ag => {
             return {
               ...ag,
-              adgroup_id: newId,
               campaignId: data.new_campaign_id,
               campaign_id: data.new_campaign_id,
               campaignName: duplicatedName,
-              operation_status: "DISABLE",
-              secondary_status: "DISABLE",
+              operation_status: ag.operation_status || "DISABLE",
+              secondary_status: ag.secondary_status || "DISABLE",
               ad_count: 0
             }
-          }).filter(Boolean)
+          });
 
-          if (mappedNewAdGroups.length > 0) {
-            setAdGroups(mappedNewAdGroups)
-            adGroupsLoadedForSelectionRef.current = `${selectedAdvertiser}:${JSON.stringify([data.new_campaign_id])}`
-          }
+          setAdGroups(mappedNewAdGroups)
+          adGroupsLoadedForSelectionRef.current = `${selectedAdvertiser}:${JSON.stringify([data.new_campaign_id])}`
         }
 
         setCampaigns(prev => {
