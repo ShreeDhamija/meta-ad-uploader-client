@@ -5124,6 +5124,8 @@ export default function TikTokAdCreationForm({
                                 src={found.avatar_url || found.profile_image || TikTokIconUrl}
                                 alt={found.display_name}
                                 className="w-6 h-6 rounded-full object-cover shrink-0 bg-gray-50 border border-gray-100 p-0.5"
+                                referrerPolicy="no-referrer"
+                                onError={(e) => { e.currentTarget.src = TikTokIconUrl; }}
                               />
                               <span className="font-semibold text-gray-900">{found.display_name}</span>
                             </span>
@@ -5158,6 +5160,8 @@ export default function TikTokAdCreationForm({
                                 src={i.avatar_url || i.profile_image || TikTokIconUrl}
                                 alt={i.display_name}
                                 className="w-6 h-6 rounded-full object-cover shrink-0 bg-gray-50 border border-gray-100 p-0.5"
+                                referrerPolicy="no-referrer"
+                                onError={(e) => { e.currentTarget.src = TikTokIconUrl; }}
                               />
                               <div className="flex flex-col min-w-0">
                                 <span className="text-sm font-semibold text-gray-900 truncate">{i.display_name}</span>
