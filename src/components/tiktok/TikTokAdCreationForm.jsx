@@ -4623,7 +4623,9 @@ export default function TikTokAdCreationForm({
                         </>
                       ) : (
                         <span className="block truncate flex-1 text-left text-sm font-medium">
-                          {showDuplicateAdGroupBlock
+                          {duplicateCampaign 
+                          ? "Finish Creating Campaign to select an ad set" 
+                          : showDuplicateAdGroupBlock
                             ? "New Ad Group"
                             : selectedCampaign.length > 0 && adGroups.length === 0
                               ? "No ad groups exist in this campaign. Select a different campaign"

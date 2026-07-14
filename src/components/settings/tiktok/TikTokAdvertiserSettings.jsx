@@ -723,68 +723,65 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                         templates={currentSettings.copyTemplates || {}}
                         defaultName={currentSettings.defaultTemplateName || ""}
                         onSaveTemplate={async (name, data, oldName) => {
-                            const updated = { ...currentSettings.copyTemplates };
+                            const updated = { ...(initialSettings?.copyTemplates || {}) };
                             if (oldName && oldName !== name) delete updated[oldName];
                             updated[name] = data;
 
-                            const wasDefault = currentSettings.defaultTemplateName === oldName;
+                            const wasDefault = initialSettings?.defaultTemplateName === oldName;
                             const partialUpdate = {
                                 copyTemplates: updated,
                                 ...(wasDefault && oldName !== name && { defaultTemplateName: name })
                             };
 
-                            const next = { ...currentSettings, ...partialUpdate };
-
-                            // Prevent the settings cache update from re-triggering
-                            // a dirty-state check and re-showing the save bar
-                            skipSettingsResetRef.current = true;
-                            setSettings(next);
+                            const next = { ...(initialSettings || {}), ...partialUpdate };
 
                             try {
                                 await saveTikTokSettings(selectedAdvertiser, next);
                                 setInitialSettings(JSON.parse(JSON.stringify(next)));
+                                setSettings(prev => ({
+                                    ...prev,
+                                    ...partialUpdate
+                                }));
                             } catch (err) {
                                 toast.error("Failed to save template");
-                                // Roll back the skip flag on failure
-                                skipSettingsResetRef.current = false;
                             }
                         }}
                         onSetDefault={async (name) => {
-                            const next = { ...currentSettings, defaultTemplateName: name };
-
-                            // Prevent the settings cache update from re-showing the save bar
-                            skipSettingsResetRef.current = true;
-                            setSettings(next);
+                            const partialUpdate = { defaultTemplateName: name };
+                            const next = { ...(initialSettings || {}), ...partialUpdate };
 
                             try {
                                 await saveTikTokSettings(selectedAdvertiser, next);
                                 setInitialSettings(JSON.parse(JSON.stringify(next)));
+                                setSettings(prev => ({
+                                    ...prev,
+                                    ...partialUpdate
+                                }));
                             } catch (err) {
                                 toast.error("Failed to set default template");
-                                skipSettingsResetRef.current = false;
                             }
                         }}
                         onDeleteTemplate={async (name) => {
-                            const updated = { ...currentSettings.copyTemplates };
+                            const updated = { ...(initialSettings?.copyTemplates || {}) };
                             delete updated[name];
 
-                            const wasDefault = currentSettings.defaultTemplateName === name;
+                            const wasDefault = initialSettings?.defaultTemplateName === name;
                             const partialUpdate = {
                                 copyTemplates: updated,
                                 ...(wasDefault && { defaultTemplateName: "" })
                             };
 
-                            const next = { ...currentSettings, ...partialUpdate };
-
-                            // Prevent the settings cache update from re-showing the save bar
-                            skipSettingsResetRef.current = true;
-                            setSettings(next);
+                            const next = { ...(initialSettings || {}), ...partialUpdate };
 
                             try {
                                 await saveTikTokSettings(selectedAdvertiser, next);
                                 setInitialSettings(JSON.parse(JSON.stringify(next)));
+                                setSettings(prev => ({
+                                    ...prev,
+                                    ...partialUpdate
+                                }));
                             } catch (err) {
-                                skipSettingsResetRef.current = false;
+                                toast.error("Failed to delete template");
                             }
                         }}
                     />
