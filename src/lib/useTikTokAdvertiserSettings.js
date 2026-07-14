@@ -13,7 +13,9 @@ export default function useTikTokAdvertiserSettings(advertiserId) {
     updateTikTokSettingsCache
   } = useAppData();
 
-  const settings = advertiserId ? (tiktokSettings[advertiserId] || null) : null;
+  const getLocalData = localStorage.getItem('tiktokAdvertiserSettings_draft');
+  const settings = getLocalData ? JSON.parse(getLocalData) : null;
+  // const settings = advertiserId ? (tiktokSettings[advertiserId] || null) : null;
   const loading = advertiserId ? (tiktokSettingsLoading[advertiserId] || false) : false;
 
   const lastFetchedIdRef = useRef(null);
