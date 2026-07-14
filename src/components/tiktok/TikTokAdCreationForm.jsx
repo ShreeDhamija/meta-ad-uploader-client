@@ -2327,6 +2327,7 @@ export default function TikTokAdCreationForm({
     setSelectedAdGroup([])
     setCampaigns([])
     setAdGroups([])
+    setSelectedTemplate("")
 
     // Reset duplicate states
     setShowDuplicateAdGroupBlock(false)
@@ -2338,7 +2339,8 @@ export default function TikTokAdCreationForm({
   }, [
     onAdvertiserChange, setCampaigns, setAdGroups, setSelectedCampaign, setSelectedAdGroup,
     setShowDuplicateAdGroupBlock, setDuplicateAdGroup, setNewAdGroupName,
-    setShowDuplicateCampaignBlock, setDuplicateCampaign, setNewCampaignName
+    setShowDuplicateCampaignBlock, setDuplicateCampaign, setNewCampaignName,
+    setSelectedTemplate
   ])
 
   // Fetch Campaigns on Advertiser change
@@ -2583,6 +2585,10 @@ export default function TikTokAdCreationForm({
 
   // Sync copy templates — use defaultTemplateName if set, otherwise fall back to first template
   useEffect(() => {
+    if (loadingPrefs) {
+      setSelectedTemplate("");
+      return;
+    }
     if (advertiserPrefs?.defaultTemplateName) {
       setSelectedTemplate(advertiserPrefs.defaultTemplateName);
     } else if (advertiserPrefs?.copyTemplates) {
@@ -2591,7 +2597,7 @@ export default function TikTokAdCreationForm({
     } else {
       setSelectedTemplate("");
     }
-  }, [selectedAdvertiser, advertiserPrefs]);
+  }, [selectedAdvertiser, advertiserPrefs, loadingPrefs]);
 
   const copyTemplates = advertiserPrefs?.copyTemplates || {};
   const defaultTemplateName = advertiserPrefs?.defaultTemplateName || "";

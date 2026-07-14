@@ -16,6 +16,7 @@ import TikTokLinkParameters from "./TikTokLinkParameters"
 import LabelIcon from "@/assets/icons/label.svg?react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import ReorderAdNameParts from "@/components/ui/ReorderAdNameParts"
+import CTAIcon from '@/assets/icons/cta.svg?react';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
@@ -872,9 +873,16 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
 
                     {/* Default CTAs — flat section like Meta */}
                     <div className="bg-[#f5f5f5] rounded-2xl p-4 space-y-3">
-                        <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-medium text-[14px] text-zinc-950">Default CTA</h3>
+                        <div className="flex items-center gap-2">
+                            <CTAIcon
+                                alt="CTA icon"
+                                className="w-4 h-4 grayscale brightness-75 contrast-75 opacity-60"
+                            />
+                            <span className="text-sm font-medium">Default CTA</span>
                         </div>
+                        <p className="text-gray-500 text-[12px] font-regular">
+                            Your ads will use this CTA by default if not edited while posting
+                        </p>
                         <div className="space-y-2">
                             <Popover open={openCta} onOpenChange={setOpenCta}>
                                 <PopoverTrigger asChild>
@@ -919,9 +927,6 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                 </PopoverContent>
                             </Popover>
                         </div>
-                        <p className="text-gray-500 text-[12px] font-regular">
-                            Your ads will use this CTA by default if not edited while posting
-                        </p>
                     </div>
 
                     {/* ─── Catalog & Product Preferences ─── */}

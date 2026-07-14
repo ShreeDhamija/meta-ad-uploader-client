@@ -650,10 +650,8 @@ export default function TikTokAds() {
     advertiserPrefs?.copyTemplates
   ]);
 
-  // Reset form fields when selected advertiser is cleared (mirrors Meta's Home.jsx pattern)
+  // Reset form fields when selected advertiser changes (mirrors Meta's Home.jsx pattern)
   useEffect(() => {
-    if (selectedAdvertiser) return;
-
     setSelectedIdentity("");
     setCta(["SHOP_NOW"]);
     setLandingUrl("");
