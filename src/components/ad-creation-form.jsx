@@ -9541,7 +9541,7 @@ export default function AdCreationForm({
                       }
                     `}</style>
                     <div
-                      className="fixed left-1/2 z-[2147483647] w-[calc(100vw-1rem)] max-w-[500px] -translate-x-1/2 rounded-2xl border border-gray-200 bg-gray-100 p-3 shadow-lg"
+                      className="fixed left-1/2 z-[2147483647] w-[calc(100vw-1rem)] max-w-[500px] -translate-x-1/2 rounded-2xl border border-gray-200 bg-[#FAF8F3] p-3 shadow-lg"
                       style={{
                         // Google centers the picker. Anchor this panel's bottom edge
                         // above the calculated top edge, allowing for its outer frame.
