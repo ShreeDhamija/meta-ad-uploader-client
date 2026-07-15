@@ -1042,6 +1042,7 @@ export default function AdCreationForm({
   const [showFrameioConnectDialog, setShowFrameioConnectDialog] = useState(false);
   const [showFrameioConnectHelp, setShowFrameioConnectHelp] = useState(false);
   const pickerInstanceRef = useRef(null);
+  const [pickerDialogHeight, setPickerDialogHeight] = useState(650);
   const [productExtensionProductSetId, setProductExtensionProductSetId] = useState("");
 
   //gogle drive pickers
@@ -2594,9 +2595,6 @@ export default function AdCreationForm({
       }
     }
 
-    setShowFolderInput(true);
-
-
     const mimeTypes = [
       "application/vnd.google-apps.folder",
       "image/jpeg",
@@ -2650,6 +2648,8 @@ export default function AdCreationForm({
     const pickerHeight = Math.floor(
       Math.min(650, Math.max(350, viewportHeight - (pickerVerticalReserve * 2)))
     );
+    setPickerDialogHeight(pickerHeight);
+    setShowFolderInput(true);
 
     const pickerBuilder = new google.picker.PickerBuilder()
       .setSize(pickerWidth, pickerHeight)
@@ -9527,7 +9527,14 @@ export default function AdCreationForm({
 
 
                 {showFolderInput && (
-                  <div className="fixed left-1/2 top-2 z-[2147483647] w-[calc(100vw-1rem)] max-w-[500px] -translate-x-1/2 rounded-lg border border-gray-200 bg-white p-4 shadow-lg">
+                  <div
+                    className="fixed left-1/2 z-[2147483647] w-[calc(100vw-1rem)] max-w-[500px] -translate-x-1/2 rounded-lg border border-gray-200 bg-white p-4 shadow-lg"
+                    style={{
+                      // Google centers the picker. Anchor this panel's bottom edge
+                      // just above the calculated top edge of that centered dialog.
+                      bottom: `calc(50% + ${Math.ceil(pickerDialogHeight / 2) + 8}px)`
+                    }}
+                  >
                     <div className="flex flex-col gap-3">
                       <div className="flex items-center justify-between">
                         <h3 className="font-semibold text-sm">Quick Navigate to Folder</h3>
