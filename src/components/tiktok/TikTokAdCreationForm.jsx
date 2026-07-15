@@ -951,8 +951,18 @@ export default function TikTokAdCreationForm({
     if (!firstId) return null;
     const matched = formCatalogProducts.find(p => p.product_id === firstId);
     if (matched) return matched.image_url || null;
-    if (firstId === advertiserPrefs?.catalogSelection?.product_id) {
-      return advertiserPrefs?.catalogSelection?.product_image_url || null;
+    
+    const catSel = advertiserPrefs?.catalogSelection;
+    if (catSel) {
+      const savedProductId = catSel.product_id;
+      const isProductMatched = Array.isArray(savedProductId)
+        ? savedProductId.includes(firstId)
+        : firstId === savedProductId;
+      if (isProductMatched) {
+        const products = catSel.products || [];
+        const matchedProd = products.find(p => p.product_id === firstId);
+        return matchedProd?.product_image_url || catSel.product_image_url || null;
+      }
     }
     return null;
   }, [formCatalogProducts, formProductId, advertiserPrefs]);
@@ -964,8 +974,16 @@ export default function TikTokAdCreationForm({
       const matched = formCatalogProducts.find(p => p.product_id === productIds[0]);
       if (matched) return matched.product_name;
       const catSel = advertiserPrefs?.catalogSelection;
-      if (catSel && catSel.product_id === productIds[0]) {
-        return catSel.product_name || productIds[0];
+      if (catSel) {
+        const savedProductId = catSel.product_id;
+        const isProductMatched = Array.isArray(savedProductId)
+          ? savedProductId.includes(productIds[0])
+          : productIds[0] === savedProductId;
+        if (isProductMatched) {
+          const products = catSel.products || [];
+          const matchedProd = products.find(p => p.product_id === productIds[0]);
+          return matchedProd?.product_name || catSel.product_name || productIds[0];
+        }
       }
       return productIds[0];
     }
@@ -1860,17 +1878,37 @@ export default function TikTokAdCreationForm({
                     skuIds.push(resolvedSku)
                   }
                 } else {
-                  const catSel = advertiserPrefs?.catalogSelection
-                  if (catSel && catSel.product_id === id) {
-                    if (catSel.item_group_id) {
-                      itemGroupIds.push(catSel.item_group_id)
-                    }
-                    const resolvedSku = catSel.sku_id || catSel.product_id
-                    if (resolvedSku) {
-                      skuIds.push(resolvedSku)
+                  const catSel = advertiserPrefs?.catalogSelection;
+                  if (catSel) {
+                    const products = catSel.products || [];
+                    const matchedProd = products.find(p => p.product_id === id);
+                    if (matchedProd) {
+                      if (matchedProd.item_group_id) {
+                        itemGroupIds.push(matchedProd.item_group_id);
+                      }
+                      const resolvedSku = matchedProd.sku_id || matchedProd.product_id;
+                      if (resolvedSku) {
+                        skuIds.push(resolvedSku);
+                      }
+                    } else {
+                      const savedProductId = catSel.product_id;
+                      const isProductMatched = Array.isArray(savedProductId)
+                        ? savedProductId.includes(id)
+                        : id === savedProductId;
+                      if (isProductMatched) {
+                        if (catSel.item_group_id) {
+                          itemGroupIds.push(catSel.item_group_id);
+                        }
+                        const resolvedSku = catSel.sku_id || catSel.product_id;
+                        if (resolvedSku) {
+                          skuIds.push(resolvedSku);
+                        }
+                      } else {
+                        skuIds.push(id);
+                      }
                     }
                   } else {
-                    skuIds.push(id)
+                    skuIds.push(id);
                   }
                 }
               })

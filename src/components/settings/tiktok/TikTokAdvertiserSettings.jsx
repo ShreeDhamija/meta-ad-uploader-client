@@ -124,8 +124,25 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
     const selectedCatalogId = settings?.catalogSelection?.catalog_id || null;
     const selectedCatalogName = settings?.catalogSelection?.catalog_name || null;
     const selectedProductId = settings?.catalogSelection?.product_id || null;
-    const selectedProductName = settings?.catalogSelection?.product_name || null;
-    const selectedProductImage = settings?.catalogSelection?.product_image_url || null;
+    const selectedProductIds = Array.isArray(selectedProductId)
+        ? selectedProductId
+        : selectedProductId ? [selectedProductId] : [];
+    const selectedProductsList = settings?.catalogSelection?.products || [];
+
+    const displayProductName = (() => {
+        if (selectedProductIds.length === 0) return null;
+        if (selectedProductIds.length === 1) {
+            const matched = selectedProductsList.find(p => p.product_id === selectedProductIds[0]);
+            return matched?.product_name || settings?.catalogSelection?.product_name || selectedProductIds[0];
+        }
+        return `${selectedProductIds.length} Products Selected`;
+    })();
+
+    const displayProductImage = (() => {
+        if (selectedProductIds.length === 0) return null;
+        const matched = selectedProductsList.find(p => p.product_id === selectedProductIds[0]);
+        return matched?.product_image_url || settings?.catalogSelection?.product_image_url || null;
+    })();
 
     // Search query states for manual dropdown filtering
     const [advertiserSearch, setAdvertiserSearch] = useState("");
@@ -402,11 +419,11 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
             await saveTikTokSettings(selectedAdvertiser, updatedSettings);
             setServerSettings(updatedSettings);
             toast.success("Settings saved successfully");
-            
+
             // Clear the cached draft
             try {
                 localStorage.removeItem(DRAFT_CACHE_KEY);
-            } catch (e) {}
+            } catch (e) { }
 
             // Sync initialSettings to exactly what we saved — hasChanges will
             // immediately compute to false on the next render (no effect lag).
@@ -422,11 +439,11 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
         if (initialSettings) {
             setSettings(JSON.parse(JSON.stringify(initialSettings)));
         }
-        
+
         // Clear the cached draft
         try {
             localStorage.removeItem(DRAFT_CACHE_KEY);
-        } catch (e) {}
+        } catch (e) { }
 
         // hasChanges is derived — resetting settings above will recompute it to false
     };
@@ -1043,6 +1060,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                                                             product_image_url: null,
                                                                             sku_id: null,
                                                                             item_group_id: null,
+                                                                            products: [],
                                                                         }
                                                                     }));
                                                                     setCatalogProducts([]);
@@ -1094,15 +1112,15 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                                 </div>
                                             ) : (
                                                 <div className="flex items-center gap-2 min-w-0">
-                                                    {selectedProductImage && (
+                                                    {displayProductImage && (
                                                         <img
-                                                            src={selectedProductImage}
+                                                            src={displayProductImage}
                                                             alt=""
                                                             className="w-6 h-6 rounded-full object-cover shrink-0 border border-gray-100"
                                                         />
                                                     )}
                                                     <span className="text-sm font-medium text-gray-900 truncate">
-                                                        {selectedProductName || 'Select a Product'}
+                                                        {displayProductName || 'Select a Product'}
                                                     </span>
                                                 </div>
                                             )}
@@ -1150,25 +1168,46 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                                                     type="button"
                                                                     key={prod.product_id}
                                                                     onClick={() => {
+                                                                        const isSelected = selectedProductIds.includes(prod.product_id);
+                                                                        let nextProductIds = [];
+                                                                        let nextProductsList = [];
+                                                                        if (isSelected) {
+                                                                            nextProductIds = selectedProductIds.filter(id => id !== prod.product_id);
+                                                                            nextProductsList = selectedProductsList.filter(p => p.product_id !== prod.product_id);
+                                                                        } else {
+                                                                            nextProductIds = [...selectedProductIds, prod.product_id];
+                                                                            nextProductsList = [
+                                                                                ...selectedProductsList.filter(p => p.product_id !== prod.product_id),
+                                                                                {
+                                                                                    product_id: prod.product_id,
+                                                                                    product_name: prod.product_name,
+                                                                                    product_image_url: prod.image_url || null,
+                                                                                    sku_id: prod.sku_id || null,
+                                                                                    item_group_id: prod.item_group_id || null,
+                                                                                }
+                                                                            ];
+                                                                        }
                                                                         setSettings(prev => ({
                                                                             ...prev,
                                                                             catalogSelection: {
                                                                                 ...(prev?.catalogSelection || {}),
-                                                                                product_id: prod.product_id,
-                                                                                product_name: prod.product_name,
-                                                                                product_image_url: prod.image_url || null,
-                                                                                sku_id: prod.sku_id || null,
-                                                                                item_group_id: prod.item_group_id || null,
+                                                                                product_id: nextProductIds,
+                                                                                product_name: nextProductsList.map(p => p.product_name).join(", "),
+                                                                                product_image_url: nextProductsList[0]?.product_image_url || null,
+                                                                                sku_id: nextProductsList[0]?.sku_id || null,
+                                                                                item_group_id: nextProductsList[0]?.item_group_id || null,
+                                                                                products: nextProductsList,
                                                                             }
                                                                         }));
-                                                                        setOpenProduct(false);
-                                                                        setProductSearch("");
                                                                     }}
                                                                     className={cn(
                                                                         "w-full text-left px-3 py-2 cursor-pointer rounded-xl transition-colors duration-150 hover:bg-gray-100 flex items-center gap-3",
-                                                                        selectedProductId === prod.product_id ? "bg-gray-50 font-medium" : ""
+                                                                        selectedProductIds.includes(prod.product_id) ? "bg-gray-50 font-medium" : ""
                                                                     )}
                                                                 >
+                                                                    <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors shrink-0 ${selectedProductIds.includes(prod.product_id) ? "bg-black border-black text-white" : "border-gray-200"}`}>
+                                                                        {selectedProductIds.includes(prod.product_id) && <Check className="w-3 h-3" />}
+                                                                    </div>
                                                                     {prod.image_url && (
                                                                         <img
                                                                             src={prod.image_url}
@@ -1182,7 +1221,6 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                                                             <p className="text-xs text-gray-400">{prod.price} {prod.currency}</p>
                                                                         )}
                                                                     </div>
-                                                                    {selectedProductId === prod.product_id && <Check className="w-4 h-4 text-black shrink-0" />}
                                                                 </button>
                                                             ))}
                                                         </div>
