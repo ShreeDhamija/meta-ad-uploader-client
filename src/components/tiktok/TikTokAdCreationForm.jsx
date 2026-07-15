@@ -6281,7 +6281,7 @@ export default function TikTokAdCreationForm({
                 <div className="space-y-1">
                   <Button
                     type="submit"
-                    disabled={isQueueingJobs || publishDisabled}
+                    disabled={isQueueingJobs || publishDisabled || isIdentityMissing}
                     className="w-full h-12 bg-neutral-950 hover:bg-blue-700 text-white rounded-2xl font-semibold transition-all duration-150"
                   >
                     {isQueueingJobs ? (
@@ -6306,11 +6306,11 @@ export default function TikTokAdCreationForm({
                     </div>
                   )}
 
-                  {isIdentityMissing && (
+                  {/* {isIdentityMissing && (
                     <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
                       {adType === 'NORMAL' ? "Please select a TikTok Identity to publish ads" : "Please select an account to Promote From to publish ads"}
                     </div>
-                  )}
+                  )} */}
                 </div>
 
                 <div className="flex flex-col gap-2">
