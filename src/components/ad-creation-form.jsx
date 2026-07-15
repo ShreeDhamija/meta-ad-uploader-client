@@ -2646,7 +2646,7 @@ export default function AdCreationForm({
     // the dialog for the quick-navigation panel (which is taller when stacked).
     const pickerVerticalReserve = viewportWidth < 640 ? 190 : 152;
     const pickerHeight = Math.floor(
-      Math.min(650, Math.max(350, viewportHeight - (pickerVerticalReserve * 2)))
+      Math.min(620, Math.max(350, viewportHeight - (pickerVerticalReserve * 2) - 24))
     );
     setPickerDialogHeight(pickerHeight);
     setShowFolderInput(true);
@@ -9528,14 +9528,14 @@ export default function AdCreationForm({
 
                 {showFolderInput && (
                   <div
-                    className="fixed left-1/2 z-[2147483647] w-[calc(100vw-1rem)] max-w-[500px] -translate-x-1/2 rounded-lg border border-gray-200 bg-white p-4 shadow-lg"
+                    className="fixed left-1/2 z-[2147483647] w-[calc(100vw-1rem)] max-w-[500px] -translate-x-1/2 rounded-2xl border border-gray-200 bg-gray-50 p-3 shadow-lg"
                     style={{
                       // Google centers the picker. Anchor this panel's bottom edge
-                      // just above the calculated top edge of that centered dialog.
-                      bottom: `calc(50% + ${Math.ceil(pickerDialogHeight / 2) + 8}px)`
+                      // above the calculated top edge, allowing for its outer frame.
+                      bottom: `calc(50% + ${Math.ceil(pickerDialogHeight / 2) + 40}px)`
                     }}
                   >
-                    <div className="flex flex-col gap-3">
+                    <div className="flex flex-col gap-2">
                       <div className="flex items-center justify-between">
                         <h3 className="font-semibold text-sm">Quick Navigate to Folder</h3>
                         <Button
@@ -9563,14 +9563,14 @@ export default function AdCreationForm({
                               handleImportFromFolder();
                             }
                           }}
-                          className={cn("min-w-0 flex-1", formInputChrome)}
+                          className={cn("min-w-0 flex-1 bg-white", formInputChrome)}
 
                         />
                         <Button
                           type="button"
                           onClick={handleImportFromFolder}
                           disabled={!folderLinkValue}
-                          className="w-full bg-blue-600 hover:bg-blue-700 sm:w-auto"
+                          className="w-full rounded-xl bg-blue-600 hover:bg-blue-700 sm:w-auto"
                         >
                           {isImportingFolder ? (
                             <>
@@ -9583,9 +9583,6 @@ export default function AdCreationForm({
                         </Button>
                       </div>
 
-                      <div className="text-xs text-gray-500">
-                        Or browse files below ↓
-                      </div>
                     </div>
                   </div>
                 )}
