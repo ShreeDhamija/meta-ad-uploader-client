@@ -43,7 +43,7 @@ export default function Header({ showMessenger, hideMessenger }) {
 
   // On the TikTok page, show TikTok user info; otherwise fall back to Meta auth
   const displayName = isTikTokPage
-    ? (tiktokUser?.display_name || tiktokUser?.name || userName)
+    ? (tiktokUser?.display_name || tiktokUser?.name || "")
     : userName
   const displayPic = isTikTokPage
     ? (tiktokUser?.avatar_url || tiktokUser?.profile_image_url || TikTokUserPlaceholder)
