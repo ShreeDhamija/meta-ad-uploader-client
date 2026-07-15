@@ -9527,15 +9527,28 @@ export default function AdCreationForm({
 
 
                 {showFolderInput && (
-                  <div
-                    className="fixed left-1/2 z-[2147483647] w-[calc(100vw-1rem)] max-w-[500px] -translate-x-1/2 rounded-2xl border border-gray-200 bg-gray-50 p-3 shadow-lg"
-                    style={{
-                      // Google centers the picker. Anchor this panel's bottom edge
-                      // above the calculated top edge, allowing for its outer frame.
-                      bottom: `calc(50% + ${Math.ceil(pickerDialogHeight / 2) + 40}px)`
-                    }}
-                  >
-                    <div className="flex flex-col gap-2">
+                  <>
+                    <style>{`
+                      .picker-dialog,
+                      .picker-dialog-content,
+                      .picker-frame {
+                        border-radius: 16px !important;
+                      }
+
+                      .picker-dialog,
+                      .picker-dialog-content {
+                        overflow: hidden !important;
+                      }
+                    `}</style>
+                    <div
+                      className="fixed left-1/2 z-[2147483647] w-[calc(100vw-1rem)] max-w-[500px] -translate-x-1/2 rounded-2xl border border-gray-200 bg-gray-100 p-3 shadow-lg"
+                      style={{
+                        // Google centers the picker. Anchor this panel's bottom edge
+                        // above the calculated top edge, allowing for its outer frame.
+                        bottom: `calc(50% + ${Math.ceil(pickerDialogHeight / 2) + 40}px)`
+                      }}
+                    >
+                      <div className="flex flex-col gap-2">
                       <div className="flex items-center justify-between">
                         <h3 className="font-semibold text-sm">Quick Navigate to Folder</h3>
                         <Button
@@ -9583,8 +9596,9 @@ export default function AdCreationForm({
                         </Button>
                       </div>
 
+                      </div>
                     </div>
-                  </div>
+                  </>
                 )}
 
               </>
