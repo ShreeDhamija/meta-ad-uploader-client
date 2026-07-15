@@ -2611,7 +2611,8 @@ export default function TikTokAdCreationForm({
         }
       } else {
         // Only auto-restore if the user is NOT in custom-link typing mode
-        if (!showCustomLink) {
+        const isCustomLinkVisible = showCustomLink || availableLinks.length === 0;
+        if (!isCustomLinkVisible) {
           const urlToRestore = lastWebsiteUrl && /^https?:\/\//i.test(lastWebsiteUrl) ? lastWebsiteUrl : defaultUrl;
           console.log("[URL_MODE_DEBUG] Restoring Website URL to:", urlToRestore);
           setLandingUrl(urlToRestore);
