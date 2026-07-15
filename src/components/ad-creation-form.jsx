@@ -1150,15 +1150,15 @@ export default function AdCreationForm({
     setUploadSources: setGlobalUploadSources,
     hasImportedCsv,
     setHasImportedCsv,
+    hasSeenCsvImportGuide,
+    setHasSeenCsvImportGuide,
   } = useGlobalSettings();
   const [uploadSources, setUploadSourcesLocal] = useState(globalUploadSources);
   const [uploadSourcesDirty, setUploadSourcesDirty] = useState(false);
   const [uploadSourcesOpen, setUploadSourcesOpen] = useState(false);
-  const [pendingCsvFile, setPendingCsvFile] = useState(null);
   const [showCsvImportGuide, setShowCsvImportGuide] = useState(false);
   const [isImportingCsv, setIsImportingCsv] = useState(false);
   const csvFileInputRef = useRef(null);
-  const importCsvAfterPickerRef = useRef(false);
   const downloadCsvTemplate = useCallback(async () => {
     const templateUrl = 'https://api.withblip.com/csv-variant-import-template.csv';
     try {
@@ -1190,14 +1190,35 @@ export default function AdCreationForm({
 
   const toggleUploadSource = useCallback((id) => {
     const isBeingEnabled = !uploadSources.includes(id);
-    setUploadSourcesDirty(true);
-    setUploadSourcesLocal((prev) =>
-      prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]
-    );
-    if (id === 'csv' && isBeingEnabled && !hasImportedCsv) {
+    const nextSources = isBeingEnabled
+      ? [...uploadSources, id]
+      : uploadSources.filter((source) => source !== id);
+    setUploadSourcesLocal(nextSources);
+
+    if (id === 'csv' && isBeingEnabled && !hasSeenCsvImportGuide) {
+      // Save this setup choice immediately because the guide replaces/closes
+      // the source popover. Future clicks should go straight to the picker.
+      setUploadSourcesDirty(false);
+      setUploadSourcesOpen(false);
+      setGlobalUploadSources(nextSources);
+      setHasSeenCsvImportGuide(true);
       setShowCsvImportGuide(true);
+      void saveSettings({
+        globalSettings: {
+          uploadSources: nextSources,
+          hasSeenCsvImportGuide: true,
+        },
+      }).then(() => {
+        window.dispatchEvent(new Event('globalSettingsUpdated'));
+      }).catch((err) => {
+        console.error('Failed to save CSV upload source:', err);
+        toast.error('Failed to save CSV upload source');
+      });
+      return;
     }
-  }, [hasImportedCsv, uploadSources]);
+
+    setUploadSourcesDirty(true);
+  }, [hasSeenCsvImportGuide, setGlobalUploadSources, setHasSeenCsvImportGuide, uploadSources]);
 
   const handleUploadSourcesOpenChange = useCallback(async (open) => {
     setUploadSourcesOpen(open);
@@ -3082,7 +3103,6 @@ export default function AdCreationForm({
       }
     } finally {
       setIsImportingCsv(false);
-      setPendingCsvFile(null);
       setShowCsvImportGuide(false);
     }
   }, [hasImportedCsv, isImportingCsv, onImportCsv, setHasImportedCsv]);
@@ -3102,12 +3122,8 @@ export default function AdCreationForm({
       return;
     }
 
-    if (hasImportedCsv) {
-      void importCsvFile(file);
-    } else {
-      setPendingCsvFile(file);
-    }
-  }, [getCatalogueMediaCount, hasImportedCsv, importCsvFile, importedPosts.length, onImportCsv]);
+    void importCsvFile(file);
+  }, [getCatalogueMediaCount, importCsvFile, importedPosts.length, onImportCsv]);
 
   const handleCsvSourceClick = useCallback(() => {
     if (!isImportingCsv) csvFileInputRef.current?.click();
@@ -3115,16 +3131,10 @@ export default function AdCreationForm({
 
   const handleCsvFilePickerChange = useCallback((event) => {
     const file = event.target.files?.[0];
-    const importImmediately = importCsvAfterPickerRef.current;
-    importCsvAfterPickerRef.current = false;
     // Allow selecting the same file again after cancelling or completing an import.
     event.target.value = '';
-    if (importImmediately) {
-      if (file) void importCsvFile(file);
-      return;
-    }
     handleCsvSelection(file);
-  }, [handleCsvSelection, importCsvFile]);
+  }, [handleCsvSelection]);
 
   const onDrop = useCallback((acceptedFiles) => {
     const csvFiles = acceptedFiles.filter((file) =>
@@ -9959,14 +9969,11 @@ export default function AdCreationForm({
           </div>
         </div>
       )}
-      {(showCsvImportGuide || pendingCsvFile) && (
+      {showCsvImportGuide && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
           <div
             className="absolute inset-0 bg-black/35"
-            onClick={() => {
-              setPendingCsvFile(null);
-              setShowCsvImportGuide(false);
-            }}
+            onClick={() => setShowCsvImportGuide(false)}
           />
           <div
             className="relative w-[min(34rem,calc(100vw-2rem))] rounded-[28px] border border-gray-200 bg-white p-6 shadow-xl"
@@ -9977,10 +9984,7 @@ export default function AdCreationForm({
               type="button"
               aria-label="Close CSV import guide"
               className="absolute right-4 top-4 rounded-full p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-black"
-              onClick={() => {
-                setPendingCsvFile(null);
-                setShowCsvImportGuide(false);
-              }}
+              onClick={() => setShowCsvImportGuide(false)}
             >
               <X className="h-4 w-4" />
             </button>
@@ -10004,10 +10008,6 @@ export default function AdCreationForm({
               </ul>
             </div>
 
-            {pendingCsvFile && (
-              <p className="mt-3 truncate text-xs text-gray-500">Selected: {pendingCsvFile.name}</p>
-            )}
-
             <div className="mt-5 grid grid-cols-2 gap-3">
               <Button
                 type="button"
@@ -10021,13 +10021,8 @@ export default function AdCreationForm({
                 className="h-12 w-full rounded-2xl bg-zinc-900 text-white hover:bg-zinc-800"
                 disabled={isImportingCsv}
                 onClick={() => {
-                  if (pendingCsvFile) {
-                    void importCsvFile(pendingCsvFile);
-                  } else {
-                    importCsvAfterPickerRef.current = true;
-                    setShowCsvImportGuide(false);
-                    csvFileInputRef.current?.click();
-                  }
+                  setShowCsvImportGuide(false);
+                  csvFileInputRef.current?.click();
                 }}
               >
                 {isImportingCsv && <Loader className="mr-2 h-4 w-4 animate-spin" />}

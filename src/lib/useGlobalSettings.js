@@ -10,6 +10,7 @@ export default function useGlobalSettings() {
     const [hasSeenAnalyticsHomePopup, setHasSeenAnalyticsHomePopup] = useState(false);
     const [hasSeenPowerupPopup, setHasSeenPowerupPopup] = useState(false);
     const [hasImportedCsv, setHasImportedCsv] = useState(false);
+    const [hasSeenCsvImportGuide, setHasSeenCsvImportGuide] = useState(false);
     const [seenOnboardingCards, setSeenOnboardingCards] = useState([]);
     const [selectedAdAccountIds, setSelectedAdAccountIds] = useState([])
     const [uploadSources, setUploadSources] = useState(['local', 'drive', 'dropbox']);
@@ -37,16 +38,23 @@ export default function useGlobalSettings() {
             setHasSeenAnalyticsHomePopup(data?.settings?.hasSeenAnalyticsHomePopup || false);
             setHasSeenPowerupPopup(data?.settings?.hasSeenPowerupPopup || false);
             setHasImportedCsv(data?.settings?.hasImportedCsv || false);
+            const csvImportGuideSeen = data?.settings?.hasSeenCsvImportGuide || false;
+            setHasSeenCsvImportGuide(csvImportGuideSeen);
             setSeenOnboardingCards(
                 Array.isArray(data?.settings?.seenOnboardingCards)
                     ? data.settings.seenOnboardingCards
                     : []
             );
             setSelectedAdAccountIds(data?.settings?.selectedAdAccountIds || [])
+            const savedUploadSources = Array.isArray(data?.settings?.uploadSources)
+                ? data.settings.uploadSources
+                : ['local', 'drive', 'dropbox'];
+            // Legacy settings may contain CSV from the earlier rollout. Until
+            // the new one-time guide has been acknowledged, keep it unchecked.
             setUploadSources(
-                Array.isArray(data?.settings?.uploadSources)
-                    ? data.settings.uploadSources
-                    : ['local', 'drive', 'dropbox']
+                csvImportGuideSeen
+                    ? savedUploadSources
+                    : savedUploadSources.filter((source) => source !== 'csv')
             );
 
         } catch (err) {
@@ -58,6 +66,7 @@ export default function useGlobalSettings() {
             setHasSeenAnalyticsHomePopup(false);
             setHasSeenPowerupPopup(false);
             setHasImportedCsv(false);
+            setHasSeenCsvImportGuide(false);
             setSeenOnboardingCards([]);
             setUploadSources(['local', 'drive', 'dropbox']);
         } finally {
@@ -109,6 +118,8 @@ export default function useGlobalSettings() {
         setHasSeenPowerupPopup,
         hasImportedCsv,
         setHasImportedCsv,
+        hasSeenCsvImportGuide,
+        setHasSeenCsvImportGuide,
         seenOnboardingCards,
         setSeenOnboardingCards,
         effectiveSeenOnboardingIds,
