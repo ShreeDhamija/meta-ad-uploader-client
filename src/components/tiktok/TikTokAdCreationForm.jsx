@@ -1180,6 +1180,8 @@ export default function TikTokAdCreationForm({
     if (!selectedAdvertiser || !isShowcaseSelection) return;
     if (!selectedIdentity) {
       setFormStoreProducts([]);
+      setFormStoreProductId([]);
+      setFormStoreProductName(null);
       return;
     }
 
@@ -1187,6 +1189,17 @@ export default function TikTokAdCreationForm({
     const cached = readCache(cacheKey);
     if (cached) {
       setFormStoreProducts(cached);
+      setFormStoreProductId(prev => {
+        const current = Array.isArray(prev) ? prev : (prev ? [prev] : []);
+        const valid = current.filter(id => cached.some(p => p.item_group_id === id));
+        if (valid.length === 0) {
+          setFormStoreProductName(null);
+        } else {
+          const matched = cached.find(p => p.item_group_id === valid[0]);
+          if (matched) setFormStoreProductName(matched.title || null);
+        }
+        return valid;
+      });
       return;
     }
 
@@ -1223,6 +1236,18 @@ export default function TikTokAdCreationForm({
             }));
           setFormStoreProducts(mappedProducts);
           writeCache(cacheKey, mappedProducts);
+
+          setFormStoreProductId(prev => {
+            const current = Array.isArray(prev) ? prev : (prev ? [prev] : []);
+            const valid = current.filter(id => mappedProducts.some(p => p.item_group_id === id));
+            if (valid.length === 0) {
+              setFormStoreProductName(null);
+            } else {
+              const matched = mappedProducts.find(p => p.item_group_id === valid[0]);
+              if (matched) setFormStoreProductName(matched.title || null);
+            }
+            return valid;
+          });
         }
       })
       .catch(err => console.warn('[CreationForm] Failed to load showcase products:', err.message))
@@ -2952,6 +2977,18 @@ export default function TikTokAdCreationForm({
               }));
             setFormStoreProducts(mappedProducts);
             writeCache(`tiktok_showcase_products_${selectedAdvertiser}_${selectedIdentity}`, mappedProducts);
+
+            setFormStoreProductId(prev => {
+              const current = Array.isArray(prev) ? prev : (prev ? [prev] : []);
+              const valid = current.filter(id => mappedProducts.some(p => p.item_group_id === id));
+              if (valid.length === 0) {
+                setFormStoreProductName(null);
+              } else {
+                const matched = mappedProducts.find(p => p.item_group_id === valid[0]);
+                if (matched) setFormStoreProductName(matched.title || null);
+              }
+              return valid;
+            });
             toast.success('Showcase products refreshed!');
           } else {
             toast.error('Failed to refresh showcase products');
