@@ -2641,7 +2641,18 @@ export default function AdCreationForm({
       .setMimeTypes(mimeTypes)
       .setSelectFolderEnabled(false);
 
+    const viewportWidth = window.visualViewport?.width ?? window.innerWidth;
+    const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+    const pickerWidth = Math.floor(Math.min(1051, Math.max(566, viewportWidth - 32)));
+    // Picker dialogs are always centered by Google. Reserve enough space above
+    // the dialog for the quick-navigation panel (which is taller when stacked).
+    const pickerVerticalReserve = viewportWidth < 640 ? 190 : 152;
+    const pickerHeight = Math.floor(
+      Math.min(650, Math.max(350, viewportHeight - (pickerVerticalReserve * 2)))
+    );
+
     const pickerBuilder = new google.picker.PickerBuilder()
+      .setSize(pickerWidth, pickerHeight)
       .setOAuthToken(token)
       .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
       .enableFeature(google.picker.Feature.SUPPORT_DRIVES)
@@ -9516,9 +9527,7 @@ export default function AdCreationForm({
 
 
                 {showFolderInput && (
-                  <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[2147483647] bg-white rounded-lg shadow-lg border border-gray-200 p-4 w-[500px]" style={{
-                    top: 'calc(50vh - 500px)' // Positions it above center where picker usually appears
-                  }} >
+                  <div className="fixed left-1/2 top-2 z-[2147483647] w-[calc(100vw-1rem)] max-w-[500px] -translate-x-1/2 rounded-lg border border-gray-200 bg-white p-4 shadow-lg">
                     <div className="flex flex-col gap-3">
                       <div className="flex items-center justify-between">
                         <h3 className="font-semibold text-sm">Quick Navigate to Folder</h3>
@@ -9536,7 +9545,7 @@ export default function AdCreationForm({
                         </Button>
                       </div>
 
-                      <div className="flex gap-2">
+                      <div className="flex flex-col gap-2 sm:flex-row">
                         <Input
                           type="text"
                           placeholder="Paste Google Drive folder link here"
@@ -9547,14 +9556,14 @@ export default function AdCreationForm({
                               handleImportFromFolder();
                             }
                           }}
-                          className={cn("flex-1", formInputChrome)}
+                          className={cn("min-w-0 flex-1", formInputChrome)}
 
                         />
                         <Button
                           type="button"
                           onClick={handleImportFromFolder}
                           disabled={!folderLinkValue}
-                          className="bg-blue-600 hover:bg-blue-700"
+                          className="w-full bg-blue-600 hover:bg-blue-700 sm:w-auto"
                         >
                           {isImportingFolder ? (
                             <>
