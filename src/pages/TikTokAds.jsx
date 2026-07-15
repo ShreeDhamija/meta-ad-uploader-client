@@ -527,10 +527,10 @@ export default function TikTokAds() {
 
   // Auth guard
   useEffect(() => {
-    if (!authLoading && !metaAuthLoading && !isTikTokLoggedIn && !isLoggedIn) {
+    if (!authLoading && !isTikTokLoggedIn) {
       navigate('/tiktok-login')
     }
-  }, [isTikTokLoggedIn, isLoggedIn, authLoading, metaAuthLoading, navigate])
+  }, [isTikTokLoggedIn, authLoading, navigate])
 
   // Auto-select advertiser account if only one exists
   useEffect(() => {

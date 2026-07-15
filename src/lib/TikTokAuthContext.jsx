@@ -167,8 +167,6 @@ export function TikTokAuthProvider({ children }) {
         setTikTokUser(null)
         setTikTokAdvertisers([])
 
-        // Navigate to login page after state and storage are cleared
-        window.location.href = '/tiktok-login'
       } else {
         console.warn("⚠️ [TikTok Auth] Logout failed on server.");
         toast.error('Failed to log out of TikTok')
