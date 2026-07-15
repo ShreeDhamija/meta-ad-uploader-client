@@ -532,9 +532,9 @@ export default function TikTokAds() {
     }
   }, [isTikTokLoggedIn, isLoggedIn, authLoading, metaAuthLoading, navigate])
 
-  // Auto-select first advertiser account
+  // Auto-select advertiser account if only one exists
   useEffect(() => {
-    if (tiktokAdvertisers.length > 0 && !selectedAdvertiser) {
+    if (tiktokAdvertisers.length === 1 && !selectedAdvertiser) {
       const firstId = tiktokAdvertisers[0].advertiser_id || tiktokAdvertisers[0].id
       setSelectedAdvertiser(firstId)
     }

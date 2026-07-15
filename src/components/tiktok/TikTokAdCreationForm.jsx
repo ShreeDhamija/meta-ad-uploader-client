@@ -951,7 +951,7 @@ export default function TikTokAdCreationForm({
     if (!firstId) return null;
     const matched = formCatalogProducts.find(p => p.product_id === firstId);
     if (matched) return matched.image_url || null;
-    
+
     const catSel = advertiserPrefs?.catalogSelection;
     if (catSel) {
       const savedProductId = catSel.product_id;
