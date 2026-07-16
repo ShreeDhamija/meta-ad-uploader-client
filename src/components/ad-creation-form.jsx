@@ -2273,6 +2273,7 @@ export default function AdCreationForm({
     { value: "INSTALL_MOBILE_APP", label: "Install Now" },
     { value: "CALL_NOW", label: "Call Now" },
     { value: "SEE_DETAILS", label: "See Details" },
+    { value: "LISTEN_NOW", label: "Listen Now" },
   ]
 
   const availableLinks = adAccountSettings?.links || [];
@@ -9435,8 +9436,8 @@ export default function AdCreationForm({
                             {isImportingCsv
                               ? "Importing CSV…"
                               : isCatalogueAd
-                              ? "Drag & drop one image here, or click to select an image"
-                              : "Drag & drop media or one CSV here, or click to select files"}
+                                ? "Drag & drop one image here, or click to select an image"
+                                : "Drag & drop media or one CSV here, or click to select files"}
                           </p>
                         )}
                       </div>
@@ -9516,9 +9517,9 @@ export default function AdCreationForm({
                             const clickHandler =
                               id === 'csv' ? handleCsvSourceClick :
                                 id === 'drive' ? handleDriveClick :
-                                id === 'dropbox' ? handleDropboxClick :
-                                  id === 'frameio' ? handleFrameioClick :
-                                    () => { };
+                                  id === 'dropbox' ? handleDropboxClick :
+                                    id === 'frameio' ? handleFrameioClick :
+                                      () => { };
 
                             return (
                               <div className="flex-1" key={id}>
@@ -9581,52 +9582,52 @@ export default function AdCreationForm({
                       }}
                     >
                       <div className="flex flex-col gap-2">
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-semibold text-sm">Quick Navigate to Folder</h3>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setShowFolderInput(false);
-                            setFolderLinkValue("");
-                          }}
-                          className="h-6 w-6 p-0"
-                        >
+                        <div className="flex items-center justify-between">
+                          <h3 className="font-semibold text-sm">Quick Navigate to Folder</h3>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setShowFolderInput(false);
+                              setFolderLinkValue("");
+                            }}
+                            className="h-6 w-6 p-0"
+                          >
 
-                        </Button>
-                      </div>
+                          </Button>
+                        </div>
 
-                      <div className="flex flex-col gap-2 sm:flex-row">
-                        <Input
-                          type="text"
-                          placeholder="Paste Google Drive folder link here"
-                          value={folderLinkValue}
-                          onChange={(e) => setFolderLinkValue(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              handleImportFromFolder();
-                            }
-                          }}
-                          className={cn("min-w-0 flex-1 bg-white", formInputChrome)}
+                        <div className="flex flex-col gap-2 sm:flex-row">
+                          <Input
+                            type="text"
+                            placeholder="Paste Google Drive folder link here"
+                            value={folderLinkValue}
+                            onChange={(e) => setFolderLinkValue(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                handleImportFromFolder();
+                              }
+                            }}
+                            className={cn("min-w-0 flex-1 bg-white", formInputChrome)}
 
-                        />
-                        <Button
-                          type="button"
-                          onClick={handleImportFromFolder}
-                          disabled={!folderLinkValue}
-                          className="w-full rounded-xl bg-blue-600 hover:bg-blue-700 sm:w-auto"
-                        >
-                          {isImportingFolder ? (
-                            <>
-                              <Loader className="h-4 w-4 mr-2 animate-spin" />
-                              Opening...
-                            </>
-                          ) : (
-                            "Open"
-                          )}
-                        </Button>
-                      </div>
+                          />
+                          <Button
+                            type="button"
+                            onClick={handleImportFromFolder}
+                            disabled={!folderLinkValue}
+                            className="w-full rounded-xl bg-blue-600 hover:bg-blue-700 sm:w-auto"
+                          >
+                            {isImportingFolder ? (
+                              <>
+                                <Loader className="h-4 w-4 mr-2 animate-spin" />
+                                Opening...
+                              </>
+                            ) : (
+                              "Open"
+                            )}
+                          </Button>
+                        </div>
 
                       </div>
                     </div>
