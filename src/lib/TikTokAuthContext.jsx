@@ -169,6 +169,7 @@ export function TikTokAuthProvider({ children }) {
   }
 
   useEffect(() => {
+    refreshTikTokUser()
     console.log("userId>>> ", userId)
     if (!userId) {
       setTikTokUser(null)
@@ -177,9 +178,8 @@ export function TikTokAuthProvider({ children }) {
       // setIsLoading(false)
     } else {
       setIsLoading(true)
-      refreshTikTokUser()
     }
-  }, [userId, refreshTikTokUser])
+  }, [userId])
 
   return (
     <TikTokAuthContext.Provider
