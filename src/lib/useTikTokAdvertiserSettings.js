@@ -54,7 +54,17 @@ export default function useTikTokAdvertiserSettings(advertiserId) {
       });
       const data = await res.json();
 
-      if (res.status === 404 || !data.settings || data.error === 'Document not found') {
+      const hasConfiguredSettings = !!(
+        data.settings && (
+          (data.settings.links && data.settings.links.length > 0) ||
+          (data.settings.copyTemplates && Object.keys(data.settings.copyTemplates).length > 0) ||
+          (data.settings.defaultUTMs && data.settings.defaultUTMs.length > 0) ||
+          data.settings.defaultIdentityId ||
+          data.settings.catalogSelection
+        )
+      );
+
+      if (res.status === 404 || !hasConfiguredSettings || data.error === 'Document not found') {
         setDocumentExists(false);
         setSettings({
           defaultUTMs: [],
