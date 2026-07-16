@@ -87,7 +87,7 @@ export function TikTokAuthProvider({ children }) {
           // Keep localStorage in sync
           if (data.user?.tiktokId) {
             try { localStorage.setItem('tiktok_uid', data.user.tiktokId) 
-              setUserId(data.user.id)
+              setUserId(data.user.tiktokId)
             } catch (_) { }
           }
           if (data.accessToken) {

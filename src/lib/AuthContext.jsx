@@ -66,7 +66,6 @@ export const AuthProvider = ({ children }) => {
         toast.info("Logged out successfully!")
         clearCache()
         clearAnalyticsCache()
-        clearTikTokSessionData()
         setIsLoggedIn(false)
         setUserName("")
         setProfilePicUrl("")
