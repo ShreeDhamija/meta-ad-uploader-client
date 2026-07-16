@@ -1,7 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { toast } from 'sonner'
 import { writeCache, clearCache, clearTikTokSessionData } from '@/lib/dataCache'
-import { useAuth } from './AuthContext'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com'
 
@@ -16,6 +15,8 @@ export function TikTokAuthProvider({ children }) {
   const [isTikTokLoggedIn, setIsTikTokLoggedIn] = useState(false)
   const [tiktokAdvertisers, setTikTokAdvertisers] = useState([])
   const [isLoading, setIsLoading] = useState(true)
+  const [userId, setUserId] = useState("") // Add this
+
 
   // Called directly by TikTokCallback after the exchange endpoint succeeds
   const setTikTokSession = (user, advertisers = [], accessToken = null) => {
@@ -85,7 +86,9 @@ export function TikTokAuthProvider({ children }) {
           writeCache('tiktokAdvertisers', data.advertisers || [])
           // Keep localStorage in sync
           if (data.user?.tiktokId) {
-            try { localStorage.setItem('tiktok_uid', data.user.tiktokId) } catch (_) { }
+            try { localStorage.setItem('tiktok_uid', data.user.tiktokId) 
+              setUserId(data.user.id)
+            } catch (_) { }
           }
           if (data.accessToken) {
             try { localStorage.setItem('tiktok_token', data.accessToken) } catch (_) { }
@@ -164,8 +167,6 @@ export function TikTokAuthProvider({ children }) {
       },
     })
   }
-
-  const { userId } = useAuth()
 
   useEffect(() => {
     if (!userId) {
