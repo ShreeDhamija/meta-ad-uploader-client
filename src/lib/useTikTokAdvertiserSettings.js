@@ -1,15 +1,44 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback } from "react";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 /**
  * Fetches TikTok advertiser preferences locally from the server,
- * mirroring the Meta useAdAccountSettings hook.
+ * mirroring the Meta useAdAccountSettings hook exactly.
  */
 export default function useTikTokAdvertiserSettings(advertiserId) {
   const [loading, setLoading] = useState(true);
-  const [documentExists, setDocumentExists] = useState(false);
-  const [settings, setSettings] = useState(null);
+  const [documentExists, setDocumentExists] = useState(true);
+
+  // Initialize to a default non-null object with all TikTok settings fields.
+  // This allows the settings component to restore the draft cache on the very first render.
+  const [settings, setSettings] = useState({
+    creativeEnhancements: {},
+    defaultUTMs: [],
+    links: [],
+    copyTemplates: {},
+    defaultTemplateName: "",
+    defaultIdentityId: "",
+    defaultIdentityName: "",
+    catalogSelection: null,
+  });
+
+  const [prevId, setPrevId] = useState(advertiserId);
+
+  if (advertiserId !== prevId) {
+    setPrevId(advertiserId);
+    setLoading(true);
+    setSettings({
+      creativeEnhancements: {},
+      defaultUTMs: [],
+      links: [],
+      copyTemplates: {},
+      defaultTemplateName: "",
+      defaultIdentityId: "",
+      defaultIdentityName: "",
+      catalogSelection: null,
+    });
+  }
 
   const fetchTikTokSettings = useCallback(async (force = false) => {
     if (!advertiserId) return;
@@ -35,6 +64,9 @@ export default function useTikTokAdvertiserSettings(advertiserId) {
           links: [],
           copyTemplates: {},
           defaultTemplateName: "",
+          defaultIdentityId: "",
+          defaultIdentityName: "",
+          catalogSelection: null,
         });
       } else {
         setDocumentExists(true);
@@ -52,18 +84,8 @@ export default function useTikTokAdvertiserSettings(advertiserId) {
     }
   }, [advertiserId]);
 
-  const lastFetchedIdRef = useRef(null);
-
   useEffect(() => {
-    if (advertiserId && advertiserId !== lastFetchedIdRef.current) {
-      lastFetchedIdRef.current = advertiserId;
-      fetchTikTokSettings();
-    } else if (!advertiserId) {
-      setSettings(null);
-      setDocumentExists(false);
-      setLoading(false);
-      lastFetchedIdRef.current = null;
-    }
+    fetchTikTokSettings();
   }, [advertiserId, fetchTikTokSettings]);
 
   const updateSettings = useCallback((nextVal) => {
