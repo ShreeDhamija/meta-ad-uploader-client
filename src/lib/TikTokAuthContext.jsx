@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { readCache, writeCache, clearCache } from '@/lib/dataCache'
+import { writeCache, clearCache, clearTikTokSessionData } from '@/lib/dataCache'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com'
 
@@ -9,22 +9,11 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com'
 const TikTokAuthContext = createContext(null)
 
 export function TikTokAuthProvider({ children }) {
-  const [tiktokUser, setTikTokUser] = useState(() => {
-    try {
-      const stored = localStorage.getItem('tiktok_user')
-      return stored ? JSON.parse(stored) : null
-    } catch (_) {
-      return null
-    }
-  })
-  const [isTikTokLoggedIn, setIsTikTokLoggedIn] = useState(() => {
-    try {
-      return !!localStorage.getItem('tiktok_uid')
-    } catch (_) {
-      return false
-    }
-  })
-  const [tiktokAdvertisers, setTikTokAdvertisers] = useState(readCache('tiktokAdvertisers') || [])
+  // Start with clean defaults — server is the source of truth (like AuthContext).
+  // Never hydrate from localStorage; stale keys from a deleted user would leak.
+  const [tiktokUser, setTikTokUser] = useState(null)
+  const [isTikTokLoggedIn, setIsTikTokLoggedIn] = useState(false)
+  const [tiktokAdvertisers, setTikTokAdvertisers] = useState([])
   const [isLoading, setIsLoading] = useState(true)
 
   // Called directly by TikTokCallback after the exchange endpoint succeeds
@@ -81,10 +70,7 @@ export function TikTokAuthProvider({ children }) {
         console.error('❌ [TikTok Auth] Failed to parse JSON response:', parseErr, '\nRaw body:', rawText)
         setIsTikTokLoggedIn(false)
         setTikTokUser(null)
-        try { localStorage.removeItem('tiktok_uid') } catch (_) { }
-        try { localStorage.removeItem('tiktok_token') } catch (_) { }
-        try { localStorage.removeItem('tiktok_advertiser_ids') } catch (_) { }
-        try { localStorage.removeItem('tiktok_user') } catch (_) { }
+        clearTikTokSessionData()
         setTikTokAdvertisers([])
         return
       }
@@ -113,34 +99,22 @@ export function TikTokAuthProvider({ children }) {
           console.warn('⚠️ [TikTok Auth] Response OK but connected=false. Reason:', data.error || 'unknown')
           setIsTikTokLoggedIn(false)
           setTikTokUser(null)
-          try { localStorage.removeItem('tiktok_uid') } catch (_) { }
-          try { localStorage.removeItem('tiktok_token') } catch (_) { }
-          try { localStorage.removeItem('tiktok_advertiser_ids') } catch (_) { }
-          try { localStorage.removeItem('tiktok_user') } catch (_) { }
+          clearTikTokSessionData()
           setTikTokAdvertisers([])
-          writeCache('tiktokAdvertisers', [])
         }
       } else {
         console.warn('⚠️ [TikTok Auth] Non-OK HTTP status:', res.status, '| body:', rawText)
         setIsTikTokLoggedIn(false)
         setTikTokUser(null)
-        try { localStorage.removeItem('tiktok_uid') } catch (_) { }
-        try { localStorage.removeItem('tiktok_token') } catch (_) { }
-        try { localStorage.removeItem('tiktok_advertiser_ids') } catch (_) { }
-        try { localStorage.removeItem('tiktok_user') } catch (_) { }
+        clearTikTokSessionData()
         setTikTokAdvertisers([])
-        writeCache('tiktokAdvertisers', [])
       }
     } catch (err) {
       console.error('❌ [TikTok Auth] Network/fetch error calling', endpoint, err)
       setIsTikTokLoggedIn(false)
       setTikTokUser(null)
-      try { localStorage.removeItem('tiktok_uid') } catch (_) { }
-      try { localStorage.removeItem('tiktok_token') } catch (_) { }
-      try { localStorage.removeItem('tiktok_advertiser_ids') } catch (_) { }
-      try { localStorage.removeItem('tiktok_user') } catch (_) { }
+      clearTikTokSessionData()
       setTikTokAdvertisers([])
-      writeCache('tiktokAdvertisers', [])
     } finally {
       setIsLoading(false)
     }
@@ -153,15 +127,7 @@ export function TikTokAuthProvider({ children }) {
         credentials: 'include',
       })
       if (res.ok) {
-        // Clear tokens FIRST to prevent auto-recovery
-        try { localStorage.removeItem('tiktok_uid') } catch (_) { }
-        try { localStorage.removeItem('tiktok_token') } catch (_) { }
-        try { localStorage.removeItem('tiktok_advertiser_ids') } catch (_) { }
-        try { localStorage.removeItem('tiktok_user') } catch (_) { }
-
-        clearCache('tiktokAdvertisers')
-        clearCache('tiktokIdentities')
-
+        clearTikTokSessionData()
         toast.info('Logged out of TikTok successfully!')
         setIsTikTokLoggedIn(false)
         setTikTokUser(null)

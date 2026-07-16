@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState } from "react"
 import { toast } from "sonner"
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
-import { clearCache, clearAnalyticsCache } from "@/lib/dataCache"
+import { clearCache, clearAnalyticsCache, clearTikTokSessionData } from "@/lib/dataCache"
 
 
 const AuthContext = createContext()
@@ -33,13 +33,24 @@ export const AuthProvider = ({ children }) => {
             setUserEmail(data.user.email) // Add this
             setUserCreatedAt(data.user.createdAt) // Add this
 
+          } else {
+            // No user in response — clear everything for a fresh start
+            clearCache()
+            clearAnalyticsCache()
+            clearTikTokSessionData()
           }
+        } else {
+          // Auth failed — clear everything for a fresh start
+          clearCache()
+          clearTikTokSessionData()
         }
       } catch (err) {
         console.error("Error fetching user info:", err)
+        // Network error — clear everything for a fresh start
+        clearCache()
+        clearTikTokSessionData()
       } finally {
         setAuthLoading(false); // ✅ mark loading finished
-
       }
     }
     checkAuth()
@@ -58,6 +69,7 @@ export const AuthProvider = ({ children }) => {
         toast.info("Logged out successfully!")
         clearCache()
         clearAnalyticsCache()
+        clearTikTokSessionData()
         setIsLoggedIn(false)
         setUserName("")
         setProfilePicUrl("")
