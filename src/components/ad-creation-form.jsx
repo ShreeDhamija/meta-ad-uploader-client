@@ -5532,6 +5532,9 @@ export default function AdCreationForm({
           return response;
 
         } catch (error) {
+          if (!error.response || error.code === "ECONNRESET") {
+            throw error;
+          }
 
           if (error.response && error.response.status === 400) {
             console.error('Create Ad Logic Error received (not retrying):', error.response.data);
@@ -6675,8 +6678,17 @@ export default function AdCreationForm({
               }
 
               // Real error — existing logic
+              // Transport failure (no HTTP response, or connection reset): the
+              // request may have reached Meta and created the ad even though we
+              // never got a reply. Never auto-retried — tell the user to verify.
+              const isConnectionLoss = !error.response ||
+                error.code === "ECONNRESET" ||
+                error.code === "ERR_NETWORK";
+
               let errorMsg = 'Unknown error';
-              if (error.response?.data?.error) {
+              if (isConnectionLoss) {
+                errorMsg = "Connection to Meta dropped, so this ad couldn't be confirmed. It may still have been created — check Ads Manager for your ad count before retrying.";
+              } else if (error.response?.data?.error) {
                 errorMsg = error.response.data.error;
               } else if (error.response?.data) {
                 errorMsg = error.response.data;
