@@ -37,18 +37,15 @@ export const AuthProvider = ({ children }) => {
             // No user in response — clear everything for a fresh start
             clearCache()
             clearAnalyticsCache()
-            clearTikTokSessionData()
           }
         } else {
           // Auth failed — clear everything for a fresh start
           clearCache()
-          clearTikTokSessionData()
         }
       } catch (err) {
         console.error("Error fetching user info:", err)
         // Network error — clear everything for a fresh start
         clearCache()
-        clearTikTokSessionData()
       } finally {
         setAuthLoading(false); // ✅ mark loading finished
       }
