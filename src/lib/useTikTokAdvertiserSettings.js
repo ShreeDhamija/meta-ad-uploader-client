@@ -13,7 +13,6 @@ export default function useTikTokAdvertiserSettings(advertiserId) {
   // Initialize to a default non-null object with all TikTok settings fields.
   // This allows the settings component to restore the draft cache on the very first render.
   const [settings, setSettings] = useState({
-    creativeEnhancements: {},
     defaultUTMs: [],
     links: [],
     copyTemplates: {},
@@ -29,7 +28,6 @@ export default function useTikTokAdvertiserSettings(advertiserId) {
     setPrevId(advertiserId);
     setLoading(true);
     setSettings({
-      creativeEnhancements: {},
       defaultUTMs: [],
       links: [],
       copyTemplates: {},
@@ -59,7 +57,6 @@ export default function useTikTokAdvertiserSettings(advertiserId) {
       if (res.status === 404 || !data.settings || data.error === 'Document not found') {
         setDocumentExists(false);
         setSettings({
-          creativeEnhancements: {},
           defaultUTMs: [],
           links: [],
           copyTemplates: {},
