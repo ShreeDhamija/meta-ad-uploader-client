@@ -199,6 +199,7 @@ export default function Home() {
     const [dropboxFiles, setDropboxFiles] = useState([]);
     const [frameioFiles, setFrameioFiles] = useState([]);
     const [launchPaused, setLaunchPaused] = useState(false); // <-- New state
+    const [discloseAiMedia, setDiscloseAiMedia] = useState(false);
     const launchPausedDefaultAppliedRef = useRef(false);
     const [isCarouselAd, setIsCarouselAd] = useState(false);
     const [adType, setAdType] = useState('regular'); // 'regular' | 'carousel' | 'flexible'
@@ -722,6 +723,7 @@ export default function Home() {
         adScheduleStartTime,
         adScheduleEndTime,
         launchPaused,
+        discloseAiMedia,
     }), [
         adName,
         headlines,
@@ -759,6 +761,7 @@ export default function Home() {
         adScheduleStartTime,
         adScheduleEndTime,
         launchPaused,
+        discloseAiMedia,
     ]);
 
     const hydrateFromSnapshot = useCallback((snapshot) => {
@@ -802,6 +805,7 @@ export default function Home() {
         setAdScheduleStartTime(snapshot.adScheduleStartTime || null);
         setAdScheduleEndTime(snapshot.adScheduleEndTime || null);
         setLaunchPaused(Boolean(snapshot.launchPaused));
+        setDiscloseAiMedia(Boolean(snapshot.discloseAiMedia));
     }, [
         setAdName,
         setHeadlines,
@@ -838,6 +842,7 @@ export default function Home() {
         setAdScheduleStartTime,
         setAdScheduleEndTime,
         setLaunchPaused,
+        setDiscloseAiMedia,
     ]);
 
     const switchVariant = useCallback((targetId) => {
@@ -1595,6 +1600,8 @@ export default function Home() {
                             setNewAdSetName={setNewAdSetName}
                             launchPaused={launchPaused}
                             setLaunchPaused={setLaunchPaused}
+                            discloseAiMedia={discloseAiMedia}
+                            setDiscloseAiMedia={setDiscloseAiMedia}
                             isCarouselAd={isCarouselAd}
                             setIsCarouselAd={setIsCarouselAd}
                             adType={adType}

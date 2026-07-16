@@ -959,6 +959,8 @@ export default function AdCreationForm({
   setNewAdSetName,
   launchPaused,
   setLaunchPaused,
+  discloseAiMedia,
+  setDiscloseAiMedia,
   isCarouselAd,
   setIsCarouselAd,
   adType,
@@ -1450,6 +1452,7 @@ export default function AdCreationForm({
     adScheduleStartTime,
     adScheduleEndTime,
     launchPaused,
+    discloseAiMedia,
   }), [
     headlines,
     descriptions,
@@ -1480,6 +1483,7 @@ export default function AdCreationForm({
     adScheduleStartTime,
     adScheduleEndTime,
     launchPaused,
+    discloseAiMedia,
   ]);
 
   const getVariantState = useCallback((variantId) => {
@@ -1702,6 +1706,7 @@ export default function AdCreationForm({
         ? [...variantState.selectedCampaign]
         : variantState.selectedCampaign,
       launchPaused: Boolean(variantState.launchPaused),
+      discloseAiMedia: Boolean(variantState.discloseAiMedia),
       adType,
       isCarouselAd,
       enablePlacementCustomization,
@@ -1813,6 +1818,7 @@ export default function AdCreationForm({
     setFileGroups(normalizeFileGroups(d.fileGroups || []));
     setSelectedFiles(new Set());
     setLaunchPaused(d.launchPaused || false);
+    setDiscloseAiMedia(Boolean(d.discloseAiMedia));
 
     setSelectedShopDestination(d.selectedShopDestination || '');
     setSelectedShopDestinationType(d.selectedShopDestinationType || '');
@@ -1832,7 +1838,7 @@ export default function AdCreationForm({
     setCompletedJobs(prev => prev.filter(j => j.id !== job.id));
 
     toast.success('Form restored — review and resubmit when ready.');
-  }, [setActiveVariantId, setAdNameFormulaV2, setAdScheduleEndTime, setAdScheduleStartTime, setAdType, setCta, setDescriptions, setDriveFiles, setDropboxFiles, setFrameioFiles, setDuplicateAdSet, setEnablePlacementCustomization, setFileGroups, setFileVariantMap, setFiles, setGroupVariantMap, setHeadlines, setImportedFiles, setImportedPosts, setInstagramAccountId, setIsCarouselAd, setIsPartnershipAd, setLaunchPaused, setLink, setMessages, setNewAdSetName, setPageId, setPartnerFbPageId, setPartnerIgAccountId, setPartnershipIdentityMode, setPartnershipPrimaryIdentity, setPhoneNumber, setPostVariantMap, setSelectedAdAccount, setSelectedAdSets, setSelectedCampaign, setSelectedFiles, setSelectedForm, setSelectedIgOrganicPosts, setSelectedShopDestination, setSelectedShopDestinationType, setSelectedTemplate, setThumbnail, setVariants, setVideoThumbs]);
+  }, [setActiveVariantId, setAdNameFormulaV2, setAdScheduleEndTime, setAdScheduleStartTime, setAdType, setCta, setDescriptions, setDiscloseAiMedia, setDriveFiles, setDropboxFiles, setFrameioFiles, setDuplicateAdSet, setEnablePlacementCustomization, setFileGroups, setFileVariantMap, setFiles, setGroupVariantMap, setHeadlines, setImportedFiles, setImportedPosts, setInstagramAccountId, setIsCarouselAd, setIsPartnershipAd, setLaunchPaused, setLink, setMessages, setNewAdSetName, setPageId, setPartnerFbPageId, setPartnerIgAccountId, setPartnershipIdentityMode, setPartnershipPrimaryIdentity, setPhoneNumber, setPostVariantMap, setSelectedAdAccount, setSelectedAdSets, setSelectedCampaign, setSelectedFiles, setSelectedForm, setSelectedIgOrganicPosts, setSelectedShopDestination, setSelectedShopDestinationType, setSelectedTemplate, setThumbnail, setVariants, setVideoThumbs]);
 
 
   const adLimitWarning = useMemo(() => {
@@ -4260,6 +4266,7 @@ export default function AdCreationForm({
 
       // Configuration
       launchPaused,
+      discloseAiMedia,
       adType,
       isCarouselAd,
       enablePlacementCustomization,
@@ -4799,6 +4806,7 @@ export default function AdCreationForm({
       }
       formData.append("cta", resolveCtaForServer(cta));
       formData.append("launchPaused", launchPaused);
+      formData.append("discloseAiMedia", String(Boolean(discloseAiMedia)));
       formData.append("jobId", jobId);
       if (selectedForm) {
         formData.append("leadgenFormId", selectedForm);
@@ -5686,6 +5694,7 @@ export default function AdCreationForm({
             formData.append("pageId", pageId);
             formData.append("instagramAccountId", instagramAccountId || "");
             formData.append("launchPaused", launchPaused);
+            formData.append("discloseAiMedia", String(Boolean(discloseAiMedia)));
             formData.append("jobId", frontendJobId);
 
             // Send the creative ID for both modes so the backend can create a
@@ -5737,6 +5746,7 @@ export default function AdCreationForm({
             formData.append("pageId", pageId);
             formData.append("instagramAccountId", instagramAccountId || "");
             formData.append("launchPaused", launchPaused);
+            formData.append("discloseAiMedia", String(Boolean(discloseAiMedia)));
             formData.append("jobId", frontendJobId);
             formData.append("cta", resolveCtaForServer(cta || "LEARN_MORE"));  // placeholder CTA
             if (usePhoneNumberField) {
@@ -9894,29 +9904,38 @@ export default function AdCreationForm({
           </div>
 
 
-          <div
-            className={cn(
-              "flex items-center space-x-2 rounded-xl transition-colors duration-150", // Base styling: padding, rounded corners, transition
-            )}
-          >
-            <Checkbox
-              id="preserveMedia"
-              checked={preserveMedia}
-              onCheckedChange={setPreserveMedia}
-              disabled={!isLoggedIn}
-              className={cn(
-                "rounded-md", // Or "rounded-lg", "rounded-full"
-                "focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0", // Remove focus ring
-              )} // Optional: style checkbox itself when checked & paused
-            />
-            <Label
-              htmlFor="preserveMedia"
-              className={cn(
-                "text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70",
-              )}
-            >
-              Don't clear media after publishing ads
-            </Label>
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center space-x-2 rounded-xl transition-colors duration-150">
+              <Checkbox
+                id="preserveMedia"
+                checked={preserveMedia}
+                onCheckedChange={setPreserveMedia}
+                disabled={!isLoggedIn}
+                className="rounded-md focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+              />
+              <Label
+                htmlFor="preserveMedia"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                Don't clear media after publishing ads
+              </Label>
+            </div>
+
+            <div className="flex items-center space-x-2 rounded-xl transition-colors duration-150">
+              <Checkbox
+                id="discloseAiMedia"
+                checked={discloseAiMedia}
+                onCheckedChange={(checked) => setDiscloseAiMedia(Boolean(checked))}
+                disabled={!isLoggedIn}
+                className="rounded-md focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+              />
+              <Label
+                htmlFor="discloseAiMedia"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                Disclose AI Media
+              </Label>
+            </div>
           </div>
 
 
