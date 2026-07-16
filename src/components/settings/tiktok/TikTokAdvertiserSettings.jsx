@@ -55,7 +55,9 @@ const CTA_OPTIONS = [
 
 const DRAFT_CACHE_KEY = 'tiktokAdvertiserSettings_draft';
 
-export default function TikTokAdvertiserSettings({ advertisers = [] }) {
+export default function TikTokAdvertiserSettings({ advertisers: propAdvertisers = [] }) {
+    const { tiktokAdvertisers, fetchTikTokAdvertisers } = useAppData();
+    const advertisers = tiktokAdvertisers.length > 0 ? tiktokAdvertisers : propAdvertisers;
     const [selectedAdvertiser, setSelectedAdvertiser] = useState(() => {
         // 1. Check URL query parameter
         const urlParams = new URLSearchParams(window.location.search);
@@ -239,26 +241,11 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
     const handleRefreshAdvertisers = async () => {
         setRefreshingAdvertisers(true);
         try {
-            const uid = localStorage.getItem('tiktok_uid');
-            const token = localStorage.getItem('tiktok_token');
-            const res = await fetch(`${API_BASE_URL}/api/tiktok/advertisers/refresh`, {
-                method: "POST",
-                credentials: 'include',
-                headers: {
-                    ...(uid && { 'x-tiktok-user-id': uid }),
-                    ...(token && { 'x-tiktok-token': token }),
-                }
-            });
-            const data = await res.json();
-            if (data.success) {
-                setAdvertisers(data.advertisers || []);
-                toast.success("Advertiser list refreshed successfully.");
-            } else {
-                toast.error(data.error || "Failed to refresh advertisers.");
-            }
+            await fetchTikTokAdvertisers();
+            toast.success("Advertiser list refreshed successfully.");
         } catch (err) {
             console.error("❌ [Client handleRefreshAdvertisers] Error:", err);
-            toast.error(err.message);
+            toast.error(err.message || "Failed to refresh advertisers.");
         } finally {
             setRefreshingAdvertisers(false);
         }

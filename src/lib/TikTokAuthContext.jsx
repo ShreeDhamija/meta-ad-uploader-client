@@ -1,6 +1,7 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { toast } from 'sonner'
 import { writeCache, clearCache, clearTikTokSessionData } from '@/lib/dataCache'
+import { useAuth } from './AuthContext'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com'
 
@@ -41,7 +42,7 @@ export function TikTokAuthProvider({ children }) {
     }
   }
 
-  const refreshTikTokUser = async () => {
+  const refreshTikTokUser = useCallback(async () => {
     const endpoint = `${API_BASE_URL}/api/tiktok/auth/me`
     try {
 
@@ -118,7 +119,7 @@ export function TikTokAuthProvider({ children }) {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [])
 
   const logoutTikTok = async () => {
     try {
@@ -164,9 +165,19 @@ export function TikTokAuthProvider({ children }) {
     })
   }
 
+  const { userId } = useAuth()
+
   useEffect(() => {
-    refreshTikTokUser()
-  }, [])
+    if (!userId) {
+      setTikTokUser(null)
+      setIsTikTokLoggedIn(false)
+      setTikTokAdvertisers([])
+      setIsLoading(false)
+    } else {
+      setIsLoading(true)
+      refreshTikTokUser()
+    }
+  }, [userId, refreshTikTokUser])
 
   return (
     <TikTokAuthContext.Provider
