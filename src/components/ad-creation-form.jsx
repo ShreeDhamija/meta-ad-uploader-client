@@ -9907,22 +9907,6 @@ export default function AdCreationForm({
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center space-x-2 rounded-xl transition-colors duration-150">
               <Checkbox
-                id="preserveMedia"
-                checked={preserveMedia}
-                onCheckedChange={setPreserveMedia}
-                disabled={!isLoggedIn}
-                className="rounded-md focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
-              />
-              <Label
-                htmlFor="preserveMedia"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-              >
-                Don't clear media after publishing ads
-              </Label>
-            </div>
-
-            <div className="flex items-center space-x-2 rounded-xl transition-colors duration-150">
-              <Checkbox
                 id="discloseAiMedia"
                 checked={discloseAiMedia}
                 onCheckedChange={(checked) => setDiscloseAiMedia(Boolean(checked))}
@@ -9934,6 +9918,22 @@ export default function AdCreationForm({
                 className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
               >
                 Disclose AI Media
+              </Label>
+            </div>
+
+            <div className="flex items-center space-x-2 rounded-xl transition-colors duration-150">
+              <Checkbox
+                id="preserveMedia"
+                checked={preserveMedia}
+                onCheckedChange={setPreserveMedia}
+                disabled={!isLoggedIn}
+                className="rounded-md focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+              />
+              <Label
+                htmlFor="preserveMedia"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                Don't clear media after publishing ads
               </Label>
             </div>
           </div>
