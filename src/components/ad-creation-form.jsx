@@ -2306,17 +2306,30 @@ export default function AdCreationForm({
     [pages, pageSearchValue]
   );
 
-  const filteredInstagramAccounts = useMemo(() =>
-    pages
-      .filter((page) => page.instagramAccount)
-      .filter((page) =>
-        page.instagramAccount.username.toLowerCase()
-          .includes(instagramSearchValue.toLowerCase())
-      ),
-    [pages, instagramSearchValue]
-  );
+  const filteredInstagramAccounts = useMemo(() => {
+    // Flatten each page's primary IG account plus any hardcoded extras
+    // (additionalInstagramAccounts). Wrap each as { instagramAccount } so the
+    // render loop below can keep reading `item.instagramAccount` unchanged.
+    const seen = new Set();
+    return pages
+      .flatMap((page) => [
+        ...(page.instagramAccount ? [page.instagramAccount] : []),
+        ...(page.additionalInstagramAccounts || []),
+      ])
+      .filter((acct) => {
+        if (!acct?.id || seen.has(acct.id)) return false;
+        seen.add(acct.id);
+        return true;
+      })
+      .filter((acct) =>
+        acct.username?.toLowerCase().includes(instagramSearchValue.toLowerCase())
+      )
+      .map((instagramAccount) => ({ instagramAccount }));
+  }, [pages, instagramSearchValue]);
   const hasPages = pages.length > 0;
-  const hasInstagramAccounts = pages.some((page) => page.instagramAccount);
+  const hasInstagramAccounts = pages.some(
+    (page) => page.instagramAccount || page.additionalInstagramAccounts?.length
+  );
 
 
   const refreshPages = async () => {
@@ -2336,8 +2349,11 @@ export default function AdCreationForm({
         // ✅ Retain selected page and IG account if still valid
         const updatedPage = data.pages.find((p) => p.id === pageId);
         const updatedInstagram = data.pages
-          .find((p) => p.instagramAccount?.id === instagramAccountId)
-          ?.instagramAccount;
+          .flatMap((p) => [
+            ...(p.instagramAccount ? [p.instagramAccount] : []),
+            ...(p.additionalInstagramAccounts || []),
+          ])
+          .find((acct) => acct.id === instagramAccountId);
 
         if (!updatedPage) setPageId("");
         if (!updatedInstagram) setInstagramAccountId("");
