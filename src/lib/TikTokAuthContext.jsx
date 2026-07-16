@@ -169,11 +169,12 @@ export function TikTokAuthProvider({ children }) {
   }
 
   useEffect(() => {
+    console.log("userId>>> ", userId)
     if (!userId) {
       setTikTokUser(null)
-      setIsTikTokLoggedIn(false)
+      // setIsTikTokLoggedIn(false)
       setTikTokAdvertisers([])
-      setIsLoading(false)
+      // setIsLoading(false)
     } else {
       setIsLoading(true)
       refreshTikTokUser()

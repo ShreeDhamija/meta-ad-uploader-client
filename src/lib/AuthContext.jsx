@@ -50,16 +50,7 @@ export const AuthProvider = ({ children }) => {
         setAuthLoading(false); // ✅ mark loading finished
       }
     }
-    const { pathname, search } = window.location;
-    const params = new URLSearchParams(search);
-    const shouldSkip =
-      pathname === "/tiktok-ads" ||
-      (pathname === "/settings" && params.get("tab") === "tiktok");
-    if (!shouldSkip) {
-      checkAuth()
-    } else {
-      setAuthLoading(false)
-    }
+    checkAuth()
   }, [])
 
 
