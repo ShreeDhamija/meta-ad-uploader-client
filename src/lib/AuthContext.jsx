@@ -57,6 +57,8 @@ export const AuthProvider = ({ children }) => {
       (pathname === "/settings" && params.get("tab") === "tiktok");
     if (!shouldSkip) {
       checkAuth()
+    } else {
+      setAuthLoading(false)
     }
   }, [])
 
