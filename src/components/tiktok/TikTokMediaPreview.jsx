@@ -707,10 +707,7 @@ export default function MediaPreview({
     return false;
   }, [selectedAdSets, adSets, duplicateAdSet]);
 
-  const showPlacementCustomizationRow = !isCarouselAd &&
-    adType !== 'flexible' &&
-    importedPosts.length === 0 &&
-    selectedIgOrganicPosts.length === 0;
+  const showPlacementCustomizationRow = false;
   const showVariantSetupButton = false;
   const isSingleMediaSplit = totalFileCount === 1;
   const showVariantButtonInPlacementRow = showVariantSetupButton && showPlacementCustomizationRow;
