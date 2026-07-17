@@ -138,6 +138,27 @@ export default function TikTokLinkParameters({
             toast.error("Please enter a link URL");
             return;
         }
+
+        let urlError = "";
+        const urlString = newLinkUrl.trim();
+        if (!/^https:\/\//i.test(urlString)) {
+            urlError = "Link (URL) must start with https://";
+        } else {
+            try {
+                const urlObj = new URL(urlString);
+                if (!urlObj.hostname.includes('.')) {
+                    urlError = "Link (URL) must contain a valid domain with a dot (.)";
+                }
+            } catch (_) {
+                urlError = "Link (URL) must be a complete and valid URL";
+            }
+        }
+
+        if (urlError) {
+            toast.error(urlError);
+            return;
+        }
+
         if (links.some(link => link.url === newLinkUrl.trim())) {
             toast.error("This link already exists");
             return;
@@ -513,6 +534,23 @@ export default function TikTokLinkParameters({
                         className="rounded-2xl border-gray-300 py-4.5 bg-white shadow"
                         autoComplete="off"
                     />
+                    {impressionTrackingUrl && impressionTrackingUrl.trim() && (() => {
+                        let urlError = "Link (URL) must start with https://";
+                        const urlString = impressionTrackingUrl.trim();
+                        if (/^https:\/\//i.test(urlString)) {
+                            try {
+                                const urlObj = new URL(urlString);
+                                if (urlObj.hostname.includes('.')) {
+                                    return null;
+                                } else {
+                                    urlError = "Link (URL) must contain a valid domain with a dot (.)";
+                                }
+                            } catch (_) {
+                                urlError = "Link (URL) must be a complete and valid URL";
+                            }
+                        }
+                        return <p className="text-xs text-red-500 font-medium mt-1">{urlError}</p>;
+                    })()}
                 </div>
 
                 <div className="space-y-1">
@@ -533,6 +571,23 @@ export default function TikTokLinkParameters({
                         className="rounded-2xl border-gray-300 py-4.5 bg-white shadow"
                         autoComplete="off"
                     />
+                    {clickTrackingUrl && clickTrackingUrl.trim() && (() => {
+                        let urlError = "Link (URL) must start with https://";
+                        const urlString = clickTrackingUrl.trim();
+                        if (/^https:\/\//i.test(urlString)) {
+                            try {
+                                const urlObj = new URL(urlString);
+                                if (urlObj.hostname.includes('.')) {
+                                    return null;
+                                } else {
+                                    urlError = "Link (URL) must contain a valid domain with a dot (.)";
+                                }
+                            } catch (_) {
+                                urlError = "Link (URL) must be a complete and valid URL";
+                            }
+                        }
+                        return <p className="text-xs text-red-500 font-medium mt-1">{urlError}</p>;
+                    })()}
                 </div>
             </div>
 

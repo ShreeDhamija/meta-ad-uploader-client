@@ -3805,19 +3805,23 @@ export default function TikTokAdCreationForm({
             return;
           }
 
-          let isValidUrl = false;
-          try {
-            const urlString = fd.landingUrl.trim();
-            if (/^https:\/\//i.test(urlString)) {
+          let urlError = "";
+          const urlString = fd.landingUrl.trim();
+          if (!/^https:\/\//i.test(urlString)) {
+            urlError = "must start with https://";
+          } else {
+            try {
               const urlObj = new URL(urlString);
-              if (urlObj.hostname.includes('.')) {
-                isValidUrl = true;
+              if (!urlObj.hostname.includes('.')) {
+                urlError = "must contain a valid domain with a dot (.)";
               }
+            } catch (_) {
+              urlError = "must be a complete and valid URL";
             }
-          } catch (_) { }
+          }
 
-          if (!isValidUrl) {
-            toast.error(`${variant.name}: please enter a valid Landing Page URL starting with https://`);
+          if (urlError) {
+            toast.error(`${variant.name}: link (URL) ${urlError}`);
             return;
           }
         }
@@ -4166,18 +4170,22 @@ export default function TikTokAdCreationForm({
       if (!landingUrl || !landingUrl.trim()) {
         errors.push("Link (URL) is required")
       } else {
-        let isValidUrl = false
-        try {
-          const urlString = landingUrl.trim()
-          if (/^https:\/\//i.test(urlString)) {
+        let urlError = ""
+        const urlString = landingUrl.trim()
+        if (!/^https:\/\//i.test(urlString)) {
+          urlError = "Link (URL) must start with https://"
+        } else {
+          try {
             const urlObj = new URL(urlString)
-            if (urlObj.hostname.includes('.')) {
-              isValidUrl = true
+            if (!urlObj.hostname.includes('.')) {
+              urlError = "Link (URL) must contain a valid domain with a dot (.)"
             }
+          } catch (_) {
+            urlError = "Link (URL) must be a complete and valid URL"
           }
-        } catch (_) { }
-        if (!isValidUrl) {
-          errors.push("Link (URL) must be a valid URL starting with https://")
+        }
+        if (urlError) {
+          errors.push(urlError)
         }
       }
     }
@@ -5763,17 +5771,22 @@ export default function TikTokAdCreationForm({
 
 
                         {!areAllSelectedAdGroupsShopping && landingUrl && landingUrl.trim() && (() => {
-                          try {
-                            const urlString = landingUrl.trim();
-                            if (/^https:\/\//i.test(urlString)) {
+                          let urlError = "Link (URL) must start with https://";
+                          const urlString = landingUrl.trim();
+                          if (/^https:\/\//i.test(urlString)) {
+                            try {
                               const urlObj = new URL(urlString);
                               if (urlObj.hostname.includes('.')) {
                                 return null;
+                              } else {
+                                urlError = "Link (URL) must contain a valid domain with a dot (.)";
                               }
+                            } catch (_) {
+                              urlError = "Link (URL) must be a complete and valid URL";
                             }
-                          } catch (_) { }
-                          return <p className="text-xs text-red-500 font-medium mt-1">Link (URL) must be a valid URL starting with https://</p>;
-                        })()}
+                          }
+                          return <p className="text-xs text-red-500 font-medium mt-1">{urlError}</p>;
+                                         })()}
                       </div>
                     ) : (
                       <div className="space-y-3">
