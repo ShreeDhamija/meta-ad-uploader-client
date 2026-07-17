@@ -1788,7 +1788,7 @@ export default function TikTokAdCreationForm({
       await new Promise(resolve => setTimeout(resolve, 100));
 
       // Stage 2: Compilation & bulk ad group submission
-      setProgressMessage('Compiling ad groups payload...')
+      setProgressMessage('Compiling ad groups payload... ')
 
       const selectedIdentityObj = identities.find(i => i.identity_id === selectedIdentity)
       const isCustomized = !selectedIdentity || selectedIdentity === 'CUSTOMIZED_USER'
