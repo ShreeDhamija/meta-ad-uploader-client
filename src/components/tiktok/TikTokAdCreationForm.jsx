@@ -2174,22 +2174,8 @@ export default function TikTokAdCreationForm({
         throw new Error(createData.error || 'Batch ad creation failed')
       }
 
-      if (setAdGroups) {
-        setAdGroups(prevAdGroups => {
-          const updatedAdGroups = prevAdGroups.map(ag => {
-            const adGroupPay = adGroupsPayload.find(pay => pay.adgroupId === ag.adgroup_id)
-            if (adGroupPay) {
-              return {
-                ...ag,
-                ad_count: (ag.ad_count || 0) + adGroupPay.creatives.length
-              }
-            }
-            return ag;
-          });
-
-          return updatedAdGroups;
-        })
-      }
+      // ad_count update is deferred to SSE job-completion listener (see trackedStatus === 'complete' effect)
+      // so the badge only updates after the ads are actually created, not optimistically on API call.
 
     } catch (err) {
       if (err.name === 'AbortError' || signal.aborted) {
@@ -2339,6 +2325,20 @@ export default function TikTokAdCreationForm({
       if (trackedStatus === 'complete') {
         completedJob.status = 'success'
         completedJob.message = `${currentJob.adCount || 1} Ad${currentJob.adCount !== 1 ? 's' : ''} successfully posted to ${currentJob.adGroupDisplayName}`
+
+        // Update ad_count badge only after ads are confirmed created (using real successCount)
+        if (setAdGroups && successCount > 0) {
+          const targetAdGroups = currentJob.formData?.selectedAdGroup || []
+          const adGroupCount = targetAdGroups.length || 1
+          // Distribute successCount evenly across targeted ad groups
+          const perAdGroup = Math.round(successCount / adGroupCount)
+          setAdGroups(prevAdGroups => prevAdGroups.map(ag => {
+            if (targetAdGroups.includes(ag.adgroup_id)) {
+              return { ...ag, ad_count: (ag.ad_count || 0) + perAdGroup }
+            }
+            return ag
+          }))
+        }
       } else if (trackedStatus === 'partial-success') {
         completedJob.status = 'partial-success'
         completedJob.message = `${successCount} Ad${successCount !== 1 ? 's' : ''} successfully posted to ${currentJob.adGroupDisplayName} (with ${failureCount} failure${failureCount !== 1 ? 's' : ''})`
@@ -2366,7 +2366,7 @@ export default function TikTokAdCreationForm({
       setIsProcessingQueue(false)
       setIsCancelling(false)
     }
-  }, [trackedStatus, trackedMessage, trackedMetaData, isProcessingQueue, currentJob, addCompletedJob])
+  }, [trackedStatus, trackedMessage, trackedMetaData, isProcessingQueue, currentJob, addCompletedJob, setAdGroups])
 
   // Sync SSE metadata updates to liveProgress
   useEffect(() => {
@@ -3394,7 +3394,7 @@ export default function TikTokAdCreationForm({
           setDriveFiles((prev) => [...prev, ...selected])
           if (selected.length > 0) {
             setVideoFile(null)
-            setDropboxFiles([])
+            // Do NOT clear dropboxFiles — both sources can accumulate together
           }
         }
         if (data.action === "picked" || data.action === "cancel") {
@@ -3481,7 +3481,7 @@ export default function TikTokAdCreationForm({
         }
         setDriveFiles((prev) => [...prev, newFile])
         setVideoFile(null)
-        setDropboxFiles([])
+        // Do NOT clear dropboxFiles — both sources can accumulate together
         setShowFolderInput(false)
         setFolderLinkValue("")
       } catch (error) {
@@ -3495,7 +3495,7 @@ export default function TikTokAdCreationForm({
     const folderId = link.match(/folders\/([a-zA-Z0-9-_]+)/) ? link.match(/folders\/([a-zA-Z0-9-_]+)/)[1] : null
     if (!folderId) return toast.error('Invalid Google Drive link')
     createPicker(googleAuthStatus.accessToken, folderId)
-  }, [folderLinkValue, googleAuthStatus.accessToken, createPicker, setDriveFiles, setVideoFile, setDropboxFiles])
+  }, [folderLinkValue, googleAuthStatus.accessToken, createPicker, setDriveFiles, setVideoFile])
 
   // Dropbox Logic
   useEffect(() => {
@@ -3524,14 +3524,14 @@ export default function TikTokAdCreationForm({
         setDropboxFiles((prev) => [...prev, ...dropboxFilesData])
         if (dropboxFilesData.length > 0) {
           setVideoFile(null)
-          setDriveFiles([])
+          // Do NOT clear driveFiles — both sources can accumulate together
         }
       },
       linkType: 'direct',
       multiselect: true,
       extensions: ['.mp4', '.mov', '.webm'],
     })
-  }, [setDropboxFiles, setVideoFile, setDriveFiles])
+  }, [setDropboxFiles, setVideoFile])
 
   const handleDropboxClick = useCallback(async () => {
     if (!window.Dropbox) return toast.error("Dropbox is still loading.")
