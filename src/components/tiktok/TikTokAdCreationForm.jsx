@@ -5779,7 +5779,7 @@ export default function TikTokAdCreationForm({
                               if (urlObj.hostname.includes('.')) {
                                 return null;
                               } else {
-                                urlError = "Link (URL) must contain a valid domain with a dot (.)";
+                                urlError = "Invalid Link (URL)";
                               }
                             } catch (_) {
                               urlError = "Link (URL) must be a complete and valid URL";
