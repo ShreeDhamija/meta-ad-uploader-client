@@ -746,11 +746,12 @@ export default function TikTokAdvertiserSettings({ advertisers: propAdvertisers 
                                 toast.error("Failed to set default template");
                             }
                         }}
-                        onDeleteTemplate={async (name) => {
+                        onDeleteTemplate={async (names) => {
+                            const namesToDelete = Array.isArray(names) ? names : [names];
                             const updated = { ...(initialSettings?.copyTemplates || {}) };
-                            delete updated[name];
+                            namesToDelete.forEach(n => delete updated[n]);
 
-                            const wasDefault = initialSettings?.defaultTemplateName === name;
+                            const wasDefault = namesToDelete.includes(initialSettings?.defaultTemplateName);
                             const partialUpdate = {
                                 copyTemplates: updated,
                                 ...(wasDefault && { defaultTemplateName: "" })

@@ -269,6 +269,11 @@ export default function TikTokCopyTemplates({
             const isEditing = selectedName !== null && selectedName !== ""
             const isRenaming = isEditing && selectedName !== templateName
 
+            // If we're renaming, delete the old template from backend
+            if (isRenaming) {
+                await deleteTikTokCopyTemplate(advertiserId, selectedName);
+            }
+
             // Call the parent update callbacks
             await onSaveTemplate(templateName, newTemplate, isRenaming ? selectedName : null);
             setSelectedName(templateName);
@@ -305,8 +310,8 @@ export default function TikTokCopyTemplates({
         try {
             for (const name of namesToDelete) {
                 await deleteTikTokCopyTemplate(advertiserId, name);
-                onDeleteTemplate(name);
             }
+            await onDeleteTemplate(namesToDelete);
             toast.success(`Deleted ${namesToDelete.length} template${namesToDelete.length > 1 ? "s" : ""}`)
             setSelectedForDelete(new Set())
             setBulkDeleteMode(false)
