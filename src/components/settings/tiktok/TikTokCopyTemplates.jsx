@@ -174,8 +174,18 @@ export default function TikTokCopyTemplates({
         return () => window.removeEventListener('beforeunload', handler);
     }, [templateChanged]);
 
+    const prevSelectedRef = useRef(selectedName);
+    const prevTemplatesStringRef = useRef(JSON.stringify(templates));
+
     // Sync with props
     useEffect(() => {
+        const templatesString = JSON.stringify(templates);
+        if (prevSelectedRef.current === selectedName && prevTemplatesStringRef.current === templatesString) {
+            return;
+        }
+        prevSelectedRef.current = selectedName;
+        prevTemplatesStringRef.current = templatesString;
+
         if (selectedName && templates[selectedName]) {
             const t = templates[selectedName];
             setTemplateName(t.name || selectedName);

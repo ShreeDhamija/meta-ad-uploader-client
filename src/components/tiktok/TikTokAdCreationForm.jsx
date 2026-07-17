@@ -3683,10 +3683,10 @@ export default function TikTokAdCreationForm({
 
         const fd = job.formData;
 
-        if (!fd.selectedAdvertiser) {
-          toast.error(`${variant.name}: please select an advertiser account`);
-          return;
-        }
+        // if (!fd.selectedAdvertiser) {
+        //   toast.error(`${variant.name}: please select an advertiser account`);
+        //   return;
+        // }
 
         if (!fd.isDuplicatingAdGroupMode && (!fd.selectedAdGroup || fd.selectedAdGroup.length === 0)) {
           toast.error(`${variant.name}: please select at least one ad group`);
@@ -3808,14 +3808,16 @@ export default function TikTokAdCreationForm({
           let isValidUrl = false;
           try {
             const urlString = fd.landingUrl.trim();
-            if (/^https?:\/\//i.test(urlString)) {
-              new URL(urlString);
-              isValidUrl = true;
+            if (/^https:\/\//i.test(urlString)) {
+              const urlObj = new URL(urlString);
+              if (urlObj.hostname.includes('.')) {
+                isValidUrl = true;
+              }
             }
           } catch (_) { }
 
           if (!isValidUrl) {
-            toast.error(`${variant.name}: please enter a valid Landing Page URL starting with http:// or https://`);
+            toast.error(`${variant.name}: please enter a valid Landing Page URL starting with https://`);
             return;
           }
         }
@@ -4167,13 +4169,15 @@ export default function TikTokAdCreationForm({
         let isValidUrl = false
         try {
           const urlString = landingUrl.trim()
-          if (/^https?:\/\//i.test(urlString)) {
-            new URL(urlString)
-            isValidUrl = true
+          if (/^https:\/\//i.test(urlString)) {
+            const urlObj = new URL(urlString)
+            if (urlObj.hostname.includes('.')) {
+              isValidUrl = true
+            }
           }
         } catch (_) { }
         if (!isValidUrl) {
-          errors.push("Link (URL) must be a valid URL starting with http:// or https://")
+          errors.push("Link (URL) must be a valid URL starting with https://")
         }
       }
     }
@@ -4349,9 +4353,9 @@ export default function TikTokAdCreationForm({
                   </Command>
                 </PopoverContent>
               </Popover>
-              {!selectedAdvertiser && (
+              {/* {!selectedAdvertiser && (
                 <p className="text-xs text-red-500 font-medium mt-1">Please select an advertiser account</p>
-              )}
+              )} */}
 
               {/* {selectedAdvertiser && loadingPrefs && (
                 <div className="flex items-center gap-2 text-xs text-gray-500 mt-2">
@@ -5761,12 +5765,14 @@ export default function TikTokAdCreationForm({
                         {!areAllSelectedAdGroupsShopping && landingUrl && landingUrl.trim() && (() => {
                           try {
                             const urlString = landingUrl.trim();
-                            if (/^https?:\/\//i.test(urlString)) {
-                              new URL(urlString);
-                              return null;
+                            if (/^https:\/\//i.test(urlString)) {
+                              const urlObj = new URL(urlString);
+                              if (urlObj.hostname.includes('.')) {
+                                return null;
+                              }
                             }
                           } catch (_) { }
-                          return <p className="text-xs text-red-500 font-medium mt-1">Link (URL) must be a valid URL starting with http:// or https://</p>;
+                          return <p className="text-xs text-red-500 font-medium mt-1">Link (URL) must be a valid URL starting with https://</p>;
                         })()}
                       </div>
                     ) : (
