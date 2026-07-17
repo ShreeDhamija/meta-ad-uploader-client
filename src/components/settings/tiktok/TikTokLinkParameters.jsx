@@ -147,7 +147,7 @@ export default function TikTokLinkParameters({
             try {
                 const urlObj = new URL(urlString);
                 if (!urlObj.hostname.includes('.')) {
-                    urlError = "Link (URL) must contain a valid domain with a dot (.)";
+                    urlError = "Invalid Link (URL)";
                 }
             } catch (_) {
                 urlError = "Link (URL) must be a complete and valid URL";
@@ -543,7 +543,7 @@ export default function TikTokLinkParameters({
                                 if (urlObj.hostname.includes('.')) {
                                     return null;
                                 } else {
-                                    urlError = "Link (URL) must contain a valid domain with a dot (.)";
+                                    urlError = "Invalid Link (URL)";
                                 }
                             } catch (_) {
                                 urlError = "Link (URL) must be a complete and valid URL";
@@ -580,7 +580,7 @@ export default function TikTokLinkParameters({
                                 if (urlObj.hostname.includes('.')) {
                                     return null;
                                 } else {
-                                    urlError = "Link (URL) must contain a valid domain with a dot (.)";
+                                    urlError = "Invalid Link (URL)";
                                 }
                             } catch (_) {
                                 urlError = "Link (URL) must be a complete and valid URL";

@@ -718,6 +718,7 @@ export default function TikTokAdvertiserSettings({ advertisers: propAdvertisers 
 
                             try {
                                 await saveTikTokSettings(selectedAdvertiser, next);
+                                skipSettingsResetRef.current = true;
                                 setServerSettings(next);
                                 setInitialSettings(JSON.parse(JSON.stringify(next)));
                                 setSettings(prev => ({
@@ -734,6 +735,7 @@ export default function TikTokAdvertiserSettings({ advertisers: propAdvertisers 
 
                             try {
                                 await saveTikTokSettings(selectedAdvertiser, next);
+                                skipSettingsResetRef.current = true;
                                 setServerSettings(next);
                                 setInitialSettings(JSON.parse(JSON.stringify(next)));
                                 setSettings(prev => ({
@@ -758,6 +760,7 @@ export default function TikTokAdvertiserSettings({ advertisers: propAdvertisers 
 
                             try {
                                 await saveTikTokSettings(selectedAdvertiser, next);
+                                skipSettingsResetRef.current = true;
                                 setServerSettings(next);
                                 setInitialSettings(JSON.parse(JSON.stringify(next)));
                                 setSettings(prev => ({
