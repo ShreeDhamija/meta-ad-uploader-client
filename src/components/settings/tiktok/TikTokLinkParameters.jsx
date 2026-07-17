@@ -413,7 +413,16 @@ export default function TikTokLinkParameters({
                             <Input
                                 placeholder="Enter Link URL"
                                 value={newLinkUrl}
-                                onChange={(e) => setNewLinkUrl(e.target.value)}
+                                onChange={(e) => {
+                                    let val = e.target.value;
+                                    if (val && !val.startsWith("https://")) {
+                                        const httpsPrefix = "https://";
+                                        if (!httpsPrefix.startsWith(val)) {
+                                            val = "https://" + val;
+                                        }
+                                    }
+                                    setNewLinkUrl(val);
+                                }}
                                 className="rounded-2xl border-gray-300 py-4.5 bg-white shadow"
                             />
                         </div>
@@ -491,7 +500,16 @@ export default function TikTokLinkParameters({
                     <Input
                         placeholder="Enter URL"
                         value={impressionTrackingUrl}
-                        onChange={(e) => setImpressionTrackingUrl(e.target.value)}
+                        onChange={(e) => {
+                            let val = e.target.value;
+                            if (val && !val.startsWith("https://")) {
+                                const httpsPrefix = "https://";
+                                if (!httpsPrefix.startsWith(val)) {
+                                    val = "https://" + val;
+                                }
+                            }
+                            setImpressionTrackingUrl(val);
+                        }}
                         className="rounded-2xl border-gray-300 py-4.5 bg-white shadow"
                         autoComplete="off"
                     />
@@ -502,7 +520,16 @@ export default function TikTokLinkParameters({
                     <Input
                         placeholder="Enter URL"
                         value={clickTrackingUrl}
-                        onChange={(e) => setClickTrackingUrl(e.target.value)}
+                        onChange={(e) => {
+                            let val = e.target.value;
+                            if (val && !val.startsWith("https://")) {
+                                const httpsPrefix = "https://";
+                                if (!httpsPrefix.startsWith(val)) {
+                                    val = "https://" + val;
+                                }
+                            }
+                            setClickTrackingUrl(val);
+                        }}
                         className="rounded-2xl border-gray-300 py-4.5 bg-white shadow"
                         autoComplete="off"
                     />

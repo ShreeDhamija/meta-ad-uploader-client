@@ -4353,12 +4353,12 @@ export default function TikTokAdCreationForm({
                 <p className="text-xs text-red-500 font-medium mt-1">Please select an advertiser account</p>
               )}
 
-              {selectedAdvertiser && loadingPrefs && (
+              {/* {selectedAdvertiser && loadingPrefs && (
                 <div className="flex items-center gap-2 text-xs text-gray-500 mt-2">
                   <Loader className="h-3 w-3 animate-spin" />
                   Loading Ad Account Preferences...
                 </div>
-              )}
+              )} */}
 
               {selectedAdvertiser && !loadingPrefs && !documentExists && (
                 <div className="flex items-center gap-1 p-1 pl-2 bg-orange-50 border border-orange-200 rounded-2xl">
@@ -5710,8 +5710,15 @@ export default function TikTokAdCreationForm({
                                   type="text"
                                   value={customLink}
                                   onChange={(e) => {
-                                    setCustomLink(e.target.value);
-                                    setLandingUrl(e.target.value);
+                                    let val = e.target.value;
+                                    if (val && !val.startsWith("https://")) {
+                                      const httpsPrefix = "https://";
+                                      if (!httpsPrefix.startsWith(val)) {
+                                        val = "https://" + val;
+                                      }
+                                    }
+                                    setCustomLink(val);
+                                    setLandingUrl(val);
                                   }}
                                   className={cn("w-full", formInputChrome)}
                                   placeholder="https://example.com"
