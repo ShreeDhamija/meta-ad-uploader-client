@@ -2,7 +2,7 @@ import { useState, useCallback, useMemo, memo, useEffect } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Trash2, Plus, ChevronDown, X } from "lucide-react"
-import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
+import { Popover, PopoverTrigger, PopoverContent, PopoverAnchor } from "@/components/ui/popover"
 import {
     Command,
     CommandInput,
@@ -751,48 +751,56 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                                                 />
 
                                                 {/* VALUE INPUT */}
-                                                <div className="relative flex-1">
-                                                    <Input
-                                                        placeholder={`Value`}
-                                                        value={pair.value}
-                                                        // 3. Use handleTempPairChange
-                                                        onChange={(e) => {
-                                                            setInputValue(e.target.value)
-                                                            handleTempPairChange(i, "value", e.target.value)
-                                                        }}
-                                                        onFocus={() => {
-                                                            setInputValue("")
-                                                            setOpenIndex(i)
-                                                        }}
-                                                        onBlur={() => {
-                                                            setTimeout(() => setOpenIndex(null), 150)
-                                                        }}
-                                                        className="rounded-2xl w-full border-gray-300 bg-white shadow h-10"
-                                                    />
-                                                    {openIndex === i && (
-                                                        <div className="absolute z-50 w-full bg-white border border-gray-200 rounded-xl shadow-lg mt-1 p-2 max-h-[200px] overflow-hidden">
-                                                            <Command className="h-full">
-                                                                <CommandList className="max-h-[180px] overflow-y-auto">
-                                                                    {filteredSuggestions.map((suggestion, index) => (
-                                                                        <CommandItem
-                                                                            key={index}
-                                                                            value={suggestion}
-                                                                            onMouseDown={(e) => {
-                                                                                e.preventDefault();
-                                                                                // 4. Use handleTempPairChange for suggestions
-                                                                                handleTempPairChange(i, "value", suggestion)
-                                                                                setOpenIndex(null)
-                                                                            }}
-                                                                            className="cursor-pointer px-3 py-2 hover:bg-gray-100 rounded-lg text-sm"
-                                                                        >
-                                                                            {suggestion}
-                                                                        </CommandItem>
-                                                                    ))}
-                                                                </CommandList>
-                                                            </Command>
-                                                        </div>
-                                                    )}
-                                                </div>
+                                                <Popover
+                                                    open={openIndex === i}
+                                                    onOpenChange={(isOpen) => {
+                                                        if (!isOpen) setOpenIndex(prev => prev === i ? null : prev)
+                                                    }}
+                                                >
+                                                    <PopoverAnchor asChild>
+                                                        <Input
+                                                            placeholder={`Value`}
+                                                            value={pair.value}
+                                                            // 3. Use handleTempPairChange
+                                                            onChange={(e) => {
+                                                                setInputValue(e.target.value)
+                                                                handleTempPairChange(i, "value", e.target.value)
+                                                            }}
+                                                            onFocus={() => {
+                                                                setInputValue("")
+                                                                setOpenIndex(i)
+                                                            }}
+                                                            className="rounded-2xl w-full flex-1 border-gray-300 bg-white shadow h-10"
+                                                        />
+                                                    </PopoverAnchor>
+                                                    <PopoverContent
+                                                        align="start"
+                                                        sideOffset={4}
+                                                        onOpenAutoFocus={(e) => e.preventDefault()}
+                                                        onCloseAutoFocus={(e) => e.preventDefault()}
+                                                        className="z-[10000] w-[--radix-popover-trigger-width] bg-white border border-gray-200 rounded-xl shadow-lg p-2 max-h-[200px] overflow-hidden"
+                                                    >
+                                                        <Command className="h-full">
+                                                            <CommandList className="max-h-[180px] overflow-y-auto">
+                                                                {filteredSuggestions.map((suggestion, index) => (
+                                                                    <CommandItem
+                                                                        key={index}
+                                                                        value={suggestion}
+                                                                        onMouseDown={(e) => {
+                                                                            e.preventDefault();
+                                                                            // 4. Use handleTempPairChange for suggestions
+                                                                            handleTempPairChange(i, "value", suggestion)
+                                                                            setOpenIndex(null)
+                                                                        }}
+                                                                        className="cursor-pointer px-3 py-2 hover:bg-gray-100 rounded-lg text-sm"
+                                                                    >
+                                                                        {suggestion}
+                                                                    </CommandItem>
+                                                                ))}
+                                                            </CommandList>
+                                                        </Command>
+                                                    </PopoverContent>
+                                                </Popover>
 
                                                 {/* DELETE BUTTON */}
                                                 <Button
