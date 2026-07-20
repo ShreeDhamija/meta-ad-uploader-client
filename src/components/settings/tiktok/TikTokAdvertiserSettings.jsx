@@ -903,7 +903,16 @@ export default function TikTokAdvertiserSettings({ advertisers: propAdvertisers 
                                         <ChevronsUpDown className="w-4 h-4 opacity-50" />
                                     </Button>
                                 </PopoverTrigger>
-                                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-1 bg-white rounded-2xl shadow-xl border-gray-100" side="bottom" avoidCollisions={false}>
+                                <PopoverContent
+                                    className="w-[var(--radix-popover-trigger-width)] p-1 bg-white rounded-2xl shadow-xl border-gray-100"
+                                    side="bottom"
+                                    avoidCollisions={true}
+                                    style={{ zIndex: 9999 }}
+                                    onInteractOutside={(e) => {
+                                        // Only close if clicking truly outside the popover
+                                        setOpenCta(false);
+                                    }}
+                                >
                                     <div className="flex flex-col overflow-hidden rounded-2xl bg-white text-gray-900">
                                         <div className="max-h-[300px] overflow-y-auto rounded-2xl p-1">
                                             <div className="space-y-0.5">
@@ -911,7 +920,10 @@ export default function TikTokAdvertiserSettings({ advertisers: propAdvertisers 
                                                     <button
                                                         type="button"
                                                         key={opt.value}
-                                                        onClick={() => {
+                                                        onMouseDown={(e) => {
+                                                            // Use mousedown + preventDefault to prevent the popover
+                                                            // from detecting a focus-loss and closing prematurely
+                                                            e.preventDefault();
                                                             const prev = currentSettings.defaultCTAs || [];
                                                             const next = prev.includes(opt.value)
                                                                 ? prev.filter(v => v !== opt.value)
@@ -1003,9 +1015,9 @@ export default function TikTokAdvertiserSettings({ advertisers: propAdvertisers 
                                     className="min-w-[--radix-popover-trigger-width] w-auto !max-w-none p-0 rounded-xl bg-white border-gray-200 shadow-2xl"
                                     align="start"
                                     sideOffset={4}
-                                    side="top"
+                                    side="bottom"
                                     avoidCollisions={true}
-                                    style={{ minWidth: "var(--radix-popover-trigger-width)", width: "auto" }}
+                                    style={{ minWidth: "var(--radix-popover-trigger-width)", width: "auto", zIndex: 9999 }}
                                 >
                                     <div className="flex flex-col overflow-hidden rounded-xl bg-white text-gray-900">
                                         <div className="mx-2 mt-2 mb-1 flex items-center rounded-2xl border border-gray-300 bg-white px-3 shadow">
@@ -1079,6 +1091,7 @@ export default function TikTokAdvertiserSettings({ advertisers: propAdvertisers 
                         </div>
 
                         {/* Products Dropdown — shown only when a catalog is selected */}
+
                         {selectedCatalogId && (
                             <div className="space-y-1">
                                 <label className="text-xs font-semibold text-gray-700">Product</label>
@@ -1087,7 +1100,12 @@ export default function TikTokAdvertiserSettings({ advertisers: propAdvertisers 
                                 )}
                                 <Popover open={openProduct} onOpenChange={(open) => {
                                     setOpenProduct(open);
-                                    if (!open) setProductSearch("");
+                                    if (!open) {
+                                        setProductSearch("");
+                                    } else if (open && catalogProducts.length === 0 && !loadingProducts && selectedCatalogId) {
+                                        // Auto-fetch products if the list is empty when dropdown is opened
+                                        fetchCatalogProducts(selectedAdvertiser, selectedCatalogId);
+                                    }
                                 }}>
                                     <PopoverTrigger asChild>
                                         <Button
@@ -1121,9 +1139,9 @@ export default function TikTokAdvertiserSettings({ advertisers: propAdvertisers 
                                         className="min-w-[--radix-popover-trigger-width] w-auto !max-w-none p-0 rounded-xl bg-white border-gray-200 shadow-2xl"
                                         align="start"
                                         sideOffset={4}
-                                        side="top"
+                                        side="bottom"
                                         avoidCollisions={true}
-                                        style={{ minWidth: "var(--radix-popover-trigger-width)", width: "auto" }}
+                                        style={{ minWidth: "var(--radix-popover-trigger-width)", width: "auto", zIndex: 9999 }}
                                     >
                                         <div className="flex flex-col overflow-hidden rounded-xl bg-white text-gray-900">
                                             <div className="mx-2 mt-2 mb-1 flex items-center rounded-2xl border border-gray-300 bg-white px-3 shadow">
@@ -1137,8 +1155,28 @@ export default function TikTokAdvertiserSettings({ advertisers: propAdvertisers 
                                                 />
                                             </div>
                                             <div className="max-h-[360px] overflow-y-auto rounded-xl p-1">
-                                                {(() => {
-                                                    const filtered = catalogProducts.filter(prod => {
+                                                {loadingProducts ? (
+                                                    <div className="py-8 flex flex-col items-center gap-2">
+                                                        <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+                                                        <span className="text-xs text-gray-400">Loading products...</span>
+                                                    </div>
+                                                ) : (() => {
+                                                    // Show saved selections at the top even if products haven't loaded yet
+                                                    const allProducts = catalogProducts.length > 0
+                                                        ? catalogProducts
+                                                        : selectedProductsList.length > 0
+                                                            ? selectedProductsList.map(p => ({
+                                                                product_id: p.product_id,
+                                                                product_name: p.product_name,
+                                                                image_url: p.product_image_url || null,
+                                                                price: null,
+                                                                currency: null,
+                                                                sku_id: p.sku_id || null,
+                                                                item_group_id: p.item_group_id || null,
+                                                                _isSavedOnly: true,
+                                                            }))
+                                                            : [];
+                                                    const filtered = allProducts.filter(prod => {
                                                         const name = (prod.product_name || "").toLowerCase();
                                                         const id = String(prod.product_id || "").toLowerCase();
                                                         const q = productSearch.toLowerCase();
@@ -1147,7 +1185,7 @@ export default function TikTokAdvertiserSettings({ advertisers: propAdvertisers 
                                                     if (filtered.length === 0) {
                                                         return (
                                                             <div className="py-6 text-center text-xs text-gray-500">
-                                                                {catalogProducts.length === 0 ? 'No products in this catalog.' : 'No results.'}
+                                                                {allProducts.length === 0 ? 'No products in this catalog.' : 'No results.'}
                                                             </div>
                                                         );
                                                     }
@@ -1209,6 +1247,9 @@ export default function TikTokAdvertiserSettings({ advertisers: propAdvertisers 
                                                                         <p className="text-sm font-semibold text-gray-900 truncate">{prod.product_name}</p>
                                                                         {prod.price && (
                                                                             <p className="text-xs text-gray-400">{prod.price} {prod.currency}</p>
+                                                                        )}
+                                                                        {prod._isSavedOnly && (
+                                                                            <p className="text-xs text-amber-500">Saved selection — open to load full list</p>
                                                                         )}
                                                                     </div>
                                                                 </button>
