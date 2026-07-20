@@ -598,7 +598,7 @@ export default function TikTokCopyTemplates({
                     <Button
                         variant="outline"
                         className={`shrink-0 ${settingsFieldChrome} px-4 hover:bg-gray-50 text-sm font-medium`}
-                        disabled={!templateName.trim() || defaultName === templateName || isProcessing}
+                        disabled={!templateName.trim() || defaultName === selectedName || isProcessing}
                         onClick={handleSetAsDefault}
                     >
                         Set as Default
