@@ -103,7 +103,12 @@ export default function TikTokAds() {
       return preselected;
     }
 
-    // 2. Check localStorage
+    // 2. PRIORITIZE DRAFT STATE: Check if there's an active draft in the cache
+    if (_tiktokCache && _tiktokCache.selectedAdvertiser) {
+      return _tiktokCache.selectedAdvertiser;
+    }
+
+    // 3. Check localStorage for global setting
     try {
       const lastSelected = localStorage.getItem('last_selected_tiktok_advertiser');
       if (lastSelected) return lastSelected;
