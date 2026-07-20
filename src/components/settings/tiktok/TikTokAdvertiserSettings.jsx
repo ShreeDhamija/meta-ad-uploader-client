@@ -99,6 +99,10 @@ export default function TikTokAdvertiserSettings({ advertisers: propAdvertisers 
     const [openCta, setOpenCta] = useState(false);
     const [openAdvertiser, setOpenAdvertiser] = useState(false);
     const [initialSettings, setInitialSettings] = useState(null);
+    // Ref that always mirrors initialSettings — lets onSaveTemplate / onSetDefault
+    // read the latest base object even when called back-to-back in the same async
+    // chain (React state updates are async and won't reflect immediately).
+    const initialSettingsRef = useRef(null);
     // Ref to prevent initialSettings from being clobbered when a template/default
     // save triggers a settings cache update (mirrors Meta's skipFormResetRef)
     const skipSettingsResetRef = useRef(false);
@@ -259,6 +263,7 @@ export default function TikTokAdvertiserSettings({ advertisers: propAdvertisers 
 
         if (skipSettingsResetRef.current) {
             skipSettingsResetRef.current = false;
+            initialSettingsRef.current = initial;
             setInitialSettings(initial);
             return;
         }
@@ -266,6 +271,7 @@ export default function TikTokAdvertiserSettings({ advertisers: propAdvertisers 
         // If cache was already restored, only update initialSettings (for hasChanges comparison)
         // but don't overwrite the form values
         if (cacheRestoredRef.current) {
+            initialSettingsRef.current = initial;
             setInitialSettings(initial);
             return;
         }
@@ -280,6 +286,7 @@ export default function TikTokAdvertiserSettings({ advertisers: propAdvertisers 
 
                 if (isForCurrentAccount && isRecent) {
                     setLocalSettings(draft.settings);
+                    initialSettingsRef.current = initial;
                     setInitialSettings(initial);
                     cacheRestoredRef.current = true;
                     return;
@@ -291,6 +298,7 @@ export default function TikTokAdvertiserSettings({ advertisers: propAdvertisers 
 
         // No valid cache, use server values
         setLocalSettings(initial);
+        initialSettingsRef.current = initial;
         setInitialSettings(initial);
     }, [serverSettings, selectedAdvertiser]);
 
@@ -391,7 +399,9 @@ export default function TikTokAdvertiserSettings({ advertisers: propAdvertisers 
 
             // Sync initialSettings to exactly what we saved — hasChanges will
             // immediately compute to false on the next render (no effect lag).
-            setInitialSettings(JSON.parse(JSON.stringify(updatedSettings)));
+            const savedSnapshot = JSON.parse(JSON.stringify(updatedSettings));
+            initialSettingsRef.current = savedSnapshot;
+            setInitialSettings(savedSnapshot);
         } catch (err) {
             toast.error("Failed to save settings");
         } finally {
@@ -415,6 +425,7 @@ export default function TikTokAdvertiserSettings({ advertisers: propAdvertisers 
     const handleAdvertiserChange = (id) => {
         setSelectedAdvertiser(id);
         setOpenAdvertiser(false);
+        initialSettingsRef.current = null;
         setInitialSettings(null);
         setLocalSettings(null);
         cacheRestoredRef.current = false; // Reset on advertiser change
@@ -704,17 +715,22 @@ export default function TikTokAdvertiserSettings({ advertisers: propAdvertisers 
                         templates={currentSettings.copyTemplates || {}}
                         defaultName={currentSettings.defaultTemplateName || ""}
                         onSaveTemplate={async (name, data, oldName) => {
-                            const updated = { ...(initialSettings?.copyTemplates || {}) };
+                            const updated = { ...(initialSettingsRef.current?.copyTemplates || initialSettings?.copyTemplates || {}) };
                             if (oldName && oldName !== name) delete updated[oldName];
                             updated[name] = data;
 
-                            const wasDefault = initialSettings?.defaultTemplateName === oldName;
+                            const wasDefault = (initialSettingsRef.current || initialSettings)?.defaultTemplateName === oldName;
                             const partialUpdate = {
                                 copyTemplates: updated,
                                 ...(wasDefault && oldName !== name && { defaultTemplateName: name })
                             };
 
-                            const next = { ...(initialSettings || {}), ...partialUpdate };
+                            const base = initialSettingsRef.current || initialSettings || {};
+                            const next = { ...base, ...partialUpdate };
+
+                            // Update the ref synchronously so onSetDefault (called right after)
+                            // always reads the latest base — React state is async.
+                            initialSettingsRef.current = JSON.parse(JSON.stringify(next));
 
                             try {
                                 await saveTikTokSettings(selectedAdvertiser, next);
@@ -731,7 +747,13 @@ export default function TikTokAdvertiserSettings({ advertisers: propAdvertisers 
                         }}
                         onSetDefault={async (name) => {
                             const partialUpdate = { defaultTemplateName: name };
-                            const next = { ...(initialSettings || {}), ...partialUpdate };
+                            // Use the ref so we always have the latest base settings even when
+                            // onSaveTemplate was just called in the same async chain.
+                            const base = initialSettingsRef.current || initialSettings || {};
+                            const next = { ...base, ...partialUpdate };
+
+                            // Keep the ref in sync
+                            initialSettingsRef.current = JSON.parse(JSON.stringify(next));
 
                             try {
                                 await saveTikTokSettings(selectedAdvertiser, next);

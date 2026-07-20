@@ -291,12 +291,42 @@ export default function TikTokCopyTemplates({
     const handleSetAsDefault = async () => {
         if (!templateName.trim() || defaultName === templateName) return
 
+        const trimmedText = text.trim();
+
         setIsProcessing(true)
         try {
-            await onSetDefault(templateName);
+            // If the template has unsaved changes (new template or modified), save it first —
+            // exactly like Meta's CopyTemplates.jsx handleSetAsDefault does.
+            if (templateChanged) {
+                if (!trimmedText) {
+                    toast.error("Text is required before setting as default")
+                    return
+                }
+
+                const newTemplate = {
+                    name: templateName,
+                    text: trimmedText,
+                }
+
+                const isEditing = selectedName !== null && selectedName !== ""
+                const isRenaming = isEditing && selectedName !== templateName
+
+                // If we're renaming, delete the old template first
+                if (isRenaming) {
+                    await deleteTikTokCopyTemplate(advertiserId, selectedName)
+                }
+
+                // Save the template AND set it as default in one shot
+                await onSaveTemplate(templateName, newTemplate, isRenaming ? selectedName : null)
+                setSelectedName(templateName)
+            }
+
+            // Now set this (freshly saved) template as the default
+            await onSetDefault(templateName)
             toast.success("Set as default template")
         } catch (err) {
             toast.error("Failed to set default template")
+            console.error(err)
         } finally {
             setIsProcessing(false)
         }
