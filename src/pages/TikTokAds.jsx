@@ -1,5 +1,5 @@
 import DesktopIcon from '@/assets/Desktop.webp'
-import Header from '@/components/header'
+import TikTokHeader from '@/components/tiktokheader'
 import TikTokMediaPreview from '@/components/tiktok/TikTokMediaPreview'
 import TikTokAdCreationForm from '@/components/tiktok/TikTokAdCreationForm'
 import { useTikTokAuth } from '@/lib/TikTokAuthContext'
@@ -1068,7 +1068,7 @@ export default function TikTokAds() {
       <div className="w-full max-w-[1600px] mx-auto py-8 px-2 sm:px-4 md:px-6">
         <Toaster richColors position="bottom-left" closeButton />
 
-        <Header showMessenger={showMessenger} hideMessenger={hideMessenger} />
+        <TikTokHeader showMessenger={showMessenger} hideMessenger={hideMessenger} />
 
         <div className="flex flex-col lg:flex-row gap-6 min-w-0">
           {/* Left Column: Form and Duplicator (55% width) */}
