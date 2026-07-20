@@ -18,17 +18,23 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 const VALUE_SUGGESTIONS = [
     "tiktok",
     "paid",
-    "{{campaign.name}}",
-    "{{adgroup.name}}",
-    "{{ad.name}}",
-    "{{placement}}"
+    "__CAMPAIGN_ID__",
+    "__CAMPAIGN_NAME__",
+    "__AID__",
+    "__AID_NAME__",
+    "__PLACEMENT__",
+    "__ADID_V2__",
+    "__ADID_V2_NAME__",
+    "__CID__",
+    "__CID_NAME__"
 ];
 
 const DEFAULT_PREFILL_PAIRS = [
     { key: "utm_source", value: "tiktok" },
     { key: "utm_medium", value: "paid" },
-    { key: "utm_campaign", value: "{{campaign.name}}" },
-    { key: "utm_content", value: "{{ad.name}}" }
+    { key: "utm_campaign", value: "__CAMPAIGN_NAME__" },
+    { key: "utm_content", value: "__ADID_V2_NAME__" },
+    { key: "utm_term", value: "__AID_NAME__" }
 ];
 
 export default function TikTokLinkParameters({
