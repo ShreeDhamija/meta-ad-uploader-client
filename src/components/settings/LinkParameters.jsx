@@ -813,7 +813,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                                     <Button
                                         // 6. Use handleAddTempPair
                                         onClick={handleAddTempPair}
-                                        className="w-full rounded-xl mt-4 bg-zinc-800 text-white hover:bg-zinc-900 border-none shadow-none"
+                                        className="w-full rounded-2xl mt-4 bg-zinc-800 text-white hover:bg-zinc-900 border-none shadow-none"
                                     >
                                         <Plus className="w-4 h-4 mr-2" />
                                         Add New Parameter
@@ -830,7 +830,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                                                 width: anchorRect.width,
                                                 zIndex: 10000,
                                             }}
-                                            className="bg-white border border-gray-200 rounded-xl shadow-lg p-2 max-h-[200px] overflow-hidden"
+                                            className="bg-white border border-gray-200 rounded-2xl shadow-lg p-2 max-h-[200px] overflow-hidden"
                                         >
                                             <Command className="h-full">
                                                 <CommandList className="max-h-[180px] overflow-y-auto">
@@ -860,7 +860,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                         {/* Footer */}
                         <div className="p-4 bg-white rounded-b-2xl border-t border-gray-200">
                             <Button
-                                className="w-full bg-black text-white rounded-xl hover:bg-zinc-800 h-10"
+                                className="w-full bg-blue-600 text-white rounded-2xl hover:bg-blue-700 h-12"
                                 onClick={handleSaveUtms}
                             >
                                 Save & Close
