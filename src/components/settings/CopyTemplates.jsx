@@ -932,11 +932,9 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
             <PopoverContent
               className="min-w-[--radix-popover-trigger-width] w-auto !max-w-none p-0 rounded-xl bg-white"
               align="start"
-              avoidCollisions={true}
               style={{
                 minWidth: "var(--radix-popover-trigger-width)",
                 width: "auto",
-                zIndex: 9999,
               }}
             >
               <Command filter={() => 1} loop={false} className="overflow-visible">

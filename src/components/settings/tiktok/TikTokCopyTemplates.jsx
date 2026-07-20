@@ -452,11 +452,10 @@ export default function TikTokCopyTemplates({
                                 className="min-w-[--radix-popover-trigger-width] w-auto !max-w-none p-0 rounded-xl bg-white border border-gray-100 shadow-xl"
                                 align="start"
                                 side="bottom"
-                                avoidCollisions={true}
+                                avoidCollisions={false}
                                 style={{
                                     minWidth: "var(--radix-popover-trigger-width)",
                                     width: "auto",
-                                    zIndex: 9999,
                                 }}
                             >
                                 <Command filter={() => 1} loop={false} className="overflow-visible">
