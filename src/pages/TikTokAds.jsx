@@ -93,7 +93,15 @@ export default function TikTokAds() {
   const _tiktokCache = _readTikTokCache();
 
   const [selectedAdvertiser, setSelectedAdvertiser] = useState(() => {
-    // 1. Check URL query parameter
+    // 1. PRIORITIZE DRAFT STATE: If there's an active draft in the cache,
+    //    always restore it — even if the URL says something different.
+    //    The Settings page writes ?adsaccount to its own URL and that can
+    //    bleed into this page; the cache is the authoritative draft source.
+    if (_tiktokCache && _tiktokCache.selectedAdvertiser) {
+      return _tiktokCache.selectedAdvertiser;
+    }
+
+    // 2. No active draft — honour a URL query param (genuine deep-link)
     const urlParams = new URLSearchParams(window.location.search);
     const preselected = urlParams.get('adsaccount') || urlParams.get('advertiser');
     if (preselected) {
@@ -103,12 +111,7 @@ export default function TikTokAds() {
       return preselected;
     }
 
-    // 2. PRIORITIZE DRAFT STATE: Check if there's an active draft in the cache
-    if (_tiktokCache && _tiktokCache.selectedAdvertiser) {
-      return _tiktokCache.selectedAdvertiser;
-    }
-
-    // 3. Check localStorage for global setting
+    // 3. Fall back to the last globally-selected advertiser
     try {
       const lastSelected = localStorage.getItem('last_selected_tiktok_advertiser');
       if (lastSelected) return lastSelected;
