@@ -1,531 +1,3 @@
-// "use client"
-
-// import { useState, useCallback, memo, useEffect, useRef } from "react"
-// import axios from "axios"
-// import { toast } from "sonner"
-// import { Button } from "@/components/ui/button"
-// import { Checkbox } from "@/components/ui/checkbox"
-// import { Switch } from "@/components/ui/switch"
-// import { Label } from "@/components/ui/label"
-// import { ScrollArea } from "@/components/ui/scroll-area"
-// import { Input } from "@/components/ui/input"
-// import { Loader, ChevronDown, ImageOff, RefreshCw, List, Search } from "lucide-react"
-// import {
-//     DropdownMenu,
-//     DropdownMenuContent,
-//     DropdownMenuItem,
-//     DropdownMenuTrigger,
-// } from "@/components/ui/dropdown-menu"
-
-// const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
-
-// const DATE_PRESETS = [
-//     { label: '1 Day', value: 'yesterday' },
-//     { label: '3 Days', value: 'last_3d' },
-//     { label: '7 Days', value: 'last_7d' },
-//     { label: '30 Days', value: 'last_30d' },
-// ]
-
-// function PostSelectorInline({ adAccountId, onImport, usePostID, setUsePostID }) {
-//     const renderCount = useRef(0);
-//     const prevAdAccountId = useRef(adAccountId);
-//     const prevOnImport = useRef(onImport);
-//     const importedAdsRef = useRef(new Map())
-
-//     useEffect(() => {
-//         renderCount.current += 1;
-//         console.log('🔄 PostSelectorInline render #', renderCount.current);
-
-//         if (prevAdAccountId.current !== adAccountId) {
-//             console.log('🔍 adAccountId changed:', prevAdAccountId.current, '->', adAccountId);
-//             prevAdAccountId.current = adAccountId;
-//         }
-
-//         if (prevOnImport.current !== onImport) {
-//             console.log('⚠️ onImport reference changed!');
-//             prevOnImport.current = onImport;
-//         }
-//     });
-
-//     const [ads, setAds] = useState([])
-//     const [selectedAdIds, setSelectedAdIds] = useState(new Set())
-//     const [isLoading, setIsLoading] = useState(false)
-//     const [isLoadingMore, setIsLoadingMore] = useState(false)
-//     const [error, setError] = useState(null)
-//     const [nextCursor, setNextCursor] = useState(null)
-//     const [hasMore, setHasMore] = useState(false)
-//     const [hasFetched, setHasFetched] = useState(false)
-//     const [datePreset, setDatePreset] = useState('last_7d')
-
-//     // Search state
-//     const [viewMode, setViewMode] = useState('list')
-//     const [searchQuery, setSearchQuery] = useState('')
-//     const [isSearching, setIsSearching] = useState(false)
-
-//     const fetchAds = useCallback(async (cursor = null, preset = datePreset) => {
-//         if (!adAccountId) {
-//             setError("No ad account selected")
-//             return
-//         }
-
-//         const isInitialLoad = !cursor
-//         if (isInitialLoad) {
-//             setIsLoading(true)
-//             setAds([])
-//             setSelectedAdIds(new Set())
-//         } else {
-//             setIsLoadingMore(true)
-//         }
-//         setError(null)
-
-//         try {
-//             const params = {
-//                 adAccountId,
-//                 datePreset: preset,
-//             }
-
-//             if (cursor) {
-//                 params.after = cursor
-//             }
-
-//             const response = await axios.get(`${API_BASE_URL}/auth/ad-insights`, {
-//                 params,
-//                 withCredentials: true
-//             })
-
-//             const { data, paging } = response.data
-
-//             if (isInitialLoad) {
-//                 setAds(data || [])
-//                 setHasFetched(true)
-//             } else {
-//                 setAds(prev => {
-//                     const existingIds = new Set(prev.map(ad => ad.ad_id))
-//                     const newAds = (data || []).filter(ad => !existingIds.has(ad.ad_id))
-//                     return [...prev, ...newAds]
-//                 })
-//             }
-
-//             if (paging?.cursors?.after && paging?.next) {
-//                 setNextCursor(paging.cursors.after)
-//                 setHasMore(true)
-//             } else {
-//                 setNextCursor(null)
-//                 setHasMore(false)
-//             }
-
-//         } catch (err) {
-//             console.error("Error fetching ads:", err)
-//             const errorMessage = err.response?.data?.error || err.message || "Failed to fetch ads"
-//             setError(errorMessage)
-//             toast.error(errorMessage)
-//         } finally {
-//             setIsLoading(false)
-//             setIsLoadingMore(false)
-//         }
-//     }, [adAccountId, datePreset])
-
-//     const searchAds = useCallback(async () => {
-//         if (!adAccountId) {
-//             setError("No ad account selected")
-//             return
-//         }
-
-//         if (!searchQuery.trim()) {
-//             toast.error("Please enter an ad name to search")
-//             return
-//         }
-
-//         setIsSearching(true)
-//         setIsLoading(true)
-//         setAds([])
-//         setSelectedAdIds(new Set())
-//         setNextCursor(null)
-//         setHasMore(false)
-//         setError(null)
-
-//         try {
-//             const response = await axios.get(`${API_BASE_URL}/auth/ad-search`, {
-//                 params: {
-//                     adAccountId,
-//                     searchQuery: searchQuery.trim()
-//                 },
-//                 withCredentials: true
-//             })
-
-//             const { data } = response.data
-//             setAds(data || [])
-//             setHasFetched(true)
-
-//         } catch (err) {
-//             console.error("Error searching ads:", err)
-//             const errorMessage = err.response?.data?.error || err.message || "Failed to search ads"
-//             setError(errorMessage)
-//             toast.error(errorMessage)
-//         } finally {
-//             setIsLoading(false)
-//             setIsSearching(false)
-//         }
-//     }, [adAccountId, searchQuery])
-
-//     useEffect(() => {
-//         if (adAccountId && viewMode === 'list') {
-//             fetchAds(null, datePreset)
-//         }
-//     }, [adAccountId])
-
-//     const handleDatePresetChange = (newPreset) => {
-//         setDatePreset(newPreset)
-//         fetchAds(null, newPreset)
-//     }
-
-//     const handleViewModeChange = (mode) => {
-//         if (mode === viewMode) return
-//         setViewMode(mode)
-//         setAds([])
-//         setSelectedAdIds(new Set())
-//         setError(null)
-//         setHasFetched(false)
-//         setNextCursor(null)
-//         setHasMore(false)
-
-//         if (mode === 'list') {
-//             setSearchQuery('')
-//             fetchAds(null, datePreset)
-//         }
-//     }
-
-//     const handleSearchKeyDown = (e) => {
-//         if (e.key === 'Enter') {
-//             searchAds()
-//         }
-//     }
-
-
-//     const toggleAdSelection = (adId) => {
-//         setSelectedAdIds(prev => {
-//             const newSet = new Set(prev)
-//             if (newSet.has(adId)) {
-//                 newSet.delete(adId)
-//                 importedAdsRef.current.delete(adId)
-//             } else {
-//                 newSet.add(adId)
-//                 const ad = ads.find(a => a.id === adId)
-//                 if (ad) importedAdsRef.current.set(adId, ad)
-//             }
-//             return newSet
-//         })
-//     }
-
-//     // Lines 215-218, change to:
-//     useEffect(() => {
-//         if (isLoading || isSearching) return
-//         onImport(Array.from(importedAdsRef.current.values()))
-//     }, [selectedAdIds, onImport, isLoading, isSearching])
-
-//     const loadMore = () => {
-//         if (nextCursor && !isLoadingMore) {
-//             fetchAds(nextCursor, datePreset)
-//         }
-//     }
-
-//     const formatSpend = (spend) => {
-//         const amount = parseFloat(spend) || 0
-//         return `$${amount.toFixed(2)}`
-//     }
-
-//     const truncateText = (text, maxLength = 40) => {
-//         if (!text) return "—"
-//         if (text.length <= maxLength) return text
-//         return text.substring(0, maxLength) + "..."
-//     }
-
-//     const extractPostId = (objectStoryId) => {
-//         if (!objectStoryId) return "—"
-//         const parts = objectStoryId.split('_')
-//         return parts.length > 1 ? parts[1] : objectStoryId
-//     }
-
-//     const getDatePresetLabel = () => {
-//         const preset = DATE_PRESETS.find(p => p.value === datePreset)
-//         return preset ? preset.label : '7 Days'
-//     }
-
-//     const formatStatus = (status) => {
-//         if (!status) return '—'
-//         return status.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase())
-//     }
-
-//     return (
-//         <div className="flex flex-col h-full overflow-hidden">
-
-//             {(ads.length > 0 || viewMode === 'search' || isLoading || hasFetched) && (
-//                 <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-//                     {/* Header Section - Fixed, never scrolls */}
-//                     <div className="flex-shrink-0 space-y-3 pb-2">
-//                         <div className="flex items-center justify-between">
-//                             <span className="text-sm text-gray-500">
-//                                 {selectedAdIds.size} selected
-//                             </span>
-
-//                             <Button
-//                                 size="sm"
-//                                 onClick={() => fetchAds(null, datePreset)}
-//                                 disabled={isLoading || viewMode === 'search'}
-//                                 className={`px-3 py-5 bg-white text-black border border-gray-300 rounded-xl hover:bg-white ${viewMode === 'search' ? 'opacity-50 cursor-not-allowed' : ''
-//                                     }`}
-//                             >
-//                                 <RefreshCw className={`h-3 w-3 mr-1 ${isLoading ? 'animate-spin' : ''}`} />
-//                                 Refresh Ads
-//                             </Button>
-
-//                         </div>
-
-//                         {/* Duplication Mode Toggle + View Mode Buttons */}
-//                         <div className="flex items-center justify-between py-2 px-1">
-//                             <div className="flex items-center gap-2">
-//                                 <Switch
-//                                     id="use-post-id"
-//                                     checked={usePostID}
-//                                     onCheckedChange={setUsePostID}
-//                                 />
-//                                 <Label htmlFor="use-post-id" className="text-sm text-gray-600 cursor-pointer">
-//                                     Use Post ID
-//                                 </Label>
-//                             </div>
-
-//                             {/* View Mode Toggle Buttons */}
-//                             <div className="flex items-center border border-gray-300 rounded-xl overflow-hidden h-8">
-//                                 <button
-//                                     type="button"
-//                                     onClick={() => handleViewModeChange('list')}
-//                                     className={`flex items-center justify-center px-2.5 h-full transition-colors ${viewMode === 'list'
-//                                         ? 'bg-black text-white'
-//                                         : 'bg-white text-gray-400'
-//                                         }`}
-//                                     title="Top spending ads"
-//                                 >
-//                                     <List className="h-4 w-4" />
-//                                 </button>
-//                                 <div className="w-px h-full bg-gray-300" />
-//                                 <button
-//                                     type="button"
-//                                     onClick={() => handleViewModeChange('search')}
-//                                     className={`flex items-center justify-center px-2.5 h-full transition-colors ${viewMode === 'search'
-//                                         ? 'bg-black text-white'
-//                                         : 'bg-white text-gray-400'
-//                                         }`}
-//                                     title="Search ads by name"
-//                                 >
-//                                     <Search className="h-4 w-4" />
-//                                 </button>
-//                             </div>
-//                         </div>
-
-//                         {/* Search Bar - Only visible in search mode */}
-//                         {viewMode === 'search' && (
-//                             <div className="flex items-center gap-2 px-1">
-//                                 <Input
-//                                     type="text"
-//                                     placeholder="Enter ad name to search..."
-//                                     value={searchQuery}
-//                                     onChange={(e) => setSearchQuery(e.target.value)}
-//                                     onKeyDown={handleSearchKeyDown}
-//                                     className="flex-1 h-9 text-sm rounded-xl border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-//                                 />
-//                                 <Button
-//                                     size="sm"
-//                                     onClick={searchAds}
-//                                     disabled={isSearching || !searchQuery.trim()}
-//                                     className="px-4 h-9 bg-black text-white rounded-xl"
-//                                 >
-//                                     {isSearching ? (
-//                                         <Loader className="h-4 w-4 animate-spin" />
-//                                     ) : (
-//                                         <Search className="h-4 w-4" />
-//                                     )}
-//                                 </Button>
-//                             </div>
-//                         )}
-
-//                         {/* Loading State */}
-//                         {isLoading && (
-//                             <div className="flex items-center justify-center gap-2 py-8 flex-shrink-0">
-//                                 <Loader className="h-6 w-6 animate-spin text-gray-400" />
-//                                 <span className="text-sm text-gray-500">
-//                                     {viewMode === 'search' ? 'Searching ads...' : 'Fetching ads...'}
-//                                 </span>
-//                             </div>
-//                         )}
-
-//                         {/* Error State */}
-//                         {error && (
-//                             <div className="flex flex-col items-center justify-center text-center p-4 border border-red-200 rounded-lg bg-red-50 flex-shrink-0">
-//                                 <p className="text-red-500 mb-4">{error}</p>
-//                                 <Button variant="outline" onClick={() => {
-//                                     if (viewMode === 'search') {
-//                                         searchAds()
-//                                     } else {
-//                                         fetchAds(null, datePreset)
-//                                     }
-//                                 }}>
-//                                     Retry
-//                                 </Button>
-//                             </div>
-//                         )}
-
-//                         {/* Empty State */}
-//                         {hasFetched && !isLoading && ads.length === 0 && !error && (
-//                             <div className="flex items-center justify-center py-8 text-gray-500 border border-gray-200 rounded-lg flex-shrink-0">
-//                                 {viewMode === 'search'
-//                                     ? 'No ads found matching your search'
-//                                     : 'No ads with valid post IDs found'
-//                                 }
-//                             </div>
-//                         )}
-
-//                         {/* Column Headers - Fixed */}
-//                         {ads.length > 0 && (
-//                             <div className="grid grid-cols-[20px_48px_1fr_120px_110px] gap-2 px-2 py-2 text-xs font-medium text-white bg-blue-500 rounded-xl items-center">
-//                                 <div></div>
-//                                 <div className="-ml-4">Thumbnail</div>
-//                                 <div>Ad Name</div>
-//                                 <div>Ad Set</div>
-//                                 <div className="text-right whitespace-nowrap">
-//                                     {viewMode === 'search' ? (
-//                                         <span>Status</span>
-//                                     ) : (
-//                                         <DropdownMenu>
-//                                             <DropdownMenuTrigger asChild>
-//                                                 <button className="flex items-center gap-1 ml-auto hover:opacity-80 transition-opacity">
-//                                                     <span>Spend ({getDatePresetLabel()})</span>
-//                                                     <ChevronDown className="h-3 w-3" />
-//                                                 </button>
-//                                             </DropdownMenuTrigger>
-//                                             <DropdownMenuContent align="end" className="bg-white rounded-xl">
-//                                                 {DATE_PRESETS.map((preset) => (
-//                                                     <DropdownMenuItem
-//                                                         key={preset.value}
-//                                                         onClick={() => handleDatePresetChange(preset.value)}
-//                                                         className={datePreset === preset.value ? 'bg-gray-100' : ''}
-//                                                     >
-//                                                         {preset.label}
-//                                                     </DropdownMenuItem>
-//                                                 ))}
-//                                             </DropdownMenuContent>
-//                                         </DropdownMenu>
-//                                     )}
-//                                 </div>
-//                             </div>
-//                         )}
-//                     </div>
-
-//                     {ads.length > 0 && (
-//                         <ScrollArea className="flex-1 pr-4 outline-none focus:outline-none">
-//                             <div className="space-y-1">
-//                                 {ads.map((ad) => (
-//                                     <label
-//                                         key={ad.id}
-//                                         className={`grid grid-cols-[auto_48px_1fr_120px_110px] gap-2 items-center p-3 rounded-lg border cursor-pointer transition-colors ${selectedAdIds.has(ad.id)
-//                                             ? 'border-blue-500 bg-blue-50'
-//                                             : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-//                                             }`}
-//                                     >
-//                                         <Checkbox
-//                                             checked={selectedAdIds.has(ad.id)}
-//                                             onCheckedChange={() => toggleAdSelection(ad.id)}
-//                                         />
-
-//                                         {/* Thumbnail */}
-//                                         <div className="w-12 h-12 rounded-md overflow-hidden bg-gray-100 flex-shrink-0">
-//                                             {ad.image_url ? (
-//                                                 <img
-//                                                     src={ad.image_url}
-//                                                     alt="Ad thumbnail"
-//                                                     className="w-full h-full object-cover"
-//                                                     onError={(e) => {
-//                                                         e.target.style.display = 'none'
-//                                                         e.target.nextSibling.style.display = 'flex'
-//                                                     }}
-//                                                 />
-//                                             ) : null}
-//                                             <div
-//                                                 className={`w-full h-full items-center justify-center ${ad.image_url ? 'hidden' : 'flex'}`}
-//                                             >
-//                                                 <ImageOff className="h-5 w-5 text-gray-400" />
-//                                             </div>
-//                                         </div>
-
-//                                         {/* Ad Name */}
-//                                         <div className="min-w-0">
-//                                             <p className="text-xs text-gray-900 truncate" title={ad.ad_name}>
-//                                                 {truncateText(ad.ad_name, 75)}
-//                                             </p>
-//                                         </div>
-
-//                                         {/* Ad Set Name */}
-//                                         <div className="flex items-center gap-1">
-//                                             <span
-//                                                 className="text-xs text-gray-900 truncate"
-//                                                 title={ad.adset_name}
-//                                             >
-//                                                 {truncateText(ad.adset_name, 75)}
-//                                             </span>
-//                                         </div>
-
-//                                         {/* Spend or Status */}
-//                                         <div className="text-right">
-//                                             {viewMode === 'search' ? (
-//                                                 <span className={`text-xs font-medium px-2 py-1 rounded-full ${ad.effective_status === 'ACTIVE'
-//                                                     ? 'bg-green-100 text-green-700'
-//                                                     : ad.effective_status === 'PAUSED'
-//                                                         ? 'bg-yellow-100 text-yellow-700'
-//                                                         : 'bg-gray-100 text-gray-600'
-//                                                     }`}>
-//                                                     {formatStatus(ad.effective_status || ad.status)}
-//                                                 </span>
-//                                             ) : (
-//                                                 <span className="text-sm font-medium text-gray-900">
-//                                                     {formatSpend(ad.spend)}
-//                                                 </span>
-//                                             )}
-//                                         </div>
-//                                     </label>
-//                                 ))}
-
-//                                 {/* Load More Button - Only in list mode */}
-//                                 {viewMode === 'list' && hasMore && (
-//                                     <div className="pt-2 pb-4">
-//                                         <Button
-//                                             variant="outline"
-//                                             className="w-full"
-//                                             onClick={loadMore}
-//                                             disabled={isLoadingMore}
-//                                         >
-//                                             {isLoadingMore ? (
-//                                                 <>
-//                                                     <Loader className="h-4 w-4 mr-2 animate-spin" />
-//                                                     Loading...
-//                                                 </>
-//                                             ) : (
-//                                                 <>
-//                                                     <ChevronDown className="h-4 w-4 mr-2" />
-//                                                     Load More Ads
-//                                                 </>
-//                                             )}
-//                                         </Button>
-//                                     </div>
-//                                 )}
-//                             </div>
-//                         </ScrollArea>
-//                     )}
-//                 </div>
-//             )}
-//         </div>
-//     )
-// }
-
-// export default memo(PostSelectorInline)
 
 "use client"
 
@@ -544,12 +16,21 @@ import {
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
+
+// Session cache of the list-view ads per ad account so returning to the
+// duplication view (e.g. after toggling "Edit Ad Creative while Duplicating"
+// off) rehydrates instantly instead of re-fetching and showing a spinner.
+const listAdsCache = new Map();
 
 const DATE_PRESETS = [
     { label: '1 Day', value: 'yesterday' },
@@ -557,6 +38,59 @@ const DATE_PRESETS = [
     { label: '7 Days', value: 'last_7d' },
     { label: '30 Days', value: 'last_30d' },
 ]
+
+const truncateText = (text, maxLength = 40) => {
+    if (!text) return "—"
+    if (text.length <= maxLength) return text
+    return text.substring(0, maxLength) + "..."
+}
+
+const getNumericMetric = (value) => {
+    const parsed = parseFloat(value)
+    return Number.isFinite(parsed) ? parsed : null
+}
+
+const isActiveAd = (ad) => (
+    String(ad?.effective_status || ad?.status || '').toUpperCase() === 'ACTIVE'
+)
+
+const sortAdsForMode = (items, sortMode = 'spend', activeFirst = false) => {
+    const sorted = [...items]
+
+    sorted.sort((a, b) => {
+        if (activeFirst) {
+            const activeDelta = Number(isActiveAd(b)) - Number(isActiveAd(a))
+            if (activeDelta !== 0) return activeDelta
+        }
+
+        if (sortMode === 'roas') {
+            const aRoas = getNumericMetric(a.roas)
+            const bRoas = getNumericMetric(b.roas)
+            if (aRoas !== null && bRoas !== null && bRoas !== aRoas) return bRoas - aRoas
+            if (aRoas !== null && bRoas === null) return -1
+            if (aRoas === null && bRoas !== null) return 1
+            return (getNumericMetric(b.spend) || 0) - (getNumericMetric(a.spend) || 0)
+        }
+
+        if (sortMode === 'name_az') {
+            return (a.ad_name || '').localeCompare(b.ad_name || '')
+        }
+
+        if (sortMode === 'date_newest') {
+            return new Date(b.created_time || 0) - new Date(a.created_time || 0)
+        }
+
+        if (sortMode === 'date_oldest') {
+            return new Date(a.created_time || 0) - new Date(b.created_time || 0)
+        }
+
+        const spendDelta = (getNumericMetric(b.spend) || 0) - (getNumericMetric(a.spend) || 0)
+        if (spendDelta !== 0) return spendDelta
+        return (getNumericMetric(b.roas) || 0) - (getNumericMetric(a.roas) || 0)
+    })
+
+    return sorted
+}
 
 function PostSelectorInline({
     adAccountId,
@@ -597,11 +131,13 @@ function PostSelectorInline({
     const [hasMore, setHasMore] = useState(false)
     const [hasFetched, setHasFetched] = useState(false)
     const [datePreset, setDatePreset] = useState('last_7d')
+    const [listSortMode, setListSortMode] = useState('spend')
 
     // Search state
     const [viewMode, setViewMode] = useState('list') // 'list' | 'search' | 'adset'
     const [searchQuery, setSearchQuery] = useState('')
     const [isSearching, setIsSearching] = useState(false)
+    const [searchSortMode, setSearchSortMode] = useState('spend')
 
     // Adset browse state
     const [adsetBrowseCampaignId, setAdsetBrowseCampaignId] = useState('')
@@ -613,6 +149,8 @@ function PostSelectorInline({
     const [browseCampaignSearch, setBrowseCampaignSearch] = useState('')
     const [openBrowseAdSet, setOpenBrowseAdSet] = useState(false)
     const [browseAdSetSearch, setBrowseAdSetSearch] = useState('')
+    const [adsetSortMode, setAdsetSortMode] = useState('spend') // 'spend' | 'roas' | 'name_az' | 'date_newest' | 'date_oldest'
+    const [adsetAdsSearch, setAdsetAdsSearch] = useState('')
 
     const filteredBrowseCampaigns = useMemo(() =>
         campaigns.filter((camp) =>
@@ -627,6 +165,31 @@ function PostSelectorInline({
         ),
         [adsetBrowseAdSets, browseAdSetSearch]
     );
+
+    const displayedAdsetAds = useMemo(() => {
+        const q = adsetAdsSearch.trim().toLowerCase()
+        let arr = q
+            ? ads.filter(a =>
+                (a.ad_name || '').toLowerCase().includes(q) ||
+                String(a.ad_id || a.id || '').toLowerCase().includes(q)
+            )
+            : ads
+        return sortAdsForMode(arr, adsetSortMode, true)
+    }, [ads, adsetAdsSearch, adsetSortMode])
+
+    const displayedAds = useMemo(() => {
+        if (viewMode === 'adset') return displayedAdsetAds
+        return sortAdsForMode(ads, viewMode === 'search' ? searchSortMode : listSortMode, viewMode === 'search')
+    }, [ads, displayedAdsetAds, listSortMode, searchSortMode, viewMode])
+
+    const hasValidRoas = useMemo(() => ads.some(ad => getNumericMetric(ad.roas) !== null), [ads])
+
+    useEffect(() => {
+        if (hasValidRoas) return
+        if (listSortMode === 'roas') setListSortMode('spend')
+        if (searchSortMode === 'roas') setSearchSortMode('spend')
+        if (adsetSortMode === 'roas') setAdsetSortMode('spend')
+    }, [adsetSortMode, hasValidRoas, listSortMode, searchSortMode])
 
     const fetchAds = useCallback(async (cursor = null, preset = datePreset) => {
         if (!adAccountId) {
@@ -698,7 +261,7 @@ function PostSelectorInline({
         }
 
         if (!searchQuery.trim()) {
-            toast.error("Please enter an ad name to search")
+            toast.error("Please enter an ad name or ID to search")
             return
         }
 
@@ -797,17 +360,39 @@ function PostSelectorInline({
     }, [])
 
     useEffect(() => {
-        if (adAccountId && viewMode === 'list') {
-            fetchAds(null, datePreset)
-        }
         // Reset adset browse state when ad account changes
         setAdsetBrowseCampaignId('')
         setAdsetBrowseAdSets([])
         setAdsetBrowseSelectedAdSetId('')
-        setAds([])
-        setHasFetched(false)
         setError(null)
+
+        if (adAccountId && viewMode === 'list') {
+            const cached = listAdsCache.get(adAccountId)
+            if (cached) {
+                // Rehydrate from cache — no spinner, no refetch
+                setAds(cached.ads)
+                setNextCursor(cached.nextCursor)
+                setHasMore(cached.hasMore)
+                setDatePreset(cached.datePreset)
+                setHasFetched(true)
+                return
+            }
+            setAds([])
+            setHasFetched(false)
+            fetchAds(null, datePreset)
+        } else {
+            setAds([])
+            setHasFetched(false)
+        }
     }, [adAccountId])
+
+    // Keep the list-view cache in sync with the latest fetched ads so a later
+    // remount can rehydrate instantly.
+    useEffect(() => {
+        if (viewMode === 'list' && adAccountId && hasFetched && !isLoading) {
+            listAdsCache.set(adAccountId, { ads, nextCursor, hasMore, datePreset })
+        }
+    }, [ads, nextCursor, hasMore, viewMode, adAccountId, hasFetched, isLoading, datePreset])
 
     useEffect(() => {
         if (importedPosts && importedPosts.length === 0) {
@@ -815,6 +400,23 @@ function PostSelectorInline({
             importedAdsRef.current.clear()
         }
     }, [importedPosts])
+
+    // Hydrate internal selection from parent-provided importedPosts on mount.
+    // Without this, the onImport effect below fires with an empty ref and
+    // wipes any pre-seeded posts (e.g. winners passed in from Analytics).
+    useEffect(() => {
+        if (!importedPosts || importedPosts.length === 0) return
+        const ids = new Set()
+        importedPosts.forEach((p) => {
+            const id = p.id || p.ad_id
+            if (!id) return
+            ids.add(id)
+            importedAdsRef.current.set(id, p)
+        })
+        if (ids.size > 0) setSelectedAdIds(ids)
+        // mount-only — do not re-hydrate on every importedPosts change
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
 
     const handleDatePresetChange = (newPreset) => {
         setDatePreset(newPreset)
@@ -860,6 +462,7 @@ function PostSelectorInline({
     const handleBrowseAdSetChange = (adsetId) => {
         setAdsetBrowseSelectedAdSetId(adsetId)
         setOpenBrowseAdSet(false)
+        setAdsetAdsSearch('')
         fetchAdsetAds(adsetId, adsetBrowseDatePreset)
     }
 
@@ -900,10 +503,49 @@ function PostSelectorInline({
         return `$${amount.toFixed(2)}`
     }
 
-    const truncateText = (text, maxLength = 40) => {
-        if (!text) return "—"
-        if (text.length <= maxLength) return text
-        return text.substring(0, maxLength) + "..."
+    const formatRoas = (roas) => {
+        const amount = getNumericMetric(roas)
+        return amount === null ? '—' : amount.toFixed(2)
+    }
+
+    const getActiveSortMode = () => {
+        if (viewMode === 'adset') return adsetSortMode
+        if (viewMode === 'search') return searchSortMode
+        return listSortMode
+    }
+
+    const renderMetricValue = (ad) => {
+        if (getActiveSortMode() === 'roas') {
+            return (
+                <span className="inline-flex items-baseline justify-end gap-1.5">
+                    <span className="text-sm font-medium text-gray-900">{formatRoas(ad.roas)}</span>
+                    <span className="text-[11px] font-medium text-gray-400">({formatSpend(ad.spend)})</span>
+                </span>
+            )
+        }
+
+        return (
+            <span className="text-sm font-medium text-gray-900">
+                {formatSpend(ad.spend)}
+            </span>
+        )
+    }
+
+    const renderNameTooltip = (value, maxLength = 75) => {
+        const displayValue = value || ""
+
+        return (
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <span className="block text-xs text-gray-900 truncate">
+                        {truncateText(displayValue, maxLength)}
+                    </span>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-[360px] break-words text-xs">
+                    {displayValue || "Unknown"}
+                </TooltipContent>
+            </Tooltip>
+        )
     }
 
     const extractPostId = (objectStoryId) => {
@@ -927,10 +569,10 @@ function PostSelectorInline({
     const showStatusColumn = viewMode === 'search' || viewMode === 'adset'
 
     return (
-        <div className="flex flex-col h-full overflow-hidden">
+        <div className="flex flex-col">
 
             {(ads.length > 0 || viewMode === 'search' || viewMode === 'adset' || isLoading || hasFetched) && (
-                <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+                <div className="flex flex-col">
                     {/* Header Section - Fixed, never scrolls */}
                     <div className="flex-shrink-0 space-y-3 pb-2">
                         <div className="flex items-center justify-between">
@@ -943,7 +585,7 @@ function PostSelectorInline({
                                     size="sm"
                                     onClick={() => fetchAds(null, datePreset)}
                                     disabled={isLoading}
-                                    className="px-3 py-5 bg-white text-black border border-gray-300 rounded-xl hover:bg-white"
+                                    className="px-3 py-3 bg-white text-black border border-gray-300 rounded-[14px] hover:bg-white"
                                 >
                                     <RefreshCw className={`h-3 w-3 mr-1 ${isLoading ? 'animate-spin' : ''}`} />
                                     Refresh Ads
@@ -977,43 +619,19 @@ function PostSelectorInline({
                             </div>
 
                             {/* View Mode Toggle Buttons - 3 tabs */}
-                            <div className="flex items-center border border-gray-300 rounded-xl overflow-hidden h-8">
-                                <button
-                                    type="button"
-                                    onClick={() => handleViewModeChange('list')}
-                                    className={`flex items-center justify-center px-2.5 h-full transition-colors ${viewMode === 'list'
-                                        ? 'bg-black text-white'
-                                        : 'bg-white text-gray-400'
-                                        }`}
-                                    title="Top spending ads"
-                                >
-                                    <DollarSign className="h-4 w-4" />
-                                </button>
-                                <div className="w-px h-full bg-gray-300" />
-                                <button
-                                    type="button"
-                                    onClick={() => handleViewModeChange('search')}
-                                    className={`flex items-center justify-center px-2.5 h-full transition-colors ${viewMode === 'search'
-                                        ? 'bg-black text-white'
-                                        : 'bg-white text-gray-400'
-                                        }`}
-                                    title="Search ads by name"
-                                >
-                                    <Search className="h-4 w-4" />
-                                </button>
-                                <div className="w-px h-full bg-gray-300" />
-                                <button
-                                    type="button"
-                                    onClick={() => handleViewModeChange('adset')}
-                                    className={`flex items-center justify-center px-2.5 h-full transition-colors ${viewMode === 'adset'
-                                        ? 'bg-black text-white'
-                                        : 'bg-white text-gray-400'
-                                        }`}
-                                    title="Browse by campaign & ad set"
-                                >
-                                    <List className="h-4 w-4" />
-                                </button>
-                            </div>
+                            <Tabs value={viewMode} onValueChange={handleViewModeChange}>
+                                <TabsList className="rounded-full">
+                                    <TabsTrigger value="list" className="rounded-full px-2.5" title="Top spending ads">
+                                        <DollarSign className="h-4 w-4" />
+                                    </TabsTrigger>
+                                    <TabsTrigger value="search" className="rounded-full px-2.5" title="Search ads by name">
+                                        <Search className="h-4 w-4" />
+                                    </TabsTrigger>
+                                    <TabsTrigger value="adset" className="rounded-full px-2.5" title="Browse by campaign & ad set">
+                                        <List className="h-4 w-4" />
+                                    </TabsTrigger>
+                                </TabsList>
+                            </Tabs>
                         </div>
 
                         {/* Search Bar - Only visible in search mode */}
@@ -1021,7 +639,7 @@ function PostSelectorInline({
                             <div className="flex items-center gap-2 px-1">
                                 <Input
                                     type="text"
-                                    placeholder="Enter ad name to search..."
+                                    placeholder="Enter ad name or ID to search..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     onKeyDown={handleSearchKeyDown}
@@ -1210,6 +828,23 @@ function PostSelectorInline({
                                         </PopoverContent>
                                     </Popover>
                                 </div>
+
+                                {/* Filter loaded ads by name or ID */}
+                                {adsetBrowseSelectedAdSetId && ads.length > 0 && (
+                                    <div className="space-y-1.5">
+                                        <Label className="text-xs text-gray-700">Filter ads by name or ID</Label>
+                                        <div className="relative">
+                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+                                            <Input
+                                                type="text"
+                                                placeholder="Filter returned ads by name or ID..."
+                                                value={adsetAdsSearch}
+                                                onChange={(e) => setAdsetAdsSearch(e.target.value)}
+                                                className="pl-8 h-9 text-sm rounded-xl border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                                            />
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         )}
 
@@ -1271,7 +906,9 @@ function PostSelectorInline({
                                 "grid gap-2 px-2 py-2 text-xs font-medium text-white bg-blue-500 rounded-xl items-center",
                                 viewMode === 'adset'
                                     ? "grid-cols-[20px_48px_1fr_110px_110px]"
-                                    : "grid-cols-[20px_48px_1fr_120px_110px]"
+                                    : viewMode === 'search'
+                                        ? "grid-cols-[20px_48px_minmax(0,1fr)_minmax(0,0.72fr)_90px_90px]"
+                                        : "grid-cols-[20px_48px_1fr_120px_110px]"
                             )}>
                                 <div></div>
                                 <div className="-ml-4">Thumbnail</div>
@@ -1282,20 +919,66 @@ function PostSelectorInline({
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
                                                     <button className="flex items-center gap-1 ml-auto hover:opacity-80 transition-opacity">
-                                                        <span>Spend ({getDatePresetLabel(adsetBrowseDatePreset)})</span>
+                                                        <span>
+                                                            {adsetSortMode === 'spend' && `Spend (${getDatePresetLabel(adsetBrowseDatePreset)})`}
+                                                            {adsetSortMode === 'roas' && `ROAS (${getDatePresetLabel(adsetBrowseDatePreset)})`}
+                                                            {adsetSortMode === 'name_az' && 'Sorted A→Z'}
+                                                            {adsetSortMode === 'date_newest' && 'Newest first'}
+                                                            {adsetSortMode === 'date_oldest' && 'Oldest first'}
+                                                        </span>
                                                         <ChevronDown className="h-3 w-3" />
                                                     </button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end" className="bg-white rounded-xl">
+                                                    <DropdownMenuLabel className="text-[11px] uppercase tracking-wide text-gray-500 font-medium">
+                                                        Sort by Spend
+                                                    </DropdownMenuLabel>
                                                     {DATE_PRESETS.map((preset) => (
                                                         <DropdownMenuItem
                                                             key={preset.value}
-                                                            onClick={() => handleAdsetBrowseDatePresetChange(preset.value)}
-                                                            className={adsetBrowseDatePreset === preset.value ? 'bg-gray-100' : ''}
+                                                            onClick={() => {
+                                                                setAdsetSortMode('spend')
+                                                                handleAdsetBrowseDatePresetChange(preset.value)
+                                                            }}
+                                                            className={adsetSortMode === 'spend' && adsetBrowseDatePreset === preset.value ? 'bg-gray-100' : ''}
                                                         >
                                                             {preset.label}
                                                         </DropdownMenuItem>
                                                     ))}
+                                                    {hasValidRoas && (
+                                                        <>
+                                                            <DropdownMenuSeparator />
+                                                            <DropdownMenuItem
+                                                                onClick={() => setAdsetSortMode('roas')}
+                                                                className={adsetSortMode === 'roas' ? 'bg-gray-100' : ''}
+                                                            >
+                                                                ROAS high to low
+                                                            </DropdownMenuItem>
+                                                        </>
+                                                    )}
+                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuItem
+                                                        onClick={() => setAdsetSortMode('name_az')}
+                                                        className={adsetSortMode === 'name_az' ? 'bg-gray-100' : ''}
+                                                    >
+                                                        Alphabetical (A→Z)
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuLabel className="text-[11px] uppercase tracking-wide text-gray-500 font-medium">
+                                                        Date Created
+                                                    </DropdownMenuLabel>
+                                                    <DropdownMenuItem
+                                                        onClick={() => setAdsetSortMode('date_newest')}
+                                                        className={adsetSortMode === 'date_newest' ? 'bg-gray-100' : ''}
+                                                    >
+                                                        Newest first
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                        onClick={() => setAdsetSortMode('date_oldest')}
+                                                        className={adsetSortMode === 'date_oldest' ? 'bg-gray-100' : ''}
+                                                    >
+                                                        Oldest first
+                                                    </DropdownMenuItem>
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
                                         </div>
@@ -1304,6 +987,32 @@ function PostSelectorInline({
                                 ) : viewMode === 'search' ? (
                                     <>
                                         <div>Ad Set</div>
+                                        <div className="text-right whitespace-nowrap">
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <button className="flex items-center gap-1 ml-auto hover:opacity-80 transition-opacity">
+                                                        <span>{searchSortMode === 'roas' ? 'ROAS (30D)' : 'Spend (30D)'}</span>
+                                                        <ChevronDown className="h-3 w-3" />
+                                                    </button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end" className="bg-white rounded-xl">
+                                                    <DropdownMenuItem
+                                                        onClick={() => setSearchSortMode('spend')}
+                                                        className={searchSortMode === 'spend' ? 'bg-gray-100' : ''}
+                                                    >
+                                                        Spend high to low
+                                                    </DropdownMenuItem>
+                                                    {hasValidRoas && (
+                                                        <DropdownMenuItem
+                                                            onClick={() => setSearchSortMode('roas')}
+                                                            className={searchSortMode === 'roas' ? 'bg-gray-100' : ''}
+                                                        >
+                                                            ROAS high to low
+                                                        </DropdownMenuItem>
+                                                    )}
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </div>
                                         <div className="text-right">Status</div>
                                     </>
                                 ) : (
@@ -1313,20 +1022,37 @@ function PostSelectorInline({
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
                                                     <button className="flex items-center gap-1 ml-auto hover:opacity-80 transition-opacity">
-                                                        <span>Spend ({getDatePresetLabel()})</span>
+                                                        <span>{listSortMode === 'roas' ? `ROAS (${getDatePresetLabel()})` : `Spend (${getDatePresetLabel()})`}</span>
                                                         <ChevronDown className="h-3 w-3" />
                                                     </button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end" className="bg-white rounded-xl">
+                                                    <DropdownMenuLabel className="text-[11px] uppercase tracking-wide text-gray-500 font-medium">
+                                                        Sort by Spend
+                                                    </DropdownMenuLabel>
                                                     {DATE_PRESETS.map((preset) => (
                                                         <DropdownMenuItem
                                                             key={preset.value}
-                                                            onClick={() => handleDatePresetChange(preset.value)}
-                                                            className={datePreset === preset.value ? 'bg-gray-100' : ''}
+                                                            onClick={() => {
+                                                                setListSortMode('spend')
+                                                                handleDatePresetChange(preset.value)
+                                                            }}
+                                                            className={listSortMode === 'spend' && datePreset === preset.value ? 'bg-gray-100' : ''}
                                                         >
                                                             {preset.label}
                                                         </DropdownMenuItem>
                                                     ))}
+                                                    {hasValidRoas && (
+                                                        <>
+                                                            <DropdownMenuSeparator />
+                                                            <DropdownMenuItem
+                                                                onClick={() => setListSortMode('roas')}
+                                                                className={listSortMode === 'roas' ? 'bg-gray-100' : ''}
+                                                            >
+                                                                ROAS high to low
+                                                            </DropdownMenuItem>
+                                                        </>
+                                                    )}
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
                                         </div>
@@ -1337,141 +1063,133 @@ function PostSelectorInline({
                     </div>
 
                     {ads.length > 0 && (
-                        <ScrollArea className="flex-1 pr-4 outline-none focus:outline-none">
-                            <div className="space-y-1.5">
-                                {ads.map((ad) => (
-                                    <label
-                                        key={ad.id}
-                                        className={cn(
-                                            "grid gap-2 items-center p-3 rounded-xl border cursor-pointer transition-colors",
-                                            viewMode === 'adset'
-                                                ? "grid-cols-[auto_48px_1fr_110px_110px]"
-                                                : "grid-cols-[auto_48px_1fr_120px_110px]",
-                                            selectedAdIds.has(ad.id)
-                                                ? 'border-blue-500 bg-blue-50'
-                                                : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                                        )}
-                                    >
-                                        <Checkbox
-                                            checked={selectedAdIds.has(ad.id)}
-                                            onCheckedChange={() => toggleAdSelection(ad.id)}
-                                        />
-
-                                        {/* Thumbnail */}
-                                        <div className="w-12 h-12 rounded-md overflow-hidden bg-gray-100 flex-shrink-0">
-                                            {ad.image_url ? (
-                                                <img
-                                                    src={ad.image_url}
-                                                    alt="Ad thumbnail"
-                                                    className="w-full h-full object-cover"
-                                                    onError={(e) => {
-                                                        e.target.style.display = 'none'
-                                                        e.target.nextSibling.style.display = 'flex'
-                                                    }}
-                                                />
-                                            ) : null}
-                                            <div
-                                                className={`w-full h-full items-center justify-center ${ad.image_url ? 'hidden' : 'flex'}`}
-                                            >
-                                                <ImageOff className="h-5 w-5 text-gray-400" />
-                                            </div>
-                                        </div>
-
-                                        {/* Ad Name */}
-                                        <div className="min-w-0">
-                                            <p className="text-xs text-gray-900 truncate" title={ad.ad_name}>
-                                                {truncateText(ad.ad_name, 75)}
-                                            </p>
-                                        </div>
-
-                                        {/* Adset view: Spend + Status columns (no adset name column) */}
-                                        {viewMode === 'adset' ? (
-                                            <>
-                                                <div className="text-right">
-                                                    <span className="text-sm font-medium text-gray-900">
-                                                        {formatSpend(ad.spend)}
-                                                    </span>
-                                                </div>
-                                                <div className="text-right">
-                                                    <span className={`text-xs font-medium px-2 py-1 rounded-full ${ad.effective_status === 'ACTIVE'
-                                                        ? 'bg-green-100 text-green-700'
-                                                        : ad.effective_status === 'PAUSED'
-                                                            ? 'bg-yellow-100 text-yellow-700'
-                                                            : 'bg-gray-100 text-gray-600'
-                                                        }`}>
-                                                        {formatStatus(ad.effective_status || ad.status)}
-                                                    </span>
-                                                </div>
-                                            </>
-                                        ) : viewMode === 'search' ? (
-                                            <>
-                                                {/* Ad Set Name */}
-                                                <div className="flex items-center gap-1">
-                                                    <span
-                                                        className="text-xs text-gray-900 truncate"
-                                                        title={ad.adset_name}
-                                                    >
-                                                        {truncateText(ad.adset_name, 75)}
-                                                    </span>
-                                                </div>
-                                                {/* Status */}
-                                                <div className="text-right">
-                                                    <span className={`text-xs font-medium px-2 py-1 rounded-full ${ad.effective_status === 'ACTIVE'
-                                                        ? 'bg-green-100 text-green-700'
-                                                        : ad.effective_status === 'PAUSED'
-                                                            ? 'bg-yellow-100 text-yellow-700'
-                                                            : 'bg-gray-100 text-gray-600'
-                                                        }`}>
-                                                        {formatStatus(ad.effective_status || ad.status)}
-                                                    </span>
-                                                </div>
-                                            </>
-                                        ) : (
-                                            <>
-                                                {/* Ad Set Name */}
-                                                <div className="flex items-center gap-1">
-                                                    <span
-                                                        className="text-xs text-gray-900 truncate"
-                                                        title={ad.adset_name}
-                                                    >
-                                                        {truncateText(ad.adset_name, 75)}
-                                                    </span>
-                                                </div>
-                                                {/* Spend */}
-                                                <div className="text-right">
-                                                    <span className="text-sm font-medium text-gray-900">
-                                                        {formatSpend(ad.spend)}
-                                                    </span>
-                                                </div>
-                                            </>
-                                        )}
-                                    </label>
-                                ))}
-
-                                {/* Load More Button - Only in list mode */}
-                                {viewMode === 'list' && hasMore && (
-                                    <div className="pt-2 pb-4">
-                                        <Button
-                                            variant="outline"
-                                            className="w-full"
-                                            onClick={loadMore}
-                                            disabled={isLoadingMore}
+                        <ScrollArea className="h-[550px] outline-none focus:outline-none">
+                            <TooltipProvider delayDuration={150}>
+                                <div className="space-y-1.5">
+                                    {displayedAds.map((ad) => (
+                                        <label
+                                            key={ad.id}
+                                            className={cn(
+                                                "grid gap-2 items-center p-3 rounded-xl border cursor-pointer transition-colors",
+                                                viewMode === 'adset'
+                                                    ? "grid-cols-[auto_48px_1fr_110px_110px]"
+                                                    : viewMode === 'search'
+                                                        ? "grid-cols-[auto_48px_minmax(0,1fr)_minmax(0,0.72fr)_90px_90px]"
+                                                        : "grid-cols-[auto_48px_1fr_120px_110px]",
+                                                selectedAdIds.has(ad.id)
+                                                    ? 'border-blue-500 bg-blue-50'
+                                                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                                            )}
                                         >
-                                            {isLoadingMore ? (
+                                            <Checkbox
+                                                checked={selectedAdIds.has(ad.id)}
+                                                onCheckedChange={() => toggleAdSelection(ad.id)}
+                                            />
+
+                                            {/* Thumbnail */}
+                                            <div className="w-12 h-12 rounded-md overflow-hidden bg-gray-100 flex-shrink-0">
+                                                {ad.image_url ? (
+                                                    <img
+                                                        src={ad.image_url}
+                                                        alt="Ad thumbnail"
+                                                        className="w-full h-full object-cover"
+                                                        onError={(e) => {
+                                                            e.target.style.display = 'none'
+                                                            e.target.nextSibling.style.display = 'flex'
+                                                        }}
+                                                    />
+                                                ) : null}
+                                                <div
+                                                    className={`w-full h-full items-center justify-center ${ad.image_url ? 'hidden' : 'flex'}`}
+                                                >
+                                                    <ImageOff className="h-5 w-5 text-gray-400" />
+                                                </div>
+                                            </div>
+
+                                            {/* Ad Name */}
+                                            <div className="min-w-0">
+                                                {renderNameTooltip(ad.ad_name)}
+                                            </div>
+
+                                            {/* Adset view: Spend + Status columns (no adset name column) */}
+                                            {viewMode === 'adset' ? (
                                                 <>
-                                                    <Loader className="h-4 w-4 mr-2 animate-spin" />
-                                                    Loading...
+                                                    <div className="text-right">
+                                                        {renderMetricValue(ad)}
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <span className={`text-xs font-medium px-2 py-1 rounded-full ${ad.effective_status === 'ACTIVE'
+                                                            ? 'bg-green-100 text-green-700'
+                                                            : ad.effective_status === 'PAUSED'
+                                                                ? 'bg-yellow-100 text-yellow-700'
+                                                                : 'bg-gray-100 text-gray-600'
+                                                            }`}>
+                                                            {formatStatus(ad.effective_status || ad.status)}
+                                                        </span>
+                                                    </div>
+                                                </>
+                                            ) : viewMode === 'search' ? (
+                                                <>
+                                                    {/* Ad Set Name */}
+                                                    <div className="min-w-0">
+                                                        {renderNameTooltip(ad.adset_name)}
+                                                    </div>
+                                                    {/* Spend */}
+                                                    <div className="text-right">
+                                                        {renderMetricValue(ad)}
+                                                    </div>
+                                                    {/* Status */}
+                                                    <div className="text-right">
+                                                        <span className={`text-xs font-medium px-2 py-1 rounded-full ${ad.effective_status === 'ACTIVE'
+                                                            ? 'bg-green-100 text-green-700'
+                                                            : ad.effective_status === 'PAUSED'
+                                                                ? 'bg-yellow-100 text-yellow-700'
+                                                                : 'bg-gray-100 text-gray-600'
+                                                            }`}>
+                                                            {formatStatus(ad.effective_status || ad.status)}
+                                                        </span>
+                                                    </div>
                                                 </>
                                             ) : (
                                                 <>
-                                                    <ChevronDown className="h-4 w-4 mr-2" />
-                                                    Load More Ads
+                                                    {/* Ad Set Name */}
+                                                    <div className="min-w-0">
+                                                        {renderNameTooltip(ad.adset_name)}
+                                                    </div>
+                                                    {/* Spend */}
+                                                    <div className="text-right">
+                                                        {renderMetricValue(ad)}
+                                                    </div>
                                                 </>
                                             )}
-                                        </Button>
-                                    </div>
-                                )}
-                            </div>
+                                        </label>
+                                    ))}
+
+                                    {/* Load More Button - Only in list mode */}
+                                    {viewMode === 'list' && hasMore && (
+                                        <div className="pt-2 pb-4">
+                                            <Button
+                                                variant="outline"
+                                                className="w-full"
+                                                onClick={loadMore}
+                                                disabled={isLoadingMore}
+                                            >
+                                                {isLoadingMore ? (
+                                                    <>
+                                                        <Loader className="h-4 w-4 mr-2 animate-spin" />
+                                                        Loading...
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <ChevronDown className="h-4 w-4 mr-2" />
+                                                        Load More Ads
+                                                    </>
+                                                )}
+                                            </Button>
+                                        </div>
+                                    )}
+                                </div>
+                            </TooltipProvider>
                         </ScrollArea>
                     )}
                 </div>

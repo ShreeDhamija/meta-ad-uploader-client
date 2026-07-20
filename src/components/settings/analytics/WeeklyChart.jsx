@@ -13,6 +13,7 @@ import {
     LineChart, Line, XAxis, YAxis, CartesianGrid,
     Tooltip, ResponsiveContainer,
 } from "recharts"
+import { formatBucketLabel, formatBucketTooltipTitle } from "./dateRangeUtils"
 
 const METRIC_OPTIONS = {
     costPerLinkClick: {
@@ -20,7 +21,7 @@ const METRIC_OPTIONS = {
         color: '#3b82f6',
         tickFormatter: (value) => `$${value.toFixed(2)}`,
         valueFormatter: (value) => value !== null && value !== undefined ? `$${value.toFixed(2)}` : 'N/A',
-        subtitle: 'Weekly cost per link click',
+        subtitle: 'Traffic cost per link click',
         yAxisWidth: 56,
     },
     cpm: {
@@ -28,7 +29,7 @@ const METRIC_OPTIONS = {
         color: '#f97316',
         tickFormatter: (value) => `$${value.toFixed(2)}`,
         valueFormatter: (value) => value !== null && value !== undefined ? `$${value.toFixed(2)}` : 'N/A',
-        subtitle: 'Weekly CPM',
+        subtitle: 'Traffic CPM',
         yAxisWidth: 56,
     },
     linkCtr: {
@@ -36,46 +37,46 @@ const METRIC_OPTIONS = {
         color: '#14b8a6',
         tickFormatter: (value) => `${value.toFixed(1)}%`,
         valueFormatter: (value) => value !== null && value !== undefined ? `${value.toFixed(2)}%` : 'N/A',
-        subtitle: 'Weekly link CTR',
+        subtitle: 'Traffic link CTR',
         yAxisWidth: 52,
     },
-    frequency: {
-        label: 'Frequency',
+    conversionRate: {
+        label: 'Conversion Rate',
         color: '#a855f7',
-        tickFormatter: (value) => `${value.toFixed(1)}x`,
-        valueFormatter: (value) => value !== null && value !== undefined ? `${value.toFixed(2)}x` : 'N/A',
-        subtitle: 'Weekly frequency',
-        yAxisWidth: 48,
+        tickFormatter: (value) => `${value.toFixed(1)}%`,
+        valueFormatter: (value) => value !== null && value !== undefined ? `${value.toFixed(2)}%` : 'N/A',
+        subtitle: 'Conversions / link clicks',
+        yAxisWidth: 52,
     },
 }
 
 const WEEKLY_CHART_SIDE_INSET = 0
 
-export default function WeeklyChart({ data, loading, className }) {
-    const [selectedMetrics, setSelectedMetrics] = useState(["costPerLinkClick", "frequency"])
+export default function WeeklyChart({ data, loading, className, granularity = 'weekly', showDefaultTooltip = false }) {
+    const [selectedMetrics, setSelectedMetrics] = useState(["costPerLinkClick", "cpm"])
 
     const chartData = useMemo(() => {
         if (!data?.weeklyInsights?.length) return []
 
         return data.weeklyInsights.map((w) => {
-            const d = new Date(w.weekStart + 'T00:00:00')
             const spend = w.spend ?? 0
             const impressions = w.impressions ?? 0
             const linkClicks = w.linkClicks ?? 0
 
             return {
-                label: `${d.getMonth() + 1}/${d.getDate()}`,
+                label: formatBucketLabel(w.weekStart, granularity),
+                tooltipTitle: formatBucketTooltipTitle(w.weekStart, granularity),
                 costPerLinkClick: w.costPerLinkClick,
                 cpm: impressions > 0 ? (spend / impressions) * 1000 : null,
                 linkCtr: impressions > 0 ? (linkClicks / impressions) * 100 : null,
-                frequency: w.frequency,
+                conversionRate: w.conversionRate ?? null,
+                conversions: w.conversions ?? 0,
                 spend,
                 impressions,
-                reach: w.reach,
                 linkClicks,
             }
         })
-    }, [data])
+    }, [data, granularity])
 
     const selectedMetricConfigs = selectedMetrics.map((metricKey) => ({
         key: metricKey,
@@ -91,6 +92,7 @@ export default function WeeklyChart({ data, loading, className }) {
         if (selectedMetricConfigs.length === 1) return selectedMetricConfigs[0].label
         return selectedMetricConfigs.map((metric) => metric.label).join(', ')
     }, [selectedMetricConfigs])
+    const shouldShowDefaultTooltip = showDefaultTooltip && chartData.length === 1
 
     const handleMetricToggle = (metricKey, checked) => {
         setSelectedMetrics((prev) => {
@@ -104,12 +106,12 @@ export default function WeeklyChart({ data, loading, className }) {
         })
     }
 
-    const CustomTooltip = ({ active, payload, label }) => {
+    const CustomTooltip = ({ active, payload }) => {
         if (!active || !payload?.length) return null
         const row = payload[0]?.payload
         return (
             <div className="bg-white border border-gray-200 rounded-xl p-3 shadow-lg text-xs">
-                <p className="font-semibold text-gray-900 mb-2">Week of {label}</p>
+                <p className="font-semibold text-gray-900 mb-2">{row?.tooltipTitle || row?.label}</p>
                 <div className="space-y-1">
                     {selectedMetricConfigs.map((metric) => (
                         <p key={metric.key} className="text-gray-600">
@@ -122,8 +124,8 @@ export default function WeeklyChart({ data, loading, className }) {
                     <div className="border-t border-gray-100 mt-1.5 pt-1.5">
                         <p className="text-gray-600">Spend: <span className="font-medium">${row.spend?.toFixed(2)}</span></p>
                         <p className="text-gray-600">Impressions: <span className="font-medium">{(row.impressions || 0).toLocaleString()}</span></p>
-                        <p className="text-gray-600">Reach: <span className="font-medium">{(row.reach || 0).toLocaleString()}</span></p>
                         <p className="text-gray-600">Link Clicks: <span className="font-medium">{(row.linkClicks || 0).toLocaleString()}</span></p>
+                        <p className="text-gray-600">Conversions: <span className="font-medium">{(row.conversions || 0).toLocaleString()}</span></p>
                     </div>
                 </div>
             </div>
@@ -134,7 +136,7 @@ export default function WeeklyChart({ data, loading, className }) {
         <div className={className ? `p-4 ${className}` : "p-4"}>
             <div className="mb-[22px] flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                    <p className="text-sm font-medium text-gray-900">Weekly Metrics</p>
+                    <p className="text-sm font-medium text-gray-900">Traffic Metrics</p>
                     <p className="text-xs text-gray-400">{subtitle}</p>
                 </div>
             </div>
@@ -145,7 +147,7 @@ export default function WeeklyChart({ data, loading, className }) {
                 </div>
             ) : chartData.length === 0 ? (
                 <div className="flex items-center justify-center h-[200px] text-sm text-gray-400">
-                    No weekly data available
+                    No traffic data available
                 </div>
             ) : (
                 <>
@@ -172,7 +174,11 @@ export default function WeeklyChart({ data, loading, className }) {
                                     width={index > 1 ? 0 : metric.yAxisWidth}
                                 />
                             ))}
-                            <Tooltip content={<CustomTooltip />} />
+                            <Tooltip
+                                content={<CustomTooltip />}
+                                defaultIndex={shouldShowDefaultTooltip ? 0 : undefined}
+                                active={shouldShowDefaultTooltip ? true : undefined}
+                            />
                             {selectedMetricConfigs.map((metric) => (
                                 <Line
                                     key={metric.key}
@@ -191,13 +197,13 @@ export default function WeeklyChart({ data, loading, className }) {
                     </ResponsiveContainer>
 
                     <div
-                        className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"
+                        className="relative mt-3"
                         style={{
                             paddingLeft: `${WEEKLY_CHART_SIDE_INSET}px`,
                             paddingRight: `${WEEKLY_CHART_SIDE_INSET}px`,
                         }}
                     >
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+                        <div className="flex flex-wrap items-center justify-start gap-x-12 gap-y-1.5 px-1 w-full sm:pr-[180px]">
                             {selectedMetricConfigs.map((metric) => (
                                 <div key={metric.key} className="flex items-center gap-2">
                                     <span
@@ -211,6 +217,7 @@ export default function WeeklyChart({ data, loading, className }) {
                             ))}
                         </div>
 
+                        <div className="mt-3 flex justify-center sm:mt-0 sm:absolute sm:right-0 sm:top-0">
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button
@@ -243,6 +250,7 @@ export default function WeeklyChart({ data, loading, className }) {
                                 ))}
                             </DropdownMenuContent>
                         </DropdownMenu>
+                        </div>
                     </div>
                 </>
             )}

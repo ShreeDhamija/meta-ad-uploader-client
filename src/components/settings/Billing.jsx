@@ -15,6 +15,7 @@ import BillingSwitchIcon from "@/assets/icons/Billing/Switch.svg?react"
 import BillingCancelIcon from "@/assets/icons/Billing/Cancel.svg?react"
 import BillingInvoiceIcon from "@/assets/icons/Billing/Frame.svg?react"
 import MailIcon from "@/assets/icons/mail.svg?react"
+import { Copy, CreditCard } from "lucide-react"
 import {
     Dialog,
     DialogContent,
@@ -79,6 +80,8 @@ const commonFeatureLines = [
     "Unlimited Team Seats",
 ]
 
+const planActionButtonClass = "border border-[#6C3403] bg-[#FFBE85] text-[#6C3403] shadow-[0_2px_2px_rgba(0,0,0,0.2)] hover:bg-[#FFBE85] hover:text-[#6C3403]"
+
 function formatPlanPrice(price) {
     return `$${price}/month`
 }
@@ -95,6 +98,7 @@ export default function BillingSettings() {
         refreshSubscriptionData,
         isTrialExpired,
         isPaidSubscriber,
+        isPastDue,
     } = useSubscription()
 
     const [cancelReason, setCancelReason] = useState(null)
@@ -107,12 +111,23 @@ export default function BillingSettings() {
     const [checkoutLoadingPlan, setCheckoutLoadingPlan] = useState(null)
     const [portalLoading, setPortalLoading] = useState(false)
     const [reactivating, setReactivating] = useState(false)
+    const [updatingPayment, setUpdatingPayment] = useState(false)
 
     const hasUsedRetentionDiscount = subscriptionData?.hasUsedRetentionDiscount || false
     const isTeamMember = subscriptionData.teamId && !subscriptionData.isTeamOwner
-    const currentPlan = isPaidSubscriber()
+    const hasPaidPlan = isPaidSubscriber() || isPastDue()
+    const currentPlan = hasPaidPlan
         ? (getPlanMeta(subscriptionData.planType) || PLANS[0])
         : null
+
+    const handleCopySupportEmail = async () => {
+        try {
+            await navigator.clipboard.writeText("shree@withblip.com")
+            toast.success("Email copied")
+        } catch {
+            toast.error("Couldn't copy email")
+        }
+    }
 
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search)
@@ -153,13 +168,14 @@ export default function BillingSettings() {
     const handleCheckout = async (planKey) => {
         setCheckoutLoadingPlan(planKey)
         try {
+            const referral = window.Rewardful?.referral
             const response = await fetch(`${API_BASE_URL}/api/stripe/create-checkout-session`, {
                 method: "POST",
                 credentials: "include",
                 headers: {
                     "Content-Type": "application/json",
                 },
-                body: JSON.stringify({ planType: planKey }),
+                body: JSON.stringify({ planType: planKey, referral }),
             })
 
             const { url } = await response.json()
@@ -189,6 +205,27 @@ export default function BillingSettings() {
             toast.error("Failed to access customer portal")
         } finally {
             setPortalLoading(false)
+        }
+    }
+
+    const handleUpdatePayment = async () => {
+        setUpdatingPayment(true)
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/stripe/customer-portal`, {
+                method: "POST",
+                credentials: "include",
+            })
+            if (response.ok) {
+                const { url } = await response.json()
+                window.open(url, "_blank")
+            } else {
+                const error = await response.json()
+                toast.error(error.message || "Failed to open payment update")
+            }
+        } catch {
+            toast.error("Failed to open payment update")
+        } finally {
+            setUpdatingPayment(false)
         }
     }
 
@@ -339,7 +376,18 @@ export default function BillingSettings() {
     const cancelDate = subscriptionData?.willCancelAt ? new Date(subscriptionData.willCancelAt) : null
     const hasScheduledCancellation = Boolean(cancelDate && cancelDate > new Date())
 
-    const statusConfig = isPaidSubscriber()
+    const statusConfig = isPastDue()
+        ? {
+            containerClass: "border border-[#F5BE9A] bg-[#FFD1AD]",
+            titleClass: "text-[#B42318]",
+            messageClass: "text-[#D92D20]",
+            chipClass: "text-[#C1121F]",
+            dotClass: "bg-[#D00000]",
+            icon: BillingAlertIcon,
+            label: "PAYMENT FAILED",
+            message: "Your last payment didn't go through. Update your payment details below to restore access.",
+        }
+        : isPaidSubscriber()
         ? {
             containerClass: "border border-[#CFEFBF] bg-[#E2FFC8]",
             titleClass: "text-[#0F5132]",
@@ -396,6 +444,104 @@ export default function BillingSettings() {
                         </div>
                     </div>
 
+                    {isPastDue() && (
+                        <div className="flex flex-col gap-3">
+                            <Button
+                                onClick={handleUpdatePayment}
+                                disabled={updatingPayment}
+                                className="h-[52px] w-full rounded-[20px] bg-[#F00D55] text-white shadow-none hover:bg-[#F00D55] hover:text-white"
+                            >
+                                <CreditCard className="h-5 w-5" />
+                                {updatingPayment ? "Opening..." : "Update Payment Details"}
+                            </Button>
+                            <Button
+                                onClick={handleViewInvoices}
+                                disabled={portalLoading}
+                                variant="outline"
+                                className="h-[52px] w-full rounded-[20px] border border-black bg-white text-black shadow-none hover:bg-white hover:text-black"
+                            >
+                                <BillingInvoiceIcon className="h-5 w-5" />
+                                {portalLoading ? "Opening Invoices..." : "View Invoices"}
+                            </Button>
+                            <Button
+                                onClick={() => setShowPlanSelector((current) => !current)}
+                                className="h-[52px] w-full rounded-[20px] bg-[#27272A] text-white shadow-none hover:bg-[#27272A] hover:text-white"
+                            >
+                                <BillingSwitchIcon className="h-5 w-5" />
+                                {showPlanSelector ? "Hide Plans" : "Switch Plans"}
+                            </Button>
+
+                            <div
+                                className={`overflow-hidden grid transition-all duration-500 ease-in-out ${showPlanSelector
+                                    ? "grid-rows-[1fr] opacity-100"
+                                    : "grid-rows-[0fr] opacity-0"
+                                    }`}
+                            >
+                                <div className="overflow-hidden">
+                                    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                                        {PLANS.map((plan) => {
+                                            const isCurrentPlan = currentPlan?.key === plan.key
+                                            const isCardLoading = checkoutLoadingPlan === plan.key || changingPlanType === plan.key
+                                            const buttonLabel = isCurrentPlan
+                                                ? "Current Plan"
+                                                : isCardLoading
+                                                    ? "Switching..."
+                                                    : "Switch Plan"
+
+                                            return (
+                                                <div
+                                                    key={plan.key}
+                                                    className="flex min-h-[438px] flex-col overflow-hidden rounded-[22px] border border-black/50 bg-[#FFFBF5]"
+                                                >
+                                                    <div className="bg-[#250900] px-4 pb-4 pt-3 text-white">
+                                                        <div className="flex items-center gap-2">
+                                                            <img src={plan.image} alt={plan.name} className="h-7 w-7 object-contain" />
+                                                            <p className="billing-plan-display text-[18px] font-semibold">{plan.name}</p>
+                                                        </div>
+                                                        <div className="mt-2 flex items-end gap-1">
+                                                            <p className="billing-price-display text-[32px] leading-none">
+                                                                ${plan.price}
+                                                            </p>
+                                                            <span className="billing-plan-display pb-[1px] text-[14px] font-medium text-white/85">
+                                                                / month
+                                                            </span>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex flex-1 flex-col bg-[#FFFBF5] px-4 py-3">
+                                                        <div className="space-y-5">
+                                                            {[plan.accountLine, ...commonFeatureLines].map((feature, index) => (
+                                                                <div key={feature} className="flex items-start gap-1.5">
+                                                                    <CheckCircleIcon className="mt-0.5 h-[18px] w-[18px] flex-shrink-0 text-[#330C00]" />
+                                                                    <span className={`text-[14px] text-[#330C00] ${index === 0 ? "font-semibold" : "font-normal"}`}>
+                                                                        {feature}
+                                                                    </span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+
+                                                        <Button
+                                                            onClick={() => {
+                                                                if (!isCurrentPlan) handleChangePlanClick(plan.key)
+                                                            }}
+                                                            disabled={isCurrentPlan || isCardLoading}
+                                                            className={`mt-auto h-[46px] rounded-full px-3 text-[16px] font-bold ${isCurrentPlan
+                                                                ? "bg-[#E8E8EA] text-[#6A6A70] shadow-none hover:bg-[#E8E8EA] hover:text-[#6A6A70]"
+                                                                : planActionButtonClass
+                                                                }`}
+                                                        >
+                                                            <span>{buttonLabel}</span>
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {isPaidSubscriber() && (
                         <div className="flex flex-col gap-3">
                             {hasScheduledCancellation ? (
@@ -425,6 +571,14 @@ export default function BillingSettings() {
                             >
                                 <BillingInvoiceIcon className="h-5 w-5" />
                                 {portalLoading ? "Opening Invoices..." : "View Invoices"}
+                            </Button>
+                            <Button
+                                onClick={handleUpdatePayment}
+                                disabled={updatingPayment}
+                                className="h-[52px] w-full rounded-[20px] bg-blue-600 text-white shadow-none hover:bg-blue-700 hover:text-white"
+                            >
+                                <CreditCard className="h-5 w-5" />
+                                {updatingPayment ? "Opening..." : "Update Payment Details"}
                             </Button>
                             {!hasScheduledCancellation && (
                                 <>
@@ -456,9 +610,9 @@ export default function BillingSettings() {
                                                     return (
                                                         <div
                                                             key={plan.key}
-                                                            className="flex min-h-[438px] flex-col overflow-hidden rounded-[22px] border border-black/50 bg-white"
+                                                            className="flex min-h-[438px] flex-col overflow-hidden rounded-[22px] border border-black/50 bg-[#FFFBF5]"
                                                         >
-                                                            <div className="bg-black px-4 pb-4 pt-3 text-white">
+                                                            <div className="bg-[#250900] px-4 pb-4 pt-3 text-white">
                                                                 <div className="flex items-center gap-2">
                                                                     <img src={plan.image} alt={plan.name} className="h-7 w-7 object-contain" />
                                                                     <p className="billing-plan-display text-[18px] font-semibold">{plan.name}</p>
@@ -473,12 +627,12 @@ export default function BillingSettings() {
                                                                 </div>
                                                             </div>
 
-                                                            <div className="flex flex-1 flex-col px-4 py-3">
+                                                            <div className="flex flex-1 flex-col bg-[#FFFBF5] px-4 py-3">
                                                                 <div className="space-y-5">
                                                                     {[plan.accountLine, ...commonFeatureLines].map((feature, index) => (
                                                                         <div key={feature} className="flex items-start gap-1.5">
-                                                                            <CheckCircleIcon className="mt-0.5 h-[18px] w-[18px] flex-shrink-0 text-black" />
-                                                                            <span className={`text-[14px] ${index === 0 ? "font-semibold text-black" : "text-[#5F5F63]"}`}>
+                                                                            <CheckCircleIcon className="mt-0.5 h-[18px] w-[18px] flex-shrink-0 text-[#330C00]" />
+                                                                            <span className={`text-[14px] text-[#330C00] ${index === 0 ? "font-semibold" : "font-normal"}`}>
                                                                                 {feature}
                                                                             </span>
                                                                         </div>
@@ -490,9 +644,9 @@ export default function BillingSettings() {
                                                                         if (!isCurrentPlan) handleChangePlanClick(plan.key)
                                                                     }}
                                                                     disabled={isCurrentPlan || isCardLoading}
-                                                                    className={`mt-auto h-[46px] rounded-full px-3 text-[16px] font-bold shadow-none ${isCurrentPlan
-                                                                        ? "bg-[#E8E8EA] text-[#6A6A70] hover:bg-[#E8E8EA] hover:text-[#6A6A70]"
-                                                                        : plan.buttonClass
+                                                                    className={`mt-auto h-[46px] rounded-full px-3 text-[16px] font-bold ${isCurrentPlan
+                                                                        ? "bg-[#E8E8EA] text-[#6A6A70] shadow-none hover:bg-[#E8E8EA] hover:text-[#6A6A70]"
+                                                                        : planActionButtonClass
                                                                         }`}
                                                                 >
                                                                     <span>{buttonLabel}</span>
@@ -509,7 +663,7 @@ export default function BillingSettings() {
                         </div>
                     )}
 
-                    {!isPaidSubscriber() && (
+                    {!hasPaidPlan && (
                         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                             {PLANS.map((plan) => {
                                 const isCardLoading = checkoutLoadingPlan === plan.key || changingPlanType === plan.key
@@ -518,9 +672,9 @@ export default function BillingSettings() {
                                 return (
                                     <div
                                         key={plan.key}
-                                        className="flex min-h-[438px] flex-col overflow-hidden rounded-[22px] border border-black/50 bg-white"
+                                        className="flex min-h-[438px] flex-col overflow-hidden rounded-[22px] border border-black/50 bg-[#FFFBF5]"
                                     >
-                                        <div className="bg-black px-4 pb-4 pt-3 text-white">
+                                        <div className="bg-[#250900] px-4 pb-4 pt-3 text-white">
                                             <div className="flex items-center gap-2">
                                                 <img src={plan.image} alt={plan.name} className="h-7 w-7 object-contain" />
                                                 <p className="billing-plan-display text-[18px] font-extrabold">{plan.name}</p>
@@ -535,12 +689,12 @@ export default function BillingSettings() {
                                             </div>
                                         </div>
 
-                                        <div className="flex flex-1 flex-col px-4 py-3">
+                                        <div className="flex flex-1 flex-col bg-[#FFFBF5] px-4 py-3">
                                             <div className="space-y-5">
                                                 {[plan.accountLine, ...commonFeatureLines].map((feature, index) => (
                                                     <div key={feature} className="flex items-start gap-1.5">
-                                                        <CheckCircleIcon className="mt-0.5 h-[18px] w-[18px] flex-shrink-0 text-black" />
-                                                        <span className={`text-[14px] ${index === 0 ? "font-semibold text-black" : "text-[#5F5F63]"}`}>
+                                                        <CheckCircleIcon className="mt-0.5 h-[18px] w-[18px] flex-shrink-0 text-[#330C00]" />
+                                                        <span className={`text-[14px] text-[#330C00] ${index === 0 ? "font-semibold" : "font-normal"}`}>
                                                             {feature}
                                                         </span>
                                                     </div>
@@ -550,7 +704,7 @@ export default function BillingSettings() {
                                             <Button
                                                 onClick={() => handleCheckout(plan.key)}
                                                 disabled={isCardLoading}
-                                                className={`mt-auto h-[46px] rounded-full px-3 text-[16px] font-bold shadow-none ${plan.buttonClass}`}
+                                                className={`mt-auto h-[46px] rounded-full px-3 text-[16px] font-bold ${planActionButtonClass}`}
                                             >
                                                 <span>{buttonLabel}</span>
                                             </Button>
@@ -563,9 +717,30 @@ export default function BillingSettings() {
                 </>
             )}
 
+            <div className="bg-white py-2 text-left">
+                <h3 className="text-[20px] font-bold leading-tight text-black">
+                    Pricing doesn't fit you right?
+                </h3>
+                <p className="mt-2 max-w-[620px] text-[14px] leading-6 text-[#5F5F63]">
+                    If you enjoy using Blip but your ad account needs don't fit any tier, reach out via chat or email{" "}
+                    <span className="inline-flex items-center gap-1 font-semibold text-black">
+                        shree@withblip.com
+                        <button
+                            type="button"
+                            onClick={handleCopySupportEmail}
+                            aria-label="Copy support email"
+                            className="inline-flex h-6 w-6 items-center justify-center rounded-full text-[#5F5F63] transition hover:bg-black/5 hover:text-black"
+                        >
+                            <Copy className="h-3.5 w-3.5" />
+                        </button>
+                    </span>{" "}
+                    and we'll create a custom plan for you.
+                </p>
+            </div>
+
             <Button
                 asChild
-                className="h-[52px] w-full rounded-[20px] border border-black/10 bg-white text-black shadow-none hover:bg-white hover:text-black shadow-xs"
+                className="h-[52px] w-full rounded-[20px] border border-black/10 bg-white text-black shadow-none shadow-xs hover:bg-white hover:text-black"
             >
                 <a
                     href="mailto:shree@withblip.com"

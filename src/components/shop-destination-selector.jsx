@@ -17,6 +17,13 @@ export default function ShopDestinationSelector({
     setSelectedShopDestinationType,
     isFieldModified,
     isVisible = false,
+    allowedTypes = ["shop", "product_set", "product"],
+    label = "Shop Destination",
+    description = "Select a shop or product set for your shop ads",
+    placeholder = "Select shop destination",
+    searchPlaceholder = "Search shop destinations...",
+    emptyLabel = "No shop destinations available",
+    triggerClassName,
 }) {
     const [open, setOpen] = useState(false)
     const [searchValue, setSearchValue] = useState("")
@@ -98,7 +105,11 @@ export default function ShopDestinationSelector({
     }))
 
 
-    const allOptions = [...shopOptions, ...productSetOptions, ...productOptions]
+    const allOptions = [
+        ...(allowedTypes.includes("shop") ? shopOptions : []),
+        ...(allowedTypes.includes("product_set") ? productSetOptions : []),
+        ...(allowedTypes.includes("product") ? productOptions : []),
+    ]
     // const filteredOptions = allOptions.filter((option) => option.label.toLowerCase().includes(searchValue.toLowerCase()))
     const selectedOption = allOptions.find((option) => option.id === selectedShopDestination)
 
@@ -112,9 +123,9 @@ export default function ShopDestinationSelector({
                 <Label className="flex items-center gap-2">
                     {isFieldModified?.() ? <span className="text-red-500 font-semibold">*</span> : null}
                     <ShopIcon alt="" className="w-4 h-4" />
-                    Shop Destination
+                    {label}
                 </Label>
-                <Label className="text-gray-500 text-[12px] font-regular block">Select a shop or product set for your shop ads</Label>
+                <Label className="text-gray-500 text-[12px] font-regular block">{description}</Label>
             </div>
 
             <Popover open={open} onOpenChange={setOpen}>
@@ -124,15 +135,18 @@ export default function ShopDestinationSelector({
                         role="combobox"
                         aria-expanded={open}
                         disabled={isLoading || allOptions.length === 0}
-                        className="w-full justify-between border border-gray-400 rounded-xl bg-white shadow hover:bg-white"
+                        className={cn(
+                            "w-full justify-between border border-gray-400 rounded-xl bg-white shadow hover:bg-white",
+                            triggerClassName,
+                        )}
                     >
                         {isLoading
                             ? "Loading shop destinations..."
-                            : selectedOption
-                                ? selectedOption.label
-                                : allOptions.length === 0
-                                    ? "No shop destinations available"
-                                    : "Select shop destination"}
+                                : selectedOption
+                                    ? selectedOption.label
+                                    : allOptions.length === 0
+                                        ? emptyLabel
+                                        : placeholder}
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                 </PopoverTrigger>
@@ -151,14 +165,14 @@ export default function ShopDestinationSelector({
                 >
                     <Command filter={() => 1} loop={false} shouldFilter={false}>
                         <CommandInput
-                            placeholder="Search shop destinations..."
+                            placeholder={searchPlaceholder}
                             value={searchValue}
                             onValueChange={setSearchValue}
                         />
                         <CommandEmpty>No shop destinations found.</CommandEmpty>
                         <CommandList className="max-h-[300px] overflow-y-auto rounded-xl custom-scrollbar" selectOnFocus={false}>
                             {/* Shops Section */}
-                            {shopOptions.length > 0 && (
+                            {allowedTypes.includes("shop") && shopOptions.length > 0 && (
                                 <CommandGroup>
                                     <div className="px-2 py-1.5 text-xs font-semibold text-gray-600 bg-gray-200 sticky top-0 rounded-lg">
                                         Shops
@@ -191,7 +205,7 @@ export default function ShopDestinationSelector({
                             )}
 
                             {/* Products Section */}
-                            {productOptions.length > 0 && (
+                            {allowedTypes.includes("product") && productOptions.length > 0 && (
                                 <CommandGroup>
                                     <div className="px-2 py-1.5 text-xs font-semibold text-gray-600 bg-gray-200 sticky top-0 rounded-lg">
                                         Products
@@ -224,7 +238,7 @@ export default function ShopDestinationSelector({
                             )}
 
                             {/* Product Sets Section */}
-                            {/* {productSetOptions.length > 0 && (
+                            {allowedTypes.includes("product_set") && productSetOptions.length > 0 && (
                                 <CommandGroup>
                                     <div className="px-2 py-1.5 text-xs font-semibold text-gray-600 bg-gray-200 sticky top-0 rounded-lg">
                                         Product Sets
@@ -249,17 +263,17 @@ export default function ShopDestinationSelector({
                                                 )}
                                                 data-selected={option.id === selectedShopDestination}
                                             >
-                                                <span>{option.label.replace('Product Set: ', '')}</span> 
+                                                <span>{option.label.replace('Product Set: ', '')}</span>
                                                 {selectedShopDestination === option.id && <Check className="ml-2 h-4 w-4" />}
                                             </CommandItem>
                                         ))}
                                 </CommandGroup>
-                            )} */}
+                            )}
 
 
 
                             {/* No results */}
-                            {shopOptions.length === 0 && productSetOptions.length === 0 && productOptions.length === 0 && (
+                            {allOptions.length === 0 && (
                                 <CommandItem disabled className="opacity-50 cursor-not-allowed">
                                     No shop destinations found.
                                 </CommandItem>

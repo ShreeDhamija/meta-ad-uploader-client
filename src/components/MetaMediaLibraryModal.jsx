@@ -1,8 +1,9 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import axios from 'axios';
 import { toast } from "sonner"
-import { Loader2, Image as ImageIcon, Video, FolderOpen, Heart, MessageCircle, Users, CalendarDays } from "lucide-react";
+import { Loader2, Image as ImageIcon, Video, FolderOpen, Heart, MessageCircle, Users, CalendarDays, Search, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import IGColor from "@/assets/icons/IGColor.webp";
 import Meta from "@/assets/icons/Meta2.svg";
 import Instagram from "@/assets/icons/ig.svg";
@@ -11,6 +12,63 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 const IG_CACHE_KEY = 'ig_media_cache';
+const META_CACHE_KEY_PREFIX = 'meta_media_library_cache_v2';
+const META_CACHE_TTL_MS = 15 * 60 * 1000;
+const metaLibraryMemoryCache = new Map();
+
+const getMetaCacheKey = (adAccountId) => `${META_CACHE_KEY_PREFIX}:${adAccountId}`;
+
+const isFreshMetaCache = (cached) => (
+    cached
+    && Array.isArray(cached.images)
+    && Array.isArray(cached.videos)
+    && cached.imagesPagination
+    && cached.videosPagination
+    && Date.now() - cached.cachedAt < META_CACHE_TTL_MS
+);
+
+const getMetaCache = (adAccountId) => {
+    if (!adAccountId) return null;
+
+    const memoryCached = metaLibraryMemoryCache.get(adAccountId);
+    if (isFreshMetaCache(memoryCached)) return memoryCached;
+
+    try {
+        const cached = JSON.parse(sessionStorage.getItem(getMetaCacheKey(adAccountId)));
+        if (isFreshMetaCache(cached)) {
+            metaLibraryMemoryCache.set(adAccountId, cached);
+            return cached;
+        }
+    } catch { }
+
+    metaLibraryMemoryCache.delete(adAccountId);
+    return null;
+};
+
+const setMetaCache = (adAccountId, images, videos, imagesPagination, videosPagination) => {
+    if (!adAccountId) return;
+
+    const cacheValue = {
+        images,
+        videos,
+        imagesPagination,
+        videosPagination,
+        cachedAt: Date.now(),
+    };
+
+    metaLibraryMemoryCache.set(adAccountId, cacheValue);
+    try {
+        sessionStorage.setItem(getMetaCacheKey(adAccountId), JSON.stringify(cacheValue));
+    } catch { }
+};
+
+const clearMetaCache = (adAccountId) => {
+    if (!adAccountId) return;
+    metaLibraryMemoryCache.delete(adAccountId);
+    try {
+        sessionStorage.removeItem(getMetaCacheKey(adAccountId));
+    } catch { }
+};
 
 const getIgCache = (igUserId) => {
     try {
@@ -139,6 +197,7 @@ export default function MetaMediaLibraryModal({
     const [loadingMoreMetaVideos, setLoadingMoreMetaVideos] = useState(false);
     const [loadingMoreIg, setLoadingMoreIg] = useState(false);
     const [filterCollaborators, setFilterCollaborators] = useState(false);
+    const [metaSearchQuery, setMetaSearchQuery] = useState('');
 
     const mapMetaImages = (rawImages) => rawImages.map(img => ({
         type: 'image',
@@ -158,25 +217,52 @@ export default function MetaMediaLibraryModal({
         height: vid.height,
         thumbnail_url: vid.thumbnail_url,
         previewUrl: vid.thumbnail_url,
+        source: vid.source,
     }));
 
-    const fetchMetaLibrary = useCallback(async () => {
+    const openSourceUrl = (event, url) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const openedWindow = window.open(url, '_blank', 'noopener,noreferrer');
+        if (openedWindow) openedWindow.opener = null;
+    };
+
+    const fetchMetaLibrary = useCallback(async (forceRefresh = false) => {
         if (!adAccountId) return;
+
+        if (forceRefresh) {
+            clearMetaCache(adAccountId);
+        } else {
+            const cached = getMetaCache(adAccountId);
+            if (cached) {
+                setMetaImages(cached.images);
+                setMetaVideos(cached.videos);
+                setMetaImagesPagination(cached.imagesPagination);
+                setMetaVideosPagination(cached.videosPagination);
+                return;
+            }
+        }
+
         setLoadingMeta(true);
         try {
             const imgRes = await axios.get(`${API_BASE_URL}/auth/library-images`, {
                 params: { adAccountId },
                 withCredentials: true,
             });
-            setMetaImages(mapMetaImages(imgRes.data?.data || []));
-            setMetaImagesPagination(imgRes.data?.pagination || { hasMore: false, nextCursor: null });
+            const images = mapMetaImages(imgRes.data?.data || []);
+            const imagesPagination = imgRes.data?.pagination || { hasMore: false, nextCursor: null };
+            setMetaImages(images);
+            setMetaImagesPagination(imagesPagination);
 
             const vidRes = await axios.get(`${API_BASE_URL}/auth/library-videos`, {
                 params: { adAccountId },
                 withCredentials: true,
             });
-            setMetaVideos(mapMetaVideos(vidRes.data?.data || []));
-            setMetaVideosPagination(vidRes.data?.pagination || { hasMore: false, nextCursor: null });
+            const videos = mapMetaVideos(vidRes.data?.data || []);
+            const videosPagination = vidRes.data?.pagination || { hasMore: false, nextCursor: null };
+            setMetaVideos(videos);
+            setMetaVideosPagination(videosPagination);
+            setMetaCache(adAccountId, images, videos, imagesPagination, videosPagination);
         } catch (err) {
             console.error('Error fetching Meta library:', err);
             toast.error('Failed to load Meta media library');
@@ -195,7 +281,12 @@ export default function MetaMediaLibraryModal({
             });
             const newData = res.data?.data || [];
             const newPagination = res.data?.pagination || { hasMore: false, nextCursor: null };
-            setMetaImages(prev => [...prev, ...mapMetaImages(newData)]);
+            const newImages = mapMetaImages(newData);
+            setMetaImages(prev => {
+                const updatedImages = [...prev, ...newImages];
+                setMetaCache(adAccountId, updatedImages, metaVideos, newPagination, metaVideosPagination);
+                return updatedImages;
+            });
             setMetaImagesPagination(newPagination);
             if (!newPagination.hasMore) {
                 toast.info('No more images to load');
@@ -206,7 +297,7 @@ export default function MetaMediaLibraryModal({
         } finally {
             setLoadingMoreMetaImages(false);
         }
-    }, [adAccountId, metaImagesPagination.nextCursor]);
+    }, [adAccountId, metaImagesPagination.nextCursor, metaVideos, metaVideosPagination]);
 
     const loadMoreMetaVideos = useCallback(async () => {
         if (!metaVideosPagination.nextCursor) return;
@@ -218,7 +309,12 @@ export default function MetaMediaLibraryModal({
             });
             const newData = res.data?.data || [];
             const newPagination = res.data?.pagination || { hasMore: false, nextCursor: null };
-            setMetaVideos(prev => [...prev, ...mapMetaVideos(newData)]);
+            const newVideos = mapMetaVideos(newData);
+            setMetaVideos(prev => {
+                const updatedVideos = [...prev, ...newVideos];
+                setMetaCache(adAccountId, metaImages, updatedVideos, metaImagesPagination, newPagination);
+                return updatedVideos;
+            });
             setMetaVideosPagination(newPagination);
             if (!newPagination.hasMore) {
                 toast.info('No more videos to load');
@@ -229,7 +325,7 @@ export default function MetaMediaLibraryModal({
         } finally {
             setLoadingMoreMetaVideos(false);
         }
-    }, [adAccountId, metaVideosPagination.nextCursor]);
+    }, [adAccountId, metaImages, metaImagesPagination, metaVideosPagination.nextCursor]);
 
 
 
@@ -333,6 +429,7 @@ export default function MetaMediaLibraryModal({
         setIsOpen(true);
         setSelectedMetaFiles([]);
         setSelectedIgPosts([]);
+        setMetaSearchQuery('');
         if (mediaSource === 'meta_library') {
             fetchMetaLibrary();
         } else {
@@ -345,6 +442,7 @@ export default function MetaMediaLibraryModal({
         setActiveTab('images');
         setSelectedMetaFiles([]);
         setSelectedIgPosts([]);
+        setMetaSearchQuery('');
 
         if (source === 'instagram') {
             if (!instagramAccountId) {
@@ -417,13 +515,62 @@ export default function MetaMediaLibraryModal({
     };
 
     const isLoading = mediaSource === 'meta_library' ? loadingMeta : loadingIg;
-    const displayItems = (() => {
+    const normalizedMetaSearch = metaSearchQuery.trim().toLowerCase();
+    const displayItems = useMemo(() => {
         if (mediaSource === 'meta_library') {
-            return activeTab === 'images' ? metaImages : metaVideos;
+            const items = activeTab === 'images' ? metaImages : metaVideos;
+            if (!normalizedMetaSearch) return items;
+            return items.filter(item => (item.name || '').toLowerCase().includes(normalizedMetaSearch));
         }
         const items = activeTab === 'images' ? igImages : igVideos;
         return filterCollaborators ? items.filter(item => item.collaborators && item.collaborators.length > 0) : items;
-    })();
+    }, [activeTab, filterCollaborators, igImages, igVideos, mediaSource, metaImages, metaVideos, normalizedMetaSearch]);
+
+    const activeMetaPagination = activeTab === 'images' ? metaImagesPagination : metaVideosPagination;
+    const isMetaSearchActive = mediaSource === 'meta_library' && normalizedMetaSearch.length > 0;
+
+    const renderLoadMoreButton = () => {
+        if (mediaSource === 'meta_library') {
+            const isImagesTab = activeTab === 'images';
+            const hasMore = isImagesTab ? metaImagesPagination.hasMore : metaVideosPagination.hasMore;
+            if (!hasMore) return null;
+
+            const isLoadingMore = isImagesTab ? loadingMoreMetaImages : loadingMoreMetaVideos;
+            const onLoadMore = isImagesTab ? loadMoreMetaImages : loadMoreMetaVideos;
+
+            return (
+                <div className="flex w-full justify-center pt-4">
+                    <Button
+                        type="button"
+                        onClick={onLoadMore}
+                        disabled={isLoadingMore}
+                        className="h-12 w-full rounded-2xl bg-zinc-700 text-white hover:bg-zinc-800 hover:text-white"
+                    >
+                        {isLoadingMore ? (
+                            <><Loader2 className="h-4 w-4 animate-spin mr-2" />Loading...</>
+                        ) : "Load More"}
+                    </Button>
+                </div>
+            );
+        }
+
+        if (!igPagination.hasMore) return null;
+
+        return (
+            <div className="flex w-full justify-center pt-4">
+                <Button
+                    type="button"
+                    onClick={loadMoreIg}
+                    disabled={loadingMoreIg}
+                    className="h-12 w-full rounded-2xl bg-zinc-700 text-white hover:bg-zinc-800 hover:text-white"
+                >
+                    {loadingMoreIg ? (
+                        <><Loader2 className="h-4 w-4 animate-spin mr-2" />Loading...</>
+                    ) : "Load More"}
+                </Button>
+            </div>
+        );
+    };
 
 
     const selectionCount =
@@ -441,6 +588,7 @@ export default function MetaMediaLibraryModal({
         setMediaSource(source);
         setSelectedMetaFiles([]);
         setSelectedIgPosts([]);
+        setMetaSearchQuery('');
         setIsOpen(true);
         if (source === 'meta_library') {
             fetchMetaLibrary();
@@ -449,11 +597,9 @@ export default function MetaMediaLibraryModal({
         }
     };
 
-    if (!isOpen) {
-        if (renderTrigger) {
-            return renderTrigger(openWithSource);
-        }
-        return (
+    const trigger = renderTrigger
+        ? renderTrigger(openWithSource)
+        : (
             <div className="p-[1.5px] rounded-2xl bg-gradient-to-r from-blue-400 to-purple-400 shadow-xs">
                 <Button
                     type="button"
@@ -474,18 +620,20 @@ export default function MetaMediaLibraryModal({
                 </Button>
             </div>
         );
-    }
 
     return (
         <>
-            {/* Overlay */}
-            <div
-                className="fixed inset-0 bg-black/50 z-50"
-                onClick={() => setIsOpen(false)}
-            />
+            {trigger}
+            {isOpen && (
+                <>
+                    {/* Overlay */}
+                    <div
+                        className="fixed inset-0 bg-black/50 z-50"
+                        onClick={() => setIsOpen(false)}
+                    />
 
-            {/* Modal */}
-            <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-5xl max-h-[90vh] rounded-3xl bg-white p-6 shadow-lg flex flex-col">
+                    {/* Modal */}
+                    <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-5xl max-h-[90vh] rounded-3xl bg-white p-6 shadow-lg flex flex-col">
 
                 {/* Header */}
                 <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -511,6 +659,18 @@ export default function MetaMediaLibraryModal({
                                 </TabsList>
                             </Tabs>
                         )}
+                        {mediaSource === 'meta_library' && (
+                            <div className="relative min-w-[220px] flex-1 sm:flex-none sm:w-64">
+                                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                                <Input
+                                    type="search"
+                                    value={metaSearchQuery}
+                                    onChange={(event) => setMetaSearchQuery(event.target.value)}
+                                    placeholder="Search asset names..."
+                                    className="h-9 rounded-xl border-gray-200 pl-9 pr-3 text-sm focus-visible:ring-0 focus-visible:ring-offset-0"
+                                />
+                            </div>
+                        )}
                         <Button
                             type="button"
                             variant="outline"
@@ -519,7 +679,7 @@ export default function MetaMediaLibraryModal({
                                 if (mediaSource === 'instagram') {
                                     fetchInstagramPosts(true);
                                 } else {
-                                    fetchMetaLibrary();
+                                    fetchMetaLibrary(true);
                                 }
                             }}
                             disabled={mediaSource === 'instagram' ? loadingIg : loadingMeta}
@@ -567,9 +727,17 @@ export default function MetaMediaLibraryModal({
                         ) : displayItems.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-12 text-gray-500">
                                 <ImageIcon className="h-12 w-12 mb-2 opacity-50" />
-                                <p>{mediaSource === 'instagram' && !instagramAccountId
-                                    ? 'No Instagram account selected. Please select one first.'
-                                    : 'No images found.'}</p>
+                                <p>{isMetaSearchActive
+                                    ? 'No results found.'
+                                    : mediaSource === 'instagram' && !instagramAccountId
+                                        ? 'No Instagram account selected. Please select one first.'
+                                        : 'No images found.'}</p>
+                                {isMetaSearchActive && activeMetaPagination.hasMore && (
+                                    <p className="mt-1 text-sm text-gray-400">
+                                        Try loading more items to search beyond the currently loaded assets.
+                                    </p>
+                                )}
+                                {isMetaSearchActive && renderLoadMoreButton()}
                             </div>
                         ) : (
                             <>
@@ -612,6 +780,17 @@ export default function MetaMediaLibraryModal({
                                                                 onCheckedChange={() => isMeta ? toggleMetaFile(item) : toggleIgPost(item)}
                                                                 className="absolute top-2 right-2 rounded-md h-5 w-5 bg-white/80 border-gray-300"
                                                             />
+                                                            {isMeta && item.source && (
+                                                                <button
+                                                                    type="button"
+                                                                    className="absolute top-2 left-2 z-20 flex h-5 w-5 items-center justify-center rounded-md border border-gray-300 bg-white text-gray-800 shadow-sm transition hover:bg-white hover:text-black"
+                                                                    onClick={(event) => openSourceUrl(event, item.source)}
+                                                                    aria-label="Open video in new tab"
+                                                                    title="Open video in new tab"
+                                                                >
+                                                                    <ExternalLink className="h-3 w-3" />
+                                                                </button>
+                                                            )}
                                                         </div>
                                                         {!isMeta ? (
                                                             <IgCardInfo item={item} instagramAccountId={instagramAccountId} />
@@ -629,34 +808,7 @@ export default function MetaMediaLibraryModal({
                                     {/* Load More for images */}
 
                                 </ScrollArea>
-                                {mediaSource === 'meta_library' && metaImagesPagination.hasMore && (
-                                    <div className="flex justify-center pt-4">
-                                        <Button
-                                            type="button"
-                                            onClick={loadMoreMetaImages}
-                                            disabled={loadingMoreMetaImages}
-                                            className="w-full rounded-xl bg-zinc-700 text-white hover:bg-zinc-800 hover:text-white"
-                                        >
-                                            {loadingMoreMetaImages ? (
-                                                <><Loader2 className="h-4 w-4 animate-spin mr-2" />Loading...</>
-                                            ) : "Load More"}
-                                        </Button>
-                                    </div>
-                                )}
-                                {mediaSource === 'instagram' && igPagination.hasMore && (
-                                    <div className="flex justify-center pt-4">
-                                        <Button
-                                            type="button"
-                                            onClick={loadMoreIg}
-                                            disabled={loadingMoreIg}
-                                            className="w-full rounded-xl bg-zinc-700 text-white hover:bg-zinc-800 hover:text-white"
-                                        >
-                                            {loadingMoreIg ? (
-                                                <><Loader2 className="h-4 w-4 animate-spin mr-2" />Loading...</>
-                                            ) : "Load More"}
-                                        </Button>
-                                    </div>
-                                )}
+                                {renderLoadMoreButton()}
                             </>
                         )}
                     </TabsContent>
@@ -669,7 +821,13 @@ export default function MetaMediaLibraryModal({
                         ) : displayItems.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-12 text-gray-500">
                                 <Video className="h-12 w-12 mb-2 opacity-50" />
-                                <p>No videos found.</p>
+                                <p>{isMetaSearchActive ? 'No results found.' : 'No videos found.'}</p>
+                                {isMetaSearchActive && activeMetaPagination.hasMore && (
+                                    <p className="mt-1 text-sm text-gray-400">
+                                        Try loading more items to search beyond the currently loaded assets.
+                                    </p>
+                                )}
+                                {isMetaSearchActive && renderLoadMoreButton()}
                             </div>
                         ) : (
                             <>
@@ -711,6 +869,17 @@ export default function MetaMediaLibraryModal({
                                                                 onCheckedChange={() => isMeta ? toggleMetaFile(item) : toggleIgPost(item)}
                                                                 className="absolute top-2 right-2 rounded-md h-5 w-5 bg-white/80 border-gray-300"
                                                             />
+                                                            {isMeta && item.source && (
+                                                                <button
+                                                                    type="button"
+                                                                    className="absolute top-2 left-2 z-20 flex h-5 w-5 items-center justify-center rounded-md border border-gray-300 bg-white text-gray-800 shadow-sm transition hover:bg-white hover:text-black"
+                                                                    onClick={(event) => openSourceUrl(event, item.source)}
+                                                                    aria-label="Open video in new tab"
+                                                                    title="Open video in new tab"
+                                                                >
+                                                                    <ExternalLink className="h-3 w-3" />
+                                                                </button>
+                                                            )}
                                                         </div>
                                                         {!isMeta ? (
                                                             <IgCardInfo item={item} instagramAccountId={instagramAccountId} />
@@ -728,34 +897,7 @@ export default function MetaMediaLibraryModal({
 
                                 </ScrollArea>
                                 {/* Load More for videos */}
-                                {mediaSource === 'meta_library' && metaVideosPagination.hasMore && (
-                                    <div className="flex justify-center pt-4">
-                                        <Button
-                                            type="button"
-                                            onClick={loadMoreMetaVideos}
-                                            disabled={loadingMoreMetaVideos}
-                                            className="w-full rounded-xl bg-zinc-700 text-white hover:bg-zinc-800 hover:text-white"
-                                        >
-                                            {loadingMoreMetaVideos ? (
-                                                <><Loader2 className="h-4 w-4 animate-spin mr-2" />Loading...</>
-                                            ) : "Load More"}
-                                        </Button>
-                                    </div>
-                                )}
-                                {mediaSource === 'instagram' && igPagination.hasMore && (
-                                    <div className="flex justify-center pt-4">
-                                        <Button
-                                            type="button"
-                                            onClick={loadMoreIg}
-                                            disabled={loadingMoreIg}
-                                            className="w-full rounded-xl bg-zinc-700 text-white hover:bg-zinc-800 hover:text-white"
-                                        >
-                                            {loadingMoreIg ? (
-                                                <><Loader2 className="h-4 w-4 animate-spin mr-2" />Loading...</>
-                                            ) : "Load More"}
-                                        </Button>
-                                    </div>
-                                )}
+                                {renderLoadMoreButton()}
                             </>
                         )}
                     </TabsContent>
@@ -787,7 +929,9 @@ export default function MetaMediaLibraryModal({
                         </Button>
                     </div>
                 </div>
-            </div >
+                    </div>
+                </>
+            )}
         </>
     );
 }

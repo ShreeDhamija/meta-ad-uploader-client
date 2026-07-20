@@ -9,6 +9,7 @@ import {
   CommandInput,
   CommandList,
   CommandItem,
+  CommandGroup,
 } from "@/components/ui/command"
 import { Button } from "@/components/ui/button"
 import { ChevronsUpDown, RefreshCcw, Loader } from "lucide-react"
@@ -23,6 +24,7 @@ function PageSelectors({
   setSelectedPage,
   selectedInstagram,
   setSelectedInstagram,
+  onLinkMorePages,
 }) {
   const { pages, setPages, pagesLoading } = useAppData()
 
@@ -49,6 +51,8 @@ function PageSelectors({
     ),
     [pages, instagramSearch]
   );
+  const hasPages = pages.length > 0;
+  const hasInstagramAccounts = pages.some((p) => p.instagramAccount);
 
   // Memoized refresh function
   const refreshPages = useCallback(async () => {
@@ -103,6 +107,12 @@ function PageSelectors({
     setOpenInstagramDropdown(false);
   }, [setSelectedInstagram]);
 
+  const handleLinkMorePages = useCallback(() => {
+    setOpenPageDropdown(false);
+    setOpenInstagramDropdown(false);
+    onLinkMorePages?.();
+  }, [onLinkMorePages]);
+
   return (
     <div className="bg-[#f5f5f5] rounded-2xl p-4 space-y-4">
       <div className="flex items-center justify-between mb-1">
@@ -142,20 +152,27 @@ function PageSelectors({
                     <Loader className="h-4 w-4 animate-spin" />
                     <span>Loading pages...</span>
                   </div>
-                ) : (
+                ) : selectedPage?.name ? (
                   <div className="flex items-center gap-2">
-                    {selectedPage?.name && (
-                      <img
-                        src={
-                          selectedPage.profilePicture ||
-                          "https://api.withblip.com/backup_page_image.png"
-                        }
-                        alt="Page"
-                        className="w-5 h-5 rounded-full object-cover border border-gray-300"
-                      />
-                    )}
-                    <span>{selectedPage?.name || "Select Facebook Page"}</span>
+                    <img
+                      src={
+                        selectedPage.profilePicture ||
+                        "https://api.withblip.com/backup_page_image.png"
+                      }
+                      alt="Page"
+                      className="w-5 h-5 rounded-full object-cover border border-gray-300"
+                    />
+                    <span>{selectedPage.name}</span>
                   </div>
+                ) : !hasPages ? (
+                  <span className="truncate text-gray-500">
+                    No pages found.{" "}
+                    <span className="text-xs font-medium text-black underline underline-offset-2">
+                      Click to link more pages
+                    </span>
+                  </span>
+                ) : (
+                  <span>Select Facebook Page</span>
                 )}
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
               </Button>
@@ -176,25 +193,41 @@ function PageSelectors({
                   wrapperClassName="bg-gray-50 border-gray-200"
                 />
                 <CommandList className="max-h-[300px] overflow-y-auto rounded-xl">
-                  {filteredPages.map((page) => (
-                    <CommandItem
-                      key={page.id}
-                      value={page.id}
-                      onSelect={() => handlePageSelect(page)}
-                      className="px-3 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150 hover:bg-gray-100"
-                    >
-                      <div className="flex items-center gap-2">
-                        <img
-                          src={page.profilePicture}
-                          alt={page.name}
-                          className="w-5 h-5 rounded-full object-cover"
-                        />
-                        <span>{page.name}</span>
-                        <span className="text-xs text-gray-400 ml-2">{page.id}</span> {/* 👈 Gray ID on same line */}
+                  {filteredPages.length > 0 ? (
+                    <CommandGroup>
+                      {filteredPages.map((page) => (
+                        <CommandItem
+                          key={page.id}
+                          value={page.id}
+                          onSelect={() => handlePageSelect(page)}
+                          className="px-3 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150 hover:bg-gray-100"
+                        >
+                          <div className="flex items-center gap-2">
+                            <img
+                              src={page.profilePicture}
+                              alt={page.name}
+                              className="w-5 h-5 rounded-full object-cover"
+                            />
+                            <span>{page.name}</span>
+                            <span className="text-xs text-gray-400 ml-2">{page.id}</span> {/* 👈 Gray ID on same line */}
 
-                      </div>
-                    </CommandItem>
-                  ))}
+                          </div>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  ) : (
+                    <div className="px-4 py-5 text-center">
+                      <p className="mb-2 text-sm text-gray-500">No pages found.</p>
+                      <Button
+                        type="button"
+                        variant="link"
+                        onClick={handleLinkMorePages}
+                        className="h-auto p-0 text-xs font-medium text-black underline underline-offset-2 hover:text-gray-700"
+                      >
+                        Confirm Blip has access to pages to make ads
+                      </Button>
+                    </div>
+                  )}
                 </CommandList>
               </Command>
             </PopoverContent>
@@ -221,7 +254,18 @@ function PageSelectors({
                       className="w-6 h-6 rounded-full object-cover border border-gray-300"
                     />
                   )}
-                  <span>{selectedInstagram?.username || "Select Instagram Account"}</span>
+                  {selectedInstagram?.username ? (
+                    <span>{selectedInstagram.username}</span>
+                  ) : !hasInstagramAccounts ? (
+                    <span className="truncate text-gray-500">
+                      No IG accounts found.{" "}
+                      <span className="text-xs font-medium text-black underline underline-offset-2">
+                        Click to link more pages
+                      </span>
+                    </span>
+                  ) : (
+                    <span>Select Instagram Account</span>
+                  )}
                 </div>
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
               </Button>
@@ -242,26 +286,42 @@ function PageSelectors({
                   wrapperClassName="bg-gray-50 border-gray-200"
                 />
                 <CommandList className="max-h-[300px] overflow-y-auto rounded-xl">
-                  {filteredInstagramAccounts.map((page) => (
-                    <CommandItem
-                      key={page.instagramAccount.id}
-                      value={page.instagramAccount.id}
-                      onSelect={() => handleInstagramSelect(page.instagramAccount)}
-                      className="px-3 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150 hover:bg-gray-100"
-                    >
-                      <div className="flex items-center gap-2">
-                        <img
-                          src={
-                            page.instagramAccount.profilePictureUrl ||
-                            "https://api.withblip.com/backup_page_image.png"
-                          }
-                          alt={page.instagramAccount.username}
-                          className="w-5 h-5 rounded-full object-cover"
-                        />
-                        <span>{page.instagramAccount.username}</span>
-                      </div>
-                    </CommandItem>
-                  ))}
+                  {filteredInstagramAccounts.length > 0 ? (
+                    <CommandGroup>
+                      {filteredInstagramAccounts.map((page) => (
+                        <CommandItem
+                          key={page.instagramAccount.id}
+                          value={page.instagramAccount.id}
+                          onSelect={() => handleInstagramSelect(page.instagramAccount)}
+                          className="px-3 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150 hover:bg-gray-100"
+                        >
+                          <div className="flex items-center gap-2">
+                            <img
+                              src={
+                                page.instagramAccount.profilePictureUrl ||
+                                "https://api.withblip.com/backup_page_image.png"
+                              }
+                              alt={page.instagramAccount.username}
+                              className="w-5 h-5 rounded-full object-cover"
+                            />
+                            <span>{page.instagramAccount.username}</span>
+                          </div>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  ) : (
+                    <div className="px-4 py-5 text-center">
+                      <p className="mb-2 text-sm text-gray-500">No IG accounts found.</p>
+                      <Button
+                        type="button"
+                        variant="link"
+                        onClick={handleLinkMorePages}
+                        className="h-auto p-0 text-xs font-medium text-black underline underline-offset-2 hover:text-gray-700"
+                      >
+                        Confirm Blip has access to pages to make ads
+                      </Button>
+                    </div>
+                  )}
                 </CommandList>
               </Command>
             </PopoverContent>

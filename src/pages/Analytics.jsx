@@ -23,7 +23,8 @@ export default function Analytics() {
         hasActiveAccess,
         loading: subscriptionLoading,
         canExtendTrial,
-        extendTrial
+        extendTrial,
+        isPastDue
     } = useSubscription()
 
     useEffect(() => {
@@ -31,13 +32,31 @@ export default function Analytics() {
 
         if (
             !subscriptionLoading &&
-            isTrialExpired() &&
+            (isTrialExpired() || isPastDue()) &&
             !userHasActiveAccess &&
             !hasDismissedTrialPopup
         ) {
             setShowTrialExpiredPopup(true)
         }
-    }, [subscriptionLoading, isTrialExpired, hasActiveAccess, hasDismissedTrialPopup])
+    }, [subscriptionLoading, isTrialExpired, isPastDue, hasActiveAccess, hasDismissedTrialPopup])
+
+    const handleUpdatePayment = async () => {
+        try {
+            const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com'
+            const res = await fetch(`${API_BASE_URL}/api/stripe/customer-portal`, {
+                method: 'POST',
+                credentials: 'include',
+            })
+            if (!res.ok) {
+                toast.error("Couldn't open payment update page")
+                return
+            }
+            const { url } = await res.json()
+            window.location.href = url
+        } catch {
+            toast.error("Couldn't open payment update page")
+        }
+    }
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search)
@@ -79,7 +98,7 @@ export default function Analytics() {
     if (!isLoggedIn) return <Navigate to="/login" />
 
     return (
-        <div className="min-h-screen w-full bg-[#f6f6f6]">
+        <div className="min-h-screen w-full">
             <div className="mobile-message fixed inset-0 bg-white flex flex-col items-center justify-center p-6 z-[100] lg:hidden">
                 <div className="text-center max-w-md">
                     <img src={DesktopIcon} alt="Desktop computer" className="w-24 h-24 mb-4 mx-auto" />
@@ -131,6 +150,8 @@ export default function Analytics() {
                     onExtendTrial={handleExtendTrial}
                     isTeamOwner={!!subscriptionData.isTeamOwner && !!subscriptionData.teamId}
                     isTeamMember={!subscriptionData.isTeamOwner && !!subscriptionData.teamId}
+                    isPastDue={isPastDue()}
+                    onUpdatePayment={handleUpdatePayment}
                 />
             )}
 

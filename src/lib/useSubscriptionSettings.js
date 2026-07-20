@@ -15,9 +15,18 @@ export default function useSubscription() {
     const fetchSubscriptionData = async () => {
         try {
             setLoading(true);
-            const res = await fetch(`${API_BASE_URL}/api/subscription/status`, {
+            let res = await fetch(`${API_BASE_URL}/api/subscription/status`, {
                 credentials: "include",
             });
+
+            // A 401 on first load is usually a brief session race right after
+            // login. Retry once before giving up — never redirect.
+            if (res.status === 401) {
+                await new Promise((r) => setTimeout(r, 400));
+                res = await fetch(`${API_BASE_URL}/api/subscription/status`, {
+                    credentials: "include",
+                });
+            }
 
             if (res.ok) {
                 const data = await res.json();
@@ -49,9 +58,7 @@ export default function useSubscription() {
             if (now > cancelDate) return false;
         }
 
-        // if (subscriptionData.teamId && !subscriptionData.isTeamOwner) {
-        //     return true;
-        // }
+
 
 
         // Existing logic
@@ -69,6 +76,10 @@ export default function useSubscription() {
 
     const isPaidSubscriber = () => {
         return subscriptionData.subscriptionStatus === 'active';
+    };
+
+    const isPastDue = () => {
+        return subscriptionData.subscriptionStatus === 'past_due';
     };
 
 
@@ -104,6 +115,7 @@ export default function useSubscription() {
         isOnTrial,
         isTrialExpired,
         isPaidSubscriber,
+        isPastDue,
         extendTrial,      // add
         canExtendTrial
     };

@@ -48,6 +48,10 @@ export default function ScheduleDateTimePicker({ label, value, onChange, onClear
             return null;
         }
 
+        if (isSameLocalDay(date, new Date())) {
+            return null;
+        }
+
         return formatTimeValue(minDate);
     };
 
@@ -82,7 +86,10 @@ export default function ScheduleDateTimePicker({ label, value, onChange, onClear
             setSelectedDate(null);
             return;
         }
-        const nextTime = clampTimeForDate(date, time);
+        const defaultTime = !selectedDate && minDate && isSameLocalDay(date, minDate)
+            ? formatTimeValue(minDate)
+            : time;
+        const nextTime = clampTimeForDate(date, defaultTime);
         const [h, m] = nextTime.split(":").map(Number);
         const d = new Date(date);
         d.setHours(h, m, 0, 0);

@@ -1,117 +1,116 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useMemo, useCallback, useRef } from "react"
-import * as DialogPrimitive from "@radix-ui/react-dialog"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Command, CommandList, CommandItem, CommandGroup } from "@/components/ui/command"
+import { Button } from "@/components/ui/button";
+import { Command, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
+import { Dialog, DialogDescription, DialogFooter, DialogHeader, DialogOverlay, DialogPortal, DialogTitle } from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu"
-import {
-  Dialog,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-  DialogPortal,
-  DialogOverlay,
-} from "@/components/ui/dialog"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Info, Plus, X, Settings2, AlertTriangle } from "lucide-react"
-import { cn } from "@/lib/utils"
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { AlertTriangle, ChevronLeft, ChevronRight, Info, Plus, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const AVAILABLE_VARIABLES = [
-  { id: 'fileName', label: 'File Name' },
-  { id: 'fileType', label: 'File Type', note: '(Static/Video)' },
-  { id: 'dateDefault', label: 'Date', note: '(DD/MM/YYYY)' },
-  { id: 'dateMonthName', label: 'Date', note: '(DD-MMM-YYYY)' },
-  { id: 'dateCustom', label: 'Date (custom)', note: 'Enter your own format' },
-  { id: 'iteration', label: 'Iteration', note: '(1/2/3..)' },
-  { id: 'slug', label: 'URL Slug', note: '(Text after last / )' },
-  { id: 'adType', label: 'Ad Type', note: 'CAR/FLEX' },
-]
+  { id: "fileName", label: "File Name" },
+  { id: "fileType", label: "File Type", note: "(Static/Video)" },
+  { id: "dateDefault", label: "Date", note: "(DD/MM/YYYY)" },
+  { id: "dateMonthName", label: "Date", note: "(DD-MMM-YYYY)" },
+  { id: "dateCustom", label: "Date (custom)", note: "Enter your own format" },
+  { id: "iteration", label: "Iteration", note: "(1/2/3..)" },
+  { id: "slug", label: "URL Slug", note: "(Text after last / )" },
+  { id: "adType", label: "Ad Type", note: "CAR/FLEX" },
+];
 
 // ─── Custom Variables Setup Dialog ───────────────────────────────────────────
 
 function CustomVariablesSetupDialog({ open, onOpenChange, variables, onSave }) {
-  const [editing, setEditing] = useState([])
-  const [newValueInputs, setNewValueInputs] = useState({})
-  const nameInputRefs = useRef({})
+  const [editing, setEditing] = useState([]);
+  const [newValueInputs, setNewValueInputs] = useState({});
+  const nameInputRefs = useRef({});
 
   // Reset working copy when dialog opens
   useEffect(() => {
     if (open) {
-      const copy = variables.length > 0
-        ? variables.map((v, i) => ({ ...v, values: [...v.values], _editKey: i }))
-        : [{ name: "", values: [], _editKey: 0 }]
-      setEditing(copy)
-      setNewValueInputs({})
+      const copy =
+        variables.length > 0 ? variables.map((v, i) => ({ ...v, values: [...v.values], _editKey: i })) : [{ name: "", values: [], _editKey: 0 }];
+      setEditing(copy);
+      setNewValueInputs({});
     }
-  }, [open, variables])
+  }, [open, variables]);
 
   const addCategory = useCallback(() => {
-    const newKey = Date.now()
-    setEditing(prev => [...prev, { name: "", values: [], _editKey: newKey }])
+    const newKey = Date.now();
+    setEditing((prev) => [...prev, { name: "", values: [], _editKey: newKey }]);
     setTimeout(() => {
-      nameInputRefs.current[newKey]?.focus()
-    }, 50)
-  }, [])
+      nameInputRefs.current[newKey]?.focus();
+    }, 50);
+  }, []);
 
   const removeCategory = useCallback((editKey) => {
-    setEditing(prev => prev.filter(c => c._editKey !== editKey))
-  }, [])
+    setEditing((prev) => prev.filter((c) => c._editKey !== editKey));
+  }, []);
 
   const updateCategoryName = useCallback((editKey, name) => {
-    setEditing(prev => prev.map(c => c._editKey === editKey ? { ...c, name } : c))
-  }, [])
+    setEditing((prev) => prev.map((c) => (c._editKey === editKey ? { ...c, name } : c)));
+  }, []);
 
-  const addValue = useCallback((editKey) => {
-    const val = (newValueInputs[editKey] || "").trim()
-    if (!val) return
+  const addValue = useCallback(
+    (editKey) => {
+      const val = (newValueInputs[editKey] || "").trim();
+      if (!val) return;
 
-    setEditing(prev => prev.map(c => {
-      if (c._editKey !== editKey) return c
-      if (c.values.includes(val)) return c
-      return { ...c, values: [...c.values, val] }
-    }))
-    setNewValueInputs(prev => ({ ...prev, [editKey]: "" }))
-  }, [newValueInputs])
+      setEditing((prev) =>
+        prev.map((c) => {
+          if (c._editKey !== editKey) return c;
+          if (c.values.includes(val)) return c;
+          return { ...c, values: [...c.values, val] };
+        }),
+      );
+      setNewValueInputs((prev) => ({ ...prev, [editKey]: "" }));
+    },
+    [newValueInputs],
+  );
 
   const removeValue = useCallback((editKey, valueIndex) => {
-    setEditing(prev => prev.map(c => {
-      if (c._editKey !== editKey) return c
-      return { ...c, values: c.values.filter((_, i) => i !== valueIndex) }
-    }))
-  }, [])
+    setEditing((prev) =>
+      prev.map((c) => {
+        if (c._editKey !== editKey) return c;
+        return { ...c, values: c.values.filter((_, i) => i !== valueIndex) };
+      }),
+    );
+  }, []);
 
-  const handleValueKeyDown = useCallback((e, editKey) => {
-    if (e.key === "Enter") {
-      e.preventDefault()
-      addValue(editKey)
-    }
-  }, [addValue])
+  const handleValueKeyDown = useCallback(
+    (e, editKey) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        addValue(editKey);
+      }
+    },
+    [addValue],
+  );
 
   const handleSave = useCallback(() => {
-    const cleaned = editing
-      .filter(c => c.name.trim().length > 0)
-      .map(c => ({ name: c.name.trim(), values: c.values }))
-    onSave(cleaned)
-    onOpenChange(false)
-  }, [editing, onSave, onOpenChange])
+    const cleaned = editing.filter((c) => c.name.trim().length > 0).map((c) => ({ name: c.name.trim(), values: c.values }));
+    onSave(cleaned);
+    onOpenChange(false);
+  }, [editing, onSave, onOpenChange]);
 
-  const hasValidCategories = editing.some(c => c.name.trim().length > 0)
+  const hasValidCategories = editing.some((c) => c.name.trim().length > 0);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -128,25 +127,21 @@ function CustomVariablesSetupDialog({ open, onOpenChange, variables, onSave }) {
           }}
         />
         <DialogPrimitive.Content
-          className="fixed left-1/2 top-1/2 z-50 flex w-full max-w-lg -translate-x-1/2 -translate-y-1/2 flex-col gap-4 rounded-2xl border bg-background p-6 shadow-lg duration-0"
+          className="fixed left-1/2 top-1/2 z-50 flex w-full max-w-lg -translate-x-1/2 -translate-y-1/2 flex-col gap-4 rounded-[20px] border bg-background p-6 shadow-lg duration-0"
+          style={{ maxHeight: "min(800px, calc(100dvh - 2rem))" }}
         >
           <DialogHeader>
-            <DialogTitle className="text-base font-semibold">
-              Set Up Custom Variables
-            </DialogTitle>
+            <DialogTitle className="text-base font-semibold">Set Up Custom Variables</DialogTitle>
             <DialogDescription className="text-sm text-gray-500">
               Create variable categories with values you can use in your ad naming formula. Type{" "}
-              <span className="inline-block mx-0.5 px-1 py-0.5 bg-gray-100 border border-gray-200 rounded text-black text-xs font-mono">@</span>{" "}
-              in the formula input to use them.
+              <span className="inline-block mx-0.5 px-1 py-0.5 bg-gray-100 border border-gray-200 rounded text-black text-xs font-mono">@</span> in
+              the formula input to use them.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto space-y-4 py-2 pr-1 custom-scrollbar">
+          <div className="min-h-0 flex-1 overflow-y-auto space-y-4 py-2 pr-1 custom-scrollbar">
             {editing.map((category) => (
-              <div
-                key={category._editKey}
-                className="bg-gray-50 rounded-xl p-4 space-y-3 relative group"
-              >
+              <div key={category._editKey} className="bg-[#f7f7f7] rounded-xl p-4 space-y-3 relative group">
                 {editing.length > 1 && (
                   <button
                     type="button"
@@ -158,11 +153,11 @@ function CustomVariablesSetupDialog({ open, onOpenChange, variables, onSave }) {
                 )}
 
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-gray-500">
-                    Variable Name
-                  </Label>
+                  <Label className="text-xs font-medium text-gray-500">Variable Name</Label>
                   <Input
-                    ref={(el) => { nameInputRefs.current[category._editKey] = el }}
+                    ref={(el) => {
+                      nameInputRefs.current[category._editKey] = el;
+                    }}
                     value={category.name}
                     onChange={(e) => updateCategoryName(category._editKey, e.target.value)}
                     placeholder="e.g. Category, URL Type, Region..."
@@ -171,9 +166,7 @@ function CustomVariablesSetupDialog({ open, onOpenChange, variables, onSave }) {
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-gray-500">
-                    Values
-                  </Label>
+                  <Label className="text-xs font-medium text-gray-500">Values</Label>
 
                   {category.values.length > 0 && (
                     <div className="flex flex-wrap gap-1.5">
@@ -199,7 +192,7 @@ function CustomVariablesSetupDialog({ open, onOpenChange, variables, onSave }) {
                     <Input
                       value={newValueInputs[category._editKey] || ""}
                       onChange={(e) =>
-                        setNewValueInputs(prev => ({
+                        setNewValueInputs((prev) => ({
                           ...prev,
                           [category._editKey]: e.target.value,
                         }))
@@ -223,38 +216,24 @@ function CustomVariablesSetupDialog({ open, onOpenChange, variables, onSave }) {
               </div>
             ))}
 
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={addCategory}
-              className="text-sm text-gray-500 hover:text-gray-700 gap-1.5"
-            >
+            <Button type="button" variant="ghost" size="sm" onClick={addCategory} className="text-sm text-gray-500 hover:text-gray-700 gap-1.5">
               <Plus className="w-3.5 h-3.5" />
               Add Another Variable
             </Button>
           </div>
 
           <DialogFooter className="pt-2 flex gap-3">
-            <Button
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              className="rounded-xl flex-1 hover:bg-white"
-            >
+            <Button variant="outline" onClick={() => onOpenChange(false)} className="rounded-xl flex-1 hover:bg-white">
               Cancel
             </Button>
-            <Button
-              onClick={handleSave}
-              className="rounded-xl flex-1 bg-blue-500 hover:bg-blue-600 text-white"
-              disabled={!hasValidCategories}
-            >
+            <Button onClick={handleSave} className="rounded-xl flex-1 bg-blue-500 hover:bg-blue-600 text-white" disabled={!hasValidCategories}>
               Save Variables
             </Button>
           </DialogFooter>
         </DialogPrimitive.Content>
       </DialogPortal>
     </Dialog>
-  )
+  );
 }
 
 // ─── Main Component ──────────────────────────────────────────────────────────
@@ -265,406 +244,455 @@ export default function ReorderAdNameParts({
   variant = "default",
   customVariables = [],
   onCustomVariablesChange,
-  hideInfoTooltip = false,   // ← add this
-
+  hideInfoTooltip = false, // ← add this
+  postSwitcher = null,
+  allowedVariableIds = null,
 }) {
-  const [inputValue, setInputValue] = useState(formulaInput)
+  const visibleVariables = useMemo(
+    () => (allowedVariableIds ? AVAILABLE_VARIABLES.filter((v) => allowedVariableIds.includes(v.id)) : AVAILABLE_VARIABLES),
+    [allowedVariableIds],
+  );
+  const [inputValue, setInputValue] = useState(formulaInput);
 
   // Slash (/) dropdown — built-in variables
-  const [showSlashDropdown, setShowSlashDropdown] = useState(false)
-  const [slashDropdownPos, setSlashDropdownPos] = useState({ top: 0, left: 0 })
+  const [showSlashDropdown, setShowSlashDropdown] = useState(false);
+  const [slashDropdownPos, setSlashDropdownPos] = useState({ top: 0, left: 0 });
 
   // At (@) dropdown — custom variables via shadcn DropdownMenu
-  const [showAtDropdown, setShowAtDropdown] = useState(false)
-  const [atDropdownPos, setAtDropdownPos] = useState({ top: 0, left: 0 })
+  const [showAtDropdown, setShowAtDropdown] = useState(false);
+  const [atDropdownPos, setAtDropdownPos] = useState({ top: 0, left: 0 });
 
   // Inline category value dropdown (cursor inside {{CategoryName}})
-  const [inlineDropdown, setInlineDropdown] = useState(null)
+  const [inlineDropdown, setInlineDropdown] = useState(null);
   // Shape: { category: {name, values}, startIndex, endIndex, position }
 
   // Setup dialog
-  const [showSetupDialog, setShowSetupDialog] = useState(false)
+  const [showSetupDialog, setShowSetupDialog] = useState(false);
 
   // Date format validation
-  const [dateFormatError, setDateFormatError] = useState("")
+  const [dateFormatError, setDateFormatError] = useState("");
   // Variable name validation
-  const [variableWarning, setVariableWarning] = useState("")
-  const variableWarningTimer = useRef(null)
+  const [variableWarning, setVariableWarning] = useState("");
+  const variableWarningTimer = useRef(null);
 
-  const inputRef = useRef(null)
-  const slashDropdownRef = useRef(null)
-  const inlineDropdownRef = useRef(null)
-  const commandInputRef = useRef(null)
+  const inputRef = useRef(null);
+  const slashDropdownRef = useRef(null);
+  const inlineDropdownRef = useRef(null);
+  const commandInputRef = useRef(null);
 
   // Sync with parent prop
   useEffect(() => {
-    setInputValue(formulaInput)
-  }, [formulaInput])
+    setInputValue(formulaInput);
+  }, [formulaInput]);
 
   // ── Warning detection for home variant ──
   // Finds any {{CategoryName}} tokens (no colon) that match a custom variable
   // category — these need a specific value selected before ad creation.
 
   const categoryWarnings = useMemo(() => {
-    if (variant !== "home" || !customVariables.length) return []
+    if (variant !== "home" || !customVariables.length) return [];
 
-    const warnings = []
-    const regex = /\{\{([^:}]+)\}\}/g
-    let match
+    const warnings = [];
+    const regex = /\{\{([^:}]+)\}\}/g;
+    let match;
     while ((match = regex.exec(inputValue)) !== null) {
-      const content = match[1].trim()
-      const isBuiltIn = AVAILABLE_VARIABLES.some(
-        v => v.label === content || content.startsWith("Date(")
-      )
-      const isCategory = customVariables.some(c => c.name === content)
+      const content = match[1].trim();
+      const isBuiltIn = AVAILABLE_VARIABLES.some((v) => v.label === content || content.startsWith("Date("));
+      const isCategory = customVariables.some((c) => c.name === content);
       if (!isBuiltIn && isCategory) {
-        warnings.push(content)
+        warnings.push(content);
       }
     }
-    return [...new Set(warnings)]
-  }, [inputValue, customVariables, variant])
+    return [...new Set(warnings)];
+  }, [inputValue, customVariables, variant]);
+
+  const hasCustomDatePlaceholder = useMemo(() => /\{\{Date\(custom\)\}\}/i.test(inputValue), [inputValue]);
 
   // ── Helpers ──
 
-  const getCursorPosition = useCallback((input, cursorIndex) => {
-    const span = document.createElement("span")
-    span.style.font = window.getComputedStyle(input).font
-    span.style.visibility = "hidden"
-    span.style.position = "absolute"
-    span.style.whiteSpace = "pre"
-    span.textContent = inputValue.substring(0, cursorIndex)
-    document.body.appendChild(span)
-    const textWidth = span.offsetWidth
-    document.body.removeChild(span)
+  const getCursorPosition = useCallback(
+    (input, cursorIndex) => {
+      const span = document.createElement("span");
+      span.style.font = window.getComputedStyle(input).font;
+      span.style.visibility = "hidden";
+      span.style.position = "absolute";
+      span.style.whiteSpace = "pre";
+      span.textContent = inputValue.substring(0, cursorIndex);
+      document.body.appendChild(span);
+      const textWidth = span.offsetWidth;
+      document.body.removeChild(span);
 
-    const inputStyles = window.getComputedStyle(input)
-    const paddingLeft = parseInt(inputStyles.paddingLeft)
+      const inputStyles = window.getComputedStyle(input);
+      const paddingLeft = parseInt(inputStyles.paddingLeft);
 
-    return {
-      top: input.offsetHeight + 4,
-      left: paddingLeft + textWidth,
-    }
-  }, [inputValue])
+      return {
+        top: input.offsetHeight + 4,
+        left: paddingLeft + textWidth,
+      };
+    },
+    [inputValue],
+  );
 
   const validateDateFormats = useCallback((value) => {
-    const dateMatches = [...value.matchAll(/\{\{Date\(([^)]+)\)\}\}/g)]
+    const dateMatches = [...value.matchAll(/\{\{Date\(([^)]+)\)\}\}/g)];
     if (dateMatches.length === 0) {
-      setDateFormatError("")
-      return
+      setDateFormatError("");
+      return;
     }
     for (const match of dateMatches) {
-      const fmt = match[1].toUpperCase()
-      if (fmt === "CUSTOM" || "CUSTOM".startsWith(fmt)) continue
+      const fmt = match[1].toUpperCase();
+      if (fmt === "CUSTOM" || "CUSTOM".startsWith(fmt)) continue;
       const stripped = fmt
-        .replace(/YYYY/g, "").replace(/YY/g, "")
-        .replace(/MMM/g, "").replace(/MM/g, "")
-        .replace(/DD/g, "").replace(/D/g, "").replace(/M/g, "")
-      const remaining = stripped.replace(/[\s/\-._]/g, "")
+        .replace(/YYYY/g, "")
+        .replace(/YY/g, "")
+        .replace(/MMM/g, "")
+        .replace(/MM/g, "")
+        .replace(/DD/g, "")
+        .replace(/D/g, "")
+        .replace(/M/g, "");
+      const remaining = stripped.replace(/[\s/\-._]/g, "");
       if (remaining.length > 0) {
-        setDateFormatError(`Invalid date token "${remaining}"`)
-        return
+        setDateFormatError(`Invalid date token "${remaining}"`);
+        return;
       }
       if (!/YYYY|YY|MMM|MM|M|DD|D/.test(fmt)) {
-        setDateFormatError(`Date format "${fmt}" has no date tokens`)
-        return
+        setDateFormatError(`Date format "${fmt}" has no date tokens`);
+        return;
       }
     }
-    setDateFormatError("")
-  }, [])
+    setDateFormatError("");
+  }, []);
 
   const KNOWN_VARIABLES = useMemo(() => {
-    const builtIn = AVAILABLE_VARIABLES.map(v => v.label.toLowerCase())
-    const customNames = customVariables.map(c => c.name.toLowerCase())
-    return new Set([...builtIn, ...customNames])
-  }, [customVariables])
+    const builtIn = AVAILABLE_VARIABLES.map((v) => v.label.toLowerCase());
+    const customNames = customVariables.map((c) => c.name.toLowerCase());
+    return new Set([...builtIn, ...customNames]);
+  }, [customVariables]);
 
-  const validateVariableNames = useCallback((value) => {
-    clearTimeout(variableWarningTimer.current)
-    variableWarningTimer.current = setTimeout(() => {
-      const tokenMatches = [...value.matchAll(/\{\{([^}]+)\}\}/g)]
-      if (tokenMatches.length === 0) {
-        setVariableWarning("")
-        return
-      }
-      const unrecognized = []
-      for (const match of tokenMatches) {
-        const content = match[1].trim()
-        const lower = content.toLowerCase()
-        // Skip Date(...) patterns — validated separately
-        if (/^date\s*\(/i.test(content)) continue
-        // Skip Category:Value pairs (custom variable with selected value)
-        if (content.includes(":")) continue
-        // Check against known variables
-        if (!KNOWN_VARIABLES.has(lower)) {
-          unrecognized.push(content)
+  const validateVariableNames = useCallback(
+    (value) => {
+      clearTimeout(variableWarningTimer.current);
+      variableWarningTimer.current = setTimeout(() => {
+        const tokenMatches = [...value.matchAll(/\{\{([^}]+)\}\}/g)];
+        if (tokenMatches.length === 0) {
+          setVariableWarning("");
+          return;
         }
-      }
-      if (unrecognized.length > 0) {
-        const names = [...new Set(unrecognized)]
-        setVariableWarning(
-          names.length === 1
-            ? `"${names[0]}" is not a recognized variable`
-            : `${names.map(n => `"${n}"`).join(", ")} are not recognized variables`
-        )
-      } else {
-        setVariableWarning("")
-      }
-    }, 800)
-  }, [KNOWN_VARIABLES])
+        const unrecognized = [];
+        for (const match of tokenMatches) {
+          const content = match[1].trim();
+          const lower = content.toLowerCase();
+          // Skip Date(...) patterns — validated separately
+          if (/^date\s*\(/i.test(content)) continue;
+          // Skip Category:Value pairs (custom variable with selected value)
+          if (content.includes(":")) continue;
+          // Check against known variables
+          if (!KNOWN_VARIABLES.has(lower)) {
+            unrecognized.push(content);
+          }
+        }
+        if (unrecognized.length > 0) {
+          const names = [...new Set(unrecognized)];
+          setVariableWarning(
+            names.length === 1
+              ? `"${names[0]}" is not a recognized variable`
+              : `${names.map((n) => `"${n}"`).join(", ")} are not recognized variables`,
+          );
+        } else {
+          setVariableWarning("");
+        }
+      }, 800);
+    },
+    [KNOWN_VARIABLES],
+  );
 
   // Clean up timer on unmount
   useEffect(() => {
-    return () => clearTimeout(variableWarningTimer.current)
-  }, [])
+    return () => clearTimeout(variableWarningTimer.current);
+  }, []);
 
-  const emitChange = useCallback((newValue) => {
-    setInputValue(newValue)
-    validateDateFormats(newValue)
-    validateVariableNames(newValue)
-    if (onFormulaChange) onFormulaChange(newValue)
-  }, [onFormulaChange, validateDateFormats, validateVariableNames])
+  const emitChange = useCallback(
+    (newValue) => {
+      setInputValue(newValue);
+      validateDateFormats(newValue);
+      validateVariableNames(newValue);
+      if (onFormulaChange) onFormulaChange(newValue);
+    },
+    [onFormulaChange, validateDateFormats, validateVariableNames],
+  );
 
   // ── Detect cursor inside a category-only {{CategoryName}} ──
   // Returns dropdown config if cursor is inside a {{CategoryName}} block,
   // or null otherwise. This is how clicking inside a category-only variable
   // in the input triggers a value picker.
 
-  const detectInlineCategory = useCallback((cursorPos) => {
-    if (!customVariables.length) return null
-    const input = inputRef.current
-    if (!input) return null
+  const detectInlineCategory = useCallback(
+    (cursorPos) => {
+      if (!customVariables.length) return null;
+      const input = inputRef.current;
+      if (!input) return null;
 
-    const before = inputValue.substring(0, cursorPos)
-    const after = inputValue.substring(cursorPos)
+      const before = inputValue.substring(0, cursorPos);
+      const after = inputValue.substring(cursorPos);
 
-    const lastOpen = before.lastIndexOf("{{")
-    const lastClose = before.lastIndexOf("}}")
+      const lastOpen = before.lastIndexOf("{{");
+      const lastClose = before.lastIndexOf("}}");
 
-    // Cursor must be inside an open {{ block
-    if (lastOpen === -1 || lastOpen < lastClose) return null
+      // Cursor must be inside an open {{ block
+      if (lastOpen === -1 || lastOpen < lastClose) return null;
 
-    const closeAfter = after.indexOf("}}")
-    if (closeAfter === -1) return null
+      const closeAfter = after.indexOf("}}");
+      if (closeAfter === -1) return null;
 
-    const content = inputValue.substring(lastOpen + 2, cursorPos + closeAfter).trim()
+      const content = inputValue.substring(lastOpen + 2, cursorPos + closeAfter).trim();
 
-    // Must be category-only (no colon) and match a known custom variable
-    if (content.includes(":")) return null
+      // Must be category-only (no colon) and match a known custom variable
+      if (content.includes(":")) return null;
 
-    const matchingCat = customVariables.find(c => c.name === content)
-    if (!matchingCat) return null
+      const matchingCat = customVariables.find((c) => c.name === content);
+      if (!matchingCat) return null;
 
-    const position = getCursorPosition(input, lastOpen)
+      const position = getCursorPosition(input, lastOpen);
 
-    return {
-      category: matchingCat,
-      startIndex: lastOpen,
-      endIndex: cursorPos + closeAfter + 2,
-      position,
-    }
-  }, [inputValue, customVariables, getCursorPosition])
+      return {
+        category: matchingCat,
+        startIndex: lastOpen,
+        endIndex: cursorPos + closeAfter + 2,
+        position,
+      };
+    },
+    [inputValue, customVariables, getCursorPosition],
+  );
 
   const handleCursorCheck = useCallback(() => {
     if (showSlashDropdown || showAtDropdown) {
-      setInlineDropdown(null)
-      return
+      setInlineDropdown(null);
+      return;
     }
-    const input = inputRef.current
-    if (!input) return
-    const cursorPos = input.selectionStart
-    const result = detectInlineCategory(cursorPos)
-    setInlineDropdown(result)
-  }, [detectInlineCategory, showSlashDropdown, showAtDropdown])
+    const input = inputRef.current;
+    if (!input) return;
+    const cursorPos = input.selectionStart;
+    const result = detectInlineCategory(cursorPos);
+    setInlineDropdown(result);
+  }, [detectInlineCategory, showSlashDropdown, showAtDropdown]);
 
   // ── Input change handler ──
 
-  const handleInputChange = useCallback((e) => {
-    const newValue = e.target.value
-    const cursorPosition = e.target.selectionStart
+  const handleInputChange = useCallback(
+    (e) => {
+      const newValue = e.target.value;
+      const cursorPosition = e.target.selectionStart;
 
-    emitChange(newValue)
-    setInlineDropdown(null)
+      emitChange(newValue);
+      setInlineDropdown(null);
 
-    const textBefore = newValue.substring(0, cursorPosition)
-    const lastOpen = textBefore.lastIndexOf("{{")
-    const lastClose = textBefore.lastIndexOf("}}")
-    const insideVariable = lastOpen > lastClose
+      const textBefore = newValue.substring(0, cursorPosition);
+      const lastOpen = textBefore.lastIndexOf("{{");
+      const lastClose = textBefore.lastIndexOf("}}");
+      const insideVariable = lastOpen > lastClose;
 
-    const charTyped = newValue[cursorPosition - 1]
+      const charTyped = newValue[cursorPosition - 1];
 
-    // "/" trigger for built-in variables (only outside variable blocks)
-    if (charTyped === "/" && !insideVariable) {
-      const position = getCursorPosition(e.target, cursorPosition)
-      setSlashDropdownPos(position)
-      setShowSlashDropdown(true)
-      setShowAtDropdown(false)
-      setTimeout(() => commandInputRef.current?.focus(), 0)
-      return
-    }
+      // "/" trigger for built-in variables (only outside variable blocks)
+      if (charTyped === "/" && !insideVariable) {
+        const position = getCursorPosition(e.target, cursorPosition);
+        setSlashDropdownPos(position);
+        setShowSlashDropdown(true);
+        setShowAtDropdown(false);
+        setTimeout(() => commandInputRef.current?.focus(), 0);
+        return;
+      }
 
-    // "@" trigger for custom variables (only outside variable blocks)
-    if (charTyped === "@" && !insideVariable && customVariables.length > 0) {
-      const position = getCursorPosition(e.target, cursorPosition)
-      setAtDropdownPos(position)
-      setShowAtDropdown(true)
-      setShowSlashDropdown(false)
-      return
-    }
+      // "@" trigger for custom variables (only outside variable blocks)
+      if (charTyped === "@" && !insideVariable && customVariables.length > 0) {
+        const position = getCursorPosition(e.target, cursorPosition);
+        setAtDropdownPos(position);
+        setShowAtDropdown(true);
+        setShowSlashDropdown(false);
+        return;
+      }
 
-    setShowSlashDropdown(false)
-    setShowAtDropdown(false)
-  }, [getCursorPosition, emitChange, customVariables])
+      setShowSlashDropdown(false);
+      setShowAtDropdown(false);
+    },
+    [getCursorPosition, emitChange, customVariables],
+  );
 
   // ── Keyboard handler ──
 
-  const handleKeyDown = useCallback((e) => {
-    if (showSlashDropdown) {
-      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-        e.preventDefault()
-        return
-      }
-      if (e.key === "Escape") {
-        e.preventDefault()
-        setShowSlashDropdown(false)
-        setTimeout(() => inputRef.current?.focus(), 0)
-        return
-      }
-    }
-
-    if (showAtDropdown && e.key === "Escape") {
-      e.preventDefault()
-      setShowAtDropdown(false)
-      setTimeout(() => inputRef.current?.focus(), 0)
-      return
-    }
-
-    if (inlineDropdown && e.key === "Escape") {
-      e.preventDefault()
-      setInlineDropdown(null)
-      return
-    }
-
-    // Backspace/Delete: remove whole variable block
-    if (e.key === "Delete" || e.key === "Backspace") {
-      const cursorPosition = e.target.selectionStart
-      const textBeforeCursor = inputValue.substring(0, cursorPosition)
-
-      if (textBeforeCursor.endsWith("}}")) {
-        const match = textBeforeCursor.match(/\{\{[^}]+\}\}$/)
-        if (match) {
-          e.preventDefault()
-          const beforeVariable = inputValue.substring(0, cursorPosition - match[0].length)
-          const afterCursor = inputValue.substring(cursorPosition)
-          const newValue = beforeVariable + afterCursor
-          emitChange(newValue)
-          setTimeout(() => {
-            const newCursorPos = cursorPosition - match[0].length
-            inputRef.current?.setSelectionRange(newCursorPos, newCursorPos)
-          }, 0)
+  const handleKeyDown = useCallback(
+    (e) => {
+      if (showSlashDropdown) {
+        if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+          e.preventDefault();
+          return;
+        }
+        if (e.key === "Escape") {
+          e.preventDefault();
+          setShowSlashDropdown(false);
+          setTimeout(() => inputRef.current?.focus(), 0);
+          return;
         }
       }
-    }
-  }, [inputValue, showSlashDropdown, showAtDropdown, inlineDropdown, emitChange])
+
+      if (showAtDropdown && e.key === "Escape") {
+        e.preventDefault();
+        setShowAtDropdown(false);
+        setTimeout(() => inputRef.current?.focus(), 0);
+        return;
+      }
+
+      if (inlineDropdown && e.key === "Escape") {
+        e.preventDefault();
+        setInlineDropdown(null);
+        return;
+      }
+
+      // Backspace/Delete: remove whole variable block
+      if (e.key === "Delete" || e.key === "Backspace") {
+        const cursorPosition = e.target.selectionStart;
+        const textBeforeCursor = inputValue.substring(0, cursorPosition);
+
+        if (textBeforeCursor.endsWith("}}")) {
+          const match = textBeforeCursor.match(/\{\{[^}]+\}\}$/);
+          if (match) {
+            e.preventDefault();
+            const beforeVariable = inputValue.substring(0, cursorPosition - match[0].length);
+            const afterCursor = inputValue.substring(cursorPosition);
+            const newValue = beforeVariable + afterCursor;
+            emitChange(newValue);
+            setTimeout(() => {
+              const newCursorPos = cursorPosition - match[0].length;
+              inputRef.current?.setSelectionRange(newCursorPos, newCursorPos);
+            }, 0);
+          }
+        }
+      }
+    },
+    [inputValue, showSlashDropdown, showAtDropdown, inlineDropdown, emitChange],
+  );
 
   // ── Built-in variable select (/ dropdown) ──
 
-  const handleVariableSelect = useCallback((variable) => {
-    const input = inputRef.current
-    if (!input) return
+  const handleVariableSelect = useCallback(
+    (variable) => {
+      const input = inputRef.current;
+      if (!input) return;
 
-    const cursorPosition = input.selectionStart
-    const textBeforeCursor = inputValue.substring(0, cursorPosition)
-    const lastSlashIndex = textBeforeCursor.lastIndexOf("/")
+      const cursorPosition = input.selectionStart;
+      const textBeforeCursor = inputValue.substring(0, cursorPosition);
+      const lastSlashIndex = textBeforeCursor.lastIndexOf("/");
 
-    if (lastSlashIndex !== -1) {
-      const beforeSlash = inputValue.substring(0, lastSlashIndex)
-      const afterCursor = inputValue.substring(cursorPosition)
+      if (lastSlashIndex !== -1) {
+        const beforeSlash = inputValue.substring(0, lastSlashIndex);
+        const afterCursor = inputValue.substring(cursorPosition);
 
-      const variableText = (() => {
-        switch (variable.id) {
-          case "dateDefault": return "{{Date(DD/MM/YYYY)}}"
-          case "dateMonthName": return "{{Date(DD-MMM-YYYY)}}"
-          case "dateCustom": return "{{Date(custom)}}"
-          default: return `{{${variable.label}}}`
-        }
-      })()
+        const variableText = (() => {
+          switch (variable.id) {
+            case "dateDefault":
+              return "{{Date(DD/MM/YYYY)}}";
+            case "dateMonthName":
+              return "{{Date(DD-MMM-YYYY)}}";
+            case "dateCustom":
+              return "{{Date(custom)}}";
+            default:
+              return `{{${variable.label}}}`;
+          }
+        })();
 
-      const newValue = beforeSlash + variableText + afterCursor
-      emitChange(newValue)
+        const newValue = beforeSlash + variableText + afterCursor;
+        emitChange(newValue);
 
-      setTimeout(() => {
-        const newCursorPos = lastSlashIndex + variableText.length
-        input.setSelectionRange(newCursorPos, newCursorPos)
-        input.focus()
-      }, 0)
-    }
+        setTimeout(() => {
+          const newCursorPos = lastSlashIndex + variableText.length;
+          input.setSelectionRange(newCursorPos, newCursorPos);
+          input.focus();
+        }, 0);
+      }
 
-    setShowSlashDropdown(false)
-  }, [inputValue, emitChange])
+      setShowSlashDropdown(false);
+    },
+    [inputValue, emitChange],
+  );
 
   // ── Custom variable helpers for @ dropdown ──
 
-  const insertAtVariable = useCallback((variableText) => {
-    const input = inputRef.current
-    if (!input) return
+  const insertAtVariable = useCallback(
+    (variableText) => {
+      const input = inputRef.current;
+      if (!input) return;
 
-    const cursorPosition = input.selectionStart
-    const textBeforeCursor = inputValue.substring(0, cursorPosition)
-    const lastAtIndex = textBeforeCursor.lastIndexOf("@")
+      const cursorPosition = input.selectionStart;
+      const textBeforeCursor = inputValue.substring(0, cursorPosition);
+      const lastAtIndex = textBeforeCursor.lastIndexOf("@");
 
-    if (lastAtIndex === -1) return
+      if (lastAtIndex === -1) return;
 
-    const beforeAt = inputValue.substring(0, lastAtIndex)
-    const afterCursor = inputValue.substring(cursorPosition)
-    const newValue = beforeAt + variableText + afterCursor
-    emitChange(newValue)
+      const beforeAt = inputValue.substring(0, lastAtIndex);
+      const afterCursor = inputValue.substring(cursorPosition);
+      const newValue = beforeAt + variableText + afterCursor;
+      emitChange(newValue);
 
-    setTimeout(() => {
-      const newCursorPos = lastAtIndex + variableText.length
-      input.setSelectionRange(newCursorPos, newCursorPos)
-      input.focus()
-    }, 0)
+      setTimeout(() => {
+        const newCursorPos = lastAtIndex + variableText.length;
+        input.setSelectionRange(newCursorPos, newCursorPos);
+        input.focus();
+      }, 0);
 
-    setShowAtDropdown(false)
-  }, [inputValue, emitChange])
+      setShowAtDropdown(false);
+    },
+    [inputValue, emitChange],
+  );
 
-  const handleCustomCategorySelect = useCallback((categoryName) => {
-    insertAtVariable(`{{${categoryName}}}`)
-  }, [insertAtVariable])
+  const handleCustomCategorySelect = useCallback(
+    (categoryName) => {
+      insertAtVariable(`{{${categoryName}}}`);
+    },
+    [insertAtVariable],
+  );
 
-  const handleCustomValueSelect = useCallback((categoryName, value) => {
-    insertAtVariable(`{{${categoryName}:${value}}}`)
-  }, [insertAtVariable])
+  const handleCustomValueSelect = useCallback(
+    (categoryName, value) => {
+      insertAtVariable(`{{${categoryName}:${value}}}`);
+    },
+    [insertAtVariable],
+  );
 
   // ── Inline category value select (clicking inside {{CategoryName}}) ──
 
-  const handleInlineValueSelect = useCallback((value) => {
-    if (!inlineDropdown) return
-    const input = inputRef.current
-    if (!input) return
+  const handleInlineValueSelect = useCallback(
+    (value) => {
+      if (!inlineDropdown) return;
+      const input = inputRef.current;
+      if (!input) return;
 
-    const { category, startIndex, endIndex } = inlineDropdown
-    const before = inputValue.substring(0, startIndex)
-    const after = inputValue.substring(endIndex)
-    const variableText = `{{${category.name}:${value}}}`
-    const newValue = before + variableText + after
-    emitChange(newValue)
-    setInlineDropdown(null)
+      const { category, startIndex, endIndex } = inlineDropdown;
+      const before = inputValue.substring(0, startIndex);
+      const after = inputValue.substring(endIndex);
+      const variableText = `{{${category.name}:${value}}}`;
+      const newValue = before + variableText + after;
+      emitChange(newValue);
+      setInlineDropdown(null);
 
-    setTimeout(() => {
-      const newCursorPos = startIndex + variableText.length
-      input.setSelectionRange(newCursorPos, newCursorPos)
-      input.focus()
-    }, 0)
-  }, [inputValue, inlineDropdown, emitChange])
+      setTimeout(() => {
+        const newCursorPos = startIndex + variableText.length;
+        input.setSelectionRange(newCursorPos, newCursorPos);
+        input.focus();
+      }, 0);
+    },
+    [inputValue, inlineDropdown, emitChange],
+  );
 
   // ── Setup dialog save ──
 
-  const handleSaveCustomVariables = useCallback((newVariables) => {
-    if (onCustomVariablesChange) {
-      onCustomVariablesChange(newVariables)
-    }
-  }, [onCustomVariablesChange])
+  const handleSaveCustomVariables = useCallback(
+    (newVariables) => {
+      if (onCustomVariablesChange) {
+        onCustomVariablesChange(newVariables);
+      }
+    },
+    [onCustomVariablesChange],
+  );
 
   // ── Click outside handlers ──
 
@@ -672,24 +700,28 @@ export default function ReorderAdNameParts({
     const handleClickOutside = (event) => {
       if (
         showSlashDropdown &&
-        inputRef.current && !inputRef.current.contains(event.target) &&
-        slashDropdownRef.current && !slashDropdownRef.current.contains(event.target)
+        inputRef.current &&
+        !inputRef.current.contains(event.target) &&
+        slashDropdownRef.current &&
+        !slashDropdownRef.current.contains(event.target)
       ) {
-        setShowSlashDropdown(false)
+        setShowSlashDropdown(false);
       }
       // @ dropdown is handled by DropdownMenu's own onOpenChange
       if (
         inlineDropdown &&
-        inputRef.current && !inputRef.current.contains(event.target) &&
-        inlineDropdownRef.current && !inlineDropdownRef.current.contains(event.target)
+        inputRef.current &&
+        !inputRef.current.contains(event.target) &&
+        inlineDropdownRef.current &&
+        !inlineDropdownRef.current.contains(event.target)
       ) {
-        setInlineDropdown(null)
+        setInlineDropdown(null);
       }
-    }
+    };
 
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => document.removeEventListener("mousedown", handleClickOutside)
-  }, [showSlashDropdown, inlineDropdown])
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showSlashDropdown, inlineDropdown]);
 
   // ── Render ──
 
@@ -699,45 +731,70 @@ export default function ReorderAdNameParts({
       <div className="flex items-center justify-between">
         <Label className="text-gray-500 text-[12px] leading-5 font-normal block">
           Type
-          <span className="inline-block mx-1 px-1.5 py-0.5 bg-white border border-gray-300 rounded-md shadow-xs text-black">
-            /
-          </span>
-          to see a list of variables
+          <span className="inline-block mx-1 px-1.5 py-0.5 bg-white border border-gray-300 rounded-md shadow-xs text-black">/</span>
+          to see a list of variables.
           {customVariables.length > 0 && (
             <>
-              {" "}Type
-              <span className="inline-block mx-1 px-1.5 py-0.5 bg-white border border-gray-300 rounded-md shadow-xs text-black">
-                @
-              </span>
+              {" "}
+              Type
+              <span className="inline-block mx-1 px-1.5 py-0.5 bg-white border border-gray-300 rounded-md shadow-xs text-black">@</span>
               for custom variables.
+              <br />
+            </>
+          )}{" "}
+          You can also save custom text.
+          {postSwitcher && (
+            <>
+              <br />
+              By default each duplicated ad keeps its original name — edit here to change it per ad.
             </>
           )}
-          {" "}You can also save custom text.
         </Label>
 
         <div className="flex items-center gap-1.5">
+          {postSwitcher && postSwitcher.total > 1 && (
+            <div className="flex items-center gap-1 mr-1">
+              <span className="text-xs text-gray-600">
+                {postSwitcher.currentIndex + 1}/{postSwitcher.total}
+              </span>
+              <button
+                type="button"
+                disabled={postSwitcher.currentIndex === 0}
+                onClick={postSwitcher.onPrev}
+                className={`p-0.5 rounded transition-colors ${
+                  postSwitcher.currentIndex === 0 ? "text-gray-300 cursor-not-allowed" : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                }`}
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                disabled={postSwitcher.currentIndex === postSwitcher.total - 1}
+                onClick={postSwitcher.onNext}
+                className={`p-0.5 rounded transition-colors ${
+                  postSwitcher.currentIndex === postSwitcher.total - 1
+                    ? "text-gray-300 cursor-not-allowed"
+                    : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                }`}
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
           {/* Setup custom variables button — settings variant only */}
           {variant === "default" && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="rounded-xl px-3 whitespace-nowrap hover:bg-white"
-              onClick={() => setShowSetupDialog(true)}
-            >
+            <Button variant="outline" size="sm" className="rounded-xl px-3 whitespace-nowrap hover:bg-white" onClick={() => setShowSetupDialog(true)}>
               Custom Variables
             </Button>
           )}
 
           {/* Info tooltip */}
           {!hideInfoTooltip && (
-
             <TooltipProvider delayDuration={200}>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    className="text-gray-400 hover:text-gray-600 transition-colors"
-                  >
+                  <button type="button" className="text-gray-400 hover:text-gray-600 transition-colors">
                     <Info className="w-3.5 h-3.5" />
                   </button>
                 </TooltipTrigger>
@@ -747,8 +804,7 @@ export default function ReorderAdNameParts({
                   className="max-w-xs p-3 text-xs leading-relaxed rounded-2xl bg-zinc-800 text-white border-black"
                 >
                   <p className="font-medium mb-1.5">
-                    Select the Custom Date option & replace &apos;custom&apos; with any
-                    combination of the tokens below.
+                    Select the Custom Date option & replace &apos;custom&apos; with any combination of the tokens below.
                   </p>
                   <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 font-mono text-[11px]">
                     <span className="font-semibold">D</span>
@@ -767,12 +823,9 @@ export default function ReorderAdNameParts({
                     <span className="text-gray-400">Year, 4-digit (2025)</span>
                   </div>
                   <p className="text-gray-400 mt-2">
-                    Use any separator:{" "}
-                    <span className="font-mono">/ - . _</span> or space
+                    Use any separator: <span className="font-mono">/ - . _</span> or space
                   </p>
-                  <p className="mt-1.5 text-gray-400 italic">
-                    {"Example: {{Date(DD-MMM-YYYY)}} → 05-Mar-2025"}
-                  </p>
+                  <p className="mt-1.5 text-gray-400 italic">{"Example: {{Date(DD-MMM-YYYY)}} → 05-Mar-2025"}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -790,7 +843,7 @@ export default function ReorderAdNameParts({
           onClick={handleCursorCheck}
           onKeyUp={(e) => {
             if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) {
-              handleCursorCheck()
+              handleCursorCheck();
             }
           }}
           placeholder="Enter custom text or variables."
@@ -798,7 +851,7 @@ export default function ReorderAdNameParts({
             "w-full rounded-2xl",
             variant === "home" && "border border-gray-300 shadow focus-visible:ring-0 focus-visible:ring-offset-0",
             dateFormatError && "border-red-400 focus-visible:ring-red-400",
-            !dateFormatError && variableWarning && "border-amber-400 focus-visible:ring-amber-400"
+            !dateFormatError && variableWarning && "border-amber-400 focus-visible:ring-amber-400",
           )}
         />
 
@@ -818,7 +871,7 @@ export default function ReorderAdNameParts({
             >
               <CommandList className="outline-none focus:outline-none focus-visible:outline-none">
                 <CommandGroup heading="Pick Variable">
-                  {AVAILABLE_VARIABLES.map((variable) => (
+                  {visibleVariables.map((variable) => (
                     <CommandItem
                       key={variable.id}
                       onSelect={() => handleVariableSelect(variable)}
@@ -827,11 +880,7 @@ export default function ReorderAdNameParts({
                     >
                       <span className="flex items-center">
                         <span>{variable.label}</span>
-                        {variable.note && (
-                          <span className="text-gray-400 text-xs ml-1">
-                            {variable.note}
-                          </span>
-                        )}
+                        {variable.note && <span className="text-gray-400 text-xs ml-1">{variable.note}</span>}
                       </span>
                     </CommandItem>
                   ))}
@@ -863,20 +912,16 @@ export default function ReorderAdNameParts({
             sideOffset={0}
             className="rounded-xl min-w-[160px] bg-white"
             onCloseAutoFocus={(e) => {
-              e.preventDefault()
-              inputRef.current?.focus()
+              e.preventDefault();
+              inputRef.current?.focus();
             }}
           >
-            <DropdownMenuLabel className="text-xs text-gray-400 font-medium">
-              Pick Variable
-            </DropdownMenuLabel>
+            <DropdownMenuLabel className="text-xs text-gray-400 font-medium">Pick Variable</DropdownMenuLabel>
 
             {customVariables.map((cat) =>
               cat.values.length > 0 ? (
                 <DropdownMenuSub key={cat.name}>
-                  <DropdownMenuSubTrigger className="cursor-pointer rounded-lg">
-                    {cat.name}
-                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubTrigger className="cursor-pointer rounded-lg">{cat.name}</DropdownMenuSubTrigger>
                   <DropdownMenuSubContent className="rounded-xl min-w-[140px] bg-white">
                     {/* Option to insert just the category name */}
                     <DropdownMenuItem
@@ -887,25 +932,17 @@ export default function ReorderAdNameParts({
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     {cat.values.map((val) => (
-                      <DropdownMenuItem
-                        key={val}
-                        className="cursor-pointer rounded-lg"
-                        onSelect={() => handleCustomValueSelect(cat.name, val)}
-                      >
+                      <DropdownMenuItem key={val} className="cursor-pointer rounded-lg" onSelect={() => handleCustomValueSelect(cat.name, val)}>
                         {val}
                       </DropdownMenuItem>
                     ))}
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
               ) : (
-                <DropdownMenuItem
-                  key={cat.name}
-                  className="cursor-pointer rounded-lg"
-                  onSelect={() => handleCustomCategorySelect(cat.name)}
-                >
+                <DropdownMenuItem key={cat.name} className="cursor-pointer rounded-lg" onSelect={() => handleCustomCategorySelect(cat.name)}>
                   {cat.name}
                 </DropdownMenuItem>
-              )
+              ),
             )}
           </DropdownMenuContent>
         </DropdownMenu>
@@ -925,9 +962,7 @@ export default function ReorderAdNameParts({
             }}
           >
             <div className="rounded-xl border shadow-md bg-white overflow-hidden min-w-[160px] py-1">
-              <div className="px-3 py-1.5 text-xs font-medium text-gray-400 select-none">
-                Select a value for {inlineDropdown.category.name}
-              </div>
+              <div className="px-3 py-1.5 text-xs font-medium text-gray-400 select-none">Select a value for {inlineDropdown.category.name}</div>
               {inlineDropdown.category.values.map((val) => (
                 <div
                   key={val}
@@ -938,31 +973,25 @@ export default function ReorderAdNameParts({
                   {val}
                 </div>
               ))}
-              {inlineDropdown.category.values.length === 0 && (
-                <div className="px-3 py-2 text-sm text-gray-400 italic">
-                  No values defined
-                </div>
-              )}
+              {inlineDropdown.category.values.length === 0 && <div className="px-3 py-2 text-sm text-gray-400 italic">No values defined</div>}
             </div>
           </div>
         )}
       </div>
 
+      {hasCustomDatePlaceholder && (
+        <p className="text-xs text-gray-500 mt-1">Replace &apos;custom&apos; with your date format. Hover i for tokens.</p>
+      )}
+
       {/* Date format error */}
       {dateFormatError && (
         <p className="text-red-500 text-xs mt-1">
-          {dateFormatError} — hover on{" "}
-          <Info className="w-3 h-3 inline-block align-text-top mx-0.5" /> to
-          see valid formats
+          {dateFormatError} — hover on <Info className="w-3 h-3 inline-block align-text-top mx-0.5" /> to see valid formats
         </p>
       )}
 
       {/* Unrecognized variable warning */}
-      {variableWarning && (
-        <p className="text-amber-600 text-xs mt-1">
-          {variableWarning} — it will be empty in the ad name
-        </p>
-      )}
+      {variableWarning && <p className="text-amber-600 text-xs mt-1">{variableWarning} — it will be empty in the ad name</p>}
 
       {/* Home variant: category-only warnings */}
       {categoryWarnings.length > 0 && (
@@ -971,8 +1000,7 @@ export default function ReorderAdNameParts({
           <p className="text-xs text-amber-700">
             {categoryWarnings.length === 1
               ? `click on "${categoryWarnings[0]}" in the input to pick a specific value. If left unselected, it will be empty in the ad name.`
-              : `${categoryWarnings.map(w => `"${w}"`).join(", ")} are categories — click on them in the input to pick specific values. If left unselected, they will be empty in the ad name.`
-            }
+              : `${categoryWarnings.map((w) => `"${w}"`).join(", ")} are categories — click on them in the input to pick specific values. If left unselected, they will be empty in the ad name.`}
           </p>
         </div>
       )}
@@ -985,5 +1013,5 @@ export default function ReorderAdNameParts({
         onSave={handleSaveCustomVariables}
       />
     </div>
-  )
+  );
 }

@@ -134,6 +134,58 @@ export function getAnalyticsDateRangeCacheKey(value) {
     return `${normalized.preset || CUSTOM_PRESET_KEY}:${normalized.since}:${normalized.until}`
 }
 
+export const ANALYTICS_GRANULARITIES = [
+    { key: "daily", label: "Daily" },
+    { key: "weekly", label: "Weekly" },
+    { key: "monthly", label: "Monthly" },
+]
+
+export const DEFAULT_ANALYTICS_GRANULARITY = "weekly"
+
+const DAILY_MAX_RANGE_DAYS = 90
+const MONTHLY_MIN_RANGE_DAYS = 60
+
+export function getAnalyticsRangeDays(value) {
+    if (!value?.since || !value?.until) return 30
+    const since = parseAnalyticsDate(value.since)
+    const until = parseAnalyticsDate(value.until)
+    if (!since || !until) return 30
+    const diff = Math.round((until - since) / 86400000) + 1
+    return Math.max(1, diff)
+}
+
+export function isGranularityAllowed(granularityKey, rangeValue) {
+    const days = getAnalyticsRangeDays(rangeValue)
+    if (granularityKey === "daily") return days <= DAILY_MAX_RANGE_DAYS
+    if (granularityKey === "monthly") return days >= MONTHLY_MIN_RANGE_DAYS
+    return true
+}
+
+export function resolveAllowedGranularity(granularityKey, rangeValue) {
+    if (getAnalyticsRangeDays(rangeValue) <= 7) return "daily"
+    if (isGranularityAllowed(granularityKey, rangeValue)) return granularityKey
+    return DEFAULT_ANALYTICS_GRANULARITY
+}
+
+const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+
+export function formatBucketLabel(dateStr, granularity) {
+    if (!dateStr) return ""
+    const d = new Date(dateStr + "T00:00:00")
+    if (Number.isNaN(d.getTime())) return ""
+    if (granularity === "monthly") return `${MONTH_NAMES[d.getMonth()]} ${String(d.getFullYear()).slice(2)}`
+    return `${d.getMonth() + 1}/${d.getDate()}`
+}
+
+export function formatBucketTooltipTitle(dateStr, granularity) {
+    if (!dateStr) return ""
+    const d = new Date(dateStr + "T00:00:00")
+    if (Number.isNaN(d.getTime())) return ""
+    if (granularity === "monthly") return `Month of ${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`
+    if (granularity === "weekly") return `Week of ${d.getMonth() + 1}/${d.getDate()}`
+    return `${MONTH_NAMES[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`
+}
+
 export function getAnalyticsDateRangeSummary(value) {
     const normalized = value || createAnalyticsDateRangeFromPreset("last_30d")
     const since = parseAnalyticsDate(normalized.since)

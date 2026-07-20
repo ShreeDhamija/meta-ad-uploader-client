@@ -19,7 +19,7 @@ import {
 import { toast } from "sonner"
 import Papa from "papaparse";
 import { useAuth } from "@/lib/AuthContext"
-import { CirclePlus, CircleCheck, Trash2, Download, X, Loader, Upload, ChevronsUpDown, ArrowUpDown, Check, Info } from 'lucide-react';
+import { CirclePlus, CircleCheck, Trash2, Download, X, Loader, Upload, ChevronsUpDown, ArrowUpDown, Check, Info, RefreshCw } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { saveCopyTemplate } from "@/lib/saveCopyTemplate"
 import { deleteCopyTemplate, deleteCopyTemplates } from "@/lib/deleteCopyTemplate"
@@ -41,6 +41,15 @@ import {
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 const settingsFieldChrome = "rounded-2xl border border-gray-300 py-4.5 bg-white shadow";
 const settingsTextareaChrome = "rounded-2xl border border-gray-300 bg-white px-3 pt-2.5 pb-2.5 leading-5 shadow";
+const COPY_IMPORT_TYPES = {
+  primaryTexts: { excludeKey: "excludePrimaryTexts" },
+  headlines: { excludeKey: "excludeHeadlines" },
+  descriptions: { excludeKey: "excludeDescriptions" },
+};
+const emptyRecentCopy = () => ({ primaryTexts: [], headlines: [], descriptions: [] });
+const emptyCopyCursors = () => ({ primaryTexts: null, headlines: null, descriptions: null });
+const emptyCopyLoaded = () => ({ primaryTexts: false, headlines: false, descriptions: false });
+const getRecentCopyCacheKey = (adAccountId) => `copyTemplates_recentCopy:${adAccountId}`;
 
 
 
@@ -173,6 +182,19 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
     templates[editingTemplate] || {}, [templates, editingTemplate]
   )
 
+  const primaryTextsFull = useMemo(
+    () => primaryTexts.filter((t) => t.trim() !== "").length >= 5,
+    [primaryTexts]
+  )
+  const headlinesFull = useMemo(
+    () => headlines.filter((t) => t.trim() !== "").length >= 5,
+    [headlines]
+  )
+  const descriptionsFull = useMemo(
+    () => descriptions.filter((t) => t !== "").length >= 5,
+    [descriptions]
+  )
+
   const hasFilledTextValue = useCallback((text) => text.trim() !== "", [])
   const hasFilledDescriptionValue = useCallback((text) => text !== "", [])
   const filterFilledTexts = useCallback((items) => items.filter(hasFilledTextValue), [hasFilledTextValue])
@@ -263,64 +285,169 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
 
 
   const [showImportPopup, setShowImportPopup] = useState(false)
-  const [recentAds, setRecentAds] = useState([])
-  const [isFetchingCopy, setIsFetchingCopy] = useState(false)
-  const [previouslyFetched, setPreviouslyFetched] = useState({
-    primaryTexts: [],
-    headlines: []
-  });
+  const [recentAds, setRecentAds] = useState(emptyRecentCopy)
+  const [activeImportTab, setActiveImportTab] = useState("primaryTexts")
+  const [copyLoading, setCopyLoading] = useState({
+    primaryTexts: false,
+    headlines: false,
+    descriptions: false
+  })
+  const [copyLoaded, setCopyLoaded] = useState(emptyCopyLoaded)
+  const [previouslyFetched, setPreviouslyFetched] = useState(emptyRecentCopy);
 
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [paginationCursor, setPaginationCursor] = useState(null);
+  const [isRefreshingCopy, setIsRefreshingCopy] = useState(false);
+  const [paginationCursor, setPaginationCursor] = useState(emptyCopyCursors);
 
+
+  const fetchCopyType = useCallback(async (copyType, { replace = false, after = null, exclude = [], showErrorToast = true } = {}) => {
+    if (!selectedAdAccount) return [];
+
+    const config = COPY_IMPORT_TYPES[copyType];
+    const cacheKey = getRecentCopyCacheKey(selectedAdAccount);
+    setCopyLoading(prev => ({ ...prev, [copyType]: true }));
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/fetch-recent-copy`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          adAccountId: selectedAdAccount,
+          copyType,
+          [config.excludeKey]: exclude,
+          after
+        })
+      });
+
+      const data = await response.json();
+      const items = data[copyType] || [];
+      const nextCursor = data.nextCursor || null;
+
+      setRecentAds(prev => ({
+        ...prev,
+        [copyType]: replace ? items : [...(prev[copyType] || []), ...items]
+      }));
+
+      setPreviouslyFetched(prev => ({
+        ...prev,
+        [copyType]: replace ? items : [...(prev[copyType] || []), ...items]
+      }));
+
+      setPaginationCursor(prev => ({
+        ...prev,
+        [copyType]: nextCursor
+      }));
+      setCopyLoaded(prev => ({ ...prev, [copyType]: true }));
+
+      try {
+        const cached = JSON.parse(sessionStorage.getItem(cacheKey) || "{}");
+        const cachedRecentAds = cached.recentAds || emptyRecentCopy();
+        const cachedPreviouslyFetched = cached.previouslyFetched || emptyRecentCopy();
+        sessionStorage.setItem(cacheKey, JSON.stringify({
+          recentAds: {
+            ...cachedRecentAds,
+            [copyType]: replace ? items : [...(cachedRecentAds[copyType] || []), ...items]
+          },
+          previouslyFetched: {
+            ...cachedPreviouslyFetched,
+            [copyType]: replace ? items : [...(cachedPreviouslyFetched[copyType] || []), ...items]
+          },
+          paginationCursor: {
+            ...(cached.paginationCursor || emptyCopyCursors()),
+            [copyType]: nextCursor
+          },
+          copyLoaded: {
+            ...(cached.copyLoaded || emptyCopyLoaded()),
+            [copyType]: true
+          }
+        }));
+      } catch (cacheErr) {
+        console.warn("Failed to cache recent copy:", cacheErr);
+      }
+
+      return items;
+    } catch (err) {
+      console.error(`Error fetching ${copyType}:`, err);
+      if (showErrorToast) {
+        toast.error("Failed to load recent ad copy");
+      }
+      setCopyLoaded(prev => ({ ...prev, [copyType]: true }));
+      return [];
+    } finally {
+      setCopyLoading(prev => ({ ...prev, [copyType]: false }));
+    }
+  }, [selectedAdAccount]);
+
+  const loadRecentCopy = useCallback(async ({ forceRefresh = false } = {}) => {
+    if (!selectedAdAccount) return;
+
+    setActiveImportTab("primaryTexts");
+    const cacheKey = getRecentCopyCacheKey(selectedAdAccount);
+
+    if (!forceRefresh) {
+      try {
+        const cached = JSON.parse(sessionStorage.getItem(cacheKey) || "null");
+        if (cached?.recentAds) {
+          const cachedLoaded = { ...emptyCopyLoaded(), ...(cached.copyLoaded || {}) };
+          setRecentAds({ ...emptyRecentCopy(), ...cached.recentAds });
+          setPreviouslyFetched({ ...emptyRecentCopy(), ...(cached.previouslyFetched || cached.recentAds) });
+          setPaginationCursor({ ...emptyCopyCursors(), ...(cached.paginationCursor || {}) });
+          setCopyLoaded(cachedLoaded);
+          if (cachedLoaded.primaryTexts && cachedLoaded.headlines && cachedLoaded.descriptions) {
+            return;
+          }
+          const pendingFetches = [];
+          if (!cachedLoaded.primaryTexts) {
+            pendingFetches.push(fetchCopyType("primaryTexts", { replace: true }));
+          }
+          if (!cachedLoaded.headlines) {
+            pendingFetches.push(fetchCopyType("headlines", { replace: true, showErrorToast: false })
+              .finally(() => {
+                if (!cachedLoaded.descriptions) {
+                  return fetchCopyType("descriptions", { replace: true, showErrorToast: false });
+                }
+              }));
+          } else if (!cachedLoaded.descriptions) {
+            pendingFetches.push(fetchCopyType("descriptions", { replace: true, showErrorToast: false }));
+          }
+          await Promise.allSettled(pendingFetches);
+          return;
+        }
+      } catch (cacheErr) {
+        console.warn("Failed to read recent copy cache:", cacheErr);
+      }
+    }
+
+    sessionStorage.removeItem(cacheKey);
+    setRecentAds(emptyRecentCopy());
+    setPreviouslyFetched(emptyRecentCopy());
+    setPaginationCursor(emptyCopyCursors());
+    setCopyLoaded(emptyCopyLoaded());
+
+    const primaryFetch = fetchCopyType("primaryTexts", { replace: true });
+    const headlineAndDescriptionFetch = fetchCopyType("headlines", { replace: true, showErrorToast: false })
+      .finally(() => {
+        return fetchCopyType("descriptions", { replace: true, showErrorToast: false });
+      });
+    await Promise.allSettled([primaryFetch, headlineAndDescriptionFetch]);
+  }, [fetchCopyType, selectedAdAccount]);
 
   useEffect(() => {
     if (!showImportPopup || !selectedAdAccount) return;
+    loadRecentCopy();
+  }, [showImportPopup, selectedAdAccount, loadRecentCopy]);
 
-    setIsFetchingCopy(true);
-    // Reset pagination cursor on initial fetch
-    setPaginationCursor(null);
-
-    fetch(`${API_BASE_URL}/auth/fetch-recent-copy`, {
-      method: "POST",
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        adAccountId: selectedAdAccount,
-        excludePrimaryTexts: [],
-        excludeHeadlines: [],
-        after: null // Initial fetch
-      })
-    })
-      .then(res => res.json())
-      .then(data => {
-        if (data.primaryTexts || data.headlines) {
-          setRecentAds({
-            primaryTexts: data.primaryTexts || [],
-            headlines: data.headlines || []
-          });
-
-          setPreviouslyFetched({
-            primaryTexts: data.primaryTexts || [],
-            headlines: data.headlines || []
-          });
-
-          // Store pagination cursor
-          setPaginationCursor(data.nextCursor);
-        } else {
-          throw new Error("No data");
-        }
-      })
-      .catch(err => {
-        console.error("Error fetching ad copy:", err);
-        toast.error("Failed to load recent ad copy");
-      })
-      .finally(() => {
-        setIsFetchingCopy(false);
-      });
-  }, [showImportPopup, selectedAdAccount]);
+  const handleRefreshRecentCopy = useCallback(async () => {
+    setIsRefreshingCopy(true);
+    try {
+      await loadRecentCopy({ forceRefresh: true });
+    } finally {
+      setIsRefreshingCopy(false);
+    }
+  }, [loadRecentCopy]);
 
 
   useEffect(() => {
@@ -377,57 +504,29 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
 
 
   const handleLoadMore = useCallback(async () => {
-    if (!paginationCursor) {
+    const cursor = paginationCursor[activeImportTab];
+    if (!cursor) {
       toast.info("No more copy available");
       return;
     }
 
     setIsLoadingMore(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/fetch-recent-copy`, {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          adAccountId: selectedAdAccount,
-          excludePrimaryTexts: previouslyFetched.primaryTexts,
-          excludeHeadlines: previouslyFetched.headlines,
-          after: paginationCursor // Use stored cursor
-        })
+      const items = await fetchCopyType(activeImportTab, {
+        after: cursor,
+        exclude: previouslyFetched[activeImportTab] || []
       });
 
-      const data = await response.json();
-
-      const newPrimaryCount = data.primaryTexts?.length || 0;
-      const newHeadlineCount = data.headlines?.length || 0;
-      const hasNewCopy = newPrimaryCount > 0 || newHeadlineCount > 0;
-
-      if (hasNewCopy) {
-        setRecentAds(prev => ({
-          primaryTexts: [...(prev.primaryTexts || []), ...(data.primaryTexts || [])],
-          headlines: [...(prev.headlines || []), ...(data.headlines || [])]
-        }));
-
-        setPreviouslyFetched(prev => ({
-          primaryTexts: [...prev.primaryTexts, ...(data.primaryTexts || [])],
-          headlines: [...prev.headlines, ...(data.headlines || [])]
-        }));
-
-        // Update pagination cursor
-        setPaginationCursor(data.nextCursor);
-      } else {
+      if (items.length === 0) {
         toast.info("No more unique copy found");
       }
-
     } catch (err) {
       console.error("Error loading more:", err);
       toast.error("Failed to load more copy");
     } finally {
       setIsLoadingMore(false);
     }
-  }, [selectedAdAccount, previouslyFetched, paginationCursor]);
+  }, [activeImportTab, fetchCopyType, paginationCursor, previouslyFetched]);
 
 
   const handleAdd = useCallback((setter, state) => {
@@ -733,6 +832,29 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
     toast.success(`Imported text into Headline ${importedToIndex + 1}`);
   }, [headlines])
 
+  const createDescriptionImportHandler = useCallback((text) => () => {
+    setAddDescriptions(true);
+    setDescriptions((currentDescriptions) => {
+      const nextDescriptions = [...currentDescriptions];
+      const emptyIndex = nextDescriptions.findIndex(t => t === "");
+      let importedToIndex;
+
+      if (emptyIndex !== -1) {
+        nextDescriptions[emptyIndex] = text;
+        importedToIndex = emptyIndex;
+      } else if (nextDescriptions.length < 5) {
+        nextDescriptions.push(text);
+        importedToIndex = nextDescriptions.length - 1;
+      } else {
+        nextDescriptions[nextDescriptions.length - 1] = text;
+        importedToIndex = nextDescriptions.length - 1;
+      }
+
+      toast.success(`Imported text into Description ${importedToIndex + 1}`);
+      return nextDescriptions;
+    });
+  }, [])
+
   // Helper function to normalize text for comparison (removes extra whitespace, case insensitive)
   const normalizeText = (text) => text.trim().toLowerCase().replace(/\s+/g, ' ');
 
@@ -894,11 +1016,11 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
 
           {/* This button remains visible to everyone */}
           <Button
-            variant="ghost"
-            className="flex items-center text-xs rounded-xl px-3 py-1 bg-zinc-800 text-white hover:text-white hover:bg-black"
+            variant="outline"
+            className="text-xs gap-1 px-3.5 pl-2.5 border-gray-300 rounded-2xl py-4.5 bg-zinc-800 text-white shadow hover:text-white hover:bg-zinc-900"
             onClick={() => setShowImportPopup(true)}
           >
-            <Download className="w-4 h-4 mr-2" />
+            <Download className="w-4 h-4 text-white" />
             Auto Import Copy Variants
           </Button>
         </div>
@@ -1128,16 +1250,18 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
               )}
             </div>
 
-            <Trash2
-              className="w-4 h-4 text-gray-400 cursor-pointer hover:text-red-500"
-              onClick={() => handleRemove(i, setPrimaryTexts, primaryTexts)}
-            />
+            {primaryTexts.length > 1 && (
+              <Trash2
+                className="w-4 h-4 text-gray-400 cursor-pointer hover:text-red-500"
+                onClick={() => handleRemove(i, setPrimaryTexts, primaryTexts)}
+              />
+            )}
           </div>
         ))}
         {primaryTexts.length < 5 && (
           <Button
             variant="ghost"
-            className="bg-zinc-600 border border-gray-200 text-sm text-white w-full rounded-xl shadow-xs hover:bg-zinc-800 hover:text-white h-[40px]"
+            className="bg-zinc-600 border border-gray-200 text-sm text-white w-full rounded-[14px] shadow-xs hover:bg-zinc-800 hover:text-white h-[40px]"
             onClick={() => handleAdd(setPrimaryTexts, primaryTexts)}
             disabled={isProcessing}
           >
@@ -1174,7 +1298,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
         {headlines.length < 5 && (
           <Button
             variant="ghost"
-            className="bg-zinc-600 border border-gray-200 text-sm text-white w-full rounded-xl shadow-xs hover:bg-zinc-800 hover:text-white h-[40px]"
+            className="bg-zinc-600 border border-gray-200 text-sm text-white w-full rounded-[14px] shadow-xs hover:bg-zinc-800 hover:text-white h-[40px]"
             onClick={() => handleAdd(setHeadlines, headlines)}
             disabled={isProcessing}
           >
@@ -1229,7 +1353,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
           {descriptions.length < 5 && (
             <Button
               variant="ghost"
-              className="bg-zinc-600 border border-gray-200 text-sm text-white w-full rounded-xl shadow-xs hover:bg-zinc-800 hover:text-white h-[40px]"
+              className="bg-zinc-600 border border-gray-200 text-sm text-white w-full rounded-[14px] shadow-xs hover:bg-zinc-800 hover:text-white h-[40px]"
               onClick={() => handleAdd(setDescriptions, descriptions)}
               disabled={isProcessing}
             >
@@ -1243,7 +1367,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
         <Button
           className="bg-blue-500 text-white w-full rounded-xl hover:bg-blue-600 h-[45px]"
           onClick={handleSaveTemplate}
-          disabled={!templateName.trim() || isProcessing || nameAlreadyExists || !templateChanged || hasDuplicates || !(primaryTexts.some(hasFilledTextValue) || headlines.some(hasFilledTextValue))}
+          disabled={!templateName.trim() || isProcessing || nameAlreadyExists || !templateChanged || hasDuplicates || !primaryTexts.some(hasFilledTextValue)}
         >
           {nameAlreadyExists
             ? "This template name already exists"
@@ -1266,7 +1390,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
           {availableTemplates.length > 0 && (
             <Button
               variant="outline"
-              className="w-full rounded-xl h-[40px] bg-zinc-800 hover:bg-black flex hover:text-white items-center gap-2 text-white transition-all duration-300 ease-in-out animate-in slide-in-from-bottom-2"
+              className="w-full rounded-[14px] h-[40px] bg-zinc-800 hover:bg-black flex hover:text-white items-center gap-2 text-white transition-all duration-300 ease-in-out animate-in slide-in-from-bottom-2"
               onClick={handleNewTemplate}
               disabled={isProcessing}
             >
@@ -1298,68 +1422,114 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
             height: "100dvh",
             minHeight: "100vh",
           }}
-          onClick={() => setShowImportPopup(false)} // Add this line
+          onPointerDown={(e) => {
+            if (e.target === e.currentTarget) setShowImportPopup(false)
+          }}
         >
-          <div className="relative w-[750px] max-w-[calc(100vw-2rem)] max-h-[80vh] overflow-hidden rounded-[32px] border border-gray-200 bg-white shadow-xl transition-all duration-300 ease-in-out"
+          <div className="relative w-[750px] max-w-[calc(100vw-2rem)] max-h-[80vh] overflow-hidden rounded-[40px] border border-gray-200 bg-white shadow-xl transition-all duration-300 ease-in-out"
+            onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="max-h-[80vh] overflow-y-auto import-popup-scroll transition-all duration-300 ease-in-out">
               <div className="px-6 pb-6 pt-4">
-                {isFetchingCopy ? (
-                  <div className="flex flex-col items-center justify-center py-10 space-y-4">
-                    <RotateLoader size={6} margin={-16} color="#adadad" />
-                    <span className="text-sm text-gray-600">Loading text copy...</span>
-                    <span className="text-sm text-gray-600">This can take a few seconds depending on Facebooks Mood.</span>
-                  </div>
-                ) : (
-                  <Tabs defaultValue="primary-texts" className="w-full">
-                    <div className="flex items-center justify-between mb-4 w-full">
-                      <TabsList className="flex h-10 items-center justify-start rounded-full bg-muted p-1 text-muted-foreground w-fit">
+                <Tabs value={activeImportTab} onValueChange={setActiveImportTab} className="w-full">
+                    <div className="flex items-center justify-between gap-3 mb-4 w-full">
+                      <TabsList className="flex h-10 max-w-full items-center justify-start overflow-x-auto rounded-full bg-muted p-1 text-muted-foreground w-fit">
                         <TabsTrigger
-                          value="primary-texts"
+                          type="button"
+                          value="primaryTexts"
                           className="inline-flex items-center justify-center whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs"
                         >
                           Primary Texts ({recentAds.primaryTexts?.length || 0})
                         </TabsTrigger>
                         <TabsTrigger
+                          type="button"
                           value="headlines"
                           className="inline-flex items-center justify-center whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs"
                         >
                           Headlines ({recentAds.headlines?.length || 0})
                         </TabsTrigger>
+                        <TabsTrigger
+                          type="button"
+                          value="descriptions"
+                          className="inline-flex items-center justify-center whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs"
+                        >
+                          Descriptions ({recentAds.descriptions?.length || 0})
+                        </TabsTrigger>
                       </TabsList>
-                      <Button
-                        className="bg-red-600 hover:bg-red-700 !shadow-none rounded-xl"
-                        onClick={() => setShowImportPopup(false)}
-                      >
-                        <CirclePlus className="w-4 h-4 rotate-45 text-white" />
-                        <p className="text-white">Close</p>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="rounded-2xl hover:bg-gray-100"
+                          onClick={handleRefreshRecentCopy}
+                          disabled={isRefreshingCopy}
+                        >
+                          <RefreshCw className={`w-4 h-4 ${isRefreshingCopy ? "animate-spin" : ""}`} />
+                          <span className="sr-only">Refresh recent copy</span>
+                        </Button>
+                        <Button
+                          type="button"
+                          className="bg-red-600 hover:bg-red-700 !shadow-none rounded-2xl"
+                          onClick={() => setShowImportPopup(false)}
+                        >
+                          <CirclePlus className="w-4 h-4 rotate-45 text-white" />
+                          <p className="text-white">Close</p>
 
-                      </Button>
+                        </Button>
+                      </div>
                     </div>
 
-                    <TabsContent value="primary-texts" className="space-y-4">
-                      {recentAds.primaryTexts?.length > 0 ? (
-                        <div className="border bg-gray-50 border-gray-200 rounded-2xl p-2 space-y-2">
+                    <TabsContent value="primaryTexts" className="space-y-2">
+                      {(!copyLoaded.primaryTexts || copyLoading.primaryTexts) && recentAds.primaryTexts.length === 0 ? (
+                        <div className="flex min-h-[260px] flex-col items-center justify-center pt-8 pb-4 space-y-4">
+                          <RotateLoader size={6} margin={-16} color="#adadad" />
+                          <span className="text-sm text-gray-600">Loading primary texts...</span>
+                        </div>
+                      ) : recentAds.primaryTexts?.length > 0 ? (
+                        <div className="border bg-gray-50 border-gray-200 rounded-[28px] p-1.5 space-y-1">
                           {recentAds.primaryTexts.map((text, index) => (
-                            <div key={index} className="rounded-lg p-4">
-                              <div className="flex justify-between items-center mb-2">
+                            <div key={index} className="rounded-lg p-2.5">
+                              <div className="flex justify-between items-center mb-1.5">
                                 <div className="text-xs font-medium text-gray-500">
                                   Primary Text {index + 1}
                                 </div>
-                                <Button
-                                  className={`flex items-center text-xs rounded-xl px-2 py-1 shrink-0 ${textExistsInTemplate(text, primaryTexts)
-                                    ? 'bg-white text-black cursor-not-allowed border border-gray-300 !shadow-none'
-                                    : 'bg-blue-600 text-white hover:bg-blue-700'
-                                    }`}
-                                  onClick={textExistsInTemplate(text, primaryTexts) ? undefined : createPrimaryTextImportHandler(text)}
-                                  disabled={textExistsInTemplate(text, primaryTexts)}
-                                >
-                                  {/* <Download className="w-3 h-3" /> */}
-                                  {textExistsInTemplate(text, primaryTexts) ? 'Exists' : 'Import'}
-                                </Button>
+                                {(() => {
+                                  const exists = textExistsInTemplate(text, primaryTexts);
+                                  const blockedByFull = !exists && primaryTextsFull;
+                                  const disabled = exists || blockedByFull;
+                                  const buttonEl = (
+                                    <Button
+                                      type="button"
+                                      className={`flex h-7 items-center text-xs rounded-xl px-4 py-0.5 shrink-0 ${exists
+                                        ? 'bg-white text-black cursor-not-allowed border border-gray-300 !shadow-none'
+                                        : blockedByFull
+                                          ? 'bg-blue-200 text-blue-700 cursor-not-allowed !shadow-none hover:bg-blue-200 disabled:opacity-100'
+                                          : 'bg-blue-600 text-white hover:bg-blue-700'
+                                        }`}
+                                      onClick={disabled ? undefined : createPrimaryTextImportHandler(text)}
+                                      disabled={disabled}
+                                    >
+                                      {exists ? 'Exists' : 'Import'}
+                                    </Button>
+                                  );
+                                  if (!blockedByFull) return buttonEl;
+                                  return (
+                                    <TooltipProvider delayDuration={0}>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <span tabIndex={0}>{buttonEl}</span>
+                                        </TooltipTrigger>
+                                        <TooltipContent side="left" className="text-xs max-w-[260px]">
+                                          You have maximum number of primary texts in this template already. Please delete one to import more.
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  );
+                                })()}
                               </div>
-                              <div className="bg-gray-200 rounded-lg p-3 text-sm text-gray-800 whitespace-pre-line">
+                              <div className="rounded-2xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 shadow-xs whitespace-pre-line">
                                 {text}
                               </div>
                             </div>
@@ -1372,28 +1542,55 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                       )}
                     </TabsContent>
 
-                    <TabsContent value="headlines" className="space-y-4">
-                      {recentAds.headlines?.length > 0 ? (
-                        <div className="border bg-gray-50 border-gray-200 rounded-2xl p-2 space-y-2">
+                    <TabsContent value="headlines" className="space-y-2">
+                      {(!copyLoaded.headlines || copyLoading.headlines) && recentAds.headlines.length === 0 ? (
+                        <div className="flex min-h-[260px] flex-col items-center justify-center pt-8 pb-4 space-y-4">
+                          <RotateLoader size={6} margin={-16} color="#adadad" />
+                          <span className="text-sm text-gray-600">Loading headlines...</span>
+                        </div>
+                      ) : recentAds.headlines?.length > 0 ? (
+                        <div className="border bg-gray-50 border-gray-200 rounded-[28px] p-1.5 space-y-1">
                           {recentAds.headlines.map((text, index) => (
-                            <div key={index} className="rounded-lg p-4">
-                              <div className="flex justify-between items-center mb-2">
+                            <div key={index} className="rounded-lg p-2.5">
+                              <div className="flex justify-between items-center mb-1.5">
                                 <div className="text-xs font-medium text-gray-500">
                                   Headline {index + 1}
                                 </div>
-                                <Button
-                                  className={`flex items-center text-xs rounded-xl px-2 py-1 shrink-0 ${textExistsInTemplate(text, headlines)
-                                    ? 'bg-white text-black cursor-not-allowed border border-gray-300 !shadow-none'
-                                    : 'bg-blue-600 text-white hover:bg-blue-700'
-                                    }`}
-                                  onClick={textExistsInTemplate(text, headlines) ? undefined : createHeadlineImportHandler(text)}
-                                  disabled={textExistsInTemplate(text, headlines)}
-                                >
-                                  {/* <Download className="w-3 h-3" /> */}
-                                  {textExistsInTemplate(text, headlines) ? 'Exists' : 'Import'}
-                                </Button>
+                                {(() => {
+                                  const exists = textExistsInTemplate(text, headlines);
+                                  const blockedByFull = !exists && headlinesFull;
+                                  const disabled = exists || blockedByFull;
+                                  const buttonEl = (
+                                    <Button
+                                      type="button"
+                                      className={`flex h-7 items-center text-xs rounded-xl px-4 py-0.5 shrink-0 ${exists
+                                        ? 'bg-white text-black cursor-not-allowed border border-gray-300 !shadow-none'
+                                        : blockedByFull
+                                          ? 'bg-blue-200 text-blue-700 cursor-not-allowed !shadow-none hover:bg-blue-200 disabled:opacity-100'
+                                          : 'bg-blue-600 text-white hover:bg-blue-700'
+                                        }`}
+                                      onClick={disabled ? undefined : createHeadlineImportHandler(text)}
+                                      disabled={disabled}
+                                    >
+                                      {exists ? 'Exists' : 'Import'}
+                                    </Button>
+                                  );
+                                  if (!blockedByFull) return buttonEl;
+                                  return (
+                                    <TooltipProvider delayDuration={0}>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <span tabIndex={0}>{buttonEl}</span>
+                                        </TooltipTrigger>
+                                        <TooltipContent side="left" className="text-xs max-w-[260px]">
+                                          You have maximum number of headlines in this template already. Please delete one to import more.
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  );
+                                })()}
                               </div>
-                              <div className="bg-gray-200 rounded-lg p-3 text-sm text-gray-800 whitespace-pre-line">
+                              <div className="rounded-2xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 shadow-xs whitespace-pre-line">
                                 {text}
                               </div>
                             </div>
@@ -1405,13 +1602,75 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                         </div>
                       )}
                     </TabsContent>
+
+                    <TabsContent value="descriptions" className="space-y-2">
+                      {(!copyLoaded.descriptions || copyLoading.descriptions) && recentAds.descriptions.length === 0 ? (
+                        <div className="flex min-h-[260px] flex-col items-center justify-center pt-8 pb-4 space-y-4">
+                          <RotateLoader size={6} margin={-16} color="#adadad" />
+                          <span className="text-sm text-gray-600">Loading descriptions...</span>
+                        </div>
+                      ) : recentAds.descriptions?.length > 0 ? (
+                        <div className="border bg-gray-50 border-gray-200 rounded-[28px] p-1.5 space-y-1">
+                          {recentAds.descriptions.map((text, index) => (
+                            <div key={index} className="rounded-lg p-2.5">
+                              <div className="flex justify-between items-center mb-1.5">
+                                <div className="text-xs font-medium text-gray-500">
+                                  Description {index + 1}
+                                </div>
+                                {(() => {
+                                  const exists = textExistsInTemplate(text, descriptions);
+                                  const blockedByFull = !exists && descriptionsFull;
+                                  const disabled = exists || blockedByFull;
+                                  const buttonEl = (
+                                    <Button
+                                      type="button"
+                                      className={`flex h-7 items-center text-xs rounded-xl px-4 py-0.5 shrink-0 ${exists
+                                        ? 'bg-white text-black cursor-not-allowed border border-gray-300 !shadow-none'
+                                        : blockedByFull
+                                          ? 'bg-blue-200 text-blue-700 cursor-not-allowed !shadow-none hover:bg-blue-200 disabled:opacity-100'
+                                          : 'bg-blue-600 text-white hover:bg-blue-700'
+                                        }`}
+                                      onClick={disabled ? undefined : createDescriptionImportHandler(text)}
+                                      disabled={disabled}
+                                    >
+                                      {exists ? 'Exists' : 'Import'}
+                                    </Button>
+                                  );
+                                  if (!blockedByFull) return buttonEl;
+                                  return (
+                                    <TooltipProvider delayDuration={0}>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <span tabIndex={0}>{buttonEl}</span>
+                                        </TooltipTrigger>
+                                        <TooltipContent side="left" className="text-xs max-w-[260px]">
+                                          You have maximum number of descriptions in this template already. Please delete one to import more.
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  );
+                                })()}
+                              </div>
+                              <div className="rounded-2xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 shadow-xs whitespace-pre-line">
+                                {text}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-10 text-gray-500">
+                          No descriptions found
+                        </div>
+                      )}
+                    </TabsContent>
                     <div className="text-center pt-4 mt-4">
                       <Button
-                        className="bg-gray-700 text-white hover:bg-gray-900 rounded-xl w-full"
+                        type="button"
+                        className="h-12 w-full rounded-2xl bg-zinc-700 py-3 text-white hover:bg-black"
                         onClick={handleLoadMore}
-                        disabled={isFetchingCopy || isLoadingMore}
+                        disabled={copyLoading[activeImportTab] || isLoadingMore}
                       >
-                        {isFetchingCopy || isLoadingMore ? (
+                        {isLoadingMore ? (
                           <>
                             <Loader className="w-4 h-4 animate-spin mr-2" />
                             Loading More Copy...
@@ -1422,8 +1681,6 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                       </Button>
                     </div>
                   </Tabs>
-
-                )}
               </div>
             </div>
           </div>

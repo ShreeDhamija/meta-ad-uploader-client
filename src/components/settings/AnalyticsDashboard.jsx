@@ -6,10 +6,12 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
 import { Command, CommandInput, CommandList, CommandItem, CommandGroup } from "@/components/ui/command"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip"
 import {
     AlertTriangle, Loader2, ChevronsUpDown, RefreshCw,
-    Target, Settings2, Activity, Zap, CheckCircle2, BarChart3, FileBarChart2, FileText, ChevronDown
+    Target, Settings2, Activity, Zap, CheckCircle2, BarChart3, FileBarChart2, FileText, ChevronDown, Stethoscope
 } from "lucide-react"
 import { toast } from "sonner"
 import { useAppData } from "@/lib/AppContext"
@@ -18,7 +20,7 @@ import useGlobalSettings from "@/lib/useGlobalSettings"
 import { saveSettings } from "@/lib/saveSettings"
 import { cn } from "@/lib/utils"
 import { Switch } from "@/components/ui/switch"
-import slackWhite from "@/assets/icons/analytics/slackwhite.svg"
+import slackColor from "@/assets/icons/analytics/slack-color.svg"
 import KPIChart from "./analytics/KPIChart"
 import WeeklyChart from "./analytics/WeeklyChart"
 import AnalyticsDateRangePicker from "./analytics/AnalyticsDateRangePicker"
@@ -26,12 +28,26 @@ import RecommendationCards from "./analytics/RecommendationCards"
 import AnalyticsOnboarding from "./analytics/AnalyticsOnboarding"
 import AggregateKPIDialog from "./analytics/AggregateKPIDialog"
 import AdAccountAudit from "./analytics/AdAccountAudit"
-import SlackAlertsDialog from "./analytics/SlackAlertsDialog"
+import AdAccountDiagnostic from "./analytics/AdAccountDiagnostic"
+import WeeklyPlacementChart from "./analytics/WeeklyPlacementChart"
+import FunnelHealthChart from "./analytics/FunnelHealthChart"
+import CreativeHitRateChart from "./analytics/CreativeHitRateChart"
+import TrendingCreative from "./analytics/TrendingCreative"
+import TrailingSixWeeksSnapshot from "./analytics/TrailingSixWeeksSnapshot"
+// import FlexAdsLauncher from "./analytics/FlexAdsLauncher" // Hidden — see Flex Ads Launcher block below
+// FEATURE START: PERIOD METRICS SUMMARY (added 2026-05-19)
+import PeriodMetricsSummary from "./analytics/PeriodMetricsSummary"
+// FEATURE END: PERIOD METRICS SUMMARY
 import AccountSummaryDialog from "./analytics/AccountSummaryDialog"
 import {
     buildAnalyticsDateQueryParams,
     createAnalyticsDateRangeFromPreset,
     getAnalyticsDateRangeCacheKey,
+    DEFAULT_ANALYTICS_GRANULARITY,
+    getAnalyticsRangeDays,
+    resolveAllowedGranularity,
+    ANALYTICS_GRANULARITIES,
+    isGranularityAllowed,
 } from "./analytics/dateRangeUtils"
 
 
@@ -43,12 +59,104 @@ const DEFAULT_THRESHOLDS = {
     overspend: 150,
 };
 
+function getRecommendationIdentity(rec) {
+    if (!rec) return ""
+    return [
+        rec.adId || rec.ad_id || rec.adsetId || rec.campaignId || rec.id || rec.message || "",
+        rec.type || "",
+        rec.level || "",
+    ].join(":")
+}
+
+function mergeRecommendationPayload(previousPayload, nextPayload) {
+    const previousRecommendations = previousPayload?.recommendations || []
+    const incomingRecommendations = nextPayload?.recommendations || []
+    const seen = new Set()
+    const recommendations = []
+
+    for (const rec of [...previousRecommendations, ...incomingRecommendations]) {
+        const key = getRecommendationIdentity(rec)
+        if (seen.has(key)) continue
+        seen.add(key)
+        recommendations.push(rec)
+    }
+
+    return {
+        ...(previousPayload || {}),
+        ...(nextPayload || {}),
+        recommendations,
+    }
+}
+
+async function readRecommendationStream(res, onChunk) {
+    if (!res.body) return null
+
+    const reader = res.body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ""
+    let finalPayload = null
+
+    while (true) {
+        const { value, done } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split("\n")
+        buffer = lines.pop() || ""
+
+        for (const line of lines) {
+            if (!line.trim()) continue
+            const event = JSON.parse(line)
+            if (event.type === "partial" && event.payload) {
+                onChunk(event.payload)
+            } else if (event.type === "complete" && event.payload) {
+                finalPayload = event.payload
+                onChunk(event.payload)
+            } else if (event.type === "error") {
+                throw new Error(event.error || "Failed to fetch recommendations")
+            }
+        }
+    }
+
+    const trailing = buffer.trim()
+    if (trailing) {
+        const event = JSON.parse(trailing)
+        if (event.type === "complete" && event.payload) {
+            finalPayload = event.payload
+            onChunk(event.payload)
+        }
+    }
+
+    return finalPayload
+}
+
+function formatEventName(actionType) {
+    if (!actionType) return 'Auto-detected event'
+    if (actionType.startsWith('offsite_conversion.fb_pixel_custom.')) {
+        return actionType.slice('offsite_conversion.fb_pixel_custom.'.length)
+            .replace(/_/g, ' ')
+            .replace(/\b\w/g, c => c.toUpperCase())
+    }
+    if (actionType === 'offsite_conversion.fb_pixel_custom') return 'Custom Event'
+    if (actionType.startsWith('offsite_conversion.custom.')) return 'Custom Conversion'
+    if (actionType.startsWith('offsite_conversion.fb_pixel_')) {
+        return actionType.slice('offsite_conversion.fb_pixel_'.length)
+            .replace(/_/g, ' ')
+            .replace(/\b\w/g, c => c.toUpperCase())
+    }
+    return actionType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+}
+
 export default function AnalyticsDashboard() {
     const { adAccounts, adAccountsLoading } = useAppData()
     const { loading: globalSettingsLoading, hasSeenAnalyticsOnboarding } = useGlobalSettings()
 
-    // ── Onboarding state 
+    // ── Onboarding state
     const [showOnboarding, setShowOnboarding] = useState(false)
+    // True once the user has saved or dismissed onboarding this session. Bridges
+    // the gap until useGlobalSettings refetches hasSeenAnalyticsOnboarding, so we
+    // don't kick off background fetches while the popup is still up (or in flight).
+    const [onboardingResolved, setOnboardingResolved] = useState(false)
 
     // ── Core state
     const [selectedAdAccount, setSelectedAdAccount] = useState(() => {
@@ -60,6 +168,14 @@ export default function AnalyticsDashboard() {
     // const [modeAutoDetected, setModeAutoDetected] = useState(false)
     const [activeTab, setActiveTab] = useState("budget")
     const [analyticsDateRange, setAnalyticsDateRange] = useState(() => createAnalyticsDateRangeFromPreset("last_30d"))
+    const [analyticsGranularity, setAnalyticsGranularity] = useState(DEFAULT_ANALYTICS_GRANULARITY)
+
+    // Keep short ranges readable: 7 days or fewer always use daily buckets.
+    // Longer ranges only change when the active granularity is invalid.
+    useEffect(() => {
+        const next = resolveAllowedGranularity(analyticsGranularity, analyticsDateRange)
+        if (next !== analyticsGranularity) setAnalyticsGranularity(next)
+    }, [analyticsDateRange, analyticsGranularity])
 
     // ── Aggregate KPI dialog 
     const [showAggregateDialog, setShowAggregateDialog] = useState(false)
@@ -69,9 +185,14 @@ export default function AnalyticsDashboard() {
     // const [anomalyThresholds, setAnomalyThresholds] = useState(DEFAULT_THRESHOLDS)
     const [tempThresholds, setTempThresholds] = useState(DEFAULT_THRESHOLDS)
 
-    // ── Target KPI (lives in settings dialog, feeds recommendations) 
+    // ── Target KPI (lives in settings dialog, feeds recommendations)
     const [tempTargetCPA, setTempTargetCPA] = useState("")
     const [tempTargetROAS, setTempTargetROAS] = useState("")
+
+    // ── Inline "set target KPI" prompt shown in the Budget tab when the account
+    //    has no saved target yet (gates budget recommendations).
+    const [budgetTargetInput, setBudgetTargetInput] = useState("")
+    const [savingBudgetTarget, setSavingBudgetTarget] = useState(false)
 
     // ── Mode/Event preferences in settings dialog 
     const [tempAnalyticsMode, setTempAnalyticsMode] = useState("roas")
@@ -80,13 +201,18 @@ export default function AnalyticsDashboard() {
     const [conversionEventsLoading, setConversionEventsLoading] = useState(false)
     const [stableMetricMode, setStableMetricMode] = useState("cpr")
 
+    // Auto-detected default conversion event per account (the popup's top row,
+    // i.e. the event the most ad sets optimize for) used when the account has no
+    // saved conversionEvent preference. Resolved on demand; { [accountId]: event|null }.
+    // `null` value = resolved, no events found (fall back to server spend-detect).
+    const [autoEvents, setAutoEvents] = useState({})
+
     // ── Slack state 
     const [slackConnected, setSlackConnected] = useState(false)
     const [slackChannelName, setSlackChannelName] = useState(null)
     // const [slackAlertsEnabled, setSlackAlertsEnabled] = useState(false)
     const [tempSlackAlertsEnabled, setTempSlackAlertsEnabled] = useState(false)
     const [slackDisconnecting, setSlackDisconnecting] = useState(false)
-    const [showSlackDialog, setShowSlackDialog] = useState(false)
     const [showSummaryDialog, setShowSummaryDialog] = useState(false)
     // ── Data state 
     const [recommendations, setRecommendations] = useState(null)
@@ -103,9 +229,22 @@ export default function AnalyticsDashboard() {
     const [weeklyLoading, setWeeklyLoading] = useState(false)
     const [savingSettings, setSavingSettings] = useState(false)
 
+    // ──────────────────────────────────────────────────────────────────────
+    // FEATURE START: PERIOD METRICS SUMMARY (added 2026-05-19) — state
+    // ──────────────────────────────────────────────────────────────────────
+    const [periodSummary, setPeriodSummary] = useState(null)
+    const [periodSummaryLoading, setPeriodSummaryLoading] = useState(false)
+    const periodSummaryCacheRef = useRef({})
+    const periodSummaryAbortRef = useRef(null)
+    // ──────────────────────────────────────────────────────────────────────
+    // FEATURE END: PERIOD METRICS SUMMARY — state
+    // ──────────────────────────────────────────────────────────────────────
+
 
 
     const [auditOpen, setAuditOpen] = useState(false)
+    const [diagnosticOpen, setDiagnosticOpen] = useState(false)
+    const [chartsRefreshKey, setChartsRefreshKey] = useState(0)
     // Per-account response caches (session-scoped, cleared on tab close)
     const recsCacheRef = useRef({})       // { [accountId]: responsePayload }
     const poorAdsCacheRef = useRef({})    // { [accountId]: responsePayload }
@@ -133,6 +272,35 @@ export default function AnalyticsDashboard() {
     const anomalyThresholds = adAccountSettings?.anomalyThresholds ?? DEFAULT_THRESHOLDS
     const slackAlertsEnabled = adAccountSettings?.slackAlertsEnabled ?? false
     const preferencesLoading = Boolean(selectedAdAccount) && adAccountSettingsLoading
+
+    // Block all background data loading until first-time onboarding is resolved
+    // (saved or dismissed). Returning users (hasSeenAnalyticsOnboarding) are only
+    // gated during the brief global-settings load.
+    const blockForOnboarding = globalSettingsLoading || (!hasSeenAnalyticsOnboarding && !onboardingResolved)
+
+    // Budget recommendations require an explicit Target KPI for the active mode —
+    // we no longer silently fall back to the account average.
+    const hasTargetKPI = metricMode === 'roas'
+        ? Number(targetROAS) > 0
+        : Number(targetCPA) > 0
+
+    // ── Default conversion event (KPI chart + Trending Creatives) ──
+    // Consumed only by the KPI chart (daily-insights) and Trending Creatives. When
+    // a CPA account has no saved conversionEvent, default to the auto-detected top
+    // event (the event the most ad sets optimize for — the popup's #1 row) and pass
+    // it as if the user had selected it explicitly. Everything else keeps the saved
+    // value / server auto-detect.
+    const savedConversionEvent = adAccountSettings?.conversionEvent || null
+    // Only applies in CPA mode — ROAS keeps its existing behavior (no event passed).
+    const autoEventApplies = metricMode === 'cpr' && !savedConversionEvent
+    const autoEventResolved = Boolean(selectedAdAccount) &&
+        Object.prototype.hasOwnProperty.call(autoEvents, selectedAdAccount)
+    const effectiveConversionEvent = savedConversionEvent ||
+        (autoEventApplies && autoEventResolved ? autoEvents[selectedAdAccount] : null)
+    // True while we still need to resolve the auto event — the KPI chart fetch
+    // waits so it doesn't fire with the wrong event and then refetch.
+    const autoEventPending = Boolean(selectedAdAccount) && !adAccountSettingsLoading &&
+        autoEventApplies && !autoEventResolved
 
     useEffect(() => {
         if (adAccountSettingsLoading) return
@@ -231,8 +399,34 @@ export default function AnalyticsDashboard() {
         return adAccounts?.find((a) => a.id === selectedAdAccount)?.name || selectedAdAccount;
     }, [selectedAdAccount, adAccounts])
 
+    const adAccountDropdownHeight = useMemo(() => {
+        const rowCount = filteredAdAccounts.length + (adAccounts?.length > 1 ? 1 : 0)
+        const groupCount = (filteredAdAccounts.length > 0 ? 1 : 0) + (adAccounts?.length > 1 ? 1 : 0)
+        return Math.min(300, Math.max(58, rowCount * 42 + groupCount * 8 + 8))
+    }, [filteredAdAccounts.length, adAccounts?.length])
+
+    const optimizationFocusLabel = useMemo(() => {
+        if (metricMode === 'roas') return 'Optimization Focus: ROAS'
+
+        const conversionEventLabel = adAccountSettings?.conversionEvent
+            ? formatEventName(adAccountSettings.conversionEvent)
+            : null
+
+        return conversionEventLabel
+            ? `Optimization Focus: CPA · ${conversionEventLabel}`
+            : 'Optimization Focus: CPA'
+    }, [metricMode, adAccountSettings?.conversionEvent])
+
+    const anomalyDetectionDescription = useMemo(() => {
+        const cpaSpike = parseInt(anomalyThresholds.cpaSpike, 10) || DEFAULT_THRESHOLDS.cpaSpike
+        const overspend = parseInt(anomalyThresholds.overspend, 10) || DEFAULT_THRESHOLDS.overspend
+
+        return `monitors CPA spikes above ${cpaSpike}% of the 7-day average and overspend above ${overspend}% of daily budget.`
+    }, [anomalyThresholds.cpaSpike, anomalyThresholds.overspend])
+
     const recsCount = recommendations?.recommendations?.length || 0
     const poorAdsCount = poorAds?.ads?.length || 0
+    const showSingleDayChartTooltips = getAnalyticsRangeDays(analyticsDateRange) === 1
 
 
 
@@ -288,6 +482,15 @@ export default function AnalyticsDashboard() {
         if (!selectedAdAccount) return
         const accountAtStart = selectedAdAccount
 
+        // Require an explicit Target KPI for the active mode — the Budget tab shows
+        // a "set a target" prompt instead of fetching against the account average.
+        const hasTarget = metricMode === 'roas' ? Number(targetROAS) > 0 : Number(targetCPA) > 0
+        if (!hasTarget) {
+            setRecsLoading(false)
+            setRecommendations(null)
+            return
+        }
+
         // Return cached data unless forced
         if (!force && recsCacheRef.current[accountAtStart]) {
             setRecommendations(recsCacheRef.current[accountAtStart])
@@ -304,15 +507,26 @@ export default function AnalyticsDashboard() {
                 url += `&conversionEvent=${encodeURIComponent(adAccountSettings.conversionEvent)}`
             }
             const res = await fetch(url, { credentials: 'include' })
-            const data = await res.json()
 
             // Discard if user switched accounts while we were fetching
             if (currentAccountRef.current !== accountAtStart) return
 
             if (res.ok) {
-                recsCacheRef.current[accountAtStart] = data
-                setRecommendations(data)
+                let latestPayload = null
+                const finalData = await readRecommendationStream(res, (chunk) => {
+                    if (currentAccountRef.current !== accountAtStart) return
+                    latestPayload = mergeRecommendationPayload(latestPayload, chunk)
+                    setRecommendations(prev => mergeRecommendationPayload(prev, chunk))
+                })
+
+                if (currentAccountRef.current !== accountAtStart) return
+                const completedData = finalData || latestPayload
+                if (completedData) {
+                    recsCacheRef.current[accountAtStart] = completedData
+                    setRecommendations(completedData)
+                }
             } else {
+                const data = await res.json()
                 toast.error(data.error || 'Failed to fetch recommendations')
             }
         } catch (err) {
@@ -379,12 +593,12 @@ export default function AnalyticsDashboard() {
         return params.toString()
     }, [])
 
-    const getDailyInsightsCacheKey = useCallback((accountId, dateRange, conversionEvent) => {
-        return `${accountId}::${getAnalyticsDateRangeCacheKey(dateRange)}::${conversionEvent || "__auto__"}`
+    const getDailyInsightsCacheKey = useCallback((accountId, dateRange, conversionEvent, granularity) => {
+        return `${accountId}::${getAnalyticsDateRangeCacheKey(dateRange)}::${conversionEvent || "__auto__"}::${granularity || DEFAULT_ANALYTICS_GRANULARITY}`
     }, [])
 
-    const getWeeklyInsightsCacheKey = useCallback((accountId, dateRange) => {
-        return `${accountId}::${getAnalyticsDateRangeCacheKey(dateRange)}`
+    const getWeeklyInsightsCacheKey = useCallback((accountId, dateRange, conversionEvent, granularity) => {
+        return `${accountId}::${getAnalyticsDateRangeCacheKey(dateRange)}::${conversionEvent || "__auto__"}::${granularity || DEFAULT_ANALYTICS_GRANULARITY}`
     }, [])
 
     const clearDailyInsightsCache = useCallback((accountId = null) => {
@@ -414,7 +628,8 @@ export default function AnalyticsDashboard() {
     const loadDailyInsights = useCallback(async ({
         accountId = selectedAdAccount,
         dateRange = analyticsDateRange,
-        conversionEvent = adAccountSettings?.conversionEvent || null,
+        conversionEvent = effectiveConversionEvent || null,
+        granularity = analyticsGranularity,
         force = false,
     } = {}) => {
         if (!accountId) return
@@ -424,7 +639,7 @@ export default function AnalyticsDashboard() {
             dailyInsightsAbortRef.current = null
         }
 
-        const cacheKey = getDailyInsightsCacheKey(accountId, dateRange, conversionEvent)
+        const cacheKey = getDailyInsightsCacheKey(accountId, dateRange, conversionEvent, granularity)
         const cachedPayload = dailyInsightsCacheRef.current[cacheKey]
 
         if (!force && cachedPayload) {
@@ -439,7 +654,7 @@ export default function AnalyticsDashboard() {
         setDailyLoading(true)
 
         try {
-            const query = buildAnalyticsQueryString(accountId, dateRange, { conversionEvent })
+            const query = buildAnalyticsQueryString(accountId, dateRange, { conversionEvent, granularity })
             const url = `${API_BASE_URL}/api/analytics/daily-insights?${query}`
 
             const res = await fetch(url, {
@@ -468,7 +683,8 @@ export default function AnalyticsDashboard() {
     }, [
         selectedAdAccount,
         analyticsDateRange,
-        adAccountSettings?.conversionEvent,
+        analyticsGranularity,
+        effectiveConversionEvent,
         buildAnalyticsQueryString,
         getDailyInsightsCacheKey,
     ])
@@ -476,6 +692,8 @@ export default function AnalyticsDashboard() {
     const fetchWeeklyInsights = useCallback(async ({
         accountId = selectedAdAccount,
         dateRange = analyticsDateRange,
+        granularity = analyticsGranularity,
+        conversionEvent = adAccountSettings?.conversionEvent || null,
         force = false,
     } = {}) => {
         if (!accountId) return
@@ -485,7 +703,7 @@ export default function AnalyticsDashboard() {
             weeklyInsightsAbortRef.current = null
         }
 
-        const cacheKey = getWeeklyInsightsCacheKey(accountId, dateRange)
+        const cacheKey = getWeeklyInsightsCacheKey(accountId, dateRange, conversionEvent, granularity)
         const cachedPayload = weeklyInsightsCacheRef.current[cacheKey]
 
         if (!force && cachedPayload) {
@@ -500,7 +718,7 @@ export default function AnalyticsDashboard() {
         setWeeklyInsights(null)
         setWeeklyLoading(true)
         try {
-            const query = buildAnalyticsQueryString(accountId, dateRange)
+            const query = buildAnalyticsQueryString(accountId, dateRange, { conversionEvent, granularity })
             const res = await fetch(`${API_BASE_URL}/api/analytics/weekly-insights?${query}`, {
                 credentials: 'include',
                 signal: controller.signal,
@@ -526,9 +744,118 @@ export default function AnalyticsDashboard() {
     }, [
         selectedAdAccount,
         analyticsDateRange,
+        analyticsGranularity,
+        adAccountSettings?.conversionEvent,
         buildAnalyticsQueryString,
         getWeeklyInsightsCacheKey,
     ])
+
+    // ──────────────────────────────────────────────────────────────────────
+    // FEATURE START: PERIOD METRICS SUMMARY (added 2026-05-19) — fetcher
+    // ──────────────────────────────────────────────────────────────────────
+    const getPeriodSummaryCacheKey = useCallback((accountId, dateRange, conversionEvent, mode) => {
+        return `${accountId}::${getAnalyticsDateRangeCacheKey(dateRange)}::${conversionEvent || "__auto__"}::${mode || "cpr"}`
+    }, [])
+
+    const clearPeriodSummaryCache = useCallback((accountId = null) => {
+        if (!accountId) {
+            periodSummaryCacheRef.current = {}
+            return
+        }
+        const prefix = `${accountId}::`
+        Object.keys(periodSummaryCacheRef.current).forEach((key) => {
+            if (key.startsWith(prefix)) delete periodSummaryCacheRef.current[key]
+        })
+    }, [])
+
+    const loadPeriodSummary = useCallback(async ({
+        accountId = selectedAdAccount,
+        dateRange = analyticsDateRange,
+        conversionEvent = adAccountSettings?.conversionEvent || null,
+        mode = metricMode,
+        force = false,
+    } = {}) => {
+        if (!accountId) return
+
+        if (periodSummaryAbortRef.current) {
+            periodSummaryAbortRef.current.abort()
+            periodSummaryAbortRef.current = null
+        }
+
+        const cacheKey = getPeriodSummaryCacheKey(accountId, dateRange, conversionEvent, mode)
+        const cachedPayload = periodSummaryCacheRef.current[cacheKey]
+        if (!force && cachedPayload) {
+            setPeriodSummary(cachedPayload)
+            setPeriodSummaryLoading(false)
+            return
+        }
+
+        const controller = new AbortController()
+        periodSummaryAbortRef.current = controller
+        setPeriodSummary(null)
+        setPeriodSummaryLoading(true)
+
+        try {
+            const params = new URLSearchParams()
+            params.set("adAccountId", accountId)
+            if (dateRange?.since) params.set("since", dateRange.since)
+            if (dateRange?.until) params.set("until", dateRange.until)
+            if (conversionEvent) params.set("conversionEvent", conversionEvent)
+            const res = await fetch(`${API_BASE_URL}/api/analytics/period-summary?${params}`, {
+                credentials: 'include',
+                signal: controller.signal,
+            })
+            const json = await res.json()
+            if (!res.ok) throw new Error(json.error || 'Failed to fetch period summary')
+            if (controller.signal.aborted || periodSummaryAbortRef.current !== controller) return
+            periodSummaryCacheRef.current[cacheKey] = json
+            setPeriodSummary(json)
+        } catch (err) {
+            if (err.name === 'AbortError') return
+            console.error('Period summary error:', err)
+        } finally {
+            if (periodSummaryAbortRef.current === controller) {
+                periodSummaryAbortRef.current = null
+                setPeriodSummaryLoading(false)
+            }
+        }
+    }, [
+        selectedAdAccount,
+        analyticsDateRange,
+        adAccountSettings?.conversionEvent,
+        metricMode,
+        getPeriodSummaryCacheKey,
+    ])
+    // ──────────────────────────────────────────────────────────────────────
+    // FEATURE END: PERIOD METRICS SUMMARY — fetcher
+    // ──────────────────────────────────────────────────────────────────────
+
+    // Resolve the auto-detected default event (popup's top row) for accounts with
+    // no saved preference, so every fetch can pass it like an explicit selection.
+    useEffect(() => {
+        if (!selectedAdAccount || adAccountSettingsLoading || blockForOnboarding) return
+        if (!autoEventApplies) return
+        if (Object.prototype.hasOwnProperty.call(autoEvents, selectedAdAccount)) return
+
+        const accountAtStart = selectedAdAccount
+        let cancelled = false
+        ;(async () => {
+            try {
+                const res = await fetch(
+                    `${API_BASE_URL}/api/analytics/conversion-events?adAccountId=${accountAtStart}`,
+                    { credentials: 'include' }
+                )
+                const data = await res.json()
+                // Events come back sorted by ad-set count desc — [0] is the popup's top row.
+                const top = res.ok && data.events?.length ? data.events[0].event : null
+                if (!cancelled) setAutoEvents(prev => ({ ...prev, [accountAtStart]: top }))
+            } catch (err) {
+                console.error('Failed to resolve default conversion event:', err)
+                if (!cancelled) setAutoEvents(prev => ({ ...prev, [accountAtStart]: null }))
+            }
+        })()
+        return () => { cancelled = true }
+    }, [selectedAdAccount, adAccountSettingsLoading, blockForOnboarding, autoEventApplies, autoEvents])
 
     // ── Data fetching triggers ──────────────────────────────
     useEffect(() => {
@@ -548,26 +875,29 @@ export default function AnalyticsDashboard() {
         pendingDailySettingsRef.current = fallback
         currentAccountRef.current = fallback
         setSelectedAdAccount(fallback)
-        try { localStorage.setItem(SELECTED_ACCOUNT_KEY, fallback) } catch { }
+        try { localStorage.setItem(SELECTED_ACCOUNT_KEY, fallback) } catch { /* ignore storage errors */ }
     }, [adAccountsLoading, adAccounts, selectedAdAccount])
 
 
 
 
-    // Weekly insights don't depend on settings, fetch immediately
+    // Traffic metrics fetch immediately; they also refetch when the selected
+    // conversion event changes (Conversion Rate metric depends on it).
     useEffect(() => {
-        if (selectedAdAccount && !adAccountSettingsLoading) {
+        if (blockForOnboarding) return
+        if (selectedAdAccount) {
             fetchWeeklyInsights()
         }
-    }, [selectedAdAccount, adAccountSettingsLoading, analyticsDateRange, fetchWeeklyInsights])
+    }, [selectedAdAccount, analyticsDateRange, fetchWeeklyInsights, blockForOnboarding])
 
     // Account info auto-detection should only run AFTER settings have loaded,
     // so modeCache is already populated if the user has a saved preference
     useEffect(() => {
+        if (blockForOnboarding) return
         if (selectedAdAccount && !adAccountSettingsLoading) {
             fetchAccountInfo(selectedAdAccount)
         }
-    }, [selectedAdAccount, adAccountSettingsLoading, fetchAccountInfo])
+    }, [selectedAdAccount, adAccountSettingsLoading, fetchAccountInfo, blockForOnboarding])
 
 
 
@@ -575,10 +905,18 @@ export default function AnalyticsDashboard() {
     useEffect(() => {
         if (!selectedAdAccount) return
         if (adAccountSettingsLoading) return
+        if (blockForOnboarding) return
 
-        fetchRecommendations()
+        // Budget recommendations only fetch once a Target KPI exists for the
+        // current mode; otherwise we render the "set a target" prompt instead.
+        if (hasTargetKPI) {
+            fetchRecommendations()
+        } else {
+            setRecsLoading(false)
+            setRecommendations(null)
+        }
         fetchPoorAds()
-    }, [selectedAdAccount, adAccountSettingsLoading, fetchRecommendations, fetchPoorAds])
+    }, [selectedAdAccount, adAccountSettingsLoading, blockForOnboarding, hasTargetKPI, fetchRecommendations, fetchPoorAds])
 
     useEffect(() => {
         if (!showSettingsDialog || !selectedAdAccount || adAccountSettingsLoading) return
@@ -617,14 +955,17 @@ export default function AnalyticsDashboard() {
         if (adAccountSettingsLoading || pendingDailySettingsRef.current === selectedAdAccount) {
             return
         }
+        if (blockForOnboarding || autoEventPending) return
 
         loadDailyInsights()
     }, [
         selectedAdAccount,
         analyticsDateRange,
         adAccountSettingsLoading,
-        adAccountSettings?.conversionEvent,
+        effectiveConversionEvent,
         loadDailyInsights,
+        blockForOnboarding,
+        autoEventPending,
     ])
 
     useEffect(() => {
@@ -638,6 +979,41 @@ export default function AnalyticsDashboard() {
         }
     }, [])
 
+    // ──────────────────────────────────────────────────────────────────────
+    // FEATURE START: PERIOD METRICS SUMMARY (added 2026-05-19) — effect
+    // ──────────────────────────────────────────────────────────────────────
+    useEffect(() => {
+        if (!selectedAdAccount) {
+            if (periodSummaryAbortRef.current) {
+                periodSummaryAbortRef.current.abort()
+                periodSummaryAbortRef.current = null
+            }
+            setPeriodSummary(null)
+            setPeriodSummaryLoading(false)
+            return
+        }
+        if (adAccountSettingsLoading || pendingDailySettingsRef.current === selectedAdAccount) return
+        if (blockForOnboarding) return
+        loadPeriodSummary()
+    }, [
+        selectedAdAccount,
+        analyticsDateRange,
+        adAccountSettingsLoading,
+        adAccountSettings?.conversionEvent,
+        metricMode,
+        loadPeriodSummary,
+        blockForOnboarding,
+    ])
+
+    useEffect(() => {
+        return () => {
+            if (periodSummaryAbortRef.current) periodSummaryAbortRef.current.abort()
+        }
+    }, [])
+    // ──────────────────────────────────────────────────────────────────────
+    // FEATURE END: PERIOD METRICS SUMMARY — effect
+    // ──────────────────────────────────────────────────────────────────────
+
 
 
     const handleAdAccountSelect = (accountId) => {
@@ -645,7 +1021,7 @@ export default function AnalyticsDashboard() {
         pendingDailySettingsRef.current = accountId
         setSelectedAdAccount(accountId)
         setOpenAdAccount(false)
-        try { localStorage.setItem(SELECTED_ACCOUNT_KEY, accountId) } catch { }
+        try { localStorage.setItem(SELECTED_ACCOUNT_KEY, accountId) } catch { /* ignore storage errors */ }
 
         // Abort any in-flight fetches
         if (dailyInsightsAbortRef.current) {
@@ -665,14 +1041,25 @@ export default function AnalyticsDashboard() {
         setRecsLoading(!recsCache)
         setPoorAdsLoading(!poorCache)
 
-        const dailyKey = getDailyInsightsCacheKey(accountId, analyticsDateRange, adAccountSettings?.conversionEvent)
-        const weeklyKey = getWeeklyInsightsCacheKey(accountId, analyticsDateRange)
+        const dailyKey = getDailyInsightsCacheKey(accountId, analyticsDateRange, effectiveConversionEvent, analyticsGranularity)
+        const weeklyKey = getWeeklyInsightsCacheKey(accountId, analyticsDateRange, adAccountSettings?.conversionEvent, analyticsGranularity)
         const cachedDaily = dailyInsightsCacheRef.current[dailyKey]
         const cachedWeekly = weeklyInsightsCacheRef.current[weeklyKey]
         setDailyInsights(cachedDaily ?? null)
         setWeeklyInsights(cachedWeekly ?? null)
         setDailyLoading(!cachedDaily)
         setWeeklyLoading(!cachedWeekly)
+
+        // FEATURE START: PERIOD METRICS SUMMARY — restore from cache on account switch
+        if (periodSummaryAbortRef.current) {
+            periodSummaryAbortRef.current.abort()
+            periodSummaryAbortRef.current = null
+        }
+        const summaryKey = getPeriodSummaryCacheKey(accountId, analyticsDateRange, adAccountSettings?.conversionEvent, metricMode)
+        const cachedSummary = periodSummaryCacheRef.current[summaryKey]
+        setPeriodSummary(cachedSummary ?? null)
+        setPeriodSummaryLoading(!cachedSummary)
+        // FEATURE END: PERIOD METRICS SUMMARY
     }
 
     const handleRefreshBudgetRecommendations = useCallback(() => {
@@ -694,6 +1081,28 @@ export default function AnalyticsDashboard() {
         fetchPoorAds(true)
     }, [selectedAdAccount, adAccountSettingsLoading, fetchPoorAds])
 
+    const handlePoorAdsPaused = useCallback((adIds, accountId = selectedAdAccount) => {
+        if (!accountId || !Array.isArray(adIds) || adIds.length === 0) return
+
+        const pausedAdIds = new Set(adIds)
+        const removePausedAds = (payload) => {
+            if (!payload?.ads) return payload
+            return {
+                ...payload,
+                ads: payload.ads.filter(ad => !pausedAdIds.has(ad.adId)),
+            }
+        }
+
+        const cachedPayload = poorAdsCacheRef.current[accountId]
+        if (cachedPayload) {
+            poorAdsCacheRef.current[accountId] = removePausedAds(cachedPayload)
+        }
+
+        if (currentAccountRef.current === accountId || selectedAdAccount === accountId) {
+            setPoorAds(prev => removePausedAds(prev))
+        }
+    }, [selectedAdAccount])
+
     const handleRefreshCharts = useCallback(() => {
         if (!selectedAdAccount || adAccountSettingsLoading) return
 
@@ -701,7 +1110,12 @@ export default function AnalyticsDashboard() {
         clearWeeklyInsightsCache(selectedAdAccount)
         loadDailyInsights({ force: true })
         fetchWeeklyInsights({ force: true })
-    }, [selectedAdAccount, adAccountSettingsLoading, clearDailyInsightsCache, clearWeeklyInsightsCache, loadDailyInsights, fetchWeeklyInsights])
+        // FEATURE START: PERIOD METRICS SUMMARY — also refresh on chart refresh
+        clearPeriodSummaryCache(selectedAdAccount)
+        loadPeriodSummary({ force: true })
+        // FEATURE END: PERIOD METRICS SUMMARY
+        setChartsRefreshKey(Date.now())
+    }, [selectedAdAccount, adAccountSettingsLoading, clearDailyInsightsCache, clearWeeklyInsightsCache, loadDailyInsights, fetchWeeklyInsights, clearPeriodSummaryCache, loadPeriodSummary])
 
     const handleSaveSettings = async () => {
         setSavingSettings(true)
@@ -778,6 +1192,11 @@ export default function AnalyticsDashboard() {
     }
 
 
+    // Kick off the Slack OAuth install flow (redirects to Slack, then back to the app).
+    const startSlackConnect = () => {
+        window.location.href = `${API_BASE_URL}/api/analytics/slack/install`
+    }
+
     const handleSlackDisconnect = async () => {
         setSlackDisconnecting(true)
         try {
@@ -805,8 +1224,62 @@ export default function AnalyticsDashboard() {
         setShowSettingsDialog(true)
     }
 
-    const handleOnboardingComplete = () => {
+    const handleOnboardingComplete = (savedSettingsByAccount = null) => {
+        if (savedSettingsByAccount) {
+            Object.keys(savedSettingsByAccount).forEach(accountId => {
+                delete recsCacheRef.current[accountId]
+                delete poorAdsCacheRef.current[accountId]
+            })
+
+            const activeAccountId = selectedAdAccount || currentAccountRef.current || adAccounts?.[0]?.id
+            const activeSettings = activeAccountId ? savedSettingsByAccount[activeAccountId] : null
+
+            if (activeSettings) {
+                setAdAccountSettings(prev => ({
+                    ...prev,
+                    ...activeSettings,
+                }))
+                setRecommendations(null)
+                setPoorAds(null)
+
+                const hasSavedTarget = activeSettings.analyticsMode === 'roas'
+                    ? Number(activeSettings.targetROAS) > 0
+                    : Number(activeSettings.targetCPA) > 0
+                setRecsLoading(hasSavedTarget)
+                setPoorAdsLoading(true)
+            }
+        }
+
         setShowOnboarding(false)
+        setOnboardingResolved(true)
+    }
+
+    // Clear the inline budget-target input whenever the account or mode changes.
+    useEffect(() => {
+        setBudgetTargetInput("")
+    }, [selectedAdAccount, metricMode])
+
+    // Save a Target KPI straight from the Budget-tab prompt. Once persisted,
+    // hasTargetKPI flips true and the recommendations effect fetches automatically.
+    const handleSetBudgetTarget = async () => {
+        const num = parseFloat(budgetTargetInput)
+        if (!num || num <= 0) {
+            toast.error(metricMode === 'roas' ? 'Enter a valid Target ROAS' : 'Enter a valid Target CPA')
+            return
+        }
+        setSavingBudgetTarget(true)
+        try {
+            const patch = metricMode === 'roas' ? { targetROAS: num } : { targetCPA: num }
+            await saveSettings({ adAccountId: selectedAdAccount, adAccountSettings: patch })
+            setAdAccountSettings(prev => ({ ...prev, ...patch }))
+            setBudgetTargetInput("")
+            toast.success('Target saved')
+        } catch (err) {
+            console.error('Failed to save target KPI:', err)
+            toast.error('Failed to save target')
+        } finally {
+            setSavingBudgetTarget(false)
+        }
     }
 
     // ── Loading / Empty states ──────────────────────────────
@@ -876,47 +1349,60 @@ export default function AnalyticsDashboard() {
                                     className="bg-transparent"
                                     wrapperClassName="bg-gray-50 border-gray-200 rounded-[20px]"
                                 />
-                                <CommandList className="max-h-[300px] overflow-y-auto rounded-xl custom-scrollbar" selectOnFocus={false}>
-                                    <CommandGroup>
-                                        {filteredAdAccounts.map((acct) => (
-                                            <CommandItem
-                                                key={acct.id}
-                                                value={acct.id}
-                                                onSelect={handleAdAccountSelect}
-                                                className={cn(
-                                                    "px-4 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150 hover:bg-gray-100",
-                                                    selectedAdAccount === acct.id && "bg-gray-100 font-semibold"
-                                                )}
-                                            >
-                                                {acct.name || acct.id}
-                                            </CommandItem>
-                                        ))}
-                                    </CommandGroup>
-                                </CommandList>
+                                <ScrollArea
+                                    className="rounded-xl [&_[data-orientation=vertical]]:!w-1.5 [&_[data-orientation=vertical]]:!p-0"
+                                    style={{ height: adAccountDropdownHeight }}
+                                >
+                                    <CommandList className="max-h-none overflow-visible rounded-xl pb-1" selectOnFocus={false}>
+                                        {adAccounts?.length > 1 && (
+                                            <CommandGroup>
+                                                <CommandItem
+                                                    value="__aggregate_kpi_view"
+                                                    onSelect={() => {
+                                                        setOpenAdAccount(false)
+                                                        setShowAggregateDialog(true)
+                                                    }}
+                                                    className="mx-2 my-1 cursor-pointer rounded-xl border border-gray-200 bg-gray-50 px-4 py-2 font-medium shadow transition-colors duration-150 hover:!bg-gray-50 data-[selected=true]:bg-gray-50"
+                                                >
+                                                    <BarChart3 className="w-4 h-4 text-gray-500" />
+                                                    Aggregate KPI View
+                                                </CommandItem>
+                                            </CommandGroup>
+                                        )}
+                                        <CommandGroup>
+                                            {filteredAdAccounts.map((acct) => (
+                                                <CommandItem
+                                                    key={acct.id}
+                                                    value={acct.id}
+                                                    onSelect={handleAdAccountSelect}
+                                                    className={cn(
+                                                        "px-4 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150 hover:bg-gray-100",
+                                                        selectedAdAccount === acct.id && "bg-gray-100 font-semibold"
+                                                    )}
+                                                >
+                                                    {acct.name || acct.id}
+                                                </CommandItem>
+                                            ))}
+                                        </CommandGroup>
+                                    </CommandList>
+                                </ScrollArea>
                             </Command>
                         </PopoverContent>
                     </Popover>
-
-                    {adAccounts?.length > 1 && (
-                        <Button
-                            variant="outline"
-                            onClick={() => setShowAggregateDialog(true)}
-                            className="rounded-2xl h-11 px-4 bg-white shadow-xs hover:bg-white"
-                        >
-                            <BarChart3 className="w-4 h-4 mr-2" />
-                            Aggregate KPI View
-                        </Button>
-                    )}
                 </div>
 
                 <div className="flex items-center gap-2">
                     <Button
                         variant="outline" size="sm"
                         onClick={openSettingsDialog}
-                        className="rounded-2xl h-11 px-4"
+                        className="rounded-2xl h-11 min-w-[220px] max-w-full px-4"
                     >
                         <Settings2 className="w-4 h-4 mr-2" />
-                        Configuration
+                        {adAccountSettingsLoading ? (
+                            <span className="h-4 w-44 rounded-full bg-gray-200 animate-pulse" />
+                        ) : (
+                            <span className="truncate">{optimizationFocusLabel}</span>
+                        )}
                     </Button>
 
                     <DropdownMenu>
@@ -927,31 +1413,53 @@ export default function AnalyticsDashboard() {
                                 <ChevronDown className="w-4 h-4 ml-2 text-gray-400" />
                             </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-[220px] rounded-2xl bg-white p-2 shadow-lg">
-                            <DropdownMenuItem
-                                onClick={() => setAuditOpen(true)}
-                                className="cursor-pointer rounded-xl px-3 py-2 text-sm focus:bg-gray-100"
-                            >
-                                <FileBarChart2 className="w-4 h-4 text-gray-500" />
-                                Audit Account
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                                onClick={() => setShowSummaryDialog(true)}
-                                className="cursor-pointer rounded-xl px-3 py-2 text-sm focus:bg-gray-100"
-                            >
-                                <FileText className="w-4 h-4 text-gray-500" />
-                                Account Summary
-                            </DropdownMenuItem>
+                        <DropdownMenuContent align="end" className="w-auto min-w-[240px] rounded-2xl bg-white p-2 shadow-lg">
+                            <TooltipProvider delayDuration={150}>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <DropdownMenuItem
+                                            onClick={() => setAuditOpen(true)}
+                                            className="cursor-pointer rounded-xl px-3 py-2 text-sm focus:bg-gray-100 whitespace-nowrap"
+                                        >
+                                            <FileBarChart2 className="w-4 h-4 text-gray-500" />
+                                            Audit Account Health
+                                        </DropdownMenuItem>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="left" className="max-w-[240px]">
+                                        Full account health check — traffic, funnel, spend, audiences, learning phase, and creative copy.
+                                    </TooltipContent>
+                                </Tooltip>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <DropdownMenuItem
+                                            onClick={() => setDiagnosticOpen(true)}
+                                            className="cursor-pointer rounded-xl px-3 py-2 text-sm focus:bg-gray-100 whitespace-nowrap"
+                                        >
+                                            <Stethoscope className="w-4 h-4 text-gray-500" />
+                                            Diagnose Poor Performance
+                                        </DropdownMenuItem>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="left" className="max-w-[240px]">
+                                        Pinpoints performance anomalies and the campaigns, ad sets, changes, and event health driving them.
+                                    </TooltipContent>
+                                </Tooltip>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <DropdownMenuItem
+                                            onClick={() => setShowSummaryDialog(true)}
+                                            className="cursor-pointer rounded-xl px-3 py-2 text-sm focus:bg-gray-100 whitespace-nowrap"
+                                        >
+                                            <FileText className="w-4 h-4 text-gray-500" />
+                                            Summarize Recent Changes
+                                        </DropdownMenuItem>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="left" className="max-w-[240px]">
+                                        A plain-English recap of what changed in your account over the last 7 days.
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
                         </DropdownMenuContent>
                     </DropdownMenu>
-                    <Button
-                        variant="outline" size="sm"
-                        onClick={() => setShowSlackDialog(true)}
-                        className="rounded-2xl h-11 w-11 p-0 flex items-center justify-center hover:bg-[#4A154B] bg-[#611f69] shadow-xs transition-colors"
-                        title="Slack Alerts"
-                    >
-                        <img src={slackWhite} alt="Slack" className="w-5 h-5" />
-                    </Button>
 
 
                 </div>
@@ -959,14 +1467,106 @@ export default function AnalyticsDashboard() {
 
             {/* ── Charts Row  */}
             {selectedAdAccount && (
-                <Card className="rounded-3xl border-gray-200 overflow-visible">
-                    <CardContent className="p-0">
-                        <div className="flex justify-end items-center gap-2 px-4 pt-4 lg:hidden">
+                /* marginTop: 24px base (space-y-6) + 8px extra breathing room below the header row */
+                <Card className="rounded-3xl border-gray-200 overflow-visible" style={{ marginTop: "2rem" }}>
+                    <CardContent className="p-0 lg:relative">
+                        {/* Desktop: floating date + breakdown + refresh, anchored to top edge of the Card
+                            (was previously anchored to the chart grid; moved to CardContent so the
+                            PERIOD METRICS SUMMARY tiles above the charts don't get overlaid). */}
+                        <div className="absolute left-1/2 top-0 z-30 hidden -translate-x-1/2 -translate-y-1/2 items-center gap-2 lg:flex">
                             <AnalyticsDateRangePicker
                                 value={analyticsDateRange}
                                 onChange={setAnalyticsDateRange}
                                 compact
                             />
+                            <div className="flex items-center gap-2 bg-gray-100 rounded-xl px-2 py-0.5">
+                                <span className="text-[11px] font-medium text-gray-500">Breakdown:</span>
+                                <div className="flex items-center gap-0.5">
+                                    {ANALYTICS_GRANULARITIES.map((opt) => {
+                                        const allowed = isGranularityAllowed(opt.key, analyticsDateRange)
+                                        const isActive = analyticsGranularity === opt.key
+                                        return (
+                                            <button
+                                                key={opt.key}
+                                                type="button"
+                                                onMouseDown={(e) => e.preventDefault()}
+                                                onClick={() => allowed && setAnalyticsGranularity(opt.key)}
+                                                disabled={!allowed}
+                                                title={
+                                                    allowed
+                                                        ? opt.label
+                                                        : opt.key === "daily"
+                                                            ? "Daily is only available for date ranges up to 90 days"
+                                                            : "Monthly needs a date range of at least 60 days"
+                                                }
+                                                className={cn(
+                                                    "px-3 py-1.5 text-[11px] font-medium rounded-lg transition-all",
+                                                    isActive
+                                                        ? "bg-white text-gray-900 shadow-xs ring-1 ring-black/5"
+                                                        : allowed
+                                                            ? "text-gray-500 hover:text-gray-700"
+                                                            : "text-gray-300 cursor-not-allowed",
+                                                )}
+                                            >
+                                                {opt.label}
+                                            </button>
+                                        )
+                                    })}
+                                </div>
+                            </div>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleRefreshCharts}
+                                disabled={dailyLoading || weeklyLoading}
+                                className="rounded-xl h-9 w-9 p-0 bg-white"
+                                title="Refresh charts"
+                            >
+                                <RefreshCw className={cn("w-3.5 h-3.5", (dailyLoading || weeklyLoading) && "animate-spin")} />
+                            </Button>
+                        </div>
+
+                        <div className="flex justify-end items-center gap-2 px-4 pt-4 lg:hidden flex-wrap">
+                            <AnalyticsDateRangePicker
+                                value={analyticsDateRange}
+                                onChange={setAnalyticsDateRange}
+                                compact
+                            />
+                            <div className="flex items-center gap-2 bg-gray-100 rounded-xl px-2 py-0.5">
+                                <span className="text-[11px] font-medium text-gray-500">Breakdown:</span>
+                                <div className="flex items-center gap-0.5">
+                                    {ANALYTICS_GRANULARITIES.map((opt) => {
+                                        const allowed = isGranularityAllowed(opt.key, analyticsDateRange)
+                                        const isActive = analyticsGranularity === opt.key
+                                        return (
+                                            <button
+                                                key={opt.key}
+                                                type="button"
+                                                onMouseDown={(e) => e.preventDefault()}
+                                                onClick={() => allowed && setAnalyticsGranularity(opt.key)}
+                                                disabled={!allowed}
+                                                title={
+                                                    allowed
+                                                        ? opt.label
+                                                        : opt.key === "daily"
+                                                            ? "Daily is only available for date ranges up to 90 days"
+                                                            : "Monthly needs a date range of at least 60 days"
+                                                }
+                                                className={cn(
+                                                    "px-3 py-1.5 text-[11px] font-medium rounded-lg transition-all",
+                                                    isActive
+                                                        ? "bg-white text-gray-900 shadow-xs ring-1 ring-black/5"
+                                                        : allowed
+                                                            ? "text-gray-500 hover:text-gray-700"
+                                                            : "text-gray-300 cursor-not-allowed",
+                                                )}
+                                            >
+                                                {opt.label}
+                                            </button>
+                                        )
+                                    })}
+                                </div>
+                            </div>
                             <Button
                                 variant="outline"
                                 size="sm"
@@ -979,38 +1579,58 @@ export default function AnalyticsDashboard() {
                             </Button>
                         </div>
 
-                        <div className="grid grid-cols-1 lg:relative lg:min-h-[360px] lg:grid-cols-2 lg:pt-4">
+                        {/* FEATURE START: PERIOD METRICS SUMMARY (added 2026-05-19) */}
+                        <PeriodMetricsSummary
+                            data={periodSummary}
+                            loading={periodSummaryLoading}
+                            mode={metricMode}
+                        />
+                        {/* FEATURE END: PERIOD METRICS SUMMARY */}
+
+                        <div className="grid grid-cols-1 lg:relative lg:min-h-[360px] lg:grid-cols-2 lg:pt-4 [&_*:focus]:outline-none [&_*:focus-visible]:outline-none">
                             <div>
                                 <KPIChart
                                     data={dailyInsights}
                                     loading={dailyLoading}
                                     mode={metricMode}
+                                    granularity={analyticsGranularity}
+                                    showDefaultTooltip={showSingleDayChartTooltips}
                                 />
                             </div>
                             <div className="border-t border-gray-200 lg:border-t-0">
                                 <WeeklyChart
                                     data={weeklyInsights}
                                     loading={weeklyLoading}
+                                    granularity={analyticsGranularity}
+                                    showDefaultTooltip={showSingleDayChartTooltips}
                                 />
                             </div>
                             <div className="pointer-events-none absolute left-1/2 top-[7%] hidden h-[90%] -translate-x-1/2 border-l border-dashed border-gray-300 lg:block" />
-                            <div className="absolute left-1/2 top-0 z-20 hidden -translate-x-1/2 -translate-y-1/2 items-center gap-2 lg:flex">
-                                <AnalyticsDateRangePicker
-                                    value={analyticsDateRange}
-                                    onChange={setAnalyticsDateRange}
-                                    compact
+                        </div>
+
+                        {/* ── Horizontal dashed separator between chart rows ── */}
+                        <div className="hidden lg:block border-t border-dashed border-gray-300 mx-4" />
+
+                        {/* ── Row 2: 2×2 grid completes with Spend Breakdown + Funnel Health ── */}
+                        <div className="grid grid-cols-1 lg:relative lg:min-h-[360px] lg:grid-cols-2 lg:pt-4 [&_*:focus]:outline-none [&_*:focus-visible]:outline-none">
+                            <div>
+                                <WeeklyPlacementChart
+                                    adAccountId={selectedAdAccount}
+                                    dateRange={analyticsDateRange}
+                                    granularity={analyticsGranularity}
+                                    refreshKey={chartsRefreshKey}
+                                    showDefaultTooltip={showSingleDayChartTooltips}
                                 />
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={handleRefreshCharts}
-                                    disabled={dailyLoading || weeklyLoading}
-                                    className="rounded-xl h-9 w-9 p-0 bg-white"
-                                    title="Refresh charts"
-                                >
-                                    <RefreshCw className={cn("w-3.5 h-3.5", (dailyLoading || weeklyLoading) && "animate-spin")} />
-                                </Button>
                             </div>
+                            <div className="border-t border-gray-200 lg:border-t-0">
+                                <FunnelHealthChart
+                                    data={weeklyInsights}
+                                    loading={weeklyLoading}
+                                    granularity={analyticsGranularity}
+                                    showDefaultTooltip={showSingleDayChartTooltips}
+                                />
+                            </div>
+                            <div className="pointer-events-none absolute left-1/2 top-[7%] hidden h-[90%] -translate-x-1/2 border-l border-dashed border-gray-300 lg:block" />
                         </div>
 
                     </CardContent>
@@ -1072,20 +1692,79 @@ export default function AnalyticsDashboard() {
             ) : (
                 <>
                     {activeTab === 'budget' && (
-                        <RecommendationCards
-                            section="budget"
-                            data={recommendations}
-                            loading={recsLoading}
-                            mode={metricMode}
-                            adAccountId={selectedAdAccount}
-                            adAccounts={adAccounts}
-                            poorAdsData={poorAds}
-                            poorAdsLoading={poorAdsLoading}
-                            onRefreshBudgetRecommendations={handleRefreshBudgetRecommendations}
-                            onRefreshPoorAds={handleRefreshPoorAds}
-                            budgetRefreshing={recsLoading}
-                            budgetRefreshToken={budgetRefreshSignal}
-                        />
+                        !hasTargetKPI ? (
+                            <Card className="rounded-2xl border-gray-200">
+                                <CardContent className="py-10 px-6">
+                                    <div className="mx-auto flex max-w-md flex-col items-center text-center">
+                                        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50">
+                                            <Target className="h-6 w-6 text-blue-500" />
+                                        </div>
+                                        <h3 className="text-base font-semibold text-gray-900">
+                                            Set a Target {metricMode === 'roas' ? 'ROAS' : 'CPA'} to see budget recommendations
+                                        </h3>
+                                        <p className="mt-1.5 text-sm text-gray-500">
+                                            Budget recommendations compare each campaign against your benchmark.
+                                            Set a target {metricMode === 'roas' ? 'ROAS' : 'CPA'} to get started.
+                                        </p>
+
+                                        <div className="mt-5 flex w-full items-center justify-center gap-2">
+                                            <div className="relative">
+                                                {metricMode !== 'roas' && (
+                                                    <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">$</span>
+                                                )}
+                                                <input
+                                                    type="number"
+                                                    step={metricMode === 'roas' ? '0.1' : '1'}
+                                                    value={budgetTargetInput}
+                                                    onChange={(e) => setBudgetTargetInput(e.target.value)}
+                                                    onKeyDown={(e) => { if (e.key === 'Enter') handleSetBudgetTarget() }}
+                                                    placeholder={metricMode === 'roas' ? 'e.g. 3.0' : 'e.g. 30'}
+                                                    className={cn(
+                                                        "w-36 py-2.5 border border-gray-300 rounded-2xl bg-white text-sm shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent",
+                                                        metricMode === 'roas' ? 'px-3 pr-7' : 'pl-7 pr-3'
+                                                    )}
+                                                />
+                                                {metricMode === 'roas' && (
+                                                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">x</span>
+                                                )}
+                                            </div>
+                                            <button
+                                                onClick={handleSetBudgetTarget}
+                                                disabled={savingBudgetTarget}
+                                                className="flex h-[42px] items-center gap-2 rounded-2xl bg-blue-600 px-5 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-70"
+                                            >
+                                                {savingBudgetTarget && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                                                {savingBudgetTarget ? 'Saving...' : 'Set Target'}
+                                            </button>
+                                        </div>
+
+                                        <button
+                                            onClick={() => setShowSettingsDialog(true)}
+                                            className="mt-4 inline-flex items-center gap-1.5 text-xs font-medium text-gray-500 transition-colors hover:text-gray-700"
+                                        >
+                                            <Settings2 className="h-3.5 w-3.5" />
+                                            Open Optimization Configuration
+                                        </button>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        ) : (
+                            <RecommendationCards
+                                section="budget"
+                                data={recommendations}
+                                loading={recsLoading}
+                                mode={metricMode}
+                                adAccountId={selectedAdAccount}
+                                adAccounts={adAccounts}
+                                poorAdsData={poorAds}
+                                poorAdsLoading={poorAdsLoading}
+                                onRefreshBudgetRecommendations={handleRefreshBudgetRecommendations}
+                                onRefreshPoorAds={handleRefreshPoorAds}
+                                onPoorAdsPaused={handlePoorAdsPaused}
+                                budgetRefreshing={recsLoading}
+                                budgetRefreshToken={budgetRefreshSignal}
+                            />
+                        )
                     )}
 
                     {activeTab === 'poor-performers' && (
@@ -1100,12 +1779,54 @@ export default function AnalyticsDashboard() {
                             poorAdsLoading={poorAdsLoading}
                             onRefreshBudgetRecommendations={handleRefreshBudgetRecommendations}
                             onRefreshPoorAds={handleRefreshPoorAds}
+                            onPoorAdsPaused={handlePoorAdsPaused}
                             budgetRefreshing={recsLoading}
                             budgetRefreshToken={budgetRefreshSignal}
                         />
                     )}
                 </>
             )}
+
+            {metricMode === "roas" && selectedAdAccount && (
+                <TrailingSixWeeksSnapshot
+                    adAccountId={selectedAdAccount}
+                    enabled={metricMode === "roas"}
+                    refreshKey={chartsRefreshKey}
+                />
+            )}
+
+            {/* ── Trending Creative (full-width) ── */}
+            {/* Wait for the auto event to resolve (CPA, no saved pref) so it fetches
+                once with the right event instead of refetching — same as the KPI chart. */}
+            {selectedAdAccount && !autoEventPending && (
+                <TrendingCreative
+                    adAccountId={selectedAdAccount}
+                    conversionEvent={effectiveConversionEvent}
+                    mode={metricMode}
+                    refreshKey={chartsRefreshKey}
+                />
+            )}
+
+            {/* ── Creative Hit Rate (full-width; bottom) ── */}
+            {selectedAdAccount && (
+                <CreativeHitRateChart
+                    adAccountId={selectedAdAccount}
+                    conversionEvent={adAccountSettings?.conversionEvent}
+                    refreshKey={chartsRefreshKey}
+                />
+            )}
+
+            {/* ── Flex Ads Launcher (full-width; bottom) ── */}
+            {/* Hidden for now — commented out, not deleted.
+            {selectedAdAccount && (
+                <FlexAdsLauncher
+                    adAccountId={selectedAdAccount}
+                    conversionEvent={adAccountSettings?.conversionEvent}
+                    mode={metricMode}
+                    refreshKey={chartsRefreshKey}
+                />
+            )}
+            */}
 
             {/* ── Info Footer ── */}
             <Card className="rounded-2xl bg-gray-50 border-gray-200">
@@ -1146,8 +1867,74 @@ export default function AnalyticsDashboard() {
                                         Anomaly Detection
                                     </strong>
                                     <span>
-                                        monitors CPA spikes above {anomalyThresholds.cpaSpike}% of the 7-day average and overspend above {anomalyThresholds.overspend}% of daily budget.
+                                        {adAccountSettingsLoading ? (
+                                            <span className="inline-block h-3 w-80 max-w-full rounded-full bg-gray-200 align-middle animate-pulse" />
+                                        ) : (
+                                            anomalyDetectionDescription
+                                        )}
                                     </span>
+                                </div>
+
+                                {/* ── Short separator before Slack Commands ── */}
+                                <div className="border-t border-gray-200 w-2/5" />
+
+                                {/* ── Slack Commands ── */}
+                                <div>
+                                    <div className="flex items-center gap-3 flex-wrap mb-2">
+                                        <strong className="text-gray-600">Slack Commands</strong>
+                                        {slackConnected ? (
+                                            <div className="flex items-center gap-2">
+                                                <span className="inline-flex items-center gap-1 text-green-600 font-medium">
+                                                    <CheckCircle2 className="w-3.5 h-3.5" />
+                                                    Slack app connected
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    onClick={handleSlackDisconnect}
+                                                    disabled={slackDisconnecting}
+                                                    className="text-red-500 hover:text-red-600 font-medium transition-colors disabled:opacity-70"
+                                                >
+                                                    {slackDisconnecting ? 'Disconnecting…' : 'Disconnect'}
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <button
+                                                type="button"
+                                                onClick={startSlackConnect}
+                                                style={{ borderColor: "rgba(74,21,75,0.35)" }}
+                                                className="inline-flex h-7 items-center gap-1.5 rounded-xl border bg-white px-2.5 text-xs font-medium text-gray-700 shadow-[0_2px_10px_rgba(74,21,75,0.18)] transition-colors hover:bg-gray-50"
+                                            >
+                                                <img src={slackColor} alt="Slack" className="h-3 w-3" />
+                                                Connect to Slack
+                                            </button>
+                                        )}
+                                    </div>
+                                    <div className="space-y-2">
+                                        <div className="flex items-start gap-2.5">
+                                            <div className="w-6 h-6 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                                <FileBarChart2 className="w-3 h-3 text-blue-600" />
+                                            </div>
+                                            <div>
+                                                <p className="font-medium text-gray-700">Account Audit</p>
+                                                <span>
+                                                    Type <code className="bg-gray-200/70 text-gray-700 px-1.5 py-0.5 rounded text-[11px] font-mono">/blip-audit</code> in
+                                                    Slack to generate a full PDF audit for any ad account.
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-start gap-2.5">
+                                            <div className="w-6 h-6 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                                <FileText className="w-3 h-3 text-amber-600" />
+                                            </div>
+                                            <div>
+                                                <p className="font-medium text-gray-700">Account Summary</p>
+                                                <span>
+                                                    Type <code className="bg-gray-200/70 text-gray-700 px-1.5 py-0.5 rounded text-[11px] font-mono">/blip-summary</code> in
+                                                    Slack to get a recap of recent changes for any ad account.
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
 
                             </div>
@@ -1164,21 +1951,23 @@ export default function AnalyticsDashboard() {
                 conversionEvent={adAccountSettings?.conversionEvent}
                 targetCPA={adAccountSettings?.targetCPA}
                 targetROAS={adAccountSettings?.targetROAS}
-            />
-            <SlackAlertsDialog
-                open={showSlackDialog}
-                onClose={() => setShowSlackDialog(false)}
                 slackConnected={slackConnected}
-                slackChannelName={slackChannelName}
-                slackAlertsEnabled={slackAlertsEnabled}
-                onSlackAlertsEnabledChange={(val) => setAdAccountSettings(prev => ({ ...prev, slackAlertsEnabled: val }))}
-                onSlackDisconnect={handleSlackDisconnect}
-                slackDisconnecting={slackDisconnecting}
+                onConnectSlack={startSlackConnect}
+            />
+            <AdAccountDiagnostic
+                open={diagnosticOpen}
+                onOpenChange={setDiagnosticOpen}
+                adAccountId={selectedAdAccount}
+                adAccountName={selectedAdAccountName}
+                kpiType={metricMode === 'roas' ? 'roas' : 'cpa'}
+                conversionEvent={adAccountSettings?.conversionEvent}
             />
             <AccountSummaryDialog
                 open={showSummaryDialog}
                 onClose={() => setShowSummaryDialog(false)}
                 adAccountId={selectedAdAccount}
+                slackConnected={slackConnected}
+                onConnectSlack={startSlackConnect}
             />
             {/* ── Custom Settings Popup ── */}
             {showSettingsDialog && (
@@ -1195,7 +1984,10 @@ export default function AnalyticsDashboard() {
                         onClick={() => setShowSettingsDialog(false)}
                     />
 
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div
+                        className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                        onClick={() => setShowSettingsDialog(false)}
+                    >
                         <div
                             className="bg-white rounded-[28px] shadow-2xl w-full max-w-[520px] max-h-[90vh] flex flex-col overflow-hidden"
                             onClick={(e) => e.stopPropagation()}
@@ -1207,7 +1999,7 @@ export default function AnalyticsDashboard() {
                                     <div className="space-y-1">
                                         <h2 className="text-xl font-semibold flex items-center gap-2">
                                             <Settings2 className="w-5 h-5" />
-                                            Analytics Settings
+                                            Optimization Focus
                                         </h2>
                                         <p className="text-sm text-gray-500">
                                             Configure optimization mode, recommendations, anomaly detection, and alerts
@@ -1233,36 +2025,29 @@ export default function AnalyticsDashboard() {
 
                                         {/* ── Optimization Focus ── */}
                                         <div className="space-y-4">
-                                            <h3 className="font-medium text-gray-900 flex items-center gap-2">
-                                                <Activity className="w-4 h-4 text-purple-500" />
-                                                Optimization Focus
-                                            </h3>
-                                            <div className="space-y-4 pl-6">
-                                                <div className="flex items-center justify-between">
-                                                    <div>
-                                                        <p className="text-sm text-gray-700">
-                                                            {tempAnalyticsMode === 'roas'
-                                                                ? 'Optimizing for Return on Ad Spend'
-                                                                : 'Optimizing for Cost Per Action'}
-                                                        </p>
-                                                    </div>
-                                                    <div className="flex items-center gap-2">
-                                                        <span className={cn("text-xs font-medium", tempAnalyticsMode === 'cpa' ? "text-green-600" : "text-gray-400")}>CPA</span>
-                                                        <Switch
-                                                            checked={tempAnalyticsMode === 'roas'}
-                                                            onCheckedChange={(checked) => {
-                                                                const next = checked ? 'roas' : 'cpa'
-                                                                setTempAnalyticsMode(next)
-                                                            }}
-                                                            className="data-[state=unchecked]:bg-green-500"
-                                                        />
-                                                        <span className={cn("text-xs font-medium", tempAnalyticsMode === 'roas' ? "text-blue-600" : "text-gray-400")}>ROAS</span>
-                                                    </div>
+                                            <div className="flex items-center justify-between gap-3">
+                                                <h3 className="font-medium text-gray-900 flex items-center gap-2">
+                                                    <Activity className="w-4 h-4 text-purple-500" />
+                                                    Optimization Focus
+                                                </h3>
+                                                <div className="flex items-center gap-2">
+                                                    <span className={cn("text-xs font-medium", tempAnalyticsMode === 'cpa' ? "text-green-600" : "text-gray-400")}>CPA</span>
+                                                    <Switch
+                                                        checked={tempAnalyticsMode === 'roas'}
+                                                        onCheckedChange={(checked) => {
+                                                            const next = checked ? 'roas' : 'cpa'
+                                                            setTempAnalyticsMode(next)
+                                                        }}
+                                                        className="data-[state=unchecked]:bg-green-500"
+                                                    />
+                                                    <span className={cn("text-xs font-medium", tempAnalyticsMode === 'roas' ? "text-blue-600" : "text-gray-400")}>ROAS</span>
                                                 </div>
+                                            </div>
+                                            <div className="space-y-4 pl-6">
 
                                                 {tempAnalyticsMode === 'cpa' && (
                                                     <div className="space-y-2">
-                                                        <p className="text-sm text-gray-600">Conversion Event</p>
+                                                        <p className="text-sm font-medium text-gray-600">Conversion Event</p>
                                                         {conversionEventsLoading ? (
                                                             <div className="flex items-center gap-2 py-2">
                                                                 <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
@@ -1315,13 +2100,15 @@ export default function AnalyticsDashboard() {
 
                                         {/* ── Target KPI (conditional) ── */}
                                         <div className="space-y-4">
-                                            <h3 className="font-medium text-gray-900 flex items-center gap-2">
-                                                <Target className="w-4 h-4 text-blue-500" />
-                                                Target KPI
-                                            </h3>
-                                            <p className="text-xs text-gray-500 pl-6">
-                                                Sets a benchmark for recommendations. If your target is stricter than the account average, recommendations will use the target instead.
-                                            </p>
+                                            <div className="space-y-2">
+                                                <h3 className="font-medium text-gray-900 flex items-center gap-2">
+                                                    <Target className="w-4 h-4 text-blue-500" />
+                                                    Target KPI
+                                                </h3>
+                                                <p className="text-xs text-gray-500 pl-6">
+                                                    Sets a benchmark for budget recommendations.
+                                                </p>
+                                            </div>
                                             <div className="space-y-4 pl-6">
                                                 {tempAnalyticsMode === 'cpa' ? (
                                                     <div className="space-y-2">
@@ -1354,17 +2141,60 @@ export default function AnalyticsDashboard() {
 
                                         {/* ── Anomaly Thresholds ── */}
                                         <div className="space-y-4">
-                                            <h3 className="font-medium text-gray-900 flex items-center gap-2">
-                                                <AlertTriangle className="w-4 h-4 text-orange-500" />
-                                                Anomaly Thresholds
-                                            </h3>
-                                            <p className="text-xs text-gray-500 pl-6">
-                                                Anomaly detection compares current CPA and spend pacing against recent account baselines, then flags unusual spikes early so you can review them before they compound.
-                                            </p>
+                                            <div className="space-y-2">
+                                                <div className="flex items-center justify-between gap-3">
+                                                    <h3 className="font-medium text-gray-900 flex items-center gap-2">
+                                                        <AlertTriangle className="w-4 h-4 text-orange-500" />
+                                                        Anomaly Thresholds
+                                                    </h3>
+                                                    {!slackConnected && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={startSlackConnect}
+                                                            style={{ borderColor: "rgba(74,21,75,0.35)" }}
+                                                            className="inline-flex h-8 items-center gap-1.5 rounded-xl border bg-white px-3 text-xs font-medium text-gray-700 shadow-[0_2px_10px_rgba(74,21,75,0.18)] transition-colors hover:bg-gray-50"
+                                                        >
+                                                            <img src={slackColor} alt="Slack" className="h-3.5 w-3.5" />
+                                                            Get Anomaly Alerts in Slack
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Connected state — channel info, disconnect, and anomaly-alerts toggle */}
+                                            {slackConnected && (
+                                                <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4 space-y-3">
+                                                    <div className="flex items-center justify-between gap-3">
+                                                        <div className="flex items-center gap-2 min-w-0">
+                                                            <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
+                                                            <p className="text-sm text-gray-700 truncate">
+                                                                Connected to <span className="font-medium">{slackChannelName || 'Slack'}</span>
+                                                            </p>
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            onClick={handleSlackDisconnect}
+                                                            disabled={slackDisconnecting}
+                                                            className="flex-shrink-0 text-xs text-white bg-red-500 hover:bg-red-600 font-medium px-3 py-1 rounded-lg transition-colors disabled:opacity-70"
+                                                        >
+                                                            {slackDisconnecting ? 'Disconnecting...' : 'Disconnect'}
+                                                        </button>
+                                                    </div>
+                                                    <div className="flex items-center justify-between gap-3">
+                                                        <p className="text-xs text-gray-500">
+                                                            Get notified in <span className="font-semibold text-gray-700">{slackChannelName || 'your channel'}</span> when CPA spikes or overspend is detected.
+                                                        </p>
+                                                        <Switch
+                                                            checked={tempSlackAlertsEnabled}
+                                                            onCheckedChange={setTempSlackAlertsEnabled}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            )}
 
                                             <div className="space-y-4 pl-6">
                                                 <div className="space-y-2">
-                                                    <p className="text-sm text-gray-600">CPA Spike Threshold (%)</p>
+                                                    <p className="text-sm font-medium text-gray-600">CPA Spike Threshold (%)</p>
                                                     <div className="flex items-center gap-3">
                                                         <input
                                                             type="number"
@@ -1373,14 +2203,14 @@ export default function AnalyticsDashboard() {
                                                             onBlur={(e) => setTempThresholds(prev => ({ ...prev, cpaSpike: parseInt(e.target.value) || 50 }))}
                                                             className="w-24 px-3 py-2.5 border border-gray-300 rounded-2xl bg-white text-sm shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                                         />
-                                                        <span className="text-sm text-gray-500">
-                                                            Alert when CPA increases by more than this % vs 7-day average
+                                                        <span className="text-xs text-gray-500 leading-snug">
+                                                            Get alerts in Slack when CPA increases<br></br> by more than this % vs 7-day average
                                                         </span>
                                                     </div>
                                                 </div>
 
                                                 <div className="space-y-2">
-                                                    <p className="text-sm text-gray-600">Overspend Threshold (%)</p>
+                                                    <p className="text-sm font-medium text-gray-600">Overspend Threshold (%)</p>
                                                     <div className="flex items-center gap-3">
                                                         <input
                                                             type="number"
@@ -1389,8 +2219,9 @@ export default function AnalyticsDashboard() {
                                                             onBlur={(e) => setTempThresholds(prev => ({ ...prev, overspend: parseInt(e.target.value) || 150 }))}
                                                             className="w-24 px-3 py-2.5 border border-gray-300 rounded-2xl bg-white text-sm shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                                         />
-                                                        <span className="text-sm text-gray-500">
-                                                            Alert when daily spend exceeds this % of budget (ABO only)
+                                                        <span className="text-xs text-gray-500 leading-snug">
+                                                            Get alerts in Slack when daily spend <br></br>exceeds this
+                                                            % of budget (ABO only)
                                                         </span>
                                                     </div>
                                                 </div>

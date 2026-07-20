@@ -1,4 +1,4 @@
-import { PostHogProvider } from 'posthog-js/react';
+import { PostHogProvider } from "posthog-js/react";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
@@ -6,13 +6,11 @@ import { AppProvider } from "./lib/AppContext";
 import { AuthProvider } from "./lib/AuthContext";
 import { TikTokAuthProvider } from "./lib/TikTokAuthContext";
 
-import {
-  createBrowserRouter,
-  RouterProvider,
-} from "react-router-dom";
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
 
 import App from "./App.jsx";
 import Analytics from "./pages/Analytics.jsx";
+import CreativeStrategy from "./pages/CreativeStrategy.jsx";
 import Home from "./pages/Home.jsx";
 import PrivacyPolicy from "./pages/Landing/PrivacyPolicy.jsx";
 import TermsOfService from "./pages/Landing/TermsOfService.jsx";
@@ -37,6 +35,7 @@ const router = createBrowserRouter([
       { path: "tiktok-signup", element: <TikTokLogin /> },
       { path: "tiktok-ads", element: <TikTokAds /> },
       { path: "tiktok-callback", element: <TikTokCallback /> },
+      { path: "creative-strategy", element: <CreativeStrategy /> },
       { path: "terms-of-service", element: <TermsOfService /> },
       { path: "privacy-policy", element: <PrivacyPolicy /> },
       { path: "*", element: <NotFound /> },
@@ -44,12 +43,10 @@ const router = createBrowserRouter([
   },
 ]);
 
-
 const options = {
   api_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
-  defaults: '2025-05-24',
-}
-
+  defaults: "2025-05-24",
+};
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
@@ -62,5 +59,5 @@ createRoot(document.getElementById("root")).render(
         </AppProvider>
       </TikTokAuthProvider>
     </AuthProvider>
-  </StrictMode>
+  </StrictMode>,
 );

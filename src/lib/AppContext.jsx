@@ -165,6 +165,7 @@ export const AppProvider = ({ children }) => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pageIds: pagesToRefresh.map(p => p.id) }),
       });
+
       const data = await res.json();
       if (!data.success) return;
 
@@ -212,6 +213,10 @@ export const AppProvider = ({ children }) => {
       // Cache hit — refresh just the pics in the background
       refreshPagePictures(cachedPages);
     }
+    // Run once on mount. Do NOT add the cached values as deps — they are re-read
+    // from localStorage each render (new reference), which would re-fire this
+    // effect every render and cause an infinite fetch loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const { tiktokUser } = useTikTokAuth()

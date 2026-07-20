@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils"
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts"
+import { formatBucketLabel, formatBucketTooltipTitle } from "./dateRangeUtils"
 
 const COLORS = [
     "#3b82f6", "#22c55e", "#f97316", "#a855f7", "#ef4444",
@@ -16,7 +17,7 @@ const COLORS = [
 ]
 
 const MAX_NAME_LENGTH = 50
-const DAILY_CHART_LEFT_INSET = 0
+const DAILY_CHART_LEFT_INSET = 46
 
 function truncateName(name) {
     if (!name) return ''
@@ -39,7 +40,7 @@ function formatEventName(actionType) {
     return actionType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
-export default function KPIChart({ data, loading, mode }) {
+export default function KPIChart({ data, loading, mode, granularity = 'daily', showDefaultTooltip = false }) {
     const { chartData, campaigns } = useMemo(() => {
         if (!data?.dailyInsights?.length) return { chartData: [], campaigns: [] }
 
@@ -58,16 +59,16 @@ export default function KPIChart({ data, loading, mode }) {
         const chartData = [...dateMap.entries()]
             .sort(([a], [b]) => a.localeCompare(b))
             .map(([date, values]) => {
-                const d = new Date(date + 'T00:00:00')
                 return {
                     date,
-                    label: `${d.getMonth() + 1}/${d.getDate()}`,
+                    label: formatBucketLabel(date, granularity),
+                    tooltipTitle: formatBucketTooltipTitle(date, granularity),
                     ...values,
                 }
             })
 
         return { chartData, campaigns }
-    }, [data, mode])
+    }, [data, mode, granularity])
 
     const [hiddenCampaigns, setHiddenCampaigns] = useState(new Set())
 
@@ -147,13 +148,39 @@ export default function KPIChart({ data, loading, mode }) {
     const metricLabel = mode === 'roas' ? 'ROAS' : 'CPA'
     const formatValue = mode === 'roas'
         ? (v) => v !== null && v !== undefined ? `${v.toFixed(2)}x` : 'N/A'
-        : (v) => v !== null && v !== undefined ? `$${v.toFixed(2)}` : 'N/A'
+        : (v) => v !== null && v !== undefined ? `$${Math.round(v).toLocaleString()}` : 'N/A'
+    const shouldShowDefaultTooltip = showDefaultTooltip && chartDataWithTrend.length === 1
+
+    const CustomTooltip = ({ active, payload }) => {
+        if (!active || !payload?.length) return null
+        const visiblePayload = payload.filter((item) => item.dataKey !== "__trend")
+        if (visiblePayload.length === 0) return null
+        const title = payload[0]?.payload?.tooltipTitle || payload[0]?.payload?.label
+
+        return (
+            <div className="rounded-xl border border-gray-200 bg-white p-3 text-xs shadow-lg">
+                <p className="mb-2 font-semibold text-gray-900">{title}</p>
+                <div className="space-y-1">
+                    {visiblePayload.map((item) => (
+                        <p key={item.dataKey} className="flex items-center gap-2 text-gray-600">
+                            <span
+                                className="h-2 w-2 rounded-full"
+                                style={{ backgroundColor: item.color }}
+                            />
+                            <span className="max-w-[180px] truncate">{item.name}</span>
+                            <span className="font-medium text-gray-900">{formatValue(item.value)}</span>
+                        </p>
+                    ))}
+                </div>
+            </div>
+        )
+    }
 
     return (
         <div className="p-4">
-            <div className="mb-[22px] flex items-center justify-between" style={{ paddingLeft: `${DAILY_CHART_LEFT_INSET}px` }}>
+            <div className="mb-[22px] flex items-center justify-between">
                 <div>
-                    <p className="text-sm font-medium text-gray-900">Daily {metricLabel} by Campaign</p>
+                    <p className="text-sm font-medium text-gray-900">{granularity === 'monthly' ? 'Monthly' : granularity === 'weekly' ? 'Weekly' : 'Daily'} {metricLabel} by Campaign</p>
                     <p className="text-xs text-gray-400">
                         {data?.primaryActionType
                             ? `Event: ${formatEventName(data.primaryActionType)}`
@@ -186,17 +213,14 @@ export default function KPIChart({ data, loading, mode }) {
                             <YAxis
                                 tick={{ fontSize: 10, fill: '#9ca3af' }}
                                 tickLine={false}
-                                axisLine={false}
+                                axisLine={{ stroke: '#e5e7eb' }}
                                 tickFormatter={(v) => mode === 'roas' ? `${v.toFixed(1)}x` : `$${Math.round(v)}`}
                                 width={DAILY_CHART_LEFT_INSET}
                             />
                             <Tooltip
-                                contentStyle={{
-                                    borderRadius: '12px', border: '1px solid #e5e7eb',
-                                    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', fontSize: '12px',
-                                }}
-                                formatter={(value, name) => [formatValue(value), name]}
-                                labelStyle={{ fontWeight: 600, marginBottom: 4 }}
+                                content={<CustomTooltip />}
+                                defaultIndex={shouldShowDefaultTooltip ? 0 : undefined}
+                                active={shouldShowDefaultTooltip ? true : undefined}
                             />
                             <Line
                                 type="monotone"
@@ -241,7 +265,7 @@ export default function KPIChart({ data, loading, mode }) {
                                                 key={name}
                                                 onClick={() => handleToggleCampaign(name)}
                                                 title={name}
-                                                className="flex items-center gap-2 text-left min-w-0 py-0.5 group"
+                                                className="flex items-center gap-2 text-left min-w-0 py-0.5 group cursor-pointer"
                                             >
                                                 <span
                                                     className="w-3 h-[3px] rounded-full flex-shrink-0 transition-opacity"
