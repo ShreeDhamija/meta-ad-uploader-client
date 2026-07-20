@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo, memo, useEffect } from "react"
+import { createPortal } from "react-dom"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Trash2, Plus, ChevronDown, X } from "lucide-react"
@@ -30,6 +31,34 @@ const DEFAULT_PREFILL_PAIRS = [
 function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAccount, displayLink, setDisplayLink }) {
     const [inputValue, setInputValue] = useState("")
     const [openIndex, setOpenIndex] = useState(null)
+    const [dropdownCoords, setDropdownCoords] = useState({ top: 0, left: 0, width: 0 })
+
+    const updateDropdownCoords = useCallback(() => {
+        if (openIndex === null) return
+        const activeEl = document.activeElement
+        if (activeEl && activeEl.tagName === 'INPUT') {
+            const rect = activeEl.getBoundingClientRect()
+            setDropdownCoords({
+                top: rect.bottom,
+                left: rect.left,
+                width: rect.width
+            })
+        }
+    }, [openIndex])
+
+    useEffect(() => {
+        if (openIndex === null) return
+
+        updateDropdownCoords()
+
+        window.addEventListener('scroll', updateDropdownCoords, true)
+        window.addEventListener('resize', updateDropdownCoords)
+
+        return () => {
+            window.removeEventListener('scroll', updateDropdownCoords, true)
+            window.removeEventListener('resize', updateDropdownCoords)
+        }
+    }, [openIndex, updateDropdownCoords])
 
     // Modal States
     const [showLinkImportModal, setShowLinkImportModal] = useState(false)
@@ -677,17 +706,34 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                                                             setInputValue(e.target.value)
                                                             handleTempPairChange(i, "value", e.target.value)
                                                         }}
-                                                        onFocus={() => {
+                                                        onFocus={(e) => {
                                                             setInputValue("")
                                                             setOpenIndex(i)
+                                                            const rect = e.target.getBoundingClientRect()
+                                                            setDropdownCoords({
+                                                                top: rect.bottom,
+                                                                left: rect.left,
+                                                                width: rect.width
+                                                            })
                                                         }}
                                                         onBlur={() => {
-                                                            setTimeout(() => setOpenIndex(null), 150)
+                                                            setTimeout(() => {
+                                                                setOpenIndex(prev => prev === i ? null : prev)
+                                                            }, 150)
                                                         }}
                                                         className="rounded-2xl w-full border-gray-300 bg-white shadow h-10"
                                                     />
-                                                    {openIndex === i && (
-                                                        <div className="absolute z-50 w-full bg-white border border-gray-200 rounded-xl shadow-lg mt-1 p-2 max-h-[200px] overflow-hidden">
+                                                    {openIndex === i && createPortal(
+                                                        <div
+                                                            style={{
+                                                                position: "fixed",
+                                                                top: `${dropdownCoords.top}px`,
+                                                                left: `${dropdownCoords.left}px`,
+                                                                width: `${dropdownCoords.width}px`,
+                                                                zIndex: 10000,
+                                                            }}
+                                                            className="bg-white border border-gray-200 rounded-xl shadow-lg mt-1 p-2 max-h-[200px] overflow-hidden"
+                                                        >
                                                             <Command className="h-full">
                                                                 <CommandList className="max-h-[180px] overflow-y-auto">
                                                                     {filteredSuggestions.map((suggestion, index) => (
@@ -707,7 +753,8 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                                                                     ))}
                                                                 </CommandList>
                                                             </Command>
-                                                        </div>
+                                                        </div>,
+                                                        document.body
                                                     )}
                                                 </div>
 
