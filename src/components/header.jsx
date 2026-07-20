@@ -104,8 +104,8 @@ export default function Header({ showMessenger, hideMessenger }) {
         </button>
       ) : (
         <div className={`flex items-center gap-3 bg-white border border-black/10 rounded-[20px] px-3 py-2 ${headerCardShadow}`}>
-          <img src={displayPic} alt="Profile" className="w-9 h-9 rounded-full border border-zinc-300 object-cover" />
-          <span className="text-[14px] font-medium text-gray-700 whitespace-nowrap">{displayName}</span>
+          <img src={profilePicUrl} alt="Profile" className="w-9 h-9 rounded-full border border-zinc-300 object-cover" />
+          <span className="text-[14px] font-medium text-gray-700 whitespace-nowrap">{userName}</span>
         </div>
       )}
 
@@ -132,9 +132,8 @@ export default function Header({ showMessenger, hideMessenger }) {
             <Button
               onClick={handleUpgrade}
               size="sm"
-              className={`flex h-7 px-3 py-4 text-[13px] text-white font-medium rounded-full cursor-pointer ${
-                !hasActiveAccess() ? "bg-red-600 hover:bg-red-700" : "bg-blue-600 hover:bg-blue-700"
-              }`}
+              className={`flex h-7 px-3 py-4 text-[13px] text-white font-medium rounded-full cursor-pointer ${!hasActiveAccess() ? "bg-red-600 hover:bg-red-700" : "bg-blue-600 hover:bg-blue-700"
+                }`}
             >
               <ZapIcon className="w-3.5 h-3.5" />
               <span>{!hasActiveAccess() ? "Subscribe" : "Upgrade"}</span>
