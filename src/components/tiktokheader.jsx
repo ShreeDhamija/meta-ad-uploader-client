@@ -108,8 +108,6 @@ export default function TikTokHeader({ showMessenger, hideMessenger }) {
     return `${days} day${days !== 1 ? 's' : ''} left`
   }
 
-
-
   return (
     <header className="flex justify-between items-center py-3 mb-4">
       {/* Profile Section (Left) */}

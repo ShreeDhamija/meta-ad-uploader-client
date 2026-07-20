@@ -1,10 +1,16 @@
-"use client";
+"use client"
 
-import AnalyticsIcon from "@/assets/icons/Analytics.svg?react";
-import ChatIcon from "@/assets/icons/chat.svg?react";
-import ZapIcon from "@/assets/icons/Zap.svg?react";
-import RocketBtn from "@/assets/rocket2.webp";
-import { Button } from "@/components/ui/button";
+import { useState } from "react"
+import { Button } from "@/components/ui/button"
+import { LogOutIcon, Settings, Clock, Bell } from "lucide-react"
+import ZapIcon from "@/assets/icons/Zap.svg?react"
+import ChatIcon from "@/assets/icons/chat.svg?react"
+import AnalyticsIcon from "@/assets/icons/Analytics.svg?react"
+import RocketBtn from "@/assets/rocket2.webp"
+import { useAuth } from "@/lib/AuthContext"
+import { useLocation, useNavigate } from "react-router-dom"
+import useSubscription from "@/lib/useSubscriptionSettings"
+import useNotifications from "@/lib/useNotifications"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,84 +18,85 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { useAuth } from "@/lib/AuthContext";
-import { useTikTokAuth } from "@/lib/TikTokAuthContext";
-import useNotifications from "@/lib/useNotifications";
-import useSubscription from "@/lib/useSubscriptionSettings";
-import { Bell, Clock, LogOutIcon, Settings } from "lucide-react";
-import { useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+} from "@/components/ui/dropdown-menu"
 
 export default function Header({ showMessenger, hideMessenger }) {
-  const { isLoggedIn, userName, profilePicUrl, handleLogout } = useAuth();
-  const { logoutTikTok, isTikTokLoggedIn, tiktokUser } = useTikTokAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const { subscriptionData, isOnTrial, isTrialExpired, hasActiveAccess, isPaidSubscriber, loading: subscriptionLoading } = useSubscription();
+  const { isLoggedIn, userName, profilePicUrl, handleLogout } = useAuth()
+  const navigate = useNavigate()
+  const location = useLocation()
+  const {
+    subscriptionData,
+    isOnTrial,
+    isTrialExpired,
+    hasActiveAccess,
+    isPaidSubscriber,
+    loading: subscriptionLoading
+  } = useSubscription()
 
-  const { notifications, hasUnread, loading: notificationsLoading, markAsRead } = useNotifications();
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const isAnalyticsPage = location.pathname === "/analytics";
-  const headerCardShadow = "shadow-[0px_1px_2px_rgba(0,0,0,0.06)]";
+  const { notifications, hasUnread, loading: notificationsLoading, markAsRead } = useNotifications()
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+  const isAnalyticsPage = location.pathname === "/analytics"
+  const headerCardShadow = "shadow-[0px_1px_2px_rgba(0,0,0,0.06)]"
 
   const handleDropdownClose = (open) => {
-    setDropdownOpen(open);
+    setDropdownOpen(open)
     if (!open && notifications.length > 0) {
-      markAsRead();
+      markAsRead()
     }
-  };
+  }
 
   const formatTime = (dateString) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMins = Math.floor((now - date) / 60000);
-    const diffHours = Math.floor(diffMins / 60);
-    const diffDays = Math.floor(diffHours / 24);
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffMins = Math.floor((now - date) / 60000)
+    const diffHours = Math.floor(diffMins / 60)
+    const diffDays = Math.floor(diffHours / 24)
 
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-  };
+    if (diffMins < 60) return `${diffMins}m ago`
+    if (diffHours < 24) return `${diffHours}h ago`
+    if (diffDays < 7) return `${diffDays}d ago`
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  }
 
   const handleChatToggle = () => {
     if (showMessenger) {
-      showMessenger();
+      showMessenger()
     }
-  };
+  }
 
   const handleUpgrade = () => {
-    navigate("/settings?tab=billing");
-  };
+    navigate('/settings?tab=billing')
+  }
 
   const isSubscriptionExpired = () => {
     if (!subscriptionData.willCancelAt) return false;
     const cancelDate = new Date(subscriptionData.willCancelAt);
     const now = new Date();
     return now > cancelDate;
-  };
+  }
 
   const getTrialButtonStyle = () => {
     if (!hasActiveAccess()) {
-      return "text-red-600 hover:text-red-700";
+      return "text-red-600 hover:text-red-700"
     }
     if (subscriptionData.trialDaysLeft <= 3) {
-      return "text-yellow-600 hover:text-yellow-700";
+      return "text-yellow-600 hover:text-yellow-700"
     }
-    return "text-blue-600 hover:text-blue-700";
-  };
+    return "text-blue-600 hover:text-blue-700"
+  }
 
   const getTrialText = () => {
     if (isSubscriptionExpired()) {
-      return "Subscription Expired";
+      return "Subscription Expired"
     }
     if (isTrialExpired()) {
-      return "Trial Expired";
+      return "Trial Expired"
     }
-    const days = subscriptionData.trialDaysLeft;
-    return `${days} day${days !== 1 ? "s" : ""} left`;
-  };
+    const days = subscriptionData.trialDaysLeft
+    return `${days} day${days !== 1 ? 's' : ''} left`
+  }
+
+
 
   return (
     <header className="flex justify-between items-center py-3 mb-4">
@@ -99,18 +106,27 @@ export default function Header({ showMessenger, hideMessenger }) {
           onClick={() => navigate("/")}
           className={`flex items-center gap-3 bg-white border border-black/10 rounded-[20px] px-3 py-2 ${headerCardShadow} hover:shadow-md transition cursor-pointer`}
         >
-          <img src={RocketBtn} alt="Launcher" className="w-9 h-9 object-contain" />
+          <img
+            src={RocketBtn}
+            alt="Launcher"
+            className="w-9 h-9 object-contain"
+          />
           <span className="text-[14px] font-medium text-gray-700 whitespace-nowrap">Go To Launcher</span>
         </button>
       ) : (
         <div className={`flex items-center gap-3 bg-white border border-black/10 rounded-[20px] px-3 py-2 ${headerCardShadow}`}>
-          <img src={profilePicUrl} alt="Profile" className="w-9 h-9 rounded-full border border-zinc-300 object-cover" />
+          <img
+            src={profilePicUrl}
+            alt="Profile"
+            className="w-9 h-9 rounded-full border border-zinc-300 object-cover"
+          />
           <span className="text-[14px] font-medium text-gray-700 whitespace-nowrap">{userName}</span>
         </div>
       )}
 
       {/* Action Buttons (Right) */}
       <div className={`flex items-center gap-3 bg-white border border-black/10 rounded-[20px] px-3 py-2 ml-2 ${headerCardShadow}`}>
+
         {/* Trial/Subscription Status Button - hide on mobile */}
         {!subscriptionLoading && (isOnTrial() || !hasActiveAccess()) && (
           <>
@@ -118,11 +134,9 @@ export default function Header({ showMessenger, hideMessenger }) {
               onClick={handleUpgrade}
               className={`flex items-center gap-2 px-3 py-1 rounded-full transition text-sm font-medium cursor-pointer ${getTrialButtonStyle()}`}
               title={
-                isSubscriptionExpired()
-                  ? "Your subscription has expired"
-                  : isTrialExpired()
-                    ? "Your trial has expired"
-                    : `${subscriptionData.trialDaysLeft} days remaining in trial`
+                isSubscriptionExpired() ? "Your subscription has expired" :
+                  isTrialExpired() ? "Your trial has expired" :
+                    `${subscriptionData.trialDaysLeft} days remaining in trial`
               }
             >
               <Clock className="w-4 h-4" />
@@ -132,11 +146,11 @@ export default function Header({ showMessenger, hideMessenger }) {
             <Button
               onClick={handleUpgrade}
               size="sm"
-              className={`flex h-7 px-3 py-4 text-[13px] text-white font-medium rounded-full cursor-pointer ${!hasActiveAccess() ? "bg-red-600 hover:bg-red-700" : "bg-blue-600 hover:bg-blue-700"
+              className={`flex h-7 px-3 py-4 text-[13px] text-white font-medium rounded-full cursor-pointer ${!hasActiveAccess() ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'
                 }`}
             >
               <ZapIcon className="w-3.5 h-3.5" />
-              <span>{!hasActiveAccess() ? "Subscribe" : "Upgrade"}</span>
+              <span>{!hasActiveAccess() ? 'Subscribe' : 'Upgrade'}</span>
             </Button>
             <div className="block h-8 w-px bg-gray-300  " />
           </>
@@ -147,7 +161,10 @@ export default function Header({ showMessenger, hideMessenger }) {
           <>
             <DropdownMenu open={dropdownOpen} onOpenChange={handleDropdownClose}>
               <DropdownMenuTrigger asChild>
-                <button title="Notifications" className="relative p-1.5 rounded-full hover:bg-gray-100 transition focus:outline-none cursor-pointer">
+                <button
+                  title="Notifications"
+                  className="relative p-1.5 rounded-full hover:bg-gray-100 transition focus:outline-none cursor-pointer"
+                >
                   <Bell className="w-5 h-5 text-gray-700" />
                   <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-red-500 rounded-full" />
                 </button>
@@ -178,7 +195,7 @@ export default function Header({ showMessenger, hideMessenger }) {
         )}
 
         <button
-          onClick={() => navigate(isTikTokPage ? "/settings?tab=tiktok" : "/settings")}
+          onClick={() => navigate("/settings")}
           title="Settings"
           className="flex items-center gap-1.5 rounded-full transition bg-transparent hover:bg-gray-100 focus:bg-transparent active:bg-transparent !focus:outline-none !focus:ring-0 !active:ring-0 px-4 py-2 cursor-pointer"
           style={{
@@ -227,5 +244,5 @@ export default function Header({ showMessenger, hideMessenger }) {
         </button>
       </div>
     </header>
-  );
+  )
 }
