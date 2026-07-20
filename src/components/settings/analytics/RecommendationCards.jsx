@@ -473,7 +473,14 @@ export default function RecommendationCards({
 
             if (result.success) {
                 toast.success(rec.type === 'pause' ? 'Entity paused successfully' : 'Budget updated successfully')
-                setDismissed(prev => new Set([...prev, key]))
+                // Persist the applied rec like a dismissal so it stays hidden for the
+                // rest of the session — even after a route unmount refetches fresh data
+                // and Meta's lagging metric windows still return it as a candidate.
+                setDismissed(prev => {
+                    const next = new Set([...prev, key])
+                    persistDismissed(next)
+                    return next
+                })
             } else {
                 toast.error(result.error || 'Failed to apply action')
             }

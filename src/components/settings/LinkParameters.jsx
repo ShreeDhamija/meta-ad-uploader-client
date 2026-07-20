@@ -1,8 +1,9 @@
-import { useState, useCallback, useMemo, memo, useEffect } from "react"
+import { useState, useCallback, useMemo, memo, useEffect, useRef } from "react"
+import { createPortal } from "react-dom"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Trash2, Plus, ChevronDown, X } from "lucide-react"
-import { Popover, PopoverTrigger, PopoverContent, PopoverAnchor } from "@/components/ui/popover"
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
 import {
     Command,
     CommandInput,
@@ -48,6 +49,10 @@ const mergeUniqueLinks = (...groups) => {
 function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAccount, displayLink, setDisplayLink }) {
     const [inputValue, setInputValue] = useState("")
     const [openIndex, setOpenIndex] = useState(null)
+    // Anchor rect for the suggestions dropdown. Rendered in a portal (position: fixed)
+    // so it escapes the modal's overflow clipping and stacks above it.
+    const [anchorRect, setAnchorRect] = useState(null)
+    const anchorElRef = useRef(null)
 
     // Modal States
     const [showLinkImportModal, setShowLinkImportModal] = useState(false)
@@ -357,6 +362,20 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
         ),
         [inputValue]
     )
+
+    // Keep the portalled suggestions dropdown aligned to its input while open.
+    useEffect(() => {
+        if (openIndex === null) return
+        const update = () => {
+            if (anchorElRef.current) setAnchorRect(anchorElRef.current.getBoundingClientRect())
+        }
+        window.addEventListener("scroll", update, true)
+        window.addEventListener("resize", update)
+        return () => {
+            window.removeEventListener("scroll", update, true)
+            window.removeEventListener("resize", update)
+        }
+    }, [openIndex])
 
     return (
         <div className="p-4 bg-[#f5f5f5] rounded-2xl space-y-3 w-full max-w-3xl">
@@ -751,56 +770,30 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                                                 />
 
                                                 {/* VALUE INPUT */}
-                                                <Popover
-                                                    open={openIndex === i}
-                                                    onOpenChange={(isOpen) => {
-                                                        if (!isOpen) setOpenIndex(prev => prev === i ? null : prev)
-                                                    }}
-                                                >
-                                                    <PopoverAnchor asChild>
-                                                        <Input
-                                                            placeholder={`Value`}
-                                                            value={pair.value}
-                                                            // 3. Use handleTempPairChange
-                                                            onChange={(e) => {
-                                                                setInputValue(e.target.value)
-                                                                handleTempPairChange(i, "value", e.target.value)
-                                                            }}
-                                                            onFocus={() => {
-                                                                setInputValue("")
-                                                                setOpenIndex(i)
-                                                            }}
-                                                            className="rounded-2xl w-full flex-1 border-gray-300 bg-white shadow h-10"
-                                                        />
-                                                    </PopoverAnchor>
-                                                    <PopoverContent
-                                                        align="start"
-                                                        sideOffset={4}
-                                                        onOpenAutoFocus={(e) => e.preventDefault()}
-                                                        onCloseAutoFocus={(e) => e.preventDefault()}
-                                                        className="z-[10000] w-[--radix-popover-trigger-width] bg-white border border-gray-200 rounded-xl shadow-lg p-2 max-h-[200px] overflow-hidden"
-                                                    >
-                                                        <Command className="h-full">
-                                                            <CommandList className="max-h-[180px] overflow-y-auto">
-                                                                {filteredSuggestions.map((suggestion, index) => (
-                                                                    <CommandItem
-                                                                        key={index}
-                                                                        value={suggestion}
-                                                                        onMouseDown={(e) => {
-                                                                            e.preventDefault();
-                                                                            // 4. Use handleTempPairChange for suggestions
-                                                                            handleTempPairChange(i, "value", suggestion)
-                                                                            setOpenIndex(null)
-                                                                        }}
-                                                                        className="cursor-pointer px-3 py-2 hover:bg-gray-100 rounded-lg text-sm"
-                                                                    >
-                                                                        {suggestion}
-                                                                    </CommandItem>
-                                                                ))}
-                                                            </CommandList>
-                                                        </Command>
-                                                    </PopoverContent>
-                                                </Popover>
+                                                <div className="relative flex-1">
+                                                    <Input
+                                                        placeholder={`Value`}
+                                                        value={pair.value}
+                                                        // 3. Use handleTempPairChange
+                                                        onChange={(e) => {
+                                                            setInputValue(e.target.value)
+                                                            handleTempPairChange(i, "value", e.target.value)
+                                                        }}
+                                                        onFocus={(e) => {
+                                                            setInputValue("")
+                                                            anchorElRef.current = e.currentTarget
+                                                            setAnchorRect(e.currentTarget.getBoundingClientRect())
+                                                            setOpenIndex(i)
+                                                        }}
+                                                        onBlur={() => {
+                                                            // Guard against a stale blur (e.g. after picking a
+                                                            // suggestion, focus stays put, then the user clicks
+                                                            // another field) closing a different field's dropdown.
+                                                            setTimeout(() => setOpenIndex(prev => (prev === i ? null : prev)), 150)
+                                                        }}
+                                                        className="rounded-2xl w-full border-gray-300 bg-white shadow h-10"
+                                                    />
+                                                </div>
 
                                                 {/* DELETE BUTTON */}
                                                 <Button
@@ -825,6 +818,41 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                                         <Plus className="w-4 h-4 mr-2" />
                                         Add New Parameter
                                     </Button>
+
+                                    {/* VALUE SUGGESTIONS DROPDOWN — portalled to body so it
+                                        renders above the modal and isn't clipped by its scroll box */}
+                                    {openIndex !== null && anchorRect && filteredSuggestions.length > 0 && createPortal(
+                                        <div
+                                            style={{
+                                                position: "fixed",
+                                                top: anchorRect.bottom + 4,
+                                                left: anchorRect.left,
+                                                width: anchorRect.width,
+                                                zIndex: 10000,
+                                            }}
+                                            className="bg-white border border-gray-200 rounded-xl shadow-lg p-2 max-h-[200px] overflow-hidden"
+                                        >
+                                            <Command className="h-full">
+                                                <CommandList className="max-h-[180px] overflow-y-auto">
+                                                    {filteredSuggestions.map((suggestion, index) => (
+                                                        <CommandItem
+                                                            key={index}
+                                                            value={suggestion}
+                                                            onMouseDown={(e) => {
+                                                                e.preventDefault();
+                                                                handleTempPairChange(openIndex, "value", suggestion)
+                                                                setOpenIndex(null)
+                                                            }}
+                                                            className="cursor-pointer px-3 py-2 hover:bg-gray-100 rounded-lg text-sm"
+                                                        >
+                                                            {suggestion}
+                                                        </CommandItem>
+                                                    ))}
+                                                </CommandList>
+                                            </Command>
+                                        </div>,
+                                        document.body
+                                    )}
                                 </>
                             )}
                         </div>
