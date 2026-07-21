@@ -44,6 +44,13 @@ const DEFAULT_ENHANCEMENTS = {
   reveal: false,
   summary: false,
   animation: false,
+  flexMedia: false,
+  dynamicDescriptions: false,
+  siteExtensions: false,
+  siteLinks: [],
+  dynamicOverlays: false,
+  highlightCard: false,
+  profileEndCard: false,
 };
 
 const DEFAULT_PIXEL_TRACKING = {
@@ -326,12 +333,23 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
 
   // Optimized save handler
   const handleSave = useCallback(async () => {
-
-    setSavingSettings(true);
     if (!selectedAdAccount) {
-      alert("Select an Ad Account first");
+      toast.error("Select an Ad Account first");
       return;
     }
+
+    if (enhancements.siteExtensions) {
+      const siteLinks = Array.isArray(enhancements.siteLinks) ? enhancements.siteLinks : [];
+      const hasIncompleteSiteLink = siteLinks.some(link =>
+        !link.site_link_title?.trim() || !link.site_link_url?.trim()
+      );
+      if (siteLinks.length === 0 || hasIncompleteSiteLink) {
+        toast.error("Add a title and URL for every enabled site link before saving");
+        return;
+      }
+    }
+
+    setSavingSettings(true);
 
     // 1. Construct settings object directly from state variables
     const adAccountSettings = {
@@ -836,7 +854,11 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
 
           <DefaultCTA defaultCTA={defaultCTA} setDefaultCTA={setDefaultCTA} />
 
-          <CreativeEnhancements enhancements={enhancements} setEnhancements={setEnhancements} />
+          <CreativeEnhancements
+            enhancements={enhancements}
+            setEnhancements={setEnhancements}
+            selectedAdAccount={selectedAdAccount}
+          />
           <MultiAdvertiserAds enabled={multiAdvertiserAds} setEnabled={setMultiAdvertiserAds} />
           {showPixelTracking && (
             <PixelTracking
