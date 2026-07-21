@@ -2294,16 +2294,21 @@ export default function TikTokAdCreationForm({
         errorMessages: errorMessages.map(msg => typeof msg === 'string' ? { error: msg } : msg)
       }
 
-      if (trackedStatus === 'complete') {
-        completedJob.status = 'success'
-        completedJob.message = `${currentJob.adCount || 1} Ad${currentJob.adCount !== 1 ? 's' : ''} successfully posted to ${currentJob.adGroupDisplayName}`
+      if (trackedStatus === 'complete' || trackedStatus === 'partial-success') {
+        const isPartial = trackedStatus === 'partial-success'
+        completedJob.status = isPartial ? 'partial-success' : 'success'
+        completedJob.message = isPartial
+          ? `${successCount} Ad${successCount !== 1 ? 's' : ''} successfully posted to ${currentJob.adGroupDisplayName} (with ${failureCount} failure${failureCount !== 1 ? 's' : ''})`
+          : `${currentJob.adCount || 1} Ad${currentJob.adCount !== 1 ? 's' : ''} successfully posted to ${currentJob.adGroupDisplayName}`
 
-        // Update ad_count badge only after ads are confirmed created (using real successCount)
-        if (setAdGroups && successCount > 0) {
+        if (isPartial) toast.warning(completedJob.message)
+
+        // 1. Immediately update ad_count badge in state
+        const effectiveCount = successCount > 0 ? successCount : (currentJob.adCount || 1)
+        if (setAdGroups && effectiveCount > 0) {
           const targetAdGroups = currentJob.formData?.selectedAdGroup || []
           const adGroupCount = targetAdGroups.length || 1
-          // Distribute successCount evenly across targeted ad groups
-          const perAdGroup = Math.round(successCount / adGroupCount)
+          const perAdGroup = Math.max(1, Math.round(effectiveCount / adGroupCount))
           setAdGroups(prevAdGroups => prevAdGroups.map(ag => {
             if (targetAdGroups.includes(ag.adgroup_id)) {
               return { ...ag, ad_count: (ag.ad_count || 0) + perAdGroup }
@@ -5748,7 +5753,7 @@ export default function TikTokAdCreationForm({
                             }
                           }
                           return <p className="text-xs text-red-500 font-medium mt-1">{urlError}</p>;
-                                         })()}
+                        })()}
                       </div>
                     ) : (
                       <div className="space-y-3">
