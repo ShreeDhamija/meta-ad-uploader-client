@@ -89,9 +89,9 @@ export default function TikTokLogin() {
                         <div className="space-y-1">
                             <div className="w-11 h-11 bg-[#F9F4EB] rounded-2xl flex items-center justify-center mb-3">
                                 <img
-                                    src={Rocket}
+                                    src="https://api.withblip.com/logo.webp"
                                     alt="Blip"
-                                    className="w-6 h-6 object-contain"
+                                    className="w-[44px] h-[44px] rounded-md mb-2"
                                 />
                             </div>
                             <h2 className="text-2xl font-bold tracking-tight text-zinc-900">Welcome To Blip!</h2>
