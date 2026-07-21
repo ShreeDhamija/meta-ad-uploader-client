@@ -22,9 +22,6 @@ export function TikTokAuthProvider({ children }) {
   const setTikTokSession = (user, advertisers = [], accessToken = null) => {
     setIsTikTokLoggedIn(true)
     setTikTokUser(user)
-    if (user) {
-      try { localStorage.setItem('tiktok_user', JSON.stringify(user)) } catch (_) { }
-    }
     setTikTokAdvertisers(advertisers)
     writeCache('tiktokAdvertisers', advertisers)
     setIsLoading(false)
@@ -56,7 +53,6 @@ export function TikTokAuthProvider({ children }) {
         if (data.connected && data.user) {
           setIsTikTokLoggedIn(true)
           setTikTokUser(data.user)
-          try { localStorage.setItem('tiktok_user', JSON.stringify(data.user)) } catch (_) { }
           setTikTokAdvertisers(data.advertisers || [])
           writeCache('tiktokAdvertisers', data.advertisers || [])
           if (data.user?.tiktokId) {
