@@ -42,15 +42,9 @@ export default function useTikTokAdvertiserSettings(advertiserId) {
     if (!advertiserId) return;
     setLoading(true);
     try {
-      const storedUid = (() => { try { return localStorage.getItem('tiktok_uid') } catch (_) { return null } })()
-      const storedToken = (() => { try { return localStorage.getItem('tiktok_token') } catch (_) { return null } })()
-      const headers = { 'Content-Type': 'application/json' }
-      if (storedUid) headers['x-tiktok-user-id'] = storedUid
-      if (storedToken) headers['x-tiktok-token'] = storedToken
-
       const res = await fetch(`${API_BASE_URL}/api/tiktok/settings/advertiser?advertiserId=${advertiserId}&_t=${Date.now()}`, {
         credentials: "include",
-        headers
+        headers: { 'Content-Type': 'application/json' }
       });
       const data = await res.json();
 

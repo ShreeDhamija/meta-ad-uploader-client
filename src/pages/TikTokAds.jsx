@@ -694,15 +694,8 @@ export default function TikTokAds() {
     if (!selectedAdvertiser) return;
     if (catalogRestoredRef.current[selectedAdvertiser]) return;
 
-    const uid = localStorage.getItem('tiktok_uid');
-    const token = localStorage.getItem('tiktok_token');
-
     fetch(`${API_BASE_URL}/api/tiktok/catalog/selection?advertiserId=${selectedAdvertiser}`, {
       credentials: 'include',
-      headers: {
-        ...(uid && { 'x-tiktok-user-id': uid }),
-        ...(token && { 'x-tiktok-token': token }),
-      },
     })
       .then(res => res.json())
       .then(data => {

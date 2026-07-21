@@ -45,15 +45,7 @@ export default function TikTokCopyTemplates({
     const [isLoadingMore, setIsLoadingMore] = useState(false)
     const [nextPage, setNextPage] = useState(null)
 
-    const tiktokHeaders = useCallback(() => {
-        const uid = localStorage.getItem('tiktok_uid');
-        const token = localStorage.getItem('tiktok_token');
-        return {
-            ...(uid && { 'x-tiktok-user-id': uid }),
-            ...(token && { 'x-tiktok-token': token }),
-            "Content-Type": "application/json"
-        };
-    }, []);
+
 
     // Fetch recent ad copy
     useEffect(() => {
@@ -64,7 +56,10 @@ export default function TikTokCopyTemplates({
 
         fetch(`${API_BASE_URL}/api/tiktok/fetch-recent-copy`, {
             method: "POST",
-            headers: tiktokHeaders(),
+            credentials: 'include',
+            headers: {
+                "Content-Type": "application/json"
+            },
             body: JSON.stringify({
                 advertiserId,
                 excludeTexts: [],
@@ -88,7 +83,7 @@ export default function TikTokCopyTemplates({
             .finally(() => {
                 setIsFetchingCopy(false);
             });
-    }, [showImportPopup, advertiserId, tiktokHeaders]);
+    }, [showImportPopup, advertiserId]);
 
     const handleLoadMore = useCallback(async () => {
         if (!nextPage) {
@@ -100,7 +95,10 @@ export default function TikTokCopyTemplates({
         try {
             const response = await fetch(`${API_BASE_URL}/api/tiktok/fetch-recent-copy`, {
                 method: "POST",
-                headers: tiktokHeaders(),
+                credentials: 'include',
+                headers: {
+                    "Content-Type": "application/json"
+                },
                 body: JSON.stringify({
                     advertiserId,
                     excludeTexts: previouslyFetched,
@@ -124,7 +122,7 @@ export default function TikTokCopyTemplates({
         } finally {
             setIsLoadingMore(false);
         }
-    }, [advertiserId, previouslyFetched, nextPage, tiktokHeaders]);
+    }, [advertiserId, previouslyFetched, nextPage]);
 
     const normalizeText = (text) => text.trim().toLowerCase().replace(/\s+/g, ' ');
 

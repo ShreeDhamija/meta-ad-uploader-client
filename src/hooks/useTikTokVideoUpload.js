@@ -214,12 +214,6 @@ export function useTikTokVideoUpload(advertiserId) {
         throw new DOMException("Upload aborted", "AbortError");
       }
 
-      // Hit the new S3-specific video sync route
-      const tiktokToken = localStorage.getItem("tiktok_token") ||
-        localStorage.getItem("tiktokAccessToken");
-      const tiktokUserId = localStorage.getItem("tiktok_uid") ||
-        localStorage.getItem("tiktokUserId");
-
       const response = await fetch(
         `${API_BASE_URL}/api/tiktok/upload-video-s3?advertiserId=${encodeURIComponent(advertiserId)}`,
         {
@@ -227,8 +221,6 @@ export function useTikTokVideoUpload(advertiserId) {
           credentials: "include",
           headers: {
             "Content-Type": "application/json",
-            ...(tiktokToken && { "x-tiktok-token": tiktokToken }),
-            ...(tiktokUserId && { "x-tiktok-user-id": tiktokUserId }),
           },
           body: JSON.stringify({
             s3Url: s3Result.s3Url,
@@ -282,11 +274,6 @@ export function useTikTokVideoUpload(advertiserId) {
     setUploadProgress(0);
 
     try {
-      const tiktokToken = localStorage.getItem("tiktok_token") ||
-        localStorage.getItem("tiktokAccessToken");
-      const tiktokUserId = localStorage.getItem("tiktok_uid") ||
-        localStorage.getItem("tiktokUserId");
-
       const response = await fetch(
         `${API_BASE_URL}/api/tiktok/upload-video-url?advertiserId=${encodeURIComponent(advertiserId)}`,
         {
@@ -294,8 +281,6 @@ export function useTikTokVideoUpload(advertiserId) {
           credentials: "include",
           headers: {
             "Content-Type": "application/json",
-            ...(tiktokToken && { "x-tiktok-token": tiktokToken }),
-            ...(tiktokUserId && { "x-tiktok-user-id": tiktokUserId }),
           },
           body: JSON.stringify({ videoUrl, fileName }),
         }

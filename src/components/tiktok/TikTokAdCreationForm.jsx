@@ -1015,14 +1015,8 @@ export default function TikTokAdCreationForm({
       return;
     }
     setLoadingFormCatalogs(true);
-    const uid = localStorage.getItem('tiktok_uid');
-    const token = localStorage.getItem('tiktok_token');
     fetch(`${API_BASE_URL}/api/tiktok/catalog/list?advertiserId=${selectedAdvertiser}`, {
       credentials: 'include',
-      headers: {
-        ...(uid && { 'x-tiktok-user-id': uid }),
-        ...(token && { 'x-tiktok-token': token }),
-      }
     })
       .then(res => res.json())
       .then(data => {
@@ -1041,14 +1035,8 @@ export default function TikTokAdCreationForm({
       return;
     }
     setLoadingFormProducts(true);
-    const uid = localStorage.getItem('tiktok_uid');
-    const token = localStorage.getItem('tiktok_token');
     fetch(`${API_BASE_URL}/api/tiktok/catalog/products?advertiserId=${selectedAdvertiser}&catalog_id=${formCatalogId}`, {
       credentials: 'include',
-      headers: {
-        ...(uid && { 'x-tiktok-user-id': uid }),
-        ...(token && { 'x-tiktok-token': token }),
-      }
     })
       .then(res => res.json())
       .then(data => {
@@ -1143,14 +1131,8 @@ export default function TikTokAdCreationForm({
       return;
     }
     setLoadingFormStores(true);
-    const uid = localStorage.getItem('tiktok_uid');
-    const token = localStorage.getItem('tiktok_token');
     fetch(`${API_BASE_URL}/api/tiktok/store/list?advertiserId=${selectedAdvertiser}`, {
       credentials: 'include',
-      headers: {
-        ...(uid && { 'x-tiktok-user-id': uid }),
-        ...(token && { 'x-tiktok-token': token }),
-      }
     })
       .then(res => res.json())
       .then(data => {
@@ -1204,18 +1186,12 @@ export default function TikTokAdCreationForm({
     }
 
     setLoadingFormStoreProducts(true);
-    const uid = localStorage.getItem('tiktok_uid');
-    const token = localStorage.getItem('tiktok_token');
     const identityObj = identities.find(i => i.identity_id === selectedIdentity);
     const identityType = identityObj?.identity_type || 'BC_AUTH_TT';
     const url = `${API_BASE_URL}/api/tiktok/showcase/products?advertiserId=${selectedAdvertiser}&identityId=${selectedIdentity}&identityType=${identityType}`;
 
     fetch(url, {
       credentials: 'include',
-      headers: {
-        ...(uid && { 'x-tiktok-user-id': uid }),
-        ...(token && { 'x-tiktok-token': token }),
-      }
     })
       .then(res => res.json())
       .then(data => {
@@ -1271,18 +1247,12 @@ export default function TikTokAdCreationForm({
     }
 
     setLoadingFormStoreProducts(true);
-    const uid = localStorage.getItem('tiktok_uid');
-    const token = localStorage.getItem('tiktok_token');
     let url = `${API_BASE_URL}/api/tiktok/store/products?advertiserId=${selectedAdvertiser}&store_id=${formStoreId}`;
     if (formStoreBcId) {
       url += `&bc_id=${formStoreBcId}`;
     }
     fetch(url, {
       credentials: 'include',
-      headers: {
-        ...(uid && { 'x-tiktok-user-id': uid }),
-        ...(token && { 'x-tiktok-token': token }),
-      }
     })
       .then(res => res.json())
       .then(data => {
@@ -2940,8 +2910,6 @@ export default function TikTokAdCreationForm({
     if (!selectedAdvertiser || loadingFormStoreProducts) return;
 
     setLoadingFormStoreProducts(true);
-    const uid = localStorage.getItem('tiktok_uid');
-    const token = localStorage.getItem('tiktok_token');
 
     if (isShowcaseSelection) {
       if (!selectedIdentity) {
@@ -2955,10 +2923,6 @@ export default function TikTokAdCreationForm({
 
       fetch(url, {
         credentials: 'include',
-        headers: {
-          ...(uid && { 'x-tiktok-user-id': uid }),
-          ...(token && { 'x-tiktok-token': token }),
-        }
       })
         .then(res => res.json())
         .then(data => {
@@ -3013,10 +2977,6 @@ export default function TikTokAdCreationForm({
 
       fetch(url, {
         credentials: 'include',
-        headers: {
-          ...(uid && { 'x-tiktok-user-id': uid }),
-          ...(token && { 'x-tiktok-token': token }),
-        }
       })
         .then(res => res.json())
         .then(data => {

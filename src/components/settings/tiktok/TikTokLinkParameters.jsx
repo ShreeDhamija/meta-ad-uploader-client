@@ -102,14 +102,7 @@ export default function TikTokLinkParameters({
         setShowAddForm(links.length === 0);
     }, [links.length]);
 
-    const tiktokHeaders = useCallback(() => {
-        const uid = localStorage.getItem('tiktok_uid');
-        const token = localStorage.getItem('tiktok_token');
-        return {
-            ...(uid && { 'x-tiktok-user-id': uid }),
-            ...(token && { 'x-tiktok-token': token }),
-        };
-    }, []);
+
 
     const selectedLink = useMemo(() => {
         if (!links || links.length === 0) return null;
@@ -246,7 +239,7 @@ export default function TikTokLinkParameters({
         try {
             const res = await fetch(
                 `${API_BASE_URL}/api/tiktok/fetch-recent-utms?advertiserId=${advertiserId}`,
-                { headers: tiktokHeaders() }
+                { credentials: 'include' }
             );
             const data = await res.json();
             if (data.links) {
@@ -260,7 +253,7 @@ export default function TikTokLinkParameters({
         } finally {
             setIsFetchingLinks(false);
         }
-    }, [advertiserId, tiktokHeaders]);
+    }, [advertiserId]);
 
     // --- API: Setup UTMs (Fetch & Modal) ---
     const handleOpenUtmSetup = useCallback(async () => {
@@ -282,7 +275,7 @@ export default function TikTokLinkParameters({
 
         try {
             const res = await fetch(`${API_BASE_URL}/api/tiktok/fetch-recent-utms?advertiserId=${advertiserId}`, {
-                headers: tiktokHeaders()
+                credentials: 'include'
             });
             const data = await res.json();
 
@@ -300,7 +293,7 @@ export default function TikTokLinkParameters({
         } finally {
             setIsFetchingUtms(false);
         }
-    }, [advertiserId, utmPairs, tiktokHeaders]);
+    }, [advertiserId, utmPairs]);
 
     const handleExtractUtms = useCallback(() => {
         if (!rawUtmString.trim()) return;

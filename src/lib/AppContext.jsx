@@ -97,17 +97,9 @@ export const AppProvider = ({ children }) => {
 
     setTiktokIdentitiesLoading(prev => ({ ...prev, [advertiserId]: true }));
     try {
-      const storedUid = (() => { try { return localStorage.getItem('tiktok_uid') } catch (_) { return null } })()
-      const storedToken = (() => { try { return localStorage.getItem('tiktok_token') } catch (_) { return null } })()
-      const storedAdvertiserIds = (() => { try { return localStorage.getItem('tiktok_advertiser_ids') } catch (_) { return null } })()
-      const headers = { 'Content-Type': 'application/json' }
-      if (storedUid) headers['x-tiktok-user-id'] = storedUid
-      if (storedToken) headers['x-tiktok-token'] = storedToken
-      if (storedAdvertiserIds) headers['x-tiktok-advertiser-ids'] = storedAdvertiserIds
-
       const res = await fetch(`${API_BASE_URL}/api/tiktok/fetch-identities?advertiserId=${advertiserId}&_t=${Date.now()}`, {
         credentials: "include",
-        headers
+        headers: { 'Content-Type': 'application/json' }
       });
       const data = await res.json();
       const list = data.identities || [];
@@ -129,17 +121,9 @@ export const AppProvider = ({ children }) => {
   const fetchTikTokAdvertisers = useCallback(async () => {
     setTiktokAdvertisersLoading(true);
     try {
-      const storedUid = (() => { try { return localStorage.getItem('tiktok_uid') } catch (_) { return null } })()
-      const storedToken = (() => { try { return localStorage.getItem('tiktok_token') } catch (_) { return null } })()
-      const storedAdvertiserIds = (() => { try { return localStorage.getItem('tiktok_advertiser_ids') } catch (_) { return null } })()
-      const headers = { 'Content-Type': 'application/json' }
-      if (storedUid) headers['x-tiktok-user-id'] = storedUid
-      if (storedToken) headers['x-tiktok-token'] = storedToken
-      if (storedAdvertiserIds) headers['x-tiktok-advertiser-ids'] = storedAdvertiserIds
-
       const res = await fetch(`${API_BASE_URL}/api/tiktok/fetch-advertisers`, {
         credentials: "include",
-        headers
+        headers: { 'Content-Type': 'application/json' }
       });
       const data = await res.json();
       if (data.advertisers) {

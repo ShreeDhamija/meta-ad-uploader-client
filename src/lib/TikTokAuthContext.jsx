@@ -28,40 +28,15 @@ export function TikTokAuthProvider({ children }) {
     setTikTokAdvertisers(advertisers)
     writeCache('tiktokAdvertisers', advertisers)
     setIsLoading(false)
-    // Persist auth data to localStorage so the server can recover the session from Firestore
     if (user?.tiktokId) {
-      try { localStorage.setItem('tiktok_uid', user.tiktokId) } catch (_) { }
-    }
-    if (accessToken) {
-      try { localStorage.setItem('tiktok_token', accessToken) } catch (_) { }
-    }
-    if (advertisers?.length > 0) {
-      try {
-        const ids = advertisers.map(a => a.advertiser_id || a.id).filter(Boolean)
-        if (ids.length) localStorage.setItem('tiktok_advertiser_ids', JSON.stringify(ids))
-      } catch (_) { }
+      setUserId(user.tiktokId)
     }
   }
 
   const refreshTikTokUser = useCallback(async () => {
     const endpoint = `${API_BASE_URL}/api/tiktok/auth/me`
     try {
-
-      // Send stored tiktokId as a hint so the server can recover from Firestore
-      const storedUid = (() => { try { return localStorage.getItem('tiktok_uid') } catch (_) { return null } })()
-      const storedToken = (() => { try { return localStorage.getItem('tiktok_token') } catch (_) { return null } })()
-      const storedAdvertiserIds = (() => { try { return localStorage.getItem('tiktok_advertiser_ids') } catch (_) { return null } })()
       const headers = { 'Content-Type': 'application/json' }
-      if (storedUid) {
-        headers['x-tiktok-user-id'] = storedUid
-      }
-      if (storedToken) {
-        headers['x-tiktok-token'] = storedToken
-      }
-      if (storedAdvertiserIds) {
-        headers['x-tiktok-advertiser-ids'] = storedAdvertiserIds
-      }
-
       const res = await fetch(endpoint, { credentials: 'include', headers })
 
       const rawText = await res.text()
@@ -84,20 +59,8 @@ export function TikTokAuthProvider({ children }) {
           try { localStorage.setItem('tiktok_user', JSON.stringify(data.user)) } catch (_) { }
           setTikTokAdvertisers(data.advertisers || [])
           writeCache('tiktokAdvertisers', data.advertisers || [])
-          // Keep localStorage in sync
           if (data.user?.tiktokId) {
-            try { localStorage.setItem('tiktok_uid', data.user.tiktokId) 
-              setUserId(data.user.tiktokId)
-            } catch (_) { }
-          }
-          if (data.accessToken) {
-            try { localStorage.setItem('tiktok_token', data.accessToken) } catch (_) { }
-          }
-          if (data.advertisers?.length > 0) {
-            try {
-              const ids = data.advertisers.map(a => a.advertiser_id || a.id).filter(Boolean)
-              if (ids.length) localStorage.setItem('tiktok_advertiser_ids', JSON.stringify(ids))
-            } catch (_) { }
+            setUserId(data.user.tiktokId)
           }
         } else {
           console.warn('⚠️ [TikTok Auth] Response OK but connected=false. Reason:', data.error || 'unknown')
@@ -150,19 +113,10 @@ export function TikTokAuthProvider({ children }) {
   // ── tiktokFetch: a drop-in replacement for fetch() that auto-injects TikTok auth headers.
   // Use this for all /api/tiktok/* requests from anywhere in the app.
   const tiktokFetch = (url, options = {}) => {
-    const storedUid = (() => { try { return localStorage.getItem('tiktok_uid') } catch (_) { return null } })()
-    const storedToken = (() => { try { return localStorage.getItem('tiktok_token') } catch (_) { return null } })()
-    const storedAdvertiserIds = (() => { try { return localStorage.getItem('tiktok_advertiser_ids') } catch (_) { return null } })()
-    const extraHeaders = {}
-    if (storedUid) extraHeaders['x-tiktok-user-id'] = storedUid
-    if (storedToken) extraHeaders['x-tiktok-token'] = storedToken
-    if (storedAdvertiserIds) extraHeaders['x-tiktok-advertiser-ids'] = storedAdvertiserIds
-
     return fetch(url, {
       credentials: 'include',
       ...options,
       headers: {
-        ...extraHeaders,
         ...(options.headers || {}),
       },
     })

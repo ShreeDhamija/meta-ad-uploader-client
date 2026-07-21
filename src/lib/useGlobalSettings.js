@@ -17,14 +17,8 @@ export default function useGlobalSettings() {
 
   const fetchSettings = async () => {
     try {
-      const headers = {};
-      const tiktokUid = localStorage.getItem("tiktok_uid");
-      if (tiktokUid) {
-        headers["x-tiktok-user-id"] = tiktokUid;
-      }
       const res = await fetch(`${API_BASE_URL}/settings/global`, {
         credentials: "include",
-        headers,
       });
 
       // A 401 on first load is usually a brief session race right after

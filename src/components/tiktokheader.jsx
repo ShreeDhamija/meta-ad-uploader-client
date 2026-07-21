@@ -23,7 +23,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 export default function TikTokHeader({ showMessenger, hideMessenger }) {
-  const { isLoggedIn, userName, profilePicUrl, handleLogout } = useAuth()
   const { logoutTikTok, isTikTokLoggedIn, tiktokUser } = useTikTokAuth()
   const navigate = useNavigate()
   const location = useLocation()
@@ -41,13 +40,8 @@ export default function TikTokHeader({ showMessenger, hideMessenger }) {
   const isAnalyticsPage = location.pathname === "/analytics"
   const isTikTokPage = location.pathname === "/tiktok-ads"
 
-  // On the TikTok page, show TikTok user info; otherwise fall back to Meta auth
-  const displayName = isTikTokPage
-    ? (tiktokUser?.display_name || tiktokUser?.name || "")
-    : userName
-  const displayPic = isTikTokPage
-    ? (tiktokUser?.avatar_url || tiktokUser?.profile_image_url || TikTokUserPlaceholder)
-    : (profilePicUrl || TikTokUserPlaceholder)
+  const displayName = tiktokUser?.display_name || tiktokUser?.name || ""
+  const displayPic = tiktokUser?.avatar_url || tiktokUser?.profile_image_url || TikTokUserPlaceholder
   const headerCardShadow = "shadow-[0px_1px_2px_rgba(0,0,0,0.06)]"
 
   const handleDropdownClose = (open) => {

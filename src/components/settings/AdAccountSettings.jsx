@@ -1,45 +1,31 @@
-"use client";
+"use client"
 
-import LabelIcon from "@/assets/icons/label.svg?react";
-import FacebookReauthDialog from "@/components/FacebookReauthDialog";
-import { Button } from "@/components/ui/button";
-import { Command, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import ReorderAdNameParts from "@/components/ui/ReorderAdNameParts";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { useAppData } from "@/lib/AppContext";
-import { useAuth } from "@/lib/AuthContext";
-import { saveSettings } from "@/lib/saveSettings";
-import useAdAccountSettings from "@/lib/useAdAccountSettings";
-import useTeamSync from "@/lib/useTeamSync";
-import confetti from "canvas-confetti";
-import {
-  ChevronDown,
-  ChevronsUpDown,
-  CirclePlus,
-  CircleX,
-  CloudSync,
-  Folder,
-  Info,
-  Loader,
-  Pencil,
-  Plus,
-  RefreshCw,
-  Trash,
-  Upload,
-  X,
-} from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
-import { toast } from "sonner";
-import CopyTemplates from "./CopyTemplates";
-import CreativeEnhancements from "./CreativeEnhancements";
-import DefaultCTA from "./DefaultCTA";
-import LinkParameters from "./LinkParameters";
-import MultiAdvertiserAds from "./MultiAdvertiserAds";
-import PageSelectors from "./PageSelectors";
-import PixelTracking from "./PixelTracking";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react"
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
+import { Command, CommandInput, CommandList, CommandItem, CommandGroup } from "@/components/ui/command"
+import { Button } from "@/components/ui/button"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { ChevronsUpDown, Loader, CirclePlus, Info, RefreshCw, ChevronDown, CircleX, Folder, Pencil, CloudSync } from "lucide-react"
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu"
+import { useAppData } from "@/lib/AppContext"
+import { useAuth } from "@/lib/AuthContext"
+import CopyTemplates from "./CopyTemplates"
+import PageSelectors from "./PageSelectors"
+import LinkParameters from "./LinkParameters"
+import MultiAdvertiserAds from "./MultiAdvertiserAds"
+import DefaultCTA from "./DefaultCTA"
+import { toast } from "sonner"
+import { saveSettings } from "@/lib/saveSettings"
+import useAdAccountSettings from "@/lib/useAdAccountSettings"
+import useTeamSync from "@/lib/useTeamSync"
+import CreativeEnhancements from "./CreativeEnhancements"
+import PixelTracking from "./PixelTracking"
+import ReorderAdNameParts from "@/components/ui/ReorderAdNameParts"
+import LabelIcon from '@/assets/icons/label.svg?react';
+import confetti from 'canvas-confetti'
+import { createPortal } from "react-dom"
+import FacebookReauthDialog from "@/components/FacebookReauthDialog"
+
 
 // Constants moved outside component to prevent recreation
 
@@ -69,12 +55,13 @@ const DEFAULT_PIXEL_TRACKING = {
 const PIXEL_TRACKING_ALLOWED_USER_IDS = ["10236978990363167", "10163794086700369", "122113601127356755"];
 
 // Single cache key for draft settings
-const DRAFT_CACHE_KEY = "adAccountSettings_draft";
+const DRAFT_CACHE_KEY = 'adAccountSettings_draft';
+
 
 export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAccountPopup, subscriptionData }) {
-  const { adAccounts, pages, adAccountsLoading, refetchAdAccounts } = useAppData();
-  const { userId } = useAuth();
-  const showPixelTracking = PIXEL_TRACKING_ALLOWED_USER_IDS.includes(String(userId));
+  const { adAccounts, pages, adAccountsLoading, refetchAdAccounts } = useAppData()
+  const { userId } = useAuth()
+  const showPixelTracking = PIXEL_TRACKING_ALLOWED_USER_IDS.includes(String(userId))
   const [selectedAdAccount, setSelectedAdAccount] = useState(() => {
     // If there's a preselected account, use that
     if (preselectedAdAccount) return preselectedAdAccount;
@@ -90,20 +77,20 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
         }
       }
     } catch (e) {
-      console.error("Failed to read cached draft:", e);
+      console.error('Failed to read cached draft:', e);
     }
 
     return null;
   });
-  const [openAdAccount, setOpenAdAccount] = useState(false);
-  const [searchValue, setSearchValue] = useState("");
-  const [selectedPage, setSelectedPage] = useState(null);
-  const [multiAdvertiserAds, setMultiAdvertiserAds] = useState(false);
-  const [selectedInstagram, setSelectedInstagram] = useState(null);
-  const [savingSettings, setSavingSettings] = useState(false);
-  const { settings: adSettings, setSettings: setAdSettings, loading, isFirstEverSave } = useAdAccountSettings(selectedAdAccount);
-  const [syncConfirmOpen, setSyncConfirmOpen] = useState(false);
-  const [syncConfirmAction, setSyncConfirmAction] = useState(null);
+  const [openAdAccount, setOpenAdAccount] = useState(false)
+  const [searchValue, setSearchValue] = useState("")
+  const [selectedPage, setSelectedPage] = useState(null)
+  const [multiAdvertiserAds, setMultiAdvertiserAds] = useState(false)
+  const [selectedInstagram, setSelectedInstagram] = useState(null)
+  const [savingSettings, setSavingSettings] = useState(false)
+  const { settings: adSettings, setSettings: setAdSettings, loading, isFirstEverSave } = useAdAccountSettings(selectedAdAccount)
+  const [syncConfirmOpen, setSyncConfirmOpen] = useState(false)
+  const [syncConfirmAction, setSyncConfirmAction] = useState(null)
   const {
     loading: syncLoading,
     toggling: syncToggling,
@@ -114,29 +101,27 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
     enableSync,
     disableSync,
     refetch: refetchSync,
-  } = useTeamSync();
+  } = useTeamSync()
 
-  const [links, setLinks] = useState([]); // Array of {url, isDefault}
+  const [links, setLinks] = useState([]) // Array of {url, isDefault}
   // const [utmPairs, setUtmPairs] = useState(DEFAULT_UTM_PAIRS)
-  const [utmPairs, setUtmPairs] = useState([]);
-  const [displayLink, setDisplayLink] = useState("");
-  const [defaultCTA, setDefaultCTA] = useState("Learn More");
+  const [utmPairs, setUtmPairs] = useState([])
+  const [displayLink, setDisplayLink] = useState("")
+  const [defaultCTA, setDefaultCTA] = useState("Learn More")
   // const [copyTemplates, setCopyTemplates] = useState({})
-  const [enhancements, setEnhancements] = useState(DEFAULT_ENHANCEMENTS);
-  const [adNameFormulaV2, setAdNameFormulaV2] = useState({ rawInput: "" }); // Add this line
-  const [customVariables, setCustomVariables] = useState([]);
-  const [pixelTracking, setPixelTracking] = useState(DEFAULT_PIXEL_TRACKING);
-  const [isDirty, setIsDirty] = useState(false);
-  const [initialSettings, setInitialSettings] = useState({});
-  const [isReauthOpen, setIsReauthOpen] = useState(false);
-  const [products, setProducts] = useState([]);
-  const [editingProduct, setEditingProduct] = useState(null);
-  const [newSellingPoint, setNewSellingPoint] = useState("");
+  const [enhancements, setEnhancements] = useState(DEFAULT_ENHANCEMENTS)
+  const [adNameFormulaV2, setAdNameFormulaV2] = useState({ rawInput: "" }) // Add this line
+  const [customVariables, setCustomVariables] = useState([])
+  const [pixelTracking, setPixelTracking] = useState(DEFAULT_PIXEL_TRACKING)
+  const [isDirty, setIsDirty] = useState(false)
+  const [initialSettings, setInitialSettings] = useState({})
+  const [isReauthOpen, setIsReauthOpen] = useState(false)
 
   // Add a ref to track template-only updates
   const skipFormResetRef = useRef(false);
   // Ref to track if we've already restored from cache for this account
   const cacheRestoredRef = useRef(false);
+
 
   // Create callback to pass to CopyTemplates
   const handleTemplateUpdate = useCallback(() => {
@@ -145,50 +130,53 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
 
   const handleRefreshAdAccounts = async () => {
     try {
-      await refetchAdAccounts();
-      toast.success("Ad accounts refreshed");
+      await refetchAdAccounts()
+      toast.success("Ad accounts refreshed")
     } catch (err) {
-      toast.error("Failed to refresh ad accounts");
+      toast.error("Failed to refresh ad accounts")
     }
-  };
+  }
+
 
   const handleSyncToggle = useCallback(() => {
     if (!isOwner) {
-      toast.info("Only the team owner can change sync settings.");
-      return;
+      toast.info("Only the team owner can change sync settings.")
+      return
     }
-    setSyncConfirmAction(syncEnabled ? "disable" : "enable");
-    setSyncConfirmOpen(true);
-  }, [isOwner, syncEnabled]);
+    setSyncConfirmAction(syncEnabled ? "disable" : "enable")
+    setSyncConfirmOpen(true)
+  }, [isOwner, syncEnabled])
 
   const handleSyncConfirm = useCallback(async () => {
-    setSyncConfirmOpen(false);
-    let result;
+    setSyncConfirmOpen(false)
+    let result
     if (syncConfirmAction === "enable") {
-      result = await enableSync();
+      result = await enableSync()
       if (result.success) {
         toast.success(
           result.seededCount > 0
             ? `Sync enabled! ${result.seededCount} ad account settings synced.`
-            : "Sync enabled! Settings will be shared when anyone saves next.",
-        );
+            : "Sync enabled! Settings will be shared when anyone saves next."
+        )
       }
     } else {
-      result = await disableSync();
+      result = await disableSync()
       if (result.success) {
-        toast.success("Sync disabled. Each member will use their own settings.");
+        toast.success("Sync disabled. Each member will use their own settings.")
       }
     }
     if (!result?.success) {
-      toast.error(result?.error || "Something went wrong.");
+      toast.error(result?.error || "Something went wrong.")
     }
     // Re-trigger settings fetch
     if (selectedAdAccount) {
-      const current = selectedAdAccount;
-      setSelectedAdAccount(null);
-      setTimeout(() => setSelectedAdAccount(current), 50);
+      const current = selectedAdAccount
+      setSelectedAdAccount(null)
+      setTimeout(() => setSelectedAdAccount(current), 50)
     }
-  }, [syncConfirmAction, enableSync, disableSync, selectedAdAccount]);
+  }, [syncConfirmAction, enableSync, disableSync, selectedAdAccount])
+
+
 
   // Memoized filtered ad accounts for dropdown
   const filteredAdAccounts = useMemo(() => {
@@ -196,7 +184,9 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
 
     const lowerSearchValue = searchValue.toLowerCase();
     return adAccounts.filter(
-      (acct) => (acct.name?.toLowerCase() || "").includes(lowerSearchValue) || acct.id.toLowerCase().includes(lowerSearchValue),
+      (acct) =>
+        (acct.name?.toLowerCase() || "").includes(lowerSearchValue) ||
+        acct.id.toLowerCase().includes(lowerSearchValue),
     );
   }, [adAccounts, searchValue]);
 
@@ -210,9 +200,9 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
   const areUtmPairsEqual = useCallback((pairs1, pairs2) => {
     const normalize = (pairs) =>
       pairs
-        .map((p) => ({ key: String(p.key || ""), value: String(p.value || "") }))
+        .map(p => ({ key: String(p.key || ""), value: String(p.value || "") }))
         .sort((a, b) => a.key.localeCompare(b.key))
-        .map((p) => `${p.key}:${p.value}`)
+        .map(p => `${p.key}:${p.value}`)
         .join("|");
 
     return normalize(pairs1) === normalize(pairs2);
@@ -241,18 +231,25 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
     defaultCTA,
     utmPairs,
     enhancements,
-    adNameFormulaV2, // Add to dependencies
+    adNameFormulaV2,  // Add to dependencies
     initialSettings,
-    multiAdvertiserAds, // ADD THIS
+    multiAdvertiserAds,  // ADD THIS
     selectedAdAccount,
     areUtmPairsEqual,
     displayLink,
-    pixelTracking,
+    pixelTracking
+
+
   ]);
 
   // Memoized initial settings calculation
   const calculateInitialSettings = useCallback((adSettings) => {
-    const utms = Array.isArray(adSettings.defaultUTMs) && adSettings.defaultUTMs.length > 0 ? adSettings.defaultUTMs : [];
+    const utms = Array.isArray(adSettings.defaultUTMs) && adSettings.defaultUTMs.length > 0
+      ? adSettings.defaultUTMs
+      : [];
+
+
+
 
     return {
       defaultPage: adSettings.defaultPage || null,
@@ -266,44 +263,45 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
       customVariables: adSettings.customVariables || [],
       displayLink: adSettings.displayLink || "",
       pixelTracking: adSettings.pixelTracking || DEFAULT_PIXEL_TRACKING,
+
+
     };
   }, []);
 
   // Optimized ad account selection handler
-  const handleAdAccountSelect = useCallback(
-    (accountId) => {
-      // If switching to a different account, clear cache and reset form state
-      if (selectedAdAccount && accountId !== selectedAdAccount) {
-        localStorage.removeItem(DRAFT_CACHE_KEY);
+  const handleAdAccountSelect = useCallback((accountId) => {
+    // If switching to a different account, clear cache and reset form state
+    if (selectedAdAccount && accountId !== selectedAdAccount) {
+      localStorage.removeItem(DRAFT_CACHE_KEY);
 
-        // Reset form state immediately to prevent showing stale values
-        setSelectedPage(null);
-        setSelectedInstagram(null);
-        setLinks([]);
-        setUtmPairs([]);
-        setDefaultCTA("LEARN_MORE");
-        setEnhancements(DEFAULT_ENHANCEMENTS);
-        setAdNameFormulaV2({ rawInput: "" });
-        setMultiAdvertiserAds(false);
-        setCustomVariables([]); // ← ADD THIS
-        setInitialSettings({});
-        setDisplayLink("");
-        setPixelTracking(DEFAULT_PIXEL_TRACKING);
-      }
+      // Reset form state immediately to prevent showing stale values
+      setSelectedPage(null);
+      setSelectedInstagram(null);
+      setLinks([]);
+      setUtmPairs([]);
+      setDefaultCTA("LEARN_MORE");
+      setEnhancements(DEFAULT_ENHANCEMENTS);
+      setAdNameFormulaV2({ rawInput: "" });
+      setMultiAdvertiserAds(false);
+      setCustomVariables([]);  // ← ADD THIS
+      setInitialSettings({});
+      setDisplayLink("");
+      setPixelTracking(DEFAULT_PIXEL_TRACKING);
 
-      // Reset cache restored flag when switching accounts
-      cacheRestoredRef.current = false;
-      setSelectedAdAccount(accountId);
-      setOpenAdAccount(false);
-    },
-    [selectedAdAccount],
-  );
+    }
+
+    // Reset cache restored flag when switching accounts
+    cacheRestoredRef.current = false;
+    setSelectedAdAccount(accountId);
+    setOpenAdAccount(false);
+  }, [selectedAdAccount]);
 
   // Optimized ad name formula handlers
 
+
   const handleFormulaInputChange = useCallback((newRawInput) => {
     setAdNameFormulaV2({
-      rawInput: newRawInput,
+      rawInput: newRawInput
     });
   }, []);
 
@@ -321,12 +319,14 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
     setDisplayLink(initialSettings.displayLink);
     setPixelTracking(initialSettings.pixelTracking || DEFAULT_PIXEL_TRACKING);
 
+
     // Clear the cached draft
     localStorage.removeItem(DRAFT_CACHE_KEY);
   }, [initialSettings]);
 
   // Optimized save handler
   const handleSave = useCallback(async () => {
+
     setSavingSettings(true);
     if (!selectedAdAccount) {
       alert("Select an Ad Account first");
@@ -342,12 +342,14 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
       defaultUTMs: utmPairs, // <--- Direct state reference
       creativeEnhancements: enhancements,
       adNameFormulaV2: {
-        rawInput: adNameFormulaV2?.rawInput || "",
+        rawInput: adNameFormulaV2?.rawInput || ""
       },
       multiAdvertiserAds: multiAdvertiserAds,
       customVariables: customVariables,
       displayLink: displayLink,
       pixelTracking: pixelTracking,
+
+
     };
 
     try {
@@ -358,12 +360,13 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
 
       toast.success("Updates saved!");
 
+
       if (isFirstEverSave) {
         confetti({
           particleCount: 150,
           spread: 70,
           origin: { y: 0.6 },
-          colors: ["#3b82f6", "#10b981", "#f59e0b"],
+          colors: ['#3b82f6', '#10b981', '#f59e0b']
         });
       }
 
@@ -380,6 +383,8 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
         customVariables: customVariables,
         displayLink: displayLink,
         pixelTracking: pixelTracking,
+
+
       };
 
       setInitialSettings(newInitialSettings);
@@ -389,7 +394,8 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
       localStorage.removeItem(DRAFT_CACHE_KEY);
     } catch (err) {
       toast.error("Failed to save settings: " + err.message);
-    } finally {
+    }
+    finally {
       setSavingSettings(false);
     }
   }, [
@@ -405,47 +411,50 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
     isFirstEverSave,
     customVariables,
     displayLink,
-    pixelTracking,
+    pixelTracking
   ]);
 
-  const handleCustomVariablesSave = useCallback(
-    async (newVariables) => {
-      setCustomVariables(newVariables);
 
-      if (!selectedAdAccount) return;
+  const handleCustomVariablesSave = useCallback(async (newVariables) => {
+    setCustomVariables(newVariables);
 
-      try {
-        await saveSettings({
-          adAccountId: selectedAdAccount,
-          adAccountSettings: {
-            customVariables: newVariables,
-          },
-          merge: true, // see note below
-        });
-        toast.success("Custom variables saved!");
+    if (!selectedAdAccount) return;
 
-        // Update initialSettings so hasChanges doesn't flag this as dirty
-        setInitialSettings((prev) => ({
-          ...prev,
+    try {
+      await saveSettings({
+        adAccountId: selectedAdAccount,
+        adAccountSettings: {
           customVariables: newVariables,
-        }));
-      } catch (err) {
-        toast.error("Failed to save custom variables: " + err.message);
-      }
-    },
-    [selectedAdAccount],
-  );
+        },
+        merge: true,  // see note below
+      });
+      toast.success("Custom variables saved!");
+
+      // Update initialSettings so hasChanges doesn't flag this as dirty
+      setInitialSettings(prev => ({
+        ...prev,
+        customVariables: newVariables,
+      }));
+    } catch (err) {
+      toast.error("Failed to save custom variables: " + err.message);
+    }
+  }, [selectedAdAccount]);
+
+
+
 
   // Effect for dirty state tracking
   useEffect(() => {
     setIsDirty(hasChanges);
   }, [hasChanges]);
 
+  // Effect to save draft to localStorage when there are unsaved changes
   // Effect to save/clear draft in localStorage based on unsaved changes
   useEffect(() => {
     if (!selectedAdAccount) return;
 
     if (!Object.keys(initialSettings).length) return;
+
 
     if (hasChanges) {
       // Save draft when there are unsaved changes
@@ -460,9 +469,9 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
         adNameFormulaV2,
         multiAdvertiserAds,
         customVariables,
-        displayLink, // ← ADD THIS
+        displayLink,     // ← ADD THIS
         pixelTracking,
-        timestamp: Date.now(),
+        timestamp: Date.now()
       };
 
       localStorage.setItem(DRAFT_CACHE_KEY, JSON.stringify(draft));
@@ -480,21 +489,9 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
         // Ignore parse errors
       }
     }
-  }, [
-    selectedAdAccount,
-    hasChanges,
-    selectedPage,
-    selectedInstagram,
-    links,
-    utmPairs,
-    defaultCTA,
-    enhancements,
-    adNameFormulaV2,
-    multiAdvertiserAds,
-    customVariables,
-    displayLink,
-    pixelTracking,
-  ]);
+  }, [selectedAdAccount, hasChanges, selectedPage, selectedInstagram, links, utmPairs, defaultCTA, enhancements, adNameFormulaV2, multiAdvertiserAds, customVariables, displayLink, pixelTracking]);
+
+
 
   // Effect for loading initial settings (with cache restoration)
   useEffect(() => {
@@ -543,7 +540,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
         }
       }
     } catch (e) {
-      console.error("Failed to parse cached draft:", e);
+      console.error('Failed to parse cached draft:', e);
     }
 
     // No valid cache, use server values
@@ -556,22 +553,25 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
     setAdNameFormulaV2(initial.adNameFormulaV2);
     setInitialSettings(initial);
     setMultiAdvertiserAds(initial.multiAdvertiserAds);
-    setCustomVariables(initial.customVariables || []); // ← ADD THIS
+    setCustomVariables(initial.customVariables || []);  // ← ADD THIS
     setDisplayLink(initial.displayLink || "");
     setPixelTracking(initial.pixelTracking || DEFAULT_PIXEL_TRACKING);
+
   }, [adSettings, selectedAdAccount, calculateInitialSettings]);
+
 
   // Add this effect after the existing useEffect hooks
 
   useEffect(() => {
     // Only check if we have a selected account and the adAccounts array has been populated
     if (selectedAdAccount && adAccounts.length > 0) {
-      const accountStillExists = adAccounts.some((acc) => acc.id === selectedAdAccount);
+      const accountStillExists = adAccounts.some(acc => acc.id === selectedAdAccount);
       if (!accountStillExists) {
         setSelectedAdAccount(null);
       }
     }
   }, [adAccounts]); // Only depend on adAccounts, not selectedAdAccount
+
 
   return (
     <div className="space-y-6 w-full max-w-3xl">
@@ -580,11 +580,10 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
         <div className="flex items-center justify-between">
           <label className="text-md font-medium text-gray-800">Select Ad Account</label>
           <div className="flex items-center gap-2">
+
             {/* Team sync button — owners always see, members only when synced */}
-            {!syncLoading &&
-              inTeam &&
-              (isOwner || syncEnabled) &&
-              (syncEnabled ? (
+            {!syncLoading && inTeam && (isOwner || syncEnabled) && (
+              syncEnabled ? (
                 isOwner ? (
                   <Button
                     size="sm"
@@ -593,7 +592,11 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
                     disabled={syncToggling}
                     className="text-sm rounded-xl border-red-200 text-red-600 bg-white hover:bg-red-50 hover:text-red-700 shadow-xs"
                   >
-                    {syncToggling ? <RefreshCw className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <CircleX className="w-3.5 h-3.5 mr-1.5" />}
+                    {syncToggling ? (
+                      <RefreshCw className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                    ) : (
+                      <CircleX className="w-3.5 h-3.5 mr-1.5" />
+                    )}
                     Disable Settings Sync With Team
                   </Button>
                 ) : null
@@ -607,25 +610,36 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
                   <CloudSync className={`w-3.5 h-3.5 mr-1.5 ${syncToggling ? "animate-spin" : ""}`} />
                   Sync Settings with Team
                 </Button>
-              ))}
+              )
+            )}
 
             {/* Dropdown: Edit Active Accounts */}
-            {subscriptionData?.planType &&
-              (subscriptionData.planType === "brand" || subscriptionData.planType === "starter" ? (
+            {subscriptionData?.planType && (
+              (subscriptionData.planType === 'brand' || subscriptionData.planType === 'starter') ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button size="sm" variant="outline" className="text-sm rounded-xl border-gray-200 hover:bg-gray-50">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-sm rounded-xl border-gray-200 hover:bg-gray-50"
+                    >
                       <Folder className="w-3.5 h-3.5 mr-1.5 opacity-80" />
                       Edit Active Accounts
                       <ChevronDown className="w-3.5 h-3.5 ml-1.5 opacity-50" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" side="bottom" className="rounded-xl bg-white" avoidCollisions={false}>
-                    <DropdownMenuItem onClick={() => setIsReauthOpen(true)} className="cursor-pointer rounded-lg text-blue-600 hover:text-blue-700">
+                    <DropdownMenuItem
+                      onClick={() => setIsReauthOpen(true)}
+                      className="cursor-pointer rounded-lg text-blue-600 hover:text-blue-700"
+                    >
                       <CirclePlus className="w-4 h-4 text-blue-600 hover:text-blue-700" />
                       Link New Ad Accounts
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={onTriggerAdAccountPopup} className="cursor-pointer rounded-lg">
+                    <DropdownMenuItem
+                      onClick={onTriggerAdAccountPopup}
+                      className="cursor-pointer rounded-lg"
+                    >
                       <Pencil className="w-4 h-4" />
                       Change Selected Accounts in Plan
                     </DropdownMenuItem>
@@ -641,13 +655,19 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
                   <CirclePlus className="w-4 h-4 mr-1.5 text-blue-600 hover:text-blue-700" />
                   Link New Ad Accounts
                 </Button>
-              ))}
+              )
+            )}
 
             {/* Reauth dialog (opened from dropdown) */}
-            <FacebookReauthDialog open={isReauthOpen} onOpenChange={setIsReauthOpen} redirectState="settings" />
+            <FacebookReauthDialog
+              open={isReauthOpen}
+              onOpenChange={setIsReauthOpen}
+              redirectState="settings"
+            />
           </div>
         </div>
         <div className="flex items-center gap-2">
+
           <Popover open={openAdAccount} onOpenChange={setOpenAdAccount}>
             <PopoverTrigger asChild>
               <Button
@@ -685,6 +705,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
                       Fetching ad accounts...
                     </div>
                   ) : (
+
                     <CommandGroup>
                       {filteredAdAccounts.map((acct) => (
                         <CommandItem
@@ -713,7 +734,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
             disabled={adAccountsLoading}
             className="disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
           >
-            <RefreshCw className={`w-4 h-4 text-gray-500 ${adAccountsLoading ? "animate-spin" : ""}`} />
+            <RefreshCw className={`w-4 h-4 text-gray-500 ${adAccountsLoading ? 'animate-spin' : ''}`} />
           </button>
         </div>
         {!syncLoading && inTeam && syncEnabled && (
@@ -726,6 +747,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
             </span>
           </div>
         )}
+
 
         {selectedAdAccount && loading && (
           <div className="flex items-center gap-2 text-sm text-gray-500 mt-2">
@@ -750,17 +772,23 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
             adSettings={adSettings}
             setAdSettings={setAdSettings}
             onTemplateUpdate={handleTemplateUpdate}
+
           />
 
           {/* Ad Naming Convention */}
           <div className="bg-[#f7f7f7] rounded-2xl p-4 space-y-3">
             <div className="flex items-center gap-2">
               <LabelIcon alt="Ad Name Icon" className="w-5 h-5 grayscale brightness-75 contrast-75 opacity-60" />
-              <h3 className="font-medium text-[14px] text-zinc-950">Set up your default ad naming conventions</h3>
+              <h3 className="font-medium text-[14px] text-zinc-950">
+                Set up your default ad naming conventions
+              </h3>
               <TooltipProvider delayDuration={200}>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <button type="button" className="text-gray-400 hover:text-gray-600 transition-colors">
+                    <button
+                      type="button"
+                      className="text-gray-400 hover:text-gray-600 transition-colors"
+                    >
                       <Info className="w-3.5 h-3.5" />
                     </button>
                   </TooltipTrigger>
@@ -771,24 +799,15 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
                   >
                     <p className="font-medium mb-1.5">Select the Custom Date option & replace 'custom' with any combination of the tokens below.</p>
                     <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 font-mono text-[11px]">
-                      <span className="font-semibold">D</span>
-                      <span className="text-gray-400">Day (1–31)</span>
-                      <span className="font-semibold">DD</span>
-                      <span className="text-gray-400">Day, zero-padded (01–31)</span>
-                      <span className="font-semibold">M</span>
-                      <span className="text-gray-400">Month (1–12)</span>
-                      <span className="font-semibold">MM</span>
-                      <span className="text-gray-400">Month, zero-padded (01–12)</span>
-                      <span className="font-semibold">MMM</span>
-                      <span className="text-gray-400">Month name (Jan, Feb…)</span>
-                      <span className="font-semibold">YY</span>
-                      <span className="text-gray-400">Year, 2-digit (25)</span>
-                      <span className="font-semibold">YYYY</span>
-                      <span className="text-gray-400">Year, 4-digit (2025)</span>
+                      <span className="font-semibold">D</span><span className="text-gray-400">Day (1–31)</span>
+                      <span className="font-semibold">DD</span><span className="text-gray-400">Day, zero-padded (01–31)</span>
+                      <span className="font-semibold">M</span><span className="text-gray-400">Month (1–12)</span>
+                      <span className="font-semibold">MM</span><span className="text-gray-400">Month, zero-padded (01–12)</span>
+                      <span className="font-semibold">MMM</span><span className="text-gray-400">Month name (Jan, Feb…)</span>
+                      <span className="font-semibold">YY</span><span className="text-gray-400">Year, 2-digit (25)</span>
+                      <span className="font-semibold">YYYY</span><span className="text-gray-400">Year, 4-digit (2025)</span>
                     </div>
-                    <p className="text-gray-400 mt-2">
-                      Use any separator: <span className="font-mono">/ - . _</span> or space
-                    </p>
+                    <p className="text-gray-400 mt-2">Use any separator: <span className="font-mono">/ - . _</span> or space</p>
                     <p className="mt-1.5 text-gray-400 italic">{"Example: {{Date(DD-MMM-YYYY)}} → 05-Mar-2025"}</p>
                   </TooltipContent>
                 </Tooltip>
@@ -820,331 +839,86 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
           <CreativeEnhancements enhancements={enhancements} setEnhancements={setEnhancements} />
           <MultiAdvertiserAds enabled={multiAdvertiserAds} setEnabled={setMultiAdvertiserAds} />
           {showPixelTracking && (
-            <PixelTracking pixelTracking={pixelTracking} setPixelTracking={setPixelTracking} selectedAdAccount={selectedAdAccount} />
+            <PixelTracking
+              pixelTracking={pixelTracking}
+              setPixelTracking={setPixelTracking}
+              selectedAdAccount={selectedAdAccount}
+            />
           )}
 
-          {/* Product Information Section */}
-          <div className="bg-[#f7f7f7] rounded-2xl p-4 space-y-3">
-            <div className="flex items-center justify-between mb-1">
-              <div className="flex items-center gap-2">
-                <Folder className="w-5 h-5 grayscale brightness-75 contrast-75 opacity-60" />
-                <h3 className="font-medium text-[14px] text-zinc-950">Product Information Preferences</h3>
-              </div>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  setEditingProduct({ id: Date.now(), name: "", image: "", sellingPoints: [] });
-                  setNewSellingPoint("");
-                }}
-                className="text-xs rounded-xl border-gray-300 hover:bg-gray-50 flex items-center gap-1"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                Add Product
-              </Button>
-            </div>
 
-            {/* List of Products */}
-            {products.length === 0 ? (
-              <p className="text-xs text-gray-500 italic py-2 text-center">No products added yet. Add products to auto-fill your ad campaigns.</p>
-            ) : (
-              <div className="grid grid-cols-1 gap-2">
-                {products.map((product) => (
-                  <div key={product.id} className="bg-white border border-gray-200 rounded-xl p-3 flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3 min-w-0">
-                      {product.image ? (
-                        <img src={product.image} alt={product.name} className="w-12 h-12 rounded-lg object-cover border border-gray-100 shrink-0" />
-                      ) : (
-                        <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
-                          <Info className="w-5 h-5 text-gray-400" />
-                        </div>
-                      )}
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-gray-800 truncate">{product.name}</p>
-                        <p className="text-xs text-gray-500 truncate">{product.sellingPoints?.length || 0} selling points</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1 shrink-0">
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => {
-                          setEditingProduct({ ...product });
-                          setNewSellingPoint("");
-                        }}
-                        className="h-8 w-8 text-gray-500 hover:text-gray-700"
-                      >
-                        <Pencil className="w-3.5 h-3.5" />
-                      </Button>
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => {
-                          setProducts(products.filter((p) => p.id !== product.id));
-                        }}
-                        className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
-                      >
-                        <Trash className="w-3.5 h-3.5" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Editing / Adding Dialog / Inline Modal */}
-            {editingProduct && (
-              <div className="fixed inset-0 z-[9999] bg-black/30 flex justify-center items-center p-4">
-                <div className="bg-white rounded-3xl w-[500px] max-w-full shadow-xl border border-gray-200 p-6 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-base font-semibold text-gray-900">
-                      {products.some((p) => p.id === editingProduct.id) ? "Edit Product" : "Add New Product"}
-                    </h4>
-                    <button type="button" onClick={() => setEditingProduct(null)} className="p-1 rounded-full hover:bg-gray-100 transition-colors">
-                      <X className="w-4 h-4 text-gray-500" />
-                    </button>
-                  </div>
-
-                  <div className="space-y-3">
-                    {/* Product Name */}
-                    <div className="space-y-1">
-                      <label htmlFor="prod-name" className="text-xs font-semibold text-gray-700">
-                        Product Name
-                      </label>
-                      <Input
-                        id="prod-name"
-                        value={editingProduct.name}
-                        onChange={(e) => setEditingProduct({ ...editingProduct, name: e.target.value })}
-                        placeholder="e.g. Premium Wireless Earbuds"
-                        className="border border-gray-300 rounded-2xl h-11 px-4 text-sm w-full"
-                      />
-                    </div>
-
-                    {/* Product Image */}
-                    <div className="space-y-1">
-                      <label className="text-xs font-semibold text-gray-700 block">Product Image</label>
-                      <div className="flex items-center gap-3">
-                        {editingProduct.image ? (
-                          <div className="relative shrink-0">
-                            <img src={editingProduct.image} alt="Preview" className="w-16 h-16 rounded-xl object-cover border border-gray-200" />
-                            <button
-                              type="button"
-                              onClick={() => setEditingProduct({ ...editingProduct, image: "" })}
-                              className="absolute -top-1.5 -right-1.5 p-0.5 bg-red-500 text-white rounded-full hover:bg-red-600 animate-[bounce_1s_infinite]"
-                            >
-                              <X className="w-3 h-3" />
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="w-16 h-16 rounded-xl bg-gray-50 border-2 border-dashed border-gray-300 flex items-center justify-center shrink-0">
-                            <Info className="w-6 h-6 text-gray-300" />
-                          </div>
-                        )}
-                        <div className="flex-1">
-                          <label className="inline-flex items-center justify-center px-4 py-2 border border-gray-300 rounded-xl bg-white text-xs font-semibold text-gray-700 shadow-sm cursor-pointer hover:bg-gray-50">
-                            <Upload className="w-3.5 h-3.5 mr-1.5 text-gray-500" />
-                            Upload Image
-                            <input
-                              type="file"
-                              accept="image/*"
-                              className="hidden"
-                              onChange={async (e) => {
-                                const file = e.target.files?.[0];
-                                if (!file) return;
-
-                                const formData = new FormData();
-                                formData.append("file", file);
-                                formData.append("advertiserId", selectedAdAccount); // Use active account ID!
-
-                                toast.loading("Uploading image to S3...");
-                                try {
-                                  const res = await fetch(`${API_BASE_URL}/api/tiktok/product-image/upload`, {
-                                    method: "POST",
-                                    body: formData,
-                                    credentials: "include",
-                                  });
-                                  const data = await res.json();
-                                  if (data.success && data.url) {
-                                    setEditingProduct({ ...editingProduct, image: data.url });
-                                    toast.dismiss();
-                                    toast.success("Image uploaded successfully!");
-                                  } else {
-                                    throw new Error(data.error || "Failed to upload image");
-                                  }
-                                } catch (err) {
-                                  toast.dismiss();
-                                  toast.error(err.message || "Failed to upload image");
-                                }
-                              }}
-                            />
-                          </label>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Selling Points */}
-                    <div className="space-y-1">
-                      <label className="text-xs font-semibold text-gray-700 block">Selling Points</label>
-                      <div className="flex gap-2">
-                        <Input
-                          value={newSellingPoint}
-                          onChange={(e) => setNewSellingPoint(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              e.preventDefault();
-                              if (!newSellingPoint.trim()) return;
-                              if (editingProduct.sellingPoints.includes(newSellingPoint.trim())) return;
-                              setEditingProduct({
-                                ...editingProduct,
-                                sellingPoints: [...editingProduct.sellingPoints, newSellingPoint.trim()],
-                              });
-                              setNewSellingPoint("");
-                            }
-                          }}
-                          placeholder="Press enter to add selling point..."
-                          className="border border-gray-300 rounded-2xl h-11 px-4 text-sm flex-1"
-                        />
-                        <Button
-                          type="button"
-                          onClick={() => {
-                            if (!newSellingPoint.trim()) return;
-                            if (editingProduct.sellingPoints.includes(newSellingPoint.trim())) return;
-                            setEditingProduct({
-                              ...editingProduct,
-                              sellingPoints: [...editingProduct.sellingPoints, newSellingPoint.trim()],
-                            });
-                            setNewSellingPoint("");
-                          }}
-                          className="rounded-2xl h-11 px-4 text-xs bg-zinc-800 text-white font-semibold hover:bg-black"
-                        >
-                          Confirm
-                        </Button>
-                      </div>
-
-                      {/* Render tags */}
-                      {editingProduct.sellingPoints?.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5 pt-2">
-                          {editingProduct.sellingPoints.map((tag) => (
-                            <span
-                              key={tag}
-                              className="inline-flex items-center gap-1 bg-gray-100 border border-gray-200 text-[11px] text-gray-700 px-2 py-0.5 rounded-full"
-                            >
-                              {tag}
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setEditingProduct({
-                                    ...editingProduct,
-                                    sellingPoints: editingProduct.sellingPoints.filter((t) => t !== tag),
-                                  })
-                                }
-                                className="text-gray-400 hover:text-gray-600"
-                              >
-                                <X className="w-3 h-3" />
-                              </button>
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex gap-3 pt-2">
-                    <Button type="button" variant="outline" onClick={() => setEditingProduct(null)} className="rounded-2xl flex-1 border-gray-200">
-                      Cancel
-                    </Button>
-                    <Button
-                      type="button"
-                      onClick={() => {
-                        if (!editingProduct.name.trim()) {
-                          toast.error("Product name is required");
-                          return;
-                        }
-                        const isExisting = products.some((p) => p.id === editingProduct.id);
-                        if (isExisting) {
-                          setProducts(products.map((p) => (p.id === editingProduct.id ? editingProduct : p)));
-                        } else {
-                          setProducts([...products, editingProduct]);
-                        }
-                        setEditingProduct(null);
-                      }}
-                      className="rounded-2xl flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold"
-                    >
-                      Save Product
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
         </div>
       </fieldset>
 
+
       {/* Portal Save Bar */}
-      {document.getElementById("settings-save-bar-portal") &&
-        createPortal(
-          <div
-            className={`absolute bottom-0 left-0 w-full z-40 w-full bg-blue-600 text-white transition-transform duration-300 ease-in-out ${
-              hasChanges ? "translate-y-0" : "translate-y-full"
+      {document.getElementById('settings-save-bar-portal') && createPortal(
+        <div
+          className={`absolute bottom-0 left-0 w-full z-40 w-full bg-blue-600 text-white transition-transform duration-300 ease-in-out ${hasChanges ? "translate-y-0" : "translate-y-full"
             }`}
-          >
-            <div className="mx-auto max-w-3xl px-6 py-1.5 flex flex-col items-center gap-1">
-              <div className="flex items-center gap-4">
-                <Button onClick={handleSave} className="bg-white text-blue-600 hover:bg-white rounded-xl px-6 h-9 text-sm font-semibold shadow-xs">
-                  {savingSettings ? (
-                    <>
-                      <Loader className="h-4 w-4 animate-spin" />
-                      <span className="block truncate flex-1 text-left">Saving changes...</span>
-                    </>
-                  ) : (
-                    <p className="text-blue-600 hover:text-blue-600">Save Changes</p>
-                  )}
-                </Button>
-                <Button
-                  onClick={handleDismiss}
-                  variant="ghost"
-                  className="text-white hover:bg-blue-700 hover:text-white rounded-xl px-4 h-9 text-sm font-medium"
-                >
-                  Dismiss changes
-                </Button>
-              </div>
+        >
+          <div className="mx-auto max-w-3xl px-6 py-1.5 flex flex-col items-center gap-1">
+            <div className="flex items-center gap-4">
+              <Button
+                onClick={handleSave}
+                className="bg-white text-blue-600 hover:bg-white rounded-xl px-6 h-9 text-sm font-semibold shadow-xs"
+              >
+                {savingSettings ? (
+                  <>
+                    <Loader className="h-4 w-4 animate-spin" />
+                    <span className="block truncate flex-1 text-left">Saving changes...</span>
+                  </>
+                ) : (
+                  <p className="text-blue-600 hover:text-blue-600">Save Changes</p>
+                )}
+              </Button>
+              <Button
+                onClick={handleDismiss}
+                variant="ghost"
+                className="text-white hover:bg-blue-700 hover:text-white rounded-xl px-4 h-9 text-sm font-medium"
+              >
+                Dismiss changes
+              </Button>
             </div>
-          </div>,
-          document.getElementById("settings-save-bar-portal"),
-        )}
+
+          </div>
+        </div>,
+        document.getElementById('settings-save-bar-portal')
+      )}
+
 
       {/* Sync confirmation dialog */}
       {syncConfirmOpen && (
         <div
           className="fixed inset-0 z-[9999] bg-black/30 flex justify-center items-center"
-          style={{ top: -25, left: 0, right: 0, bottom: 0, position: "fixed" }}
+          style={{ top: -25, left: 0, right: 0, bottom: 0, position: 'fixed' }}
           onClick={() => setSyncConfirmOpen(false)}
         >
-          <div className="bg-white rounded-3xl w-[440px] shadow-xl border border-gray-200" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="bg-white rounded-3xl w-[440px] shadow-xl border border-gray-200"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="p-8 space-y-4">
-              <h3 className="text-base font-semibold">{syncConfirmAction === "enable" ? "Enable Team Sync" : "Disable team sync?"}</h3>
+              <h3 className="text-base font-semibold">
+                {syncConfirmAction === "enable" ? "Enable Team Sync" : "Disable team sync?"}
+              </h3>
               <div className="text-sm text-gray-600 space-y-2">
                 {syncConfirmAction === "enable" ? (
                   <>
                     <p>This will share your ad account settings and copy templates with all team members.</p>
-                    <p className="font-semibold">
-                      The admin's settings will be used as the starting point and will override any existing team member settings. If the admin hasn't
-                      saved settings for an ad account, the first team member with saved settings will be used instead.
-                    </p>
+                    <p className="font-semibold">The admin's settings will be used as the starting point and will override any existing team member settings. If the admin hasn't saved settings for an ad account, the first team member with saved settings will be used instead.</p>
                     <p>Once enabled, any team member can edit settings and changes will be visible to everyone.</p>
                   </>
                 ) : (
-                  <p>
-                    Each team member will return to using their own personal settings. Their current settings (copied from the shared ones) will be
-                    preserved.
-                  </p>
+                  <p>Each team member will return to using their own personal settings. Their current settings (copied from the shared ones) will be preserved.</p>
                 )}
               </div>
               <div className="flex gap-3 pt-2 w-full">
-                <Button variant="outline" onClick={() => setSyncConfirmOpen(false)} className="rounded-2xl flex-1 border-gray-200">
+                <Button
+                  variant="outline"
+                  onClick={() => setSyncConfirmOpen(false)}
+                  className="rounded-2xl flex-1 border-gray-200"
+                >
                   Cancel
                 </Button>
                 <Button
@@ -1158,6 +932,9 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
           </div>
         </div>
       )}
+
+
     </div>
-  );
+  )
+
 }

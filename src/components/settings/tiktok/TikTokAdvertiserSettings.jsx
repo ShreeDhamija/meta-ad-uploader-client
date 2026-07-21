@@ -156,33 +156,18 @@ export default function TikTokAdvertiserSettings({ advertisers: propAdvertisers 
     const [catalogSearch, setCatalogSearch] = useState("");
     const [productSearch, setProductSearch] = useState("");
 
-    const tiktokHeaders = useCallback(() => {
-        const uid = localStorage.getItem('tiktok_uid');
-        const token = localStorage.getItem('tiktok_token');
-        return {
-            ...(uid && { 'x-tiktok-user-id': uid }),
-            ...(token && { 'x-tiktok-token': token }),
-        };
-    }, []);
-
     // ── Fetch catalogs from TikTok via server (bc_id resolved automatically) ──
     const fetchCatalogs = useCallback(async (advId) => {
         if (!advId) return;
         setLoadingCatalogs(true);
         setCatalogError(null);
         try {
-            const uid = localStorage.getItem('tiktok_uid');
-            const token = localStorage.getItem('tiktok_token');
             const url = `${API_BASE_URL}/api/tiktok/catalog/list?advertiserId=${advId}`;
 
             const res = await fetch(
                 url,
                 {
                     credentials: 'include',
-                    headers: {
-                        ...(uid && { 'x-tiktok-user-id': uid }),
-                        ...(token && { 'x-tiktok-token': token }),
-                    }
                 }
             );
 
@@ -211,18 +196,12 @@ export default function TikTokAdvertiserSettings({ advertisers: propAdvertisers 
         setProductError(null);
         setCatalogProducts([]);
         try {
-            const uid = localStorage.getItem('tiktok_uid');
-            const token = localStorage.getItem('tiktok_token');
             const url = `${API_BASE_URL}/api/tiktok/catalog/products?advertiserId=${advId}&catalog_id=${catalogId}`;
 
             const res = await fetch(
                 url,
                 {
                     credentials: 'include',
-                    headers: {
-                        ...(uid && { 'x-tiktok-user-id': uid }),
-                        ...(token && { 'x-tiktok-token': token }),
-                    }
                 }
             );
 

@@ -8,13 +8,8 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
  * @param {object} settings      - Partial or full settings object (merged server-side)
  */
 export async function saveTikTokSettings(advertiserId, settings) {
-  const tiktokUid = localStorage.getItem('tiktok_uid');
-  const tiktokToken = localStorage.getItem('tiktok_token');
-
   const headers = {
     'Content-Type': 'application/json',
-    ...(tiktokUid  && { 'x-tiktok-user-id': tiktokUid }),
-    ...(tiktokToken && { 'x-tiktok-token': tiktokToken }),
   };
 
   const response = await fetch(`${API_BASE_URL}/api/tiktok/settings/save`, {
@@ -36,13 +31,8 @@ export async function saveTikTokSettings(advertiserId, settings) {
  * Delete a TikTok ad-text template from Firestore.
  */
 export async function deleteTikTokCopyTemplate(advertiserId, templateName) {
-  const tiktokUid = localStorage.getItem('tiktok_uid');
-  const tiktokToken = localStorage.getItem('tiktok_token');
-
   const headers = {
     'Content-Type': 'application/json',
-    ...(tiktokUid   && { 'x-tiktok-user-id': tiktokUid }),
-    ...(tiktokToken && { 'x-tiktok-token': tiktokToken }),
   };
 
   const response = await fetch(`${API_BASE_URL}/api/tiktok/settings/copy-template`, {
