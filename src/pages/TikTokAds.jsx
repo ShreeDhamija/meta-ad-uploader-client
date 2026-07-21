@@ -1037,6 +1037,7 @@ export default function TikTokAds() {
   }, [files, driveFiles, dropboxFiles])
 
   if (authLoading || metaAuthLoading) return null
+  if (!isTikTokLoggedIn) return null // Prevent rendering UI while redirecting
 
   return (
     <>
