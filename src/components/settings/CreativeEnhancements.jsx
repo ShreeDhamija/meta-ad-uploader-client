@@ -97,11 +97,6 @@ const ENHANCEMENT_SECTIONS = [
                 label: "Dynamic Overlays",
                 description: "Add information from catalog items as visually-unique overlays",
             },
-            {
-                key: "mediaTypeAutomation",
-                label: "Dynamic Media",
-                description: "If you want videos from your catalog to be displayed (along with images) in supported placements.",
-            },
         ],
     },
     {

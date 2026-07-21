@@ -3919,6 +3919,7 @@ export default function AdCreationForm({
     pageId &&
     campaignObjective.length > 0 &&
     campaignObjective.every((objective) => ["OUTCOME_SALES", "OUTCOME_TRAFFIC"].includes(objective));
+  const requiresProductExtensionCatalog = showProductExtensionSelector && !useExistingPosts;
   const showPhoneNumberField = areAllAdSetsPhoneCall();
   const hasCatalogueInvalidMedia = isCatalogueAd && (
     [...files, ...driveFiles, ...dropboxFiles, ...(frameioFiles || []), ...importedFiles].some((file) => isVideoFile(file) || isGifFile(file) || !isImageFile(file))
@@ -4358,7 +4359,7 @@ export default function AdCreationForm({
       toast.error("Please select a shop destination for shop ads")
       throw new Error("Please select a shop destination for shop ads")
     }
-    if (showProductExtensionSelector && !productExtensionProductSetId) {
+    if (requiresProductExtensionCatalog && !productExtensionProductSetId) {
       toast.error("Please select a product catalog for product extensions")
       throw new Error("Please select a product catalog for product extensions")
     }
@@ -6972,7 +6973,7 @@ export default function AdCreationForm({
         return;
       }
 
-      if (showProductExtensionSelector && !job.formData.productExtensionProductSetId) {
+      if (requiresProductExtensionCatalog && !job.formData.productExtensionProductSetId) {
         toast.error(`${variant.name}: please select a product catalog for product extensions`);
         return;
       }
@@ -7036,7 +7037,7 @@ export default function AdCreationForm({
       !isLoggedIn ||
       (!isCatalogueAd && files.length === 0 && driveFiles.length === 0 && dropboxFiles.length === 0 && frameioFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0 && selectedIgOrganicPosts.length === 0) ||
       hasCatalogueInvalidMedia ||
-      (showProductExtensionSelector && !productExtensionProductSetId) ||
+      (requiresProductExtensionCatalog && !productExtensionProductSetId) ||
       (selectedFiles.size > 0) ||
       (!isCarouselAd && hasDuplicates)
     )
@@ -7049,7 +7050,7 @@ export default function AdCreationForm({
       (isCatalogueAd && !hasCatalogueEligibleAdSets) ||
       hasCatalogueInvalidMedia ||
       (showShopDestinationSelector && !selectedShopDestination) ||
-      (showProductExtensionSelector && !productExtensionProductSetId) ||
+      (requiresProductExtensionCatalog && !productExtensionProductSetId) ||
       isMissingDestinationValue ||
       (selectedFiles.size > 0) ||
       (shouldShowLeadFormSelector && !selectedForm) ||
@@ -9695,7 +9696,7 @@ export default function AdCreationForm({
               </div>
             )}
 
-            {showProductExtensionSelector && !productExtensionProductSetId && (
+            {requiresProductExtensionCatalog && !productExtensionProductSetId && (
               <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
                 Please select a product catalog for product extensions
               </div>
