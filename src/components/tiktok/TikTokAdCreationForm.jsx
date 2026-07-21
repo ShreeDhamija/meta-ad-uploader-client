@@ -6258,7 +6258,7 @@ export default function TikTokAdCreationForm({
                             </div>
                             {hasFastUploadSource && (
                               <p className="px-1 text-[11px] leading-tight text-gray-500">
-                                Google Drive/Dropbox/Frame files upload 5X faster
+                                Google Drive/Dropbox files upload 5X faster
                               </p>
                             )}
                           </div>
