@@ -2548,13 +2548,19 @@ export default function TikTokAdCreationForm({
   }, [advertiserPrefs]);
 
   // Consolidated Landing URL & Tab Switch Synchronization Hook
+  const lastUrlModeRef = useRef(urlMode);
+
   useEffect(() => {
+    const isUrlModeSwitch = lastUrlModeRef.current !== urlMode;
+    lastUrlModeRef.current = urlMode;
+
     const availableLinks = advertiserPrefs?.links || [];
     const isUrl = /^https?:\/\//i.test(landingUrl || "");
     const isWebsiteUrl = availableLinks.some(l => l.url === landingUrl);
 
     console.log("[URL_MODE_DEBUG] Synchronization triggered:", {
       urlMode,
+      isUrlModeSwitch,
       landingUrl,
       showCustomLink,
       isUrl,
@@ -2589,7 +2595,7 @@ export default function TikTokAdCreationForm({
       } else {
         // Only auto-restore if the user is NOT in custom-link typing mode
         const isCustomLinkVisible = showCustomLink || availableLinks.length === 0;
-        if (!isCustomLinkVisible) {
+        if (isUrlModeSwitch || !isCustomLinkVisible) {
           const urlToRestore = lastWebsiteUrl && /^https?:\/\//i.test(lastWebsiteUrl) ? lastWebsiteUrl : defaultUrl;
           console.log("[URL_MODE_DEBUG] Restoring Website URL to:", urlToRestore);
           setLandingUrl(urlToRestore);
