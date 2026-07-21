@@ -2587,11 +2587,9 @@ export default function TikTokAdCreationForm({
           }
         }
       } else {
-        // Only auto-restore if the user is NOT in custom-link typing mode,
-        // OR if the current landingUrl is an Instant Page ID (meaning we just switched back from the Instant Page tab)
-        const isInstantPageId = landingUrl && (instantPages.some(p => String(p.page_id) === String(landingUrl)) || String(landingUrl) === String(lastInstantPageId));
+        // Only auto-restore if the user is NOT in custom-link typing mode
         const isCustomLinkVisible = showCustomLink || availableLinks.length === 0;
-        if (!isCustomLinkVisible || isInstantPageId) {
+        if (!isCustomLinkVisible) {
           const urlToRestore = lastWebsiteUrl && /^https?:\/\//i.test(lastWebsiteUrl) ? lastWebsiteUrl : defaultUrl;
           console.log("[URL_MODE_DEBUG] Restoring Website URL to:", urlToRestore);
           setLandingUrl(urlToRestore);
