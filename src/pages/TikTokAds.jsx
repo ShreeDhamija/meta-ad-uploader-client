@@ -1036,7 +1036,9 @@ export default function TikTokAds() {
     })
   }, [files, driveFiles, dropboxFiles])
 
-  if (authLoading || metaAuthLoading) return null
+  if (authLoading) return null;
+  if (!isTikTokLoggedIn && metaAuthLoading) return null;
+  if (!isTikTokLoggedIn) return null;
 
   return (
     <>

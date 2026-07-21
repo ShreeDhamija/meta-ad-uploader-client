@@ -1416,9 +1416,9 @@ export default function Home() {
     [campaigns],
   );
 
-  if (authLoading || tiktokAuthLoading) return null;
-
   if (authLoading) return null;
+  if (!isLoggedIn && tiktokAuthLoading) return null;
+  if (!isLoggedIn && !isTikTokLoggedIn) return null;
 
   return (
     <>
