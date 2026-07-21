@@ -1658,15 +1658,17 @@ export default function TikTokAdCreationForm({
                     driveFileUrl: `https://www.googleapis.com/drive/v3/files/${item.file.id}?alt=media`,
                     fileName: item.file.name,
                     mimeType: item.file.mimeType,
-                    googleAccessToken: item.file.accessToken,
+                    googleAccessToken: item.file.accessToken || item.file.googleAccessToken,
                     size: item.file.size,
                   });
                 } else {
                   uploadUrl = `${API_BASE_URL}/api/tiktok/upload-from-dropbox?${uploadParams}`;
                   uploadBody = JSON.stringify({
-                    fileId: item.file.dropboxId,
+                    fileId: item.file.dropboxId || item.file.id,
                     fileName: item.file.name,
-                    dropboxAccessToken: item.file.accessToken,
+                    directLink: item.file.directLink || item.file.link,
+                    link: item.file.link,
+                    dropboxAccessToken: item.file.accessToken || item.file.dropboxAccessToken,
                   });
                 }
 
