@@ -2,17 +2,12 @@ import { useTikTokAuth } from "@/lib/TikTokAuthContext"
 import { useNavigate, useLocation } from "react-router-dom"
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { useIntercom } from "@/lib/useIntercom";
-import SignUpImg from "../assets/signup.webp?url"
+import { useIntercom } from "@/lib/useIntercom"
+import Doodle from "../assets/onboarding/doodle.webp?url"
+import MrAvatar from "../assets/onboarding/mr.webp?url"
 import Rocket from "../assets/rocket2.webp?url"
-import Book from "../assets/Book.webp?url"
-import Cat from "../assets/Cat.webp?url"
-import Moon from "../assets/Moon.webp?url"
-import Meteor from "../assets/Meteor.webp?url"
-import Check from "../assets/icons/check.svg"
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com'
 
 // TikTok SVG logo
 function TikTokLogo({ size = 20, color = "white" }) {
@@ -23,28 +18,53 @@ function TikTokLogo({ size = 20, color = "white" }) {
     )
 }
 
+function TestimonialPanel() {
+    return (
+        <div className="hidden md:flex relative w-1/2 h-full bg-[#F4ECDC] overflow-hidden items-center justify-center">
+            <div className="max-w-lg px-8 relative z-10">
+                <div
+                    className="leading-none mb-2"
+                    style={{ color: '#CB9A68', fontSize: '100px', fontFamily: 'Alcyone, serif' }}
+                >
+                    “
+                </div>
+                <p
+                    className="text-[#320000] mb-6"
+                    style={{ fontFamily: 'Alcyone, serif', fontSize: '24px', fontWeight: 700, lineHeight: 1.35 }}
+                >
+                    I love Blip! Before I would spend way too much time launching ads in platform which was always an incredibly frustrating experience. Blip makes it super easy and intuitive to upload ads. I regained a ton of wasted time.
+                </p>
+                <div className="flex items-center gap-3">
+                    <img src={MrAvatar} alt="" className="w-10 h-10 rounded-full object-cover" />
+                    <div>
+                        <div className="font-semibold text-sm text-zinc-900">Michael Rizzo</div>
+                        <div className="text-sm text-zinc-700">Senior Media Buyer</div>
+                    </div>
+                </div>
+            </div>
+            <img
+                src={Doodle}
+                alt=""
+                className="absolute bottom-0 right-[-200px] w-[840px] h-auto pointer-events-none origin-bottom-right"
+                style={{ transform: 'rotate(-15deg)' }}
+            />
+        </div>
+    )
+}
+
 export default function TikTokLogin() {
     const { isTikTokLoggedIn } = useTikTokAuth()
     const navigate = useNavigate()
     const location = useLocation()
-    const [email, setEmail] = useState("")
-    const [isValidEmail, setIsValidEmail] = useState(false)
     const [isRedirecting, setIsRedirecting] = useState(false)
     const [error, setError] = useState(null)
-    useIntercom(true, true);
-
-    const isSignupPage = location.pathname === '/tiktok-signup'
+    useIntercom(true, true)
 
     useEffect(() => {
         if (isTikTokLoggedIn) {
             navigate("/tiktok-ads")
         }
     }, [isTikTokLoggedIn, navigate])
-
-    useEffect(() => {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-        setIsValidEmail(emailRegex.test(email))
-    }, [email])
 
     useEffect(() => {
         const params = new URLSearchParams(location.search)
@@ -56,157 +76,71 @@ export default function TikTokLogin() {
 
     const handleTikTokLogin = () => {
         setIsRedirecting(true)
-        const cleanApiUrl = API_BASE_URL.replace(/\/$/, ''); // Remove trailing slash if any
-        if (isSignupPage) {
-            const encodedEmail = encodeURIComponent(email)
-            window.location.href = `${cleanApiUrl}/auth/tiktok/login?state=signup&user_email=${encodedEmail}`;
-        } else {
-            window.location.href = `${cleanApiUrl}/auth/tiktok/login?state=login`;
-        }
+        const cleanApiUrl = API_BASE_URL.replace(/\/$/, '')
+        window.location.href = `${cleanApiUrl}/auth/tiktok/login?state=login`
     }
 
     return (
-        <div className="relative flex justify-center align-center items-center h-screen md:px-4 overflow-hidden">
-
-            <img src={Rocket}
-                alt=""
-                className="md:hidden absolute right-[-50px] top-20 w-32 h-auto pointer-events-none"
-            />
-            <img src={Moon}
-                alt=""
-                className="md:hidden absolute left-[-50px] top-16 w-28 h-auto pointer-events-none"
-            />
-
-            <img src={Meteor}
-                alt=""
-                className="md:hidden absolute top-0 -translate-y-1/2 w-28 h-auto pointer-events-none"
-            />
-
-            <img src={Cat}
-                alt=""
-                className="md:hidden absolute bottom-[-10px] left-[-50px] w-[200px] h-auto pointer-events-none"
-            />
-
-            <img src={Book}
-                alt=""
-                className="md:hidden absolute bottom-[-10px] right-[-20px] w-[150px] h-auto pointer-events-none"
-            />
-            <div className="flex w-full md:w-auto rounded-xl overflow-hidden md:p-6 overflow-visible">
-
-                <div className="w-full h-screen md:max-w-md space-y-6 bg-white p-8 md:rounded-3xl md:shadow-lg md:min-w-[420px] min-h-[650px] md:h-auto flex flex-col justify-center">
-
-                    <div className="text-center space-y-1">
-                        <img
-                            src="https://api.withblip.com/logo.webp"
-                            alt="Hero"
-                            className="shadow-xs w-[48px] h-[48px] mx-auto rounded-md mb-2"
-                        />
-                        <h2 className="text-2xl font-bold tracking-tight">Welcome To Blip</h2>
-                        <p className="text-sm font-bold text-zinc-700">
-                            {isSignupPage ? 'Start your 7 Day Free Trial!' : ''}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                            {isSignupPage ? 'Connect your TikTok Ads account to start creating' : 'Login to your TikTok Ads account'}
-                        </p>
-                    </div>
-
-                    {error && (
-                        <p className="text-sm text-red-500 text-center bg-red-50 p-2 rounded-lg border border-red-100">
-                            {error}
-                        </p>
-                    )}
-
-                    {isSignupPage ? (
-                        <div className="space-y-4">
-                            <div className="space-y-2">
-                                <div className="flex items-center justify-between">
-                                    <label className="text-sm font-medium text-muted-foreground">Step 1.</label>
-                                    {isValidEmail && (
-                                        <img src={Check} alt="Valid" className="size-5" />
-                                    )}
-                                </div>
-                                <Input
-                                    type="email"
-                                    placeholder="Enter your work email"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    className="rounded-xl"
+        <div className="flex h-screen w-full flex-col overflow-hidden">
+            <div className="relative flex min-h-0 flex-1 w-full overflow-hidden">
+                {/* Left half — TikTok form */}
+                <div className="flex h-full w-full items-center justify-center bg-white px-8 md:w-1/2">
+                    <div className="w-full max-w-sm space-y-6">
+                        <div className="space-y-1">
+                            <div className="w-11 h-11 bg-[#F9F4EB] rounded-2xl flex items-center justify-center mb-3">
+                                <img
+                                    src={Rocket}
+                                    alt="Blip"
+                                    className="w-6 h-6 object-contain"
                                 />
                             </div>
-
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-muted-foreground">Step 2.</label>
-                                <Button
-                                    onClick={handleTikTokLogin}
-                                    disabled={!isValidEmail || isRedirecting}
-                                    variant="secondary"
-                                    className="w-full bg-[#010101] hover:bg-[#121212] text-white rounded-xl shadow-md flex items-center justify-center gap-2 h-[40px] disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    <TikTokLogo size={20} />
-                                    {isRedirecting ? 'Redirecting...' : 'Sign up with TikTok'}
-                                </Button>
-                            </div>
+                            <h2 className="text-2xl font-bold tracking-tight text-zinc-900">Welcome To Blip!</h2>
+                            <p className="text-sm text-zinc-600">
+                                Login to your account
+                            </p>
                         </div>
-                    ) : (
+
+                        {error && (
+                            <p className="text-sm text-red-500 text-center bg-red-50 p-2 rounded-lg border border-red-100">
+                                {error}
+                            </p>
+                        )}
+
                         <div className="space-y-4">
                             <Button
                                 onClick={handleTikTokLogin}
                                 disabled={isRedirecting}
-                                variant="secondary"
-                                className="w-full bg-[#010101] hover:bg-[#121212] text-white rounded-xl shadow-md flex items-center justify-center gap-2 h-[40px] disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="w-full bg-[#1877F2] hover:bg-[#0866FF] text-white rounded-2xl shadow-md flex items-center justify-center gap-2 h-[44px] text-base font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                                style={{
+                                    background: 'linear-gradient(0deg, #101010 0%, #202020 100%)',
+                                }}
                             >
                                 <TikTokLogo size={20} />
                                 {isRedirecting ? 'Redirecting...' : 'Login with TikTok'}
                             </Button>
                         </div>
-                    )}
 
-                    {isSignupPage ? (
-                        <p className="text-sm text-center text-muted-foreground">
-                            Already have an account?{" "}
-                            <button
-                                onClick={() => navigate('/tiktok-login')}
-                                className="font-bold underline text-blue-600 hover:text-blue-800"
-                            >
-                                Head to Login
-                            </button>
-                        </p>
-                    ) : (
-                        <p className="text-sm text-center text-muted-foreground">
-                            New user?{" "}
-                            <button
-                                onClick={() => navigate('/tiktok-signup')}
-                                className="font-bold underline text-blue-600 hover:text-blue-800"
-                            >
-                                Head to Sign Up Page
-                            </button>
-                        </p>
-                    )}
+                        <div className="space-y-3 pt-1">
+                            <div>
+                                <button
+                                    onClick={() => navigate('/login')}
+                                    className="text-xs text-zinc-500 hover:text-zinc-800 transition-colors font-medium"
+                                >
+                                    ← Switch to Meta Ads Login
+                                </button>
+                            </div>
+                        </div>
 
-                    <div className="flex flex-col gap-2">
-                        <button
-                            onClick={() => navigate('/')}
-                            className="text-xs text-center text-muted-foreground hover:text-zinc-800 transition-colors"
-                        >
-                            ← Back to Meta Ads
-                        </button>
-
-                        <p className="text-xs text-center text-muted-foreground mt-2">
+                        <p className="text-xs text-zinc-500 max-w-[350px]">
                             By clicking continue, you agree to our{" "}
-                            <br></br>
-                            <a href="https://app.withblip.com/terms-of-service" className="underline text-zinc-600">Terms of Service</a> and{" "}
-                            <a href="https://app.withblip.com/privacy-policy" className="underline text-zinc-600">Privacy Policy</a>.
+                            <a href="https://app.withblip.com/terms-of-service" className="underline">Terms of Service</a> &{" "}
+                            <a href="https://app.withblip.com/privacy-policy" className="underline">Privacy Policy</a>.
                         </p>
                     </div>
-
                 </div>
-            </div>
 
-            <div className="hidden md:block w-[490px] h-[700px] overflow-visible">
-                <img src={SignUpImg}
-                    alt="Login Visual"
-                    className="w-full h-full object-cover"
-                />
+                {/* Right half — testimonial */}
+                <TestimonialPanel />
             </div>
         </div>
     )
