@@ -590,6 +590,13 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
     }
   }, [adAccounts]); // Only depend on adAccounts, not selectedAdAccount
 
+  useEffect(() => {
+    // Auto-select ad account if only one exists and none is currently selected
+    if (adAccounts.length === 1 && !selectedAdAccount && !adAccountsLoading) {
+      handleAdAccountSelect(adAccounts[0].id);
+    }
+  }, [adAccounts, selectedAdAccount, adAccountsLoading, handleAdAccountSelect]);
+
 
   return (
     <div className="space-y-6 w-full max-w-3xl">
