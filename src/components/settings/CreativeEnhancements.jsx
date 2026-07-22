@@ -107,7 +107,7 @@ function SiteLinksEditor({ siteLinks, setEnhancements, selectedAdAccount }) {
         const controller = new AbortController();
         abortRef.current = controller;
         setIsFetching(true);
-        setFetchMessage("Checking up to 50 recent ads for site links…");
+        setFetchMessage("Checking up to 100 recent ads for four unique site links…");
 
         try {
             const params = new URLSearchParams({ adAccountId: selectedAdAccount });
