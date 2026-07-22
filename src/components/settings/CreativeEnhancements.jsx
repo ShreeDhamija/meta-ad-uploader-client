@@ -207,7 +207,7 @@ function SiteLinksEditor({ siteLinks, setEnhancements, selectedAdAccount }) {
                 {siteLinks.map((link, index) => (
                     <div key={index} className="rounded-xl border border-gray-200 bg-gray-50 p-3">
                         <div className="flex gap-3 items-start">
-                            <div className="w-14 h-14 rounded-lg border border-gray-200 bg-white overflow-hidden shrink-0 flex items-center justify-center">
+                            <div className="w-11 h-11 rounded-lg border border-gray-200 bg-white overflow-hidden shrink-0 flex items-center justify-center">
                                 {link.site_link_image_url ? (
                                     <img src={link.site_link_image_url} alt="" className="w-full h-full object-cover" />
                                 ) : (
