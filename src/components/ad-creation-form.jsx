@@ -2274,6 +2274,7 @@ export default function AdCreationForm({
     { value: "CALL_NOW", label: "Call Now" },
     { value: "SEE_DETAILS", label: "See Details" },
     { value: "LISTEN_NOW", label: "Listen Now" },
+    { value: "WATCH_MORE", label: "Watch More" },
   ]
 
   const availableLinks = adAccountSettings?.links || [];
