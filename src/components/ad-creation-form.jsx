@@ -2142,7 +2142,6 @@ export default function AdCreationForm({
   async function uploadDriveFileToS3(file, maxRetries = 3, signal = null) {
     // supportsAllDrives=true so files living in a Shared Drive can be downloaded too.
     const driveDownloadUrl = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&supportsAllDrives=true`;
-    console.log("[DriveUpload] Uploading to S3:", { id: file.id, name: file.name, mimeType: file.mimeType, size: file.size });
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
@@ -2162,10 +2161,7 @@ export default function AdCreationForm({
         });
 
         const data = await res.json();
-        if (!res.ok) {
-          console.error(`[DriveUpload] Backend rejected ${file.name} (attempt ${attempt}) → HTTP ${res.status}`, data);
-          throw new Error(data.error || "S3 upload failed");
-        }
+        if (!res.ok) throw new Error(data.error || "S3 upload failed");
 
         // Success! Return the result
         return {
@@ -2773,7 +2769,6 @@ export default function AdCreationForm({
 
     if (fileId) {
       // It's a file! Fetch it directly and bypass the Picker
-      console.log("[DriveImport] Importing file by link. fileId:", fileId);
       try {
         // Optional: If you use a toast library like react-hot-toast, you can show a loading state
         // const toastId = toast.loading("Importing file...");
@@ -2781,50 +2776,30 @@ export default function AdCreationForm({
         // supportsAllDrives=true → required for files that live in a Shared Drive,
         // otherwise the raw v3 API returns 404 even when you have access via the Picker.
         // shortcutDetails → so we can detect + resolve shortcuts (which have no downloadable media).
-        const metadataUrl = `https://www.googleapis.com/drive/v3/files/${fileId}?supportsAllDrives=true&fields=id,name,mimeType,size,thumbnailLink,shortcutDetails,driveId,capabilities`;
-        const response = await fetch(metadataUrl, {
-          headers: { Authorization: `Bearer ${googleAuthStatus.accessToken}` }
-        });
+        const response = await fetch(
+          `https://www.googleapis.com/drive/v3/files/${fileId}?supportsAllDrives=true&fields=id,name,mimeType,size,thumbnailLink,shortcutDetails`,
+          { headers: { Authorization: `Bearer ${googleAuthStatus.accessToken}` } }
+        );
 
-        if (!response.ok) {
-          // Surface the REAL reason (401/403/404 + Google's error payload) instead of a generic message.
-          const errorBody = await response.text();
-          console.error(
-            `[DriveImport] Metadata fetch failed for ${fileId} → HTTP ${response.status} ${response.statusText}`,
-            errorBody
-          );
-          throw new Error(`Drive metadata fetch failed (HTTP ${response.status})`);
-        }
+        if (!response.ok) throw new Error(`Drive fetch failed (${response.status})`);
 
         let data = await response.json();
-        console.log("[DriveImport] Metadata response:", data);
 
         // Resolve shortcuts: a shortcut has no media of its own; its real content lives
         // at shortcutDetails.targetId. The Picker resolves these automatically, the raw API does not.
         if (data.mimeType === "application/vnd.google-apps.shortcut" && data.shortcutDetails?.targetId) {
-          const targetId = data.shortcutDetails.targetId;
-          console.log("[DriveImport] File is a shortcut → resolving targetId:", targetId);
           const targetRes = await fetch(
-            `https://www.googleapis.com/drive/v3/files/${targetId}?supportsAllDrives=true&fields=id,name,mimeType,size,thumbnailLink`,
+            `https://www.googleapis.com/drive/v3/files/${data.shortcutDetails.targetId}?supportsAllDrives=true&fields=id,name,mimeType,size,thumbnailLink`,
             { headers: { Authorization: `Bearer ${googleAuthStatus.accessToken}` } }
           );
-          if (!targetRes.ok) {
-            const targetErr = await targetRes.text();
-            console.error(
-              `[DriveImport] Shortcut target fetch failed for ${targetId} → HTTP ${targetRes.status}`,
-              targetErr
-            );
-            throw new Error(`Shortcut target fetch failed (HTTP ${targetRes.status})`);
-          }
+          if (!targetRes.ok) throw new Error(`Shortcut target fetch failed (${targetRes.status})`);
           data = await targetRes.json();
-          console.log("[DriveImport] Resolved shortcut target metadata:", data);
         }
 
         // Google-native files (Docs/Sheets/Slides/etc.) can't be downloaded with alt=media;
         // they'd fail later in uploadDriveFileToS3. Reject them up front with a clear message.
         if (data.mimeType?.startsWith("application/vnd.google-apps.")) {
-          console.error("[DriveImport] Unsupported Google-native mimeType:", data.mimeType);
-          toast.error(`"${data.name}" is a Google ${data.mimeType.split(".").pop()} file and can't be uploaded. Export it to a normal image/video first.`);
+          toast.error(`"${data.name}" is a Google-native file and can't be uploaded. Export it to a normal image/video first.`);
           return;
         }
 
@@ -2837,7 +2812,6 @@ export default function AdCreationForm({
           accessToken: googleAuthStatus.accessToken,
           pickerThumbnail: data.thumbnailLink || null // Automatically hooks into our new thumbnail logic!
         };
-        console.log("[DriveImport] Accepted file object:", newFile);
 
         const acceptedFiles = filterCatalogueImageFiles([newFile]);
         if (acceptedFiles.length === 0) return;
@@ -2850,7 +2824,6 @@ export default function AdCreationForm({
 
         // toast.success("File imported successfully!", { id: toastId });
       } catch (error) {
-        console.error("[DriveImport] Import failed:", error);
         toast.error(`Failed to import file: ${error.message}`);
       }
       return; // Stop execution here so we don't open the folder picker

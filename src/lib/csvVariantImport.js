@@ -228,13 +228,34 @@ async function fetchGoogleAccessToken(apiBaseUrl) {
 // Build a driveFile object shaped exactly like the Drive Picker produces, so all
 // downstream code (which spreads `{ ...file, isDrive: true }`) works unchanged.
 async function fetchDriveFileMeta(fileId, token) {
+  // supportsAllDrives=true → files in a Shared Drive would otherwise 404.
+  // shortcutDetails → so we can detect + resolve shortcuts (which have no downloadable media).
   const res = await fetch(
     `https://www.googleapis.com/drive/v3/files/${fileId}` +
-      `?fields=id,name,mimeType,size,thumbnailLink&supportsAllDrives=true`,
+      `?fields=id,name,mimeType,size,thumbnailLink,shortcutDetails&supportsAllDrives=true`,
     { headers: { Authorization: `Bearer ${token}` } }
   );
   if (!res.ok) throw new Error(`Drive fetch failed (${res.status})`);
-  const data = await res.json();
+  let data = await res.json();
+
+  // Resolve shortcuts: a shortcut has no media of its own; its real content lives
+  // at shortcutDetails.targetId. The Picker resolves these automatically, the raw API does not.
+  if (data.mimeType === "application/vnd.google-apps.shortcut" && data.shortcutDetails?.targetId) {
+    const targetRes = await fetch(
+      `https://www.googleapis.com/drive/v3/files/${data.shortcutDetails.targetId}` +
+        `?fields=id,name,mimeType,size,thumbnailLink&supportsAllDrives=true`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    if (!targetRes.ok) throw new Error(`Shortcut target fetch failed (${targetRes.status})`);
+    data = await targetRes.json();
+  }
+
+  // Google-native files (Docs/Sheets/Slides/etc.) can't be downloaded with alt=media,
+  // so they'd fail later at upload. Reject them up front.
+  if (data.mimeType?.startsWith("application/vnd.google-apps.")) {
+    throw new Error("Google-native file — not a downloadable image/video");
+  }
+
   return {
     id: data.id,
     name: data.name,
@@ -485,8 +506,8 @@ export async function importVariantsFromCsv(file, ctx) {
           const driveFile = await fetchDriveFileMeta(driveFileId, googleToken);
           newDriveFiles.push(driveFile);
           fileVariantAssignments[driveFile.id] = variantId;
-        } catch {
-          addWarning("Google Drive Link", `Row ${rowNum}: couldn't fetch Drive file (check sharing/permissions)`);
+        } catch (err) {
+          addWarning("Google Drive Link", `Row ${rowNum}: couldn't import Drive file — ${err.message || "check sharing/permissions"}`);
         }
       }
     }
