@@ -204,12 +204,16 @@ function extractDriveFileId(text) {
 // Scan every cell for a Google Drive/Docs URL and return the first file id found.
 // (Column-name agnostic — the link may sit inside a cell with other text.)
 function findDriveFileIdInRow(row) {
-  for (const value of Object.values(row)) {
+  for (const [column, value] of Object.entries(row)) {
     if (typeof value !== "string") continue;
     if (!/https?:\/\/(?:drive|docs)\.google\.com/i.test(value)) continue;
     const urlMatch = value.match(/https?:\/\/(?:drive|docs)\.google\.com\/[^\s",]+/i);
-    const id = extractDriveFileId(urlMatch ? urlMatch[0] : value);
-    if (id) return id;
+    const matchedUrl = urlMatch ? urlMatch[0] : value;
+    const id = extractDriveFileId(matchedUrl);
+    if (id) {
+      console.log("[CsvDriveImport] Extracted fileId", id, "from column", JSON.stringify(column), "url:", matchedUrl);
+      return id;
+    }
   }
   return null;
 }
@@ -217,10 +221,21 @@ function findDriveFileIdInRow(row) {
 async function fetchGoogleAccessToken(apiBaseUrl) {
   try {
     const res = await fetch(`${apiBaseUrl}/auth/google/status`, { credentials: "include" });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      console.warn("[CsvDriveImport] /auth/google/status returned", res.status);
+      return null;
+    }
     const data = await res.json();
-    return data.authenticated ? data.accessToken || null : null;
-  } catch {
+    const token = data.authenticated ? data.accessToken || null : null;
+    console.log("[CsvDriveImport] Google token resolved:", {
+      authenticated: data.authenticated,
+      hasToken: !!token,
+      tokenPrefix: token ? token.slice(0, 12) + "…" : null,
+      googleEmail: data.email || data.googleEmail || "(not in status payload)",
+    });
+    return token;
+  } catch (err) {
+    console.warn("[CsvDriveImport] fetchGoogleAccessToken failed:", err);
     return null;
   }
 }
@@ -230,13 +245,21 @@ async function fetchGoogleAccessToken(apiBaseUrl) {
 async function fetchDriveFileMeta(fileId, token) {
   // supportsAllDrives=true → files in a Shared Drive would otherwise 404.
   // shortcutDetails → so we can detect + resolve shortcuts (which have no downloadable media).
+  console.log("[CsvDriveImport] Fetching Drive metadata for fileId:", fileId);
   const res = await fetch(
     `https://www.googleapis.com/drive/v3/files/${fileId}` +
       `?fields=id,name,mimeType,size,thumbnailLink,shortcutDetails&supportsAllDrives=true`,
     { headers: { Authorization: `Bearer ${token}` } }
   );
-  if (!res.ok) throw new Error(`Drive fetch failed (${res.status})`);
+  if (!res.ok) {
+    // Google returns a JSON body explaining WHY — 404 "File not found" (wrong id / wrong
+    // account / not shared with this token) vs a permissions error. Log it verbatim.
+    const errorBody = await res.text();
+    console.error(`[CsvDriveImport] Drive metadata fetch failed for ${fileId} → HTTP ${res.status}`, errorBody);
+    throw new Error(`Drive fetch failed (${res.status})`);
+  }
   let data = await res.json();
+  console.log("[CsvDriveImport] Metadata response:", data);
 
   // Resolve shortcuts: a shortcut has no media of its own; its real content lives
   // at shortcutDetails.targetId. The Picker resolves these automatically, the raw API does not.
