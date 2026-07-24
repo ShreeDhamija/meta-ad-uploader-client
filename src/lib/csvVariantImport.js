@@ -419,9 +419,43 @@ export async function importVariantsFromCsv(file, ctx) {
   const fileVariantAssignments = {};
   let defaultSnapshot = null;  // row 0 populates the existing Default variant
 
+  // Rows that are identical in every column EXCEPT the Google Drive link collapse
+  // into a single variant, with each row's Drive file attached to that same variant.
+  // `fields` already excludes the Drive link, so its serialization is the merge key.
+  const signatureToVariantId = new Map();
+
+  // Fetch a row's Drive file and attach it to the given variant. Shared by the
+  // "establishing" row and any later rows that merge into the same variant.
+  const attachDriveFile = async (fileId, variantId, rowNum) => {
+    if (!fileId) return;
+    if (!googleToken) {
+      addWarning("Google Drive Link", `Row ${rowNum}: Google Drive not connected — file skipped`);
+      return;
+    }
+    try {
+      const driveFile = await fetchDriveFileMeta(fileId, googleToken);
+      if (!newDriveFiles.some((f) => f.id === driveFile.id)) {
+        newDriveFiles.push(driveFile);
+      }
+      fileVariantAssignments[driveFile.id] = variantId;
+    } catch (err) {
+      addWarning("Google Drive Link", `Row ${rowNum}: couldn't import Drive file — ${err.message || "check sharing/permissions"}`);
+    }
+  };
+
   for (let idx = 0; idx < rows.length; idx++) {
     const { fields, driveFileId } = rows[idx];
     const rowNum = idx + 1;
+
+    // If an earlier row had the exact same columns (Drive link aside), don't build
+    // a second variant — just attach this row's Drive file to the existing one.
+    const signature = JSON.stringify(fields);
+    const mergeIntoVariantId = signatureToVariantId.get(signature);
+    if (mergeIntoVariantId) {
+      await attachDriveFile(driveFileId, mergeIntoVariantId, rowNum);
+      continue;
+    }
+
     const snap = cloneSnapshotValue(baseSnapshot);
 
     if (fields.primaryTexts.length > 0) snap.messages = fields.primaryTexts;
@@ -497,20 +531,9 @@ export async function importVariantsFromCsv(file, ctx) {
 
     // Row 0 populates the existing Default variant; the rest become new variants.
     const variantId = idx === 0 ? "default" : makeId();
+    signatureToVariantId.set(signature, variantId);
 
-    if (driveFileId) {
-      if (!googleToken) {
-        addWarning("Google Drive Link", `Row ${rowNum}: Google Drive not connected — file skipped`);
-      } else {
-        try {
-          const driveFile = await fetchDriveFileMeta(driveFileId, googleToken);
-          newDriveFiles.push(driveFile);
-          fileVariantAssignments[driveFile.id] = variantId;
-        } catch (err) {
-          addWarning("Google Drive Link", `Row ${rowNum}: couldn't import Drive file — ${err.message || "check sharing/permissions"}`);
-        }
-      }
-    }
+    await attachDriveFile(driveFileId, variantId, rowNum);
 
     if (idx === 0) {
       defaultSnapshot = snap;
