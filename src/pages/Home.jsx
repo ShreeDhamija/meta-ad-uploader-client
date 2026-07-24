@@ -932,6 +932,7 @@ export default function Home() {
             pages,
             selectedAdAccount,
             apiBaseUrl: API_BASE_URL,
+            adType,
             captureCurrentSnapshot,
             cloneSnapshotValue,
             hydrateFromSnapshot,
@@ -941,9 +942,12 @@ export default function Home() {
             setActiveVariantId,
             setFileVariantMap,
             setDriveFiles,
+            setEnablePlacementCustomization,
+            setFileGroups,
+            setGroupVariantMap,
             toast,
         });
-    }, [campaigns, pages, selectedAdAccount, captureCurrentSnapshot, hydrateFromSnapshot, variants, setVariants, setActiveVariantId, setFileVariantMap, setDriveFiles]);
+    }, [campaigns, pages, selectedAdAccount, adType, captureCurrentSnapshot, hydrateFromSnapshot, variants, setVariants, setActiveVariantId, setFileVariantMap, setDriveFiles, setEnablePlacementCustomization, setFileGroups, setGroupVariantMap]);
 
     const handleDeleteVariant = useCallback((variantId) => {
         if (variantId === "default") return;

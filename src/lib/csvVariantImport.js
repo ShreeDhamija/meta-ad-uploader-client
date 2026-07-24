@@ -301,10 +301,11 @@ function makeLetterAllocator(existingVariants) {
 }
 
 // ctx: {
-//   campaigns, pages, selectedAdAccount, apiBaseUrl,
+//   campaigns, pages, selectedAdAccount, apiBaseUrl, adType,
 //   captureCurrentSnapshot, cloneSnapshotValue, hydrateFromSnapshot, makeId,
 //   existingVariants,
 //   setVariants, setActiveVariantId, setFileVariantMap, setDriveFiles, toast,
+//   setEnablePlacementCustomization, setFileGroups, setGroupVariantMap,
 // }
 export async function importVariantsFromCsv(file, ctx) {
   const {
@@ -312,6 +313,7 @@ export async function importVariantsFromCsv(file, ctx) {
     pages,
     selectedAdAccount,
     apiBaseUrl,
+    adType,
     captureCurrentSnapshot,
     cloneSnapshotValue,
     hydrateFromSnapshot,
@@ -321,6 +323,9 @@ export async function importVariantsFromCsv(file, ctx) {
     setActiveVariantId,
     setFileVariantMap,
     setDriveFiles,
+    setEnablePlacementCustomization,
+    setFileGroups,
+    setGroupVariantMap,
     toast,
   } = ctx;
 
@@ -558,6 +563,36 @@ export async function importVariantsFromCsv(file, ctx) {
       return [...prev, ...newDriveFiles.filter((f) => !existingIds.has(f.id))];
     });
     setFileVariantMap((prev) => ({ ...prev, ...fileVariantAssignments }));
+  }
+
+  // Auto-group: when the merge above landed 2+ Drive files on the same variant
+  // (rows identical except the Drive link), turn on placement customization and
+  // bundle those files into one group so the variant renders as a single ad across
+  // placements instead of separate ads. Only for regular ads — carousel/flexible
+  // ad types have their own grouping model.
+  if (adType === "regular" && newDriveFiles.length > 0) {
+    const fileIdsByVariant = {};
+    for (const [fileId, variantId] of Object.entries(fileVariantAssignments)) {
+      if (!fileIdsByVariant[variantId]) fileIdsByVariant[variantId] = [];
+      fileIdsByVariant[variantId].push(fileId);
+    }
+
+    const autoGroups = [];                 // { id, fileIds } appended to fileGroups
+    const groupVariantAssignments = {};    // groupId → variantId (default omitted, per app convention)
+    for (const [variantId, fileIds] of Object.entries(fileIdsByVariant)) {
+      if (fileIds.length < 2) continue;    // single-file variants stay ungrouped
+      const groupId = makeId();
+      autoGroups.push({ id: groupId, fileIds: [...fileIds] });
+      if (variantId !== "default") groupVariantAssignments[groupId] = variantId;
+    }
+
+    if (autoGroups.length > 0) {
+      setEnablePlacementCustomization(true);
+      setFileGroups((prev) => [...prev, ...autoGroups]);
+      if (Object.keys(groupVariantAssignments).length > 0) {
+        setGroupVariantMap((prev) => ({ ...prev, ...groupVariantAssignments }));
+      }
+    }
   }
 
   const totalVariants = newVariants.length + (defaultSnapshot ? 1 : 0);
