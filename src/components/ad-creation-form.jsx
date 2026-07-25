@@ -9745,6 +9745,12 @@ export default function AdCreationForm({
               </div>
             )}
 
+            {isFlexLikeAdType && fileGroups.length === 0 && (files.length + driveFiles.length + importedFiles.length + dropboxFiles.length + frameioFiles.length) > 10 && (
+              <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                This ad type can have maximum 10 files per ad. You have {files.length + driveFiles.length + importedFiles.length + dropboxFiles.length + frameioFiles.length}. Use the group ads button to split them into multiple ads.
+              </div>
+            )}
+
             {isMissingDestinationValue && (
               <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
                 {showPhoneNumberField ? 'Please provide a phone number' : 'Please provide a link URL'}
