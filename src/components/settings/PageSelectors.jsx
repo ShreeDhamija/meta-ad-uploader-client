@@ -12,6 +12,7 @@ import {
   CommandGroup,
 } from "@/components/ui/command"
 import { Button } from "@/components/ui/button"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { ChevronsUpDown, RefreshCcw, Loader } from "lucide-react"
 import { useAppData } from "@/lib/AppContext"
 import { toast } from "sonner";
@@ -192,42 +193,44 @@ function PageSelectors({
                   onValueChange={setPageSearch}
                   wrapperClassName="bg-gray-50 border-gray-200"
                 />
-                <CommandList className="max-h-[300px] overflow-y-auto rounded-xl">
-                  {filteredPages.length > 0 ? (
-                    <CommandGroup>
-                      {filteredPages.map((page) => (
-                        <CommandItem
-                          key={page.id}
-                          value={page.id}
-                          onSelect={() => handlePageSelect(page)}
-                          className="px-3 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150 hover:bg-gray-100"
-                        >
-                          <div className="flex items-center gap-2">
-                            <img
-                              src={page.profilePicture}
-                              alt={page.name}
-                              className="w-5 h-5 rounded-full object-cover"
-                            />
-                            <span>{page.name}</span>
-                            <span className="text-xs text-gray-400 ml-2">{page.id}</span> {/* 👈 Gray ID on same line */}
+                <CommandList className="max-h-none overflow-hidden rounded-xl">
+                  <ScrollArea viewportClassName="max-h-[300px]">
+                    {filteredPages.length > 0 ? (
+                      <CommandGroup>
+                        {filteredPages.map((page) => (
+                          <CommandItem
+                            key={page.id}
+                            value={page.id}
+                            onSelect={() => handlePageSelect(page)}
+                            className="px-3 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150 hover:bg-gray-100"
+                          >
+                            <div className="flex items-center gap-2">
+                              <img
+                                src={page.profilePicture}
+                                alt={page.name}
+                                className="w-5 h-5 rounded-full object-cover"
+                              />
+                              <span>{page.name}</span>
+                              <span className="text-xs text-gray-400 ml-2">{page.id}</span> {/* 👈 Gray ID on same line */}
 
-                          </div>
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  ) : (
-                    <div className="px-4 py-5 text-center">
-                      <p className="mb-2 text-sm text-gray-500">No pages found.</p>
-                      <Button
-                        type="button"
-                        variant="link"
-                        onClick={handleLinkMorePages}
-                        className="h-auto p-0 text-xs font-medium text-black underline underline-offset-2 hover:text-gray-700"
-                      >
-                        Confirm Blip has access to pages to make ads
-                      </Button>
-                    </div>
-                  )}
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    ) : (
+                      <div className="px-4 py-5 text-center">
+                        <p className="mb-2 text-sm text-gray-500">No pages found.</p>
+                        <Button
+                          type="button"
+                          variant="link"
+                          onClick={handleLinkMorePages}
+                          className="h-auto p-0 text-xs font-medium text-black underline underline-offset-2 hover:text-gray-700"
+                        >
+                          Confirm Blip has access to pages to make ads
+                        </Button>
+                      </div>
+                    )}
+                  </ScrollArea>
                 </CommandList>
               </Command>
             </PopoverContent>
@@ -285,43 +288,45 @@ function PageSelectors({
                   onValueChange={setInstagramSearch}
                   wrapperClassName="bg-gray-50 border-gray-200"
                 />
-                <CommandList className="max-h-[300px] overflow-y-auto rounded-xl">
-                  {filteredInstagramAccounts.length > 0 ? (
-                    <CommandGroup>
-                      {filteredInstagramAccounts.map((page) => (
-                        <CommandItem
-                          key={page.instagramAccount.id}
-                          value={page.instagramAccount.id}
-                          onSelect={() => handleInstagramSelect(page.instagramAccount)}
-                          className="px-3 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150 hover:bg-gray-100"
+                <CommandList className="max-h-none overflow-hidden rounded-xl">
+                  <ScrollArea viewportClassName="max-h-[300px]">
+                    {filteredInstagramAccounts.length > 0 ? (
+                      <CommandGroup>
+                        {filteredInstagramAccounts.map((page) => (
+                          <CommandItem
+                            key={page.instagramAccount.id}
+                            value={page.instagramAccount.id}
+                            onSelect={() => handleInstagramSelect(page.instagramAccount)}
+                            className="px-3 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150 hover:bg-gray-100"
+                          >
+                            <div className="flex items-center gap-2">
+                              <img
+                                src={
+                                  page.instagramAccount.profilePictureUrl ||
+                                  "https://api.withblip.com/backup_page_image.png"
+                                }
+                                alt={page.instagramAccount.username}
+                                className="w-5 h-5 rounded-full object-cover"
+                              />
+                              <span>{page.instagramAccount.username}</span>
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    ) : (
+                      <div className="px-4 py-5 text-center">
+                        <p className="mb-2 text-sm text-gray-500">No IG accounts found.</p>
+                        <Button
+                          type="button"
+                          variant="link"
+                          onClick={handleLinkMorePages}
+                          className="h-auto p-0 text-xs font-medium text-black underline underline-offset-2 hover:text-gray-700"
                         >
-                          <div className="flex items-center gap-2">
-                            <img
-                              src={
-                                page.instagramAccount.profilePictureUrl ||
-                                "https://api.withblip.com/backup_page_image.png"
-                              }
-                              alt={page.instagramAccount.username}
-                              className="w-5 h-5 rounded-full object-cover"
-                            />
-                            <span>{page.instagramAccount.username}</span>
-                          </div>
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  ) : (
-                    <div className="px-4 py-5 text-center">
-                      <p className="mb-2 text-sm text-gray-500">No IG accounts found.</p>
-                      <Button
-                        type="button"
-                        variant="link"
-                        onClick={handleLinkMorePages}
-                        className="h-auto p-0 text-xs font-medium text-black underline underline-offset-2 hover:text-gray-700"
-                      >
-                        Confirm Blip has access to pages to make ads
-                      </Button>
-                    </div>
-                  )}
+                          Confirm Blip has access to pages to make ads
+                        </Button>
+                      </div>
+                    )}
+                  </ScrollArea>
                 </CommandList>
               </Command>
             </PopoverContent>

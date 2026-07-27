@@ -7808,59 +7808,61 @@ export default function AdCreationForm({
                             className="bg-transparent"
                             wrapperClassName="bg-gray-50 border-gray-200 rounded-[20px]"
                           />
-                          <CommandList className="max-h-[500px] overflow-y-auto rounded-2xl custom-scrollbar" selectOnFocus={false}>
-                            {filteredPages.length > 0 ? (
-                              <CommandGroup>
-                                {filteredPages.map((page) => (
-                                  <CommandItem
-                                    key={page.id}
-                                    value={page.id}
-                                    onSelect={() => {
-                                      setPageId(page.id)
-                                      setOpenPage(false)
-                                      if (page.instagramAccount?.id) {
-                                        setInstagramAccountId(page.instagramAccount.id)
-                                      } else {
-                                        setInstagramAccountId("") // Clear if not available
-                                      }
-                                      setPartnerIgAccountId("")
-                                      setPartnerFbPageId("")
-                                    }}
-                                    className={cn(
-                                      "px-3 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
-                                      "data-[selected=true]:bg-gray-100",
-                                      pageId === page.id && "bg-gray-100 rounded-2xl font-semibold",
-                                      "hover:bg-gray-100",
-                                      "flex items-center gap-2" // 👈 for image + name layout
-                                    )}
-                                    data-selected={page.id === pageId}
+                          <CommandList className="max-h-none overflow-hidden rounded-2xl" selectOnFocus={false}>
+                            <ScrollArea viewportClassName="max-h-[300px]">
+                              {filteredPages.length > 0 ? (
+                                <CommandGroup>
+                                  {filteredPages.map((page) => (
+                                    <CommandItem
+                                      key={page.id}
+                                      value={page.id}
+                                      onSelect={() => {
+                                        setPageId(page.id)
+                                        setOpenPage(false)
+                                        if (page.instagramAccount?.id) {
+                                          setInstagramAccountId(page.instagramAccount.id)
+                                        } else {
+                                          setInstagramAccountId("") // Clear if not available
+                                        }
+                                        setPartnerIgAccountId("")
+                                        setPartnerFbPageId("")
+                                      }}
+                                      className={cn(
+                                        "px-3 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
+                                        "data-[selected=true]:bg-gray-100",
+                                        pageId === page.id && "bg-gray-100 rounded-2xl font-semibold",
+                                        "hover:bg-gray-100",
+                                        "flex items-center gap-2" // 👈 for image + name layout
+                                      )}
+                                      data-selected={page.id === pageId}
+                                    >
+
+                                      <img
+                                        src={page.profilePicture || "/placeholder.svg"}
+                                        alt={`${page.name} profile`}
+                                        className="w-6 h-6 rounded-full object-cover border border-gray-300"
+                                      />
+                                      <span className="truncate">{page.name}</span>
+                                      <span className="text-xs text-gray-400 ml-2">{page.id}</span> {/* 👈 Gray ID on same line */}
+
+                                    </CommandItem>
+
+                                  ))}
+                                </CommandGroup>
+                              ) : (
+                                <div className="px-4 py-5 text-center">
+                                  <p className="mb-2 text-sm text-gray-500">No pages found.</p>
+                                  <Button
+                                    type="button"
+                                    variant="link"
+                                    onClick={handleLinkMorePages}
+                                    className="h-auto p-0 text-xs font-medium text-black underline underline-offset-2 hover:text-gray-700"
                                   >
-
-                                    <img
-                                      src={page.profilePicture || "/placeholder.svg"}
-                                      alt={`${page.name} profile`}
-                                      className="w-6 h-6 rounded-full object-cover border border-gray-300"
-                                    />
-                                    <span className="truncate">{page.name}</span>
-                                    <span className="text-xs text-gray-400 ml-2">{page.id}</span> {/* 👈 Gray ID on same line */}
-
-                                  </CommandItem>
-
-                                ))}
-                              </CommandGroup>
-                            ) : (
-                              <div className="px-4 py-5 text-center">
-                                <p className="mb-2 text-sm text-gray-500">No pages found.</p>
-                                <Button
-                                  type="button"
-                                  variant="link"
-                                  onClick={handleLinkMorePages}
-                                  className="h-auto p-0 text-xs font-medium text-black underline underline-offset-2 hover:text-gray-700"
-                                >
-                                  Confirm Blip has access to pages to make ads
-                                </Button>
-                              </div>
-                            )}
+                                    Confirm Blip has access to pages to make ads
+                                  </Button>
+                                </div>
+                              )}
+                            </ScrollArea>
                           </CommandList>
                         </Command>
                       </PopoverContent>
@@ -7930,45 +7932,47 @@ export default function AdCreationForm({
                             className="bg-transparent"
                             wrapperClassName="bg-gray-50 border-gray-200 rounded-[20px]"
                           />
-                          <CommandList className="max-h-[300px] overflow-y-auto rounded-2xl custom-scrollbar" selectOnFocus={false}>
-                            {filteredInstagramAccounts.length > 0 ? (
-                              <CommandGroup>
-                                {filteredInstagramAccounts.map((page) => (
-                                  <CommandItem
-                                    key={page.instagramAccount.id}
-                                    value={page.instagramAccount.id}
-                                    onSelect={() => {
-                                      setInstagramAccountId(page.instagramAccount.id)
-                                      setOpenInstagram(false)
-                                    }}
-                                    className={cn(
-                                      "px-3 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
-                                      instagramAccountId === page.instagramAccount.id && "bg-gray-100 font-semibold",
-                                      "hover:bg-gray-100 flex items-center gap-2"
-                                    )}
+                          <CommandList className="max-h-none overflow-hidden rounded-2xl" selectOnFocus={false}>
+                            <ScrollArea viewportClassName="max-h-[300px]">
+                              {filteredInstagramAccounts.length > 0 ? (
+                                <CommandGroup>
+                                  {filteredInstagramAccounts.map((page) => (
+                                    <CommandItem
+                                      key={page.instagramAccount.id}
+                                      value={page.instagramAccount.id}
+                                      onSelect={() => {
+                                        setInstagramAccountId(page.instagramAccount.id)
+                                        setOpenInstagram(false)
+                                      }}
+                                      className={cn(
+                                        "px-3 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
+                                        instagramAccountId === page.instagramAccount.id && "bg-gray-100 font-semibold",
+                                        "hover:bg-gray-100 flex items-center gap-2"
+                                      )}
+                                    >
+                                      <img
+                                        src={page.instagramAccount.profilePictureUrl || "https://api.withblip.com/backup_page_image.png"}
+                                        alt={`${page.instagramAccount.username} profile`}
+                                        className="w-6 h-6 rounded-full object-cover border border-gray-300"
+                                      />
+                                      <span>{page.instagramAccount.username}</span>
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              ) : (
+                                <div className="px-4 py-5 text-center">
+                                  <p className="mb-2 text-sm text-gray-500">No IG accounts found.</p>
+                                  <Button
+                                    type="button"
+                                    variant="link"
+                                    onClick={handleLinkMorePages}
+                                    className="h-auto p-0 text-xs font-medium text-black underline underline-offset-2 hover:text-gray-700"
                                   >
-                                    <img
-                                      src={page.instagramAccount.profilePictureUrl || "https://api.withblip.com/backup_page_image.png"}
-                                      alt={`${page.instagramAccount.username} profile`}
-                                      className="w-6 h-6 rounded-full object-cover border border-gray-300"
-                                    />
-                                    <span>{page.instagramAccount.username}</span>
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            ) : (
-                              <div className="px-4 py-5 text-center">
-                                <p className="mb-2 text-sm text-gray-500">No IG accounts found.</p>
-                                <Button
-                                  type="button"
-                                  variant="link"
-                                  onClick={handleLinkMorePages}
-                                  className="h-auto p-0 text-xs font-medium text-black underline underline-offset-2 hover:text-gray-700"
-                                >
-                                  Confirm Blip has access to pages to make ads
-                                </Button>
-                              </div>
-                            )}
+                                    Confirm Blip has access to pages to make ads
+                                  </Button>
+                                </div>
+                              )}
+                            </ScrollArea>
                           </CommandList>
                         </Command>
                       </PopoverContent>

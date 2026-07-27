@@ -4,6 +4,7 @@ import { useState, useMemo, useCallback, useEffect } from "react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -743,38 +744,40 @@ export default function AdAccountSettings({
                     wrapperClassName="bg-gray-50 border-gray-200 rounded-[20px]"
                   />
                   <CommandEmpty>No campaigns exist in this ad account. Try selecting a different account.</CommandEmpty>
-                  <CommandList className="max-h-[500px] overflow-y-auto rounded-2xl custom-scrollbar" selectOnFocus={false}>
-                    <CommandGroup>
-                      {filteredCampaigns.map((camp) => {
-                        const isSelected = selectedCampaign.includes(camp.id);
-                        return (
-                          <CommandItem
-                            key={camp.id}
-                            value={camp.name || camp.id}
-                            onSelect={() => handleCampaignChange(camp.id)}
-                            className="px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150"
-                          >
-                            <div className="flex items-center gap-2 w-full min-w-0">
-                              <Checkbox
-                                id={`campaign-${camp.id}`}
-                                checked={isSelected}
-                                className="p-0 w-4 h-4 aspect-square bg-white border border-gray-300 rounded-[6px]"
-                              >
-                                <Checkbox.Indicator>
-                                  <Check className="w-3 h-3 text-green-500" />
-                                </Checkbox.Indicator>
-                              </Checkbox>
-                              <Label className={cn("min-w-0 flex-1 cursor-pointer flex items-center justify-between", camp.status !== "ACTIVE" && "text-gray-400")}>
-                                <span className="min-w-0 truncate leading-[1.25]" title={camp.name || camp.id}>{camp.name || camp.id}</span>
-                                {camp.status === "ACTIVE" && (
-                                  <span className="ml-2 w-2 h-2 rounded-full bg-green-500" />
-                                )}
-                              </Label>
-                            </div>
-                          </CommandItem>
-                        );
-                      })}
-                    </CommandGroup>
+                  <CommandList className="max-h-none overflow-hidden rounded-2xl" selectOnFocus={false}>
+                    <ScrollArea viewportClassName="max-h-[500px]">
+                      <CommandGroup>
+                        {filteredCampaigns.map((camp) => {
+                          const isSelected = selectedCampaign.includes(camp.id);
+                          return (
+                            <CommandItem
+                              key={camp.id}
+                              value={camp.name || camp.id}
+                              onSelect={() => handleCampaignChange(camp.id)}
+                              className="px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150"
+                            >
+                              <div className="flex items-center gap-2 w-full min-w-0">
+                                <Checkbox
+                                  id={`campaign-${camp.id}`}
+                                  checked={isSelected}
+                                  className="p-0 w-4 h-4 aspect-square bg-white border border-gray-300 rounded-[6px]"
+                                >
+                                  <Checkbox.Indicator>
+                                    <Check className="w-3 h-3 text-green-500" />
+                                  </Checkbox.Indicator>
+                                </Checkbox>
+                                <Label className={cn("min-w-0 flex-1 cursor-pointer flex items-center justify-between", camp.status !== "ACTIVE" && "text-gray-400")}>
+                                  <span className="min-w-0 truncate leading-[1.25]" title={camp.name || camp.id}>{camp.name || camp.id}</span>
+                                  {camp.status === "ACTIVE" && (
+                                    <span className="ml-2 w-2 h-2 rounded-full bg-green-500" />
+                                  )}
+                                </Label>
+                              </div>
+                            </CommandItem>
+                          );
+                        })}
+                      </CommandGroup>
+                    </ScrollArea>
                   </CommandList>
                   {/* Launch in a New Campaign Button */}
                   <div className="p-2 border-t border-gray-200">
@@ -871,34 +874,36 @@ transition-all duration-150 hover:!bg-black
                           wrapperClassName="bg-gray-50 border-gray-200 rounded-[20px]"
                         />
                         <CommandEmpty>No campaigns exist in this ad account. Try selecting a different account.</CommandEmpty>
-                        <CommandList className="max-h-[500px] overflow-y-auto rounded-2xl custom-scrollbar" selectOnFocus={false}>
-                          <CommandGroup>
-                            {campaigns
-                              .filter((campaign) =>
-                                (campaign.name || campaign.id).toLowerCase().includes(duplicateCampaignSearchValue.toLowerCase())
-                              )
-                              .map((campaign) => (
-                                <CommandItem
-                                  key={campaign.id}
-                                  value={campaign.name || campaign.id}
-                                  onSelect={() => {
-                                    setDuplicateCampaign(campaign.id);
-                                    setOpenDuplicateCampaign(false);
-                                  }}
-                                  className={cn(
-                                    "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
-                                    campaign.status !== "ACTIVE" && "text-gray-400"
-                                  )}
-                                >
-                                  <div className="flex justify-between items-center w-full min-w-0">
-                                    <span className="min-w-0 truncate" title={campaign.name || campaign.id}>{campaign.name || campaign.id}</span>
-                                    {campaign.status === "ACTIVE" && (
-                                      <span className="ml-2 w-2 h-2 rounded-full bg-green-500 shrink-0" />
+                        <CommandList className="max-h-none overflow-hidden rounded-2xl" selectOnFocus={false}>
+                          <ScrollArea viewportClassName="max-h-[500px]">
+                            <CommandGroup>
+                              {campaigns
+                                .filter((campaign) =>
+                                  (campaign.name || campaign.id).toLowerCase().includes(duplicateCampaignSearchValue.toLowerCase())
+                                )
+                                .map((campaign) => (
+                                  <CommandItem
+                                    key={campaign.id}
+                                    value={campaign.name || campaign.id}
+                                    onSelect={() => {
+                                      setDuplicateCampaign(campaign.id);
+                                      setOpenDuplicateCampaign(false);
+                                    }}
+                                    className={cn(
+                                      "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
+                                      campaign.status !== "ACTIVE" && "text-gray-400"
                                     )}
-                                  </div>
-                                </CommandItem>
-                              ))}
-                          </CommandGroup>
+                                  >
+                                    <div className="flex justify-between items-center w-full min-w-0">
+                                      <span className="min-w-0 truncate" title={campaign.name || campaign.id}>{campaign.name || campaign.id}</span>
+                                      {campaign.status === "ACTIVE" && (
+                                        <span className="ml-2 w-2 h-2 rounded-full bg-green-500 shrink-0" />
+                                      )}
+                                    </div>
+                                  </CommandItem>
+                                ))}
+                            </CommandGroup>
+                          </ScrollArea>
                         </CommandList>
                       </Command>
                     </PopoverContent>
@@ -1034,146 +1039,148 @@ transition-all duration-150 hover:!bg-black
                     wrapperClassName="bg-gray-50 border-gray-200 rounded-[20px]"
                   />
                   <CommandEmpty>No ad sets exist in this campaign. Select a different campaign</CommandEmpty>
-                  <CommandList className="max-h-[500px] overflow-y-auto rounded-2xl custom-scrollbar px-2" selectOnFocus={false}>
-                    <CommandGroup>
-                      {!isAdvantagePlusCampaign && (
-                        <CommandItem
-                          key="create-new-adset"
-                          value="create-new-adset"
-                          disabled={selectedCampaign.length !== 1}
-                          onSelect={() => {
-                            if (selectedCampaign.length === 1) {
-                              setShowDuplicateBlock(true)
-                              setSelectedAdSets([])
-                              setOpenAdSet(false)
-                            }
-                          }}
-                          className={`
-                          h-10 w-full px-4 py-3 m-1 rounded-2xl 
-                          ${selectedCampaign.length !== 1 ? '!bg-zinc-800 !text-zinc-500' : '!bg-zinc-700 !text-white'}
-                          shadow-md 
-                          flex items-center justify-center 
-                          text-sm font-semibold 
-                          ${selectedCampaign.length !== 1 ? 'cursor-not-allowed' : 'cursor-pointer'}
-                          transition-all duration-150 
-                          ${selectedCampaign.length === 1 ? 'hover:!bg-black' : ''}
-                        `}
-                        >
-                          🚀 Launch in a New Ad Set
-                          {selectedCampaign.length !== 1 && (
-                            <span className="ml-2 text-xs text-zinc-400">
-                              (Please select 1 campaign)
-                            </span>
-                          )}
-                        </CommandItem>
-                      )}
-                    </CommandGroup>
-                    <CommandGroup heading="Launch in an existing ad set">
-                      {filteredAdSets.length > 0 ? (
-                        (() => {
-                          // Group adsets by campaign
-                          const groupedByCampaign = filteredAdSets.reduce((acc, adset) => {
-                            const campaignId = adset.campaignId || 'unknown';
-                            if (!acc[campaignId]) {
-                              acc[campaignId] = [];
-                            }
-                            acc[campaignId].push(adset);
-                            return acc;
-                          }, {});
+                  <CommandList className="max-h-none overflow-hidden rounded-2xl px-2" selectOnFocus={false}>
+                    <ScrollArea viewportClassName="max-h-[500px]">
+                      <CommandGroup>
+                        {!isAdvantagePlusCampaign && (
+                          <CommandItem
+                            key="create-new-adset"
+                            value="create-new-adset"
+                            disabled={selectedCampaign.length !== 1}
+                            onSelect={() => {
+                              if (selectedCampaign.length === 1) {
+                                setShowDuplicateBlock(true)
+                                setSelectedAdSets([])
+                                setOpenAdSet(false)
+                              }
+                            }}
+                            className={`
+                            h-10 w-full px-4 py-3 m-1 rounded-2xl 
+                            ${selectedCampaign.length !== 1 ? '!bg-zinc-800 !text-zinc-500' : '!bg-zinc-700 !text-white'}
+                            shadow-md 
+                            flex items-center justify-center 
+                            text-sm font-semibold 
+                            ${selectedCampaign.length !== 1 ? 'cursor-not-allowed' : 'cursor-pointer'}
+                            transition-all duration-150 
+                            ${selectedCampaign.length === 1 ? 'hover:!bg-black' : ''}
+                          `}
+                          >
+                            🚀 Launch in a New Ad Set
+                            {selectedCampaign.length !== 1 && (
+                              <span className="ml-2 text-xs text-zinc-400">
+                                (Please select 1 campaign)
+                              </span>
+                            )}
+                          </CommandItem>
+                        )}
+                      </CommandGroup>
+                      <CommandGroup heading="Launch in an existing ad set">
+                        {filteredAdSets.length > 0 ? (
+                          (() => {
+                            // Group adsets by campaign
+                            const groupedByCampaign = filteredAdSets.reduce((acc, adset) => {
+                              const campaignId = adset.campaignId || 'unknown';
+                              if (!acc[campaignId]) {
+                                acc[campaignId] = [];
+                              }
+                              acc[campaignId].push(adset);
+                              return acc;
+                            }, {});
 
-                          return (
-                            <>
-                              {filteredAdSets.length > 1 && (
-                                <CommandItem
-                                  key="select-all-visible-adsets"
-                                  value="select-all-visible-adsets"
-                                  forceMount
-                                  onSelect={handleSelectAllVisibleAdSets}
-                                  className={cn(
-                                    "py-2 cursor-pointer m-1 rounded-2xl bg-gray-100 text-xs transition-colors duration-150 hover:!bg-gray-100",
-                                    areAllVisibleAdSetsSelected && "font-semibold",
-                                  )}
-                                >
-                                  <div className="flex items-center space-x-2 w-full min-w-0">
-                                    <Checkbox
-                                      id="select-all-visible-adsets"
-                                      checked={areAllVisibleAdSetsSelected}
-                                      className="p-0 w-4 h-4 aspect-square bg-white border border-gray-300 rounded-[6px]"
-                                    >
-                                      <Checkbox.Indicator>
-                                        <Check className="w-3 h-3 text-green-500" />
-                                      </Checkbox.Indicator>
-                                    </Checkbox>
-                                    <Label className="min-w-0 flex-1 cursor-pointer flex items-center justify-between text-xs">
-                                      <span className="min-w-0 truncate leading-[1.25]">Select all</span>
-                                    </Label>
-                                  </div>
-                                </CommandItem>
-                              )}
-                              {Object.entries(groupedByCampaign).map(([campaignId, campaignAdSets]) => {
-                                const campaignName = campaignAdSets[0]?.campaignName || campaignId;
-
-                                return (
-                                  <div key={campaignId}>
-                                    {/* Campaign separator */}
-                                    {selectedCampaign.length >= 2 && (
-                                      <div
-                                        className="px-4 py-2 mx-1 mb-1 bg-gray-100 text-gray-700 font-semibold text-xs rounded-lg pointer-events-none truncate"
-                                        title={`${campaignName} Ad Sets`}
-                                      >
-                                        {campaignName} Ad Sets
-                                      </div>
+                            return (
+                              <>
+                                {filteredAdSets.length > 1 && (
+                                  <CommandItem
+                                    key="select-all-visible-adsets"
+                                    value="select-all-visible-adsets"
+                                    forceMount
+                                    onSelect={handleSelectAllVisibleAdSets}
+                                    className={cn(
+                                      "py-2 cursor-pointer m-1 rounded-2xl bg-gray-100 text-xs transition-colors duration-150 hover:!bg-gray-100",
+                                      areAllVisibleAdSetsSelected && "font-semibold",
                                     )}
-                                    {/* Adsets for this campaign */}
-                                    {campaignAdSets.map((adset) => {
-                                      const isSelected = selectedAdSets.includes(adset.id);
-                                      return (
-                                        <CommandItem
-                                          key={adset.id}
-                                          value={adset.name || adset.id}
-                                          onSelect={() => handleAdSetCheckboxChange(adset.id, !isSelected)}
-                                          className={cn(
-                                            "py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
-                                            isSelected ? "bg-gray-100 hover:!bg-gray-100 font-semibold" : "hover:!bg-gray-200",
-                                          )}
+                                  >
+                                    <div className="flex items-center space-x-2 w-full min-w-0">
+                                      <Checkbox
+                                        id="select-all-visible-adsets"
+                                        checked={areAllVisibleAdSetsSelected}
+                                        className="p-0 w-4 h-4 aspect-square bg-white border border-gray-300 rounded-[6px]"
+                                      >
+                                        <Checkbox.Indicator>
+                                          <Check className="w-3 h-3 text-green-500" />
+                                        </Checkbox.Indicator>
+                                      </Checkbox>
+                                      <Label className="min-w-0 flex-1 cursor-pointer flex items-center justify-between text-xs">
+                                        <span className="min-w-0 truncate leading-[1.25]">Select all</span>
+                                      </Label>
+                                    </div>
+                                  </CommandItem>
+                                )}
+                                {Object.entries(groupedByCampaign).map(([campaignId, campaignAdSets]) => {
+                                  const campaignName = campaignAdSets[0]?.campaignName || campaignId;
+
+                                  return (
+                                    <div key={campaignId}>
+                                      {/* Campaign separator */}
+                                      {selectedCampaign.length >= 2 && (
+                                        <div
+                                          className="px-4 py-2 mx-1 mb-1 bg-gray-100 text-gray-700 font-semibold text-xs rounded-lg pointer-events-none truncate"
+                                          title={`${campaignName} Ad Sets`}
                                         >
-                                          <div className="flex items-center space-x-2 w-full min-w-0">
-                                            <Checkbox
-                                              id={`adset-${adset.id}`}
-                                              checked={isSelected}
-                                              className="p-0 w-4 h-4 aspect-square bg-white border border-gray-300 rounded-[6px]"
-                                            >
-                                              <Checkbox.Indicator>
-                                                <Check className="w-3 h-3 text-green-500" />
-                                              </Checkbox.Indicator>
-                                            </Checkbox>
-                                            <Label className={cn("min-w-0 flex-1 cursor-pointer flex items-center justify-between", adset.status !== "ACTIVE" && "text-gray-400")}>
-                                              <span className="min-w-0 truncate leading-[1.25]" title={adset.name || adset.id}>{adset.name || adset.id}</span>
-                                              <span className="ml-2 flex shrink-0 items-center">
-                                                {adset.totalAds != null && (
-                                                  <span className="text-xs text-gray-400 mr-1.5">({adset.totalAds} {adset.totalAds === 1 ? 'Ad' : 'Ads'})</span>
-                                                )}
-                                                {adset.status === "ACTIVE" && (
-                                                  <span className="ml-0 w-2 h-2 rounded-full bg-green-500" />
-                                                )}
-                                              </span>
-                                            </Label>
-                                          </div>
-                                        </CommandItem>
-                                      );
-                                    })}
-                                  </div>
-                                );
-                              })}
-                            </>
-                          );
-                        })()
-                      ) : (
-                        <CommandItem disabled className="opacity-50 cursor-not-allowed">
-                          No AdSets found.
-                        </CommandItem>
-                      )}
-                    </CommandGroup>
+                                          {campaignName} Ad Sets
+                                        </div>
+                                      )}
+                                      {/* Adsets for this campaign */}
+                                      {campaignAdSets.map((adset) => {
+                                        const isSelected = selectedAdSets.includes(adset.id);
+                                        return (
+                                          <CommandItem
+                                            key={adset.id}
+                                            value={adset.name || adset.id}
+                                            onSelect={() => handleAdSetCheckboxChange(adset.id, !isSelected)}
+                                            className={cn(
+                                              "py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
+                                              isSelected ? "bg-gray-100 hover:!bg-gray-100 font-semibold" : "hover:!bg-gray-200",
+                                            )}
+                                          >
+                                            <div className="flex items-center space-x-2 w-full min-w-0">
+                                              <Checkbox
+                                                id={`adset-${adset.id}`}
+                                                checked={isSelected}
+                                                className="p-0 w-4 h-4 aspect-square bg-white border border-gray-300 rounded-[6px]"
+                                              >
+                                                <Checkbox.Indicator>
+                                                  <Check className="w-3 h-3 text-green-500" />
+                                                </Checkbox.Indicator>
+                                              </Checkbox>
+                                              <Label className={cn("min-w-0 flex-1 cursor-pointer flex items-center justify-between", adset.status !== "ACTIVE" && "text-gray-400")}>
+                                                <span className="min-w-0 truncate leading-[1.25]" title={adset.name || adset.id}>{adset.name || adset.id}</span>
+                                                <span className="ml-2 flex shrink-0 items-center">
+                                                  {adset.totalAds != null && (
+                                                    <span className="text-xs text-gray-400 mr-1.5">({adset.totalAds} {adset.totalAds === 1 ? 'Ad' : 'Ads'})</span>
+                                                  )}
+                                                  {adset.status === "ACTIVE" && (
+                                                    <span className="ml-0 w-2 h-2 rounded-full bg-green-500" />
+                                                  )}
+                                                </span>
+                                              </Label>
+                                            </div>
+                                          </CommandItem>
+                                        );
+                                      })}
+                                    </div>
+                                  );
+                                })}
+                              </>
+                            );
+                          })()
+                        ) : (
+                          <CommandItem disabled className="opacity-50 cursor-not-allowed">
+                            No AdSets found.
+                          </CommandItem>
+                        )}
+                      </CommandGroup>
+                    </ScrollArea>
                   </CommandList>
                 </Command>
               </PopoverContent>
@@ -1258,69 +1265,71 @@ transition-all duration-150 hover:!bg-black
                           wrapperClassName="bg-gray-50 border-gray-200 rounded-[20px]"
                         />
                         <CommandEmpty>No ad sets exist in this campaign. Select a different campaign</CommandEmpty>
-                        <CommandList className="max-h-[500px] overflow-y-auto rounded-2xl custom-scrollbar" selectOnFocus={false}>
-                          <CommandGroup>
-                            {filteredAdSets.length > 0 ? (
-                              (() => {
-                                // Group adsets by campaign
-                                const groupedByCampaign = filteredAdSets.reduce((acc, adset) => {
-                                  const campaignId = adset.campaignId || 'unknown';
-                                  if (!acc[campaignId]) {
-                                    acc[campaignId] = [];
-                                  }
-                                  acc[campaignId].push(adset);
-                                  return acc;
-                                }, {});
+                        <CommandList className="max-h-none overflow-hidden rounded-2xl" selectOnFocus={false}>
+                          <ScrollArea viewportClassName="max-h-[500px]">
+                            <CommandGroup>
+                              {filteredAdSets.length > 0 ? (
+                                (() => {
+                                  // Group adsets by campaign
+                                  const groupedByCampaign = filteredAdSets.reduce((acc, adset) => {
+                                    const campaignId = adset.campaignId || 'unknown';
+                                    if (!acc[campaignId]) {
+                                      acc[campaignId] = [];
+                                    }
+                                    acc[campaignId].push(adset);
+                                    return acc;
+                                  }, {});
 
-                                return Object.entries(groupedByCampaign).map(([campaignId, campaignAdSets]) => {
-                                  const campaignName = campaignAdSets[0]?.campaignName || campaignId;
+                                  return Object.entries(groupedByCampaign).map(([campaignId, campaignAdSets]) => {
+                                    const campaignName = campaignAdSets[0]?.campaignName || campaignId;
 
-                                  return (
-                                    <div key={campaignId}>
-                                      {/* Campaign separator */}
-                                      {selectedCampaign.length >= 2 && (
-                                        <div
-                                          className="px-4 py-2 mx-1 mb-1 bg-gray-100 text-gray-700 font-semibold text-xs rounded-lg pointer-events-none truncate"
-                                          title={`${campaignName} Ad Sets`}
-                                        >
-                                          {campaignName} Ad Sets
-                                        </div>
-                                      )}
-                                      {/* Adsets for this campaign */}
-                                      {campaignAdSets.map((adset) => {
-                                        // const isSelected = selectedAdSets.includes(adset.id);
-                                        return (
-                                          <CommandItem
-                                            key={adset.id}
-                                            value={adset.name || adset.id}
-                                            onSelect={() => {
-                                              setDuplicateAdSet(adset.id)
-                                              setOpenDuplicateAdSet(false)
-                                            }}
-                                            className={cn(
-                                              "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
-                                              adset.status !== "ACTIVE" && "text-gray-400"
-                                            )}
+                                    return (
+                                      <div key={campaignId}>
+                                        {/* Campaign separator */}
+                                        {selectedCampaign.length >= 2 && (
+                                          <div
+                                            className="px-4 py-2 mx-1 mb-1 bg-gray-100 text-gray-700 font-semibold text-xs rounded-lg pointer-events-none truncate"
+                                            title={`${campaignName} Ad Sets`}
                                           >
-                                            <div className="flex justify-between items-center w-full min-w-0">
-                                              <span className="min-w-0 truncate" title={adset.name || adset.id}>{adset.name || adset.id}</span>
-                                              {adset.status === "ACTIVE" && (
-                                                <span className="ml-2 w-2 h-2 rounded-full bg-green-500 shrink-0" />
+                                            {campaignName} Ad Sets
+                                          </div>
+                                        )}
+                                        {/* Adsets for this campaign */}
+                                        {campaignAdSets.map((adset) => {
+                                          // const isSelected = selectedAdSets.includes(adset.id);
+                                          return (
+                                            <CommandItem
+                                              key={adset.id}
+                                              value={adset.name || adset.id}
+                                              onSelect={() => {
+                                                setDuplicateAdSet(adset.id)
+                                                setOpenDuplicateAdSet(false)
+                                              }}
+                                              className={cn(
+                                                "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
+                                                adset.status !== "ACTIVE" && "text-gray-400"
                                               )}
-                                            </div>
-                                          </CommandItem>
-                                        );
-                                      })}
-                                    </div>
-                                  );
-                                });
-                              })()
-                            ) : (
-                              <CommandItem disabled className="opacity-50 cursor-not-allowed">
-                                No AdSets found.
-                              </CommandItem>
-                            )}
-                          </CommandGroup>
+                                            >
+                                              <div className="flex justify-between items-center w-full min-w-0">
+                                                <span className="min-w-0 truncate" title={adset.name || adset.id}>{adset.name || adset.id}</span>
+                                                {adset.status === "ACTIVE" && (
+                                                  <span className="ml-2 w-2 h-2 rounded-full bg-green-500 shrink-0" />
+                                                )}
+                                              </div>
+                                            </CommandItem>
+                                          );
+                                        })}
+                                      </div>
+                                    );
+                                  });
+                                })()
+                              ) : (
+                                <CommandItem disabled className="opacity-50 cursor-not-allowed">
+                                  No AdSets found.
+                                </CommandItem>
+                              )}
+                            </CommandGroup>
+                          </ScrollArea>
                         </CommandList>
                       </Command>
                     </PopoverContent>
