@@ -9286,24 +9286,26 @@ export default function AdCreationForm({
                             className="bg-transparent"
                             wrapperClassName="bg-gray-50 border-gray-200 rounded-[20px]"
                           />
-                          <CommandList className="max-h-[400px] overflow-y-auto rounded-2xl custom-scrollbar" selectOnFocus={false}>
-                            <CommandGroup>
-                              {filteredCtaOptions.map((option) => (
-                                <CommandItem
-                                  key={option.value}
-                                  value={option.value}
-                                  onSelect={() => handleCtaSelect(option.value)}
-                                  className={`
-                                  px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150
-                                  hover:bg-gray-100
-                                  ${cta === option.value ? "bg-gray-100 font-semibold" : ""}
-                                  `}
-                                  data-selected={option.value === cta}
-                                >
-                                  {option.label}
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
+                          <CommandList className="max-h-none overflow-hidden rounded-2xl" selectOnFocus={false}>
+                            <ScrollArea viewportClassName="max-h-[350px]">
+                              <CommandGroup>
+                                {filteredCtaOptions.map((option) => (
+                                  <CommandItem
+                                    key={option.value}
+                                    value={option.value}
+                                    onSelect={() => handleCtaSelect(option.value)}
+                                    className={`
+                                    px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150
+                                    hover:bg-gray-100
+                                    ${cta === option.value ? "bg-gray-100 font-semibold" : ""}
+                                    `}
+                                    data-selected={option.value === cta}
+                                  >
+                                    {option.label}
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </ScrollArea>
                           </CommandList>
                         </Command>
                       </PopoverContent>

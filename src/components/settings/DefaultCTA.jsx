@@ -3,6 +3,7 @@ import { memo, useMemo, useState, useCallback } from "react"
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
 import { Command, CommandInput, CommandList, CommandItem, CommandGroup } from "@/components/ui/command"
 import { Button } from "@/components/ui/button"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { ChevronsUpDown } from "lucide-react"
 import CTAIcon from '@/assets/icons/cta.svg?react';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
@@ -97,24 +98,26 @@ function DefaultCTA({ defaultCTA, setDefaultCTA }) {
                             className="bg-transparent"
                             wrapperClassName="bg-gray-50 border-gray-200 rounded-[20px]"
                         />
-                        <CommandList className="max-h-[400px] overflow-y-auto rounded-2xl custom-scrollbar" selectOnFocus={false}>
-                            <CommandGroup>
-                                {filteredCTAs.map((cta) => (
-                                    <CommandItem
-                                        key={cta.value}
-                                        value={cta.value}
-                                        onSelect={() => handleSelect(cta.value)}
-                                        className={`
-                                        px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150
-                                        hover:bg-gray-100
-                                        ${defaultCTA === cta.value ? "bg-gray-100 font-semibold" : ""}
-                                        `}
-                                        data-selected={cta.value === defaultCTA}
-                                    >
-                                        {cta.label}
-                                    </CommandItem>
-                                ))}
-                            </CommandGroup>
+                        <CommandList className="max-h-none overflow-hidden rounded-2xl" selectOnFocus={false}>
+                            <ScrollArea viewportClassName="max-h-[400px]">
+                                <CommandGroup>
+                                    {filteredCTAs.map((cta) => (
+                                        <CommandItem
+                                            key={cta.value}
+                                            value={cta.value}
+                                            onSelect={() => handleSelect(cta.value)}
+                                            className={`
+                                            px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150
+                                            hover:bg-gray-100
+                                            ${defaultCTA === cta.value ? "bg-gray-100 font-semibold" : ""}
+                                            `}
+                                            data-selected={cta.value === defaultCTA}
+                                        >
+                                            {cta.label}
+                                        </CommandItem>
+                                    ))}
+                                </CommandGroup>
+                            </ScrollArea>
                         </CommandList>
                     </Command>
                 </PopoverContent>
