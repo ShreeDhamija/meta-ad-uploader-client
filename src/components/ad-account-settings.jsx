@@ -1040,40 +1040,41 @@ transition-all duration-150 hover:!bg-black
                   />
                   <CommandEmpty>No ad sets exist in this campaign. Select a different campaign</CommandEmpty>
                   <CommandList className="max-h-none overflow-hidden rounded-2xl px-2" selectOnFocus={false}>
-                    <ScrollArea viewportClassName="max-h-[500px]">
-                      <CommandGroup>
-                        {!isAdvantagePlusCampaign && (
-                          <CommandItem
-                            key="create-new-adset"
-                            value="create-new-adset"
-                            disabled={selectedCampaign.length !== 1}
-                            onSelect={() => {
-                              if (selectedCampaign.length === 1) {
-                                setShowDuplicateBlock(true)
-                                setSelectedAdSets([])
-                                setOpenAdSet(false)
-                              }
-                            }}
-                            className={`
-                            h-10 w-full px-4 py-3 m-1 rounded-2xl 
-                            ${selectedCampaign.length !== 1 ? '!bg-zinc-800 !text-zinc-500' : '!bg-zinc-700 !text-white'}
-                            shadow-md 
-                            flex items-center justify-center 
-                            text-sm font-semibold 
-                            ${selectedCampaign.length !== 1 ? 'cursor-not-allowed' : 'cursor-pointer'}
-                            transition-all duration-150 
-                            ${selectedCampaign.length === 1 ? 'hover:!bg-black' : ''}
-                          `}
-                          >
-                            🚀 Launch in a New Ad Set
-                            {selectedCampaign.length !== 1 && (
-                              <span className="ml-2 text-xs text-zinc-400">
-                                (Please select 1 campaign)
-                              </span>
-                            )}
-                          </CommandItem>
-                        )}
-                      </CommandGroup>
+                    {/* Kept outside the ScrollArea so the scrollbar doesn't overlap it */}
+                    <CommandGroup>
+                      {!isAdvantagePlusCampaign && (
+                        <CommandItem
+                          key="create-new-adset"
+                          value="create-new-adset"
+                          disabled={selectedCampaign.length !== 1}
+                          onSelect={() => {
+                            if (selectedCampaign.length === 1) {
+                              setShowDuplicateBlock(true)
+                              setSelectedAdSets([])
+                              setOpenAdSet(false)
+                            }
+                          }}
+                          className={`
+                          h-10 w-full px-4 py-3 m-1 rounded-2xl
+                          ${selectedCampaign.length !== 1 ? '!bg-zinc-800 !text-zinc-500' : '!bg-zinc-700 !text-white'}
+                          shadow-md
+                          flex items-center justify-center
+                          text-sm font-semibold
+                          ${selectedCampaign.length !== 1 ? 'cursor-not-allowed' : 'cursor-pointer'}
+                          transition-all duration-150
+                          ${selectedCampaign.length === 1 ? 'hover:!bg-black' : ''}
+                        `}
+                        >
+                          🚀 Launch in a New Ad Set
+                          {selectedCampaign.length !== 1 && (
+                            <span className="ml-2 text-xs text-zinc-400">
+                              (Please select 1 campaign)
+                            </span>
+                          )}
+                        </CommandItem>
+                      )}
+                    </CommandGroup>
+                    <ScrollArea viewportClassName="max-h-[500px] [&>div]:!block">
                       <CommandGroup heading="Launch in an existing ad set">
                         {filteredAdSets.length > 0 ? (
                           (() => {
