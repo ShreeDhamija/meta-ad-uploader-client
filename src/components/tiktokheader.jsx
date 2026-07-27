@@ -5,11 +5,9 @@ import { Button } from "@/components/ui/button"
 import { LogOutIcon, Settings, Clock, Bell } from "lucide-react"
 import ZapIcon from "@/assets/icons/Zap.svg?react"
 import ChatIcon from "@/assets/icons/chat.svg?react"
-import AnalyticsIcon from "@/assets/icons/Analytics.svg?react"
-import TikTokIcon from "@/assets/icons/tiktok.svg"
-import RocketBtn from "@/assets/rocket2.webp"
-import { useAuth } from "@/lib/AuthContext"
-import { useLocation, useNavigate } from "react-router-dom"
+import TikTokUserPlaceholder from "@/assets/TikTokUser.jpg"
+import { useTikTokAuth } from "@/lib/TikTokAuthContext"
+import { useNavigate } from "react-router-dom"
 import useSubscription from "@/lib/useSubscriptionSettings"
 import useNotifications from "@/lib/useNotifications"
 import {
@@ -21,10 +19,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
-export default function Header({ showMessenger, hideMessenger }) {
-  const { userName, profilePicUrl, handleLogout, features } = useAuth()
+export default function TikTokHeader({ showMessenger, hideMessenger }) {
+  const { logoutTikTok, tiktokUser } = useTikTokAuth()
   const navigate = useNavigate()
-  const location = useLocation()
   const {
     subscriptionData,
     isOnTrial,
@@ -36,7 +33,9 @@ export default function Header({ showMessenger, hideMessenger }) {
 
   const { notifications, hasUnread, loading: notificationsLoading, markAsRead } = useNotifications()
   const [dropdownOpen, setDropdownOpen] = useState(false)
-  const isAnalyticsPage = location.pathname === "/analytics"
+
+  const displayName = tiktokUser?.display_name || tiktokUser?.name || ""
+  const displayPic = tiktokUser?.picture || tiktokUser?.avatar_url || tiktokUser?.profile_image_url || TikTokUserPlaceholder
   const headerCardShadow = "shadow-[0px_1px_2px_rgba(0,0,0,0.06)]"
 
   const handleDropdownClose = (open) => {
@@ -97,33 +96,21 @@ export default function Header({ showMessenger, hideMessenger }) {
     return `${days} day${days !== 1 ? 's' : ''} left`
   }
 
-
+  const handleTikTokDisconnect = async () => {
+    if (await logoutTikTok()) navigate('/', { replace: true })
+  }
 
   return (
     <header className="flex justify-between items-center py-3 mb-4">
       {/* Profile Section (Left) */}
-      {isAnalyticsPage ? (
-        <button
-          onClick={() => navigate("/")}
-          className={`flex items-center gap-3 bg-white border border-black/10 rounded-[20px] px-3 py-2 ${headerCardShadow} hover:shadow-md transition cursor-pointer`}
-        >
-          <img
-            src={RocketBtn}
-            alt="Launcher"
-            className="w-9 h-9 object-contain"
-          />
-          <span className="text-[14px] font-medium text-gray-700 whitespace-nowrap">Go To Launcher</span>
-        </button>
-      ) : (
-        <div className={`flex items-center gap-3 bg-white border border-black/10 rounded-[20px] px-3 py-2 ${headerCardShadow}`}>
-          <img
-            src={profilePicUrl}
-            alt="Profile"
-            className="w-9 h-9 rounded-full border border-zinc-300 object-cover"
-          />
-          <span className="text-[14px] font-medium text-gray-700 whitespace-nowrap">{userName}</span>
-        </div>
-      )}
+      <div className={`flex items-center gap-3 bg-white border border-black/10 rounded-[20px] px-3 py-2 ${headerCardShadow}`}>
+        <img
+          src={displayPic}
+          alt="Profile"
+          className="w-9 h-9 rounded-full border border-zinc-300 object-cover"
+        />
+        <span className="text-[14px] font-medium text-gray-700 whitespace-nowrap">{displayName}</span>
+      </div>
 
       {/* Action Buttons (Right) */}
       <div className={`flex items-center gap-3 bg-white border border-black/10 rounded-[20px] px-3 py-2 ml-2 ${headerCardShadow}`}>
@@ -209,28 +196,6 @@ export default function Header({ showMessenger, hideMessenger }) {
           <span className="hidden min-[1000px]:inline text-gray-900 text-[14px] font-medium">Preferences</span>
         </button>
         <div className="hidden min-[1000px]:block h-8 w-px bg-gray-300" />
-        <button
-          onClick={() => navigate("/analytics")}
-          title="Analytics"
-          className="flex items-center gap-1.5 rounded-full transition-colors px-2 py-2   bg-transparent hover:bg-gray-100 focus:bg-transparent active:bg-transparent cursor-pointer"
-        >
-          <AnalyticsIcon className="size-5" />
-          <span className="hidden min-[1000px]:inline text-[14px] text-gray-900 font-medium">Analytics</span>
-        </button>
-        <div className="hidden min-[1000px]:block h-8 w-px bg-gray-300  " />
-        {features.tiktokLauncher && (
-          <>
-            <button
-              onClick={() => navigate("/tiktok-ads")}
-              title="TikTok Launcher"
-              className="flex items-center gap-1.5 rounded-full transition-colors px-2 py-2 bg-transparent hover:bg-gray-100 focus:bg-transparent active:bg-transparent cursor-pointer"
-            >
-              <img src={TikTokIcon} alt="" className="size-5" />
-              <span className="hidden min-[1000px]:inline text-[14px] text-gray-900 font-medium">TikTok Launcher</span>
-            </button>
-            <div className="hidden min-[1000px]:block h-8 w-px bg-gray-300" />
-          </>
-        )}
         {/* Chat Support Button */}
         <button
           onClick={handleChatToggle}
@@ -244,8 +209,8 @@ export default function Header({ showMessenger, hideMessenger }) {
         <div className="hidden min-[1000px]:block h-8 w-px bg-gray-300  " />
 
         <button
-          onClick={handleLogout}
-          title="Logout"
+          onClick={handleTikTokDisconnect}
+          title="Disconnect TikTok"
           className="p-1 rounded-full transition !bg-transparent hover:!bg-transparent focus:outline-none focus:ring-0 active:ring-0 cursor-pointer"
           style={{
             backgroundColor: "transparent",

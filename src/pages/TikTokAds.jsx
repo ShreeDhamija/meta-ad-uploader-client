@@ -1,0 +1,1178 @@
+import DesktopIcon from '@/assets/Desktop.webp'
+import TikTokHeader from '@/components/tiktokheader'
+import TikTokMediaPreview from '@/components/tiktok/TikTokMediaPreview'
+import TikTokAdCreationForm from '@/components/tiktok/TikTokAdCreationForm'
+import { useTikTokAuth } from '@/lib/TikTokAuthContext'
+import useSubscription from '@/lib/useSubscriptionSettings'
+import { useIntercom } from '@/lib/useIntercom'
+import useTikTokAdvertiserSettings from '@/lib/useTikTokAdvertiserSettings'
+import { saveTikTokSettings } from '@/lib/saveTikTokSettings'
+import { Loader2 } from "lucide-react"
+import React, { useCallback, useEffect, useRef, useState } from "react"
+import { useNavigate } from 'react-router-dom'
+import { toast, Toaster } from 'sonner'
+import { v4 as uuidv4 } from "uuid"
+
+const TIKTOK_CACHE_KEY = 'tiktok_ads_cache';
+const MEDIA_PREVIEW_LAUNCH_DURATION_MS = 560;
+
+// Error boundary to catch component preview failures and prevent crashes
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('Error caught by preview boundary:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-4 text-center border border-dashed border-red-200 rounded-3xl bg-red-50/50">
+          <p className="text-red-600 mb-2 font-bold text-sm">Something went wrong with the preview</p>
+          <button
+            onClick={() => this.setState({ hasError: false })}
+            className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-2xl text-xs font-semibold shadow-sm transition-all"
+          >
+            Try Again
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
+
+const isVideoFile = (file) => {
+  if (!file) return false;
+  const type = file.type || file.mimeType || "";
+  if (type.startsWith("video/") || type === "video/quicktime") return true;
+
+  const name = file.name || file.originalname || "";
+  return /\.(mov|mp4|avi|webm|mkv|m4v)$/i.test(name);
+};
+
+const getFileId = (file) => {
+  if (file.isDrive) return file.id;
+  if (file.isDropbox) return file.dropboxId;
+  if (file.isFrameio) return file.frameioId;
+  if (file.isMetaLibrary) return file.type === 'image' ? file.hash : file.id;
+  return file.uniqueId || file.name;
+};
+
+export default function TikTokAds() {
+  const navigate = useNavigate()
+  const { isTikTokLoggedIn, tiktokAdvertisers, isLoading: authLoading } = useTikTokAuth()
+  const { hasActiveAccess, loading: subscriptionLoading } = useSubscription()
+  const userHasActiveAccess = hasActiveAccess ? hasActiveAccess() : true
+  const { showMessenger, hideMessenger } = useIntercom()
+
+  // Read the 24-hour cache once at component creation (mirrors Meta's Home.jsx pattern).
+  // Defined as a plain function — not a hook — so it's safe to call here before useState.
+  const _readTikTokCache = () => {
+    try {
+      const raw = localStorage.getItem(TIKTOK_CACHE_KEY);
+      if (!raw) return null;
+      const data = JSON.parse(raw);
+      if (Date.now() - data.timestamp < 24 * 60 * 60 * 1000) return data;
+    } catch (e) {
+      console.error('Failed to parse TikTok ads cache:', e);
+    }
+    return null;
+  };
+  const _tiktokCache = _readTikTokCache();
+
+  const [selectedAdvertiser, setSelectedAdvertiser] = useState(() => {
+    // 1. PRIORITIZE DRAFT STATE: If there's an active draft in the cache,
+    //    always restore it — even if the URL says something different.
+    //    The Settings page writes ?adsaccount to its own URL and that can
+    //    bleed into this page; the cache is the authoritative draft source.
+    if (_tiktokCache && _tiktokCache.selectedAdvertiser) {
+      return _tiktokCache.selectedAdvertiser;
+    }
+
+    // 2. No active draft — honour a URL query param (genuine deep-link)
+    const urlParams = new URLSearchParams(window.location.search);
+    const preselected = urlParams.get('adsaccount') || urlParams.get('advertiser');
+    if (preselected) {
+      try {
+        localStorage.setItem('last_selected_tiktok_advertiser', preselected);
+      } catch (e) { }
+      return preselected;
+    }
+
+    // 3. Fall back to the last globally-selected advertiser
+    try {
+      const lastSelected = localStorage.getItem('last_selected_tiktok_advertiser');
+      if (lastSelected) return lastSelected;
+    } catch (e) {
+      console.error('Failed to read last selected advertiser:', e);
+    }
+
+    return '';
+  });
+  const [adName, setAdName] = useState('')
+  const [adTexts, setAdTexts] = useState([''])
+  const [cta, setCta] = useState(['SHOP_NOW'])
+  const [landingUrl, setLandingUrl] = useState('')
+  const [videoFile, setVideoFile] = useState(null)
+  const [videoPreview, setVideoPreview] = useState(null)
+  const [driveFiles, setDriveFiles] = useState([])
+  const [dropboxFiles, setDropboxFiles] = useState([])
+  const [selectedIdentity, setSelectedIdentity] = useState('')
+  const [formStoreId, setFormStoreId] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.formStoreId : null) || null)
+  const [formStoreName, setFormStoreName] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.formStoreName : null) || null)
+  const [formStoreProductId, setFormStoreProductId] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.formStoreProductId : null) || [])
+  const [formStoreProductName, setFormStoreProductName] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.formStoreProductName : null) || null)
+  const [formStoreBcId, setFormStoreBcId] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.formStoreBcId : null) || null)
+  const [formStoreCatalogId, setFormStoreCatalogId] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.formStoreCatalogId : null) || null)
+  const [formCatalogId, setFormCatalogId] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.formCatalogId : null) || null)
+  const [formCatalogName, setFormCatalogName] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.formCatalogName : null) || null)
+  const [formProductId, setFormProductId] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.formProductId : null) || [])
+  const [formProductName, setFormProductName] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.formProductName : null) || null)
+  const [sparkAuthCodes, setSparkAuthCodes] = useState([''])
+  const [urlMode, setUrlMode] = useState('WEBSITE')
+  const [adType, setAdType] = useState('NORMAL')
+  const [showMobileBanner, setShowMobileBanner] = useState(true)
+  const [productName, setProductName] = useState("")
+  const [productImageUrl, setProductImageUrl] = useState("")
+  const [sellingPoints, setSellingPoints] = useState([])
+  const [selectedSavedProductId, setSelectedSavedProductId] = useState("")
+
+  // Only restore campaign/ad-group cache if it belongs to the same advertiser
+  const _cacheMatchesAdvertiser = _tiktokCache?.selectedAdvertiser === (_tiktokCache?.selectedAdvertiser && selectedAdvertiser
+    ? selectedAdvertiser : _tiktokCache?.selectedAdvertiser);
+
+  // Lifted form fetching states (to snapshot campaign & ad group selections)
+  const [campaigns, setCampaigns] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.campaigns : null) || [])
+  const [adGroups, setAdGroups] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.adGroups : null) || [])
+  const [selectedCampaign, setSelectedCampaign] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.selectedCampaign : null) || [])
+  const [selectedAdGroup, setSelectedAdGroup] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.selectedAdGroup : null) || [])
+  const [identities, setIdentities] = useState([])
+
+  // Mocked state arrays & variables for MediaPreview integration compatibility
+  const [files, setFiles] = useState([])
+  const [importedPosts, setImportedPosts] = useState([])
+  const [frameioFiles, setFrameioFiles] = useState([])
+  const [importedFiles, setImportedFiles] = useState([])
+  const [videoThumbs, setVideoThumbs] = useState({})
+  const [isCarouselAd, setIsCarouselAd] = useState(false)
+  const [enablePlacementCustomization, setEnablePlacementCustomization] = useState(false)
+  const [fileGroups, setFileGroups] = useState([])
+  const [selectedAdSets, setSelectedAdSets] = useState([])
+  const [adSets, setAdSets] = useState([])
+  const [duplicateAdSet, setDuplicateAdSet] = useState('')
+  const [duplicateAdGroup, setDuplicateAdGroup] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.duplicateAdGroup : null) || '')
+  const [newAdGroupName, setNewAdGroupName] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.newAdGroupName : null) || '')
+  const [showDuplicateCampaignBlock, setShowDuplicateCampaignBlock] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.showDuplicateCampaignBlock : null) || false)
+  const [duplicateCampaign, setDuplicateCampaign] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.duplicateCampaign : null) || '')
+  const [newCampaignName, setNewCampaignName] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.newCampaignName : null) || '')
+  const [showDuplicateAdGroupBlock, setShowDuplicateAdGroupBlock] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.showDuplicateAdGroupBlock : null) || false)
+  const [selectedFiles, setSelectedFiles] = useState(new Set())
+  const [selectedIgOrganicPosts, setSelectedIgOrganicPosts] = useState([])
+  const [hasSeenPowerupPopup, setHasSeenPowerupPopup] = useState(false)
+  const [showPowerupPopup, setShowPowerupPopup] = useState(false)
+
+  // Launch animation states/callbacks
+  const [isLaunchingMediaPreview, setIsLaunchingMediaPreview] = useState(false)
+  const mediaPreviewLaunchTimeoutRef = useRef(null)
+
+  useEffect(() => {
+    return () => {
+      if (mediaPreviewLaunchTimeoutRef.current) {
+        clearTimeout(mediaPreviewLaunchTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  const triggerMediaPreviewLaunch = useCallback(() => {
+    const hasMediaToLaunch = (
+      files.length > 0 ||
+      driveFiles.length > 0 ||
+      dropboxFiles.length > 0 ||
+      frameioFiles.length > 0 ||
+      importedPosts.length > 0 ||
+      importedFiles.length > 0 ||
+      selectedIgOrganicPosts.length > 0
+    )
+
+    if (!hasMediaToLaunch) {
+      return Promise.resolve()
+    }
+
+    if (mediaPreviewLaunchTimeoutRef.current) {
+      clearTimeout(mediaPreviewLaunchTimeoutRef.current)
+    }
+
+    const prefersReducedMotion = typeof window !== "undefined" &&
+      window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches
+    const launchDuration = prefersReducedMotion ? 140 : MEDIA_PREVIEW_LAUNCH_DURATION_MS
+
+    setIsLaunchingMediaPreview(true)
+
+    return new Promise((resolve) => {
+      mediaPreviewLaunchTimeoutRef.current = setTimeout(() => {
+        setIsLaunchingMediaPreview(false)
+        mediaPreviewLaunchTimeoutRef.current = null
+        resolve()
+      }, launchDuration)
+    })
+  }, [
+    files.length,
+    driveFiles.length,
+    dropboxFiles.length,
+    frameioFiles.length,
+    importedPosts.length,
+    importedFiles.length,
+    selectedIgOrganicPosts.length
+  ])
+
+  // Variant States
+  const [variants, setVariants] = useState([{ id: "default", name: "Default", snapshot: null }])
+  const [activeVariantId, setActiveVariantId] = useState("default")
+  const [fileVariantMap, setFileVariantMap] = useState({})
+  const [groupVariantMap, setGroupVariantMap] = useState({})
+  const [postVariantMap, setPostVariantMap] = useState({})
+
+  // Video thumbnail processing refs and effects
+  const processingRef = useRef(new Set());
+  const videoThumbsRef = useRef(videoThumbs);
+
+  useEffect(() => {
+    videoThumbsRef.current = videoThumbs;
+  }, [videoThumbs]);
+
+  const generateThumbnail = useCallback((file) => {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const video = document.createElement("video");
+
+      const cleanup = () => {
+        URL.revokeObjectURL(url);
+        video.remove();
+        clearTimeout(timeout);
+      };
+
+      const timeout = setTimeout(() => {
+        cleanup();
+        reject("Timeout");
+      }, 8000);
+
+      video.preload = "metadata";
+      video.src = url;
+      video.muted = true;
+      video.playsInline = true;
+      video.currentTime = 0.1;
+
+      video.addEventListener("loadeddata", () => {
+        clearTimeout(timeout);
+        try {
+          const canvas = document.createElement("canvas");
+          const MAX_THUMB_SIZE = 320;
+          const scale = Math.min(1, MAX_THUMB_SIZE / Math.max(video.videoWidth, video.videoHeight));
+
+          canvas.width = video.videoWidth * scale;
+          canvas.height = video.videoHeight * scale;
+
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const dataURL = canvas.toDataURL("image/jpeg", 0.7);
+
+          cleanup();
+          resolve(dataURL);
+        } catch (err) {
+          cleanup();
+          reject(err);
+        }
+      });
+
+      video.addEventListener("error", () => {
+        cleanup();
+        reject("Error generating thumbnail");
+      });
+    });
+  }, []);
+
+  const getDriveVideoThumbnail = useCallback(async (file, signal) => {
+    if (file.pickerThumbnail) {
+      return file.pickerThumbnail.replace(/=s\d+$/, '=w400-h300');
+    }
+    try {
+      const response = await fetch(
+        `https://www.googleapis.com/drive/v3/files/${file.id}?fields=thumbnailLink`,
+        {
+          headers: { Authorization: `Bearer ${file.accessToken}` },
+          signal: signal
+        }
+      );
+      if (!response.ok) throw new Error('Failed to fetch Drive thumbnail');
+      const data = await response.json();
+      if (data.thumbnailLink) {
+        return data.thumbnailLink.replace(/=s\d+$/, '=w400-h300');
+      }
+      return "https://api.withblip.com/thumbnail.jpg";
+    } catch (err) {
+      if (err.name === 'AbortError') throw err;
+      return "https://api.withblip.com/thumbnail.jpg";
+    }
+  }, []);
+
+  useEffect(() => {
+    const abortController = new AbortController();
+
+    const processThumbnails = async () => {
+      // --- 1. LOCAL FILES ---
+      const videoFiles = files.filter(file => {
+        const fileId = getFileId(file);
+        return isVideoFile(file) &&
+          !file.isDrive &&
+          !file.isDropbox &&
+          !videoThumbsRef.current[fileId] &&
+          !processingRef.current.has(fileId);
+      });
+
+      if (videoFiles.length > 0) {
+        videoFiles.forEach(file => processingRef.current.add(getFileId(file)));
+        const MAX_CONCURRENT = 2;
+        const queue = [...videoFiles];
+
+        const processNext = async () => {
+          if (queue.length === 0 || abortController.signal.aborted) return;
+          const file = queue.shift();
+          const fileId = getFileId(file);
+
+          try {
+            const thumb = await generateThumbnail(file);
+            if (!abortController.signal.aborted) {
+              setVideoThumbs(prev => ({ ...prev, [fileId]: thumb }));
+            }
+          } catch (err) {
+            console.error(`Thumbnail error for ${file.name}:`, err);
+            if (!abortController.signal.aborted) {
+              setVideoThumbs(prev => ({
+                ...prev,
+                [fileId]: "https://api.withblip.com/thumbnail.jpg"
+              }));
+            }
+          } finally {
+            processingRef.current.delete(fileId);
+            if (queue.length > 0 && !abortController.signal.aborted) {
+              if ('requestIdleCallback' in window) {
+                requestIdleCallback(() => processNext(), { timeout: 100 });
+              } else {
+                setTimeout(processNext, 0);
+              }
+            }
+          }
+        };
+
+        const initialPromises = [];
+        for (let i = 0; i < Math.min(MAX_CONCURRENT, videoFiles.length); i++) {
+          initialPromises.push(processNext());
+        }
+        await Promise.all(initialPromises);
+      }
+
+      // --- 2. GOOGLE DRIVE ---
+      const driveFilesNeedingThumbs = driveFiles.filter(file => {
+        const fileId = getFileId(file);
+        return isVideoFile(file) &&
+          !videoThumbsRef.current[fileId] &&
+          !processingRef.current.has(fileId);
+      });
+
+      if (driveFilesNeedingThumbs.length > 0 && !abortController.signal.aborted) {
+        driveFilesNeedingThumbs.forEach(file => processingRef.current.add(getFileId(file)));
+        const MAX_DRIVE_CONCURRENT = 3;
+        const driveQueue = [...driveFilesNeedingThumbs];
+
+        const processNextDrive = async () => {
+          if (driveQueue.length === 0 || abortController.signal.aborted) return;
+          const file = driveQueue.shift();
+          const fileId = getFileId(file);
+
+          try {
+            const thumbUrl = await getDriveVideoThumbnail(file, abortController.signal);
+            if (!abortController.signal.aborted) {
+              setVideoThumbs(prev => ({ ...prev, [fileId]: thumbUrl }));
+            }
+          } finally {
+            processingRef.current.delete(fileId);
+            if (driveQueue.length > 0 && !abortController.signal.aborted) {
+              processNextDrive();
+            }
+          }
+        };
+
+        const drivePromises = [];
+        for (let i = 0; i < Math.min(MAX_DRIVE_CONCURRENT, driveFilesNeedingThumbs.length); i++) {
+          drivePromises.push(processNextDrive());
+        }
+      }
+
+      // --- 3. DROPBOX ---
+      const dropboxFilesNeedingThumbs = dropboxFiles.filter(file => {
+        const fileId = file.dropboxId;
+        return !videoThumbsRef.current[fileId] && !processingRef.current.has(fileId);
+      });
+
+      if (dropboxFilesNeedingThumbs.length > 0 && !abortController.signal.aborted) {
+        dropboxFilesNeedingThumbs.forEach(file => processingRef.current.add(file.dropboxId));
+        const BATCH_SIZE = 25;
+
+        for (let i = 0; i < dropboxFilesNeedingThumbs.length; i += BATCH_SIZE) {
+          if (abortController.signal.aborted) break;
+          const batch = dropboxFilesNeedingThumbs.slice(i, i + BATCH_SIZE);
+          const filesData = batch.map(f => ({ id: f.dropboxId, link: f.link }));
+
+          try {
+            const response = await fetch(`${API_BASE_URL}/api/dropbox/thumbnails/batch`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify({ files: filesData }),
+              signal: abortController.signal
+            });
+
+            if (response.ok) {
+              const data = await response.json();
+              const newThumbs = {};
+              batch.forEach(file => {
+                const dId = file.dropboxId;
+                if (data.thumbnails && data.thumbnails[dId]) {
+                  newThumbs[dId] = data.thumbnails[dId];
+                } else {
+                  newThumbs[dId] = file.icon || "https://api.withblip.com/thumbnail.jpg";
+                }
+              });
+              setVideoThumbs(prev => ({ ...prev, ...newThumbs }));
+            }
+          } catch (error) {
+            if (error.name === 'AbortError') return;
+            console.error("Dropbox batch error:", error);
+            const failedThumbs = {};
+            batch.forEach(f => {
+              failedThumbs[f.dropboxId] = "https://api.withblip.com/thumbnail.jpg";
+            });
+            setVideoThumbs(prev => ({ ...prev, ...failedThumbs }));
+          } finally {
+            batch.forEach(f => processingRef.current.delete(f.dropboxId));
+          }
+        }
+      }
+
+      // --- 4. FRAME.IO ---
+      const frameioFilesNeedingThumbs = (frameioFiles || []).filter(file => {
+        const fileId = file.frameioId;
+        return !videoThumbsRef.current[fileId] && !processingRef.current.has(fileId);
+      });
+
+      if (frameioFilesNeedingThumbs.length > 0 && !abortController.signal.aborted) {
+        const newThumbs = {};
+        frameioFilesNeedingThumbs.forEach(file => {
+          newThumbs[file.frameioId] = file.pickerThumbnail || "https://api.withblip.com/thumbnail.jpg";
+        });
+        setVideoThumbs(prev => ({ ...prev, ...newThumbs }));
+      }
+    };
+
+    processThumbnails();
+
+    return () => {
+      abortController.abort();
+      processingRef.current.clear();
+    };
+  }, [files, driveFiles, dropboxFiles, frameioFiles, generateThumbnail, getDriveVideoThumbnail, setVideoThumbs]);
+
+
+  // Load preferences for selected advertiser
+  const { settings: advertiserPrefs, refetch: refetchAdvertiserPrefs, loading: loadingPrefs, documentExists } = useTikTokAdvertiserSettings(selectedAdvertiser)
+  const lastLoadedAdvertiserRef = useRef(null);
+
+  // Sync files with videoFile/videoPreview for backend submissions and video uploading hooks
+  useEffect(() => {
+    if (files && files.length > 0) {
+      const file = files[0]
+      setVideoFile(file)
+      if (file instanceof File) {
+        const previewUrl = URL.createObjectURL(file)
+        setVideoPreview(previewUrl)
+        return () => URL.revokeObjectURL(previewUrl)
+      } else if (file.url) {
+        setVideoPreview(file.url)
+      } else if (file.preview) {
+        setVideoPreview(file.preview)
+      }
+    } else {
+      setVideoFile(null)
+      setVideoPreview(null)
+    }
+  }, [files])
+
+  // Auth guard
+  useEffect(() => {
+    if (!authLoading && !isTikTokLoggedIn) {
+      navigate('/tiktok-login')
+    }
+  }, [isTikTokLoggedIn, authLoading, navigate])
+
+  // Auto-select advertiser account if only one exists
+  useEffect(() => {
+    if (tiktokAdvertisers.length === 1 && !selectedAdvertiser) {
+      const firstId = tiktokAdvertisers[0].advertiser_id || tiktokAdvertisers[0].id
+      setSelectedAdvertiser(firstId)
+    }
+  }, [tiktokAdvertisers, selectedAdvertiser])
+
+  // Save selected advertiser to localStorage to persist selection across page navigations
+  useEffect(() => {
+    if (selectedAdvertiser) {
+      try {
+        localStorage.setItem('last_selected_tiktok_advertiser', selectedAdvertiser);
+      } catch (e) { }
+    }
+  }, [selectedAdvertiser])
+
+  // Cache TikTok ads form state (mirrors Meta's Home.jsx caching pattern)
+  useEffect(() => {
+    if (!selectedAdvertiser) {
+      localStorage.removeItem(TIKTOK_CACHE_KEY);
+      return;
+    }
+    const cacheData = {
+      selectedAdvertiser,
+      campaigns,
+      selectedCampaign,
+      adGroups,
+      selectedAdGroup,
+      formStoreId,
+      formStoreName,
+      formStoreProductId,
+      formStoreProductName,
+      formStoreBcId,
+      formStoreCatalogId,
+      formCatalogId,
+      formCatalogName,
+      formProductId,
+      formProductName,
+      duplicateAdGroup,
+      newAdGroupName,
+      showDuplicateAdGroupBlock,
+      duplicateCampaign,
+      newCampaignName,
+      showDuplicateCampaignBlock,
+      timestamp: Date.now(),
+    };
+    try {
+      localStorage.setItem(TIKTOK_CACHE_KEY, JSON.stringify(cacheData));
+    } catch (e) { }
+  }, [
+    selectedAdvertiser,
+    campaigns,
+    selectedCampaign,
+    adGroups,
+    selectedAdGroup,
+    formStoreId,
+    formStoreName,
+    formStoreProductId,
+    formStoreProductName,
+    formStoreBcId,
+    formStoreCatalogId,
+    formCatalogId,
+    formCatalogName,
+    formProductId,
+    formProductName,
+    duplicateAdGroup,
+    newAdGroupName,
+    showDuplicateAdGroupBlock,
+    duplicateCampaign,
+    newCampaignName,
+    showDuplicateCampaignBlock,
+  ]);
+
+  // Sync state with preferences when they load (mirrors Meta's Home.jsx pattern)
+  // Sync state with preferences when they load (mirrors Meta's Home.jsx pattern)
+  useEffect(() => {
+    if (!selectedAdvertiser) return;
+
+    if (!loadingPrefs) {
+      // 1. Default Identity (always prioritize preference over cache, matching Meta page selection)
+      const resolvedIdentity = advertiserPrefs?.defaultIdentityId || "";
+      setSelectedIdentity(resolvedIdentity);
+
+      // 2. Default CTA
+      setCta(advertiserPrefs?.defaultCTAs || ["SHOP_NOW"]);
+
+      // 3. Default Landing URL
+      const defaultLink = advertiserPrefs?.links?.find(l => l.isDefault) || advertiserPrefs?.links?.[0];
+      setLandingUrl(defaultLink?.url || "");
+
+      // 4. Default Ad Text
+      const templateName = advertiserPrefs?.defaultTemplateName
+        || (advertiserPrefs?.copyTemplates ? Object.keys(advertiserPrefs.copyTemplates)[0] : '')
+        || '';
+      const template = templateName ? advertiserPrefs?.copyTemplates?.[templateName] : null;
+      if (template) {
+        if (template.texts?.length > 0) {
+          setAdTexts([...template.texts]);
+        } else if (template.text) {
+          setAdTexts([template.text]);
+        } else {
+          setAdTexts([""]);
+        }
+      } else {
+        setAdTexts([""]);
+      }
+    }
+  }, [
+    selectedAdvertiser,
+    loadingPrefs,
+    advertiserPrefs?.defaultIdentityId,
+    advertiserPrefs?.defaultCTAs,
+    advertiserPrefs?.links,
+    advertiserPrefs?.defaultTemplateName,
+    advertiserPrefs?.copyTemplates
+  ]);
+
+  // Reset form fields when selected advertiser is cleared (mirrors Meta's Home.jsx pattern)
+  useEffect(() => {
+    if (selectedAdvertiser) return;
+
+    setSelectedIdentity("");
+    setCta(["SHOP_NOW"]);
+    setLandingUrl("");
+    setAdTexts([""]);
+    setProductName("");
+    setProductImageUrl("");
+    setSelectedSavedProductId("");
+    setFormStoreId(null);
+    setFormStoreName(null);
+    setFormStoreProductId([]);
+    setFormStoreProductName(null);
+    setFormStoreBcId(null);
+    setFormStoreCatalogId(null);
+    setFormCatalogId(null);
+    setFormCatalogName(null);
+    setFormProductId([]);
+    setFormProductName(null);
+    setDuplicateAdGroup("");
+    setNewAdGroupName("");
+    setShowDuplicateAdGroupBlock(false);
+    setDuplicateCampaign("");
+    setNewCampaignName("");
+    setShowDuplicateCampaignBlock(false);
+    lastLoadedAdvertiserRef.current = null;
+  }, [selectedAdvertiser]);
+
+  // Auto-populate product from saved catalog selection in Firebase
+  const catalogRestoredRef = useRef({});
+  useEffect(() => {
+    if (!selectedAdvertiser) return;
+    if (catalogRestoredRef.current[selectedAdvertiser]) return;
+
+    fetch(`${API_BASE_URL}/api/tiktok/catalog/selection?advertiserId=${selectedAdvertiser}`, {
+      credentials: 'include',
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.selection?.product_id) {
+          const sel = data.selection;
+          // Only set if not already populated
+          if (!productName) setProductName(sel.product_name || '');
+          if (!productImageUrl) setProductImageUrl(sel.product_image_url || '');
+          if (!selectedSavedProductId) setSelectedSavedProductId(sel.product_id || '');
+          catalogRestoredRef.current[selectedAdvertiser] = true;
+        }
+      })
+      .catch(err => console.warn('[TikTokAds] Could not load catalog selection:', err.message));
+  }, [selectedAdvertiser]);
+
+  // Variant helper methods matching Home.jsx pattern
+  const cloneSnapshotValue = (value) => {
+    if (Array.isArray(value)) return [...value];
+    if (value && typeof value === "object") {
+      return JSON.parse(JSON.stringify(value));
+    }
+    return value;
+  };
+
+  const snapshotValuesEqual = (left, right) => JSON.stringify(left ?? null) === JSON.stringify(right ?? null);
+
+  const captureCurrentSnapshot = useCallback(() => ({
+    adName,
+    adTexts,
+    cta,
+    landingUrl,
+    selectedIdentity,
+    sparkAuthCodes,
+    urlMode,
+    selectedCampaign,
+    selectedAdGroup,
+    duplicateAdGroup,
+    newAdGroupName,
+    showDuplicateAdGroupBlock,
+    duplicateCampaign,
+    newCampaignName,
+    showDuplicateCampaignBlock,
+    productName,
+    productImageUrl,
+    sellingPoints,
+    selectedSavedProductId,
+    formCatalogId,
+    formCatalogName,
+    formProductId: Array.isArray(formProductId) ? [...formProductId] : formProductId,
+    formProductName,
+    formStoreId,
+    formStoreName,
+    formStoreProductId: Array.isArray(formStoreProductId) ? [...formStoreProductId] : formStoreProductId,
+    formStoreProductName,
+    formStoreBcId,
+    formStoreCatalogId,
+  }), [
+    adName,
+    adTexts,
+    cta,
+    landingUrl,
+    selectedIdentity,
+    sparkAuthCodes,
+    urlMode,
+    selectedCampaign,
+    selectedAdGroup,
+    duplicateAdGroup,
+    newAdGroupName,
+    showDuplicateAdGroupBlock,
+    duplicateCampaign,
+    newCampaignName,
+    showDuplicateCampaignBlock,
+    productName,
+    productImageUrl,
+    sellingPoints,
+    selectedSavedProductId,
+    formCatalogId,
+    formCatalogName,
+    formProductId,
+    formProductName,
+    formStoreId,
+    formStoreName,
+    formStoreProductId,
+    formStoreProductName,
+    formStoreBcId,
+    formStoreCatalogId,
+  ]);
+
+  const hydrateFromSnapshot = useCallback((snapshot) => {
+    if (!snapshot) return;
+    setAdName(snapshot.adName || "");
+    setAdTexts(snapshot.adTexts || [""]);
+    const rawCta = snapshot.cta;
+    setCta(Array.isArray(rawCta) ? rawCta : (rawCta ? [rawCta] : ["SHOP_NOW"]));
+    setLandingUrl(snapshot.landingUrl || "");
+    setSelectedIdentity(snapshot.selectedIdentity || "");
+    setSparkAuthCodes(snapshot.sparkAuthCodes || [""]);
+    setUrlMode(snapshot.urlMode || "WEBSITE");
+    const rawCampaign = snapshot.selectedCampaign || "";
+    setSelectedCampaign(Array.isArray(rawCampaign) ? rawCampaign : (rawCampaign ? [rawCampaign] : []));
+    const rawAdGroup = snapshot.selectedAdGroup || "";
+    setSelectedAdGroup(Array.isArray(rawAdGroup) ? rawAdGroup : (rawAdGroup ? [rawAdGroup] : []));
+    setDuplicateAdGroup(snapshot.duplicateAdGroup || "");
+    setNewAdGroupName(snapshot.newAdGroupName || "");
+    setShowDuplicateAdGroupBlock(Boolean(snapshot.showDuplicateAdGroupBlock));
+    setDuplicateCampaign(snapshot.duplicateCampaign || "");
+    setNewCampaignName(snapshot.newCampaignName || "");
+    setShowDuplicateCampaignBlock(Boolean(snapshot.showDuplicateCampaignBlock));
+    setProductName(snapshot.productName || "");
+    setProductImageUrl(snapshot.productImageUrl || "");
+    setSellingPoints(snapshot.sellingPoints || []);
+    setSelectedSavedProductId(snapshot.selectedSavedProductId || "");
+    setFormCatalogId(snapshot.formCatalogId ?? null);
+    setFormCatalogName(snapshot.formCatalogName ?? null);
+    const rawProductId = snapshot.formProductId;
+    setFormProductId(Array.isArray(rawProductId) ? rawProductId : (rawProductId ? [rawProductId] : []));
+    setFormProductName(snapshot.formProductName ?? null);
+    setFormStoreId(snapshot.formStoreId ?? null);
+    setFormStoreName(snapshot.formStoreName ?? null);
+    const rawStoreProductId = snapshot.formStoreProductId;
+    setFormStoreProductId(Array.isArray(rawStoreProductId) ? rawStoreProductId : (rawStoreProductId ? [rawStoreProductId] : []));
+    setFormStoreProductName(snapshot.formStoreProductName ?? null);
+    setFormStoreBcId(snapshot.formStoreBcId ?? null);
+    setFormStoreCatalogId(snapshot.formStoreCatalogId ?? null);
+  }, []);
+
+  const switchVariant = useCallback((targetId) => {
+    if (targetId === activeVariantId) return;
+
+    const targetVariant = variants.find((variant) => variant.id === targetId);
+    if (!targetVariant) return;
+
+    const currentSnapshot = captureCurrentSnapshot();
+
+    setVariants((prev) => prev.map((variant) => {
+      if (variant.id === activeVariantId) {
+        return { ...variant, snapshot: currentSnapshot };
+      }
+      if (variant.id === targetId) {
+        return { ...variant, snapshot: null };
+      }
+      return variant;
+    }));
+
+    hydrateFromSnapshot(targetVariant.snapshot);
+    setActiveVariantId(targetId);
+    setSelectedFiles(new Set());
+  }, [activeVariantId, captureCurrentSnapshot, hydrateFromSnapshot, variants]);
+
+  const getVariantSnapshot = useCallback((variantId) => {
+    if (variantId === activeVariantId) {
+      return captureCurrentSnapshot();
+    }
+    return variants.find((variant) => variant.id === variantId)?.snapshot || null;
+  }, [activeVariantId, captureCurrentSnapshot, variants]);
+
+  const isFormFieldModified = useCallback((fieldKeys) => {
+    if (activeVariantId === "default") return false;
+
+    const activeSnapshot = getVariantSnapshot(activeVariantId);
+    const defaultSnapshot = getVariantSnapshot("default");
+    if (!activeSnapshot || !defaultSnapshot) return false;
+
+    const keys = Array.isArray(fieldKeys) ? fieldKeys : [fieldKeys];
+    return keys.some((key) => !snapshotValuesEqual(activeSnapshot[key], defaultSnapshot[key]));
+  }, [activeVariantId, getVariantSnapshot]);
+
+  const handleAddVariant = useCallback(() => {
+    const usedLetters = new Set(
+      variants
+        .filter((variant) => variant.id !== "default")
+        .map((variant) => variant.name.replace(/^(Form|Variant)\s+/, ""))
+    );
+    const nextLetter = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").find((letter) => !usedLetters.has(letter));
+
+    if (!nextLetter) {
+      toast.error("Maximum 26 Variants");
+      return;
+    }
+
+    const currentSnapshot = captureCurrentSnapshot();
+    const defaultSnapshot = cloneSnapshotValue(getVariantSnapshot("default")) || cloneSnapshotValue(currentSnapshot);
+    const newVariantId = uuidv4();
+
+    setVariants((prev) => [
+      ...prev.map((variant) => (
+        variant.id === activeVariantId
+          ? { ...variant, snapshot: currentSnapshot }
+          : variant
+      )),
+      { id: newVariantId, name: `Variant ${nextLetter}`, snapshot: defaultSnapshot }
+    ]);
+    setSelectedFiles(new Set());
+  }, [activeVariantId, captureCurrentSnapshot, getVariantSnapshot, variants]);
+
+  const handleDeleteVariant = useCallback((variantId) => {
+    if (variantId === "default") return;
+
+    const defaultVariant = variants.find((variant) => variant.id === "default");
+    const wasActive = variantId === activeVariantId;
+    const reassignedCount =
+      Object.values(fileVariantMap).filter((value) => value === variantId).length +
+      Object.values(groupVariantMap).filter((value) => value === variantId).length +
+      Object.values(postVariantMap).filter((value) => value === variantId).length;
+
+    setFileVariantMap((prev) => {
+      const next = { ...prev };
+      Object.keys(next).forEach((key) => {
+        if (next[key] === variantId) delete next[key];
+      });
+      return next;
+    });
+
+    setGroupVariantMap((prev) => {
+      const next = { ...prev };
+      Object.keys(next).forEach((key) => {
+        if (next[key] === variantId) delete next[key];
+      });
+      return next;
+    });
+
+    setPostVariantMap((prev) => {
+      const next = { ...prev };
+      Object.keys(next).forEach((key) => {
+        if (next[key] === variantId) delete next[key];
+      });
+      return next;
+    });
+
+    setVariants((prev) => prev.filter((variant) => variant.id !== variantId));
+
+    if (wasActive) {
+      hydrateFromSnapshot(defaultVariant?.snapshot);
+      setActiveVariantId("default");
+      setVariants((prev) => prev.map((variant) => (
+        variant.id === "default" ? { ...variant, snapshot: null } : variant
+      )));
+    }
+
+    toast.success(
+      reassignedCount > 0
+        ? `Variant deleted. ${reassignedCount} assignment${reassignedCount === 1 ? "" : "s"} moved to Default.`
+        : "Variant deleted."
+    );
+  }, [activeVariantId, fileVariantMap, groupVariantMap, postVariantMap, hydrateFromSnapshot, variants]);
+
+  const handleDeleteAllVariants = useCallback(() => {
+    if (variants.length <= 1) return;
+
+    const defaultVariant = variants.find((variant) => variant.id === "default");
+    const defaultSnapshot = activeVariantId === "default"
+      ? captureCurrentSnapshot()
+      : defaultVariant?.snapshot;
+    const clearedAssignments = Object.keys(fileVariantMap).length + Object.keys(groupVariantMap).length + Object.keys(postVariantMap).length;
+
+    setFileVariantMap({});
+    setGroupVariantMap({});
+    setPostVariantMap({});
+    setVariants([{ id: "default", name: "Default", snapshot: null }]);
+    setSelectedFiles(new Set());
+
+    if (activeVariantId !== "default" && defaultSnapshot) {
+      hydrateFromSnapshot(defaultSnapshot);
+    }
+
+    setActiveVariantId("default");
+
+    toast.success(
+      clearedAssignments > 0
+        ? `All variants deleted. ${clearedAssignments} assignment${clearedAssignments === 1 ? "" : "s"} moved to Default.`
+        : "All variants deleted."
+    );
+  }, [
+    activeVariantId,
+    captureCurrentSnapshot,
+    fileVariantMap,
+    groupVariantMap,
+    postVariantMap,
+    hydrateFromSnapshot,
+    variants,
+  ]);
+
+  // Sync variant cleanups when variants list changes
+  useEffect(() => {
+    const activeVariantIds = new Set(variants.map((v) => v.id))
+    setFileVariantMap((prev) => {
+      const next = { ...prev }
+      let changed = false
+      Object.keys(next).forEach((key) => {
+        if (!activeVariantIds.has(next[key])) {
+          delete next[key]
+          changed = true
+        }
+      })
+      return changed ? next : prev
+    })
+    setGroupVariantMap((prev) => {
+      const next = { ...prev }
+      let changed = false
+      Object.keys(next).forEach((key) => {
+        if (!activeVariantIds.has(next[key])) {
+          delete next[key]
+          changed = true
+        }
+      })
+      return changed ? next : prev
+    })
+    setPostVariantMap((prev) => {
+      const next = { ...prev }
+      let changed = false
+      Object.keys(next).forEach((key) => {
+        if (!activeVariantIds.has(next[key])) {
+          delete next[key]
+          changed = true
+        }
+      })
+      return changed ? next : prev
+    })
+  }, [variants])
+
+  // Clean file variant map if files are deleted
+  useEffect(() => {
+    const validFileIds = new Set([
+      ...files.map((file) => file.isDrive ? file.id : file.uniqueId || file.name),
+      ...driveFiles.map((file) => file.id),
+      ...dropboxFiles.map((file) => file.dropboxId),
+    ])
+    setFileVariantMap((prev) => {
+      const next = { ...prev }
+      let changed = false
+      Object.keys(next).forEach((key) => {
+        if (!validFileIds.has(key)) {
+          delete next[key]
+          changed = true
+        }
+      })
+      return changed ? next : prev
+    })
+  }, [files, driveFiles, dropboxFiles])
+
+  if (authLoading) return null;
+  if (!isTikTokLoggedIn) return null;
+
+  return (
+    <>
+      {showMobileBanner && (
+        <div className="mobile-message fixed inset-0 bg-white flex flex-col items-center justify-center p-6 z-[100] lg:hidden">
+          <div className="text-center max-w-md">
+            <img src={DesktopIcon} alt="Desktop computer" className="w-24 h-24 mb-4 mx-auto" />
+            <h1 className="text-2xl font-bold text-gray-900 mb-4">Desktop Recommended</h1>
+            <p className="text-gray-600 mb-6">
+              Thanks for signing up! <br></br>Blip works best on a bigger screen. <br></br> We've sent you an email to help you<br></br> pick up from here.
+            </p>
+            <button
+              onClick={() => setShowMobileBanner(false)}
+              className="mt-4 px-6 py-2 text-sm text-white bg-blue-600 rounded-xl hover:text-blue-700 transition-colors"
+            >
+              Continue Anyway
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="w-full max-w-[1600px] mx-auto py-8 px-2 sm:px-4 md:px-6">
+        <Toaster richColors position="bottom-left" closeButton />
+
+        <TikTokHeader showMessenger={showMessenger} hideMessenger={hideMessenger} />
+
+        <div className="flex flex-col lg:flex-row gap-6 min-w-0">
+          {/* Left Column: Form and Duplicator (55% width) */}
+          <div className={`flex-1 lg:flex-[55] min-w-0 space-y-6 ${(!userHasActiveAccess || !isTikTokLoggedIn) ? 'pointer-events-none opacity-40 cursor-not-allowed select-none' : ''}`}>
+            <TikTokAdCreationForm
+              advertiserId={selectedAdvertiser}
+              advertisers={tiktokAdvertisers}
+              onAdvertiserChange={setSelectedAdvertiser}
+              advertiserPrefs={advertiserPrefs}
+              refetchAdvertiserPrefs={refetchAdvertiserPrefs}
+              documentExists={documentExists}
+              loadingPrefs={loadingPrefs}
+
+              // Lifted Form State
+              adName={adName} setAdName={setAdName}
+              adTexts={adTexts} setAdTexts={setAdTexts}
+              cta={cta} setCta={setCta}
+              landingUrl={landingUrl} setLandingUrl={setLandingUrl}
+              productName={productName} setProductName={setProductName}
+              productImageUrl={productImageUrl} setProductImageUrl={setProductImageUrl}
+              sellingPoints={sellingPoints} setSellingPoints={setSellingPoints}
+              selectedSavedProductId={selectedSavedProductId} setSelectedSavedProductId={setSelectedSavedProductId}
+              videoFile={videoFile} setVideoFile={setVideoFile}
+              videoPreview={videoPreview} setVideoPreview={setVideoPreview}
+              driveFiles={driveFiles} setDriveFiles={setDriveFiles}
+              dropboxFiles={dropboxFiles} setDropboxFiles={setDropboxFiles}
+              selectedIdentity={selectedIdentity} setSelectedIdentity={setSelectedIdentity}
+              formStoreId={formStoreId} setFormStoreId={setFormStoreId}
+              formStoreName={formStoreName} setFormStoreName={setFormStoreName}
+              formStoreProductId={formStoreProductId} setFormStoreProductId={setFormStoreProductId}
+              formStoreProductName={formStoreProductName} setFormStoreProductName={setFormStoreProductName}
+              formStoreBcId={formStoreBcId} setFormStoreBcId={setFormStoreBcId}
+              formStoreCatalogId={formStoreCatalogId} setFormStoreCatalogId={setFormStoreCatalogId}
+              formCatalogId={formCatalogId} setFormCatalogId={setFormCatalogId}
+              formCatalogName={formCatalogName} setFormCatalogName={setFormCatalogName}
+              formProductId={formProductId} setFormProductId={setFormProductId}
+              formProductName={formProductName} setFormProductName={setFormProductName}
+              sparkAuthCodes={sparkAuthCodes} setSparkAuthCodes={setSparkAuthCodes}
+              urlMode={urlMode} setUrlMode={setUrlMode}
+              adType={adType} setAdType={setAdType}
+              importedPosts={importedPosts} setImportedPosts={setImportedPosts}
+
+              // Form Fetching States
+              campaigns={campaigns} setCampaigns={setCampaigns}
+              adGroups={adGroups} setAdGroups={setAdGroups}
+              selectedCampaign={selectedCampaign} setSelectedCampaign={setSelectedCampaign}
+              selectedAdGroup={selectedAdGroup} setSelectedAdGroup={setSelectedAdGroup}
+              duplicateAdGroup={duplicateAdGroup} setDuplicateAdGroup={setDuplicateAdGroup}
+              newAdGroupName={newAdGroupName} setNewAdGroupName={setNewAdGroupName}
+              showDuplicateAdGroupBlock={showDuplicateAdGroupBlock} setShowDuplicateAdGroupBlock={setShowDuplicateAdGroupBlock}
+              duplicateCampaign={duplicateCampaign} setDuplicateCampaign={setDuplicateCampaign}
+              newCampaignName={newCampaignName} setNewCampaignName={setNewCampaignName}
+              showDuplicateCampaignBlock={showDuplicateCampaignBlock} setShowDuplicateCampaignBlock={setShowDuplicateCampaignBlock}
+              identities={identities} setIdentities={setIdentities}
+              files={files} setFiles={setFiles}
+
+              // Variants Props
+              variants={variants}
+              setVariants={setVariants}
+              activeVariantId={activeVariantId}
+              setActiveVariantId={setActiveVariantId}
+              switchVariant={switchVariant}
+              handleAddVariant={handleAddVariant}
+              handleDeleteVariant={handleDeleteVariant}
+              handleDeleteAllVariants={handleDeleteAllVariants}
+              isFormFieldModified={isFormFieldModified}
+              fileVariantMap={fileVariantMap}
+              setFileVariantMap={setFileVariantMap}
+              groupVariantMap={groupVariantMap}
+              setGroupVariantMap={setGroupVariantMap}
+              postVariantMap={postVariantMap}
+              setPostVariantMap={setPostVariantMap}
+              selectedFiles={selectedFiles}
+              setSelectedFiles={setSelectedFiles}
+              onBeforeMediaClear={triggerMediaPreviewLaunch}
+            />
+          </div>
+
+          {/* Right Column: Media Preview (45% width) */}
+          <div className={`flex-1 lg:flex-[45] min-w-0 ${(!userHasActiveAccess || !isTikTokLoggedIn) ? 'pointer-events-none opacity-40 cursor-not-allowed select-none' : ''}`}>
+            <ErrorBoundary>
+              <TikTokMediaPreview
+                files={[...files, ...driveFiles.map((f) => ({ ...f, isDrive: true }))]}
+                setFiles={setFiles}
+                importedPosts={importedPosts}
+                setImportedPosts={setImportedPosts}
+                driveFiles={driveFiles}
+                setDriveFiles={setDriveFiles}
+                dropboxFiles={dropboxFiles}
+                setDropboxFiles={setDropboxFiles}
+                frameioFiles={frameioFiles}
+                setFrameioFiles={setFrameioFiles}
+                importedFiles={importedFiles}
+                setImportedFiles={setImportedFiles}
+                videoThumbs={videoThumbs}
+                isCarouselAd={isCarouselAd}
+                adType={adType} // Pass adType to MediaPreview ('NORMAL' or 'SPARK')
+                enablePlacementCustomization={enablePlacementCustomization}
+                setEnablePlacementCustomization={setEnablePlacementCustomization}
+                fileGroups={fileGroups}
+                setFileGroups={setFileGroups}
+                selectedAdSets={selectedAdSets}
+                adSets={adSets}
+                duplicateAdSet={duplicateAdSet}
+                selectedFiles={selectedFiles}
+                setSelectedFiles={setSelectedFiles}
+                selectedIgOrganicPosts={selectedIgOrganicPosts}
+                setSelectedIgOrganicPosts={setSelectedIgOrganicPosts}
+                variants={variants}
+                activeVariantId={activeVariantId}
+                handleAddVariant={() => { }} // Safe no-op to disable adding variants in TikTok
+                handleDeleteAllVariants={handleDeleteAllVariants}
+                fileVariantMap={fileVariantMap}
+                setFileVariantMap={setFileVariantMap}
+                groupVariantMap={groupVariantMap}
+                setGroupVariantMap={setGroupVariantMap}
+                postVariantMap={postVariantMap}
+                setPostVariantMap={setPostVariantMap}
+                hasSeenPowerupPopup={hasSeenPowerupPopup}
+                setShowPowerupPopup={setShowPowerupPopup}
+                isLaunchingMedia={isLaunchingMediaPreview}
+              />
+            </ErrorBoundary>
+          </div>
+        </div>
+      </div>
+    </>
+  )
+}

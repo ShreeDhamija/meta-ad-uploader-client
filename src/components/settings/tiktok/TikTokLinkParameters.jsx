@@ -1,0 +1,871 @@
+import { useState, useCallback, useMemo, useEffect } from "react"
+import { createPortal } from "react-dom"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
+import { Trash2, Plus, ChevronDown, X, Download, Settings2, Loader, Link as LinkIcon } from "lucide-react"
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
+import {
+    Command,
+    CommandInput,
+    CommandItem,
+    CommandList,
+} from "@/components/ui/command"
+import { toast } from "sonner";
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
+
+// TikTok-specific macro tokens
+const VALUE_SUGGESTIONS = [
+    "tiktok",
+    "paid",
+    "__CAMPAIGN_ID__",
+    "__CAMPAIGN_NAME__",
+    "__AID__",
+    "__AID_NAME__",
+    "__PLACEMENT__",
+    "__ADID_V2__",
+    "__ADID_V2_NAME__",
+    "__CID__",
+    "__CID_NAME__"
+];
+
+const DEFAULT_PREFILL_PAIRS = [
+    { key: "utm_source", value: "tiktok" },
+    { key: "utm_medium", value: "paid" },
+    { key: "utm_campaign", value: "__CAMPAIGN_NAME__" },
+    { key: "utm_content", value: "__ADID_V2_NAME__" },
+    { key: "utm_term", value: "__AID_NAME__" }
+];
+
+export default function TikTokLinkParameters({
+    links = [],
+    setLinks,
+    utmPairs = [],
+    setUtmPairs,
+    advertiserId,
+    clickTrackingUrl = "",
+    setClickTrackingUrl,
+    impressionTrackingUrl = "",
+    setImpressionTrackingUrl
+}) {
+    const [inputValue, setInputValue] = useState("")
+    const [openIndex, setOpenIndex] = useState(null)
+    const [dropdownCoords, setDropdownCoords] = useState({ top: 0, left: 0, width: 0 })
+
+    const updateDropdownCoords = useCallback(() => {
+        if (openIndex === null) return
+        const activeEl = document.activeElement
+        if (activeEl && activeEl.tagName === 'INPUT') {
+            const rect = activeEl.getBoundingClientRect()
+            setDropdownCoords({
+                top: rect.bottom,
+                left: rect.left,
+                width: rect.width
+            })
+        }
+    }, [openIndex])
+
+    useEffect(() => {
+        if (openIndex === null) return
+
+        updateDropdownCoords()
+
+        window.addEventListener('scroll', updateDropdownCoords, true)
+        window.addEventListener('resize', updateDropdownCoords)
+
+        return () => {
+            window.removeEventListener('scroll', updateDropdownCoords, true)
+            window.removeEventListener('resize', updateDropdownCoords)
+        }
+    }, [openIndex, updateDropdownCoords])
+
+    // Modal/Fetch States
+    const [showLinkImportModal, setShowLinkImportModal] = useState(false)
+    const [showUtmSetupModal, setShowUtmSetupModal] = useState(false)
+    const [isFetchingLinks, setIsFetchingLinks] = useState(false)
+    const [isFetchingUtms, setIsFetchingUtms] = useState(false)
+    const [linkImportPreview, setLinkImportPreview] = useState([])
+    const [utmFetchError, setUtmFetchError] = useState(false)
+
+    // Add Link Form
+    const [showAddForm, setShowAddForm] = useState(false)
+    const [newLinkUrl, setNewLinkUrl] = useState("")
+    const [linkDropdownOpen, setLinkDropdownOpen] = useState(false)
+    const [selectedLinkIndex, setSelectedLinkIndex] = useState(null)
+
+    // UTM Setup States
+    const [tempUtmPairs, setTempUtmPairs] = useState([])
+    const [rawUtmString, setRawUtmString] = useState("")
+
+    // Show add form when no links exist
+    useEffect(() => {
+        setShowAddForm(links.length === 0);
+    }, [links.length]);
+
+
+
+    const selectedLink = useMemo(() => {
+        if (!links || links.length === 0) return null;
+        if (selectedLinkIndex === null) {
+            const defaultLink = links.find(link => link.isDefault);
+            if (defaultLink) {
+                const defaultIndex = links.indexOf(defaultLink);
+                setSelectedLinkIndex(defaultIndex);
+                return defaultLink;
+            }
+            setSelectedLinkIndex(0);
+            return links[0];
+        }
+        if (selectedLinkIndex >= 0 && selectedLinkIndex < links.length) {
+            return links[selectedLinkIndex];
+        }
+        setSelectedLinkIndex(0);
+        return links[0];
+    }, [links, selectedLinkIndex]);
+
+    // --- Handlers: Link Management ---
+    const handleLinkSelect = useCallback((linkIndex) => {
+        setSelectedLinkIndex(linkIndex);
+        setLinkDropdownOpen(false);
+    }, []);
+
+    const handleImportLink = useCallback((linkUrl) => {
+        if (links.some(link => link.url === linkUrl)) {
+            toast.error("This link already exists");
+            return;
+        }
+        const newLink = {
+            url: linkUrl,
+            isDefault: links.length === 0
+        };
+        setLinks(prev => [...prev, newLink]);
+    }, [links, setLinks]);
+
+    const handleImportAllLinks = useCallback((event) => {
+        if (event) { event.stopPropagation(); event.preventDefault(); }
+
+        const newLinks = [];
+        for (const linkUrl of linkImportPreview) {
+            if (!links.some(link => link.url === linkUrl)) {
+                newLinks.push({
+                    url: linkUrl,
+                    isDefault: links.length === 0 && newLinks.length === 0
+                });
+            }
+        }
+
+        if (newLinks.length > 0) {
+            setLinks(prev => [...prev, ...newLinks]);
+        } else {
+            toast.info("All links already exist");
+        }
+    }, [linkImportPreview, links, setLinks]);
+
+    const handleAddNewLink = useCallback(() => {
+        if (!newLinkUrl.trim()) {
+            toast.error("Please enter a link URL");
+            return;
+        }
+
+        let urlError = "";
+        const urlString = newLinkUrl.trim();
+        if (!/^https:\/\//i.test(urlString)) {
+            urlError = "Link (URL) must start with https://";
+        } else {
+            try {
+                const urlObj = new URL(urlString);
+                if (!urlObj.hostname.includes('.')) {
+                    urlError = "Invalid Link (URL)";
+                }
+            } catch (_) {
+                urlError = "Link (URL) must be a complete and valid URL";
+            }
+        }
+
+        if (urlError) {
+            toast.error(urlError);
+            return;
+        }
+
+        if (links.some(link => link.url === newLinkUrl.trim())) {
+            toast.error("This link already exists");
+            return;
+        }
+        const newLink = {
+            url: newLinkUrl.trim(),
+            isDefault: links.length === 0
+        };
+        setLinks(prev => [...prev, newLink]);
+        setSelectedLinkIndex(links.length);
+        setNewLinkUrl("");
+        setShowAddForm(false);
+    }, [newLinkUrl, links, setLinks]);
+
+    const handleSetAsDefault = useCallback(() => {
+        if (!selectedLink || selectedLink.isDefault) return;
+        setLinks(prev => prev.map((link, index) => ({
+            ...link,
+            isDefault: index === selectedLinkIndex
+        })));
+    }, [selectedLink, selectedLinkIndex, setLinks]);
+
+    const handleDeleteLink = useCallback((linkUrl) => {
+        const linkIndex = links.findIndex(l => l.url === linkUrl);
+        if (linkIndex === -1) return;
+
+        const linkToDelete = links[linkIndex];
+        const updatedLinks = links.filter((_, index) => index !== linkIndex);
+
+        if (linkToDelete.isDefault && updatedLinks.length > 0) {
+            updatedLinks[0].isDefault = true;
+        }
+        setLinks(updatedLinks);
+        if (selectedLinkIndex >= updatedLinks.length) {
+            setSelectedLinkIndex(updatedLinks.length - 1);
+        } else if (selectedLinkIndex > linkIndex) {
+            setSelectedLinkIndex(selectedLinkIndex - 1);
+        }
+        setLinkDropdownOpen(false);
+    }, [links, selectedLinkIndex, setLinks]);
+
+    // --- API: Import Links Only ---
+    const handleOpenLinkImport = useCallback(async () => {
+        if (!advertiserId) {
+            toast.error("No advertiser account selected");
+            return;
+        }
+        setIsFetchingLinks(true);
+        setShowLinkImportModal(true);
+        try {
+            const res = await fetch(
+                `${API_BASE_URL}/api/tiktok/fetch-recent-utms?advertiserId=${advertiserId}`,
+                { credentials: 'include' }
+            );
+            const data = await res.json();
+            if (data.links) {
+                setLinkImportPreview(data.links);
+            } else {
+                setLinkImportPreview([]);
+            }
+        } catch (err) {
+            toast.error("Failed to fetch recent links");
+            console.error("Link import error:", err);
+        } finally {
+            setIsFetchingLinks(false);
+        }
+    }, [advertiserId]);
+
+    // --- API: Setup UTMs (Fetch & Modal) ---
+    const handleOpenUtmSetup = useCallback(async () => {
+        setShowUtmSetupModal(true);
+        setIsFetchingUtms(true);
+        setUtmFetchError(false); // Reset error state on open
+
+        // Copy current real settings to draft
+        let currentPairs = utmPairs.length > 0 ? [...utmPairs] : [];
+        setTempUtmPairs(currentPairs);
+
+        if (!advertiserId) {
+            setIsFetchingUtms(false);
+            if (currentPairs.length === 0) {
+                setTempUtmPairs(DEFAULT_PREFILL_PAIRS);
+            }
+            return;
+        }
+
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/tiktok/fetch-recent-utms?advertiserId=${advertiserId}`, {
+                credentials: 'include'
+            });
+            const data = await res.json();
+
+            if (data.pairs && data.pairs.length > 0) {
+                setTempUtmPairs(data.pairs); // Update Draft
+            } else if (currentPairs.length === 0) {
+                setTempUtmPairs(DEFAULT_PREFILL_PAIRS); // Suggest Defaults in Draft
+                setUtmFetchError(true);
+            }
+        } catch (err) {
+            if (currentPairs.length === 0) {
+                setTempUtmPairs(DEFAULT_PREFILL_PAIRS);
+                setUtmFetchError(true);
+            }
+        } finally {
+            setIsFetchingUtms(false);
+        }
+    }, [advertiserId, utmPairs]);
+
+    const handleExtractUtms = useCallback(() => {
+        if (!rawUtmString.trim()) return;
+        const queryString = rawUtmString.includes('?') ? rawUtmString.split('?')[1] : rawUtmString;
+
+        const newPairs = queryString.split('&')
+            .filter(part => part.includes('='))
+            .map(part => {
+                const [key, ...valueParts] = part.split('=');
+                return {
+                    key: decodeURIComponent(key).trim(),
+                    value: decodeURIComponent(valueParts.join('=')).trim()
+                };
+            });
+
+        if (newPairs.length > 0) {
+            setTempUtmPairs(newPairs);
+            setRawUtmString("");
+            toast.success("UTMs extracted successfully");
+        } else {
+            toast.error("No valid UTM parameters found");
+        }
+    }, [rawUtmString]);
+
+    const handleSaveUtms = useCallback(() => {
+        setUtmPairs(tempUtmPairs);
+        setShowUtmSetupModal(false);
+    }, [tempUtmPairs, setUtmPairs]);
+
+    const handleTempPairChange = useCallback((index, field, value) => {
+        setTempUtmPairs(prev => prev.map((pair, i) => i === index ? { ...pair, [field]: value } : pair))
+    }, []);
+
+    const handleAddTempPair = useCallback(() => setTempUtmPairs(prev => [...prev, { key: "", value: "" }]), []);
+    const handleDeleteTempPair = useCallback((index) => setTempUtmPairs(prev => prev.filter((_, i) => i !== index)), []);
+
+    // Memoized filtered suggestions
+    const filteredSuggestions = useMemo(() =>
+        VALUE_SUGGESTIONS.filter(suggestion =>
+            inputValue === "" || suggestion.toLowerCase().includes(inputValue.toLowerCase())
+        ),
+        [inputValue]
+    );
+
+    return (
+        <div className="p-4 bg-[#f5f5f5] rounded-2xl space-y-3 w-full max-w-3xl">
+            {/* Section Header */}
+            <div className="flex items-start justify-between">
+                <div className="flex items-center gap-2">
+                    <LinkIcon
+                        className="w-4 h-4 grayscale brightness-75 contrast-75 opacity-60"
+                    />
+                    <span className="text-sm font-medium">Link Parameters</span>
+                </div>
+                <Button
+                    variant="ghost"
+                    className="flex items-center text-xs rounded-xl px-3 py-1 bg-zinc-800 text-white hover:text-white hover:bg-black"
+                    onClick={handleOpenLinkImport}
+                >
+                    <Download className="w-4 h-4" />
+                    Import Links from Recent Ads
+                </Button>
+            </div>
+
+            {/* Link Selection and Management */}
+            <div className="space-y-2">
+                <div className="space-y-1">
+                    <label className="text-sm font-semibold">Landing Page Links</label>
+                    <p className="text-xs text-gray-500">
+                        Add and set default links for your ads.
+                    </p>
+                </div>
+
+                {links.length > 0 && (
+                    <div className="flex gap-2 items-center">
+                        <Popover open={linkDropdownOpen} onOpenChange={setLinkDropdownOpen}>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    variant="outline"
+                                    role="combobox"
+                                    className="flex-1 justify-between rounded-2xl border border-gray-300 bg-white shadow hover:bg-white px-3 py-4.5"
+                                    disabled={links.length === 0}
+                                >
+                                    {selectedLink ? (
+                                        <div className="flex items-center justify-between w-full">
+                                            <span className="text-sm truncate max-w-[350px]">
+                                                {selectedLink.url}
+                                            </span>
+                                            {selectedLink.isDefault && (
+                                                <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-lg">
+                                                    Default
+                                                </span>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        "No links available"
+                                    )}
+                                    <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent
+                                className="min-w-[--radix-popover-trigger-width] w-auto !max-w-none p-0 bg-white shadow-lg rounded-2xl"
+                                align="start"
+                                sideOffset={5}
+                                side="bottom"
+                                avoidCollisions={false}
+                                style={{
+                                    minWidth: "var(--radix-popover-trigger-width)",
+                                    width: "auto",
+                                }}
+                            >
+                                <Command>
+                                    <CommandList className="max-h-[500px] overflow-y-auto p-1">
+                                        {links.map((link, index) => (
+                                            <CommandItem
+                                                key={link.url}
+                                                value={link.url}
+                                                onSelect={() => handleLinkSelect(index)}
+                                                className="cursor-pointer px-3 py-2 hover:bg-gray-100 rounded-xl m-1 group relative"
+                                            >
+                                                <div className="flex items-center justify-between w-full pr-6">
+                                                    <div className="flex items-center min-w-0 flex-1">
+                                                        <span className="text-sm truncate max-w-[500px]" title={link.url}>
+                                                            {link.url}
+                                                        </span>
+                                                        {link.isDefault && (
+                                                            <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-lg whitespace-nowrap flex-shrink-0">
+                                                                Default
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    className="absolute right-2 p-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-red-50 rounded flex-shrink-0"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        e.preventDefault();
+                                                        handleDeleteLink(link.url);
+                                                    }}
+                                                >
+                                                    <Trash2 className="w-3 h-3 text-gray-400 hover:text-red-500" />
+                                                </button>
+                                            </CommandItem>
+                                        ))}
+                                    </CommandList>
+                                </Command>
+                            </PopoverContent>
+                        </Popover>
+
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="rounded-xl px-3 whitespace-nowrap"
+                            disabled={!selectedLink || selectedLink.isDefault}
+                            onClick={handleSetAsDefault}
+                        >
+                            Set as Default
+                        </Button>
+                    </div>
+                )}
+
+                {showAddForm ? (
+                    <div className="border border-gray-200 rounded-xl p-3 bg-white space-y-3">
+                        <div className="space-y-2">
+                            <Input
+                                placeholder="Enter Link URL"
+                                value={newLinkUrl}
+                                onChange={(e) => {
+                                    let val = e.target.value;
+                                    if (val && !val.startsWith("https://")) {
+                                        const httpsPrefix = "https://";
+                                        if (!httpsPrefix.startsWith(val)) {
+                                            val = "https://" + val;
+                                        }
+                                    }
+                                    setNewLinkUrl(val);
+                                }}
+                                className="rounded-2xl border-gray-300 py-4.5 bg-white shadow"
+                            />
+                        </div>
+                        <div className="flex gap-2">
+                            <Button
+                                onClick={handleAddNewLink}
+                                className="bg-blue-500 text-white rounded-xl hover:bg-blue-600"
+                                size="sm"
+                            >
+                                Add Link
+                            </Button>
+                            <Button
+                                onClick={() => {
+                                    setShowAddForm(false);
+                                    setNewLinkUrl("");
+                                }}
+                                variant="outline"
+                                className="rounded-xl"
+                                size="sm"
+                            >
+                                Cancel
+                            </Button>
+                        </div>
+                    </div>
+                ) : (
+                    <Button
+                        onClick={() => setShowAddForm(true)}
+                        className="bg-zinc-600 text-white w-full rounded-xl hover:bg-zinc-800 mt-2 h-[40px]"
+                    >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add New Link
+                    </Button>
+                )}
+            </div>
+
+            {/* UTM Parameters */}
+            <div className="pt-4 border-t border-gray-200">
+                <div className="space-y-1 mb-2">
+                    <label className="text-sm font-semibold">UTM Parameters</label>
+                    <p className="text-xs text-gray-500">
+                        Configure tracking parameters for your links.
+                    </p>
+                </div>
+
+                {utmPairs.length > 0 && (
+                    <div className="mb-3">
+                        <p className="text-xs font-semibold mb-1 text-zinc-700">Saved UTMs</p>
+                        <div className="flex flex-wrap gap-2">
+                            {utmPairs.map((pair, i) => (
+                                pair.key && <span key={i} className="text-xs bg-gray-200 px-2 py-1 rounded-md text-gray-600">
+                                    {pair.key}={pair.value}
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                <Button
+                    onClick={handleOpenUtmSetup}
+                    className="bg-zinc-600 text-white w-full rounded-xl hover:bg-zinc-800 mt-2 h-[40px]"
+                >
+                    <Settings2 className="w-4 h-4 mr-2" />
+                    Set Up UTMs
+                </Button>
+            </div>
+
+            {/* Third-party tracking settings */}
+            <div className="pt-4 border-t border-gray-200 space-y-4">
+                <div className="space-y-1">
+                    <label className="text-sm font-semibold text-zinc-900 block">Third-party tracking settings</label>
+                </div>
+
+                <div className="space-y-1">
+                    <label className="text-xs font-medium text-gray-600 block">Impression tracking URL</label>
+                    <Input
+                        placeholder="Enter URL"
+                        value={impressionTrackingUrl}
+                        onChange={(e) => {
+                            let val = e.target.value;
+                            if (val && !val.startsWith("https://")) {
+                                const httpsPrefix = "https://";
+                                if (!httpsPrefix.startsWith(val)) {
+                                    val = "https://" + val;
+                                }
+                            }
+                            setImpressionTrackingUrl(val);
+                        }}
+                        className="rounded-2xl border-gray-300 py-4.5 bg-white shadow"
+                        autoComplete="off"
+                    />
+                    {impressionTrackingUrl && impressionTrackingUrl.trim() && (() => {
+                        let urlError = "Link (URL) must start with https://";
+                        const urlString = impressionTrackingUrl.trim();
+                        if (/^https:\/\//i.test(urlString)) {
+                            try {
+                                const urlObj = new URL(urlString);
+                                if (urlObj.hostname.includes('.')) {
+                                    return null;
+                                } else {
+                                    urlError = "Invalid Link (URL)";
+                                }
+                            } catch (_) {
+                                urlError = "Link (URL) must be a complete and valid URL";
+                            }
+                        }
+                        return <p className="text-xs text-red-500 font-medium mt-1">{urlError}</p>;
+                    })()}
+                </div>
+
+                <div className="space-y-1">
+                    <label className="text-xs font-medium text-gray-600 block">Click tracking URL</label>
+                    <Input
+                        placeholder="Enter URL"
+                        value={clickTrackingUrl}
+                        onChange={(e) => {
+                            let val = e.target.value;
+                            if (val && !val.startsWith("https://")) {
+                                const httpsPrefix = "https://";
+                                if (!httpsPrefix.startsWith(val)) {
+                                    val = "https://" + val;
+                                }
+                            }
+                            setClickTrackingUrl(val);
+                        }}
+                        className="rounded-2xl border-gray-300 py-4.5 bg-white shadow"
+                        autoComplete="off"
+                    />
+                    {clickTrackingUrl && clickTrackingUrl.trim() && (() => {
+                        let urlError = "Link (URL) must start with https://";
+                        const urlString = clickTrackingUrl.trim();
+                        if (/^https:\/\//i.test(urlString)) {
+                            try {
+                                const urlObj = new URL(urlString);
+                                if (urlObj.hostname.includes('.')) {
+                                    return null;
+                                } else {
+                                    urlError = "Invalid Link (URL)";
+                                }
+                            } catch (_) {
+                                urlError = "Link (URL) must be a complete and valid URL";
+                            }
+                        }
+                        return <p className="text-xs text-red-500 font-medium mt-1">{urlError}</p>;
+                    })()}
+                </div>
+            </div>
+
+            {/* --- MODAL 1: IMPORT LINKS --- */}
+            {showLinkImportModal && (
+                <div className="fixed inset-0 z-[9999] bg-black/30 flex justify-center items-center"
+                    style={{ top: -20, left: 0, right: 0, bottom: 0, position: 'fixed' }}
+                    onClick={() => setShowLinkImportModal(false)}
+                >
+                    <div className="bg-white rounded-2xl max-h-[80vh] overflow-y-auto w-[600px] shadow-xl relative border border-gray-200"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="sticky top-0 bg-white z-10 px-6 py-6 border-b border-gray-200 flex justify-between items-center">
+                            <h3 className="text-lg font-semibold">Import Recent Links</h3>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="rounded-full hover:bg-gray-100"
+                                onClick={() => setShowLinkImportModal(false)}
+                            >
+                                <X className="w-5 h-5" />
+                            </Button>
+                        </div>
+
+                        <div className="p-6">
+                            {isFetchingLinks ? (
+                                <div className="flex flex-col items-center justify-center py-10 space-y-4">
+                                    <Loader className="w-6 h-6 animate-spin text-gray-400" />
+                                    <span className="text-sm text-gray-600">Fetching links…</span>
+                                </div>
+                            ) : linkImportPreview.length > 0 ? (
+                                <>
+                                    <div className="flex items-center justify-between mb-4">
+                                        <p className="text-sm text-gray-500">
+                                            Found {linkImportPreview.length} recent link{linkImportPreview.length > 1 ? 's' : ''}.
+                                        </p>
+                                        <Button
+                                            className="bg-black text-white rounded-xl hover:bg-zinc-800 px-4"
+                                            onClick={handleImportAllLinks}
+                                        >
+                                            Import All
+                                        </Button>
+                                    </div>
+
+                                    <div className="space-y-4 max-h-[300px] overflow-y-auto">
+                                        {linkImportPreview.map((linkUrl, idx) => {
+                                            const alreadyExists = links.some(link => link.url === linkUrl);
+                                            return (
+                                                <div key={idx} className="flex gap-3 items-center">
+                                                    <div className={`flex-1 bg-gray-100 text-sm px-3 py-[10px] rounded-xl truncate ${alreadyExists ? 'opacity-50' : 'text-zinc-800'}`}>
+                                                        {linkUrl}
+                                                    </div>
+                                                    <Button
+                                                        size="sm"
+                                                        className="rounded-xl"
+                                                        variant={alreadyExists ? "outline" : "default"}
+                                                        disabled={alreadyExists}
+                                                        onClick={() => handleImportLink(linkUrl)}
+                                                    >
+                                                        {alreadyExists ? "Exists" : "Import"}
+                                                    </Button>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="py-10 text-center">
+                                    <p className="text-sm text-gray-500">No recent links found in your ads.</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* --- MODAL 2: UTM SETUP --- */}
+            {showUtmSetupModal && (
+                <div className="fixed inset-0 z-[9999] bg-black/30 flex justify-center items-center"
+                    style={{ top: -20, left: 0, right: 0, bottom: 0, position: 'fixed' }}
+                    onClick={() => setShowUtmSetupModal(false)}
+                >
+                    <div className="bg-white rounded-2xl max-h-[85vh] w-[600px] shadow-xl relative border border-gray-200 flex flex-col"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* Header */}
+                        <div className="px-6 py-5 border-b border-gray-200 flex justify-between items-center bg-white rounded-t-2xl">
+                            <div>
+                                <h3 className="text-lg font-semibold">Configure UTMs</h3>
+                                <p className="text-xs text-gray-500 mt-1">Manage your URL tracking parameters.</p>
+                            </div>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="rounded-full hover:bg-gray-100"
+                                onClick={() => setShowUtmSetupModal(false)}
+                            >
+                                <X className="w-5 h-5" />
+                            </Button>
+                        </div>
+
+                        {/* Content */}
+                        <div className="p-6 overflow-y-auto">
+                            {/* Extract Section */}
+                            <div className="mb-6 bg-gray-50 p-4 rounded-xl border border-gray-100">
+                                <label className="text-xs font-semibold text-gray-600 block mb-2">Extract from String</label>
+                                <div className="flex gap-2 items-center">
+                                    <Input
+                                        placeholder="Paste UTM string here eg: utm_source=tiktok&utm_campaign={{campaign.name}}&utm_medium=paid&utm_content={{ad.name}}"
+                                        value={rawUtmString}
+                                        onChange={(e) => setRawUtmString(e.target.value)}
+                                        className="rounded-2xl border-gray-300 bg-white shadow placeholder:text-xs h-9"
+                                    />
+                                    <Button
+                                        onClick={handleExtractUtms}
+                                        disabled={!rawUtmString}
+                                        className="bg-blue-600 text-white text-xs rounded-xl hover:bg-blue-700 whitespace-nowrap h-9"
+                                    >
+                                        Extract
+                                    </Button>
+                                </div>
+                            </div>
+
+                            {isFetchingUtms ? (
+                                <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                                    <Loader className="w-6 h-6 animate-spin text-gray-400" />
+                                    <span className="text-sm text-gray-600">Looking for recent UTMs...</span>
+                                </div>
+                            ) : (
+                                <>
+                                    {!utmFetchError && (
+                                        <div className="mb-4 p-3 bg-green-50 text-green-800 text-xs rounded-xl border border-green-100">
+                                            We found these UTMs from your recent ads.
+                                        </div>
+                                    )}
+
+                                    {utmFetchError && (
+                                        <div className="mb-4 p-3 bg-blue-50 text-blue-800 text-xs rounded-xl border border-blue-100">
+                                            No recent UTMs found on Ad Account. Showing suggested default values.
+                                        </div>
+                                    )}
+
+                                    <div className="flex flex-col space-y-3">
+                                        {tempUtmPairs.map((pair, i) => (
+                                            <div key={i} className="flex gap-2 items-center">
+                                                {/* KEY INPUT */}
+                                                <Input
+                                                    placeholder="Key"
+                                                    value={pair.key}
+                                                    onChange={(e) => handleTempPairChange(i, "key", e.target.value)}
+                                                    className="rounded-2xl flex-1 border-gray-300 bg-white shadow h-10"
+                                                />
+
+                                                {/* VALUE INPUT */}
+                                                <div className="relative flex-1">
+                                                    <Input
+                                                        placeholder="Value"
+                                                        value={pair.value}
+                                                        onChange={(e) => {
+                                                            setInputValue(e.target.value)
+                                                            handleTempPairChange(i, "value", e.target.value)
+                                                        }}
+                                                        onFocus={(e) => {
+                                                            setInputValue("")
+                                                            setOpenIndex(i)
+                                                            const rect = e.target.getBoundingClientRect()
+                                                            setDropdownCoords({
+                                                                top: rect.bottom,
+                                                                left: rect.left,
+                                                                width: rect.width
+                                                            })
+                                                        }}
+                                                        onBlur={() => {
+                                                            setTimeout(() => {
+                                                                setOpenIndex(prev => prev === i ? null : prev)
+                                                            }, 150)
+                                                        }}
+                                                        className="rounded-2xl w-full border-gray-300 bg-white shadow h-10"
+                                                    />
+                                                    {openIndex === i && createPortal(
+                                                        <div
+                                                            style={{
+                                                                position: "fixed",
+                                                                top: `${dropdownCoords.top}px`,
+                                                                left: `${dropdownCoords.left}px`,
+                                                                width: `${dropdownCoords.width}px`,
+                                                                zIndex: 10000,
+                                                            }}
+                                                            className="bg-white border border-gray-200 rounded-xl shadow-lg mt-1 p-2 max-h-[200px] overflow-hidden"
+                                                        >
+                                                            <Command className="h-full">
+                                                                <CommandList className="max-h-[180px] overflow-y-auto">
+                                                                    {filteredSuggestions.map((suggestion, index) => (
+                                                                        <CommandItem
+                                                                            key={index}
+                                                                            value={suggestion}
+                                                                            onMouseDown={(e) => {
+                                                                                e.preventDefault();
+                                                                                handleTempPairChange(i, "value", suggestion)
+                                                                                setOpenIndex(null)
+                                                                            }}
+                                                                            className="cursor-pointer px-3 py-2 hover:bg-gray-100 rounded-lg text-sm"
+                                                                        >
+                                                                            {suggestion}
+                                                                        </CommandItem>
+                                                                    ))}
+                                                                </CommandList>
+                                                            </Command>
+                                                        </div>,
+                                                        document.body
+                                                    )}
+                                                </div>
+
+                                                {/* DELETE BUTTON */}
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => handleDeleteTempPair(i)}
+                                                    className="hover:bg-red-50 rounded-full h-8 w-8 shrink-0"
+                                                >
+                                                    <Trash2 className="w-4 h-4 text-gray-400 hover:text-red-500" />
+                                                </Button>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {/* ADD BUTTON */}
+                                    <Button
+                                        onClick={handleAddTempPair}
+                                        className="w-full rounded-xl mt-4 bg-zinc-800 text-white hover:bg-zinc-900 border-none shadow-none"
+                                    >
+                                        <Plus className="w-4 h-4 mr-2" />
+                                        Add New Parameter
+                                    </Button>
+                                </>
+                            )}
+                        </div>
+
+                        {/* Footer */}
+                        <div className="p-4 bg-white rounded-b-2xl border-t border-gray-200">
+                            <Button
+                                className="w-full bg-black text-white rounded-xl hover:bg-zinc-800 h-10"
+                                onClick={handleSaveUtms}
+                            >
+                                Save & Close
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    )
+}

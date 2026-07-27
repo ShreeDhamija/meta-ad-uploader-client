@@ -46,3 +46,20 @@ export const clearAnalyticsCache = () => {
       .forEach((key) => sessionStorage.removeItem(key))
   } catch { }
 };
+
+export const clearTikTokSessionData = () => {
+  try {
+    [
+      'tiktok_uid',
+      'tiktok_token',
+      'tiktok_advertiser_ids',
+      'tiktok_user',
+      'tiktok_ads_cache',
+      'last_selected_tiktok_advertiser',
+      'tiktokAdvertiserSettings_draft',
+    ].forEach((key) => localStorage.removeItem(key));
+    clearCache('tiktokAdvertisers');
+    clearCache('tiktokIdentities');
+    clearCache('tiktokSettings');
+  } catch { }
+};
