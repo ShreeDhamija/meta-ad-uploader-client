@@ -1020,6 +1020,8 @@ export default function AdCreationForm({
   const formInputChrome = `${formFieldChrome} focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0`;
   const formDropdownTriggerChrome = `${formFieldChrome} hover:bg-white`;
   const formTextareaChrome = "w-full border border-gray-300 rounded-2xl bg-white px-3 pt-2.5 pb-2.5 text-sm leading-5 resize-none shadow focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0";
+  const [ctaOpen, setCtaOpen] = useState(false);
+  const [ctaSearch, setCtaSearch] = useState("");
   const isFlexLikeAdType = adType === 'flexible' || adType === 'multi_media';
   const isCatalogueAd = adType === 'catalogue';
   const isPlacementCustomizedSingleDescription = enablePlacementCustomization && !isCarouselAd;
@@ -2278,6 +2280,18 @@ export default function AdCreationForm({
     { value: "WATCH_MORE", label: "Watch More" },
     { value: "GET_QUOTE", label: "Get Quote" },
   ]
+
+  const selectedCtaLabel = ctaOptions.find((option) => option.value === cta)?.label;
+  const lowerCtaSearch = ctaSearch.toLowerCase();
+  const filteredCtaOptions = ctaSearch
+    ? ctaOptions.filter((option) => option.label.toLowerCase().includes(lowerCtaSearch))
+    : ctaOptions;
+
+  const handleCtaSelect = (value) => {
+    setCta(value);
+    setCtaOpen(false);
+    setCtaSearch("");
+  };
 
   const availableLinks = adAccountSettings?.links || [];
   const defaultLink = availableLinks.find(l => l.isDefault) || availableLinks[0];
@@ -9238,31 +9252,62 @@ export default function AdCreationForm({
                       <CTAIcon className="w-4 h-4" />
                       Call-to-Action (CTA)
                     </Label>
-                    <Select disabled={!isLoggedIn} value={cta} onValueChange={setCta}>
-                      <SelectTrigger id="cta" className={formFieldChrome}>
-                        <SelectValue placeholder="Select a CTA" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white shadow-lg rounded-xl max-h-full p-0 pr-2">
-                        {ctaOptions.map((option) => (
-                          <SelectItem
-                            key={option.value}
-                            value={option.value}
-                            className={cn(
-                              "w-full text-left",
-                              "px-4 py-2 m-1 rounded-xl", // padding and spacing
-                              "transition-colors duration-150",
-                              "hover:bg-gray-100 hover:rounded-xl",
-                              "data-[state=selected]:!bg-gray-100 data-[state=selected]:rounded-xl",
-                              "data-[highlighted]:!bg-gray-100 data-[highlighted]:rounded-xl",
-                              cta === option.value && "!bg-gray-100 font-semibold rounded-xl"
-                            )}
-                          >
-                            {option.label}
-                          </SelectItem>
-
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Popover open={ctaOpen} onOpenChange={setCtaOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          id="cta"
+                          disabled={!isLoggedIn}
+                          variant="outline"
+                          role="combobox"
+                          className={cn(formDropdownTriggerChrome, "w-full justify-between px-3 text-sm font-normal")}
+                        >
+                          <span className={cn("truncate", !selectedCtaLabel && "text-muted-foreground")}>
+                            {selectedCtaLabel || "Select a CTA"}
+                          </span>
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        className="min-w-[--radix-popover-trigger-width] w-auto !max-w-none p-0 bg-white shadow-lg rounded-2xl"
+                        align="start"
+                        sideOffset={4}
+                        side="bottom"
+                        avoidCollisions={false}
+                        style={{
+                          minWidth: "var(--radix-popover-trigger-width)",
+                          width: "auto",
+                        }}
+                      >
+                        <Command filter={() => 1} loop={false} value="">
+                          <CommandInput
+                            placeholder="Search CTAs..."
+                            value={ctaSearch}
+                            onValueChange={setCtaSearch}
+                            className="bg-transparent"
+                            wrapperClassName="bg-gray-50 border-gray-200 rounded-[20px]"
+                          />
+                          <CommandList className="max-h-[400px] overflow-y-auto rounded-2xl custom-scrollbar" selectOnFocus={false}>
+                            <CommandGroup>
+                              {filteredCtaOptions.map((option) => (
+                                <CommandItem
+                                  key={option.value}
+                                  value={option.value}
+                                  onSelect={() => handleCtaSelect(option.value)}
+                                  className={`
+                                  px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150
+                                  hover:bg-gray-100
+                                  ${cta === option.value ? "bg-gray-100 font-semibold" : ""}
+                                  `}
+                                  data-selected={option.value === cta}
+                                >
+                                  {option.label}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                   </div>
                   {/* Shop Destination Selector - Only show when needed */}
                   <ShopDestinationSelector
