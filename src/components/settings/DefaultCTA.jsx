@@ -22,10 +22,11 @@ const CTA_OPTIONS = [
     { label: "Book Now", value: "BOOK_NOW" },
     { label: "Subscribe", value: "SUBSCRIBE" },
     { label: "See More", value: "SEE_MORE" },
-    { value: "INSTALL_MOBILE_APP", label: "Install Now" },
-    { value: "SEE_DETAILS", label: "See Details" },
-    { value: "LISTEN_NOW", label: "Listen Now" },
-    { value: "WATCH_MORE", label: "Watch More" },
+    { label: "Install Now", value: "INSTALL_MOBILE_APP" },
+    { label: "See Details", value: "SEE_DETAILS" },
+    { label: "Listen Now", value: "LISTEN_NOW" },
+    { label: "Watch More", value: "WATCH_MORE" },
+    { label: "Get Quote", value: "GET_QUOTE" },
 ];
 
 function DefaultCTA({ defaultCTA, setDefaultCTA }) {
