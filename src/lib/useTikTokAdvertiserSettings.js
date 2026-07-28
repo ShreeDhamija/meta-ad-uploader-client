@@ -38,7 +38,7 @@ export default function useTikTokAdvertiserSettings(advertiserId) {
     });
   }
 
-  const fetchTikTokSettings = useCallback(async (force = false) => {
+  const fetchTikTokSettings = useCallback(async () => {
     if (!advertiserId) return;
     setLoading(true);
     try {
@@ -48,15 +48,7 @@ export default function useTikTokAdvertiserSettings(advertiserId) {
       });
       const data = await res.json();
 
-      const hasConfiguredSettings = !!(
-        data.settings && (
-          (data.settings.links && data.settings.links.length > 0) ||
-          (data.settings.copyTemplates && Object.keys(data.settings.copyTemplates).length > 0) ||
-          (data.settings.defaultUTMs && data.settings.defaultUTMs.length > 0) ||
-          data.settings.defaultIdentityId ||
-          data.settings.catalogSelection
-        )
-      );
+      const hasConfiguredSettings = data.documentExists === true && !!data.settings;
 
       if (res.status === 404 || !hasConfiguredSettings || data.error === 'Document not found') {
         setDocumentExists(false);
@@ -99,7 +91,7 @@ export default function useTikTokAdvertiserSettings(advertiserId) {
   }, []);
 
   const refetch = useCallback(() => {
-    return fetchTikTokSettings(true);
+    return fetchTikTokSettings();
   }, [fetchTikTokSettings]);
 
   return {

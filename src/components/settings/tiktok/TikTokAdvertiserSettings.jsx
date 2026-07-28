@@ -5,9 +5,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { saveTikTokSettings } from "@/lib/saveTikTokSettings"
 import { useTikTokAuth } from "@/lib/TikTokAuthContext"
 import useTikTokAdvertiserSettings from "@/lib/useTikTokAdvertiserSettings"
+import useTeamSync from "@/lib/useTeamSync"
 import { useAppData } from "@/lib/AppContext"
 import { cn } from "@/lib/utils"
-import { Check, ChevronsUpDown, HelpCircle, Layout, Loader, Loader2, RefreshCcw, Info, Trash, Plus, X, Upload, Pencil, Folder, Search } from "lucide-react"
+import { Check, ChevronsUpDown, HelpCircle, Layout, Loader, Loader2, RefreshCcw, Info, Trash, Plus, X, Upload, Pencil, Folder, Search, CloudSync, CircleX } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import { toast } from "sonner"
@@ -84,7 +85,23 @@ export default function TikTokAdvertiserSettings({
 
         return null;
     });
-    const { settings: serverSettings, setSettings: setServerSettings, loading } = useTikTokAdvertiserSettings(selectedAdvertiser);
+    const {
+        settings: serverSettings,
+        setSettings: setServerSettings,
+        loading,
+        refetch: refetchSettings,
+    } = useTikTokAdvertiserSettings(selectedAdvertiser);
+    const [syncConfirmOpen, setSyncConfirmOpen] = useState(false);
+    const [syncConfirmAction, setSyncConfirmAction] = useState(null);
+    const {
+        loading: syncLoading,
+        toggling: syncToggling,
+        inTeam,
+        syncEnabled,
+        isOwner,
+        enableSync,
+        disableSync,
+    } = useTeamSync();
     const [localSettings, setLocalSettings] = useState(null);
     const settings = localSettings;
     const setSettings = (nextVal) => {
@@ -238,6 +255,56 @@ export default function TikTokAdvertiserSettings({
             setRefreshingAdvertisers(false);
         }
     };
+
+    const handleSyncToggle = useCallback(() => {
+        if (!isOwner) {
+            toast.info("Only the team owner can change sync settings.");
+            return;
+        }
+        setSyncConfirmAction(syncEnabled ? "disable" : "enable");
+        setSyncConfirmOpen(true);
+    }, [isOwner, syncEnabled]);
+
+    const handleSyncConfirm = useCallback(async () => {
+        setSyncConfirmOpen(false);
+        const result = syncConfirmAction === "enable"
+            ? await enableSync()
+            : await disableSync();
+
+        if (!result?.success) {
+            toast.error(result?.error || "Something went wrong.");
+            return;
+        }
+
+        if (syncConfirmAction === "enable") {
+            toast.success(
+                result.seededCount > 0
+                    ? `Sync enabled! ${result.seededCount} account settings synced across Meta and TikTok.`
+                    : "Sync enabled! Settings will be shared when anyone saves next."
+            );
+        } else {
+            toast.success("Sync disabled. Each member will use their own settings.");
+        }
+
+        try {
+            localStorage.removeItem(DRAFT_CACHE_KEY);
+        } catch {
+            // Sync still succeeds when draft storage is unavailable.
+        }
+        cacheRestoredRef.current = false;
+        initialSettingsRef.current = null;
+        setInitialSettings(null);
+        setLocalSettings(null);
+        if (selectedAdvertiser) {
+            await refetchSettings();
+        }
+    }, [
+        syncConfirmAction,
+        enableSync,
+        disableSync,
+        selectedAdvertiser,
+        refetchSettings,
+    ]);
 
     // Track initial settings & form settings (matching Meta's AdAccountSettings.jsx)
     useEffect(() => {
@@ -471,18 +538,52 @@ export default function TikTokAdvertiserSettings({
             <div className="space-y-2">
                 <div className="flex items-center justify-between">
                     <label className="text-md font-medium text-gray-800">Select Advertiser Account</label>
-                    {(subscriptionData?.planType === 'brand' || subscriptionData?.planType === 'starter') && (
-                        <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={onTriggerAdAccountPopup}
-                            className="rounded-xl border-gray-200 text-sm hover:bg-gray-50"
-                        >
-                            <Pencil className="mr-1.5 h-3.5 w-3.5 opacity-80" />
-                            Change Selected Accounts in Plan
-                        </Button>
-                    )}
+                    <div className="flex items-center gap-2">
+                        {!syncLoading && inTeam && (isOwner || syncEnabled) && (
+                            syncEnabled ? (
+                                isOwner ? (
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={handleSyncToggle}
+                                        disabled={syncToggling}
+                                        className="text-sm rounded-xl border-red-200 text-red-600 bg-white hover:bg-red-50 hover:text-red-700 shadow-xs"
+                                    >
+                                        {syncToggling ? (
+                                            <RefreshCcw className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                                        ) : (
+                                            <CircleX className="w-3.5 h-3.5 mr-1.5" />
+                                        )}
+                                        Disable Settings Sync With Team
+                                    </Button>
+                                ) : null
+                            ) : (
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    onClick={handleSyncToggle}
+                                    disabled={syncToggling || !isOwner}
+                                    className="text-sm rounded-xl bg-blue-600 hover:bg-blue-700 shadow-xs text-white"
+                                >
+                                    <CloudSync className={`w-3.5 h-3.5 mr-1.5 ${syncToggling ? "animate-spin" : ""}`} />
+                                    Sync Settings with Team
+                                </Button>
+                            )
+                        )}
+                        {(subscriptionData?.planType === 'brand' || subscriptionData?.planType === 'starter') && (
+                            <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={onTriggerAdAccountPopup}
+                                className="rounded-xl border-gray-200 text-sm hover:bg-gray-50"
+                            >
+                                <Pencil className="mr-1.5 h-3.5 w-3.5 opacity-80" />
+                                Change Selected Accounts in Plan
+                            </Button>
+                        )}
+                    </div>
                 </div>
                 <div className="flex items-center gap-2">
                     <Popover open={openAdvertiser} onOpenChange={(open) => {
@@ -570,6 +671,17 @@ export default function TikTokAdvertiserSettings({
                         <RefreshCcw className={`w-4 h-4 text-gray-500 ${refreshingAdvertisers ? 'animate-spin' : ''}`} />
                     </button>
                 </div>
+
+                {!syncLoading && inTeam && syncEnabled && (
+                    <div className="flex items-center gap-1.5 mt-1.5">
+                        <RefreshCcw className="w-3 h-3 text-blue-500" />
+                        <span className="text-xs text-gray-500">
+                            {isOwner
+                                ? "Settings sync is active. Changes will apply to all team members."
+                                : "Team admin turned on settings sync. Changes will apply to all team members."}
+                        </span>
+                    </div>
+                )}
 
                 {selectedAdvertiser && loading && (
                     <div className="flex items-center gap-2 text-xs text-gray-500 mt-2">
@@ -1264,6 +1376,51 @@ export default function TikTokAdvertiserSettings({
                     </div>
                 </div>,
                 document.getElementById('settings-save-bar-portal')
+            )}
+
+            {syncConfirmOpen && (
+                <div
+                    className="fixed inset-0 z-[9999] bg-black/30 flex justify-center items-center"
+                    style={{ top: -25, left: 0, right: 0, bottom: 0, position: 'fixed' }}
+                    onClick={() => setSyncConfirmOpen(false)}
+                >
+                    <div
+                        className="bg-white rounded-3xl w-[440px] shadow-xl border border-gray-200"
+                        onClick={(event) => event.stopPropagation()}
+                    >
+                        <div className="p-8 space-y-4">
+                            <h3 className="text-base font-semibold">
+                                {syncConfirmAction === "enable" ? "Enable Team Sync" : "Disable team sync?"}
+                            </h3>
+                            <div className="text-sm text-gray-600 space-y-2">
+                                {syncConfirmAction === "enable" ? (
+                                    <>
+                                        <p>This single team sync setting applies to both Meta and TikTok account preferences and copy templates.</p>
+                                        <p className="font-semibold">For each account, the admin&apos;s saved settings will be used first. If the admin has no saved settings for that account, the first team member with saved settings will be used instead.</p>
+                                        <p>Existing shared settings will be preserved. Once enabled, any team member can edit shared settings.</p>
+                                    </>
+                                ) : (
+                                    <p>Sync will be disabled for both Meta and TikTok. Each member will receive a personal copy of the current shared settings before returning to personal preferences.</p>
+                                )}
+                            </div>
+                            <div className="flex gap-3 pt-2 w-full">
+                                <Button
+                                    variant="outline"
+                                    onClick={() => setSyncConfirmOpen(false)}
+                                    className="rounded-2xl flex-1 border-gray-200"
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    onClick={handleSyncConfirm}
+                                    className={`rounded-2xl flex-1 ${syncConfirmAction === "enable" ? "bg-blue-500 hover:bg-blue-600 text-white" : "bg-red-500 hover:bg-red-600 text-white"}`}
+                                >
+                                    {syncConfirmAction === "enable" ? "Enable sync" : "Disable sync"}
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );

@@ -156,6 +156,11 @@ export default function TikTokAds() {
   const [driveFiles, setDriveFiles] = useState([])
   const [dropboxFiles, setDropboxFiles] = useState([])
   const [selectedIdentity, setSelectedIdentity] = useState('')
+  const [adNameFormulaV2, setAdNameFormulaV2] = useState({ rawInput: "" })
+  const [selectedTemplate, setSelectedTemplate] = useState("")
+  const [showCustomLink, setShowCustomLink] = useState(false)
+  const [customLink, setCustomLink] = useState("")
+  const [launchPaused, setLaunchPaused] = useState(false)
   const [formStoreId, setFormStoreId] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.formStoreId : null) || null)
   const [formStoreName, setFormStoreName] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.formStoreName : null) || null)
   const [formStoreProductId, setFormStoreProductId] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.formStoreProductId : null) || [])
@@ -166,6 +171,7 @@ export default function TikTokAds() {
   const [formCatalogName, setFormCatalogName] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.formCatalogName : null) || null)
   const [formProductId, setFormProductId] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.formProductId : null) || [])
   const [formProductName, setFormProductName] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.formProductName : null) || null)
+  const [formCatalogProducts, setFormCatalogProducts] = useState([])
   const [sparkAuthCodes, setSparkAuthCodes] = useState([''])
   const [urlMode, setUrlMode] = useState('WEBSITE')
   const [adType, setAdType] = useState('NORMAL')
@@ -729,6 +735,21 @@ export default function TikTokAds() {
     advertiserPrefs?.copyTemplates
   ]);
 
+  // Keep advertiser selection global across variants. When it changes from an
+  // existing account, discard account-specific snapshots so stale campaigns,
+  // ad groups, identities, and products cannot be restored by variant switching.
+  const previousAdvertiserRef = useRef(selectedAdvertiser);
+  useEffect(() => {
+    if (previousAdvertiserRef.current === selectedAdvertiser) return;
+    const hadPreviousAdvertiser = Boolean(previousAdvertiserRef.current);
+    previousAdvertiserRef.current = selectedAdvertiser;
+    if (!hadPreviousAdvertiser) return;
+
+    setVariants((prev) => prev.map((variant) => ({ ...variant, snapshot: null })));
+    setCustomLink("");
+    setShowCustomLink(false);
+  }, [selectedAdvertiser]);
+
   // Reset form fields when selected advertiser is cleared (mirrors Meta's Home.jsx pattern)
   useEffect(() => {
     if (selectedAdvertiser) return;
@@ -795,14 +816,18 @@ export default function TikTokAds() {
 
   const captureCurrentSnapshot = useCallback(() => ({
     adName,
-    adTexts,
-    cta,
+    adTexts: cloneSnapshotValue(adTexts),
+    cta: cloneSnapshotValue(cta),
     landingUrl,
+    customLink,
+    showCustomLink,
     selectedIdentity,
-    sparkAuthCodes,
+    sparkAuthCodes: cloneSnapshotValue(sparkAuthCodes),
     urlMode,
-    selectedCampaign,
-    selectedAdGroup,
+    selectedAdvertiser,
+    selectedCampaign: cloneSnapshotValue(selectedCampaign),
+    selectedAdGroup: cloneSnapshotValue(selectedAdGroup),
+    adGroups: cloneSnapshotValue(adGroups),
     duplicateAdGroup,
     newAdGroupName,
     showDuplicateAdGroupBlock,
@@ -811,28 +836,36 @@ export default function TikTokAds() {
     showDuplicateCampaignBlock,
     productName,
     productImageUrl,
-    sellingPoints,
+    sellingPoints: cloneSnapshotValue(sellingPoints),
     selectedSavedProductId,
     formCatalogId,
     formCatalogName,
-    formProductId: Array.isArray(formProductId) ? [...formProductId] : formProductId,
+    formProductId: cloneSnapshotValue(formProductId),
     formProductName,
+    formCatalogProducts: cloneSnapshotValue(formCatalogProducts),
     formStoreId,
     formStoreName,
-    formStoreProductId: Array.isArray(formStoreProductId) ? [...formStoreProductId] : formStoreProductId,
+    formStoreProductId: cloneSnapshotValue(formStoreProductId),
     formStoreProductName,
     formStoreBcId,
     formStoreCatalogId,
+    adNameFormulaV2: cloneSnapshotValue(adNameFormulaV2),
+    selectedTemplate,
+    launchPaused,
   }), [
     adName,
     adTexts,
     cta,
     landingUrl,
+    customLink,
+    showCustomLink,
     selectedIdentity,
     sparkAuthCodes,
     urlMode,
+    selectedAdvertiser,
     selectedCampaign,
     selectedAdGroup,
+    adGroups,
     duplicateAdGroup,
     newAdGroupName,
     showDuplicateAdGroupBlock,
@@ -847,28 +880,38 @@ export default function TikTokAds() {
     formCatalogName,
     formProductId,
     formProductName,
+    formCatalogProducts,
     formStoreId,
     formStoreName,
     formStoreProductId,
     formStoreProductName,
     formStoreBcId,
     formStoreCatalogId,
+    adNameFormulaV2,
+    selectedTemplate,
+    launchPaused,
   ]);
 
   const hydrateFromSnapshot = useCallback((snapshot) => {
     if (!snapshot) return;
     setAdName(snapshot.adName || "");
-    setAdTexts(snapshot.adTexts || [""]);
+    setAdTexts(cloneSnapshotValue(snapshot.adTexts) || [""]);
     const rawCta = snapshot.cta;
-    setCta(Array.isArray(rawCta) ? rawCta : (rawCta ? [rawCta] : ["SHOP_NOW"]));
+    setCta(Array.isArray(rawCta) ? cloneSnapshotValue(rawCta) : (rawCta ? [rawCta] : ["SHOP_NOW"]));
     setLandingUrl(snapshot.landingUrl || "");
+    setCustomLink(snapshot.customLink || "");
+    setShowCustomLink(Boolean(snapshot.showCustomLink));
     setSelectedIdentity(snapshot.selectedIdentity || "");
-    setSparkAuthCodes(snapshot.sparkAuthCodes || [""]);
+    setSparkAuthCodes(cloneSnapshotValue(snapshot.sparkAuthCodes) || [""]);
     setUrlMode(snapshot.urlMode || "WEBSITE");
+    setSelectedAdvertiser(snapshot.selectedAdvertiser || "");
     const rawCampaign = snapshot.selectedCampaign || "";
-    setSelectedCampaign(Array.isArray(rawCampaign) ? rawCampaign : (rawCampaign ? [rawCampaign] : []));
+    setSelectedCampaign(Array.isArray(rawCampaign) ? cloneSnapshotValue(rawCampaign) : (rawCampaign ? [rawCampaign] : []));
     const rawAdGroup = snapshot.selectedAdGroup || "";
-    setSelectedAdGroup(Array.isArray(rawAdGroup) ? rawAdGroup : (rawAdGroup ? [rawAdGroup] : []));
+    setSelectedAdGroup(Array.isArray(rawAdGroup) ? cloneSnapshotValue(rawAdGroup) : (rawAdGroup ? [rawAdGroup] : []));
+    if (snapshot.adGroups) {
+      setAdGroups(cloneSnapshotValue(snapshot.adGroups));
+    }
     setDuplicateAdGroup(snapshot.duplicateAdGroup || "");
     setNewAdGroupName(snapshot.newAdGroupName || "");
     setShowDuplicateAdGroupBlock(Boolean(snapshot.showDuplicateAdGroupBlock));
@@ -877,20 +920,24 @@ export default function TikTokAds() {
     setShowDuplicateCampaignBlock(Boolean(snapshot.showDuplicateCampaignBlock));
     setProductName(snapshot.productName || "");
     setProductImageUrl(snapshot.productImageUrl || "");
-    setSellingPoints(snapshot.sellingPoints || []);
+    setSellingPoints(cloneSnapshotValue(snapshot.sellingPoints) || []);
     setSelectedSavedProductId(snapshot.selectedSavedProductId || "");
     setFormCatalogId(snapshot.formCatalogId ?? null);
     setFormCatalogName(snapshot.formCatalogName ?? null);
     const rawProductId = snapshot.formProductId;
-    setFormProductId(Array.isArray(rawProductId) ? rawProductId : (rawProductId ? [rawProductId] : []));
+    setFormProductId(Array.isArray(rawProductId) ? cloneSnapshotValue(rawProductId) : (rawProductId ? [rawProductId] : []));
     setFormProductName(snapshot.formProductName ?? null);
+    setFormCatalogProducts(cloneSnapshotValue(snapshot.formCatalogProducts) || []);
     setFormStoreId(snapshot.formStoreId ?? null);
     setFormStoreName(snapshot.formStoreName ?? null);
     const rawStoreProductId = snapshot.formStoreProductId;
-    setFormStoreProductId(Array.isArray(rawStoreProductId) ? rawStoreProductId : (rawStoreProductId ? [rawStoreProductId] : []));
+    setFormStoreProductId(Array.isArray(rawStoreProductId) ? cloneSnapshotValue(rawStoreProductId) : (rawStoreProductId ? [rawStoreProductId] : []));
     setFormStoreProductName(snapshot.formStoreProductName ?? null);
     setFormStoreBcId(snapshot.formStoreBcId ?? null);
     setFormStoreCatalogId(snapshot.formStoreCatalogId ?? null);
+    setAdNameFormulaV2(cloneSnapshotValue(snapshot.adNameFormulaV2) || { rawInput: "" });
+    setSelectedTemplate(snapshot.selectedTemplate ?? "");
+    setLaunchPaused(Boolean(snapshot.launchPaused));
   }, []);
 
   const switchVariant = useCallback((targetId) => {
@@ -940,11 +987,20 @@ export default function TikTokAds() {
         .filter((variant) => variant.id !== "default")
         .map((variant) => variant.name.replace(/^(Form|Variant)\s+/, ""))
     );
-    const nextLetter = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").find((letter) => !usedLetters.has(letter));
+    let letterIndex = 0;
+    let nextLetter = "";
+    while (!nextLetter) {
+      let current = letterIndex;
+      let candidate = "";
+      do {
+        candidate = String.fromCharCode(65 + (current % 26)) + candidate;
+        current = Math.floor(current / 26) - 1;
+      } while (current >= 0);
+      letterIndex += 1;
 
-    if (!nextLetter) {
-      toast.error("Maximum 26 Variants");
-      return;
+      if (!usedLetters.has(candidate)) {
+        nextLetter = candidate;
+      }
     }
 
     const currentSnapshot = captureCurrentSnapshot();
@@ -1107,6 +1163,36 @@ export default function TikTokAds() {
     })
   }, [files, driveFiles, dropboxFiles])
 
+  useEffect(() => {
+    const validGroupIds = new Set(fileGroups.map((group) => group.id))
+    setGroupVariantMap((prev) => {
+      const next = { ...prev }
+      let changed = false
+      Object.keys(next).forEach((key) => {
+        if (!validGroupIds.has(key)) {
+          delete next[key]
+          changed = true
+        }
+      })
+      return changed ? next : prev
+    })
+  }, [fileGroups])
+
+  useEffect(() => {
+    const validPostKeys = new Set(importedPosts.map((post) => `post:${post.id}`))
+    setPostVariantMap((prev) => {
+      const next = { ...prev }
+      let changed = false
+      Object.keys(next).forEach((key) => {
+        if (!validPostKeys.has(key)) {
+          delete next[key]
+          changed = true
+        }
+      })
+      return changed ? next : prev
+    })
+  }, [importedPosts])
+
   if (authLoading) return null;
   if (!isTikTokLoggedIn) return null;
 
@@ -1180,9 +1266,15 @@ export default function TikTokAds() {
               formCatalogName={formCatalogName} setFormCatalogName={setFormCatalogName}
               formProductId={formProductId} setFormProductId={setFormProductId}
               formProductName={formProductName} setFormProductName={setFormProductName}
+              formCatalogProducts={formCatalogProducts} setFormCatalogProducts={setFormCatalogProducts}
               sparkAuthCodes={sparkAuthCodes} setSparkAuthCodes={setSparkAuthCodes}
               urlMode={urlMode} setUrlMode={setUrlMode}
               adType={adType} setAdType={setAdType}
+              adNameFormulaV2={adNameFormulaV2} setAdNameFormulaV2={setAdNameFormulaV2}
+              selectedTemplate={selectedTemplate} setSelectedTemplate={setSelectedTemplate}
+              showCustomLink={showCustomLink} setShowCustomLink={setShowCustomLink}
+              customLink={customLink} setCustomLink={setCustomLink}
+              launchPaused={launchPaused} setLaunchPaused={setLaunchPaused}
               importedPosts={importedPosts} setImportedPosts={setImportedPosts}
 
               // Form Fetching States
@@ -1253,7 +1345,7 @@ export default function TikTokAds() {
                 setSelectedIgOrganicPosts={setSelectedIgOrganicPosts}
                 variants={variants}
                 activeVariantId={activeVariantId}
-                handleAddVariant={() => { }} // Safe no-op to disable adding variants in TikTok
+                handleAddVariant={handleAddVariant}
                 handleDeleteAllVariants={handleDeleteAllVariants}
                 fileVariantMap={fileVariantMap}
                 setFileVariantMap={setFileVariantMap}

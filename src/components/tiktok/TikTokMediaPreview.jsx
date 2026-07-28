@@ -708,7 +708,7 @@ export default function MediaPreview({
   }, [selectedAdSets, adSets, duplicateAdSet]);
 
   const showPlacementCustomizationRow = false;
-  const showVariantSetupButton = false;
+  const showVariantSetupButton = variants.length > 1 || totalFileCount >= 1;
   const isSingleMediaSplit = totalFileCount === 1;
   const showVariantButtonInPlacementRow = showVariantSetupButton && showPlacementCustomizationRow;
   const showVariantButtonInHeader = showVariantSetupButton && !showPlacementCustomizationRow;
@@ -736,7 +736,7 @@ export default function MediaPreview({
         </TooltipTrigger>
         {variants.length === 1 && (
           <TooltipContent className="max-w-xs">
-            upload all your media once and split it into different ad sets with different naming, copy & more.
+            Upload media once, then assign files to TikTok form variants with different campaigns, ad groups, naming, copy, and more.
           </TooltipContent>
         )}
       </Tooltip>
@@ -1317,6 +1317,7 @@ export default function MediaPreview({
                       setSelectedIgOrganicPosts([]);
                       setFileVariantMap({});
                       setGroupVariantMap({});
+                      setPostVariantMap({});
                     }}
                     className="bg-red-500 hover:bg-red-600 text-white rounded-xl mt-0"
                   >

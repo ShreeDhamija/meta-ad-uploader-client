@@ -534,6 +534,11 @@ export default function TikTokAdCreationForm({
   sparkAuthCodes, setSparkAuthCodes,
   urlMode, setUrlMode,
   adType, setAdType,
+  adNameFormulaV2, setAdNameFormulaV2,
+  selectedTemplate, setSelectedTemplate,
+  showCustomLink, setShowCustomLink,
+  customLink, setCustomLink,
+  launchPaused, setLaunchPaused,
   importedPosts, setImportedPosts,
 
   // Form Fetching States
@@ -582,6 +587,7 @@ export default function TikTokAdCreationForm({
   formCatalogName, setFormCatalogName,
   formProductId, setFormProductId,
   formProductName, setFormProductName,
+  formCatalogProducts, setFormCatalogProducts,
   selectedFiles,
   setSelectedFiles,
   onBeforeMediaClear
@@ -635,8 +641,6 @@ export default function TikTokAdCreationForm({
     }
   }
 
-  const [adNameFormulaV2, setAdNameFormulaV2] = useState({ rawInput: "" })
-
   // ---------------------------------------------------------------------------
   // formStateRef — always mirrors the latest form state so that
   // captureFormDataAsJob() reads the EXACT values present at publish-click time,
@@ -672,12 +676,15 @@ export default function TikTokAdCreationForm({
   const [openAdGroup, setOpenAdGroup] = useState(false)
   const [openIdentity, setOpenIdentity] = useState(false)
   const [openCta, setOpenCta] = useState(false)
-  const [showCustomLink, setShowCustomLink] = useState(false)
-  const [customLink, setCustomLink] = useState("")
   const [templateDropdownOpen, setTemplateDropdownOpen] = useState(false)
 
+  useEffect(() => {
+    if (variants.length > 1 && activeVariantId !== 'default') {
+      setOpenAdvertiser(false)
+    }
+  }, [activeVariantId, variants.length])
+
   // Copy template state
-  const [selectedTemplate, setSelectedTemplate] = useState("")
   const [templateSearch, setTemplateSearch] = useState("")
   const [sortMode, setSortMode] = useState(() => localStorage.getItem("tiktokHomeTemplateSortMode") || "default")
   const [showSortMenu, setShowSortMenu] = useState(false)
@@ -748,8 +755,6 @@ export default function TikTokAdCreationForm({
   const [isQueueingJobs, setIsQueueingJobs] = useState(false)
   const currentJobIdRef = useRef(null)
   const isInPromisePhase = useRef(false)
-  const [launchPaused, setLaunchPaused] = useState(false)
-
   const [liveProgress, setLiveProgress] = useState({
     completed: 0,
     succeeded: 0,
@@ -760,7 +765,6 @@ export default function TikTokAdCreationForm({
   const [preserveMedia, setPreserveMedia] = useState(false)
 
   const [formCatalogs, setFormCatalogs] = useState([])
-  const [formCatalogProducts, setFormCatalogProducts] = useState([])
   const [loadingFormCatalogs, setLoadingFormCatalogs] = useState(false)
   const [loadingFormProducts, setLoadingFormProducts] = useState(false)
   const [openFormCatalog, setOpenFormCatalog] = useState(false)
@@ -1298,22 +1302,31 @@ export default function TikTokAdCreationForm({
   )
 
   const countFilesForVariant = (variantId) => {
-    let count = 0
-    Object.values(fileVariantMap).forEach((val) => {
-      if (val === variantId) count++
-    })
-    Object.values(groupVariantMap).forEach((val) => {
-      if (val === variantId) count++
-    })
-    Object.values(postVariantMap).forEach((val) => {
-      if (val === variantId) count++
-    })
-    return count
+    const allFiles = [
+      ...(files || []),
+      ...(driveFiles || []).map((file) => ({ ...file, isDrive: true })),
+      ...(dropboxFiles || []).map((file) => ({ ...file, isDropbox: true })),
+      ...(tiktokLibraryFiles || []),
+    ]
+    const totalMediaCount = allFiles.length + (importedPosts || []).length
+    if (totalMediaCount === 1) return 1
+
+    const fileCount = allFiles.filter((file) => (
+      (fileVariantMap[getFileId(file)] || 'default') === variantId
+    )).length
+    const postCount = (importedPosts || []).filter((post) => (
+      (postVariantMap[`post:${post.id}`] || 'default') === variantId
+    )).length
+
+    return fileCount + postCount
   }
 
   const getFileId = (file) => {
     if (!file) return ''
-    return file.id || file.name || file.videoId || ''
+    if (file.isDrive) return file.id
+    if (file.isDropbox) return file.dropboxId
+    if (file.isFrameio) return file.frameioId
+    return file.uniqueId || file.id || file.videoId || file.name || ''
   }
 
   // Keep formStateRef in sync with every render so captureFormDataAsJob always
@@ -1353,10 +1366,48 @@ export default function TikTokAdCreationForm({
     formStoreProductId,
     formStoreProductName,
     formStoreCatalogId,
+    selectedTemplate,
+    showCustomLink,
+    customLink,
     variants,
+    activeVariantId,
     fileVariantMap,
+    groupVariantMap,
     postVariantMap,
     adGroups,
+    liveVariantSnapshot: {
+      adName,
+      adTexts,
+      cta,
+      landingUrl,
+      selectedIdentity,
+      sparkAuthCodes,
+      urlMode,
+      selectedCampaign,
+      selectedAdGroup,
+      adGroups,
+      duplicateAdGroup,
+      newAdGroupName,
+      showDuplicateAdGroupBlock,
+      productName,
+      productImageUrl,
+      sellingPoints,
+      formCatalogId,
+      formCatalogName,
+      formProductId,
+      formProductName,
+      formCatalogProducts,
+      formStoreId,
+      formStoreName,
+      formStoreProductId,
+      formStoreProductName,
+      formStoreCatalogId,
+      adNameFormulaV2,
+      selectedTemplate,
+      showCustomLink,
+      customLink,
+      launchPaused,
+    },
   }
 
   // captureFormDataAsJob reads exclusively from formStateRef.current so it
@@ -1367,38 +1418,52 @@ export default function TikTokAdCreationForm({
     const s = formStateRef.current
 
     const getVariantState = (vid) => {
+      if (vid === s.activeVariantId) return s.liveVariantSnapshot
       const v = (s.variants || []).find(val => val.id === vid)
       if (!v) return null
-      return v.state || v.snapshot || v
+      return v.snapshot || null
     }
 
     const variantState = getVariantState(variantId)
     if (!variantState) return null
 
-    const filterFiles = (items) => items.filter((file) => {
+    const totalMediaCount = (
+      (s.files || []).length +
+      (s.driveFiles || []).length +
+      (s.dropboxFiles || []).length +
+      (s.tiktokLibraryFiles || []).length +
+      (s.importedPosts || []).length
+    )
+    const isSingleMediaSplit = totalMediaCount === 1
+
+    const filterFiles = (items, mapper = (item) => item) => items.filter((item) => {
+      if (isSingleMediaSplit) return true
+      const file = mapper(item)
       const fileId = getFileId(file)
       return ((s.fileVariantMap || {})[fileId] || 'default') === variantId
     })
 
     const filterPosts = (items) => items.filter((post) => {
+      if (isSingleMediaSplit) return true
       const postKey = `post:${post.id}`
       return ((s.postVariantMap || {})[postKey] || 'default') === variantId
     })
 
     const variantFiles = filterFiles(s.files || [])
-    const variantDriveFiles = filterFiles(s.driveFiles || []).map(f => ({ ...f, isDrive: true }))
-    const variantDropboxFiles = filterFiles(s.dropboxFiles || []).map(f => ({ ...f, isDropbox: true }))
+    const variantDriveFiles = filterFiles(s.driveFiles || [], (file) => ({ ...file, isDrive: true })).map(f => ({ ...f, isDrive: true }))
+    const variantDropboxFiles = filterFiles(s.dropboxFiles || [], (file) => ({ ...file, isDropbox: true })).map(f => ({ ...f, isDropbox: true }))
     const variantLibraryFiles = filterFiles(s.tiktokLibraryFiles || [])
     const variantImportedPosts = filterPosts(s.importedPosts || [])
+    const variantAdGroups = Array.isArray(variantState.adGroups) ? variantState.adGroups : s.adGroups || []
 
     const formData = {
-      adName: variantState.adName || s.adName || '',
-      adTexts: variantState.adTexts || (variantState.adText ? [variantState.adText] : null) || s.adTexts || [''],
-      cta: variantState.cta || s.cta || ['SHOP_NOW'],
-      landingUrl: variantState.landingUrl || s.landingUrl || '',
-      sparkAuthCodes: variantState.sparkAuthCodes || s.sparkAuthCodes || [''],
-      urlMode: variantState.urlMode || s.urlMode || 'WEBSITE',
-      adType: variantState.adType || s.adType || 'NORMAL',
+      adName: variantState.adName ?? '',
+      adTexts: [...(variantState.adTexts || (variantState.adText ? [variantState.adText] : ['']))],
+      cta: [...(variantState.cta || ['SHOP_NOW'])],
+      landingUrl: variantState.landingUrl ?? '',
+      sparkAuthCodes: [...(variantState.sparkAuthCodes || [''])],
+      urlMode: variantState.urlMode || 'WEBSITE',
+      adType: s.adType || 'NORMAL',
 
       files: [...variantFiles],
       driveFiles: [...variantDriveFiles],
@@ -1407,30 +1472,31 @@ export default function TikTokAdCreationForm({
       importedPosts: [...variantImportedPosts],
 
       selectedAdvertiser: s.selectedAdvertiser,
-      selectedCampaign: [...(s.selectedCampaign || [])],
-      selectedAdGroup: [...(s.selectedAdGroup || [])],
+      selectedCampaign: [...(variantState.selectedCampaign || [])],
+      selectedAdGroup: [...(variantState.selectedAdGroup || [])],
+      adGroups: [...variantAdGroups],
 
-      isDuplicatingAdGroupMode: s.showDuplicateAdGroupBlock && s.duplicateAdGroup,
-      duplicateAdGroup: s.duplicateAdGroup,
-      newAdGroupName: s.newAdGroupName,
-      selectedIdentity: s.selectedIdentity,
-      launchPaused: s.launchPaused,
+      isDuplicatingAdGroupMode: Boolean(variantState.showDuplicateAdGroupBlock && variantState.duplicateAdGroup),
+      duplicateAdGroup: variantState.duplicateAdGroup || '',
+      newAdGroupName: variantState.newAdGroupName || '',
+      selectedIdentity: variantState.selectedIdentity || '',
+      launchPaused: Boolean(variantState.launchPaused),
 
-      productName: variantState.productName || s.productName || '',
-      productImageUrl: variantState.productImageUrl || s.productImageUrl || '',
-      sellingPoints: variantState.sellingPoints || s.sellingPoints || [],
+      productName: variantState.productName ?? '',
+      productImageUrl: variantState.productImageUrl ?? '',
+      sellingPoints: [...(variantState.sellingPoints || [])],
 
-      adNameFormulaV2: variantState.adNameFormulaV2 || s.adNameFormulaV2 || null,
-      formCatalogId: variantState.formCatalogId || s.formCatalogId || null,
-      formCatalogName: variantState.formCatalogName || s.formCatalogName || null,
-      formProductId: variantState.formProductId || s.formProductId || [],
-      formProductName: variantState.formProductName || s.formProductName || null,
-      formCatalogProducts: variantState.formCatalogProducts || s.formCatalogProducts || [],
-      formStoreId: variantState.formStoreId || s.formStoreId || null,
-      formStoreName: variantState.formStoreName || s.formStoreName || null,
-      formStoreProductId: variantState.formStoreProductId || s.formStoreProductId || [],
-      formStoreProductName: variantState.formStoreProductName || s.formStoreProductName || null,
-      formStoreCatalogId: variantState.formStoreCatalogId || s.formStoreCatalogId || null,
+      adNameFormulaV2: variantState.adNameFormulaV2 ? { ...variantState.adNameFormulaV2 } : null,
+      formCatalogId: variantState.formCatalogId ?? null,
+      formCatalogName: variantState.formCatalogName ?? null,
+      formProductId: [...(variantState.formProductId || [])],
+      formProductName: variantState.formProductName ?? null,
+      formCatalogProducts: [...(variantState.formCatalogProducts || [])],
+      formStoreId: variantState.formStoreId ?? null,
+      formStoreName: variantState.formStoreName ?? null,
+      formStoreProductId: [...(variantState.formStoreProductId || [])],
+      formStoreProductName: variantState.formStoreProductName ?? null,
+      formStoreCatalogId: variantState.formStoreCatalogId ?? null,
     }
 
     let fileCount = formData.files.length + formData.driveFiles.length + formData.dropboxFiles.length + formData.tiktokLibraryFiles.length
@@ -1439,10 +1505,10 @@ export default function TikTokAdCreationForm({
     }
 
     const activeAdGroups = formData.selectedAdGroup || []
-    const adGroupDisplayName = (s.showDuplicateAdGroupBlock && s.duplicateAdGroup)
-      ? (s.newAdGroupName || 'New Ad Group')
+    const adGroupDisplayName = formData.isDuplicatingAdGroupMode
+      ? (formData.newAdGroupName || 'New Ad Group')
       : activeAdGroups.length === 1
-        ? ((s.adGroups || []).find(ag => ag.adgroup_id === activeAdGroups[0])?.adgroup_name || 'selected ad group')
+        ? (variantAdGroups.find(ag => ag.adgroup_id === activeAdGroups[0])?.adgroup_name || 'selected ad group')
         : `${activeAdGroups.length} ad groups`
 
     return {
@@ -1484,6 +1550,23 @@ export default function TikTokAdCreationForm({
     setSelectedAdvertiser(d.selectedAdvertiser || '')
     setSelectedCampaign(d.selectedCampaign || [])
     setSelectedAdGroup(d.selectedAdGroup || [])
+    setAdGroups(d.adGroups || [])
+    setShowDuplicateAdGroupBlock(Boolean(d.isDuplicatingAdGroupMode))
+    setDuplicateAdGroup(d.duplicateAdGroup || '')
+    setNewAdGroupName(d.newAdGroupName || '')
+    setSelectedIdentity(d.selectedIdentity || '')
+    setLaunchPaused(Boolean(d.launchPaused))
+    setAdNameFormulaV2(d.adNameFormulaV2 || { rawInput: '' })
+    setFormCatalogId(d.formCatalogId ?? null)
+    setFormCatalogName(d.formCatalogName ?? null)
+    setFormProductId(d.formProductId || [])
+    setFormProductName(d.formProductName ?? null)
+    setFormCatalogProducts(d.formCatalogProducts || [])
+    setFormStoreId(d.formStoreId ?? null)
+    setFormStoreName(d.formStoreName ?? null)
+    setFormStoreProductId(d.formStoreProductId || [])
+    setFormStoreProductName(d.formStoreProductName ?? null)
+    setFormStoreCatalogId(d.formStoreCatalogId ?? null)
 
     setVariants([{ id: 'default', name: 'Default', snapshot: null }])
     setActiveVariantId('default')
@@ -1493,8 +1576,12 @@ export default function TikTokAdCreationForm({
   }, [
     setAdName, setAdTexts, setCta, setLandingUrl, setSparkAuthCodes, setUrlMode,
     setAdType, setFiles, setDriveFiles, setDropboxFiles, setSelectedAdvertiser,
-    setSelectedCampaign, setSelectedAdGroup, setVariants, setActiveVariantId,
-    setFileVariantMap, setGroupVariantMap, setPostVariantMap
+    setSelectedCampaign, setSelectedAdGroup, setAdGroups, setShowDuplicateAdGroupBlock,
+    setDuplicateAdGroup, setNewAdGroupName, setSelectedIdentity, setLaunchPaused,
+    setAdNameFormulaV2, setFormCatalogId, setFormCatalogName, setFormProductId,
+    setFormProductName, setFormCatalogProducts, setFormStoreId, setFormStoreName,
+    setFormStoreProductId, setFormStoreProductName, setFormStoreCatalogId,
+    setVariants, setActiveVariantId, setFileVariantMap, setGroupVariantMap, setPostVariantMap
   ])
 
   // Sequentially process the publishing job queue
@@ -1521,6 +1608,7 @@ export default function TikTokAdCreationForm({
       selectedAdvertiser,
       selectedCampaign,
       selectedAdGroup,
+      adGroups: jobAdGroups = [],
       isDuplicatingAdGroupMode,
       duplicateAdGroup,
       newAdGroupName,
@@ -1790,7 +1878,7 @@ export default function TikTokAdCreationForm({
         adGroupIdsToSubmit = [dupData.copied_adgroup_id]
 
         // Proactively add the newly duplicated ad group to local state and cache with ad_count = 0
-        const sourceAg = adGroups.find(ag => ag.adgroup_id === duplicateAdGroup)
+        const sourceAg = jobAdGroups.find(ag => ag.adgroup_id === duplicateAdGroup)
         if (sourceAg) {
           const newAgObj = {
             ...sourceAg,
@@ -1837,7 +1925,7 @@ export default function TikTokAdCreationForm({
         )
 
         for (const adgroupId of adGroupIdsToSubmit) {
-          const adGroupObj = adGroups.find(ag => ag.adgroup_id === adgroupId)
+          const adGroupObj = jobAdGroups.find(ag => ag.adgroup_id === adgroupId)
           const shoppingAdsType = adGroupObj?.shopping_ads_type || null
           const productSource = adGroupObj?.product_source || null
           const isShoppingAg = !!(
@@ -2096,7 +2184,7 @@ export default function TikTokAdCreationForm({
           }
 
           if (!adGroupsMap[adgroupId]) {
-            const adGroupObj = adGroups.find(ag => ag.adgroup_id === adgroupId)
+            const adGroupObj = jobAdGroups.find(ag => ag.adgroup_id === adgroupId)
             adGroupsMap[adgroupId] = {
               adgroupId: adgroupId,
               adName: adType === 'SPARK' ? ' ' : finalAdName,
@@ -3653,6 +3741,14 @@ export default function TikTokAdCreationForm({
         }
 
         const fd = job.formData;
+        const variantAdGroups = fd.adGroups || [];
+        const activeVariantAdGroupIds = fd.isDuplicatingAdGroupMode
+          ? [fd.duplicateAdGroup]
+          : (fd.selectedAdGroup || []);
+        const areAllVariantAdGroupsShopping = activeVariantAdGroupIds.length > 0 &&
+          activeVariantAdGroupIds.every((adgroupId) => (
+            variantAdGroups.find((adGroup) => adGroup.adgroup_id === adgroupId)?.product_source === 'SHOWCASE'
+          ));
 
         // if (!fd.selectedAdvertiser) {
         //   toast.error(`${variant.name}: please select an advertiser account`);
@@ -3680,7 +3776,7 @@ export default function TikTokAdCreationForm({
 
         if (!fd.isDuplicatingAdGroupMode && fd.selectedAdGroup && fd.selectedAdGroup.length > 0) {
           for (const adgroupId of fd.selectedAdGroup) {
-            const agObj = adGroups.find(ag => ag.adgroup_id === adgroupId);
+            const agObj = variantAdGroups.find(ag => ag.adgroup_id === adgroupId);
             if (agObj) {
               const currentAdCount = agObj.ad_count || 0;
 
@@ -3745,7 +3841,7 @@ export default function TikTokAdCreationForm({
           }
         }
 
-        const hasFormula = adNameFormulaV2?.rawInput?.trim();
+        const hasFormula = fd.adNameFormulaV2?.rawInput?.trim();
         if (!hasFormula && !fd.adName.trim()) {
           toast.error(`${variant.name}: ad name is required`);
           return;
@@ -3770,7 +3866,7 @@ export default function TikTokAdCreationForm({
           }
         }
 
-        if (fd.urlMode === 'WEBSITE' && !areAllSelectedAdGroupsShopping) {
+        if (fd.urlMode === 'WEBSITE' && !areAllVariantAdGroupsShopping) {
           if (!fd.landingUrl || !fd.landingUrl.trim()) {
             toast.error(`${variant.name}: link (URL) is required`);
             return;
@@ -3797,7 +3893,7 @@ export default function TikTokAdCreationForm({
           }
         }
 
-        if (fd.urlMode === 'INSTANT_PAGE' && !areAllSelectedAdGroupsShopping) {
+        if (fd.urlMode === 'INSTANT_PAGE' && !areAllVariantAdGroupsShopping) {
           if (!fd.landingUrl || !fd.landingUrl.trim()) {
             toast.error(`${variant.name}: instant page is required`);
             return;
@@ -3806,6 +3902,17 @@ export default function TikTokAdCreationForm({
           const isNumeric = /^\d+$/.test(fd.landingUrl.trim());
           if (!isNumeric) {
             toast.error(`${variant.name}: instant page ID must be a valid integer`);
+            return;
+          }
+        }
+
+        if (areAllVariantAdGroupsShopping) {
+          if (!fd.formStoreId) {
+            toast.error(`${variant.name}: store is required`);
+            return;
+          }
+          if (!Array.isArray(fd.formStoreProductId) || fd.formStoreProductId.length === 0) {
+            toast.error(`${variant.name}: showcase product is required`);
             return;
           }
         }
@@ -4194,7 +4301,9 @@ export default function TikTokAdCreationForm({
   const validationErrors = getValidationErrors()
   const isFormValid = validationErrors.length === 0
   const isIdentityMissing = !selectedIdentity || selectedIdentity === 'CUSTOMIZED_USER'
-  const publishDisabled = !isFormValid || (selectedFiles && selectedFiles.size > 0)
+  const publishDisabled = !isFormValid || loadingAdGroups || (selectedFiles && selectedFiles.size > 0)
+  const isAdvertiserLocked = variants.length > 1 && activeVariantId !== 'default'
+  const shouldScrollVariantPicker = variants.length > 5
 
   return (
     <>
@@ -4243,27 +4352,34 @@ export default function TikTokAdCreationForm({
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label className="flex items-center gap-2">
-                  {renderDiffMark("selectedAdvertiser")}
                   <AdAccountIcon className="w-4 h-4" />
                   Ad Account
                 </Label>
                 <RefreshCcw
                   className={cn(
                     "h-4 w-4 cursor-pointer transition-all duration-200",
-                    refreshingAdvertisers
+                    isAdvertiserLocked
+                      ? "text-gray-300 cursor-not-allowed"
+                      : refreshingAdvertisers
                       ? "h-3.5 w-3.5 text-gray-300 animate-[spin_3s_linear_infinite]"
                       : "text-gray-500 hover:text-gray-700"
                   )}
-                  onClick={handleRefreshAdvertisers}
+                  onClick={isAdvertiserLocked ? undefined : handleRefreshAdvertisers}
                 />
               </div>
-              <Popover open={openAdvertiser} onOpenChange={setOpenAdvertiser}>
+              <Popover
+                open={openAdvertiser}
+                onOpenChange={(open) => {
+                  if (!isAdvertiserLocked) setOpenAdvertiser(open)
+                }}
+              >
                 <PopoverTrigger asChild>
                   <Button
                     type="button"
                     variant="outline"
                     role="combobox"
-                    className="w-full justify-between border border-gray-300 rounded-2xl py-4.5 bg-white shadow group-data-[state=open]:border-blue-500 transition-colors duration-150 hover:bg-white"
+                    disabled={isAdvertiserLocked}
+                    className="w-full justify-between border border-gray-300 rounded-2xl py-4.5 bg-white shadow group-data-[state=open]:border-blue-500 transition-colors duration-150 hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <span className="truncate text-sm font-medium">
                       {selectedAdvertiser
@@ -4332,6 +4448,11 @@ export default function TikTokAdCreationForm({
                   </Command>
                 </PopoverContent>
               </Popover>
+              {isAdvertiserLocked && (
+                <p className="text-xs text-gray-500">
+                  Ad account can only be changed from the Default variant.
+                </p>
+              )}
               {/* {!selectedAdvertiser && (
                 <p className="text-xs text-red-500 font-medium mt-1">Please select an advertiser account</p>
               )} */}
@@ -4990,7 +5111,6 @@ export default function TikTokAdCreationForm({
               </div>
               <div className="flex flex-wrap items-center justify-end gap-2">
                 <Label htmlFor="ad-type" className="text-sm whitespace-nowrap flex items-center gap-2">
-                  {renderDiffMark("adType")}
                   Ad Type:
                 </Label>
                 <TooltipProvider delayDuration={0}>
@@ -5857,6 +5977,7 @@ export default function TikTokAdCreationForm({
                 <div className="space-y-4">
                   <div className="flex flex-col m-0 pt-1">
                     <Label className="flex items-center gap-2 font-semibold text-sm">
+                      {renderDiffMark(["formCatalogId", "formProductId"])}
                       <BookOpen className="w-4 h-4" />
                       Product Information
                     </Label>
@@ -6005,6 +6126,7 @@ export default function TikTokAdCreationForm({
                   <div className="flex items-center justify-between">
                     <div className="flex flex-col m-0 pt-1">
                       <Label className="flex items-center gap-2 font-semibold text-sm">
+                        {renderDiffMark(["formStoreId", "formStoreProductId"])}
                         <Store className="w-4 h-4" />
                         Showcase Product Information
                       </Label>
