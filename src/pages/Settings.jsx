@@ -27,7 +27,11 @@ import TikTokUserPlaceholder from "@/assets/TikTokUser.jpg"
 import { useTikTokAuth } from "@/lib/TikTokAuthContext"
 import TikTokConnectDialog from "@/components/TikTokConnectDialog"
 import DesktopIcon from '@/assets/Desktop.webp';
-import { getRequiredSelectionPlatforms, META_PLATFORM } from "@/lib/accountSelection"
+import {
+    getRequiredSelectionPlatforms,
+    META_PLATFORM,
+    TIKTOK_PLATFORM,
+} from "@/lib/accountSelection"
 import "../settings.css"
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 const META_SETTINGS_TABS = ["adaccount", "billing", "team"]
@@ -308,7 +312,15 @@ export default function Settings({ platform = "meta" }) {
                                             subscriptionData={subscriptionData}
                                         />
                                     )}
-                                    {activeTab === "tiktok" && <TikTokAdvertiserSettings />}
+                                    {activeTab === "tiktok" && (
+                                        <TikTokAdvertiserSettings
+                                            subscriptionData={subscriptionData}
+                                            onTriggerAdAccountPopup={() => {
+                                                setPopupPlatforms([TIKTOK_PLATFORM])
+                                                setShowAdAccountPopup(true)
+                                            }}
+                                        />
+                                    )}
                                     {activeTab === "billing" && <BillingSettings platform={platform} />}
                                     {activeTab === "team" && <TeamSettings />}
 

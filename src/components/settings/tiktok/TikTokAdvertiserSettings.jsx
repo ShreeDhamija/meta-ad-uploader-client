@@ -17,6 +17,7 @@ import LabelIcon from "@/assets/icons/label.svg?react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import ReorderAdNameParts from "@/components/ui/ReorderAdNameParts"
 import CTAIcon from '@/assets/icons/cta.svg?react';
+import PropTypes from "prop-types"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
@@ -55,7 +56,11 @@ const CTA_OPTIONS = [
 
 const DRAFT_CACHE_KEY = 'tiktokAdvertiserSettings_draft';
 
-export default function TikTokAdvertiserSettings({ advertisers: propAdvertisers = [] }) {
+export default function TikTokAdvertiserSettings({
+    advertisers: propAdvertisers = [],
+    onTriggerAdAccountPopup,
+    subscriptionData,
+}) {
     const { tiktokAdvertisers, fetchTikTokAdvertisers } = useAppData();
     const advertisers = tiktokAdvertisers.length > 0 ? tiktokAdvertisers : propAdvertisers;
     const [selectedAdvertiser, setSelectedAdvertiser] = useState(() => {
@@ -466,6 +471,18 @@ export default function TikTokAdvertiserSettings({ advertisers: propAdvertisers 
             <div className="space-y-2">
                 <div className="flex items-center justify-between">
                     <label className="text-md font-medium text-gray-800">Select Advertiser Account</label>
+                    {(subscriptionData?.planType === 'brand' || subscriptionData?.planType === 'starter') && (
+                        <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={onTriggerAdAccountPopup}
+                            className="rounded-xl border-gray-200 text-sm hover:bg-gray-50"
+                        >
+                            <Pencil className="mr-1.5 h-3.5 w-3.5 opacity-80" />
+                            Change Selected Accounts in Plan
+                        </Button>
+                    )}
                 </div>
                 <div className="flex items-center gap-2">
                     <Popover open={openAdvertiser} onOpenChange={(open) => {
@@ -1250,4 +1267,12 @@ export default function TikTokAdvertiserSettings({ advertisers: propAdvertisers 
             )}
         </div>
     );
+}
+
+TikTokAdvertiserSettings.propTypes = {
+    advertisers: PropTypes.arrayOf(PropTypes.object),
+    onTriggerAdAccountPopup: PropTypes.func,
+    subscriptionData: PropTypes.shape({
+        planType: PropTypes.string,
+    }),
 }
