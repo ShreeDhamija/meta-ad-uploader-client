@@ -8,6 +8,7 @@ import ZapIcon from "@/assets/icons/Zap.svg?react"
 import ChatIcon from "@/assets/icons/chat.svg?react"
 import TikTokUserPlaceholder from "@/assets/TikTokUser.jpg"
 import { useTikTokAuth } from "@/lib/TikTokAuthContext"
+import { useAuth } from "@/lib/AuthContext"
 import LauncherSwitcher from "@/components/LauncherSwitcher"
 import { useNavigate } from "react-router-dom"
 import useSubscription from "@/lib/useSubscriptionSettings"
@@ -22,7 +23,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 export default function TikTokHeader({ showMessenger }) {
-  const { isTikTokLoggedIn, logoutTikTok, tiktokUser } = useTikTokAuth()
+  const { handleLogout } = useAuth()
+  const { isTikTokLoggedIn, tiktokUser } = useTikTokAuth()
   const navigate = useNavigate()
   const {
     subscriptionData,
@@ -95,10 +97,6 @@ export default function TikTokHeader({ showMessenger }) {
     }
     const days = subscriptionData.trialDaysLeft
     return `${days} day${days !== 1 ? 's' : ''} left`
-  }
-
-  const handleTikTokDisconnect = async () => {
-    if (await logoutTikTok()) navigate('/', { replace: true })
   }
 
   return (
@@ -208,8 +206,8 @@ export default function TikTokHeader({ showMessenger }) {
         <div className="hidden min-[1000px]:block h-8 w-px bg-gray-300  " />
 
         <button
-          onClick={handleTikTokDisconnect}
-          title="Disconnect TikTok"
+          onClick={handleLogout}
+          title="Logout"
           className="p-1 rounded-full transition !bg-transparent hover:!bg-transparent focus:outline-none focus:ring-0 active:ring-0 cursor-pointer"
           style={{
             backgroundColor: "transparent",
