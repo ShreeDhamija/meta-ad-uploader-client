@@ -7,8 +7,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
@@ -55,21 +53,22 @@ export default function LauncherSwitcher({
               <button
                 type="button"
                 className="flex items-center gap-2 rounded-xl px-2 py-1.5 text-[14px] font-medium text-gray-700 transition-colors hover:bg-gray-100 focus:outline-none"
-                title="Switch launcher"
               >
                 <img src={currentProvider.icon} alt="" className="h-4 w-4" />
                 <span className="whitespace-nowrap">{currentProvider.label}</span>
                 <ChevronDown className="h-3.5 w-3.5 text-gray-500" />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" sideOffset={8} className="w-52 rounded-2xl !bg-white p-2">
-              <DropdownMenuLabel className="px-2 text-xs font-medium text-gray-400">
-                Switch launcher
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
+            <DropdownMenuContent
+              align="start"
+              sideOffset={8}
+              className="w-52 rounded-2xl bg-white p-2"
+              style={{ backgroundColor: "#ffffff" }}
+            >
               <DropdownMenuItem
                 onSelect={() => navigate(otherProvider.route)}
-                className="cursor-pointer rounded-xl px-3 py-2.5"
+                className="cursor-pointer rounded-xl bg-white px-3 py-2.5 focus:bg-neutral-100"
+                style={{ backgroundColor: "#ffffff" }}
               >
                 <img src={otherProvider.icon} alt="" className="h-5 w-5" />
                 <span className="font-medium">{otherProvider.label}</span>

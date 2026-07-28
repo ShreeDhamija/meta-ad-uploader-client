@@ -3,7 +3,7 @@
 import { useAuth } from "@/lib/AuthContext"
 import { Navigate, useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
-import { ArrowRight, LogOutIcon } from "lucide-react"
+import { LogOutIcon } from "lucide-react"
 import { Toaster } from "sonner"
 import { useState, useEffect } from "react"
 import PropTypes from "prop-types"
@@ -22,7 +22,7 @@ import TeamSettings from "@/components/settings/TeamSettings"
 import { useIntercom } from "@/lib/useIntercom";
 import UsersIcon from "@/assets/icons/users.svg?react";
 import TikTokIcon from "@/assets/icons/tiktok.svg?react"
-import MetaIconUrl from "@/assets/icons/meta.svg"
+import MetaIcon from "@/assets/icons/meta.svg?react"
 import TikTokUserPlaceholder from "@/assets/TikTokUser.jpg"
 import { useTikTokAuth } from "@/lib/TikTokAuthContext"
 import TikTokConnectDialog from "@/components/TikTokConnectDialog"
@@ -32,14 +32,16 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 const META_SETTINGS_TABS = ["adaccount", "billing", "team"]
 const TIKTOK_SETTINGS_TABS = ["tiktok", "billing", "team"]
 const TIKTOK_SWITCH_TAB = "tiktok-switch"
+const META_SWITCH_TAB = "meta-switch"
 
 export default function Settings({ platform = "meta" }) {
     const isTikTok = platform === "tiktok"
     const settingsTabs = isTikTok ? TIKTOK_SETTINGS_TABS : META_SETTINGS_TABS
     const { isLoggedIn, userName, profilePicUrl, handleLogout, authLoading, features } = useAuth()
     const { isTikTokLoggedIn, tiktokUser, isLoading: tiktokLoading } = useTikTokAuth()
-    const sidebarTabs = !isTikTok && features.tiktokLauncher === true
-        ? [...settingsTabs, TIKTOK_SWITCH_TAB]
+    const providerSwitchTab = isTikTok ? META_SWITCH_TAB : TIKTOK_SWITCH_TAB
+    const sidebarTabs = features.tiktokLauncher === true
+        ? [...settingsTabs, providerSwitchTab]
         : settingsTabs
     const [showSettingsPopup, setShowSettingsPopup] = useState(false)
     const [showAdAccountPopup, setShowAdAccountPopup] = useState(false)
@@ -61,6 +63,7 @@ export default function Settings({ platform = "meta" }) {
         adaccount: Folder,
         tiktok: TikTokIcon,
         [TIKTOK_SWITCH_TAB]: TikTokIcon,
+        [META_SWITCH_TAB]: MetaIcon,
         billing: Card,
         team: UsersIcon,
     }
@@ -85,6 +88,7 @@ export default function Settings({ platform = "meta" }) {
         adaccount: "Preferences",
         tiktok: "Preferences",
         [TIKTOK_SWITCH_TAB]: "TikTok",
+        [META_SWITCH_TAB]: "Meta",
         billing: "Billing",
         team: "Team",
     }
@@ -199,19 +203,20 @@ export default function Settings({ platform = "meta" }) {
                             <div className="space-y-2">
                                 {sidebarTabs.map((tab) => {
                                     const Icon = tabIconMap[tab];
-                                    const isProviderSwitch = tab === TIKTOK_SWITCH_TAB;
+                                    const isProviderSwitch = tab === TIKTOK_SWITCH_TAB || tab === META_SWITCH_TAB;
+                                    const isTikTokConnectionPending = tab === TIKTOK_SWITCH_TAB && tiktokLoading;
                                     return (
                                         <button
                                             key={tab}
                                             type="button"
                                             onClick={() => isProviderSwitch ? handleProviderSwitch() : handleTabChange(tab)}
-                                            disabled={isProviderSwitch && tiktokLoading}
+                                            disabled={isTikTokConnectionPending}
                                             className={cn(
                                                 "w-full flex items-center gap-2 px-4 py-2 rounded-2xl transition-all h-10",
                                                 activeTab === tab
                                                     ? "bg-white border border-gray-300 shadow font-semibold text-neutral-900"
                                                     : "border border-transparent text-neutral-700 hover:bg-neutral-200",
-                                                isProviderSwitch && tiktokLoading && "cursor-wait opacity-60",
+                                                isTikTokConnectionPending && "cursor-wait opacity-60",
                                                 "justify-start max-lg:justify-center max-lg:px-2 relative",
                                             )}
                                         >
@@ -222,9 +227,7 @@ export default function Settings({ platform = "meta" }) {
                                             <span className="text-sm font-medium max-lg:hidden transition-colors duration-500 ease-in-out">
                                                 {tabLabelMap[tab]}
                                             </span>
-                                            {isProviderSwitch ? (
-                                                <ArrowRight className="ml-auto h-4 w-4 text-neutral-400 max-lg:hidden" />
-                                            ) : activeTab === tab && (
+                                            {activeTab === tab && (
                                                 <span className="ml-auto h-1.5 w-1.5 rounded-full bg-neutral-500 max-lg:hidden" aria-hidden="true" />
                                             )}
 
@@ -265,26 +268,12 @@ export default function Settings({ platform = "meta" }) {
                     <div className="bg-white rounded-3xl border border-gray-200 shadow-xs h-[calc(100vh-3rem)] flex flex-col overflow-hidden relative">
                         <div className="flex-1 overflow-auto">
                             <div className="w-full max-w-[52rem] mx-auto p-16">
-                                <div className="mb-6 flex items-start justify-between gap-6">
-                                    <div>
-                                        <p className="text-sm text-gray-400 mb-1 text-left">Settings / {tabLabelMap[activeTab]}</p>
-                                        <h1 className="text-xl font-semibold mb-1 text-left">
-                                            {tabTitleMap[activeTab]}
-                                        </h1>
-                                        <p className="text-gray-400 text-sm text-left">{tabDescriptionMap[activeTab]}</p>
-                                    </div>
-
-                                    {isTikTok && (
-                                        <button
-                                            type="button"
-                                            onClick={handleProviderSwitch}
-                                            className="flex shrink-0 items-center gap-2 rounded-2xl border border-neutral-200 bg-white px-4 py-2.5 text-sm font-semibold text-neutral-800 shadow-xs transition hover:bg-neutral-50"
-                                        >
-                                            <img src={MetaIconUrl} alt="" className="h-5 w-5" />
-                                            <span>Meta</span>
-                                            <ArrowRight className="h-4 w-4 text-neutral-400" />
-                                        </button>
-                                    )}
+                                <div className="mb-6">
+                                    <p className="text-sm text-gray-400 mb-1 text-left">Settings / {tabLabelMap[activeTab]}</p>
+                                    <h1 className="text-xl font-semibold mb-1 text-left">
+                                        {tabTitleMap[activeTab]}
+                                    </h1>
+                                    <p className="text-gray-400 text-sm text-left">{tabDescriptionMap[activeTab]}</p>
                                 </div>
 
                                 <div className="w-full">
