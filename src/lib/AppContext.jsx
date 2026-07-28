@@ -1,4 +1,5 @@
 import { useEffect, useState, useContext, useMemo, useCallback, createContext, useRef } from "react"
+import PropTypes from "prop-types"
 import useSubscription from "@/lib/useSubscriptionSettings"
 import useGlobalSettings from "@/lib/useGlobalSettings"
 import { readCache, writeCache, clearCache } from "@/lib/dataCache"
@@ -31,7 +32,13 @@ export const AppProvider = ({ children }) => {
   const [tiktokIdentitiesLoading, setTiktokIdentitiesLoading] = useState({})
   const [tiktokAdvertisers, setTiktokAdvertisers] = useState(readCache('tiktokAdvertisers') || [])
   const [tiktokAdvertisersLoading, setTiktokAdvertisersLoading] = useState(false)
-  const { tiktokUser, isTikTokLoggedIn, tiktokFetch } = useTikTokAuth()
+  const {
+    tiktokUser,
+    isTikTokLoggedIn,
+    tiktokAdvertisers: authenticatedTikTokAdvertisers,
+    isLoading: tiktokAuthLoading,
+    tiktokFetch,
+  } = useTikTokAuth()
   const previousTikTokSubject = useRef(tiktokUser?.subject || null)
 
   const { subscriptionData } = useSubscription()
@@ -202,16 +209,30 @@ export const AppProvider = ({ children }) => {
   }, [filteredAdAccounts])
 
   useEffect(() => {
+    if (tiktokAuthLoading) return
+
     const subject = tiktokUser?.subject || null
     if (previousTikTokSubject.current !== subject) {
       setTiktokIdentities({})
-      setTiktokAdvertisers([])
       previousTikTokSubject.current = subject
     }
-    if (subject && !readCache('tiktokAdvertisers')) {
-      fetchTikTokAdvertisers()
+
+    if (!subject || !isTikTokLoggedIn) {
+      setTiktokAdvertisers([])
+      return
     }
-  }, [fetchTikTokAdvertisers, tiktokUser])
+
+    // /api/tiktok/auth/me already returns the current advertiser list. Keep the
+    // shared app state in sync with that response instead of clearing it and
+    // relying on a second fetch or a manual refresh.
+    setTiktokAdvertisers(authenticatedTikTokAdvertisers)
+    writeCache('tiktokAdvertisers', authenticatedTikTokAdvertisers)
+  }, [
+    authenticatedTikTokAdvertisers,
+    isTikTokLoggedIn,
+    tiktokAuthLoading,
+    tiktokUser,
+  ])
 
   return (
     <AppContext.Provider value={{
@@ -231,6 +252,10 @@ export const AppProvider = ({ children }) => {
       {children}
     </AppContext.Provider>
   )
+}
+
+AppProvider.propTypes = {
+  children: PropTypes.node.isRequired,
 }
 
 export const useAppData = () => useContext(AppContext)
