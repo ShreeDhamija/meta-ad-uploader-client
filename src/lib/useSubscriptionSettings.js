@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 export default function useSubscription() {
+    const pendingPlanTypeRef = useRef(null);
     const [loading, setLoading] = useState(true);
     const [subscriptionData, setSubscriptionData] = useState({
         subscriptionStatus: 'trial',
@@ -30,7 +31,22 @@ export default function useSubscription() {
 
             if (res.ok) {
                 const data = await res.json();
-                setSubscriptionData(data);
+                const fetchedPlanType = data.planType === 'agency' ? 'pro' : data.planType;
+                const pendingPlanType = pendingPlanTypeRef.current;
+                if (pendingPlanType && fetchedPlanType !== pendingPlanType) {
+                    setSubscriptionData({
+                        ...data,
+                        planType: pendingPlanType,
+                        subscriptionStatus: 'active',
+                        isTrialExpired: false,
+                    });
+                } else {
+                    pendingPlanTypeRef.current = null;
+                    setSubscriptionData({
+                        ...data,
+                        planType: fetchedPlanType,
+                    });
+                }
             } else {
                 console.error("Failed to fetch subscription data:", res.status);
             }
@@ -43,6 +59,30 @@ export default function useSubscription() {
 
     useEffect(() => {
         fetchSubscriptionData();
+
+        let refreshTimer;
+        const handleSubscriptionUpdated = (event) => {
+            const nextPlanType = event.detail?.planType;
+            if (nextPlanType) {
+                const normalizedPlanType = nextPlanType === 'agency' ? 'pro' : nextPlanType;
+                pendingPlanTypeRef.current = normalizedPlanType;
+                setSubscriptionData((previous) => ({
+                    ...previous,
+                    planType: normalizedPlanType,
+                    subscriptionStatus: 'active',
+                    isTrialExpired: false,
+                }));
+                setLoading(false);
+            }
+            clearTimeout(refreshTimer);
+            refreshTimer = setTimeout(fetchSubscriptionData, 1500);
+        };
+        window.addEventListener('subscriptionUpdated', handleSubscriptionUpdated);
+
+        return () => {
+            clearTimeout(refreshTimer);
+            window.removeEventListener('subscriptionUpdated', handleSubscriptionUpdated);
+        };
     }, []);
 
     const refreshSubscriptionData = () => {

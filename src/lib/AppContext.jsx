@@ -4,6 +4,7 @@ import useSubscription from "@/lib/useSubscriptionSettings"
 import useGlobalSettings from "@/lib/useGlobalSettings"
 import { readCache, writeCache, clearCache } from "@/lib/dataCache"
 import { useTikTokAuth } from "@/lib/TikTokAuthContext"
+import { getPlanAccountLimit } from "@/lib/accountSelection"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
@@ -30,7 +31,7 @@ export const AppProvider = ({ children }) => {
   const [adAccountsLoading, setAdAccountsLoading] = useState(false)
   const [tiktokIdentities, setTiktokIdentities] = useState(readCache('tiktokIdentities') || {})
   const [tiktokIdentitiesLoading, setTiktokIdentitiesLoading] = useState({})
-  const [tiktokAdvertisers, setTiktokAdvertisers] = useState(readCache('tiktokAdvertisers') || [])
+  const [allTikTokAdvertisers, setAllTikTokAdvertisers] = useState(readCache('tiktokAdvertisers') || [])
   const [tiktokAdvertisersLoading, setTiktokAdvertisersLoading] = useState(false)
   const {
     tiktokUser,
@@ -42,7 +43,7 @@ export const AppProvider = ({ children }) => {
   const previousTikTokSubject = useRef(tiktokUser?.subject || null)
 
   const { subscriptionData } = useSubscription()
-  const { selectedAdAccountIds } = useGlobalSettings()
+  const { selectedAdAccountIds, selectedTikTokAdvertiserIds } = useGlobalSettings()
 
   const filteredAdAccounts = useMemo(() => {
     if (subscriptionData.planType === 'starter' && selectedAdAccountIds.length > 0) {
@@ -52,6 +53,19 @@ export const AppProvider = ({ children }) => {
     }
     return allAdAccounts
   }, [allAdAccounts, subscriptionData.planType, selectedAdAccountIds])
+
+  const filteredTikTokAdvertisers = useMemo(() => {
+    const limit = getPlanAccountLimit(subscriptionData.planType)
+    const shouldFilter = (
+      (Number.isFinite(limit) || subscriptionData.planType === 'free_trial')
+      && selectedTikTokAdvertiserIds.length > 0
+    )
+    if (!shouldFilter) return allTikTokAdvertisers
+    return allTikTokAdvertisers.filter((advertiser) => {
+      const id = String(advertiser.advertiser_id || advertiser.id)
+      return selectedTikTokAdvertiserIds.includes(id)
+    })
+  }, [allTikTokAdvertisers, selectedTikTokAdvertiserIds, subscriptionData.planType])
 
   const fetchAdAccounts = useCallback(async () => {
     setAdAccountsLoading(true);
@@ -129,7 +143,7 @@ export const AppProvider = ({ children }) => {
       if (!res.ok) return []
       const data = await res.json()
       const advertisers = data.advertisers || []
-      setTiktokAdvertisers(advertisers)
+      setAllTikTokAdvertisers(advertisers)
       writeCache('tiktokAdvertisers', advertisers)
       return advertisers
     } catch (err) {
@@ -218,14 +232,14 @@ export const AppProvider = ({ children }) => {
     }
 
     if (!subject || !isTikTokLoggedIn) {
-      setTiktokAdvertisers([])
+      setAllTikTokAdvertisers([])
       return
     }
 
     // /api/tiktok/auth/me already returns the current advertiser list. Keep the
     // shared app state in sync with that response instead of clearing it and
     // relying on a second fetch or a manual refresh.
-    setTiktokAdvertisers(authenticatedTikTokAdvertisers)
+    setAllTikTokAdvertisers(authenticatedTikTokAdvertisers)
     writeCache('tiktokAdvertisers', authenticatedTikTokAdvertisers)
   }, [
     authenticatedTikTokAdvertisers,
@@ -245,7 +259,8 @@ export const AppProvider = ({ children }) => {
       tiktokIdentities,
       tiktokIdentitiesLoading,
       fetchTikTokIdentities,
-      tiktokAdvertisers,
+      tiktokAdvertisers: filteredTikTokAdvertisers,
+      allTikTokAdvertisers,
       tiktokAdvertisersLoading,
       fetchTikTokAdvertisers,
     }}>

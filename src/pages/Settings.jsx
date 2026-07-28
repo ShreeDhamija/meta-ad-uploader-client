@@ -27,6 +27,7 @@ import TikTokUserPlaceholder from "@/assets/TikTokUser.jpg"
 import { useTikTokAuth } from "@/lib/TikTokAuthContext"
 import TikTokConnectDialog from "@/components/TikTokConnectDialog"
 import DesktopIcon from '@/assets/Desktop.webp';
+import { getRequiredSelectionPlatforms, META_PLATFORM } from "@/lib/accountSelection"
 import "../settings.css"
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 const META_SETTINGS_TABS = ["adaccount", "billing", "team"]
@@ -45,6 +46,7 @@ export default function Settings({ platform = "meta" }) {
         : settingsTabs
     const [showSettingsPopup, setShowSettingsPopup] = useState(false)
     const [showAdAccountPopup, setShowAdAccountPopup] = useState(false)
+    const [popupPlatforms, setPopupPlatforms] = useState([META_PLATFORM])
     const [showTikTokConnectDialog, setShowTikTokConnectDialog] = useState(false)
     const navigate = useNavigate()
     const {
@@ -68,7 +70,13 @@ export default function Settings({ platform = "meta" }) {
         team: UsersIcon,
     }
 
-    const { hasSeenSettingsOnboarding, setHasSeenSettingsOnboarding, loading, selectedAdAccountIds } = useGlobalSettings()
+    const {
+        hasSeenSettingsOnboarding,
+        setHasSeenSettingsOnboarding,
+        loading,
+        selectedAdAccountIds,
+        selectedTikTokAdvertiserIds,
+    } = useGlobalSettings()
 
     const tabDescriptionMap = {
         adaccount: "Configure default settings and values to pre-fill into ads for all your ad accounts.",
@@ -149,16 +157,29 @@ export default function Settings({ platform = "meta" }) {
     }, [isTikTok, loading, hasSeenSettingsOnboarding])
 
     useEffect(() => {
-        if (isTikTok) {
-            setShowAdAccountPopup(false)
-            return
-        }
-        if (loading || subscriptionLoading) return;
+        if (loading || subscriptionLoading || tiktokLoading) return;
 
-        if ((subscriptionData.planType === 'brand' || subscriptionData.planType === 'starter') && (!selectedAdAccountIds || selectedAdAccountIds.length === 0)) {
+        const requiredPlatforms = getRequiredSelectionPlatforms({
+            planType: subscriptionData.planType,
+            selectedMetaIds: selectedAdAccountIds,
+            selectedTikTokIds: selectedTikTokAdvertiserIds,
+            isTikTokConnected: isTikTokLoggedIn,
+            requireTikTokTrialSelection: isTikTok,
+        })
+        if (requiredPlatforms.length > 0) {
+            setPopupPlatforms(requiredPlatforms)
             setShowAdAccountPopup(true)
         }
-    }, [isTikTok, loading, subscriptionLoading, subscriptionData.planType, selectedAdAccountIds])
+    }, [
+        isTikTok,
+        isTikTokLoggedIn,
+        loading,
+        selectedAdAccountIds,
+        selectedTikTokAdvertiserIds,
+        subscriptionData.planType,
+        subscriptionLoading,
+        tiktokLoading,
+    ])
 
     if (authLoading || (isTikTok && tiktokLoading)) return null
     if (!isLoggedIn) return <Navigate to="/login" />
@@ -280,12 +301,15 @@ export default function Settings({ platform = "meta" }) {
                                     {activeTab === "adaccount" && (
                                         <AdAccountSettings
                                             preselectedAdAccount={preselectedAdAccount}
-                                            onTriggerAdAccountPopup={() => setShowAdAccountPopup(true)}
+                                            onTriggerAdAccountPopup={() => {
+                                                setPopupPlatforms([META_PLATFORM])
+                                                setShowAdAccountPopup(true)
+                                            }}
                                             subscriptionData={subscriptionData}
                                         />
                                     )}
                                     {activeTab === "tiktok" && <TikTokAdvertiserSettings />}
-                                    {activeTab === "billing" && <BillingSettings />}
+                                    {activeTab === "billing" && <BillingSettings platform={platform} />}
                                     {activeTab === "team" && <TeamSettings />}
 
                                 </div>
@@ -300,13 +324,14 @@ export default function Settings({ platform = "meta" }) {
                     <Toaster richColors position="bottom-left" closeButton />
                 </div>
                 {!isTikTok && showSettingsPopup && <SettingsOnboardingPopup onClose={handleCloseSettingsPopup} />}
-                {!isTikTok && (
-                    <AdAccountSelectionPopup
-                        isOpen={showAdAccountPopup}
-                        onClose={() => setShowAdAccountPopup(false)}
-                        selectedAdAccountIds={selectedAdAccountIds}
-                    />
-                )}
+                <AdAccountSelectionPopup
+                    isOpen={showAdAccountPopup}
+                    onClose={() => setShowAdAccountPopup(false)}
+                    selectedAdAccountIds={selectedAdAccountIds}
+                    selectedTikTokAdvertiserIds={selectedTikTokAdvertiserIds}
+                    platforms={popupPlatforms}
+                    planType={subscriptionData.planType}
+                />
                 <TikTokConnectDialog
                     open={showTikTokConnectDialog}
                     onOpenChange={setShowTikTokConnectDialog}

@@ -13,6 +13,7 @@ export default function useGlobalSettings() {
     const [hasSeenCsvImportGuide, setHasSeenCsvImportGuide] = useState(false);
     const [seenOnboardingCards, setSeenOnboardingCards] = useState([]);
     const [selectedAdAccountIds, setSelectedAdAccountIds] = useState([])
+    const [selectedTikTokAdvertiserIds, setSelectedTikTokAdvertiserIds] = useState([])
     const [uploadSources, setUploadSources] = useState(['local', 'drive', 'dropbox']);
 
     const fetchSettings = async () => {
@@ -46,6 +47,7 @@ export default function useGlobalSettings() {
                     : []
             );
             setSelectedAdAccountIds(data?.settings?.selectedAdAccountIds || [])
+            setSelectedTikTokAdvertiserIds(data?.settings?.tiktok?.selectedAdvertiserIds || [])
             const savedUploadSources = Array.isArray(data?.settings?.uploadSources)
                 ? data.settings.uploadSources
                 : ['local', 'drive', 'dropbox'];
@@ -61,6 +63,7 @@ export default function useGlobalSettings() {
             console.error("Failed to fetch global settings:", err);
             setHasSeenOnboarding(false);
             setSelectedAdAccountIds([]);
+            setSelectedTikTokAdvertiserIds([]);
             setHasSeenSettingsOnboarding(false);
             setHasSeenAnalyticsOnboarding(false);
             setHasSeenAnalyticsHomePopup(false);
@@ -124,6 +127,7 @@ export default function useGlobalSettings() {
         setSeenOnboardingCards,
         effectiveSeenOnboardingIds,
         selectedAdAccountIds,
+        selectedTikTokAdvertiserIds,
         uploadSources,
         setUploadSources,
     };

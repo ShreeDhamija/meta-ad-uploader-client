@@ -357,6 +357,17 @@ export default function TikTokAdvertiserSettings({ advertisers: propAdvertisers 
         }
     }, [advertisers, selectedAdvertiser]);
 
+    useEffect(() => {
+        if (!selectedAdvertiser || advertisers.length === 0) return;
+        const selectionIsAllowed = advertisers.some((advertiser) => (
+            String(advertiser.advertiser_id || advertiser.id) === String(selectedAdvertiser)
+        ));
+        if (!selectionIsAllowed) {
+            setSelectedAdvertiser(null);
+            localStorage.removeItem('last_selected_tiktok_advertiser');
+        }
+    }, [advertisers, selectedAdvertiser]);
+
     const fetchIdentities = () => {
         if (selectedAdvertiser) {
             fetchTikTokIdentities(selectedAdvertiser, true);

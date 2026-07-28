@@ -22,6 +22,8 @@ import AdAccountSelectionPopup from "../components/AdAccountSelectionPopup"
 import { useIntercom } from "@/lib/useIntercom";
 import DesktopIcon from '@/assets/Desktop.webp';
 import TrialExpiredPopup from '../components/TrialExpiredPopup';
+import { useTikTokAuth } from "@/lib/TikTokAuthContext"
+import { getRequiredSelectionPlatforms } from "@/lib/accountSelection"
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 const HOME_CACHE_KEY = 'home_adAccountSettings_cache';
 const MEDIA_PREVIEW_LAUNCH_DURATION_MS = 560;
@@ -118,8 +120,10 @@ export default function Home() {
         setSeenOnboardingCards,
         effectiveSeenOnboardingIds,
         loading,
-        selectedAdAccountIds
+        selectedAdAccountIds,
+        selectedTikTokAdvertiserIds,
     } = useGlobalSettings();
+    const { isTikTokLoggedIn, isLoading: tiktokAuthLoading } = useTikTokAuth()
     const isNewOnboardingUser = !hasSeenOnboarding
     const newUserCards = ONBOARDING_CARDS.filter((c) => !c.existingUsersOnly)
     const unseenOnboardingCards = ONBOARDING_CARDS.filter(
@@ -401,12 +405,24 @@ export default function Home() {
     }, [isLoggedIn, loading, hasSeenOnboarding, unseenOnboardingCards.length])
 
     useEffect(() => {
-        if (loading || subscriptionLoading) return;
+        if (loading || subscriptionLoading || tiktokAuthLoading) return;
 
-        if ((subscriptionData.planType === 'brand' || subscriptionData.planType === 'starter') && (!selectedAdAccountIds || selectedAdAccountIds.length === 0)) {
-            setShowAdAccountPopup(true)
-        }
-    }, [subscriptionData.planType, selectedAdAccountIds])
+        const requiredPlatforms = getRequiredSelectionPlatforms({
+            planType: subscriptionData.planType,
+            selectedMetaIds: selectedAdAccountIds,
+            selectedTikTokIds: selectedTikTokAdvertiserIds,
+            isTikTokConnected: isTikTokLoggedIn,
+        })
+        setShowAdAccountPopup(requiredPlatforms.length > 0)
+    }, [
+        isTikTokLoggedIn,
+        loading,
+        selectedAdAccountIds,
+        selectedTikTokAdvertiserIds,
+        subscriptionData.planType,
+        subscriptionLoading,
+        tiktokAuthLoading,
+    ])
 
     useEffect(() => {
         if (subscriptionLoading) return;
@@ -1763,6 +1779,15 @@ export default function Home() {
             <AdAccountSelectionPopup
                 isOpen={showAdAccountPopup}
                 onClose={() => setShowAdAccountPopup(false)}
+                platforms={getRequiredSelectionPlatforms({
+                    planType: subscriptionData.planType,
+                    selectedMetaIds: selectedAdAccountIds,
+                    selectedTikTokIds: selectedTikTokAdvertiserIds,
+                    isTikTokConnected: isTikTokLoggedIn,
+                })}
+                planType={subscriptionData.planType}
+                selectedAdAccountIds={selectedAdAccountIds}
+                selectedTikTokAdvertiserIds={selectedTikTokAdvertiserIds}
             />
 
             {blocker.state === "blocked" && (

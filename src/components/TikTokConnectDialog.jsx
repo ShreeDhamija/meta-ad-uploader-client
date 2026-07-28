@@ -26,7 +26,7 @@ export default function TikTokConnectDialog({ open, onOpenChange }) {
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-[460px] !rounded-[28px] p-8">
+      <DialogContent className="sm:max-w-[460px] !rounded-[28px] p-8 data-[state=open]:!slide-in-from-left-0 data-[state=closed]:!slide-out-to-left-0 data-[state=open]:!slide-in-from-top-0 data-[state=closed]:!slide-out-to-top-0">
         <DialogHeader className="space-y-3">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-neutral-100">
             <img src={TikTokIcon} alt="" className="h-6 w-6" />

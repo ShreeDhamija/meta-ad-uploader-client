@@ -26,6 +26,8 @@ import {
     DialogOverlay,
 } from "@/components/ui/dialog"
 import useSubscription from "@/lib/useSubscriptionSettings"
+import PropTypes from "prop-types"
+import { normalizeCheckoutPlanType } from "@/lib/accountSelection"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "https://api.withblip.com"
 const PLANS = [
@@ -90,7 +92,7 @@ function getPlanMeta(planType) {
     return PLANS.find((plan) => plan.matchKeys.includes(planType))
 }
 
-export default function BillingSettings() {
+export default function BillingSettings({ platform = "meta" }) {
     const [showCancelDialog, setShowCancelDialog] = useState(false)
     const {
         loading,
@@ -144,6 +146,9 @@ export default function BillingSettings() {
                 }
 
                 const data = await res.json()
+                window.dispatchEvent(new CustomEvent("subscriptionUpdated", {
+                    detail: { planType: normalizeCheckoutPlanType(data.planType) },
+                }))
                 if (data.amount_total) {
                     window.dataLayer = window.dataLayer || []
                     window.dataLayer.push({
@@ -175,7 +180,11 @@ export default function BillingSettings() {
                 headers: {
                     "Content-Type": "application/json",
                 },
-                body: JSON.stringify({ planType: planKey, referral }),
+                body: JSON.stringify({
+                    planType: planKey,
+                    referral,
+                    returnPlatform: platform,
+                }),
             })
 
             const { url } = await response.json()
@@ -888,4 +897,8 @@ export default function BillingSettings() {
             </Dialog>
         </div>
     )
+}
+
+BillingSettings.propTypes = {
+    platform: PropTypes.oneOf(["meta", "tiktok"]),
 }

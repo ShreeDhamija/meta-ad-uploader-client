@@ -12,6 +12,13 @@ import React, { useCallback, useEffect, useRef, useState } from "react"
 import { useNavigate } from 'react-router-dom'
 import { toast, Toaster } from 'sonner'
 import { v4 as uuidv4 } from "uuid"
+import { useAppData } from "@/lib/AppContext"
+import useGlobalSettings from "@/lib/useGlobalSettings"
+import AdAccountSelectionPopup from "@/components/AdAccountSelectionPopup"
+import {
+  getRequiredSelectionPlatforms,
+  normalizeCheckoutPlanType,
+} from "@/lib/accountSelection"
 
 const TIKTOK_CACHE_KEY = 'tiktok_ads_cache';
 const MEDIA_PREVIEW_LAUNCH_DURATION_MS = 560;
@@ -70,8 +77,29 @@ const getFileId = (file) => {
 
 export default function TikTokAds() {
   const navigate = useNavigate()
-  const { isTikTokLoggedIn, tiktokAdvertisers, isLoading: authLoading } = useTikTokAuth()
-  const { hasActiveAccess, loading: subscriptionLoading } = useSubscription()
+  const { isTikTokLoggedIn, isLoading: authLoading } = useTikTokAuth()
+  const { tiktokAdvertisers } = useAppData()
+  const {
+    loading: globalSettingsLoading,
+    selectedAdAccountIds,
+    selectedTikTokAdvertiserIds,
+  } = useGlobalSettings()
+  const {
+    hasActiveAccess,
+    loading: subscriptionLoading,
+    subscriptionData,
+  } = useSubscription()
+  const [checkoutPlanType, setCheckoutPlanType] = useState(null)
+  const [showAdAccountPopup, setShowAdAccountPopup] = useState(false)
+  const stripeSessionHandledRef = useRef(false)
+  const effectivePlanType = checkoutPlanType || subscriptionData.planType
+  const requiredSelectionPlatforms = getRequiredSelectionPlatforms({
+    planType: effectivePlanType,
+    selectedMetaIds: selectedAdAccountIds,
+    selectedTikTokIds: selectedTikTokAdvertiserIds,
+    isTikTokConnected: isTikTokLoggedIn,
+    requireTikTokTrialSelection: true,
+  })
   const userHasActiveAccess = hasActiveAccess ? hasActiveAccess() : true
   const { showMessenger, hideMessenger } = useIntercom()
 
@@ -524,6 +552,54 @@ export default function TikTokAds() {
     }
   }, [isTikTokLoggedIn, authLoading, navigate])
 
+  useEffect(() => {
+    if (stripeSessionHandledRef.current) return
+    const sessionId = new URLSearchParams(window.location.search).get("session_id")
+    if (!sessionId) return
+    stripeSessionHandledRef.current = true
+
+    fetch(`${API_BASE_URL}/api/stripe/session/${encodeURIComponent(sessionId)}`, {
+      credentials: "include",
+    })
+      .then(async (response) => {
+        if (!response.ok) throw new Error(`Session fetch failed: ${response.status}`)
+        const data = await response.json()
+        const planType = normalizeCheckoutPlanType(data.planType)
+        setCheckoutPlanType(planType)
+        window.dispatchEvent(new CustomEvent("subscriptionUpdated", {
+          detail: { planType },
+        }))
+
+        if (data.amount_total) {
+          window.dataLayer = window.dataLayer || []
+          window.dataLayer.push({
+            event: "purchase",
+            value: data.amount_total,
+            customer_name: data.customer_name,
+            customer_email: data.customer_email,
+          })
+        }
+      })
+      .catch((error) => {
+        console.error("[TikTok Billing] Error fetching Stripe session:", error)
+      })
+      .finally(() => {
+        const url = new URL(window.location.href)
+        url.searchParams.delete("session_id")
+        window.history.replaceState({}, "", url)
+      })
+  }, [])
+
+  useEffect(() => {
+    if (authLoading || globalSettingsLoading || subscriptionLoading) return
+    setShowAdAccountPopup(requiredSelectionPlatforms.length > 0)
+  }, [
+    authLoading,
+    globalSettingsLoading,
+    requiredSelectionPlatforms.length,
+    subscriptionLoading,
+  ])
+
   // Auto-select advertiser account if only one exists
   useEffect(() => {
     if (tiktokAdvertisers.length === 1 && !selectedAdvertiser) {
@@ -531,6 +607,17 @@ export default function TikTokAds() {
       setSelectedAdvertiser(firstId)
     }
   }, [tiktokAdvertisers, selectedAdvertiser])
+
+  useEffect(() => {
+    if (!selectedAdvertiser || tiktokAdvertisers.length === 0) return
+    const selectionIsAllowed = tiktokAdvertisers.some((advertiser) => (
+      String(advertiser.advertiser_id || advertiser.id) === String(selectedAdvertiser)
+    ))
+    if (!selectionIsAllowed) {
+      setSelectedAdvertiser("")
+      localStorage.removeItem("last_selected_tiktok_advertiser")
+    }
+  }, [selectedAdvertiser, tiktokAdvertisers])
 
   // Save selected advertiser to localStorage to persist selection across page navigations
   useEffect(() => {
@@ -1045,6 +1132,15 @@ export default function TikTokAds() {
 
       <div className="w-full max-w-[1600px] mx-auto py-8 px-2 sm:px-4 md:px-6">
         <Toaster richColors position="bottom-left" closeButton />
+
+        <AdAccountSelectionPopup
+          isOpen={showAdAccountPopup}
+          onClose={() => setShowAdAccountPopup(false)}
+          selectedAdAccountIds={selectedAdAccountIds}
+          selectedTikTokAdvertiserIds={selectedTikTokAdvertiserIds}
+          platforms={requiredSelectionPlatforms}
+          planType={effectivePlanType}
+        />
 
         <TikTokHeader showMessenger={showMessenger} hideMessenger={hideMessenger} />
 
