@@ -62,7 +62,7 @@ export default function LauncherSwitcher({
                 <ChevronDown className="h-3.5 w-3.5 text-gray-500" />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" sideOffset={8} className="w-52 rounded-2xl p-2">
+            <DropdownMenuContent align="start" sideOffset={8} className="w-52 rounded-2xl !bg-white p-2">
               <DropdownMenuLabel className="px-2 text-xs font-medium text-gray-400">
                 Switch launcher
               </DropdownMenuLabel>
