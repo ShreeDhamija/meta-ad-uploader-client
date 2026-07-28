@@ -1,8 +1,10 @@
 import { useTikTokAuth } from "@/lib/TikTokAuthContext"
 import { useNavigate, useLocation } from "react-router-dom"
 import { useEffect, useState } from "react"
+import PropTypes from "prop-types"
 import { Button } from "@/components/ui/button"
 import { useIntercom } from "@/lib/useIntercom"
+import { startTikTokOAuth } from "@/lib/tiktokOAuth"
 import Doodle from "../assets/onboarding/doodle.webp?url"
 import MrAvatar from "../assets/onboarding/mr.webp?url"
 
@@ -15,6 +17,11 @@ function TikTokLogo({ size = 20, color = "white" }) {
             <path d="M34.1 6C34.7 9.5 36.7 12.5 39.7 14.3V20.3C37.2 20.3 34.9 19.5 32.9 18.2V30.4C32.9 37.4 27.2 43 20.1 43C13 43 7.3 37.4 7.3 30.4C7.3 23.4 13 17.8 20.1 17.8C20.7 17.8 21.3 17.8 21.9 17.9V23.9C21.3 23.8 20.7 23.7 20.1 23.7C16.2 23.7 13.1 26.7 13.1 30.5C13.1 34.3 16.2 37.3 20.1 37.3C24 37.3 27.3 34.2 27.3 30.4V6H34.1Z" fill={color} />
         </svg>
     )
+}
+
+TikTokLogo.propTypes = {
+    size: PropTypes.number,
+    color: PropTypes.string,
 }
 
 function TestimonialPanel() {
@@ -75,8 +82,7 @@ export default function TikTokLogin() {
 
     const handleTikTokLogin = () => {
         setIsRedirecting(true)
-        const cleanApiUrl = API_BASE_URL.replace(/\/$/, '')
-        window.location.href = `${cleanApiUrl}/auth/tiktok/login`
+        startTikTokOAuth()
     }
 
     return (

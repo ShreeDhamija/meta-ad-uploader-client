@@ -3,9 +3,10 @@
 import { useAuth } from "@/lib/AuthContext"
 import { Navigate, useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
-import { LogOutIcon } from "lucide-react"
+import { ArrowRight, Loader2, LogOutIcon } from "lucide-react"
 import { Toaster } from "sonner"
 import { useState, useEffect } from "react"
+import PropTypes from "prop-types"
 import { cn } from "@/lib/utils"
 import useGlobalSettings from "@/lib/useGlobalSettings"
 import AdAccountSettings from "@/components/settings/AdAccountSettings"
@@ -21,8 +22,11 @@ import TeamSettings from "@/components/settings/TeamSettings"
 import { useIntercom } from "@/lib/useIntercom";
 import UsersIcon from "@/assets/icons/users.svg?react";
 import TikTokIcon from "@/assets/icons/tiktok.svg?react"
+import TikTokIconUrl from "@/assets/icons/tiktok.svg"
+import MetaIconUrl from "@/assets/icons/meta.svg"
 import TikTokUserPlaceholder from "@/assets/TikTokUser.jpg"
 import { useTikTokAuth } from "@/lib/TikTokAuthContext"
+import TikTokConnectDialog from "@/components/TikTokConnectDialog"
 import DesktopIcon from '@/assets/Desktop.webp';
 import "../settings.css"
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
@@ -32,10 +36,11 @@ const TIKTOK_SETTINGS_TABS = ["tiktok", "billing", "team"]
 export default function Settings({ platform = "meta" }) {
     const isTikTok = platform === "tiktok"
     const settingsTabs = isTikTok ? TIKTOK_SETTINGS_TABS : META_SETTINGS_TABS
-    const { isLoggedIn, userName, profilePicUrl, handleLogout, authLoading } = useAuth()
-    const { tiktokUser, isLoading: tiktokLoading } = useTikTokAuth()
+    const { isLoggedIn, userName, profilePicUrl, handleLogout, authLoading, features } = useAuth()
+    const { isTikTokLoggedIn, tiktokUser, isLoading: tiktokLoading } = useTikTokAuth()
     const [showSettingsPopup, setShowSettingsPopup] = useState(false)
     const [showAdAccountPopup, setShowAdAccountPopup] = useState(false)
+    const [showTikTokConnectDialog, setShowTikTokConnectDialog] = useState(false)
     const navigate = useNavigate()
     const {
         subscriptionData,
@@ -67,7 +72,7 @@ export default function Settings({ platform = "meta" }) {
 
     const tabTitleMap = {
         adaccount: "Ad Account Settings",
-        tiktok: "TikTok Preferences",
+        tiktok: "TikTok Ad Account Settings",
         billing: "Billing and Subscription",
         team: "Team Management",
     };
@@ -99,6 +104,19 @@ export default function Settings({ platform = "meta" }) {
         newUrl.searchParams.set('tab', tab)
         window.history.pushState({}, '', newUrl)
         document.activeElement.blur()
+    }
+
+    const handleProviderSwitch = () => {
+        if (isTikTok) {
+            navigate("/settings")
+            return
+        }
+        if (tiktokLoading) return
+        if (isTikTokLoggedIn) {
+            navigate("/tiktok-settings")
+            return
+        }
+        setShowTikTokConnectDialog(true)
     }
 
     useEffect(() => {
@@ -144,7 +162,7 @@ export default function Settings({ platform = "meta" }) {
                     <img src={DesktopIcon} alt="Desktop computer" className="w-24 h-24 mb-4 mx-auto" />
                     <h1 className="text-2xl font-bold text-gray-900 mb-4">Desktop Recommended</h1>
                     <p className="text-gray-600 mb-6">
-                        Blip works best on a bigger screen. <br></br> We've sent you an email to help you<br></br> pick up from here.
+                        Blip works best on a bigger screen. <br></br> We&apos;ve sent you an email to help you<br></br> pick up from here.
                     </p>
                     <button
                         onClick={() => navigate(isTikTok ? "/tiktok-ads" : "/")}
@@ -236,12 +254,36 @@ export default function Settings({ platform = "meta" }) {
                     <div className="bg-white rounded-3xl border border-gray-200 shadow-xs h-[calc(100vh-3rem)] flex flex-col overflow-hidden relative">
                         <div className="flex-1 overflow-auto">
                             <div className="w-full max-w-[52rem] mx-auto p-16">
-                                <p className="text-sm text-gray-400 mb-1 text-left">Settings / {tabLabelMap[activeTab]}</p>
-                                <h1 className="text-xl font-semibold mb-1 text-left">
-                                    {tabTitleMap[activeTab]}
-                                </h1>
+                                <div className="mb-6 flex items-start justify-between gap-6">
+                                    <div>
+                                        <p className="text-sm text-gray-400 mb-1 text-left">Settings / {tabLabelMap[activeTab]}</p>
+                                        <h1 className="text-xl font-semibold mb-1 text-left">
+                                            {tabTitleMap[activeTab]}
+                                        </h1>
+                                        <p className="text-gray-400 text-sm text-left">{tabDescriptionMap[activeTab]}</p>
+                                    </div>
 
-                                <p className="text-gray-400 text-sm mb-6 text-left">{tabDescriptionMap[activeTab]}</p>
+                                    {(isTikTok || features.tiktokLauncher === true) && (
+                                        <button
+                                            type="button"
+                                            onClick={handleProviderSwitch}
+                                            disabled={!isTikTok && tiktokLoading}
+                                            className="flex shrink-0 items-center gap-2 rounded-2xl border border-neutral-200 bg-white px-4 py-2.5 text-sm font-semibold text-neutral-800 shadow-xs transition hover:bg-neutral-50 disabled:cursor-wait disabled:opacity-60"
+                                        >
+                                            {!isTikTok && tiktokLoading ? (
+                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                            ) : (
+                                                <img
+                                                    src={isTikTok ? MetaIconUrl : TikTokIconUrl}
+                                                    alt=""
+                                                    className="h-5 w-5"
+                                                />
+                                            )}
+                                            <span>{isTikTok ? "Meta" : "TikTok"}</span>
+                                            <ArrowRight className="h-4 w-4 text-neutral-400" />
+                                        </button>
+                                    )}
+                                </div>
 
                                 <div className="w-full">
                                     {activeTab === "adaccount" && (
@@ -274,7 +316,15 @@ export default function Settings({ platform = "meta" }) {
                         selectedAdAccountIds={selectedAdAccountIds}
                     />
                 )}
+                <TikTokConnectDialog
+                    open={showTikTokConnectDialog}
+                    onOpenChange={setShowTikTokConnectDialog}
+                />
             </div>
         </>
     )
+}
+
+Settings.propTypes = {
+    platform: PropTypes.oneOf(["meta", "tiktok"]),
 }
