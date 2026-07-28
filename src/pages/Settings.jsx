@@ -27,7 +27,7 @@ import DesktopIcon from '@/assets/Desktop.webp';
 import "../settings.css"
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 const META_SETTINGS_TABS = ["adaccount", "billing", "team"]
-const TIKTOK_SETTINGS_TABS = ["tiktok"]
+const TIKTOK_SETTINGS_TABS = ["tiktok", "billing", "team"]
 
 export default function Settings({ platform = "meta" }) {
     const isTikTok = platform === "tiktok"

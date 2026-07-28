@@ -65,7 +65,7 @@ export default function TikTokHeader({ showMessenger, hideMessenger }) {
   }
 
   const handleUpgrade = () => {
-    navigate('/settings?tab=billing')
+    navigate('/tiktok-settings?tab=billing')
   }
 
   const isSubscriptionExpired = () => {

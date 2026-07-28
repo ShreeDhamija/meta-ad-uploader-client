@@ -4353,7 +4353,7 @@ export default function TikTokAdCreationForm({
                     type="button"
                     size="sm"
                     variant="outline"
-                    onClick={() => navigate(`/settings?tab=tiktok&adsaccount=${selectedAdvertiser}`)}
+                    onClick={() => navigate(`/tiktok-settings?tab=tiktok&advertiser=${selectedAdvertiser}`)}
                     className="text-xs px-3 py-0.25 border-orange-300 text-orange-700 bg-orange-300 rounded-xl hover:text-orange-800 hover:bg-orange-400"
                   >
                     Add Settings
@@ -5272,7 +5272,7 @@ export default function TikTokAdCreationForm({
                       size="sm"
                       variant="outline"
                       disabled={adType === 'SPARK'}
-                      onClick={() => navigate(`/settings?tab=tiktok&adsaccount=${selectedAdvertiser}`)}
+                      onClick={() => navigate(`/tiktok-settings?tab=tiktok&advertiser=${selectedAdvertiser}`)}
                       className={cn(
                         "text-xs px-3 pl-2 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900 ml-auto",
                         adType === 'SPARK' && "opacity-50 cursor-not-allowed bg-zinc-700 hover:bg-zinc-700 hover:text-white"
@@ -5331,7 +5331,7 @@ export default function TikTokAdCreationForm({
                             type="button"
                             size="sm"
                             variant="outline"
-                            onClick={() => navigate(`/settings?tab=tiktok&adsaccount=${selectedAdvertiser}`)}
+                            onClick={() => navigate(`/tiktok-settings?tab=tiktok&advertiser=${selectedAdvertiser}`)}
                             className="text-xs px-3 pl-2 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900 ml-auto"
                           >
                             <CogIcon className="w-3 h-3 text-white mr-1" />
