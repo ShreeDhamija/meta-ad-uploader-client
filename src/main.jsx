@@ -56,6 +56,10 @@ const router = createBrowserRouter([
       { path: "settings", element: <Settings /> },
       { path: "analytics", element: <Analytics /> },
       {
+        path: "tiktok-settings",
+        element: <TikTokRoute requireConnection><Settings platform="tiktok" /></TikTokRoute>,
+      },
+      {
         path: "tiktok-login",
         element: <TikTokRoute><TikTokLogin /></TikTokRoute>,
       },

@@ -183,7 +183,7 @@ export default function TikTokHeader({ showMessenger, hideMessenger }) {
         )}
 
         <button
-          onClick={() => navigate("/settings")}
+          onClick={() => navigate("/tiktok-settings")}
           title="Settings"
           className="flex items-center gap-1.5 rounded-full transition bg-transparent hover:bg-gray-100 focus:bg-transparent active:bg-transparent !focus:outline-none !focus:ring-0 !active:ring-0 px-4 py-2 cursor-pointer"
           style={{

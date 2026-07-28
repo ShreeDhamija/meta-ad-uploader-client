@@ -9,6 +9,7 @@ import { useState, useEffect } from "react"
 import { cn } from "@/lib/utils"
 import useGlobalSettings from "@/lib/useGlobalSettings"
 import AdAccountSettings from "@/components/settings/AdAccountSettings"
+import TikTokAdvertiserSettings from "@/components/settings/tiktok/TikTokAdvertiserSettings"
 import BillingSettings from "@/components/settings/Billing"
 import useSubscription from "@/lib/useSubscriptionSettings"
 import SettingsOnboardingPopup from "@/components/SettingsOnboardingPopup"
@@ -19,13 +20,20 @@ import Card from '@/assets/icons/card.svg?react';
 import TeamSettings from "@/components/settings/TeamSettings"
 import { useIntercom } from "@/lib/useIntercom";
 import UsersIcon from "@/assets/icons/users.svg?react";
+import TikTokIcon from "@/assets/icons/tiktok.svg?react"
+import TikTokUserPlaceholder from "@/assets/TikTokUser.jpg"
+import { useTikTokAuth } from "@/lib/TikTokAuthContext"
 import DesktopIcon from '@/assets/Desktop.webp';
 import "../settings.css"
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
-const SETTINGS_TABS = ["adaccount", "billing", "team"]
+const META_SETTINGS_TABS = ["adaccount", "billing", "team"]
+const TIKTOK_SETTINGS_TABS = ["tiktok"]
 
-export default function Settings() {
+export default function Settings({ platform = "meta" }) {
+    const isTikTok = platform === "tiktok"
+    const settingsTabs = isTikTok ? TIKTOK_SETTINGS_TABS : META_SETTINGS_TABS
     const { isLoggedIn, userName, profilePicUrl, handleLogout, authLoading } = useAuth()
+    const { tiktokUser, isLoading: tiktokLoading } = useTikTokAuth()
     const [showSettingsPopup, setShowSettingsPopup] = useState(false)
     const [showAdAccountPopup, setShowAdAccountPopup] = useState(false)
     const navigate = useNavigate()
@@ -36,12 +44,14 @@ export default function Settings() {
     useIntercom(true)
     const urlParams = new URLSearchParams(window.location.search)
     const requestedTab = urlParams.get('tab')
-    const initialTab = SETTINGS_TABS.includes(requestedTab) ? requestedTab : 'adaccount'
+    const defaultTab = isTikTok ? "tiktok" : "adaccount"
+    const initialTab = settingsTabs.includes(requestedTab) ? requestedTab : defaultTab
     const preselectedAdAccount = urlParams.get('adAccount')
     const [activeTab, setActiveTab] = useState(initialTab)
 
     const tabIconMap = {
         adaccount: Folder,
+        tiktok: TikTokIcon,
         billing: Card,
         team: UsersIcon,
     }
@@ -50,18 +60,21 @@ export default function Settings() {
 
     const tabDescriptionMap = {
         adaccount: "Configure default settings and values to pre-fill into ads for all your ad accounts.",
+        tiktok: "Configure default settings, UTMs and ad copy for your TikTok advertiser accounts.",
         billing: "Manage your subscription, billing methods, and view invoices.",
         team: "Manage your team, invite members, or join an existing team.",
     }
 
     const tabTitleMap = {
         adaccount: "Ad Account Settings",
+        tiktok: "TikTok Preferences",
         billing: "Billing and Subscription",
         team: "Team Management",
     };
 
     const tabLabelMap = {
         adaccount: "Preferences",
+        tiktok: "Preferences",
         billing: "Billing",
         team: "Team",
     }
@@ -89,30 +102,38 @@ export default function Settings() {
     }
 
     useEffect(() => {
-        if (!SETTINGS_TABS.includes(activeTab)) {
-            setActiveTab("adaccount")
+        if (!settingsTabs.includes(activeTab)) {
+            setActiveTab(defaultTab)
             const newUrl = new URL(window.location)
-            newUrl.searchParams.set("tab", "adaccount")
+            newUrl.searchParams.set("tab", defaultTab)
             window.history.replaceState({}, '', newUrl)
         }
-    }, [activeTab])
+    }, [activeTab, defaultTab, settingsTabs])
 
 
     useEffect(() => {
+        if (isTikTok) {
+            setShowSettingsPopup(false)
+            return
+        }
         if (!loading && !hasSeenSettingsOnboarding) {
             setShowSettingsPopup(true)
         }
-    }, [loading, hasSeenSettingsOnboarding])
+    }, [isTikTok, loading, hasSeenSettingsOnboarding])
 
     useEffect(() => {
+        if (isTikTok) {
+            setShowAdAccountPopup(false)
+            return
+        }
         if (loading || subscriptionLoading) return;
 
         if ((subscriptionData.planType === 'brand' || subscriptionData.planType === 'starter') && (!selectedAdAccountIds || selectedAdAccountIds.length === 0)) {
             setShowAdAccountPopup(true)
         }
-    }, [subscriptionData.planType, selectedAdAccountIds])
+    }, [isTikTok, loading, subscriptionLoading, subscriptionData.planType, selectedAdAccountIds])
 
-    if (authLoading) return null
+    if (authLoading || (isTikTok && tiktokLoading)) return null
     if (!isLoggedIn) return <Navigate to="/login" />
 
     return (
@@ -126,7 +147,7 @@ export default function Settings() {
                         Blip works best on a bigger screen. <br></br> We've sent you an email to help you<br></br> pick up from here.
                     </p>
                     <button
-                        onClick={() => navigate("/")}
+                        onClick={() => navigate(isTikTok ? "/tiktok-ads" : "/")}
                         className="mt-4 px-6 py-2 text-sm text-white bg-blue-600 rounded-xl hover:text-blue-700 transition-colors"
                     >
                         Go Home
@@ -142,7 +163,7 @@ export default function Settings() {
                         <div className="flex-1 flex flex-col">
                             {/* Back to Home Button */}
                             <Button
-                                onClick={() => navigate("/")}
+                                onClick={() => navigate(isTikTok ? "/tiktok-ads" : "/")}
                                 className="flex items-center pl-3 justify-start gap-1 bg-white hover:bg-white border border-neutral-200 shadow-xs hover:shadow-sm rounded-[20px] py-7 font-medium w-full mb-4 text-neutral-700"
                                 variant="ghost"
                             >
@@ -153,7 +174,7 @@ export default function Settings() {
 
                             {/* Tab Buttons */}
                             <div className="space-y-2">
-                                {SETTINGS_TABS.map((tab) => {
+                                {settingsTabs.map((tab) => {
                                     const Icon = tabIconMap[tab];
                                     return (
                                         <button
@@ -189,11 +210,15 @@ export default function Settings() {
                             <div className="w-full flex items-center bg-neutral-50 border border-neutral-200 shadow-xs rounded-[20px] pl-3 pr-3 py-2 max-lg:justify-center max-lg:p-2">
                                 <div className="flex items-center gap-2 flex-grow max-lg:hidden">
                                     <img
-                                        src={profilePicUrl || "/placeholder.svg"}
+                                        src={isTikTok
+                                            ? (tiktokUser?.picture || tiktokUser?.avatar_url || tiktokUser?.profile_image_url || TikTokUserPlaceholder)
+                                            : (profilePicUrl || "/placeholder.svg")}
                                         alt="Profile"
                                         className="w-8 h-8 rounded-full object-cover"
                                     />
-                                    <span className="text-sm font-medium text-neutral-800 truncate max-w-[120px]">{userName}</span>
+                                    <span className="text-sm font-medium text-neutral-800 truncate max-w-[120px]">
+                                        {isTikTok ? (tiktokUser?.name || "TikTok User") : userName}
+                                    </span>
                                 </div>
                                 <div className="flex items-center">
                                     <div className="h-6 w-px bg-neutral-300 max-lg:hidden" />
@@ -226,6 +251,7 @@ export default function Settings() {
                                             subscriptionData={subscriptionData}
                                         />
                                     )}
+                                    {activeTab === "tiktok" && <TikTokAdvertiserSettings />}
                                     {activeTab === "billing" && <BillingSettings />}
                                     {activeTab === "team" && <TeamSettings />}
 
@@ -240,13 +266,14 @@ export default function Settings() {
                 <div>
                     <Toaster richColors position="bottom-left" closeButton />
                 </div>
-                {showSettingsPopup && <SettingsOnboardingPopup onClose={handleCloseSettingsPopup} />}
-                <AdAccountSelectionPopup
-                    isOpen={showAdAccountPopup}
-                    onClose={() => setShowAdAccountPopup(false)}
-                    selectedAdAccountIds={selectedAdAccountIds}
-
-                />
+                {!isTikTok && showSettingsPopup && <SettingsOnboardingPopup onClose={handleCloseSettingsPopup} />}
+                {!isTikTok && (
+                    <AdAccountSelectionPopup
+                        isOpen={showAdAccountPopup}
+                        onClose={() => setShowAdAccountPopup(false)}
+                        selectedAdAccountIds={selectedAdAccountIds}
+                    />
+                )}
             </div>
         </>
     )
