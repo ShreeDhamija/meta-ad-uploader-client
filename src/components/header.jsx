@@ -103,7 +103,7 @@ export default function Header({ showMessenger }) {
 
   return (
     <header className="flex justify-between items-center py-3 mb-4">
-      {/* Profile Section (Left) */}
+      {/* Profile Section */}
       {isAnalyticsPage ? (
         <button
           onClick={() => navigate("/")}
