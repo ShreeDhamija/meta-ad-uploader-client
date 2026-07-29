@@ -10,7 +10,7 @@ export function getPlanAccountLimit(planType) {
 export function selectionNeedsAttention(planType, selectedIds) {
   const limit = getPlanAccountLimit(planType)
   if (!Number.isFinite(limit)) return false
-  return !Array.isArray(selectedIds) || selectedIds.length === 0 || selectedIds.length > limit
+  return !Array.isArray(selectedIds) || selectedIds.length === 0
 }
 
 export function getRequiredSelectionPlatforms({
