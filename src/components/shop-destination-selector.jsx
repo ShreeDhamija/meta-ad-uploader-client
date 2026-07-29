@@ -363,13 +363,13 @@ export default function ShopDestinationSelector({
                                     </div>
                                 )}
 
-                                {(productSetCursor || isProductSetOnly) && (
-                                    <div className="flex justify-center px-3 py-2">
+                                {productSetCursor && (
+                                    <div className="px-3 py-2">
                                         <button
                                             type="button"
                                             onClick={handleLoadMoreProductSets}
                                             disabled={isLoadingMore}
-                                            className="rounded-xl bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-60"
+                                            className="w-full rounded-xl bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-60"
                                         >
                                             {isLoadingMore ? (
                                                 <span className="flex items-center gap-2">
