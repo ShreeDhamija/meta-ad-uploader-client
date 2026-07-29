@@ -48,28 +48,32 @@ export default function ShopDestinationSelector({
         products: [],
     })
     const [isLoading, setIsLoading] = useState(false)
-    const [lastFetchedPageId, setLastFetchedPageId] = useState(null)
+    const [isLoadingMore, setIsLoadingMore] = useState(false)
+    const [productSetCursor, setProductSetCursor] = useState(null)
+    const [lastFetchKey, setLastFetchKey] = useState(null)
+    const isProductSetOnly = allowedTypes.length === 1 && allowedTypes[0] === "product_set"
 
 
 
-    // Fetch shop data only when pageId changes (not when isVisible changes)
+    // Hidden selector instances must not duplicate this relatively expensive request.
     useEffect(() => {
         if (!pageId) {
             setShopData({ shops: [], productSets: [], products: [] })
-            setLastFetchedPageId(null)
+            setProductSetCursor(null)
+            setLastFetchKey(null)
             return
         }
+        if (!isVisible) return
 
-        // Skip fetch if we already have data for this pageId
-        if (pageId === lastFetchedPageId) {
-            return
-        }
+        const fetchKey = `${pageId}:${isProductSetOnly ? "product_sets" : "all"}`
+        if (fetchKey === lastFetchKey) return
 
         const fetchShopData = async () => {
             setIsLoading(true)
             try {
+                const scope = isProductSetOnly ? "&scope=product_sets" : ""
                 const res = await fetch(
-                    `${API_BASE_URL}/auth/fetch-shop-data?pageId=${pageId}`,
+                    `${API_BASE_URL}/auth/fetch-shop-data?pageId=${encodeURIComponent(pageId)}${scope}`,
                     { credentials: "include" },
                 )
                 const data = await res.json()
@@ -80,23 +84,53 @@ export default function ShopDestinationSelector({
                         productSets: data.product_sets || [],
                         products: data.products || [],
                     })
-                    setLastFetchedPageId(pageId)
+                    setProductSetCursor(data.product_set_cursor || null)
+                    setLastFetchKey(fetchKey)
                 } else {
                     console.error("Failed to fetch shop data:", data.error)
                     setShopData({ shops: [], productSets: [], products: [] })
-                    setLastFetchedPageId(null)
+                    setProductSetCursor(null)
+                    setLastFetchKey(null)
                 }
             } catch (err) {
                 console.error("Error fetching shop data:", err)
                 setShopData({ shops: [], productSets: [], products: [] })
-                setLastFetchedPageId(null)
+                setProductSetCursor(null)
+                setLastFetchKey(null)
             } finally {
                 setIsLoading(false)
             }
         }
 
         fetchShopData()
-    }, [pageId, lastFetchedPageId])
+    }, [isProductSetOnly, isVisible, lastFetchKey, pageId])
+
+    const handleLoadMoreProductSets = async () => {
+        if (!productSetCursor || isLoadingMore) return
+        setIsLoadingMore(true)
+        try {
+            const res = await fetch(
+                `${API_BASE_URL}/auth/fetch-shop-product-sets` +
+                    `?pageId=${encodeURIComponent(pageId)}&cursor=${encodeURIComponent(productSetCursor)}`,
+                { credentials: "include" },
+            )
+            const data = await res.json()
+            if (!res.ok) throw new Error(data.error || "Failed to load more product sets")
+
+            setShopData((previous) => ({
+                ...previous,
+                productSets: dedupeById([
+                    ...previous.productSets,
+                    ...(data.product_sets || []),
+                ]),
+            }))
+            setProductSetCursor(data.product_set_cursor || null)
+        } catch (err) {
+            console.error("Failed to load more product sets:", err)
+        } finally {
+            setIsLoadingMore(false)
+        }
+    }
 
     // Create options for the dropdown. `meta` is the gray subtext that tells otherwise
     // identically-named entries apart (products in particular repeat names constantly).
@@ -121,11 +155,13 @@ export default function ShopDestinationSelector({
                 shopData.productSets.map((set) => ({
                     id: set.id,
                     label: (set.name || "").replace("Product Set: ", ""),
-                    meta: set.catalog_name || set.catalog_id || null,
+                    meta: isProductSetOnly ? null : (set.catalog_name || set.catalog_id || null),
+                    catalogId: set.catalog_id || "unknown",
+                    catalogName: set.catalog_name || "Catalog",
                     type: "product_set",
                 })),
             ),
-        [shopData.productSets],
+        [isProductSetOnly, shopData.productSets],
     )
 
     const productOptions = useMemo(
@@ -159,7 +195,9 @@ export default function ShopDestinationSelector({
         q
             ? options.filter(
                   (option) =>
-                      option.label.toLowerCase().includes(q) || (option.meta || "").toLowerCase().includes(q),
+                      option.label.toLowerCase().includes(q) ||
+                      (option.meta || "").toLowerCase().includes(q) ||
+                      (option.catalogName || "").toLowerCase().includes(q),
               )
             : options
 
@@ -169,6 +207,20 @@ export default function ShopDestinationSelector({
         () => filterOptions(productSetOptions, query),
         [productSetOptions, query],
     )
+    const filteredProductSetGroups = useMemo(() => {
+        const groups = new Map()
+        for (const option of filteredProductSetOptions) {
+            const key = option.catalogId
+            if (!groups.has(key)) {
+                groups.set(key, {
+                    name: option.catalogName,
+                    options: [],
+                })
+            }
+            groups.get(key).options.push(option)
+        }
+        return Array.from(groups.entries())
+    }, [filteredProductSetOptions])
 
     const visibleCount =
         (allowedTypes.includes("shop") ? filteredShopOptions.length : 0) +
@@ -291,18 +343,43 @@ export default function ShopDestinationSelector({
                                     </CommandGroup>
                                 )}
 
-                                {/* Product Sets Section */}
-                                {allowedTypes.includes("product_set") && filteredProductSetOptions.length > 0 && (
-                                    <CommandGroup>
-                                        {sectionHeader("Product Sets", filteredProductSetOptions.length)}
-                                        {filteredProductSetOptions.map(renderItem)}
-                                    </CommandGroup>
+                                {/* Product Sets Sections */}
+                                {allowedTypes.includes("product_set") && filteredProductSetGroups.map(
+                                    ([catalogId, group]) => (
+                                        <CommandGroup key={catalogId}>
+                                            {sectionHeader(
+                                                `${group.name} Product Sets`,
+                                                group.options.length,
+                                            )}
+                                            {group.options.map(renderItem)}
+                                        </CommandGroup>
+                                    ),
                                 )}
 
                                 {/* No results */}
                                 {visibleCount === 0 && (
                                     <div className="px-4 py-5 text-center text-sm text-gray-500">
-                                        No shop destinations found.
+                                        {query ? "No results found." : emptyLabel}
+                                    </div>
+                                )}
+
+                                {productSetCursor && (
+                                    <div className="flex justify-center px-3 py-2">
+                                        <button
+                                            type="button"
+                                            onClick={handleLoadMoreProductSets}
+                                            disabled={isLoadingMore}
+                                            className="rounded-xl bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-60"
+                                        >
+                                            {isLoadingMore ? (
+                                                <span className="flex items-center gap-2">
+                                                    <Loader className="h-3.5 w-3.5 animate-spin" />
+                                                    Loading...
+                                                </span>
+                                            ) : (
+                                                "Load More"
+                                            )}
+                                        </button>
                                     </div>
                                 )}
                             </ScrollArea>
