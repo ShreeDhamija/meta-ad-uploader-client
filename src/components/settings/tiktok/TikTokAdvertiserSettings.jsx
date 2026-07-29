@@ -997,16 +997,18 @@ export default function TikTokAdvertiserSettings({
 
                     {/* Default CTAs — flat section like Meta */}
                     <div className="bg-[#f5f5f5] rounded-2xl p-4 space-y-3">
-                        <div className="flex items-center gap-2">
-                            <CTAIcon
-                                alt="CTA icon"
-                                className="w-4 h-4 grayscale brightness-75 contrast-75 opacity-60"
-                            />
-                            <span className="text-sm font-medium">Default CTA</span>
+                        <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                                <CTAIcon
+                                    alt="CTA icon"
+                                    className="w-4 h-4 grayscale brightness-75 contrast-75 opacity-60"
+                                />
+                                <span className="text-sm font-medium">Default CTA</span>
+                            </div>
+                            <p className="text-gray-500 text-[12px] font-regular">
+                                Tiktok allows multiple CTAs for each ad
+                            </p>
                         </div>
-                        <p className="text-gray-500 text-[12px] font-regular">
-                            Your ads will use this CTA by default if not edited while posting
-                        </p>
                         <div className="space-y-2">
                             <Popover open={openCta} onOpenChange={setOpenCta}>
                                 <PopoverTrigger asChild>
@@ -1022,7 +1024,11 @@ export default function TikTokAdvertiserSettings({
                                         <ChevronsUpDown className="w-4 h-4 opacity-50" />
                                     </Button>
                                 </PopoverTrigger>
-                                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-1 bg-white rounded-2xl shadow-xl border-gray-100" side="bottom" avoidCollisions={false}>
+                                <PopoverContent
+                                    className="w-[var(--radix-popover-trigger-width)] p-1 bg-white rounded-2xl shadow-xl border-gray-100"
+                                    side="bottom"
+                                    collisionPadding={8}
+                                >
                                     <div className="flex flex-col overflow-hidden rounded-2xl bg-white text-gray-900">
                                         <div className="max-h-[300px] overflow-y-auto rounded-2xl p-1">
                                             <div className="space-y-0.5">
