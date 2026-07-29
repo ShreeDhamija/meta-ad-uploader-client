@@ -363,7 +363,7 @@ export default function ShopDestinationSelector({
                                     </div>
                                 )}
 
-                                {productSetCursor && (
+                                {(productSetCursor || isProductSetOnly) && (
                                     <div className="flex justify-center px-3 py-2">
                                         <button
                                             type="button"
