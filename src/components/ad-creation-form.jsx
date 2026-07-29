@@ -953,6 +953,8 @@ export default function AdCreationForm({
   setSelectedShopDestination,
   selectedShopDestinationType,
   setSelectedShopDestinationType,
+  productExtensionProductSetId,
+  setProductExtensionProductSetId,
   selectedForm,
   setSelectedForm,
   newAdSetName,
@@ -1047,8 +1049,6 @@ export default function AdCreationForm({
   const [showFrameioConnectHelp, setShowFrameioConnectHelp] = useState(false);
   const pickerInstanceRef = useRef(null);
   const [pickerDialogHeight, setPickerDialogHeight] = useState(650);
-  const [productExtensionProductSetId, setProductExtensionProductSetId] = useState("");
-
   //gogle drive pickers
   const [accessToken, setAccessToken] = useState(null)
   //S3 States
@@ -3956,7 +3956,6 @@ export default function AdCreationForm({
     pageId &&
     campaignObjective.length > 0 &&
     campaignObjective.every((objective) => ["OUTCOME_SALES", "OUTCOME_TRAFFIC"].includes(objective));
-  const requiresProductExtensionCatalog = showProductExtensionSelector && !useExistingPosts;
   const showPhoneNumberField = areAllAdSetsPhoneCall();
   const hasCatalogueInvalidMedia = isCatalogueAd && (
     [...files, ...driveFiles, ...dropboxFiles, ...(frameioFiles || []), ...importedFiles].some((file) => isVideoFile(file) || isGifFile(file) || !isImageFile(file))
@@ -4395,10 +4394,6 @@ export default function AdCreationForm({
     if (showShopDestinationSelector && !selectedShopDestination) {
       toast.error("Please select a shop destination for shop ads")
       throw new Error("Please select a shop destination for shop ads")
-    }
-    if (requiresProductExtensionCatalog && !productExtensionProductSetId) {
-      toast.error("Please select a product catalog for product extensions")
-      throw new Error("Please select a product catalog for product extensions")
     }
     if (duplicateAdSet && (!newAdSetName || newAdSetName.trim() === "")) {
       toast.error("Please enter a name for the new ad set")
@@ -7010,11 +7005,6 @@ export default function AdCreationForm({
         return;
       }
 
-      if (requiresProductExtensionCatalog && !job.formData.productExtensionProductSetId) {
-        toast.error(`${variant.name}: please select a product catalog for product extensions`);
-        return;
-      }
-
       newJobs.push(job);
     }
 
@@ -7074,7 +7064,6 @@ export default function AdCreationForm({
       !isLoggedIn ||
       (!isCatalogueAd && files.length === 0 && driveFiles.length === 0 && dropboxFiles.length === 0 && frameioFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0 && selectedIgOrganicPosts.length === 0) ||
       hasCatalogueInvalidMedia ||
-      (requiresProductExtensionCatalog && !productExtensionProductSetId) ||
       (selectedFiles.size > 0) ||
       (!isCarouselAd && hasDuplicates)
     )
@@ -7087,7 +7076,6 @@ export default function AdCreationForm({
       (isCatalogueAd && !hasCatalogueEligibleAdSets) ||
       hasCatalogueInvalidMedia ||
       (showShopDestinationSelector && !selectedShopDestination) ||
-      (requiresProductExtensionCatalog && !productExtensionProductSetId) ||
       isMissingDestinationValue ||
       (selectedFiles.size > 0) ||
       (shouldShowLeadFormSelector && !selectedForm) ||
@@ -9333,7 +9321,7 @@ export default function AdCreationForm({
                     isFieldModified={() => isFormFieldModified?.("productExtensionProductSetId")}
                     isVisible={showProductExtensionSelector}
                     allowedTypes={["product_set"]}
-                    label="Product Catalog"
+                    label="Product Catalog (Optional)"
                     description={(
                       <>
                         <span className="text-gray-400">You are seeing this because the catalog items creative enhancement is enabled.</span>{" "}
@@ -9767,12 +9755,6 @@ export default function AdCreationForm({
             {showShopDestinationSelector && !selectedShopDestination && (
               <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
                 Please select a shop destination
-              </div>
-            )}
-
-            {requiresProductExtensionCatalog && !productExtensionProductSetId && (
-              <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
-                Please select a product catalog for product extensions
               </div>
             )}
 

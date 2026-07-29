@@ -218,6 +218,7 @@ export default function Home() {
     const [hasAnyAdAccountSettings, setHasAnyAdAccountSettings] = useState(false);
     const [selectedShopDestination, setSelectedShopDestination] = useState("")
     const [selectedShopDestinationType, setSelectedShopDestinationType] = useState("")
+    const [productExtensionProductSetId, setProductExtensionProductSetId] = useState("")
     const userHasActiveAccess = hasActiveAccess();
     const [isLoadingAdSets, setIsLoadingAdSets] = useState(false);
     const [selectedFiles, setSelectedFiles] = useState(new Set());
@@ -727,6 +728,7 @@ export default function Home() {
         instagramAccountId,
         selectedShopDestination,
         selectedShopDestinationType,
+        productExtensionProductSetId,
         selectedForm,
         selectedTemplate,
         isPartnershipAd,
@@ -765,6 +767,7 @@ export default function Home() {
         instagramAccountId,
         selectedShopDestination,
         selectedShopDestinationType,
+        productExtensionProductSetId,
         selectedForm,
         selectedTemplate,
         isPartnershipAd,
@@ -809,6 +812,7 @@ export default function Home() {
         setInstagramAccountId(snapshot.instagramAccountId || "");
         setSelectedShopDestination(snapshot.selectedShopDestination || "");
         setSelectedShopDestinationType(snapshot.selectedShopDestinationType || "");
+        setProductExtensionProductSetId(snapshot.productExtensionProductSetId || "");
         setSelectedForm(snapshot.selectedForm || null);
         setSelectedTemplate(snapshot.selectedTemplate ?? "");
         setIsPartnershipAd(Boolean(snapshot.isPartnershipAd));
@@ -847,6 +851,7 @@ export default function Home() {
         setInstagramAccountId,
         setSelectedShopDestination,
         setSelectedShopDestinationType,
+        setProductExtensionProductSetId,
         setSelectedForm,
         setSelectedTemplate,
         setIsPartnershipAd,
@@ -1614,6 +1619,8 @@ export default function Home() {
                             setSelectedShopDestination={setSelectedShopDestination}
                             selectedShopDestinationType={selectedShopDestinationType}
                             setSelectedShopDestinationType={setSelectedShopDestinationType}
+                            productExtensionProductSetId={productExtensionProductSetId}
+                            setProductExtensionProductSetId={setProductExtensionProductSetId}
                             selectedForm={selectedForm}
                             setSelectedForm={setSelectedForm}
                             newAdSetName={newAdSetName}
