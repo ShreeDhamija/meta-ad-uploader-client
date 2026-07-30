@@ -104,7 +104,7 @@ const cloneSnapshotValue = (value) => {
 const snapshotValuesEqual = (left, right) => JSON.stringify(left ?? null) === JSON.stringify(right ?? null);
 
 export default function Home() {
-    const { isLoggedIn, userName, handleLogout, authLoading } = useAuth()
+    const { isLoggedIn, userName, userId, handleLogout, authLoading } = useAuth()
     const { showMessenger, hideMessenger } = useIntercom();
     const navigate = useNavigate()
     const location = useLocation()
@@ -428,11 +428,15 @@ export default function Home() {
     useEffect(() => {
         if (subscriptionLoading) return;
         if (launchPausedDefaultAppliedRef.current) return;
-        if (subscriptionData.teamId === 'team_1779097238802_0p8jy2tcn') {
+        if (
+            subscriptionData.teamId === 'team_1779097238802_0p8jy2tcn'
+            || String(userId) === '10242641224983476'
+            || String(userId) === '10236978990363167'
+        ) {
             setLaunchPaused(true);
         }
         launchPausedDefaultAppliedRef.current = true;
-    }, [subscriptionLoading, subscriptionData.teamId])
+    }, [subscriptionLoading, subscriptionData.teamId, userId])
 
     useEffect(() => {
 
