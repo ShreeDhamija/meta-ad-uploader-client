@@ -7967,7 +7967,7 @@ export default function AdCreationForm({
                     </Popover>
 
                     {/* Partnership Ad Toggle */}
-                    <div className="space-y-4 pt-4 mt-4">
+                    <div className="space-y-4 pt-1">
                       <div className="flex items-center gap-2">
                         <Users className="w-4 h-4 text-gray-600" />
                         <Label htmlFor="partnership-toggle" className="cursor-pointer">
