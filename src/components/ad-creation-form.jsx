@@ -33,6 +33,7 @@ import PostSelectorInline from "@/components/PostIDSelector"
 import MetaMediaLibraryModal from "@/components/MetaMediaLibraryModal";
 import FrameioPickerModal from "@/components/FrameioPickerModal";
 import FlexAdsImportModal from "@/components/FlexAdsImportModal";
+import DraftsModal from "@/components/DraftsModal";
 import FacebookReauthDialog from "@/components/FacebookReauthDialog";
 import { v4 as uuidv4 } from 'uuid';
 import ConfigIcon from '@/assets/icons/plus.svg?react';
@@ -54,6 +55,7 @@ import RocketIcon2 from '@/assets/icons/rocket.svg?react';
 import CheckIcon from '@/assets/icons/check.svg?react';
 import UploadIcon from '@/assets/icons/upload.svg?react';
 import QueueIcon from '@/assets/icons/queue.svg?react';
+import DraftFolderIcon from '@/assets/icons/BlueFolder.svg';
 import PartialSuccess from '@/assets/icons/partialsuccess.svg?react';
 import pLimit from 'p-limit';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
@@ -157,6 +159,13 @@ const UPLOAD_SOURCE_OPTIONS = [
     icon: MetaIcon,
     fullLabel: 'Import from Meta',
     compactLabel: 'Meta Library',
+  },
+  {
+    id: 'drafts',
+    name: 'Drafts',
+    icon: DraftFolderIcon,
+    fullLabel: 'Open Drafts',
+    compactLabel: 'Drafts',
   },
 ];
 
@@ -991,6 +1000,7 @@ export default function AdCreationForm({
   setPartnerIgAccountId,
   partnerFbPageId,
   setPartnerFbPageId,
+  setPartnerName,
   partnershipIdentityMode,
   setPartnershipIdentityMode,
   partnershipPrimaryIdentity,
@@ -1016,7 +1026,9 @@ export default function AdCreationForm({
   setPostVariantMap,
   onImportCsv,
   onBeforeMediaClear,
-  onAdLaunchInProgressChange
+  onAdLaunchInProgressChange,
+  onSaveDraft,
+  onRestoreDraft
 }) {
   const formFieldChrome = "border-gray-300 rounded-2xl py-4.5 bg-white shadow";
   const formInputChrome = `${formFieldChrome} focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0`;
@@ -1062,6 +1074,10 @@ export default function AdCreationForm({
   const [isLinkPagesOpen, setIsLinkPagesOpen] = useState(false)
   const [publishPending, setPublishPending] = useState(false);
   const [isQueueingJobs, setIsQueueingJobs] = useState(false);
+  const [draftMenuOpen, setDraftMenuOpen] = useState(false);
+  const [draftName, setDraftName] = useState("");
+  const [savingDraft, setSavingDraft] = useState(false);
+  const [draftsModalOpen, setDraftsModalOpen] = useState(false);
   const [isPagesLoading, setIsPagesLoading] = useState(false);
   // const [isPostSelectorOpen, setIsPostSelectorOpen] = useState(false)
   const [linkCustomStates, setLinkCustomStates] = useState({}) // Track which carousel links are custom
@@ -1388,6 +1404,7 @@ export default function AdCreationForm({
   const handlePartnerSelect = (partner) => {
     setPartnerIgAccountId(partner.creatorIgId);
     setPartnerFbPageId(partner.creatorFbPageId);
+    setPartnerName?.(partner.creatorUsername || partner.creatorName || "");
     setOpenPartnerSelector(false);
   };
 
@@ -1397,6 +1414,7 @@ export default function AdCreationForm({
     if (!checked) {
       setPartnerIgAccountId("");
       setPartnerFbPageId("");
+      setPartnerName?.("");
     }
   };
 
@@ -4491,7 +4509,7 @@ export default function AdCreationForm({
     }
 
     const largeFiles = files.filter(file =>
-      isVideoFile(file) && file.size > S3_UPLOAD_THRESHOLD
+      !file.isDraftAsset && isVideoFile(file) && file.size > S3_UPLOAD_THRESHOLD
     );
     const largeDriveFiles = driveFiles.filter(file =>
       isVideoFile(file) && file.size > S3_UPLOAD_THRESHOLD
@@ -4503,7 +4521,17 @@ export default function AdCreationForm({
     // Frame.io images skip S3 — backend streams them from Frame.io directly.
     const largeFrameioFiles = frameioFiles.filter(file => isVideoFile(file));
 
-    let s3Results = [];
+    let s3Results = files
+      .filter((file) => file.isDraftAsset && isVideoFile(file) && file.s3Url)
+      .map((file) => ({
+        name: file.name,
+        type: file.type || file.mimeType,
+        size: file.size,
+        s3Url: file.s3Url,
+        isS3Upload: true,
+        isDraftAsset: true,
+        uniqueId: getFileId(file),
+      }));
     const s3DriveResults = [];
     const s3DropboxResults = [];
     const s3FrameioResults = [];
@@ -6963,6 +6991,29 @@ export default function AdCreationForm({
     setGroupVariantMap({});
     setPostVariantMap({});
     setSelectedFiles(new Set());
+  };
+
+  const handleSaveDraft = async () => {
+    const trimmedName = draftName.trim();
+    if (!trimmedName) {
+      toast.error("Enter a draft name");
+      return;
+    }
+    if (!selectedAdAccount) {
+      toast.error("Select an ad account before saving a draft");
+      return;
+    }
+    setSavingDraft(true);
+    try {
+      await onSaveDraft(trimmedName);
+      setDraftName("");
+      setDraftMenuOpen(false);
+      toast.success("Draft saved");
+    } catch (error) {
+      toast.error(error.message || "Failed to save draft");
+    } finally {
+      setSavingDraft(false);
+    }
   };
 
   const handleQueueJob = async (e) => {
@@ -9596,9 +9647,10 @@ export default function AdCreationForm({
                             const clickHandler =
                               id === 'csv' ? handleCsvSourceClick :
                                 id === 'drive' ? handleDriveClick :
-                                  id === 'dropbox' ? handleDropboxClick :
-                                    id === 'frameio' ? handleFrameioClick :
-                                      () => { };
+                              id === 'dropbox' ? handleDropboxClick :
+                                id === 'frameio' ? handleFrameioClick :
+                                  id === 'drafts' ? () => setDraftsModalOpen(true) :
+                                  () => { };
 
                             return (
                               <div className="flex-1" key={id}>
@@ -9635,6 +9687,13 @@ export default function AdCreationForm({
                   conversionEvent={adAccountSettings?.conversionEvent}
                   importedFiles={importedFiles}
                   setImportedFiles={setImportedFiles}
+                />
+
+                <DraftsModal
+                  open={draftsModalOpen}
+                  onOpenChange={setDraftsModalOpen}
+                  adAccountId={selectedAdAccount}
+                  onRestore={onRestoreDraft}
                 />
 
 
@@ -9721,13 +9780,54 @@ export default function AdCreationForm({
 
 
           <div className="space-y-1">
-            <Button
-              type="submit"
-              className="w-full h-12 bg-neutral-950 hover:bg-blue-700 text-white rounded-2xl"
-              disabled={publishDisabled || isQueueingJobs}
-            >
-              {isQueueingJobs ? "Publishing Ads..." : "Publish Ads"}
-            </Button>
+            <div className="flex h-12 w-full overflow-hidden rounded-2xl bg-neutral-950 text-white">
+              <Button
+                type="submit"
+                className="h-12 flex-1 rounded-none bg-neutral-950 text-white hover:bg-blue-700"
+                disabled={publishDisabled || isQueueingJobs}
+              >
+                {isQueueingJobs ? "Publishing Ads..." : "Publish Ads"}
+              </Button>
+              <div className="my-2 w-px bg-white/30" />
+              <Popover open={draftMenuOpen} onOpenChange={setDraftMenuOpen}>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    className="flex h-12 w-12 items-center justify-center bg-neutral-950 transition hover:bg-blue-700 disabled:opacity-50"
+                    disabled={savingDraft}
+                    aria-label="Save as draft"
+                  >
+                    <ChevronDown className="h-4 w-4" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent align="end" sideOffset={8} className="w-[390px] rounded-2xl border border-gray-200 bg-white p-3 shadow-xl">
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={draftName}
+                      onChange={(event) => setDraftName(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          event.preventDefault();
+                          handleSaveDraft();
+                        }
+                      }}
+                      placeholder="Draft name"
+                      maxLength={120}
+                      className="h-10 min-w-0 flex-1 rounded-xl bg-white"
+                      autoFocus
+                    />
+                    <Button
+                      type="button"
+                      onClick={handleSaveDraft}
+                      disabled={savingDraft || !draftName.trim()}
+                      className="h-10 shrink-0 rounded-xl bg-black px-4 text-white hover:bg-zinc-800"
+                    >
+                      {savingDraft ? <Loader className="h-4 w-4 animate-spin" /> : "Save draft"}
+                    </Button>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
 
             {variants.length > 1 && hasConfiguredFormSplits && (
               <div className="text-xs text-gray-500 mt-2">

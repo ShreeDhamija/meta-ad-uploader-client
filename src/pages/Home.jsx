@@ -18,6 +18,13 @@ import useAdAccountSettings from "@/lib/useAdAccountSettings"
 import useSubscription from "@/lib/useSubscriptionSettings"
 import { importVariantsFromCsv } from "@/lib/csvVariantImport"
 import { saveSettings } from "@/lib/saveSettings"
+import {
+    createDraft,
+    deleteDraft,
+    importDraftMedia,
+    updateDraft,
+    uploadLocalDraftMedia,
+} from "@/lib/draftApi"
 import AdAccountSelectionPopup from "../components/AdAccountSelectionPopup"
 import { useIntercom } from "@/lib/useIntercom";
 import DesktopIcon from '@/assets/Desktop.webp';
@@ -103,6 +110,15 @@ const cloneSnapshotValue = (value) => {
 
 const snapshotValuesEqual = (left, right) => JSON.stringify(left ?? null) === JSON.stringify(right ?? null);
 
+const draftMediaKey = (file) => {
+    if (file?.draftKey) return file.draftKey;
+    if (file?.isDrive) return file.id;
+    if (file?.isDropbox) return file.dropboxId;
+    if (file?.isFrameio) return file.frameioId;
+    if (file?.isMetaLibrary) return file.type === "image" ? file.hash : file.id;
+    return file?.uniqueId || file?.name;
+};
+
 export default function Home() {
     const { isLoggedIn, userName, userId, handleLogout, authLoading } = useAuth()
     const { showMessenger, hideMessenger } = useIntercom();
@@ -122,6 +138,8 @@ export default function Home() {
         loading,
         selectedAdAccountIds,
         selectedTikTokAdvertiserIds,
+        uploadSources,
+        setUploadSources,
     } = useGlobalSettings();
     const { isTikTokLoggedIn, isLoading: tiktokAuthLoading } = useTikTokAuth()
     const isNewOnboardingUser = !hasSeenOnboarding
@@ -236,6 +254,7 @@ export default function Home() {
     const [isPartnershipAd, setIsPartnershipAd] = useState(false);
     const [partnerIgAccountId, setPartnerIgAccountId] = useState("");
     const [partnerFbPageId, setPartnerFbPageId] = useState("");
+    const [partnerName, setPartnerName] = useState("");
     const [partnershipIdentityMode, setPartnershipIdentityMode] = useState("dynamic");
     const [partnershipPrimaryIdentity, setPartnershipPrimaryIdentity] = useState("brand");
     const [adScheduleStartTime, setAdScheduleStartTime] = useState(null);
@@ -740,8 +759,11 @@ export default function Home() {
         partnerFbPageId,
         partnershipIdentityMode,
         partnershipPrimaryIdentity,
+        partnerName,
         adNameFormulaV2: cloneSnapshotValue(adNameFormulaV2),
         adValues: cloneSnapshotValue(adValues),
+        adOrder: cloneSnapshotValue(adOrder),
+        selectedItems: cloneSnapshotValue(selectedItems),
         adScheduleStartTime,
         adScheduleEndTime,
         launchPaused,
@@ -779,8 +801,11 @@ export default function Home() {
         partnerFbPageId,
         partnershipIdentityMode,
         partnershipPrimaryIdentity,
+        partnerName,
         adNameFormulaV2,
         adValues,
+        adOrder,
+        selectedItems,
         adScheduleStartTime,
         adScheduleEndTime,
         launchPaused,
@@ -824,8 +849,11 @@ export default function Home() {
         setPartnerFbPageId(snapshot.partnerFbPageId || "");
         setPartnershipIdentityMode(snapshot.partnershipIdentityMode || "dynamic");
         setPartnershipPrimaryIdentity(snapshot.partnershipPrimaryIdentity || "brand");
+        setPartnerName(snapshot.partnerName || "");
         setAdNameFormulaV2(cloneSnapshotValue(snapshot.adNameFormulaV2) || { rawInput: "" });
         setAdValues(cloneSnapshotValue(snapshot.adValues) || { dateType: "MonthYYYY", customTexts: {} });
+        setAdOrder(cloneSnapshotValue(snapshot.adOrder) || ["adType", "dateType", "fileName", "iteration"]);
+        setSelectedItems(cloneSnapshotValue(snapshot.selectedItems) || []);
         setAdScheduleStartTime(snapshot.adScheduleStartTime || null);
         setAdScheduleEndTime(snapshot.adScheduleEndTime || null);
         setLaunchPaused(Boolean(snapshot.launchPaused));
@@ -862,8 +890,12 @@ export default function Home() {
         setPartnerIgAccountId,
         setPartnerFbPageId,
         setPartnershipIdentityMode,
+        setPartnershipPrimaryIdentity,
+        setPartnerName,
         setAdNameFormulaV2,
         setAdValues,
+        setAdOrder,
+        setSelectedItems,
         setAdScheduleStartTime,
         setAdScheduleEndTime,
         setLaunchPaused,
@@ -911,6 +943,299 @@ export default function Home() {
         const keys = Array.isArray(fieldKeys) ? fieldKeys : [fieldKeys];
         return keys.some((key) => !snapshotValuesEqual(activeSnapshot[key], defaultSnapshot[key]));
     }, [activeVariantId, getVariantSnapshot]);
+
+    const buildDraftState = useCallback((mediaItems = []) => {
+        const orderedVariants = [
+            variants.find((variant) => variant.id === "default"),
+            ...variants.filter((variant) => variant.id !== "default"),
+        ].filter(Boolean);
+
+        const forms = orderedVariants.map((variant) => {
+            const values = cloneSnapshotValue(getVariantSnapshot(variant.id)) || {};
+            const variantAdSets = Array.isArray(values.adSets) ? values.adSets : adSets;
+            // Account scope is already encoded in the Firestore path, while
+            // `adSets` is a fetched option catalogue rather than form state.
+            // Keep both out of every persisted form to avoid redundant,
+            // potentially large snapshots.
+            const persistedValues = { ...values };
+            delete persistedValues.selectedAdAccount;
+            delete persistedValues.adSets;
+            return {
+                id: variant.id,
+                name: variant.name,
+                values: {
+                    ...persistedValues,
+                    selectionLabels: {
+                        campaigns: (values.selectedCampaign || []).map((id) => ({
+                            id,
+                            name: campaigns.find((campaign) => campaign.id === id)?.name || id,
+                        })),
+                        adSets: (values.selectedAdSets || []).map((id) => ({
+                            id,
+                            name: variantAdSets.find((adSet) => adSet.id === id)?.name || id,
+                        })),
+                        duplicateCampaignName: values.newCampaignName || "",
+                        duplicateAdSetName: values.newAdSetName || "",
+                        partnerName: values.partnerName || "",
+                    },
+                },
+            };
+        });
+
+        return {
+            forms,
+            configuration: {
+                adType,
+                isCarouselAd,
+                enablePlacementCustomization,
+                useExistingPosts,
+                usePostID,
+                editAdCreativeMode,
+            },
+            mediaLayout: {
+                items: mediaItems,
+                fileGroups: cloneSnapshotValue(fileGroups),
+                fileVariantMap: cloneSnapshotValue(fileVariantMap),
+                groupVariantMap: cloneSnapshotValue(groupVariantMap),
+                postVariantMap: cloneSnapshotValue(postVariantMap),
+            },
+            posts: {
+                importedPosts: cloneSnapshotValue(importedPosts),
+                importedFiles: cloneSnapshotValue(importedFiles),
+                selectedIgOrganicPosts: cloneSnapshotValue(selectedIgOrganicPosts),
+            },
+        };
+    }, [
+        adSets,
+        adType,
+        campaigns,
+        editAdCreativeMode,
+        enablePlacementCustomization,
+        fileGroups,
+        fileVariantMap,
+        getVariantSnapshot,
+        groupVariantMap,
+        importedFiles,
+        importedPosts,
+        isCarouselAd,
+        postVariantMap,
+        selectedIgOrganicPosts,
+        useExistingPosts,
+        usePostID,
+        variants,
+    ]);
+
+    const saveCurrentDraft = useCallback(async (name) => {
+        if (!selectedAdAccount) throw new Error("Select an ad account before saving a draft");
+
+        const created = await createDraft({ adAccountId: selectedAdAccount, name });
+        const draftId = created.id;
+        const allMedia = [
+            ...files.map((file) => ({ file, source: "local", role: "form_media" })),
+            ...driveFiles.map((file) => ({ file: { ...file, isDrive: true }, source: "drive", role: "form_media" })),
+            ...dropboxFiles.map((file) => ({ file: { ...file, isDropbox: true }, source: "dropbox", role: "form_media" })),
+            ...frameioFiles.map((file) => ({ file: { ...file, isFrameio: true }, source: "frameio", role: "form_media" })),
+            ...importedFiles.map((file) => ({
+                file: {
+                    ...file,
+                    isMetaLibrary: true,
+                    mimeType: file.mimeType || (file.type === "video" ? "video/mp4" : "image/jpeg"),
+                },
+                source: "meta",
+                role: "preview_only",
+                providerRef: file.type === "image"
+                    ? { type: "meta_image", hash: file.hash }
+                    : { type: "meta_video", id: file.id },
+            })),
+            ...importedPosts.filter((post) => post.image_url).map((post) => ({
+                file: {
+                    name: post.ad_name || post.name || "Existing ad",
+                    type: "image/jpeg",
+                    source: post.image_url,
+                    draftKey: `post:${post.id}`,
+                },
+                source: "meta",
+                role: "preview_only",
+                providerRef: { type: "existing_post", id: post.id },
+            })),
+            ...selectedIgOrganicPosts.filter((post) => post.image_url || post.previewUrl || post.thumbnail_url || post.media_url).map((post) => ({
+                file: {
+                    name: post.caption || "Instagram post",
+                    type: "image/jpeg",
+                    source: post.image_url || post.previewUrl || post.thumbnail_url || post.media_url,
+                    draftKey: `igpost:${post.source_instagram_media_id}`,
+                },
+                source: "meta",
+                role: "preview_only",
+                providerRef: { type: "instagram_post", id: post.source_instagram_media_id },
+            })),
+        ];
+        const seenKeys = new Set();
+        const uniqueMedia = allMedia.filter(({ file }) => {
+            const key = draftMediaKey(file);
+            if (!key || seenKeys.has(key)) return false;
+            seenKeys.add(key);
+            return true;
+        });
+
+        try {
+            const mediaItems = [];
+            for (let index = 0; index < uniqueMedia.length; index += 3) {
+                const batch = uniqueMedia.slice(index, index + 3);
+                const uploaded = await Promise.all(batch.map(async ({ file, source, role, providerRef }) => {
+                    const originalKey = draftMediaKey(file);
+                    const mediaId = uuidv4();
+                    const preview = videoThumbs[originalKey];
+                    const previewDataUrl = typeof preview === "string" && preview.startsWith("data:")
+                        ? preview
+                        : null;
+
+                    if (source === "local" && file instanceof File) {
+                        await uploadLocalDraftMedia({
+                            draftId,
+                            adAccountId: selectedAdAccount,
+                            mediaId,
+                            file,
+                            previewDataUrl,
+                            width: file.width,
+                            height: file.height,
+                        });
+                    } else {
+                        await importDraftMedia({
+                            draftId,
+                            adAccountId: selectedAdAccount,
+                            mediaId,
+                            source: file.isDraftAsset ? "draft_url" : source,
+                            file,
+                            previewDataUrl,
+                            providerRef,
+                        });
+                    }
+                    return { mediaId, originalKey, role };
+                }));
+                mediaItems.push(...uploaded);
+            }
+
+            const state = buildDraftState(mediaItems);
+            await updateDraft({
+                draftId,
+                adAccountId: selectedAdAccount,
+                name,
+                state,
+            });
+
+            if (!uploadSources.includes("drafts")) {
+                const nextSources = [...uploadSources, "drafts"];
+                setUploadSources(nextSources);
+                try {
+                    await saveSettings({ globalSettings: { uploadSources: nextSources } });
+                    window.dispatchEvent(new Event("globalSettingsUpdated"));
+                } catch (settingsError) {
+                    console.warn("Draft saved, but the Drafts upload source preference could not be saved:", settingsError);
+                }
+            }
+            return { id: draftId };
+        } catch (error) {
+            await deleteDraft({ draftId, adAccountId: selectedAdAccount }).catch(() => {});
+            throw error;
+        }
+    }, [
+        buildDraftState,
+        driveFiles,
+        dropboxFiles,
+        files,
+        frameioFiles,
+        importedFiles,
+        importedPosts,
+        selectedAdAccount,
+        selectedIgOrganicPosts,
+        setUploadSources,
+        uploadSources,
+        videoThumbs,
+    ]);
+
+    const restoreDraftToForm = useCallback(async (draft) => {
+        const state = draft?.state;
+        const forms = Array.isArray(state?.forms) ? state.forms : [];
+        if (forms.length === 0) throw new Error("This draft does not contain any forms");
+
+        const mediaById = new Map((draft.media || []).map((media) => [media.id, media]));
+        const mediaByOriginalKey = new Map(
+            (state.mediaLayout?.items || [])
+                .map((item) => [item.originalKey, mediaById.get(item.mediaId)])
+                .filter(([, media]) => Boolean(media))
+        );
+        const restoredFiles = [];
+        const restoredVideoThumbs = {};
+
+        for (const item of state.mediaLayout?.items || []) {
+            if (item.role === "preview_only") continue;
+            const media = mediaById.get(item.mediaId);
+            if (!media) continue;
+            if ((media.mimeType || "").startsWith("video/")) {
+                restoredFiles.push({
+                    name: media.name,
+                    type: media.mimeType,
+                    mimeType: media.mimeType,
+                    size: 2 * 1024 * 1024,
+                    uniqueId: item.originalKey,
+                    isDraftAsset: true,
+                    s3Url: media.url,
+                    previewUrl: media.previewUrl,
+                });
+                restoredVideoThumbs[item.originalKey] = media.previewUrl;
+            } else {
+                const response = await fetch(media.url);
+                if (!response.ok) throw new Error(`Failed to restore ${media.name}`);
+                const blob = await response.blob();
+                const file = new File([blob], media.name, { type: media.mimeType || blob.type });
+                file.uniqueId = item.originalKey;
+                restoredFiles.push(file);
+            }
+        }
+
+        const firstForm = forms[0];
+        hydrateFromSnapshot(firstForm.values);
+        setVariants(forms.map((form, index) => ({
+            id: index === 0 ? "default" : form.id,
+            name: index === 0 ? "Default" : form.name,
+            snapshot: index === 0 ? null : cloneSnapshotValue(form.values),
+        })));
+        setActiveVariantId("default");
+
+        setAdType(state.configuration?.adType || "regular");
+        setIsCarouselAd(Boolean(state.configuration?.isCarouselAd));
+        setEnablePlacementCustomization(Boolean(state.configuration?.enablePlacementCustomization));
+        setUseExistingPosts(Boolean(state.configuration?.useExistingPosts));
+        setUsePostID(Boolean(state.configuration?.usePostID));
+        setEditAdCreativeMode(Boolean(state.configuration?.editAdCreativeMode));
+        setFiles(restoredFiles);
+        setDriveFiles([]);
+        setDropboxFiles([]);
+        setFrameioFiles([]);
+        setVideoThumbs(restoredVideoThumbs);
+        setFileGroups(cloneSnapshotValue(state.mediaLayout?.fileGroups) || []);
+        setFileVariantMap(cloneSnapshotValue(state.mediaLayout?.fileVariantMap) || {});
+        setGroupVariantMap(cloneSnapshotValue(state.mediaLayout?.groupVariantMap) || {});
+        setPostVariantMap(cloneSnapshotValue(state.mediaLayout?.postVariantMap) || {});
+        setImportedPosts((cloneSnapshotValue(state.posts?.importedPosts) || []).map((post) => {
+            const media = mediaByOriginalKey.get(`post:${post.id}`);
+            return media ? { ...post, image_url: media.previewUrl || media.url } : post;
+        }));
+        setImportedFiles((cloneSnapshotValue(state.posts?.importedFiles) || []).map((file) => {
+            const key = file.type === "image" ? file.hash : file.id;
+            const media = mediaByOriginalKey.get(key);
+            if (!media) return file;
+            return file.type === "image"
+                ? { ...file, url: media.url, previewUrl: media.previewUrl }
+                : { ...file, source: media.url, thumbnail_url: media.previewUrl, previewUrl: media.previewUrl };
+        }));
+        setSelectedIgOrganicPosts((cloneSnapshotValue(state.posts?.selectedIgOrganicPosts) || []).map((post) => {
+            const media = mediaByOriginalKey.get(`igpost:${post.source_instagram_media_id}`);
+            return media ? { ...post, previewUrl: media.previewUrl || media.url } : post;
+        }));
+        setSelectedFiles(new Set());
+    }, [hydrateFromSnapshot]);
 
     const handleAddVariant = useCallback(() => {
         const usedLetters = new Set(
@@ -1662,6 +1987,8 @@ export default function Home() {
                             setPartnerIgAccountId={setPartnerIgAccountId}
                             partnerFbPageId={partnerFbPageId}
                             setPartnerFbPageId={setPartnerFbPageId}
+                            partnerName={partnerName}
+                            setPartnerName={setPartnerName}
                             partnershipIdentityMode={partnershipIdentityMode}
                             setPartnershipIdentityMode={setPartnershipIdentityMode}
                             partnershipPrimaryIdentity={partnershipPrimaryIdentity}
@@ -1688,6 +2015,8 @@ export default function Home() {
                             onImportCsv={handleImportCsv}
                             onBeforeMediaClear={triggerMediaPreviewLaunch}
                             onAdLaunchInProgressChange={setAdLaunchInProgress}
+                            onSaveDraft={saveCurrentDraft}
+                            onRestoreDraft={restoreDraftToForm}
 
 
                         />

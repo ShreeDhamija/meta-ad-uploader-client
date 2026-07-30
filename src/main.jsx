@@ -26,6 +26,7 @@ import PrivacyPolicy from "./pages/Landing/PrivacyPolicy.jsx";
 import TikTokAds from "./pages/TikTokAds.jsx";
 import TikTokCallback from "./pages/TikTokCallback.jsx";
 import TikTokLogin from "./pages/TikTokLogin.jsx";
+import QaReview from "./pages/QaReview.jsx";
 
 function TikTokRoute({ children, requireConnection = false }) {
   const location = useLocation()
@@ -74,6 +75,7 @@ const router = createBrowserRouter([
       { path: "creative-strategy", element: <CreativeStrategy /> },
       { path: "terms-of-service", element: <TermsOfService /> },
       { path: "privacy-policy", element: <PrivacyPolicy /> },
+      { path: "qa/:token", element: <QaReview /> },
       { path: "*", element: <NotFound /> },
     ],
   },
