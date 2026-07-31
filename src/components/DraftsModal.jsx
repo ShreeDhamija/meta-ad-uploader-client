@@ -1,6 +1,6 @@
 /* eslint-disable react/prop-types */
 import { useCallback, useEffect, useState } from "react";
-import { FileText, Loader2, Play, RotateCcw, Share2, Trash2 } from "lucide-react";
+import { FileText, Link2, Loader2, Play, RotateCcw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -305,7 +305,7 @@ export default function DraftsModal({ open, onOpenChange, adAccountId, onRestore
       <DialogContent
         hideClose
         disableSlide
-        className="h-[86vh] max-h-[860px] max-w-[96vw] grid-cols-[260px_minmax(0,1fr)] gap-0 overflow-hidden rounded-[32px] border-gray-200 bg-white p-0 xl:max-w-7xl"
+        className="h-[86vh] max-h-[860px] max-w-[96vw] grid-cols-[220px_minmax(0,1fr)] gap-0 overflow-hidden rounded-[48px] border-gray-200 bg-white p-0 xl:max-w-7xl"
       >
         <aside className="min-h-0 overflow-y-auto border-r border-gray-200 bg-[#f4f4f4] px-4 py-7">
           <DialogTitle className="px-3 text-2xl font-bold tracking-tight text-gray-950">Drafts</DialogTitle>
@@ -326,9 +326,11 @@ export default function DraftsModal({ open, onOpenChange, adAccountId, onRestore
                 }`}
               >
                 <span className="block truncate text-sm font-semibold text-gray-950">{draft.name}</span>
-                <span className="mt-0.5 block text-sm font-normal text-gray-500">
-                  {draft.formCount} variant{draft.formCount === 1 ? "" : "s"}
-                </span>
+                {draft.formCount > 1 && (
+                  <span className="mt-0.5 block text-sm font-normal text-gray-500">
+                    {draft.formCount} variants
+                  </span>
+                )}
               </button>
             ))}
           </div>
@@ -372,7 +374,7 @@ export default function DraftsModal({ open, onOpenChange, adAccountId, onRestore
                   type="button"
                   onClick={handleRestore}
                   disabled={working}
-                  className="h-11 min-w-40 rounded-xl bg-gray-800 px-5 text-white hover:bg-blue-700"
+                  className="h-[30px] min-w-36 rounded-lg bg-gray-800 px-4 text-sm text-white hover:bg-blue-700"
                 >
                   <RotateCcw className="mr-2 h-4 w-4" /> Restore Draft
                 </Button>
@@ -380,15 +382,15 @@ export default function DraftsModal({ open, onOpenChange, adAccountId, onRestore
                   type="button"
                   onClick={handleShare}
                   disabled={working}
-                  className="h-11 min-w-40 rounded-xl bg-blue-600 px-5 text-white hover:bg-blue-700"
+                  className="h-[30px] min-w-36 rounded-lg bg-blue-600 px-4 text-sm text-white hover:bg-blue-700"
                 >
-                  <Share2 className="mr-2 h-4 w-4" /> {qaUrl ? "Copy QA Link" : "Share QA Link"}
+                  <Link2 className="mr-2 h-3.5 w-3.5" /> {qaUrl ? "Copy QA Link" : "Share QA Link"}
                 </Button>
                 <button
                   type="button"
                   onClick={handleDelete}
                   disabled={working}
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-red-600 transition hover:bg-red-50 hover:text-red-700 disabled:opacity-50"
+                  className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-lg text-red-600 transition hover:bg-red-50 hover:text-red-700 disabled:opacity-50"
                   aria-label={`Delete ${selectedDraft.name}`}
                   title="Delete draft"
                 >

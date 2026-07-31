@@ -10047,7 +10047,7 @@ export default function AdCreationForm({
                 <div className="flex h-12 w-full overflow-hidden rounded-2xl bg-neutral-950 text-white">
                   <Button
                     type="submit"
-                    className="h-12 flex-1 rounded-none bg-neutral-950 text-white hover:bg-blue-700"
+                    className="peer h-12 flex-1 rounded-none bg-neutral-950 text-white hover:bg-blue-700"
                     disabled={publishDisabled || isQueueingJobs}
                   >
                     {isQueueingJobs ? "Publishing Ads..." : "Publish Ads"}
@@ -10056,7 +10056,7 @@ export default function AdCreationForm({
                 <PopoverTrigger asChild>
                   <button
                     type="button"
-                    className="flex h-12 w-12 items-center justify-center bg-neutral-950 transition hover:bg-zinc-800 disabled:opacity-50"
+                    className="flex h-12 w-12 items-center justify-center bg-neutral-950 transition hover:bg-zinc-800 peer-hover:!bg-blue-700 disabled:opacity-50"
                     disabled={savingDraft || !selectedAdAccount}
                     aria-label="Save as draft"
                   >
@@ -10072,26 +10072,26 @@ export default function AdCreationForm({
                   avoidCollisions={false}
                   className="w-[var(--radix-popover-trigger-width)] rounded-2xl border border-gray-200 bg-gray-100 p-2 shadow-xl"
                 >
-                  <Input
-                    value={draftName}
-                    onChange={(event) => setDraftName(event.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter") {
-                        event.preventDefault();
-                        handleSaveDraft();
-                      }
-                    }}
-                    placeholder="Draft name"
-                    maxLength={120}
-                    className="h-9 w-full rounded-xl bg-white"
-                    autoFocus
-                  />
-                  <div className="mt-2 grid grid-cols-2 gap-2">
+                  <div className="flex items-center gap-1.5">
+                    <Input
+                      value={draftName}
+                      onChange={(event) => setDraftName(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          event.preventDefault();
+                          handleSaveDraft();
+                        }
+                      }}
+                      placeholder="Draft name"
+                      maxLength={120}
+                      className="h-9 min-w-0 flex-1 rounded-xl bg-white px-2.5"
+                      autoFocus
+                    />
                     <Button
                       type="button"
                       onClick={() => handleSaveDraft()}
                       disabled={savingDraft || !draftName.trim()}
-                      className="h-9 rounded-xl bg-black px-3 text-white hover:bg-blue-700"
+                      className="h-9 shrink-0 rounded-xl bg-black px-3 text-white hover:bg-blue-700"
                     >
                       {savingDraft && draftSaveMode === "save" ? <Loader className="h-4 w-4 animate-spin" /> : "Save draft"}
                     </Button>
@@ -10101,14 +10101,14 @@ export default function AdCreationForm({
                           type="button"
                           variant="outline"
                           disabled={savingDraft}
-                          className="h-9 rounded-xl border-gray-300 bg-white px-3 hover:border-blue-600 hover:bg-blue-600 hover:text-white"
+                          className="h-9 shrink-0 rounded-xl border-gray-300 bg-white px-3 hover:border-blue-600 hover:bg-blue-600 hover:text-white"
                         >
                           {savingDraft && draftSaveMode === "update" ? <Loader className="h-4 w-4 animate-spin" /> : "Update draft"}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent align="end" sideOffset={6} className="w-72 rounded-xl border-gray-200 bg-white p-2 shadow-xl">
                         <p className="px-2 pb-1.5 text-xs font-medium text-gray-500">Select a draft to update</p>
-                        <div className="max-h-56 overflow-y-auto">
+                        <ScrollArea className="h-56">
                           {loadingDraftUpdateOptions ? (
                             <Loader className="mx-auto my-5 h-4 w-4 animate-spin text-gray-500" />
                           ) : draftUpdateOptions.length === 0 ? (
@@ -10126,7 +10126,7 @@ export default function AdCreationForm({
                               </span>
                             </button>
                           ))}
-                        </div>
+                        </ScrollArea>
                       </PopoverContent>
                     </Popover>
                   </div>
