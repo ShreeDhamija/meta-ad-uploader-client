@@ -429,6 +429,11 @@ const getFileId = (file) => {
   return file.uniqueId || file.name;
 };
 
+const getDraftCreativeKey = (file) => {
+  if (file?.draftKey) return file.draftKey;
+  return getFileId(file);
+};
+
 const isVideoFile = (file) => {
   if (!file) return false;
   const type = file.type || file.mimeType || "";
@@ -7217,9 +7222,91 @@ export default function AdCreationForm({
     setDraftSaveProgress({ value: 0, message: targetDraft ? `Updating ${targetDraft.name}...` : "Preparing draft..." });
     try {
       const resolvedAdName = computeAdNameFromFormula(adNamePreviewFile, 0, link[0], null, adType);
+      const creativeSourceFiles = [
+        ...files,
+        ...driveFiles.map((file) => ({ ...file, isDrive: true })),
+        ...dropboxFiles.map((file) => ({ ...file, isDropbox: true })),
+        ...frameioFiles.map((file) => ({ ...file, isFrameio: true })),
+        ...importedFiles.map((file) => ({ ...file, isMetaLibrary: true })),
+        ...importedPosts.filter((post) => post.image_url).map((post) => ({
+          ...post,
+          name: post.ad_name || post.name || "Existing ad",
+          type: "image/jpeg",
+          draftKey: `post:${post.id}`,
+        })),
+        ...selectedIgOrganicPosts
+          .filter((post) => post.image_url || post.previewUrl || post.thumbnail_url || post.media_url)
+          .map((post) => ({
+            ...post,
+            name: post.caption || "Instagram post",
+            type: "image/jpeg",
+            draftKey: `igpost:${post.source_instagram_media_id}`,
+          })),
+      ];
+      const uniqueCreativeSources = Array.from(new Map(
+        creativeSourceFiles
+          .map((file) => [String(getDraftCreativeKey(file) || ""), file])
+          .filter(([key]) => key)
+      ).entries());
+      const creativeFileByKey = new Map(uniqueCreativeSources);
+      const groupedCreativeKeys = new Set(fileGroups.flatMap(getGroupFileIds).map(String));
+      const orderedVariants = [
+        variants.find((variant) => variant.id === "default"),
+        ...variants.filter((variant) => variant.id !== "default"),
+      ].filter(Boolean);
+      const creativeAdNames = Object.fromEntries(orderedVariants.map((variant) => {
+        const snapshot = getVariantSnapshot(variant.id) || {};
+        const names = { groups: {}, files: {} };
+        let iterationIndex = 0;
+        const formula = {
+          ...(snapshot.adNameFormulaV2 || {}),
+          selectedTemplate: snapshot.selectedTemplate || "",
+        };
+        const destination = snapshot.link?.[0] || "";
+
+        fileGroups.forEach((group, groupIndex) => {
+          const groupKey = Array.isArray(group) || !group?.id ? `group-${groupIndex}` : String(group.id);
+          const assignedVariant = Array.isArray(group) || !group?.id
+            ? "default"
+            : groupVariantMap[group.id] || "default";
+          if (assignedVariant !== variant.id) return;
+          const firstFile = getGroupFileIds(group)
+            .map((key) => creativeFileByKey.get(String(key)))
+            .find(Boolean);
+          names.groups[groupKey] = computeAdNameFromFormula(
+            firstFile,
+            iterationIndex,
+            destination,
+            formula,
+            adType
+          );
+          iterationIndex += 1;
+        });
+
+        uniqueCreativeSources.forEach(([originalKey, file]) => {
+          if (groupedCreativeKeys.has(originalKey)) return;
+          const assignmentMap = originalKey.startsWith("post:") || originalKey.startsWith("igpost:")
+            ? postVariantMap
+            : fileVariantMap;
+          const assignedVariant = uniqueCreativeSources.length <= 1
+            ? variant.id
+            : assignmentMap[originalKey] || "default";
+          if (assignedVariant !== variant.id) return;
+          names.files[originalKey] = computeAdNameFromFormula(
+            file,
+            iterationIndex,
+            destination,
+            formula,
+            adType
+          );
+          iterationIndex += 1;
+        });
+        return [variant.id, names];
+      }));
       setAdName((current) => current === resolvedAdName ? current : resolvedAdName);
       await onSaveDraft(trimmedName, {
         resolvedAdName,
+        creativeAdNames,
         targetDraft,
         signal: controller.signal,
         onProgress: setDraftSaveProgress,
@@ -10052,7 +10139,6 @@ export default function AdCreationForm({
                   >
                     {isQueueingJobs ? "Publishing Ads..." : "Publish Ads"}
                   </Button>
-                  <div className="my-2 w-px bg-white/30" />
                 <PopoverTrigger asChild>
                   <button
                     type="button"
@@ -10070,7 +10156,7 @@ export default function AdCreationForm({
                   side="bottom"
                   sideOffset={6}
                   avoidCollisions={false}
-                  className="w-[var(--radix-popover-trigger-width)] rounded-2xl border border-gray-200 bg-gray-100 p-2 shadow-xl"
+                  className="w-[var(--radix-popover-trigger-width)] rounded-3xl border border-gray-200 bg-gray-100 p-2 shadow-xl"
                 >
                   <div className="flex items-center gap-1.5">
                     <Input
@@ -10106,7 +10192,7 @@ export default function AdCreationForm({
                           {savingDraft && draftSaveMode === "update" ? <Loader className="h-4 w-4 animate-spin" /> : "Update draft"}
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent align="end" sideOffset={6} className="w-72 rounded-xl border-gray-200 bg-white p-2 shadow-xl">
+                      <PopoverContent align="end" sideOffset={6} className="w-72 rounded-2xl border-gray-200 bg-white p-2 shadow-xl">
                         <p className="px-2 pb-1.5 text-xs font-medium text-gray-500">Select a draft to update</p>
                         <ScrollArea className="h-56">
                           {loadingDraftUpdateOptions ? (

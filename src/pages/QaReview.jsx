@@ -1,81 +1,126 @@
 /* eslint-disable react/prop-types */
 import { useEffect, useMemo, useState } from "react";
-import { ExternalLink, Loader2 } from "lucide-react";
+import { ExternalLink, Loader2, Play, Users } from "lucide-react";
 import { useParams } from "react-router-dom";
+import AdSetIcon from "@/assets/icons/grid.svg?react";
+import CampaignIcon from "@/assets/icons/folder.svg?react";
+import CTAIcon from "@/assets/icons/cta.svg?react";
+import FacebookIcon from "@/assets/icons/fb.svg?react";
+import InstagramIcon from "@/assets/icons/ig.svg?react";
+import LinkIcon from "@/assets/icons/link.svg?react";
+import TemplateIcon from "@/assets/icons/file.svg?react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { getQaDraft } from "@/lib/draftApi";
+import { getCreativeUnitsForForm } from "@/lib/draftCreativeLayout";
 
 const MEDIA_FALLBACK_URL = "https://api.withblip.com/thumbnail.jpg";
+const COPY_PREVIEW_LIMIT = 200;
 
-function getGroupFileIds(group) {
-  return Array.isArray(group) ? group : group?.fileIds || [];
+function FieldLabel({ icon, children }) {
+  return (
+    <span className="mb-0.5 flex items-center gap-1.5 text-sm text-gray-500">
+      {icon}
+      {children}
+    </span>
+  );
 }
 
-function mediaForForm(state, form, mediaById) {
-  const items = state.mediaLayout?.items || [];
-  if (items.length <= 1) return items.map((item) => mediaById.get(item.mediaId)).filter(Boolean);
+function DetailField({ label, icon, children }) {
+  return (
+    <div>
+      <dt><FieldLabel icon={icon}>{label}</FieldLabel></dt>
+      <dd className="break-words text-sm font-semibold leading-5 text-gray-950">{children || "—"}</dd>
+    </div>
+  );
+}
 
-  const fileGroups = state.mediaLayout?.fileGroups || [];
-  const groupedKeys = new Set(fileGroups.flatMap(getGroupFileIds));
-  const groupVariantMap = state.mediaLayout?.groupVariantMap || {};
-  const fileVariantMap = state.mediaLayout?.fileVariantMap || {};
-  const postVariantMap = state.mediaLayout?.postVariantMap || {};
-  const formId = form.id || "default";
-  const assignedKeys = new Set();
-
-  fileGroups.forEach((group) => {
-    const groupId = Array.isArray(group) ? null : group.id;
-    const assigned = groupId ? groupVariantMap[groupId] || "default" : "default";
-    if (assigned === formId) getGroupFileIds(group).forEach((key) => assignedKeys.add(key));
-  });
-  items.forEach((item) => {
-    if (groupedKeys.has(item.originalKey)) return;
-    const assignmentMap = item.originalKey.startsWith("post:") || item.originalKey.startsWith("igpost:")
-      ? postVariantMap
-      : fileVariantMap;
-    if ((assignmentMap[item.originalKey] || "default") === formId) {
-      assignedKeys.add(item.originalKey);
-    }
-  });
-  return items
-    .filter((item) => assignedKeys.has(item.originalKey))
-    .map((item) => mediaById.get(item.mediaId))
-    .filter(Boolean);
+function ExpandableText({ text }) {
+  const [expanded, setExpanded] = useState(false);
+  const value = String(text || "");
+  const isLong = value.length > COPY_PREVIEW_LIMIT;
+  const displayed = !expanded && isLong ? `${value.slice(0, COPY_PREVIEW_LIMIT).trimEnd()}…` : value;
+  return (
+    <p className="whitespace-pre-wrap break-words text-sm font-medium leading-5 text-gray-950">
+      {displayed || "—"}
+      {isLong && (
+        <button
+          type="button"
+          onClick={() => setExpanded((current) => !current)}
+          className="ml-1 whitespace-nowrap text-xs font-semibold text-blue-600 hover:text-blue-700"
+        >
+          {expanded ? "View less" : "View more"}
+        </button>
+      )}
+    </p>
+  );
 }
 
 function ReviewMedia({ media, priority = false }) {
   const isVideo = (media.mimeType || "").startsWith("video/");
   return (
-    <div className="overflow-hidden rounded-xl border border-gray-200 bg-gray-100">
+    <div className="relative aspect-[4/5] overflow-hidden rounded-xl border border-gray-200 bg-gray-100">
       {isVideo ? (
-        <video
-          controls={!media.deletedAt}
-          preload="metadata"
-          poster={media.deletedAt ? MEDIA_FALLBACK_URL : media.previewUrl}
-          className="aspect-[4/5] w-full bg-black object-contain"
-          onError={(event) => {
-            event.currentTarget.poster = MEDIA_FALLBACK_URL;
-            event.currentTarget.removeAttribute("src");
-            event.currentTarget.querySelectorAll("source").forEach((source) => source.remove());
-            event.currentTarget.load();
-          }}
-        >
-          {!media.deletedAt && <source src={media.url} type={media.mimeType} />}
-        </video>
+        <>
+          <video
+            controls={!media.deletedAt}
+            preload="metadata"
+            poster={media.deletedAt ? MEDIA_FALLBACK_URL : media.previewUrl}
+            className="h-full w-full bg-black object-contain"
+            onError={(event) => {
+              event.currentTarget.poster = MEDIA_FALLBACK_URL;
+              event.currentTarget.removeAttribute("src");
+              event.currentTarget.querySelectorAll("source").forEach((source) => source.remove());
+              event.currentTarget.load();
+            }}
+          >
+            {!media.deletedAt && <source src={media.url} type={media.mimeType} />}
+          </video>
+          <span className="pointer-events-none absolute left-2 top-2 rounded-full bg-black/55 p-1.5 text-white">
+            <Play className="h-3 w-3 fill-current" />
+          </span>
+        </>
       ) : (
         <img
-          src={media.deletedAt ? MEDIA_FALLBACK_URL : media.url}
-          alt={media.name}
+          src={media.deletedAt ? MEDIA_FALLBACK_URL : media.previewUrl || media.url}
+          alt={media.name || "Ad creative"}
           loading={priority ? "eager" : "lazy"}
           fetchPriority={priority ? "high" : "auto"}
           decoding="async"
-          className="aspect-[4/5] w-full object-cover"
+          className="h-full w-full object-cover"
           onError={(event) => {
             event.currentTarget.onerror = null;
             event.currentTarget.src = MEDIA_FALLBACK_URL;
           }}
         />
       )}
-      <p className="truncate px-2 py-1.5 text-xs text-gray-600">{media.name}</p>
+    </div>
+  );
+}
+
+function CreativeReviewCard({ unit, priority = false }) {
+  return (
+    <div className={`min-w-0 rounded-2xl border p-2 ${
+      unit.type === "group" ? "border-blue-200 bg-blue-50/60" : "border-gray-200 bg-white"
+    }`}>
+      <div className={`grid gap-2 ${unit.media.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}>
+        {unit.media.map((media, index) => (
+          <ReviewMedia key={media.id} media={media} priority={priority && index < 2} />
+        ))}
+      </div>
+      <div className="mt-2 flex min-w-0 items-center gap-2 border-t border-gray-200/80 pt-2">
+        <span className="shrink-0 text-xs text-gray-500">Ad Name</span>
+        <TooltipProvider delayDuration={250}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <p className="min-w-0 flex-1 truncate text-sm font-semibold text-gray-950">{unit.adName}</p>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-sm break-words text-xs">
+              {unit.adName}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
     </div>
   );
 }
@@ -83,23 +128,20 @@ function ReviewMedia({ media, priority = false }) {
 function ReviewForm({ form, index, state, mediaById }) {
   const values = form.values || {};
   const labels = values.selectionLabels || {};
-  const media = mediaForForm(state, form, mediaById);
-  const links = (values.link || []).filter((value) => {
-    try {
-      return ["http:", "https:"].includes(new URL(value).protocol);
-    } catch {
-      return false;
-    }
-  });
+  const creativeUnits = getCreativeUnitsForForm(state, form, mediaById);
+  const messages = (values.messages || []).filter(Boolean);
+  const headlines = (values.headlines || []).filter(Boolean);
+  const descriptions = (values.descriptions || []).filter(Boolean);
+  const links = (values.link || []).filter(Boolean);
 
   return (
-    <article className="scroll-mt-6 rounded-3xl border border-gray-200 bg-white p-5 shadow-sm sm:p-7">
-      <header className="mb-5 flex items-start justify-between gap-4 border-b border-gray-100 pb-4">
+    <article className="flex h-[min(78vh,760px)] min-h-[620px] flex-col overflow-hidden !rounded-[48px] border border-gray-200 bg-white shadow-sm">
+      <header className="flex shrink-0 items-center justify-between gap-4 px-8 py-5">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">Launch form {index + 1}</p>
-          <h2 className="mt-1 text-xl font-semibold text-gray-950">
-            {values.adName || `Ad ${index + 1}`}
-          </h2>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">
+            Creative variation {index + 1}
+          </p>
+          <h2 className="mt-1 text-lg font-semibold text-gray-950">{form.name || `Variation ${index + 1}`}</h2>
         </div>
         <span className={`rounded-full px-3 py-1 text-xs font-medium ${
           values.launchPaused ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"
@@ -108,84 +150,96 @@ function ReviewForm({ form, index, state, mediaById }) {
         </span>
       </header>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(280px,0.8fr)]">
-        <div className="space-y-5">
-          <dl className="grid gap-4 text-sm sm:grid-cols-2">
-            <div>
-              <dt className="text-xs text-gray-500">Campaign</dt>
-              <dd className="mt-1 font-medium">{labels.campaigns?.map((item) => item.name).join(", ") || labels.duplicateCampaignName || "—"}</dd>
+      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1.05fr)_minmax(320px,0.85fr)] gap-8 overflow-hidden px-8 pb-8">
+        <ScrollArea className="h-full min-h-0 min-w-0">
+          <dl className="space-y-5 pr-4">
+            <div className="grid grid-cols-2 gap-6">
+              <DetailField label="Campaign" icon={<CampaignIcon className="h-4 w-4" />}>
+                {labels.campaigns?.map((item) => item.name).join(", ") || labels.duplicateCampaignName || "—"}
+              </DetailField>
+              <DetailField label="Ad Set" icon={<AdSetIcon className="h-4 w-4" />}>
+                {labels.adSets?.map((item) => item.name).join(", ") || labels.duplicateAdSetName || "—"}
+              </DetailField>
             </div>
-            <div>
-              <dt className="text-xs text-gray-500">Ad set</dt>
-              <dd className="mt-1 font-medium">{labels.adSets?.map((item) => item.name).join(", ") || labels.duplicateAdSetName || "—"}</dd>
+            <div className="grid grid-cols-2 gap-6">
+              <DetailField label="Facebook Page" icon={<FacebookIcon className="h-4 w-4" />}>
+                {labels.page?.name || values.pageId || "—"}
+              </DetailField>
+              <DetailField label="Instagram Account" icon={<InstagramIcon className="h-4 w-4" />}>
+                {labels.instagramAccount?.name || values.instagramAccountId || "—"}
+              </DetailField>
             </div>
-            <div>
-              <dt className="text-xs text-gray-500">CTA</dt>
-              <dd className="mt-1 font-medium">{(values.cta || "—").replaceAll("_", " ")}</dd>
-            </div>
-            <div>
-              <dt className="text-xs text-gray-500">Facebook page</dt>
-              <dd className="mt-1 font-medium">{labels.page?.name || values.pageId || "—"}</dd>
-            </div>
-            <div>
-              <dt className="text-xs text-gray-500">Instagram account</dt>
-              <dd className="mt-1 font-medium">{labels.instagramAccount?.name || values.instagramAccountId || "—"}</dd>
-            </div>
-            {values.isPartnershipAd && (
-              <div>
-                <dt className="text-xs text-gray-500">Partner</dt>
-                <dd className="mt-1 font-medium">{labels.partnerName || values.partnerIgAccountId || "—"}</dd>
+            {messages.length > 0 ? messages.map((message, messageIndex) => (
+              <div key={`message-${messageIndex}`}>
+                <dt>
+                  <FieldLabel icon={<TemplateIcon className="h-4 w-4" />}>
+                    Primary Text {messages.length > 1 ? messageIndex + 1 : ""}
+                  </FieldLabel>
+                </dt>
+                <dd><ExpandableText text={message} /></dd>
               </div>
-            )}
-          </dl>
-
-          <div>
-            <p className="text-xs text-gray-500">Primary text</p>
-            <div className="mt-1 space-y-2">
-              {(values.messages || []).filter(Boolean).map((message, messageIndex) => (
-                <p key={messageIndex} className="whitespace-pre-wrap text-sm leading-6 text-gray-800">{message}</p>
-              ))}
-              {!(values.messages || []).some(Boolean) && <p>—</p>}
-            </div>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <p className="text-xs text-gray-500">Headlines</p>
-              <p className="mt-1 text-sm">{(values.headlines || []).filter(Boolean).join(" · ") || "—"}</p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-500">Descriptions</p>
-              <p className="mt-1 text-sm">{(values.descriptions || []).filter(Boolean).join(" · ") || "—"}</p>
-            </div>
-          </div>
-
-          {links.length > 0 && (
-            <div>
-              <p className="text-xs text-gray-500">Destination</p>
-              {links.map((link) => (
-                <a key={link} href={link} target="_blank" rel="noreferrer" className="mt-1 flex items-center gap-1 break-all text-sm text-blue-600 hover:underline">
+            )) : <DetailField label="Primary Text" icon={<TemplateIcon className="h-4 w-4" />}>—</DetailField>}
+            {headlines.length > 0 ? headlines.map((headline, headlineIndex) => (
+              <div key={`headline-${headlineIndex}`}>
+                <dt>
+                  <FieldLabel icon={<TemplateIcon className="h-4 w-4" />}>
+                    Headline {headlines.length > 1 ? headlineIndex + 1 : ""}
+                  </FieldLabel>
+                </dt>
+                <dd><ExpandableText text={headline} /></dd>
+              </div>
+            )) : <DetailField label="Headline" icon={<TemplateIcon className="h-4 w-4" />}>—</DetailField>}
+            {descriptions.map((description, descriptionIndex) => (
+              <div key={`description-${descriptionIndex}`}>
+                <dt>
+                  <FieldLabel icon={<TemplateIcon className="h-4 w-4" />}>
+                    Description {descriptions.length > 1 ? descriptionIndex + 1 : ""}
+                  </FieldLabel>
+                </dt>
+                <dd><ExpandableText text={description} /></dd>
+              </div>
+            ))}
+            <DetailField label="Link" icon={<LinkIcon className="h-4 w-4" />}>
+              {links.length > 0 ? links.map((link, linkIndex) => (
+                <a
+                  key={`${link}-${linkIndex}`}
+                  href={link}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-1 break-all text-blue-600 hover:underline"
+                >
                   {link}<ExternalLink className="h-3 w-3 shrink-0" />
                 </a>
-              ))}
-            </div>
-          )}
-        </div>
+              )) : "—"}
+            </DetailField>
+            <DetailField label="CTA" icon={<CTAIcon className="h-4 w-4" />}>
+              {(values.cta || "—").replaceAll("_", " ")}
+            </DetailField>
+            {values.isPartnershipAd && (
+              <DetailField label="Partner" icon={<Users className="h-4 w-4" />}>
+                {labels.partnerName || values.partnerIgAccountId || "—"}
+              </DetailField>
+            )}
+          </dl>
+        </ScrollArea>
 
-        <div>
-          <p className="mb-2 text-xs text-gray-500">Media</p>
-          {media.length > 0 ? (
-            <div className="grid grid-cols-2 gap-3">
-              {media.map((item, mediaIndex) => (
-                <ReviewMedia key={item.id} media={item} priority={index === 0 && mediaIndex < 2} />
+        <ScrollArea className="h-full min-h-0 pr-2">
+          {creativeUnits.length > 0 ? (
+            <div className="grid grid-cols-2 gap-4">
+              {creativeUnits.map((unit, unitIndex) => (
+                <CreativeReviewCard
+                  key={unit.id}
+                  unit={unit}
+                  priority={index === 0 && unitIndex < 2}
+                />
               ))}
             </div>
           ) : (
-            <div className="rounded-2xl border border-dashed border-gray-300 p-8 text-center text-sm text-gray-500">
-              This form uses an existing post or platform media reference.
+            <div className="flex h-full min-h-48 items-center justify-center rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-8 text-center text-sm text-gray-500">
+              This variation uses an existing post or platform media reference.
             </div>
           )}
-        </div>
+        </ScrollArea>
       </div>
     </article>
   );
@@ -205,6 +259,15 @@ export default function QaReview() {
     [draft?.media]
   );
 
+  const forms = draft?.state?.forms || [];
+  const creativeCount = useMemo(
+    () => forms.reduce(
+      (total, form) => total + getCreativeUnitsForForm(draft?.state, form, mediaById).length,
+      0
+    ),
+    [draft?.state, forms, mediaById]
+  );
+
   if (error) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-gray-50 p-6">
@@ -220,23 +283,31 @@ export default function QaReview() {
     return <main className="flex min-h-screen items-center justify-center bg-gray-50"><Loader2 className="h-7 w-7 animate-spin text-gray-500" /></main>;
   }
 
-  const forms = draft.state?.forms || [];
+  const accountName = draft.state?.configuration?.adAccount?.name || draft.name;
   return (
-    <main className="min-h-screen bg-gray-50 px-4 py-8 sm:px-6">
-      <div className="mx-auto max-w-6xl">
-        <header className="mb-7">
-          <p className="text-sm font-medium text-blue-600">Ad review</p>
-          <h1 className="mt-1 text-3xl font-semibold tracking-tight text-gray-950">{draft.name}</h1>
-          <p className="mt-2 text-sm text-gray-600">
-            {forms.length} launch form{forms.length === 1 ? "" : "s"} prepared for review
-          </p>
-        </header>
-        <div className="space-y-6">
-          {forms.map((form, index) => (
-            <ReviewForm key={form.id || index} form={form} index={index} state={draft.state} mediaById={mediaById} />
-          ))}
+    <ScrollArea className="h-screen bg-gray-50">
+      <main className="min-h-screen px-4 py-10 sm:px-6">
+        <div className="mx-auto max-w-7xl">
+          <header className="mb-8 px-3">
+            <h1 className="text-3xl font-semibold tracking-tight text-blue-600">Ad review for {accountName}</h1>
+            <p className="mt-2 text-sm text-gray-600">
+              {creativeCount} Ad{creativeCount === 1 ? "" : "s"}
+              {forms.length > 1 ? ` with ${forms.length} different Creative Variations` : ""}
+            </p>
+          </header>
+          <div className="space-y-8">
+            {forms.map((form, index) => (
+              <ReviewForm
+                key={form.id || index}
+                form={form}
+                index={index}
+                state={draft.state}
+                mediaById={mediaById}
+              />
+            ))}
+          </div>
         </div>
-      </div>
-    </main>
+      </main>
+    </ScrollArea>
   );
 }

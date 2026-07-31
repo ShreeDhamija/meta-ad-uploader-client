@@ -1,22 +1,29 @@
 /* eslint-disable react/prop-types */
 import { useCallback, useEffect, useState } from "react";
-import { FileText, Link2, Loader2, Play, RotateCcw, Trash2 } from "lucide-react";
+import { FileText, Link2, Loader2, Play, RotateCcw, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import AdSetIcon from "@/assets/icons/grid.svg?react";
+import CampaignIcon from "@/assets/icons/folder.svg?react";
+import CTAIcon from "@/assets/icons/cta.svg?react";
+import FacebookIcon from "@/assets/icons/fb.svg?react";
+import InstagramIcon from "@/assets/icons/ig.svg?react";
+import LabelIcon from "@/assets/icons/label.svg?react";
+import LinkIcon from "@/assets/icons/link.svg?react";
+import TemplateIcon from "@/assets/icons/file.svg?react";
 import {
   createDraftShareUrl,
   deleteDraft,
   getDraft,
   listDrafts,
 } from "@/lib/draftApi";
+import { getCreativeUnitsForForm } from "@/lib/draftCreativeLayout";
 
 const MEDIA_FALLBACK_URL = "https://api.withblip.com/thumbnail.jpg";
 const COPY_PREVIEW_LIMIT = 200;
-
-function getGroupFileIds(group) {
-  return Array.isArray(group) ? group : group?.fileIds || [];
-}
 
 function ExpandableText({ text }) {
   const [expanded, setExpanded] = useState(false);
@@ -40,47 +47,22 @@ function ExpandableText({ text }) {
   );
 }
 
-function DetailField({ label, children, className = "" }) {
+function FieldLabel({ icon, children }) {
   return (
-    <div className={className}>
-      <dt className="mb-0.5 text-sm text-gray-500">{label}</dt>
-      <dd className="break-words text-sm font-semibold leading-5 text-gray-950">{children || "—"}</dd>
-    </div>
+    <span className="mb-0.5 flex items-center gap-1.5 text-sm text-gray-500">
+      {icon}
+      {children}
+    </span>
   );
 }
 
-function getVisibleMedia(form, mediaById, state) {
-  const mediaItems = state.mediaLayout?.items || [];
-  const fileGroups = state.mediaLayout?.fileGroups || [];
-  const groupedKeys = new Set(fileGroups.flatMap(getGroupFileIds));
-  const assignedKeys = new Set();
-  const formId = form.id || "default";
-  const groupVariantMap = state.mediaLayout?.groupVariantMap || {};
-  const fileVariantMap = state.mediaLayout?.fileVariantMap || {};
-  const postVariantMap = state.mediaLayout?.postVariantMap || {};
-
-  if (mediaItems.length <= 1) {
-    mediaItems.forEach((item) => assignedKeys.add(item.originalKey));
-  } else {
-    fileGroups.forEach((group) => {
-      const groupId = Array.isArray(group) ? null : group.id;
-      if ((groupId ? groupVariantMap[groupId] || "default" : "default") === formId) {
-        getGroupFileIds(group).forEach((key) => assignedKeys.add(key));
-      }
-    });
-    mediaItems.forEach((item) => {
-      if (groupedKeys.has(item.originalKey)) return;
-      const map = item.originalKey.startsWith("post:") || item.originalKey.startsWith("igpost:")
-        ? postVariantMap
-        : fileVariantMap;
-      if ((map[item.originalKey] || "default") === formId) assignedKeys.add(item.originalKey);
-    });
-  }
-
-  return mediaItems
-    .filter((item) => assignedKeys.has(item.originalKey))
-    .map((item) => mediaById.get(item.mediaId))
-    .filter(Boolean);
+function DetailField({ label, icon, children, className = "" }) {
+  return (
+    <div className={className}>
+      <dt><FieldLabel icon={icon}>{label}</FieldLabel></dt>
+      <dd className="break-words text-sm font-semibold leading-5 text-gray-950">{children || "—"}</dd>
+    </div>
+  );
 }
 
 function MediaThumbnail({ media }) {
@@ -131,66 +113,105 @@ function MediaThumbnail({ media }) {
   );
 }
 
+function CreativeUnit({ unit }) {
+  return (
+    <div className={`min-w-0 rounded-2xl border p-2 ${
+      unit.type === "group" ? "border-blue-200 bg-blue-50/60" : "border-gray-200 bg-white"
+    }`}>
+      <div className={`grid gap-2 ${unit.media.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}>
+        {unit.media.map((media) => <MediaThumbnail key={media.id} media={media} />)}
+      </div>
+      <div className="mt-2 border-t border-gray-200/80 pt-2">
+        <span className="text-xs text-gray-500">Ad Name</span>
+        <TooltipProvider delayDuration={250}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <p className="truncate text-sm font-semibold text-gray-950">{unit.adName}</p>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-sm break-words text-xs">
+              {unit.adName}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
+    </div>
+  );
+}
+
 function FormPreview({ form, mediaById, state }) {
   const values = form?.values || {};
   const labels = values.selectionLabels || {};
-  const visibleMedia = getVisibleMedia(form, mediaById, state);
+  const creativeUnits = getCreativeUnitsForForm(state, form, mediaById);
   const messages = values.messages?.filter(Boolean) || [];
   const headlines = values.headlines?.filter(Boolean) || [];
   const links = values.link?.filter(Boolean) || [];
 
   return (
     <section className="grid min-h-0 flex-1 grid-cols-[minmax(0,1.05fr)_minmax(300px,0.85fr)] gap-8 overflow-hidden px-8 pb-8">
-      <dl className="min-w-0 space-y-5 overflow-y-auto pr-2">
-        <DetailField label="Ad Name">{values.adName}</DetailField>
+      <ScrollArea className="h-full min-h-0 min-w-0">
+      <dl className="space-y-5 pr-4">
+        <DetailField label="Ad Name" icon={<LabelIcon className="h-4 w-4" />}>{values.adName}</DetailField>
         <div className="grid grid-cols-2 gap-6">
-          <DetailField label="Campaign">
+          <DetailField label="Campaign" icon={<CampaignIcon className="h-4 w-4" />}>
             {labels.campaigns?.map((item) => item.name).join(", ") || labels.duplicateCampaignName || "—"}
           </DetailField>
-          <DetailField label="Ad Set">
+          <DetailField label="Ad Set" icon={<AdSetIcon className="h-4 w-4" />}>
             {labels.adSets?.map((item) => item.name).join(", ") || labels.duplicateAdSetName || "—"}
+          </DetailField>
+        </div>
+        <div className="grid grid-cols-2 gap-6">
+          <DetailField label="Facebook Page" icon={<FacebookIcon className="h-4 w-4" />}>
+            {labels.page?.name || values.pageId || "—"}
+          </DetailField>
+          <DetailField label="Instagram Account" icon={<InstagramIcon className="h-4 w-4" />}>
+            {labels.instagramAccount?.name || values.instagramAccountId || "—"}
           </DetailField>
         </div>
         {messages.length > 0 ? messages.map((message, index) => (
           <div key={`message-${index}`}>
-            <dt className="mb-0.5 text-sm text-gray-500">Primary Text {messages.length > 1 ? index + 1 : ""}</dt>
+            <dt>
+              <FieldLabel icon={<TemplateIcon className="h-4 w-4" />}>
+                Primary Text {messages.length > 1 ? index + 1 : ""}
+              </FieldLabel>
+            </dt>
             <dd><ExpandableText text={message} /></dd>
           </div>
-        )) : <DetailField label="Primary Text">—</DetailField>}
+        )) : <DetailField label="Primary Text" icon={<TemplateIcon className="h-4 w-4" />}>—</DetailField>}
         {headlines.length > 0 ? headlines.map((headline, index) => (
           <div key={`headline-${index}`}>
-            <dt className="mb-0.5 text-sm text-gray-500">Headline {headlines.length > 1 ? index + 1 : ""}</dt>
+            <dt>
+              <FieldLabel icon={<TemplateIcon className="h-4 w-4" />}>
+                Headline {headlines.length > 1 ? index + 1 : ""}
+              </FieldLabel>
+            </dt>
             <dd><ExpandableText text={headline} /></dd>
           </div>
-        )) : <DetailField label="Headline">—</DetailField>}
-        <DetailField label="Link">
+        )) : <DetailField label="Headline" icon={<TemplateIcon className="h-4 w-4" />}>—</DetailField>}
+        <DetailField label="Link" icon={<LinkIcon className="h-4 w-4" />}>
           {links.length > 0 ? links.map((item, index) => (
             <span key={`${item}-${index}`} className="block break-all">{item}</span>
           )) : "—"}
         </DetailField>
-        <DetailField label="CTA">{values.cta}</DetailField>
-        <div className="grid grid-cols-2 gap-6">
-          <DetailField label="Facebook Page">{labels.page?.name || values.pageId || "—"}</DetailField>
-          <DetailField label="Instagram Account">
-            {labels.instagramAccount?.name || values.instagramAccountId || "—"}
-          </DetailField>
-        </div>
+        <DetailField label="CTA" icon={<CTAIcon className="h-4 w-4" />}>{values.cta}</DetailField>
         {values.isPartnershipAd && (
-          <DetailField label="Partner">{labels.partnerName || values.partnerIgAccountId || "—"}</DetailField>
+          <DetailField label="Partner" icon={<Users className="h-4 w-4" />}>
+            {labels.partnerName || values.partnerIgAccountId || "—"}
+          </DetailField>
         )}
       </dl>
+      </ScrollArea>
 
-      <div className="min-h-0 overflow-y-auto pr-2">
-        {visibleMedia.length > 0 ? (
+      <ScrollArea className="h-full min-h-0 pr-2">
+        {creativeUnits.length > 0 ? (
           <div className="grid grid-cols-2 gap-x-4 gap-y-5">
-            {visibleMedia.map((media) => <MediaThumbnail key={media.id} media={media} />)}
+            {creativeUnits.map((unit) => <CreativeUnit key={unit.id} unit={unit} />)}
           </div>
         ) : (
           <div className="flex h-full min-h-48 items-center justify-center rounded-2xl border border-dashed border-gray-300 bg-gray-50 text-sm text-gray-500">
             No media saved for this variant.
           </div>
         )}
-      </div>
+      </ScrollArea>
     </section>
   );
 }
@@ -305,11 +326,13 @@ export default function DraftsModal({ open, onOpenChange, adAccountId, onRestore
       <DialogContent
         hideClose
         disableSlide
-        className="h-[86vh] max-h-[860px] max-w-[96vw] grid-cols-[220px_minmax(0,1fr)] gap-0 overflow-hidden rounded-[48px] border-gray-200 bg-white p-0 xl:max-w-7xl"
+        className="h-[86vh] max-h-[860px] max-w-[96vw] grid-cols-[220px_minmax(0,1fr)] gap-0 overflow-hidden !rounded-[48px] border-gray-200 bg-white p-0 sm:!rounded-[48px] xl:max-w-7xl"
       >
-        <aside className="min-h-0 overflow-y-auto border-r border-gray-200 bg-[#f4f4f4] px-4 py-7">
-          <DialogTitle className="px-3 text-2xl font-bold tracking-tight text-gray-950">Drafts</DialogTitle>
-          <div className="mt-7">
+        <aside className="min-h-0 overflow-hidden border-r border-gray-200 bg-[#f4f4f4]">
+          <ScrollArea className="h-full">
+            <div className="px-4 py-7 pr-5">
+              <DialogTitle className="px-3 text-2xl font-bold tracking-tight text-gray-950">Drafts</DialogTitle>
+              <div className="mt-3.5">
             {loadingList ? (
               <Loader2 className="mx-auto mt-8 h-5 w-5 animate-spin text-gray-500" />
             ) : drafts.length === 0 ? (
@@ -319,7 +342,7 @@ export default function DraftsModal({ open, onOpenChange, adAccountId, onRestore
                 key={draft.id}
                 type="button"
                 onClick={() => setSelectedId(draft.id)}
-                className={`mb-2 w-full rounded-2xl px-4 py-3 text-left transition ${
+                className={`mb-1.5 w-full rounded-2xl px-4 py-3 text-left transition ${
                   selectedId === draft.id
                     ? "border border-gray-200 bg-white shadow-sm"
                     : "border border-transparent hover:bg-white/70"
@@ -333,7 +356,9 @@ export default function DraftsModal({ open, onOpenChange, adAccountId, onRestore
                 )}
               </button>
             ))}
-          </div>
+              </div>
+            </div>
+          </ScrollArea>
         </aside>
 
         <main className="flex min-h-0 min-w-0 flex-col overflow-hidden">
@@ -352,45 +377,47 @@ export default function DraftsModal({ open, onOpenChange, adAccountId, onRestore
                 <div className="mr-auto min-w-0">
                   <h2 className="truncate text-lg font-semibold text-gray-950">{selectedDraft.name}</h2>
                   {forms.length > 1 && (
-                    <div className="mt-2 flex max-w-lg gap-1 overflow-x-auto pb-1">
-                      {forms.map((form, index) => (
-                        <button
-                          key={form.id || index}
-                          type="button"
-                          onClick={() => setActiveFormIndex(index)}
-                          className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium transition ${
-                            activeFormIndex === index
-                              ? "bg-gray-950 text-white"
-                              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                          }`}
-                        >
-                          Variant {index + 1}
-                        </button>
-                      ))}
-                    </div>
+                    <ScrollArea className="mt-2 h-9 max-w-lg">
+                      <div className="flex w-max gap-1 pb-2 pr-2">
+                        {forms.map((form, index) => (
+                          <button
+                            key={form.id || index}
+                            type="button"
+                            onClick={() => setActiveFormIndex(index)}
+                            className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium transition ${
+                              activeFormIndex === index
+                                ? "bg-gray-950 text-white"
+                                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                            }`}
+                          >
+                            Variant {index + 1}
+                          </button>
+                        ))}
+                      </div>
+                    </ScrollArea>
                   )}
                 </div>
                 <Button
                   type="button"
                   onClick={handleRestore}
                   disabled={working}
-                  className="h-[30px] min-w-36 rounded-lg bg-gray-800 px-4 text-sm text-white hover:bg-blue-700"
+                  className="h-9 min-w-36 rounded-xl bg-gray-800 px-4 text-sm text-white hover:bg-blue-700"
                 >
-                  <RotateCcw className="mr-2 h-4 w-4" /> Restore Draft
+                  <RotateCcw className="mr-1 h-4 w-4" /> Restore Draft
                 </Button>
                 <Button
                   type="button"
                   onClick={handleShare}
                   disabled={working}
-                  className="h-[30px] min-w-36 rounded-lg bg-blue-600 px-4 text-sm text-white hover:bg-blue-700"
+                  className="h-9 min-w-36 rounded-xl bg-blue-600 px-4 text-sm text-white hover:bg-blue-700"
                 >
-                  <Link2 className="mr-2 h-3.5 w-3.5" /> {qaUrl ? "Copy QA Link" : "Share QA Link"}
+                  <Link2 className="mr-1 h-3.5 w-3.5" /> {qaUrl ? "Copy QA Link" : "Share QA Link"}
                 </Button>
                 <button
                   type="button"
                   onClick={handleDelete}
                   disabled={working}
-                  className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-lg text-red-600 transition hover:bg-red-50 hover:text-red-700 disabled:opacity-50"
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-red-600 transition hover:bg-red-50 hover:text-red-700 disabled:opacity-50"
                   aria-label={`Delete ${selectedDraft.name}`}
                   title="Delete draft"
                 >

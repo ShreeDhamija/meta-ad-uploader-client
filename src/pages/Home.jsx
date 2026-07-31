@@ -953,7 +953,7 @@ export default function Home() {
         return keys.some((key) => !snapshotValuesEqual(activeSnapshot[key], defaultSnapshot[key]));
     }, [activeVariantId, getVariantSnapshot]);
 
-    const buildDraftState = useCallback((mediaItems = [], { resolvedAdName = "" } = {}) => {
+    const buildDraftState = useCallback((mediaItems = [], { resolvedAdName = "", creativeAdNames = {} } = {}) => {
         const orderedVariants = [
             variants.find((variant) => variant.id === "default"),
             ...variants.filter((variant) => variant.id !== "default"),
@@ -1017,6 +1017,10 @@ export default function Home() {
         return {
             forms,
             configuration: {
+                adAccount: {
+                    id: selectedAdAccount,
+                    name: adAccounts.find((account) => account.id === selectedAdAccount)?.name || selectedAdAccount,
+                },
                 adType,
                 isCarouselAd,
                 enablePlacementCustomization,
@@ -1030,6 +1034,7 @@ export default function Home() {
                 fileVariantMap: cloneSnapshotValue(fileVariantMap),
                 groupVariantMap: cloneSnapshotValue(groupVariantMap),
                 postVariantMap: cloneSnapshotValue(postVariantMap),
+                creativeAdNames: cloneSnapshotValue(creativeAdNames),
             },
             posts: {
                 importedPosts: cloneSnapshotValue(importedPosts),
@@ -1039,6 +1044,7 @@ export default function Home() {
         };
     }, [
         adSets,
+        adAccounts,
         adType,
         activeVariantId,
         campaigns,
@@ -1053,6 +1059,7 @@ export default function Home() {
         isCarouselAd,
         pages,
         postVariantMap,
+        selectedAdAccount,
         selectedIgOrganicPosts,
         useExistingPosts,
         usePostID,
