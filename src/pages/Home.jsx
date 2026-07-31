@@ -22,8 +22,10 @@ import { saveSettings } from "@/lib/saveSettings"
 import {
     createDraft,
     deleteDraft,
+    discardDraftMedia,
     downloadDraftMedia,
     importDraftMedia,
+    pruneDraftMedia,
     updateDraft,
     uploadLocalDraftMedia,
 } from "@/lib/draftApi"
@@ -1060,13 +1062,16 @@ export default function Home() {
     const saveCurrentDraft = useCallback(async (name, draftOptions = {}) => {
         if (!selectedAdAccount) throw new Error("Select an ad account before saving a draft");
 
-        const { onProgress, signal } = draftOptions;
+        const { onProgress, signal, targetDraft = null } = draftOptions;
         const reportProgress = (value, message) => {
             onProgress?.({ value: Math.max(0, Math.min(100, Math.round(value))), message });
         };
-        reportProgress(2, "Creating draft...");
-        const created = await createDraft({ adAccountId: selectedAdAccount, name, signal });
-        const draftId = created.id;
+        reportProgress(2, targetDraft ? "Preparing draft update..." : "Creating draft...");
+        const created = targetDraft
+            ? null
+            : await createDraft({ adAccountId: selectedAdAccount, name, signal });
+        const draftId = targetDraft?.id || created.id;
+        const uploadedMediaIds = new Set();
         const allMedia = [
             ...files.map((file) => ({ file, source: "local", role: "form_media" })),
             ...driveFiles.map((file) => ({ file: { ...file, isDrive: true }, source: "drive", role: "form_media" })),
@@ -1166,6 +1171,7 @@ export default function Home() {
                             });
                         }
                         updateMediaProgress(index, 1, file.name);
+                        uploadedMediaIds.add(mediaId);
                         return { mediaId, originalKey, role };
                     } catch (error) {
                         transferController.abort();
@@ -1189,6 +1195,16 @@ export default function Home() {
                 signal,
             });
 
+            if (targetDraft) {
+                pruneDraftMedia({
+                    draftId,
+                    adAccountId: selectedAdAccount,
+                    keepMediaIds: mediaItems.map((item) => item.mediaId),
+                }).catch((cleanupError) => {
+                    console.warn("Draft updated, but superseded media could not be pruned:", cleanupError);
+                });
+            }
+
             if (!uploadSources.includes("drafts")) {
                 const nextSources = [...uploadSources, "drafts"];
                 setUploadSources(nextSources);
@@ -1199,10 +1215,18 @@ export default function Home() {
                     console.warn("Draft saved, but the Drafts upload source preference could not be saved:", settingsError);
                 }
             }
-            reportProgress(100, "Draft saved");
+            reportProgress(100, targetDraft ? "Draft updated" : "Draft saved");
             return { id: draftId };
         } catch (error) {
-            await deleteDraft({ draftId, adAccountId: selectedAdAccount }).catch(() => {});
+            if (targetDraft) {
+                await discardDraftMedia({
+                    draftId,
+                    adAccountId: selectedAdAccount,
+                    mediaIds: Array.from(uploadedMediaIds),
+                }).catch(() => {});
+            } else {
+                await deleteDraft({ draftId, adAccountId: selectedAdAccount }).catch(() => {});
+            }
             throw error;
         }
     }, [

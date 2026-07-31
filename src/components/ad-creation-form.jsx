@@ -17,7 +17,7 @@ import { Switch } from "@/components/ui/switch"
 import TextareaAutosize from 'react-textarea-autosize'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Checkbox } from "@/components/ui/checkbox"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Progress } from "@/components/ui/progress"
@@ -59,7 +59,7 @@ import QueueIcon from '@/assets/icons/queue.svg?react';
 import DraftFolderIcon from '@/assets/icons/BlueFolder.svg';
 import PartialSuccess from '@/assets/icons/partialsuccess.svg?react';
 import pLimit from 'p-limit';
-import { cleanupPublishedDraftMedia, refreshDraftMediaUrl } from '@/lib/draftApi';
+import { cleanupPublishedDraftMedia, listDrafts, refreshDraftMediaUrl } from '@/lib/draftApi';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 const TEMPLATE_LINK_SYNC_USER_ID = "929470643071391";
 
@@ -1079,7 +1079,11 @@ export default function AdCreationForm({
   const [draftMenuOpen, setDraftMenuOpen] = useState(false);
   const [draftName, setDraftName] = useState("");
   const [savingDraft, setSavingDraft] = useState(false);
+  const [draftSaveMode, setDraftSaveMode] = useState("save");
   const [draftSaveProgress, setDraftSaveProgress] = useState({ value: 0, message: "" });
+  const [draftUpdateMenuOpen, setDraftUpdateMenuOpen] = useState(false);
+  const [draftUpdateOptions, setDraftUpdateOptions] = useState([]);
+  const [loadingDraftUpdateOptions, setLoadingDraftUpdateOptions] = useState(false);
   const draftSaveAbortControllerRef = useRef(null);
   const [draftsModalOpen, setDraftsModalOpen] = useState(false);
   const [isPagesLoading, setIsPagesLoading] = useState(false);
@@ -7196,9 +7200,9 @@ export default function AdCreationForm({
     setSelectedFiles(new Set());
   };
 
-  const handleSaveDraft = async () => {
-    const trimmedName = draftName.trim();
-    if (!trimmedName) {
+  const handleSaveDraft = async (targetDraft = null) => {
+    const trimmedName = targetDraft?.name || draftName.trim();
+    if (!targetDraft && !trimmedName) {
       toast.error("Enter a draft name");
       return;
     }
@@ -7208,29 +7212,47 @@ export default function AdCreationForm({
     }
     const controller = new AbortController();
     draftSaveAbortControllerRef.current = controller;
+    setDraftSaveMode(targetDraft ? "update" : "save");
     setSavingDraft(true);
-    setDraftSaveProgress({ value: 0, message: "Preparing draft..." });
+    setDraftSaveProgress({ value: 0, message: targetDraft ? `Updating ${targetDraft.name}...` : "Preparing draft..." });
     try {
       const resolvedAdName = computeAdNameFromFormula(adNamePreviewFile, 0, link[0], null, adType);
       setAdName((current) => current === resolvedAdName ? current : resolvedAdName);
       await onSaveDraft(trimmedName, {
         resolvedAdName,
+        targetDraft,
         signal: controller.signal,
         onProgress: setDraftSaveProgress,
       });
-      setDraftName("");
+      if (!targetDraft) setDraftName("");
+      setDraftUpdateMenuOpen(false);
       setDraftMenuOpen(false);
-      toast.success("Draft saved");
+      toast.success(targetDraft ? `“${targetDraft.name}” updated` : "Draft saved");
     } catch (error) {
       if (error?.name === "AbortError" || controller.signal.aborted) {
-        toast.info("Draft save cancelled");
+        toast.info(targetDraft ? "Draft update cancelled" : "Draft save cancelled");
       } else {
-        toast.error(error.message || "Failed to save draft");
+        toast.error(error.message || (targetDraft ? "Failed to update draft" : "Failed to save draft"));
       }
     } finally {
       draftSaveAbortControllerRef.current = null;
       setSavingDraft(false);
       setDraftSaveProgress({ value: 0, message: "" });
+    }
+  };
+
+  const handleDraftUpdateMenuChange = async (nextOpen) => {
+    if (savingDraft) return;
+    setDraftUpdateMenuOpen(nextOpen);
+    if (!nextOpen || !selectedAdAccount) return;
+    setLoadingDraftUpdateOptions(true);
+    try {
+      setDraftUpdateOptions(await listDrafts(selectedAdAccount));
+    } catch (error) {
+      toast.error(error.message || "Failed to load drafts");
+      setDraftUpdateOptions([]);
+    } finally {
+      setLoadingDraftUpdateOptions(false);
     }
   };
 
@@ -10013,78 +10035,122 @@ export default function AdCreationForm({
 
 
           <div className="space-y-1">
-            <div className="flex h-12 w-full overflow-hidden rounded-2xl bg-neutral-950 text-white">
-              <Button
-                type="submit"
-                className="h-12 flex-1 rounded-none bg-neutral-950 text-white hover:bg-blue-700"
-                disabled={publishDisabled || isQueueingJobs}
-              >
-                {isQueueingJobs ? "Publishing Ads..." : "Publish Ads"}
-              </Button>
-              <div className="my-2 w-px bg-white/30" />
-              <Popover
-                open={draftMenuOpen}
-                onOpenChange={(nextOpen) => {
-                  if (savingDraft && !nextOpen) return;
-                  setDraftMenuOpen(nextOpen);
-                }}
-              >
+            <Popover
+              open={draftMenuOpen}
+              onOpenChange={(nextOpen) => {
+                if (savingDraft && !nextOpen) return;
+                setDraftMenuOpen(nextOpen);
+                if (!nextOpen) setDraftUpdateMenuOpen(false);
+              }}
+            >
+              <PopoverAnchor asChild>
+                <div className="flex h-12 w-full overflow-hidden rounded-2xl bg-neutral-950 text-white">
+                  <Button
+                    type="submit"
+                    className="h-12 flex-1 rounded-none bg-neutral-950 text-white hover:bg-blue-700"
+                    disabled={publishDisabled || isQueueingJobs}
+                  >
+                    {isQueueingJobs ? "Publishing Ads..." : "Publish Ads"}
+                  </Button>
+                  <div className="my-2 w-px bg-white/30" />
                 <PopoverTrigger asChild>
                   <button
                     type="button"
-                    className="flex h-12 w-12 items-center justify-center bg-neutral-950 transition hover:bg-blue-700 disabled:opacity-50"
-                    disabled={savingDraft}
+                    className="flex h-12 w-12 items-center justify-center bg-neutral-950 transition hover:bg-zinc-800 disabled:opacity-50"
+                    disabled={savingDraft || !selectedAdAccount}
                     aria-label="Save as draft"
                   >
                     <ChevronDown className="h-4 w-4" />
                   </button>
                 </PopoverTrigger>
-                <PopoverContent align="end" sideOffset={8} className="w-[390px] rounded-2xl border border-gray-200 bg-white p-3 shadow-xl">
-                  <div className="flex items-center gap-2">
-                    <Input
-                      value={draftName}
-                      onChange={(event) => setDraftName(event.target.value)}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter") {
-                          event.preventDefault();
-                          handleSaveDraft();
-                        }
-                      }}
-                      placeholder="Draft name"
-                      maxLength={120}
-                      className="h-10 min-w-0 flex-1 rounded-xl bg-white"
-                      autoFocus
-                    />
+                </div>
+              </PopoverAnchor>
+                <PopoverContent
+                  align="end"
+                  side="bottom"
+                  sideOffset={6}
+                  avoidCollisions={false}
+                  className="w-[var(--radix-popover-trigger-width)] rounded-2xl border border-gray-200 bg-gray-100 p-2 shadow-xl"
+                >
+                  <Input
+                    value={draftName}
+                    onChange={(event) => setDraftName(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        handleSaveDraft();
+                      }
+                    }}
+                    placeholder="Draft name"
+                    maxLength={120}
+                    className="h-9 w-full rounded-xl bg-white"
+                    autoFocus
+                  />
+                  <div className="mt-2 grid grid-cols-2 gap-2">
                     <Button
                       type="button"
-                      onClick={handleSaveDraft}
+                      onClick={() => handleSaveDraft()}
                       disabled={savingDraft || !draftName.trim()}
-                      className="h-10 shrink-0 rounded-xl bg-black px-4 text-white hover:bg-zinc-800"
+                      className="h-9 rounded-xl bg-black px-3 text-white hover:bg-blue-700"
                     >
-                      {savingDraft ? <Loader className="h-4 w-4 animate-spin" /> : "Save draft"}
+                      {savingDraft && draftSaveMode === "save" ? <Loader className="h-4 w-4 animate-spin" /> : "Save draft"}
                     </Button>
+                    <Popover open={draftUpdateMenuOpen} onOpenChange={handleDraftUpdateMenuChange}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          disabled={savingDraft}
+                          className="h-9 rounded-xl border-gray-300 bg-white px-3 hover:border-blue-600 hover:bg-blue-600 hover:text-white"
+                        >
+                          {savingDraft && draftSaveMode === "update" ? <Loader className="h-4 w-4 animate-spin" /> : "Update draft"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent align="end" sideOffset={6} className="w-72 rounded-xl border-gray-200 bg-white p-2 shadow-xl">
+                        <p className="px-2 pb-1.5 text-xs font-medium text-gray-500">Select a draft to update</p>
+                        <div className="max-h-56 overflow-y-auto">
+                          {loadingDraftUpdateOptions ? (
+                            <Loader className="mx-auto my-5 h-4 w-4 animate-spin text-gray-500" />
+                          ) : draftUpdateOptions.length === 0 ? (
+                            <p className="px-2 py-4 text-center text-sm text-gray-500">No drafts available.</p>
+                          ) : draftUpdateOptions.map((draft) => (
+                            <button
+                              key={draft.id}
+                              type="button"
+                              onClick={() => handleSaveDraft(draft)}
+                              className="block w-full rounded-lg px-2.5 py-2 text-left hover:bg-gray-100"
+                            >
+                              <span className="block truncate text-sm font-medium text-gray-900">{draft.name}</span>
+                              <span className="block text-xs text-gray-500">
+                                {draft.formCount} variant{draft.formCount === 1 ? "" : "s"}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
                   </div>
                   {savingDraft && (
-                    <div className="mt-3 space-y-2 rounded-xl bg-gray-50 p-3">
-                      <div className="flex items-center justify-between gap-3 text-xs text-gray-600">
+                    <div className="mt-2 rounded-xl bg-white px-2 py-1.5">
+                      <div className="mb-1 flex items-center justify-between gap-3 text-[11px] text-gray-600">
                         <span className="truncate">{draftSaveProgress.message || "Saving draft..."}</span>
                         <span className="shrink-0 font-medium">{draftSaveProgress.value}%</span>
                       </div>
-                      <Progress value={draftSaveProgress.value} className="h-2 bg-gray-200 [&>div]:bg-blue-600" />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleCancelDraftSave}
-                        className="h-7 w-full rounded-lg text-xs text-red-600 hover:bg-red-50 hover:text-red-700"
-                      >
-                        Cancel upload
-                      </Button>
+                      <div className="flex items-center gap-1.5">
+                        <Progress value={draftSaveProgress.value} className="h-1.5 flex-1 bg-gray-200 [&>div]:bg-blue-600" />
+                        <button
+                          type="button"
+                          onClick={handleCancelDraftSave}
+                          className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-red-600 transition hover:bg-red-50 hover:text-red-700"
+                          aria-label="Cancel draft save"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
                     </div>
                   )}
                 </PopoverContent>
-              </Popover>
-            </div>
+            </Popover>
 
             {variants.length > 1 && hasConfiguredFormSplits && (
               <div className="text-xs text-gray-500 mt-2">

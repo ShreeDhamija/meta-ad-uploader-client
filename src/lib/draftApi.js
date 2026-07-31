@@ -68,6 +68,33 @@ export async function updateDraft({ draftId, adAccountId, name, state, signal })
   return readJson(response);
 }
 
+export async function discardDraftMedia({ draftId, adAccountId, mediaIds }) {
+  if (!mediaIds?.length) return { success: true, deletedMediaIds: [] };
+  const response = await fetch(
+    `${API_BASE_URL}/api/drafts/${encodeURIComponent(draftId)}/media/discard`,
+    {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ adAccountId, mediaIds }),
+    }
+  );
+  return readJson(response);
+}
+
+export async function pruneDraftMedia({ draftId, adAccountId, keepMediaIds }) {
+  const response = await fetch(
+    `${API_BASE_URL}/api/drafts/${encodeURIComponent(draftId)}/media/prune`,
+    {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ adAccountId, keepMediaIds }),
+    }
+  );
+  return readJson(response);
+}
+
 export async function getDraft({ draftId, adAccountId }) {
   const response = await fetch(
     `${API_BASE_URL}/api/drafts/${encodeURIComponent(draftId)}?adAccountId=${encodeURIComponent(adAccountId)}`,
