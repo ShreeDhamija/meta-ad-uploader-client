@@ -1249,6 +1249,8 @@ export default function Home() {
                         isDraftAsset: true,
                         s3Url: media.url,
                         previewUrl: media.previewUrl,
+                        width: media.width || null,
+                        height: media.height || null,
                         draftId: draft.id,
                         draftMediaId: media.id,
                         draftAdAccountId: selectedAdAccount,

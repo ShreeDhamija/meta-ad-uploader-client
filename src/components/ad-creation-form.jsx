@@ -3328,8 +3328,37 @@ export default function AdCreationForm({
       return null; // Not a video file
     }
 
+    if (file.width && file.height) {
+      return file.width / file.height;
+    }
+
+    if (file.isDraftAsset && file.s3Url) {
+      return new Promise((resolve) => {
+        const video = document.createElement('video');
+        let settled = false;
+        const finish = (aspectRatio) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timeout);
+          video.removeAttribute('src');
+          video.load();
+          resolve(aspectRatio);
+        };
+        const timeout = setTimeout(() => {
+          finish(16 / 9);
+        }, 10000);
+        video.preload = 'metadata';
+        video.src = file.s3Url;
+        video.addEventListener('loadedmetadata', () => {
+          finish(video.videoWidth && video.videoHeight
+            ? video.videoWidth / video.videoHeight
+            : 16 / 9);
+        }, { once: true });
+        video.addEventListener('error', () => finish(16 / 9), { once: true });
+      });
+    }
+
     if (file.isFrameio) {
-      if (file.width && file.height) return file.width / file.height;
       try {
         const response = await fetch(`${API_BASE_URL}/api/frameio/video-metadata`, {
           method: 'POST',
@@ -4817,6 +4846,11 @@ export default function AdCreationForm({
             draftId: file.draftId,
             draftMediaId: file.draftMediaId,
             draftAdAccountId: file.draftAdAccountId || selectedAdAccount,
+            width: file.width || null,
+            height: file.height || null,
+            aspectRatio: aspectRatioMap[getFileId(file)]
+              || (file.width && file.height ? file.width / file.height : null)
+              || 16 / 9,
           };
         })
       ));
