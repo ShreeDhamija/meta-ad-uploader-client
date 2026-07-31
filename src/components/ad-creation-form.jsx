@@ -20,6 +20,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Checkbox } from "@/components/ui/checkbox"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Progress } from "@/components/ui/progress"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Users, ChevronDown, Loader, Plus, Trash2, Upload, ChevronsUpDown, RefreshCcw, CircleX, AlertTriangle, RotateCcw, Eye, FileText, X, Clock, ChevronLeft, ChevronRight, Ban, Phone, ArrowUpDown, Check, Info, CloudUpload, BicepsFlexed } from "lucide-react"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
@@ -58,6 +59,7 @@ import QueueIcon from '@/assets/icons/queue.svg?react';
 import DraftFolderIcon from '@/assets/icons/BlueFolder.svg';
 import PartialSuccess from '@/assets/icons/partialsuccess.svg?react';
 import pLimit from 'p-limit';
+import { cleanupPublishedDraftMedia, refreshDraftMediaUrl } from '@/lib/draftApi';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 const TEMPLATE_LINK_SYNC_USER_ID = "929470643071391";
 
@@ -1077,6 +1079,8 @@ export default function AdCreationForm({
   const [draftMenuOpen, setDraftMenuOpen] = useState(false);
   const [draftName, setDraftName] = useState("");
   const [savingDraft, setSavingDraft] = useState(false);
+  const [draftSaveProgress, setDraftSaveProgress] = useState({ value: 0, message: "" });
+  const draftSaveAbortControllerRef = useRef(null);
   const [draftsModalOpen, setDraftsModalOpen] = useState(false);
   const [isPagesLoading, setIsPagesLoading] = useState(false);
   // const [isPostSelectorOpen, setIsPostSelectorOpen] = useState(false)
@@ -1100,8 +1104,14 @@ export default function AdCreationForm({
   const isInPromisePhase = useRef(false); // ADD THIS
   const currentJobIdRef = useRef(null); // ADD THIS
   const [isCancelling, setIsCancelling] = useState(false);
+  const pendingDraftMediaCleanupRef = useRef(new Map());
+  const draftMediaCleanupInProgressRef = useRef(false);
 
   const [preserveMedia, setPreserveMedia] = useState(false);
+
+  useEffect(() => () => {
+    draftSaveAbortControllerRef.current?.abort();
+  }, []);
 
   const adLaunchInProgress = uploadingToS3 || isQueueingJobs || isProcessingQueue || Boolean(currentJob) || jobQueue.length > 0;
   useEffect(() => {
@@ -1111,6 +1121,53 @@ export default function AdCreationForm({
   useEffect(() => {
     return () => onAdLaunchInProgressChange?.(false);
   }, [onAdLaunchInProgressChange]);
+
+  useEffect(() => {
+    if (
+      isProcessingQueue ||
+      currentJob ||
+      jobQueue.length > 0 ||
+      draftMediaCleanupInProgressRef.current ||
+      pendingDraftMediaCleanupRef.current.size === 0
+    ) {
+      return;
+    }
+
+    const pending = [...pendingDraftMediaCleanupRef.current.values()];
+    pendingDraftMediaCleanupRef.current.clear();
+    draftMediaCleanupInProgressRef.current = true;
+
+    const grouped = new Map();
+    pending.forEach((media) => {
+      const key = JSON.stringify([media.draftAdAccountId, media.draftId]);
+      if (!grouped.has(key)) {
+        grouped.set(key, {
+          adAccountId: media.draftAdAccountId,
+          draftId: media.draftId,
+          mediaIds: new Set(),
+        });
+      }
+      grouped.get(key).mediaIds.add(media.draftMediaId);
+    });
+
+    Promise.all([...grouped.values()].map(async ({ adAccountId, draftId, mediaIds }) => {
+      const result = await cleanupPublishedDraftMedia({
+        adAccountId,
+        draftId,
+        mediaIds: [...mediaIds],
+      });
+      if (result.failedMediaIds?.length) {
+        throw new Error(`Could not remove ${result.failedMediaIds.length} published draft file(s)`);
+      }
+    }))
+      .catch((error) => {
+        console.warn("Published ads were created, but draft media cleanup failed:", error);
+        toast.warning("Ads were created, but some draft media could not be removed");
+      })
+      .finally(() => {
+        draftMediaCleanupInProgressRef.current = false;
+      });
+  }, [currentJob, isProcessingQueue, jobQueue.length]);
 
   const handleLinkMorePages = useCallback(() => {
     setOpenPage(false)
@@ -3894,11 +3951,34 @@ export default function AdCreationForm({
     return adName.trim() || "Ad Generated Through Blip";
   }, [adNameFormulaV2, adValues.dateType, computeAdName, defaultTemplateName, isTemplateLinkSyncUser, selectedTemplate]);
 
+  const adNamePreviewFile = useMemo(() => {
+    const directFile = files[0] || driveFiles[0] || dropboxFiles[0] || frameioFiles[0] || importedFiles[0];
+    if (directFile) return directFile;
+
+    const existingPost = importedPosts[0];
+    if (existingPost) {
+      return {
+        name: existingPost.ad_name || existingPost.name || "Existing ad",
+        type: existingPost.video_id ? "video/mp4" : "image/jpeg",
+      };
+    }
+
+    const instagramPost = selectedIgOrganicPosts[0];
+    if (instagramPost) {
+      return {
+        name: instagramPost.caption || "Instagram post",
+        type: instagramPost.media_type === "VIDEO" ? "video/mp4" : "image/jpeg",
+      };
+    }
+
+    return null;
+  }, [driveFiles, dropboxFiles, files, frameioFiles, importedFiles, importedPosts, selectedIgOrganicPosts]);
+
 
   useEffect(() => {
-    const adName = computeAdNameFromFormula(null);
-    setAdName(adName);
-  }, [adNameFormulaV2, computeAdNameFromFormula]);
+    const computedAdName = computeAdNameFromFormula(adNamePreviewFile, 0, link[0], null, adType);
+    setAdName((current) => current === computedAdName ? current : computedAdName);
+  }, [adNamePreviewFile, adType, computeAdNameFromFormula, link, setAdName]);
 
 
   useEffect(() => {
@@ -4409,6 +4489,10 @@ export default function AdCreationForm({
       }
     }
 
+    if (files.some((file) => file.isDraftAsset && file.isMissingDraftAsset)) {
+      throw new Error("This draft contains media that was removed after publishing. Remove or replace the unavailable file before publishing again.");
+    }
+
     if (showShopDestinationSelector && !selectedShopDestination) {
       toast.error("Please select a shop destination for shop ads")
       throw new Error("Please select a shop destination for shop ads")
@@ -4521,17 +4605,19 @@ export default function AdCreationForm({
     // Frame.io images skip S3 — backend streams them from Frame.io directly.
     const largeFrameioFiles = frameioFiles.filter(file => isVideoFile(file));
 
-    let s3Results = files
-      .filter((file) => file.isDraftAsset && isVideoFile(file) && file.s3Url)
+    let restoredDraftAssets = files
+      .filter((file) => file.isDraftAsset && file.draftId && file.draftMediaId)
       .map((file) => ({
         name: file.name,
-        type: file.type || file.mimeType,
         size: file.size,
-        s3Url: file.s3Url,
-        isS3Upload: true,
-        isDraftAsset: true,
+        type: file.type || file.mimeType || "",
+        s3Url: file.s3Url || null,
+        draftId: file.draftId,
+        draftMediaId: file.draftMediaId,
+        draftAdAccountId: file.draftAdAccountId || selectedAdAccount,
         uniqueId: getFileId(file),
       }));
+    const s3Results = [];
     const s3DriveResults = [];
     const s3DropboxResults = [];
     const s3FrameioResults = [];
@@ -4704,6 +4790,46 @@ export default function AdCreationForm({
         setUploadingToS3(false);
       }
     }
+
+    const restoredDraftVideos = files.filter(
+      (file) => file.isDraftAsset && isVideoFile(file) && file.draftId && file.draftMediaId
+    );
+    if (restoredDraftVideos.length > 0) {
+      setProgressMessage("Refreshing secure draft media links...");
+      const refreshLimit = pLimit(3);
+      const refreshedVideos = await Promise.all(restoredDraftVideos.map((file) =>
+        refreshLimit(async () => {
+          throwIfCancelled();
+          const freshUrl = await refreshDraftMediaUrl({
+            draftId: file.draftId,
+            adAccountId: file.draftAdAccountId || selectedAdAccount,
+            mediaId: file.draftMediaId,
+            signal,
+          });
+          return {
+            name: file.name,
+            type: file.type || file.mimeType,
+            size: file.size,
+            s3Url: freshUrl,
+            isS3Upload: true,
+            isDraftAsset: true,
+            uniqueId: getFileId(file),
+            draftId: file.draftId,
+            draftMediaId: file.draftMediaId,
+            draftAdAccountId: file.draftAdAccountId || selectedAdAccount,
+          };
+        })
+      ));
+      s3Results.push(...refreshedVideos);
+      const refreshedUrlByMediaId = new Map(
+        refreshedVideos.map((video) => [video.draftMediaId, video.s3Url])
+      );
+      restoredDraftAssets = restoredDraftAssets.map((media) => ({
+        ...media,
+        s3Url: refreshedUrlByMediaId.get(media.draftMediaId) || media.s3Url,
+      }));
+    }
+
     throwIfCancelled(); // ADD THIS LINE
     // 🔧 NOW start the actual job (50-100% progress)
     const frontendJobId = uuidv4();
@@ -5008,7 +5134,7 @@ export default function AdCreationForm({
       // Add local files from this group
       group.forEach(fileId => {
         const file = files.find(f => getFileId(f) === fileId);
-        if (file && !file.isDrive && !file.isDropbox && (!isVideoFile(file) || file.size <= S3_UPLOAD_THRESHOLD)) {
+        if (file && (!file.isDraftAsset || !isVideoFile(file)) && !file.isDrive && !file.isDropbox && (!isVideoFile(file) || file.size <= S3_UPLOAD_THRESHOLD)) {
           formData.append("mediaFiles", file);
 
           if (isVideoFile(file)) {
@@ -5144,7 +5270,7 @@ export default function AdCreationForm({
     ) => {
       // Add all small local files
       files.forEach((file) => {
-        if (!isVideoFile(file) || file.size <= S3_UPLOAD_THRESHOLD) {
+        if ((!file.isDraftAsset || !isVideoFile(file)) && (!isVideoFile(file) || file.size <= S3_UPLOAD_THRESHOLD)) {
           formData.append("mediaFiles", file);
         }
       });
@@ -5293,14 +5419,16 @@ export default function AdCreationForm({
 
       // Process files in the order they appear in the UI
       files.forEach((file) => {
-        if (!isVideoFile(file) || file.size <= S3_UPLOAD_THRESHOLD) {
+        const usesS3Url = isVideoFile(file) && (file.isDraftAsset || file.size > S3_UPLOAD_THRESHOLD);
+        if (!usesS3Url) {
           fileOrder.push({
             index: fileIndex++,
             type: 'local',
             name: file.name
           });
         } else {
-          const s3File = s3Results.find(s3f => s3f.name === file.name);
+          const fileId = getFileId(file);
+          const s3File = s3Results.find(s3f => s3f.uniqueId === fileId || s3f.name === file.name);
           if (s3File) {
             fileOrder.push({
               index: fileIndex++,
@@ -5430,7 +5558,7 @@ export default function AdCreationForm({
         // Check local files
         const localFile = files.find(f => getFileId(f) === fileId);
         if (localFile) {
-          if (isVideoFile(localFile) && localFile.size > S3_UPLOAD_THRESHOLD) {
+          if (isVideoFile(localFile) && (localFile.isDraftAsset || localFile.size > S3_UPLOAD_THRESHOLD)) {
             const s3File = s3Results.find(s3f => s3f.uniqueId === fileId || s3f.name === localFile.name);
             if (s3File) {
               fileOrder.push({ index: fileIndex++, type: 's3', url: s3File.s3Url, name: localFile.name });
@@ -5533,7 +5661,15 @@ export default function AdCreationForm({
         // Local files
         const localFile = files.find(f => getFileId(f) === fileId);
         if (localFile && !localFile.isDrive && !localFile.isDropbox) {
-          if (!isVideoFile(localFile) || localFile.size <= S3_UPLOAD_THRESHOLD) {
+          if (localFile.isDraftAsset && isVideoFile(localFile)) {
+            const s3File = s3Results.find(s3Result =>
+              s3Result.uniqueId === fileId || s3Result.name === localFile.name
+            );
+            if (s3File) {
+              formData.append("s3VideoUrls", s3File.s3Url);
+              formData.append("s3VideoNames", s3File.name);
+            }
+          } else if (!isVideoFile(localFile) || localFile.size <= S3_UPLOAD_THRESHOLD) {
             formData.append("mediaFiles", localFile);
           }
           return;
@@ -5644,6 +5780,25 @@ export default function AdCreationForm({
     try {
       const promises = [];
       const promiseMetadata = []; // ADD THIS
+      const draftMediaForRequest = (formData) => {
+        if (restoredDraftAssets.length === 0) return [];
+        const values = [...formData.values()];
+        const stringValues = values.filter((value) => typeof value === "string");
+        const requestFiles = values.filter(
+          (value) => typeof File !== "undefined" && value instanceof File
+        );
+        return restoredDraftAssets.filter((media) =>
+          requestFiles.some((file) =>
+            file.draftMediaId === media.draftMediaId ||
+            (
+              file.name === media.name &&
+              file.size === media.size &&
+              file.type === media.type
+            )
+          ) ||
+          (media.s3Url && stringValues.some((value) => value.includes(media.s3Url)))
+        );
+      };
       const queueCreateAdPromise = (formData, metadata = {}) => {
         if (productExtensionProductSetId && !formData.has("productExtensionProductSetId")) {
           formData.append("productExtensionProductSetId", productExtensionProductSetId);
@@ -5653,6 +5808,7 @@ export default function AdCreationForm({
           adSetId: formData.get("adSetId"),
           adName: formData.get("adName"),
           ...metadata,
+          draftMediaRefs: draftMediaForRequest(formData),
         });
       };
 
@@ -5974,7 +6130,7 @@ export default function AdCreationForm({
             } else {
               // Ungrouped: all files (backward compat)
               files.forEach((file) => {
-                if (!isVideoFile(file) || file.size <= S3_UPLOAD_THRESHOLD) {
+                if ((!file.isDraftAsset || !isVideoFile(file)) && (!isVideoFile(file) || file.size <= S3_UPLOAD_THRESHOLD)) {
                   formData.append("mediaFiles", file);
                 }
               });
@@ -6269,7 +6425,7 @@ export default function AdCreationForm({
         nonDynamicAdSetIds.forEach((adSetId) => {
           const groupedFileIds = enablePlacementCustomization ? new Set(fileGroups.flat()) : new Set();
           const hasUngroupedFiles = (
-            files.some(file => !groupedFileIds.has(getFileId(file)) && (!isVideoFile(file) || file.size <= S3_UPLOAD_THRESHOLD)) ||
+            files.some(file => (!file.isDraftAsset || !isVideoFile(file)) && !groupedFileIds.has(getFileId(file)) && (!isVideoFile(file) || file.size <= S3_UPLOAD_THRESHOLD)) ||
             smallDriveFiles.some(driveFile => !groupedFileIds.has(driveFile.id)) ||
             smallDropboxFiles.some(dropboxFile => !groupedFileIds.has(dropboxFile.dropboxId)) ||
             smallFrameioFiles.some(frameioFile => !groupedFileIds.has(frameioFile.frameioId)) ||
@@ -6385,7 +6541,9 @@ export default function AdCreationForm({
           if (hasUngroupedFiles) {
             // Pre-compute ad names for all ungrouped files
             const ungroupedLocalFiles = files.filter(file =>
-              (!isVideoFile(file) || file.size <= S3_UPLOAD_THRESHOLD) && !groupedFileIds.has(getFileId(file))
+              (!file.isDraftAsset || !isVideoFile(file)) &&
+              (!isVideoFile(file) || file.size <= S3_UPLOAD_THRESHOLD) &&
+              !groupedFileIds.has(getFileId(file))
 
             );
             const ungroupedDriveFiles = smallDriveFiles.filter(driveFile =>
@@ -6823,6 +6981,17 @@ export default function AdCreationForm({
           .filter(({ response }) => response?.status === 'fulfilled')
           .map(({ meta }) => meta?.adName || meta?.fileName)
           .filter(Boolean);
+        responses.forEach((response, index) => {
+          if (response?.status !== "fulfilled") return;
+          (promiseMetadata[index]?.draftMediaRefs || []).forEach((media) => {
+            const cleanupKey = JSON.stringify([
+              media.draftAdAccountId,
+              media.draftId,
+              media.draftMediaId,
+            ]);
+            pendingDraftMediaCleanupRef.current.set(cleanupKey, media);
+          });
+        });
 
         if (Object.keys(successfulAdCountsByAdSet).length > 0) {
           onAdSetCountsCreated?.(successfulAdCountsByAdSet);
@@ -7003,17 +7172,38 @@ export default function AdCreationForm({
       toast.error("Select an ad account before saving a draft");
       return;
     }
+    const controller = new AbortController();
+    draftSaveAbortControllerRef.current = controller;
     setSavingDraft(true);
+    setDraftSaveProgress({ value: 0, message: "Preparing draft..." });
     try {
-      await onSaveDraft(trimmedName);
+      const resolvedAdName = computeAdNameFromFormula(adNamePreviewFile, 0, link[0], null, adType);
+      setAdName((current) => current === resolvedAdName ? current : resolvedAdName);
+      await onSaveDraft(trimmedName, {
+        resolvedAdName,
+        signal: controller.signal,
+        onProgress: setDraftSaveProgress,
+      });
       setDraftName("");
       setDraftMenuOpen(false);
       toast.success("Draft saved");
     } catch (error) {
-      toast.error(error.message || "Failed to save draft");
+      if (error?.name === "AbortError" || controller.signal.aborted) {
+        toast.info("Draft save cancelled");
+      } else {
+        toast.error(error.message || "Failed to save draft");
+      }
     } finally {
+      draftSaveAbortControllerRef.current = null;
       setSavingDraft(false);
+      setDraftSaveProgress({ value: 0, message: "" });
     }
+  };
+
+  const handleCancelDraftSave = () => {
+    if (!draftSaveAbortControllerRef.current) return;
+    setDraftSaveProgress((current) => ({ ...current, message: "Cancelling draft save..." }));
+    draftSaveAbortControllerRef.current.abort();
   };
 
   const handleQueueJob = async (e) => {
@@ -7149,12 +7339,6 @@ export default function AdCreationForm({
     if (!importedActivePost) return;
     setImportedPostAdNames((prev) => ({ ...prev, [importedActiveKey]: value }));
   };
-  const adNamePreviewFile = files[0]
-    || driveFiles[0]
-    || dropboxFiles[0]
-    || frameioFiles[0]
-    || (importedFiles[0] ? { name: importedFiles[0].name } : null);
-
   const adNameSection = (
     <div id="adName" className="space-y-1">
       <Label htmlFor="adName" className="flex items-center justify-between w-full">
@@ -9583,7 +9767,7 @@ export default function AdCreationForm({
                     if (rowSources.length === 0) return null;
                     const mode = rowSources.length <= 2 ? 'full' : rowSources.length === 3 ? 'compact' : 'icon';
 
-                    const renderButton = (src, onClick) => {
+                    const renderButton = (src, onClick, disabled = false) => {
                       const fullLabel = src.fullLabel;
                       const compactLabel = src.compactLabel;
                       const iconImg = (
@@ -9597,7 +9781,8 @@ export default function AdCreationForm({
                         <Button
                           type="button"
                           onClick={onClick}
-                          className="w-full bg-black hover:bg-zinc-800 text-white rounded-2xl h-[48px] flex items-center justify-center gap-2 px-3"
+                          disabled={disabled}
+                          className="w-full bg-black hover:bg-zinc-800 text-white rounded-2xl h-[48px] flex items-center justify-center gap-2 px-3 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-500 disabled:opacity-100"
                         >
                           {iconImg}
                           {mode === 'full' && <span className="truncate">{fullLabel}</span>}
@@ -9652,9 +9837,23 @@ export default function AdCreationForm({
                                   id === 'drafts' ? () => setDraftsModalOpen(true) :
                                   () => { };
 
+                            const draftDisabled = id === 'drafts' && !selectedAdAccount;
+                            const sourceButton = renderButton(src, clickHandler, draftDisabled);
+
                             return (
                               <div className="flex-1" key={id}>
-                                {renderButton(src, clickHandler)}
+                                {draftDisabled ? (
+                                  <TooltipProvider delayDuration={0}>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <div className="w-full">{sourceButton}</div>
+                                      </TooltipTrigger>
+                                      <TooltipContent side="top" className="max-w-xs rounded-xl text-xs">
+                                        Select an ad account at the top to view drafts.
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                ) : sourceButton}
                               </div>
                             );
                           })}
@@ -9789,7 +9988,13 @@ export default function AdCreationForm({
                 {isQueueingJobs ? "Publishing Ads..." : "Publish Ads"}
               </Button>
               <div className="my-2 w-px bg-white/30" />
-              <Popover open={draftMenuOpen} onOpenChange={setDraftMenuOpen}>
+              <Popover
+                open={draftMenuOpen}
+                onOpenChange={(nextOpen) => {
+                  if (savingDraft && !nextOpen) return;
+                  setDraftMenuOpen(nextOpen);
+                }}
+              >
                 <PopoverTrigger asChild>
                   <button
                     type="button"
@@ -9825,6 +10030,24 @@ export default function AdCreationForm({
                       {savingDraft ? <Loader className="h-4 w-4 animate-spin" /> : "Save draft"}
                     </Button>
                   </div>
+                  {savingDraft && (
+                    <div className="mt-3 space-y-2 rounded-xl bg-gray-50 p-3">
+                      <div className="flex items-center justify-between gap-3 text-xs text-gray-600">
+                        <span className="truncate">{draftSaveProgress.message || "Saving draft..."}</span>
+                        <span className="shrink-0 font-medium">{draftSaveProgress.value}%</span>
+                      </div>
+                      <Progress value={draftSaveProgress.value} className="h-2 bg-gray-200 [&>div]:bg-blue-600" />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleCancelDraftSave}
+                        className="h-7 w-full rounded-lg text-xs text-red-600 hover:bg-red-50 hover:text-red-700"
+                      >
+                        Cancel upload
+                      </Button>
+                    </div>
+                  )}
                 </PopoverContent>
               </Popover>
             </div>

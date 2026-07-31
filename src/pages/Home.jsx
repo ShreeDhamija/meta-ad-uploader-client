@@ -3,6 +3,7 @@ import { toast, Toaster } from "sonner"
 import { useBlocker } from "react-router"
 import { useNavigate, useLocation } from "react-router-dom"
 import { v4 as uuidv4 } from "uuid";
+import pLimit from "p-limit";
 
 import Header from "../components/header"
 import AdAccountSettings from "../components/ad-account-settings"
@@ -21,6 +22,7 @@ import { saveSettings } from "@/lib/saveSettings"
 import {
     createDraft,
     deleteDraft,
+    downloadDraftMedia,
     importDraftMedia,
     updateDraft,
     uploadLocalDraftMedia,
@@ -824,7 +826,12 @@ export default function Home() {
         setShowCustomLink(Boolean(snapshot.showCustomLink));
         setCta(snapshot.cta || "LEARN_MORE");
         setPhoneNumber(snapshot.phoneNumber || "");
-        setSelectedAdAccount(snapshot.selectedAdAccount || "");
+        // Persisted drafts intentionally omit the account because it is encoded
+        // in their Firestore path. Clearing it here triggers the account-default
+        // effects below and wipes the snapshot we just restored.
+        if (snapshot.selectedAdAccount) {
+            setSelectedAdAccount(snapshot.selectedAdAccount);
+        }
         setSelectedCampaign(cloneSnapshotValue(snapshot.selectedCampaign) || []);
         setSelectedAdSets(cloneSnapshotValue(snapshot.selectedAdSets) || []);
         if (snapshot.adSets) {
@@ -944,7 +951,7 @@ export default function Home() {
         return keys.some((key) => !snapshotValuesEqual(activeSnapshot[key], defaultSnapshot[key]));
     }, [activeVariantId, getVariantSnapshot]);
 
-    const buildDraftState = useCallback((mediaItems = []) => {
+    const buildDraftState = useCallback((mediaItems = [], { resolvedAdName = "" } = {}) => {
         const orderedVariants = [
             variants.find((variant) => variant.id === "default"),
             ...variants.filter((variant) => variant.id !== "default"),
@@ -952,6 +959,9 @@ export default function Home() {
 
         const forms = orderedVariants.map((variant) => {
             const values = cloneSnapshotValue(getVariantSnapshot(variant.id)) || {};
+            if (variant.id === activeVariantId && resolvedAdName) {
+                values.adName = resolvedAdName;
+            }
             const variantAdSets = Array.isArray(values.adSets) ? values.adSets : adSets;
             // Account scope is already encoded in the Firestore path, while
             // `adSets` is a fetched option catalogue rather than form state.
@@ -977,6 +987,26 @@ export default function Home() {
                         duplicateCampaignName: values.newCampaignName || "",
                         duplicateAdSetName: values.newAdSetName || "",
                         partnerName: values.partnerName || "",
+                        page: values.pageId
+                            ? {
+                                id: values.pageId,
+                                name: pages.find((page) => page.id === values.pageId)?.name || values.pageId,
+                            }
+                            : null,
+                        instagramAccount: values.instagramAccountId
+                            ? (() => {
+                                const account = pages
+                                    .flatMap((page) => [
+                                        ...(page.instagramAccount ? [page.instagramAccount] : []),
+                                        ...(page.additionalInstagramAccounts || []),
+                                    ])
+                                    .find((item) => item.id === values.instagramAccountId);
+                                return {
+                                    id: values.instagramAccountId,
+                                    name: account?.username || values.instagramAccountId,
+                                };
+                            })()
+                            : null,
                     },
                 },
             };
@@ -1008,6 +1038,7 @@ export default function Home() {
     }, [
         adSets,
         adType,
+        activeVariantId,
         campaigns,
         editAdCreativeMode,
         enablePlacementCustomization,
@@ -1018,6 +1049,7 @@ export default function Home() {
         importedFiles,
         importedPosts,
         isCarouselAd,
+        pages,
         postVariantMap,
         selectedIgOrganicPosts,
         useExistingPosts,
@@ -1025,10 +1057,15 @@ export default function Home() {
         variants,
     ]);
 
-    const saveCurrentDraft = useCallback(async (name) => {
+    const saveCurrentDraft = useCallback(async (name, draftOptions = {}) => {
         if (!selectedAdAccount) throw new Error("Select an ad account before saving a draft");
 
-        const created = await createDraft({ adAccountId: selectedAdAccount, name });
+        const { onProgress, signal } = draftOptions;
+        const reportProgress = (value, message) => {
+            onProgress?.({ value: Math.max(0, Math.min(100, Math.round(value))), message });
+        };
+        reportProgress(2, "Creating draft...");
+        const created = await createDraft({ adAccountId: selectedAdAccount, name, signal });
         const draftId = created.id;
         const allMedia = [
             ...files.map((file) => ({ file, source: "local", role: "form_media" })),
@@ -1079,49 +1116,77 @@ export default function Home() {
         });
 
         try {
-            const mediaItems = [];
-            for (let index = 0; index < uniqueMedia.length; index += 3) {
-                const batch = uniqueMedia.slice(index, index + 3);
-                const uploaded = await Promise.all(batch.map(async ({ file, source, role, providerRef }) => {
-                    const originalKey = draftMediaKey(file);
-                    const mediaId = uuidv4();
-                    const preview = videoThumbs[originalKey];
-                    const previewDataUrl = typeof preview === "string" && preview.startsWith("data:")
-                        ? preview
-                        : null;
+            const mediaProgress = new Map(uniqueMedia.map((_, index) => [index, 0]));
+            const updateMediaProgress = (index, fraction, fileName) => {
+                mediaProgress.set(index, Math.max(0, Math.min(1, fraction)));
+                const completed = Array.from(mediaProgress.values()).reduce((sum, value) => sum + value, 0);
+                const mediaPercent = uniqueMedia.length > 0 ? completed / uniqueMedia.length : 1;
+                reportProgress(5 + (mediaPercent * 87), `Uploading ${fileName}...`);
+            };
+            const uploadLimit = pLimit(3);
+            const transferController = new AbortController();
+            const forwardAbort = () => transferController.abort();
+            if (signal?.aborted) forwardAbort();
+            signal?.addEventListener("abort", forwardAbort, { once: true });
+            const transferSignal = transferController.signal;
+            const mediaTasks = uniqueMedia.map(({ file, source, role, providerRef }, index) =>
+                uploadLimit(async () => {
+                    try {
+                        if (transferSignal.aborted) throw new DOMException("Draft save cancelled", "AbortError");
+                        const originalKey = draftMediaKey(file);
+                        const mediaId = uuidv4();
+                        const preview = videoThumbs[originalKey];
+                        const previewDataUrl = typeof preview === "string" && preview.startsWith("data:")
+                            ? preview
+                            : null;
 
-                    if (source === "local" && file instanceof File) {
-                        await uploadLocalDraftMedia({
-                            draftId,
-                            adAccountId: selectedAdAccount,
-                            mediaId,
-                            file,
-                            previewDataUrl,
-                            width: file.width,
-                            height: file.height,
-                        });
-                    } else {
-                        await importDraftMedia({
-                            draftId,
-                            adAccountId: selectedAdAccount,
-                            mediaId,
-                            source: file.isDraftAsset ? "draft_url" : source,
-                            file,
-                            previewDataUrl,
-                            providerRef,
-                        });
+                        if (source === "local" && file instanceof File) {
+                            await uploadLocalDraftMedia({
+                                draftId,
+                                adAccountId: selectedAdAccount,
+                                mediaId,
+                                file,
+                                previewDataUrl,
+                                width: file.width,
+                                height: file.height,
+                                signal: transferSignal,
+                                onProgress: (fraction) => updateMediaProgress(index, fraction, file.name),
+                            });
+                        } else {
+                            updateMediaProgress(index, 0.05, file.name);
+                            await importDraftMedia({
+                                draftId,
+                                adAccountId: selectedAdAccount,
+                                mediaId,
+                                source: file.isDraftAsset ? "draft_url" : source,
+                                file,
+                                previewDataUrl,
+                                providerRef,
+                                signal: transferSignal,
+                            });
+                        }
+                        updateMediaProgress(index, 1, file.name);
+                        return { mediaId, originalKey, role };
+                    } catch (error) {
+                        transferController.abort();
+                        throw error;
                     }
-                    return { mediaId, originalKey, role };
-                }));
-                mediaItems.push(...uploaded);
-            }
+                })
+            );
+            const mediaResults = await Promise.allSettled(mediaTasks);
+            signal?.removeEventListener("abort", forwardAbort);
+            const failedMedia = mediaResults.find((result) => result.status === "rejected");
+            if (failedMedia) throw failedMedia.reason;
+            const mediaItems = mediaResults.map((result) => result.value);
 
-            const state = buildDraftState(mediaItems);
+            reportProgress(95, "Saving form settings...");
+            const state = buildDraftState(mediaItems, draftOptions);
             await updateDraft({
                 draftId,
                 adAccountId: selectedAdAccount,
                 name,
                 state,
+                signal,
             });
 
             if (!uploadSources.includes("drafts")) {
@@ -1134,6 +1199,7 @@ export default function Home() {
                     console.warn("Draft saved, but the Drafts upload source preference could not be saved:", settingsError);
                 }
             }
+            reportProgress(100, "Draft saved");
             return { id: draftId };
         } catch (error) {
             await deleteDraft({ draftId, adAccountId: selectedAdAccount }).catch(() => {});
@@ -1165,34 +1231,59 @@ export default function Home() {
                 .map((item) => [item.originalKey, mediaById.get(item.mediaId)])
                 .filter(([, media]) => Boolean(media))
         );
-        const restoredFiles = [];
         const restoredVideoThumbs = {};
+        const restoreLimit = pLimit(3);
+        const restoredFiles = (await Promise.all((state.mediaLayout?.items || []).map((item) =>
+            restoreLimit(async () => {
+                if (item.role === "preview_only") return null;
+                const media = mediaById.get(item.mediaId);
+                if (!media) return null;
+                if ((media.mimeType || "").startsWith("video/")) {
+                    restoredVideoThumbs[item.originalKey] = media.previewUrl || "https://api.withblip.com/thumbnail.jpg";
+                    return {
+                        name: media.name,
+                        type: media.mimeType,
+                        mimeType: media.mimeType,
+                        size: 2 * 1024 * 1024,
+                        uniqueId: item.originalKey,
+                        isDraftAsset: true,
+                        s3Url: media.url,
+                        previewUrl: media.previewUrl,
+                        draftId: draft.id,
+                        draftMediaId: media.id,
+                        draftAdAccountId: selectedAdAccount,
+                        isMissingDraftAsset: Boolean(media.deletedAt),
+                    };
+                }
 
-        for (const item of state.mediaLayout?.items || []) {
-            if (item.role === "preview_only") continue;
-            const media = mediaById.get(item.mediaId);
-            if (!media) continue;
-            if ((media.mimeType || "").startsWith("video/")) {
-                restoredFiles.push({
-                    name: media.name,
-                    type: media.mimeType,
-                    mimeType: media.mimeType,
-                    size: 2 * 1024 * 1024,
-                    uniqueId: item.originalKey,
-                    isDraftAsset: true,
-                    s3Url: media.url,
-                    previewUrl: media.previewUrl,
-                });
-                restoredVideoThumbs[item.originalKey] = media.previewUrl;
-            } else {
-                const response = await fetch(media.url);
-                if (!response.ok) throw new Error(`Failed to restore ${media.name}`);
-                const blob = await response.blob();
-                const file = new File([blob], media.name, { type: media.mimeType || blob.type });
+                let blob;
+                let isMissingDraftAsset = Boolean(media.deletedAt);
+                if (!isMissingDraftAsset) {
+                    try {
+                        blob = await downloadDraftMedia({
+                            draftId: draft.id,
+                            adAccountId: selectedAdAccount,
+                            mediaId: media.id,
+                        });
+                    } catch (error) {
+                        isMissingDraftAsset = true;
+                        console.warn(`Draft media ${media.name} is no longer available:`, error);
+                    }
+                }
+                const file = new File(
+                    isMissingDraftAsset ? [] : [blob],
+                    media.name,
+                    { type: media.mimeType || blob?.type || "image/jpeg" }
+                );
                 file.uniqueId = item.originalKey;
-                restoredFiles.push(file);
-            }
-        }
+                file.isDraftAsset = true;
+                file.isMissingDraftAsset = isMissingDraftAsset;
+                file.draftId = draft.id;
+                file.draftMediaId = media.id;
+                file.draftAdAccountId = selectedAdAccount;
+                return file;
+            })
+        ))).filter(Boolean);
 
         const firstForm = forms[0];
         hydrateFromSnapshot(firstForm.values);
@@ -1235,7 +1326,7 @@ export default function Home() {
             return media ? { ...post, previewUrl: media.previewUrl || media.url } : post;
         }));
         setSelectedFiles(new Set());
-    }, [hydrateFromSnapshot]);
+    }, [hydrateFromSnapshot, selectedAdAccount]);
 
     const handleAddVariant = useCallback(() => {
         const usedLetters = new Set(

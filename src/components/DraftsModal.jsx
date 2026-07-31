@@ -11,6 +11,8 @@ import {
   listDrafts,
 } from "@/lib/draftApi";
 
+const MEDIA_FALLBACK_URL = "https://api.withblip.com/thumbnail.jpg";
+
 function getGroupFileIds(group) {
   return Array.isArray(group) ? group : group?.fileIds || [];
 }
@@ -56,6 +58,10 @@ function FormPreview({ form, index, mediaById, state }) {
         <span className="text-xs text-gray-500">{visibleMedia.length} media</span>
       </div>
       <dl className="grid gap-2 text-sm sm:grid-cols-2">
+        <div className="sm:col-span-2">
+          <dt className="text-xs text-gray-500">Ad name</dt>
+          <dd>{values.adName || "—"}</dd>
+        </div>
         <div>
           <dt className="text-xs text-gray-500">Campaign</dt>
           <dd>{labels.campaigns?.map((item) => item.name).join(", ") || labels.duplicateCampaignName || "—"}</dd>
@@ -76,6 +82,14 @@ function FormPreview({ form, index, mediaById, state }) {
           <dt className="text-xs text-gray-500">CTA</dt>
           <dd>{values.cta || "—"}</dd>
         </div>
+        <div>
+          <dt className="text-xs text-gray-500">Facebook page</dt>
+          <dd>{labels.page?.name || values.pageId || "—"}</dd>
+        </div>
+        <div>
+          <dt className="text-xs text-gray-500">Instagram account</dt>
+          <dd>{labels.instagramAccount?.name || values.instagramAccountId || "—"}</dd>
+        </div>
         {values.isPartnershipAd && (
           <div className="sm:col-span-2">
             <dt className="text-xs text-gray-500">Partner</dt>
@@ -88,9 +102,29 @@ function FormPreview({ form, index, mediaById, state }) {
           {visibleMedia.slice(0, 8).map((media) => (
             <div key={media.id} className="overflow-hidden rounded-xl border border-gray-200 bg-gray-50">
               {(media.mimeType || "").startsWith("video/") ? (
-                <video src={media.url} poster={media.previewUrl} preload="metadata" className="aspect-square h-full w-full object-cover" />
+                <video
+                  src={media.deletedAt ? undefined : media.url}
+                  poster={media.deletedAt ? MEDIA_FALLBACK_URL : media.previewUrl}
+                  preload="metadata"
+                  className="aspect-square h-full w-full object-cover"
+                  onError={(event) => {
+                    event.currentTarget.poster = MEDIA_FALLBACK_URL;
+                    event.currentTarget.removeAttribute("src");
+                    event.currentTarget.load();
+                  }}
+                />
               ) : (
-                <img src={media.previewUrl} alt={media.name} className="aspect-square h-full w-full object-cover" />
+                <img
+                  src={media.deletedAt ? MEDIA_FALLBACK_URL : media.previewUrl}
+                  alt={media.name}
+                  loading="lazy"
+                  decoding="async"
+                  className="aspect-square h-full w-full object-cover"
+                  onError={(event) => {
+                    event.currentTarget.onerror = null;
+                    event.currentTarget.src = MEDIA_FALLBACK_URL;
+                  }}
+                />
               )}
             </div>
           ))}
@@ -107,6 +141,7 @@ export default function DraftsModal({ open, onOpenChange, adAccountId, onRestore
   const [loadingList, setLoadingList] = useState(false);
   const [loadingDraft, setLoadingDraft] = useState(false);
   const [working, setWorking] = useState(false);
+  const [qaUrl, setQaUrl] = useState("");
 
   const refresh = useCallback(async () => {
     if (!open || !adAccountId) return;
@@ -134,10 +169,14 @@ export default function DraftsModal({ open, onOpenChange, adAccountId, onRestore
       return;
     }
     let cancelled = false;
+    setQaUrl("");
     setLoadingDraft(true);
     getDraft({ draftId: selectedId, adAccountId })
       .then((draft) => {
-        if (!cancelled) setSelectedDraft(draft);
+        if (!cancelled) {
+          setSelectedDraft(draft);
+          setQaUrl(draft.qaUrl || "");
+        }
       })
       .catch((error) => {
         if (!cancelled) toast.error(error.message);
@@ -168,7 +207,8 @@ export default function DraftsModal({ open, onOpenChange, adAccountId, onRestore
     if (!selectedDraft) return;
     setWorking(true);
     try {
-      const url = await createDraftShareUrl({ draftId: selectedDraft.id, adAccountId });
+      const url = qaUrl || await createDraftShareUrl({ draftId: selectedDraft.id, adAccountId });
+      if (!qaUrl) setQaUrl(url);
       await navigator.clipboard.writeText(url);
       toast.success("QA link copied");
     } catch (error) {
@@ -253,7 +293,7 @@ export default function DraftsModal({ open, onOpenChange, adAccountId, onRestore
                     <RotateCcw className="mr-2 h-4 w-4" /> Restore to form
                   </Button>
                   <Button type="button" onClick={handleShare} disabled={working} variant="outline" className="rounded-xl">
-                    <Share2 className="mr-2 h-4 w-4" /> Create QA URL
+                    <Share2 className="mr-2 h-4 w-4" /> {qaUrl ? "Copy QA URL" : "Create QA URL"}
                   </Button>
                   <Button type="button" onClick={handleDelete} disabled={working} variant="ghost" className="ml-auto rounded-xl text-red-600">
                     <Trash2 className="mr-2 h-4 w-4" /> Delete

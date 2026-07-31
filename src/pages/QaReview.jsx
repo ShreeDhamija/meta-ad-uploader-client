@@ -4,6 +4,8 @@ import { ExternalLink, Loader2 } from "lucide-react";
 import { useParams } from "react-router-dom";
 import { getQaDraft } from "@/lib/draftApi";
 
+const MEDIA_FALLBACK_URL = "https://api.withblip.com/thumbnail.jpg";
+
 function getGroupFileIds(group) {
   return Array.isArray(group) ? group : group?.fileIds || [];
 }
@@ -40,16 +42,38 @@ function mediaForForm(state, form, mediaById) {
     .filter(Boolean);
 }
 
-function ReviewMedia({ media }) {
+function ReviewMedia({ media, priority = false }) {
   const isVideo = (media.mimeType || "").startsWith("video/");
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-gray-100">
       {isVideo ? (
-        <video controls preload="metadata" poster={media.previewUrl} className="aspect-[4/5] w-full bg-black object-contain">
-          <source src={media.url} type={media.mimeType} />
+        <video
+          controls={!media.deletedAt}
+          preload="metadata"
+          poster={media.deletedAt ? MEDIA_FALLBACK_URL : media.previewUrl}
+          className="aspect-[4/5] w-full bg-black object-contain"
+          onError={(event) => {
+            event.currentTarget.poster = MEDIA_FALLBACK_URL;
+            event.currentTarget.removeAttribute("src");
+            event.currentTarget.querySelectorAll("source").forEach((source) => source.remove());
+            event.currentTarget.load();
+          }}
+        >
+          {!media.deletedAt && <source src={media.url} type={media.mimeType} />}
         </video>
       ) : (
-        <img src={media.url} alt={media.name} className="aspect-[4/5] w-full object-cover" />
+        <img
+          src={media.deletedAt ? MEDIA_FALLBACK_URL : media.url}
+          alt={media.name}
+          loading={priority ? "eager" : "lazy"}
+          fetchPriority={priority ? "high" : "auto"}
+          decoding="async"
+          className="aspect-[4/5] w-full object-cover"
+          onError={(event) => {
+            event.currentTarget.onerror = null;
+            event.currentTarget.src = MEDIA_FALLBACK_URL;
+          }}
+        />
       )}
       <p className="truncate px-2 py-1.5 text-xs text-gray-600">{media.name}</p>
     </div>
@@ -99,6 +123,14 @@ function ReviewForm({ form, index, state, mediaById }) {
               <dt className="text-xs text-gray-500">CTA</dt>
               <dd className="mt-1 font-medium">{(values.cta || "—").replaceAll("_", " ")}</dd>
             </div>
+            <div>
+              <dt className="text-xs text-gray-500">Facebook page</dt>
+              <dd className="mt-1 font-medium">{labels.page?.name || values.pageId || "—"}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-gray-500">Instagram account</dt>
+              <dd className="mt-1 font-medium">{labels.instagramAccount?.name || values.instagramAccountId || "—"}</dd>
+            </div>
             {values.isPartnershipAd && (
               <div>
                 <dt className="text-xs text-gray-500">Partner</dt>
@@ -144,7 +176,9 @@ function ReviewForm({ form, index, state, mediaById }) {
           <p className="mb-2 text-xs text-gray-500">Media</p>
           {media.length > 0 ? (
             <div className="grid grid-cols-2 gap-3">
-              {media.map((item) => <ReviewMedia key={item.id} media={item} />)}
+              {media.map((item, mediaIndex) => (
+                <ReviewMedia key={item.id} media={item} priority={index === 0 && mediaIndex < 2} />
+              ))}
             </div>
           ) : (
             <div className="rounded-2xl border border-dashed border-gray-300 p-8 text-center text-sm text-gray-500">
