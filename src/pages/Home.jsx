@@ -38,6 +38,10 @@ import { getRequiredSelectionPlatforms } from "@/lib/accountSelection"
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 const HOME_CACHE_KEY = 'home_adAccountSettings_cache';
 const MEDIA_PREVIEW_LAUNCH_DURATION_MS = 560;
+const EMPTY_PIXEL_TRACKING_OVERRIDE = {
+    websitePixelId: null,
+    offlineDatasetId: null,
+};
 
 // Check if user has active access
 
@@ -226,6 +230,7 @@ export default function Home() {
     const [frameioFiles, setFrameioFiles] = useState([]);
     const [launchPaused, setLaunchPaused] = useState(false); // <-- New state
     const [discloseAiMedia, setDiscloseAiMedia] = useState(false);
+    const [pixelTrackingOverride, setPixelTrackingOverride] = useState({ ...EMPTY_PIXEL_TRACKING_OVERRIDE });
     const launchPausedDefaultAppliedRef = useRef(false);
     const [isCarouselAd, setIsCarouselAd] = useState(false);
     const [adType, setAdType] = useState('regular'); // 'regular' | 'carousel' | 'flexible'
@@ -634,6 +639,7 @@ export default function Home() {
         if (previousAdAccountRef.current === selectedAdAccount) return;
         const hadPrevious = Boolean(previousAdAccountRef.current);
         previousAdAccountRef.current = selectedAdAccount;
+        setPixelTrackingOverride({ ...EMPTY_PIXEL_TRACKING_OVERRIDE });
         if (!hadPrevious) return;
         setVariants((prev) => prev.map((variant) => ({ ...variant, snapshot: null })));
         setCustomLink("");
@@ -772,6 +778,7 @@ export default function Home() {
         adScheduleEndTime,
         launchPaused,
         discloseAiMedia,
+        pixelTrackingOverride: cloneSnapshotValue(pixelTrackingOverride),
     }), [
         adName,
         headlines,
@@ -814,6 +821,7 @@ export default function Home() {
         adScheduleEndTime,
         launchPaused,
         discloseAiMedia,
+        pixelTrackingOverride,
     ]);
 
     const hydrateFromSnapshot = useCallback((snapshot) => {
@@ -867,6 +875,9 @@ export default function Home() {
         setAdScheduleEndTime(snapshot.adScheduleEndTime || null);
         setLaunchPaused(Boolean(snapshot.launchPaused));
         setDiscloseAiMedia(Boolean(snapshot.discloseAiMedia));
+        setPixelTrackingOverride(
+            cloneSnapshotValue(snapshot.pixelTrackingOverride) || { ...EMPTY_PIXEL_TRACKING_OVERRIDE }
+        );
     }, [
         setAdName,
         setHeadlines,
@@ -909,6 +920,7 @@ export default function Home() {
         setAdScheduleEndTime,
         setLaunchPaused,
         setDiscloseAiMedia,
+        setPixelTrackingOverride,
     ]);
 
     const switchVariant = useCallback((targetId) => {
@@ -2082,6 +2094,8 @@ export default function Home() {
                             setLaunchPaused={setLaunchPaused}
                             discloseAiMedia={discloseAiMedia}
                             setDiscloseAiMedia={setDiscloseAiMedia}
+                            pixelTrackingOverride={pixelTrackingOverride}
+                            setPixelTrackingOverride={setPixelTrackingOverride}
                             isCarouselAd={isCarouselAd}
                             setIsCarouselAd={setIsCarouselAd}
                             adType={adType}

@@ -36,6 +36,7 @@ import FrameioPickerModal from "@/components/FrameioPickerModal";
 import FlexAdsImportModal from "@/components/FlexAdsImportModal";
 import DraftsModal from "@/components/DraftsModal";
 import FacebookReauthDialog from "@/components/FacebookReauthDialog";
+import PixelTracking from "@/components/settings/PixelTracking";
 import { v4 as uuidv4 } from 'uuid';
 import ConfigIcon from '@/assets/icons/plus.svg?react';
 import FacebookIcon from '@/assets/icons/fb.svg?react';
@@ -62,6 +63,11 @@ import pLimit from 'p-limit';
 import { cleanupPublishedDraftMedia, createDraftShareUrl, listDrafts, refreshDraftMediaUrl } from '@/lib/draftApi';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 const TEMPLATE_LINK_SYNC_USER_ID = "929470643071391";
+const PIXEL_TRACKING_FORM_ALLOWED_USER_IDS = ["10236978990363167", "10234447959963619"];
+const EMPTY_PIXEL_TRACKING_OVERRIDE = {
+  websitePixelId: null,
+  offlineDatasetId: null,
+};
 
 // Staging gate — used to hide work-in-progress UI (currently: the
 // "View Top Creatives for Flexible Ads" trigger). Mirrors the pattern in
@@ -980,6 +986,8 @@ export default function AdCreationForm({
   setLaunchPaused,
   discloseAiMedia,
   setDiscloseAiMedia,
+  pixelTrackingOverride,
+  setPixelTrackingOverride,
   isCarouselAd,
   setIsCarouselAd,
   adType,
@@ -1076,6 +1084,7 @@ export default function AdCreationForm({
 
   const [pageSearchValue, setPageSearchValue] = useState("")
   const { isLoggedIn, userId } = useAuth()
+  const showPixelTrackingOverride = PIXEL_TRACKING_FORM_ALLOWED_USER_IDS.includes(String(userId))
   const { showMessenger } = useIntercom()
   const [openInstagram, setOpenInstagram] = useState(false)
   const [instagramSearchValue, setInstagramSearchValue] = useState("")
@@ -1540,6 +1549,7 @@ export default function AdCreationForm({
     adScheduleEndTime,
     launchPaused,
     discloseAiMedia,
+    pixelTrackingOverride,
   }), [
     headlines,
     descriptions,
@@ -1571,6 +1581,7 @@ export default function AdCreationForm({
     adScheduleEndTime,
     launchPaused,
     discloseAiMedia,
+    pixelTrackingOverride,
   ]);
 
   const getVariantState = useCallback((variantId) => {
@@ -1794,6 +1805,9 @@ export default function AdCreationForm({
         : variantState.selectedCampaign,
       launchPaused: Boolean(variantState.launchPaused),
       discloseAiMedia: Boolean(variantState.discloseAiMedia),
+      pixelTrackingOverride: showPixelTrackingOverride
+        ? { ...(variantState.pixelTrackingOverride || EMPTY_PIXEL_TRACKING_OVERRIDE) }
+        : { ...EMPTY_PIXEL_TRACKING_OVERRIDE },
       adType,
       isCarouselAd,
       enablePlacementCustomization,
@@ -1851,6 +1865,7 @@ export default function AdCreationForm({
     isCarouselAd,
     postVariantMap,
     selectedIgOrganicPosts,
+    showPixelTrackingOverride,
     thumbnail,
     variants,
     videoThumbs,
@@ -1906,6 +1921,7 @@ export default function AdCreationForm({
     setSelectedFiles(new Set());
     setLaunchPaused(d.launchPaused || false);
     setDiscloseAiMedia(Boolean(d.discloseAiMedia));
+    setPixelTrackingOverride(d.pixelTrackingOverride || EMPTY_PIXEL_TRACKING_OVERRIDE);
 
     setSelectedShopDestination(d.selectedShopDestination || '');
     setSelectedShopDestinationType(d.selectedShopDestinationType || '');
@@ -1925,7 +1941,7 @@ export default function AdCreationForm({
     setCompletedJobs(prev => prev.filter(j => j.id !== job.id));
 
     toast.success('Form restored — review and resubmit when ready.');
-  }, [setActiveVariantId, setAdNameFormulaV2, setAdScheduleEndTime, setAdScheduleStartTime, setAdType, setCta, setDescriptions, setDiscloseAiMedia, setDriveFiles, setDropboxFiles, setFrameioFiles, setDuplicateAdSet, setEnablePlacementCustomization, setFileGroups, setFileVariantMap, setFiles, setGroupVariantMap, setHeadlines, setImportedFiles, setImportedPosts, setInstagramAccountId, setIsCarouselAd, setIsPartnershipAd, setLaunchPaused, setLink, setMessages, setNewAdSetName, setPageId, setPartnerFbPageId, setPartnerIgAccountId, setPartnershipIdentityMode, setPartnershipPrimaryIdentity, setPhoneNumber, setPostVariantMap, setSelectedAdAccount, setSelectedAdSets, setSelectedCampaign, setSelectedFiles, setSelectedForm, setSelectedIgOrganicPosts, setSelectedShopDestination, setSelectedShopDestinationType, setSelectedTemplate, setThumbnail, setVariants, setVideoThumbs]);
+  }, [setActiveVariantId, setAdNameFormulaV2, setAdScheduleEndTime, setAdScheduleStartTime, setAdType, setCta, setDescriptions, setDiscloseAiMedia, setDriveFiles, setDropboxFiles, setFrameioFiles, setDuplicateAdSet, setEnablePlacementCustomization, setFileGroups, setFileVariantMap, setFiles, setGroupVariantMap, setHeadlines, setImportedFiles, setImportedPosts, setInstagramAccountId, setIsCarouselAd, setIsPartnershipAd, setLaunchPaused, setLink, setMessages, setNewAdSetName, setPageId, setPartnerFbPageId, setPartnerIgAccountId, setPartnershipIdentityMode, setPartnershipPrimaryIdentity, setPhoneNumber, setPixelTrackingOverride, setPostVariantMap, setSelectedAdAccount, setSelectedAdSets, setSelectedCampaign, setSelectedFiles, setSelectedForm, setSelectedIgOrganicPosts, setSelectedShopDestination, setSelectedShopDestinationType, setSelectedTemplate, setThumbnail, setVariants, setVideoThumbs]);
 
 
   const adLimitWarning = useMemo(() => {
@@ -4458,6 +4474,7 @@ export default function AdCreationForm({
       // Configuration
       launchPaused,
       discloseAiMedia,
+      pixelTrackingOverride,
       adType,
       isCarouselAd,
       enablePlacementCustomization,
@@ -5844,6 +5861,12 @@ export default function AdCreationForm({
         );
       };
       const queueCreateAdPromise = (formData, metadata = {}) => {
+        const selectedPixelTrackingOverride = Object.fromEntries(
+          Object.entries(pixelTrackingOverride || {}).filter(([, value]) => Boolean(value))
+        );
+        if (Object.keys(selectedPixelTrackingOverride).length > 0) {
+          formData.append("pixelTrackingOverride", JSON.stringify(selectedPixelTrackingOverride));
+        }
         if (productExtensionProductSetId && !formData.has("productExtensionProductSetId")) {
           formData.append("productExtensionProductSetId", productExtensionProductSetId);
         }
@@ -8105,6 +8128,18 @@ export default function AdCreationForm({
             }
           }}
           className="space-y-6">
+          {showPixelTrackingOverride && selectedAdAccount && (
+            <PixelTracking
+              pixelTracking={pixelTrackingOverride}
+              setPixelTracking={setPixelTrackingOverride}
+              selectedAdAccount={selectedAdAccount}
+              title="Pixel Tracking Override"
+              description="Optionally override your saved Website and Offline event tracking for this launch"
+              allowSavedPreference
+              savedPixelTracking={adAccountSettings?.pixelTracking}
+              isModified={isFormFieldModified?.("pixelTrackingOverride")}
+            />
+          )}
           <div className="space-y-10 overflow-hidden">
             {isDuplicationMode ? (
               <div className="relative space-y-6">

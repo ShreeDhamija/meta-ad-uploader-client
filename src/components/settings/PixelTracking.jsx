@@ -18,13 +18,26 @@ const EVENT_ROWS = [
 ];
 
 // Single combobox for selecting a pixel/dataset (or none) for one event type.
-const PixelSelect = memo(({ pixels, value, onChange, loading, placeholder }) => {
+const PixelSelect = memo(({
+    pixels,
+    value,
+    onChange,
+    loading,
+    placeholder,
+    allowSavedPreference = false,
+    savedValue = null,
+}) => {
     const [open, setOpen] = useState(false)
 
     const selected = pixels.find(p => p.id === value)
+    const savedSelection = pixels.find(p => p.id === savedValue)
     const displayText = selected
         ? (selected.name || selected.id)
-        : (value ? value : "Select a pixel")
+        : value
+            ? value
+            : allowSavedPreference
+                ? `Use saved preference${savedValue ? ` — ${savedSelection?.name || savedValue}` : ""}`
+                : "Select a pixel"
 
     return (
         <Popover open={open} onOpenChange={setOpen}>
@@ -64,6 +77,22 @@ const PixelSelect = memo(({ pixels, value, onChange, loading, placeholder }) => 
                     <CommandInput placeholder={placeholder || "Search pixels..."} className="bg-transparent" wrapperClassName="bg-gray-50 border-gray-200 rounded-[20px]" />
                     <CommandList className="max-h-[300px] overflow-y-auto rounded-2xl custom-scrollbar">
                         <CommandGroup>
+                            {allowSavedPreference && (
+                                <CommandItem
+                                    value="Use saved preference"
+                                    onSelect={() => { onChange(null); setOpen(false); }}
+                                    className={`px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150 hover:bg-gray-100 ${!value ? "bg-gray-100 font-semibold" : ""}`}
+                                >
+                                    <div className="flex flex-col">
+                                        <span className="text-sm">Use saved preference</span>
+                                        {savedValue && (
+                                            <span className="text-xs text-gray-400">
+                                                {savedSelection?.name || savedValue}
+                                            </span>
+                                        )}
+                                    </div>
+                                </CommandItem>
+                            )}
                             {pixels.map((pixel) => (
                                 <CommandItem
                                     key={pixel.id}
@@ -87,7 +116,16 @@ const PixelSelect = memo(({ pixels, value, onChange, loading, placeholder }) => 
 
 PixelSelect.displayName = 'PixelSelect';
 
-function PixelTracking({ pixelTracking, setPixelTracking, selectedAdAccount }) {
+function PixelTracking({
+    pixelTracking,
+    setPixelTracking,
+    selectedAdAccount,
+    title = "Pixel Tracking",
+    description = "Attach Website & Offline conversion events to every ad you create",
+    allowSavedPreference = false,
+    savedPixelTracking = null,
+    isModified = false,
+}) {
     const [pixels, setPixels] = useState([])
     const [loading, setLoading] = useState(false)
 
@@ -128,10 +166,11 @@ function PixelTracking({ pixelTracking, setPixelTracking, selectedAdAccount }) {
                 <Target className="w-5 h-5 grayscale brightness-75 contrast-75 opacity-60" />
                 <div className="flex flex-col">
                     <h3 className="font-medium text-[14px] text-zinc-950">
-                        Pixel Tracking
+                        {isModified && <span className="text-red-500 font-semibold">*</span>}
+                        {isModified ? " " : ""}{title}
                     </h3>
                     <label className="text-xs text-gray-400">
-                        Attach Website &amp; Offline conversion events to every ad you create
+                        {description}
                     </label>
                 </div>
             </div>
@@ -151,6 +190,8 @@ function PixelTracking({ pixelTracking, setPixelTracking, selectedAdAccount }) {
                             value={pixelTracking?.[row.key] || null}
                             onChange={(id) => handleChange(row.key, id)}
                             loading={loading}
+                            allowSavedPreference={allowSavedPreference}
+                            savedValue={savedPixelTracking?.[row.key] || null}
                         />
                     </div>
                 ))}
