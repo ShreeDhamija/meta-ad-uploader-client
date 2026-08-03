@@ -7255,7 +7255,7 @@ export default function AdCreationForm({
         ...variants.filter((variant) => variant.id !== "default"),
       ].filter(Boolean);
       const creativeAdNames = Object.fromEntries(orderedVariants.map((variant) => {
-        const snapshot = getVariantSnapshot(variant.id) || {};
+        const snapshot = getVariantState(variant.id) || {};
         const names = { groups: {}, files: {} };
         let iterationIndex = 0;
         const formula = {
