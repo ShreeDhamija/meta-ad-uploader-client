@@ -56,10 +56,33 @@ function ExpandableText({ text }) {
   );
 }
 
-function ReviewMedia({ media, priority = false }) {
+function getMediaAspectRatio(media) {
+  const width = Number(media?.width ?? media?.metadata?.width ?? media?.dimensions?.width);
+  const height = Number(media?.height ?? media?.metadata?.height ?? media?.dimensions?.height);
+
+  if (Number.isFinite(width) && width > 0 && Number.isFinite(height) && height > 0) {
+    return `${width} / ${height}`;
+  }
+
+  const rawRatio = media?.aspectRatio ?? media?.metadata?.aspectRatio;
+  if (Number.isFinite(Number(rawRatio)) && Number(rawRatio) > 0) return String(rawRatio);
+  if (typeof rawRatio === "string") {
+    const match = rawRatio.match(/^\s*(\d+(?:\.\d+)?)\s*[:/]\s*(\d+(?:\.\d+)?)\s*$/);
+    if (match && Number(match[1]) > 0 && Number(match[2]) > 0) {
+      return `${match[1]} / ${match[2]}`;
+    }
+  }
+
+  return "1 / 1";
+}
+
+function ReviewMedia({ media, priority = false, grouped = false }) {
   const isVideo = (media.mimeType || "").startsWith("video/");
   return (
-    <div className="relative aspect-[4/5] overflow-hidden rounded-xl border border-gray-200 bg-gray-100">
+    <div
+      className={`relative overflow-hidden rounded-xl bg-gray-100 ${grouped ? "border border-gray-200" : ""}`}
+      style={{ aspectRatio: getMediaAspectRatio(media) }}
+    >
       {isVideo ? (
         <>
           <video
@@ -98,17 +121,27 @@ function ReviewMedia({ media, priority = false }) {
   );
 }
 
-function CreativeReviewCard({ unit, priority = false }) {
+function CreativeReviewCard({ unit, groupIndex, priority = false }) {
+  const grouped = unit.type === "group";
+  const groupColor = groupIndex % 2 === 0
+    ? "border-blue-300 bg-blue-100"
+    : "border-orange-300 bg-orange-100";
+
   return (
-    <div className={`min-w-0 rounded-2xl border p-2 ${
-      unit.type === "group" ? "border-blue-200 bg-blue-50/60" : "border-gray-200 bg-white"
+    <div className={`min-w-0 ${
+      grouped ? `col-span-2 rounded-2xl border p-2 ${groupColor}` : ""
     }`}>
       <div className={`grid gap-2 ${unit.media.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}>
         {unit.media.map((media, index) => (
-          <ReviewMedia key={media.id} media={media} priority={priority && index < 2} />
+          <ReviewMedia
+            key={media.id}
+            media={media}
+            priority={priority && index < 2}
+            grouped={grouped}
+          />
         ))}
       </div>
-      <div className="mt-2 flex min-w-0 items-center gap-2 border-t border-gray-200/80 pt-2">
+      <div className="mt-2 flex min-w-0 items-center gap-2">
         <span className="shrink-0 text-xs text-gray-500">Ad Name</span>
         <TooltipProvider delayDuration={250}>
           <Tooltip>
@@ -125,10 +158,26 @@ function CreativeReviewCard({ unit, priority = false }) {
   );
 }
 
-function ReviewForm({ form, index, state, mediaById }) {
+function ReviewForm({ form, index, state, mediaById, showLaunchHeading }) {
   const values = form.values || {};
   const labels = values.selectionLabels || {};
   const creativeUnits = getCreativeUnitsForForm(state, form, mediaById);
+  const groupIndexByKey = new Map(
+    (state?.mediaLayout?.fileGroups || []).map((group, groupIndex) => [
+      Array.isArray(group) || !group?.id ? `group-${groupIndex}` : String(group.id),
+      groupIndex,
+    ])
+  );
+  let nextVisibleGroupIndex = 0;
+  const indexedCreativeUnits = creativeUnits.map((unit) => {
+    if (unit.type !== "group") return { unit, groupIndex: -1 };
+    const fallbackIndex = nextVisibleGroupIndex;
+    nextVisibleGroupIndex += 1;
+    return {
+      unit,
+      groupIndex: groupIndexByKey.get(unit.groupKey) ?? fallbackIndex,
+    };
+  });
   const messages = (values.messages || []).filter(Boolean);
   const headlines = (values.headlines || []).filter(Boolean);
   const descriptions = (values.descriptions || []).filter(Boolean);
@@ -136,21 +185,15 @@ function ReviewForm({ form, index, state, mediaById }) {
 
   return (
     <article className="flex h-[min(78vh,760px)] min-h-[620px] flex-col overflow-hidden !rounded-[48px] border border-gray-200 bg-white shadow-sm">
-      <header className="flex shrink-0 items-center justify-between gap-4 px-8 py-5">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">
-            Creative variation {index + 1}
-          </p>
-          <h2 className="mt-1 text-lg font-semibold text-gray-950">{form.name || `Variation ${index + 1}`}</h2>
-        </div>
-        <span className={`rounded-full px-3 py-1 text-xs font-medium ${
-          values.launchPaused ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"
-        }`}>
-          {values.launchPaused ? "Paused" : "Active"}
-        </span>
-      </header>
+      {showLaunchHeading && (
+        <header className="shrink-0 px-8 py-5">
+          <h2 className="text-lg font-semibold text-gray-950">Launch {index + 1}</h2>
+        </header>
+      )}
 
-      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1.05fr)_minmax(320px,0.85fr)] gap-8 overflow-hidden px-8 pb-8">
+      <div className={`grid min-h-0 flex-1 grid-cols-[minmax(0,1.05fr)_minmax(320px,0.85fr)] gap-8 overflow-hidden px-8 pb-8 ${
+        showLaunchHeading ? "" : "pt-8"
+      }`}>
         <ScrollArea className="h-full min-h-0 min-w-0">
           <dl className="space-y-5 pr-4">
             <div className="grid grid-cols-2 gap-6">
@@ -226,17 +269,18 @@ function ReviewForm({ form, index, state, mediaById }) {
         <ScrollArea className="h-full min-h-0 pr-2">
           {creativeUnits.length > 0 ? (
             <div className="grid grid-cols-2 gap-4">
-              {creativeUnits.map((unit, unitIndex) => (
+              {indexedCreativeUnits.map(({ unit, groupIndex }, unitIndex) => (
                 <CreativeReviewCard
                   key={unit.id}
                   unit={unit}
+                  groupIndex={groupIndex}
                   priority={index === 0 && unitIndex < 2}
                 />
               ))}
             </div>
           ) : (
             <div className="flex h-full min-h-48 items-center justify-center rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-8 text-center text-sm text-gray-500">
-              This variation uses an existing post or platform media reference.
+              This launch uses an existing post or platform media reference.
             </div>
           )}
         </ScrollArea>
@@ -259,7 +303,8 @@ export default function QaReview() {
     [draft?.media]
   );
 
-  const forms = draft?.state?.forms || [];
+  const forms = useMemo(() => draft?.state?.forms || [], [draft?.state?.forms]);
+  const accountName = draft?.state?.configuration?.adAccount?.name || draft?.name || "";
   const creativeCount = useMemo(
     () => forms.reduce(
       (total, form) => total + getCreativeUnitsForForm(draft?.state, form, mediaById).length,
@@ -267,6 +312,15 @@ export default function QaReview() {
     ),
     [draft?.state, forms, mediaById]
   );
+
+  useEffect(() => {
+    if (!accountName) return undefined;
+    const previousTitle = document.title;
+    document.title = `Ad Review for ${accountName}`;
+    return () => {
+      document.title = previousTitle;
+    };
+  }, [accountName]);
 
   if (error) {
     return (
@@ -283,7 +337,6 @@ export default function QaReview() {
     return <main className="flex min-h-screen items-center justify-center bg-gray-50"><Loader2 className="h-7 w-7 animate-spin text-gray-500" /></main>;
   }
 
-  const accountName = draft.state?.configuration?.adAccount?.name || draft.name;
   return (
     <ScrollArea className="h-screen bg-gray-50">
       <main className="min-h-screen px-4 py-10 sm:px-6">
@@ -292,7 +345,7 @@ export default function QaReview() {
             <h1 className="text-3xl font-semibold tracking-tight text-blue-600">Ad review for {accountName}</h1>
             <p className="mt-2 text-sm text-gray-600">
               {creativeCount} Ad{creativeCount === 1 ? "" : "s"}
-              {forms.length > 1 ? ` with ${forms.length} different Creative Variations` : ""}
+              {forms.length > 1 ? ` across ${forms.length} Launches` : ""}
             </p>
           </header>
           <div className="space-y-8">
@@ -303,6 +356,7 @@ export default function QaReview() {
                 index={index}
                 state={draft.state}
                 mediaById={mediaById}
+                showLaunchHeading={forms.length > 1}
               />
             ))}
           </div>
