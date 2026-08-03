@@ -22,7 +22,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Progress } from "@/components/ui/progress"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Users, ChevronDown, Loader, Plus, Trash2, Upload, ChevronsUpDown, RefreshCcw, CircleX, AlertTriangle, RotateCcw, Eye, FileText, X, Clock, ChevronLeft, ChevronRight, Ban, Phone, ArrowUpDown, Check, Info, CloudUpload, BicepsFlexed } from "lucide-react"
+import { Users, ChevronDown, Loader, Plus, Trash2, Upload, ChevronsUpDown, RefreshCcw, CircleX, AlertTriangle, RotateCcw, Eye, FileText, X, Clock, ChevronLeft, ChevronRight, Ban, Phone, ArrowUpDown, Check, Info, CloudUpload, BicepsFlexed, Link2, Save } from "lucide-react"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useAuth } from "@/lib/AuthContext"
@@ -59,7 +59,7 @@ import QueueIcon from '@/assets/icons/queue.svg?react';
 import DraftFolderIcon from '@/assets/icons/BlueFolder.svg';
 import PartialSuccess from '@/assets/icons/partialsuccess.svg?react';
 import pLimit from 'p-limit';
-import { cleanupPublishedDraftMedia, listDrafts, refreshDraftMediaUrl } from '@/lib/draftApi';
+import { cleanupPublishedDraftMedia, createDraftShareUrl, listDrafts, refreshDraftMediaUrl } from '@/lib/draftApi';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 const TEMPLATE_LINK_SYNC_USER_ID = "929470643071391";
 
@@ -7205,7 +7205,7 @@ export default function AdCreationForm({
     setSelectedFiles(new Set());
   };
 
-  const handleSaveDraft = async (targetDraft = null) => {
+  const handleSaveDraft = async (targetDraft = null, { copyPreviewLink = false } = {}) => {
     const trimmedName = targetDraft?.name || draftName.trim();
     if (!targetDraft && !trimmedName) {
       toast.error("Enter a draft name");
@@ -7217,9 +7217,17 @@ export default function AdCreationForm({
     }
     const controller = new AbortController();
     draftSaveAbortControllerRef.current = controller;
-    setDraftSaveMode(targetDraft ? "update" : "save");
+    setDraftSaveMode(copyPreviewLink ? "preview" : targetDraft ? "update" : "save");
     setSavingDraft(true);
-    setDraftSaveProgress({ value: 0, message: targetDraft ? `Updating ${targetDraft.name}...` : "Preparing draft..." });
+    setDraftSaveProgress({
+      value: 0,
+      message: copyPreviewLink
+        ? "Preparing preview..."
+        : targetDraft
+          ? `Updating ${targetDraft.name}...`
+          : "Preparing draft...",
+    });
+    let draftSaved = false;
     try {
       const resolvedAdName = computeAdNameFromFormula(adNamePreviewFile, 0, link[0], null, adType);
       const creativeSourceFiles = [
@@ -7304,20 +7312,41 @@ export default function AdCreationForm({
         return [variant.id, names];
       }));
       setAdName((current) => current === resolvedAdName ? current : resolvedAdName);
-      await onSaveDraft(trimmedName, {
+      const savedDraft = await onSaveDraft(trimmedName, {
         resolvedAdName,
         creativeAdNames,
         targetDraft,
         signal: controller.signal,
         onProgress: setDraftSaveProgress,
       });
+      draftSaved = true;
       if (!targetDraft) setDraftName("");
+
+      if (copyPreviewLink) {
+        setDraftSaveProgress({ value: 100, message: "Creating preview link..." });
+        const previewUrl = await createDraftShareUrl({
+          draftId: savedDraft.id,
+          adAccountId: selectedAdAccount,
+        });
+        await navigator.clipboard.writeText(previewUrl);
+      }
+
       setDraftUpdateMenuOpen(false);
       setDraftMenuOpen(false);
-      toast.success(targetDraft ? `“${targetDraft.name}” updated` : "Draft saved");
+      toast.success(
+        copyPreviewLink
+          ? "Preview link copied"
+          : targetDraft
+            ? `“${targetDraft.name}” updated`
+            : "Draft saved"
+      );
     } catch (error) {
       if (error?.name === "AbortError" || controller.signal.aborted) {
         toast.info(targetDraft ? "Draft update cancelled" : "Draft save cancelled");
+      } else if (copyPreviewLink && draftSaved) {
+        setDraftUpdateMenuOpen(false);
+        setDraftMenuOpen(false);
+        toast.error(`Draft saved, but the preview link could not be copied${error.message ? `: ${error.message}` : "."}`);
       } else {
         toast.error(error.message || (targetDraft ? "Failed to update draft" : "Failed to save draft"));
       }
@@ -10131,7 +10160,7 @@ export default function AdCreationForm({
               }}
             >
               <PopoverAnchor asChild>
-                <div className="flex h-12 w-full overflow-hidden rounded-2xl bg-neutral-950 text-white">
+                <div className="group flex h-12 w-full overflow-hidden rounded-2xl bg-neutral-950 text-white">
                   <Button
                     type="submit"
                     className="peer h-12 flex-1 rounded-none bg-neutral-950 text-white hover:bg-blue-700"
@@ -10142,7 +10171,7 @@ export default function AdCreationForm({
                 <PopoverTrigger asChild>
                   <button
                     type="button"
-                    className="flex h-12 w-12 items-center justify-center bg-neutral-950 transition hover:bg-zinc-800 peer-hover:!bg-blue-700 disabled:opacity-50"
+                    className="relative flex h-12 w-12 items-center justify-center bg-neutral-950 transition before:pointer-events-none before:absolute before:left-0 before:top-3 before:h-6 before:w-px before:bg-white/25 before:transition-opacity hover:bg-zinc-800 group-hover:before:opacity-0 peer-hover:!bg-blue-700 disabled:opacity-50"
                     disabled={savingDraft || !selectedAdAccount}
                     aria-label="Save as draft"
                   >
@@ -10179,7 +10208,23 @@ export default function AdCreationForm({
                       disabled={savingDraft || !draftName.trim()}
                       className="h-9 shrink-0 rounded-xl bg-black px-3 text-white hover:bg-blue-700"
                     >
-                      {savingDraft && draftSaveMode === "save" ? <Loader className="h-4 w-4 animate-spin" /> : "Save draft"}
+                      {savingDraft && draftSaveMode === "save" ? (
+                        <Loader className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <><Save className="mr-1.5 h-4 w-4" /> Save Draft</>
+                      )}
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={() => handleSaveDraft(null, { copyPreviewLink: true })}
+                      disabled={savingDraft || !draftName.trim()}
+                      className="h-9 shrink-0 rounded-xl bg-blue-600 px-3 text-white hover:bg-blue-700"
+                    >
+                      {savingDraft && draftSaveMode === "preview" ? (
+                        <Loader className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <><Link2 className="mr-1.5 h-4 w-4" /> Copy Preview Link</>
+                      )}
                     </Button>
                     <Popover open={draftUpdateMenuOpen} onOpenChange={handleDraftUpdateMenuChange}>
                       <PopoverTrigger asChild>
@@ -10189,7 +10234,7 @@ export default function AdCreationForm({
                           disabled={savingDraft}
                           className="h-9 shrink-0 rounded-xl border-gray-300 bg-white px-3 hover:border-blue-600 hover:bg-blue-600 hover:text-white"
                         >
-                          {savingDraft && draftSaveMode === "update" ? <Loader className="h-4 w-4 animate-spin" /> : "Update draft"}
+                          {savingDraft && draftSaveMode === "update" ? <Loader className="h-4 w-4 animate-spin" /> : "Update Existing Draft"}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent align="end" sideOffset={6} className="w-72 rounded-2xl border-gray-200 bg-white p-2 shadow-xl">

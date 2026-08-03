@@ -73,15 +73,25 @@ function getMediaAspectRatio(media) {
     }
   }
 
-  return "1 / 1";
+  return null;
 }
 
 function ReviewMedia({ media, priority = false, grouped = false }) {
   const isVideo = (media.mimeType || "").startsWith("video/");
+  const savedAspectRatio = getMediaAspectRatio(media);
+  const [detectedAspectRatio, setDetectedAspectRatio] = useState(null);
+  const aspectRatio = savedAspectRatio || detectedAspectRatio || "1 / 1";
+
+  const detectAspectRatio = (width, height) => {
+    if (!savedAspectRatio && width > 0 && height > 0) {
+      setDetectedAspectRatio(`${width} / ${height}`);
+    }
+  };
+
   return (
     <div
       className={`relative overflow-hidden rounded-xl bg-gray-100 ${grouped ? "border border-gray-200" : ""}`}
-      style={{ aspectRatio: getMediaAspectRatio(media) }}
+      style={{ aspectRatio }}
     >
       {isVideo ? (
         <>
@@ -90,6 +100,9 @@ function ReviewMedia({ media, priority = false, grouped = false }) {
             preload="metadata"
             poster={media.deletedAt ? MEDIA_FALLBACK_URL : media.previewUrl}
             className="h-full w-full bg-black object-contain"
+            onLoadedMetadata={(event) => {
+              detectAspectRatio(event.currentTarget.videoWidth, event.currentTarget.videoHeight);
+            }}
             onError={(event) => {
               event.currentTarget.poster = MEDIA_FALLBACK_URL;
               event.currentTarget.removeAttribute("src");
@@ -105,12 +118,15 @@ function ReviewMedia({ media, priority = false, grouped = false }) {
         </>
       ) : (
         <img
-          src={media.deletedAt ? MEDIA_FALLBACK_URL : media.previewUrl || media.url}
+          src={media.deletedAt ? MEDIA_FALLBACK_URL : media.url || media.previewUrl || MEDIA_FALLBACK_URL}
           alt={media.name || "Ad creative"}
           loading={priority ? "eager" : "lazy"}
           fetchPriority={priority ? "high" : "auto"}
           decoding="async"
           className="h-full w-full object-cover"
+          onLoad={(event) => {
+            detectAspectRatio(event.currentTarget.naturalWidth, event.currentTarget.naturalHeight);
+          }}
           onError={(event) => {
             event.currentTarget.onerror = null;
             event.currentTarget.src = MEDIA_FALLBACK_URL;

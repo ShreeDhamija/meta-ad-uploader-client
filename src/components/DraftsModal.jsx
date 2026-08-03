@@ -81,18 +81,27 @@ function getMediaAspectRatio(media) {
     }
   }
 
-  return "1 / 1";
+  return null;
 }
 
 function MediaThumbnail({ media, grouped }) {
   const isVideo = (media.mimeType || "").startsWith("video/");
   const previewUrl = media.deletedAt ? MEDIA_FALLBACK_URL : media.previewUrl;
+  const savedAspectRatio = getMediaAspectRatio(media);
+  const [detectedAspectRatio, setDetectedAspectRatio] = useState(null);
+  const aspectRatio = savedAspectRatio || detectedAspectRatio || "1 / 1";
+
+  const detectAspectRatio = (width, height) => {
+    if (!savedAspectRatio && width > 0 && height > 0) {
+      setDetectedAspectRatio(`${width} / ${height}`);
+    }
+  };
 
   return (
     <figure className="min-w-0">
       <div
         className={`group relative overflow-hidden rounded-xl bg-gray-100 ${grouped ? "border border-gray-200" : ""}`}
-        style={{ aspectRatio: getMediaAspectRatio(media) }}
+        style={{ aspectRatio }}
       >
         {isVideo && !previewUrl ? (
           <video
@@ -101,6 +110,9 @@ function MediaThumbnail({ media, grouped }) {
             preload="metadata"
             muted
             className="h-full w-full object-cover"
+            onLoadedMetadata={(event) => {
+              detectAspectRatio(event.currentTarget.videoWidth, event.currentTarget.videoHeight);
+            }}
             onError={(event) => {
               event.currentTarget.poster = MEDIA_FALLBACK_URL;
               event.currentTarget.removeAttribute("src");
@@ -109,11 +121,16 @@ function MediaThumbnail({ media, grouped }) {
           />
         ) : (
           <img
-            src={previewUrl || media.url || MEDIA_FALLBACK_URL}
+            src={isVideo
+              ? previewUrl || media.url || MEDIA_FALLBACK_URL
+              : media.url || previewUrl || MEDIA_FALLBACK_URL}
             alt={media.name || "Draft media"}
             loading="lazy"
             decoding="async"
             className="h-full w-full object-cover"
+            onLoad={(event) => {
+              detectAspectRatio(event.currentTarget.naturalWidth, event.currentTarget.naturalHeight);
+            }}
             onError={(event) => {
               event.currentTarget.onerror = null;
               event.currentTarget.src = MEDIA_FALLBACK_URL;
@@ -133,6 +150,16 @@ function MediaThumbnail({ media, grouped }) {
       </figcaption>
     </figure>
   );
+}
+
+function getDraftTimestamp(draft) {
+  const value = draft?.updatedAt || draft?.createdAt;
+  if (typeof value?.toMillis === "function") return value.toMillis();
+  if (typeof value?.seconds === "number") return value.seconds * 1000;
+  if (typeof value?._seconds === "number") return value._seconds * 1000;
+  if (typeof value === "number") return value;
+  const parsed = Date.parse(value || "");
+  return Number.isNaN(parsed) ? 0 : parsed;
 }
 
 function CreativeUnit({ unit, groupIndex }) {
@@ -305,11 +332,10 @@ export default function DraftsModal({ open, onOpenChange, adAccountId, onRestore
     if (!open || !adAccountId) return;
     setLoadingList(true);
     try {
-      const next = await listDrafts(adAccountId);
+      const next = [...await listDrafts(adAccountId)]
+        .sort((left, right) => getDraftTimestamp(right) - getDraftTimestamp(left));
       setDrafts(next);
-      setSelectedId((current) => current && next.some((draft) => draft.id === current)
-        ? current
-        : next[0]?.id || null);
+      setSelectedId(next[0]?.id || null);
     } catch (error) {
       toast.error(error.message);
     } finally {
@@ -324,6 +350,7 @@ export default function DraftsModal({ open, onOpenChange, adAccountId, onRestore
   useEffect(() => {
     if (!open || !adAccountId || !selectedId) {
       setSelectedDraft(null);
+      if (!open) setSelectedId(null);
       return;
     }
     let cancelled = false;
@@ -471,7 +498,7 @@ export default function DraftsModal({ open, onOpenChange, adAccountId, onRestore
                     disabled={working}
                     className="h-9 min-w-36 rounded-xl bg-blue-600 px-4 text-sm text-white hover:bg-blue-700"
                   >
-                    <Link2 className="mr-1 h-3.5 w-3.5" /> {qaUrl ? "Copy QA Link" : "Share QA Link"}
+                    <Link2 className="mr-1 h-3.5 w-3.5" /> Copy Preview Link
                   </Button>
                   <button
                     type="button"
