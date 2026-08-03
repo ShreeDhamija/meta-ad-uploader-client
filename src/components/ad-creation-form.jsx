@@ -10268,7 +10268,7 @@ export default function AdCreationForm({
                 <div className="group flex h-12 w-full overflow-hidden rounded-2xl bg-neutral-950 text-white">
                   <Button
                     type="submit"
-                    className="peer h-12 flex-1 rounded-none bg-neutral-950 text-white hover:bg-blue-700"
+                    className="peer h-12 flex-1 rounded-none bg-neutral-950 text-white hover:bg-blue-700 disabled:bg-zinc-400 disabled:text-white disabled:opacity-100 disabled:hover:bg-zinc-400"
                     disabled={publishDisabled || isQueueingJobs}
                   >
                     {isQueueingJobs ? "Publishing Ads..." : "Publish Ads"}
