@@ -68,6 +68,7 @@ const TEMPLATE_LINK_SYNC_USER_ID = "929470643071391";
 // pages/Login.jsx: prefer the env var, but fall back to a URL substring
 // check so the gate still works on staging deploys with missing env vars.
 const IS_STAGING = import.meta.env.VITE_ENV === 'staging' || API_BASE_URL.includes('staging');
+const SHOW_DRAFT_UPDATE = false;
 const PRE_JOB_RESIZE_TIMEOUT_MS = 2 * 60 * 1000;
 const DUPLICATE_AD_SET_TIMEOUT_MS = 90 * 1000;
 
@@ -10164,7 +10165,7 @@ export default function AdCreationForm({
                 if (savingDraft && !nextOpen) return;
                 setDraftMenuOpen(nextOpen);
                 if (!nextOpen) setDraftUpdateMenuOpen(false);
-                if (nextOpen) loadDraftUpdateOptions();
+                if (nextOpen && SHOW_DRAFT_UPDATE) loadDraftUpdateOptions();
               }}
             >
               <PopoverAnchor asChild>
@@ -10219,7 +10220,7 @@ export default function AdCreationForm({
                       {savingDraft && draftSaveMode === "save" ? (
                         <><Loader className="mr-1.5 h-4 w-4 animate-spin" /> Saving...</>
                       ) : (
-                        <><Save className="mr-1.5 h-4 w-4" /> Save Draft</>
+                        <><Save className="mr-1 h-4 w-4" /> Save Draft</>
                       )}
                     </Button>
                     <Button
@@ -10231,10 +10232,10 @@ export default function AdCreationForm({
                       {savingDraft && draftSaveMode === "preview" ? (
                         <><Loader className="mr-1.5 h-4 w-4 animate-spin" /> Copying...</>
                       ) : (
-                        <><Link2 className="mr-1.5 h-4 w-4" /> Copy Preview Link</>
+                        <><Link2 className="mr-1 h-4 w-4" /> Copy Preview Link</>
                       )}
                     </Button>
-                    {!loadingDraftUpdateOptions && draftUpdateOptions.length > 0 && (
+                    {SHOW_DRAFT_UPDATE && !loadingDraftUpdateOptions && draftUpdateOptions.length > 0 && (
                     <Popover open={draftUpdateMenuOpen} onOpenChange={handleDraftUpdateMenuChange}>
                       <PopoverTrigger asChild>
                         <Button

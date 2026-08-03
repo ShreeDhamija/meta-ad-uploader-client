@@ -357,7 +357,7 @@ export default function QaReview() {
     <ScrollArea className="h-screen bg-gray-50">
       <main className="min-h-screen px-4 py-10 sm:px-6">
         <div className="mx-auto max-w-7xl">
-          <header className="mb-8 px-3">
+          <header className="mb-4 px-3">
             <h1 className="text-3xl font-semibold tracking-tight text-blue-600">Ad review for {accountName}</h1>
             <p className="mt-2 text-base font-semibold text-gray-700">{draft.name}</p>
             <p className="mt-1 text-sm text-gray-600">
