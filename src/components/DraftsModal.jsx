@@ -91,7 +91,7 @@ function MediaThumbnail({ media, grouped }) {
   return (
     <figure className="min-w-0">
       <div
-        className={`group relative overflow-hidden rounded-xl bg-gray-100 ${grouped ? "border border-blue-100" : ""}`}
+        className={`group relative overflow-hidden rounded-xl bg-gray-100 ${grouped ? "border border-gray-200" : ""}`}
         style={{ aspectRatio: getMediaAspectRatio(media) }}
       >
         {isVideo && !previewUrl ? (
@@ -135,12 +135,15 @@ function MediaThumbnail({ media, grouped }) {
   );
 }
 
-function CreativeUnit({ unit }) {
+function CreativeUnit({ unit, groupIndex }) {
   const grouped = unit.type === "group";
+  const groupColor = groupIndex % 2 === 0
+    ? "border-blue-300 bg-blue-100"
+    : "border-orange-300 bg-orange-100";
 
   return (
     <div className={`min-w-0 ${
-      grouped ? "col-span-2 rounded-2xl border border-blue-200 bg-blue-50/60 p-2" : ""
+      grouped ? `col-span-2 rounded-2xl border p-2 ${groupColor}` : ""
     }`}>
       <div className={`grid gap-2 ${unit.media.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}>
         {unit.media.map((media) => (
@@ -151,80 +154,139 @@ function CreativeUnit({ unit }) {
   );
 }
 
-function FormPreview({ form, mediaById, state }) {
+function FormPreview({
+  form,
+  forms,
+  activeFormIndex,
+  onActiveFormChange,
+  mediaById,
+  state,
+  actions,
+}) {
   const values = form?.values || {};
   const labels = values.selectionLabels || {};
   const creativeUnits = getCreativeUnitsForForm(state, form, mediaById);
+  const groupIndexByKey = new Map(
+    (state?.mediaLayout?.fileGroups || []).map((group, index) => [
+      Array.isArray(group) || !group?.id ? `group-${index}` : String(group.id),
+      index,
+    ])
+  );
+  let nextVisibleGroupIndex = 0;
+  const indexedCreativeUnits = creativeUnits.map((unit) => {
+    if (unit.type !== "group") return { unit, groupIndex: -1 };
+    const fallbackIndex = nextVisibleGroupIndex;
+    nextVisibleGroupIndex += 1;
+    return {
+      unit,
+      groupIndex: groupIndexByKey.get(unit.groupKey) ?? fallbackIndex,
+    };
+  });
   const messages = values.messages?.filter(Boolean) || [];
   const headlines = values.headlines?.filter(Boolean) || [];
   const links = values.link?.filter(Boolean) || [];
+  const adNameFormula = values.adNameFormulaV2?.rawInput?.trim();
 
   return (
-    <section className="grid min-h-0 flex-1 grid-cols-[minmax(0,1.05fr)_minmax(300px,0.85fr)] gap-8 overflow-hidden px-8 pb-8">
-      <ScrollArea className="h-full min-h-0 min-w-0">
-      <dl className="space-y-5 pr-4">
-        <DetailField label="Ad Name" icon={<LabelIcon className="h-4 w-4" />}>{values.adName}</DetailField>
-        <div className="grid grid-cols-2 gap-6">
-          <DetailField label="Campaign" icon={<CampaignIcon className="h-4 w-4" />}>
-            {labels.campaigns?.map((item) => item.name).join(", ") || labels.duplicateCampaignName || "—"}
-          </DetailField>
-          <DetailField label="Ad Set" icon={<AdSetIcon className="h-4 w-4" />}>
-            {labels.adSets?.map((item) => item.name).join(", ") || labels.duplicateAdSetName || "—"}
-          </DetailField>
-        </div>
-        <div className="grid grid-cols-2 gap-6">
-          <DetailField label="Facebook Page" icon={<FacebookIcon className="h-4 w-4" />}>
-            {labels.page?.name || values.pageId || "—"}
-          </DetailField>
-          <DetailField label="Instagram Account" icon={<InstagramIcon className="h-4 w-4" />}>
-            {labels.instagramAccount?.name || values.instagramAccountId || "—"}
-          </DetailField>
-        </div>
-        {messages.length > 0 ? messages.map((message, index) => (
-          <div key={`message-${index}`}>
-            <dt>
-              <FieldLabel icon={<TemplateIcon className="h-4 w-4" />}>
-                Primary Text {messages.length > 1 ? index + 1 : ""}
-              </FieldLabel>
-            </dt>
-            <dd><ExpandableText text={message} /></dd>
-          </div>
-        )) : <DetailField label="Primary Text" icon={<TemplateIcon className="h-4 w-4" />}>—</DetailField>}
-        {headlines.length > 0 ? headlines.map((headline, index) => (
-          <div key={`headline-${index}`}>
-            <dt>
-              <FieldLabel icon={<TemplateIcon className="h-4 w-4" />}>
-                Headline {headlines.length > 1 ? index + 1 : ""}
-              </FieldLabel>
-            </dt>
-            <dd><ExpandableText text={headline} /></dd>
-          </div>
-        )) : <DetailField label="Headline" icon={<TemplateIcon className="h-4 w-4" />}>—</DetailField>}
-        <DetailField label="Link" icon={<LinkIcon className="h-4 w-4" />}>
-          {links.length > 0 ? links.map((item, index) => (
-            <span key={`${item}-${index}`} className="block break-all">{item}</span>
-          )) : "—"}
-        </DetailField>
-        <DetailField label="CTA" icon={<CTAIcon className="h-4 w-4" />}>{values.cta}</DetailField>
-        {values.isPartnershipAd && (
-          <DetailField label="Partner" icon={<Users className="h-4 w-4" />}>
-            {labels.partnerName || values.partnerIgAccountId || "—"}
-          </DetailField>
+    <section className="grid min-h-0 flex-1 grid-cols-[minmax(0,1.05fr)_minmax(300px,0.85fr)] gap-8 overflow-hidden px-8 pb-8 pt-5">
+      <div className="flex min-h-0 min-w-0 flex-col">
+        {forms.length > 1 && (
+          <ScrollArea className="mb-4 h-9 shrink-0 max-w-lg">
+            <div className="flex w-max gap-1 pb-2 pr-2">
+              {forms.map((variantForm, index) => (
+                <button
+                  key={variantForm.id || index}
+                  type="button"
+                  onClick={() => onActiveFormChange(index)}
+                  className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium transition ${
+                    activeFormIndex === index
+                      ? "bg-gray-950 text-white"
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  }`}
+                >
+                  Variant {index + 1}
+                </button>
+              ))}
+            </div>
+          </ScrollArea>
         )}
-      </dl>
-      </ScrollArea>
+        <ScrollArea className="min-h-0 flex-1">
+          <dl className="space-y-5 pr-4">
+            <DetailField
+              label={adNameFormula ? "Ad Name Formula" : "Ad Name"}
+              icon={<LabelIcon className="h-4 w-4" />}
+            >
+              {adNameFormula || values.adName}
+            </DetailField>
+            <div className="grid grid-cols-2 gap-6">
+              <DetailField label="Campaign" icon={<CampaignIcon className="h-4 w-4" />}>
+                {labels.campaigns?.map((item) => item.name).join(", ") || labels.duplicateCampaignName || "—"}
+              </DetailField>
+              <DetailField label="Ad Set" icon={<AdSetIcon className="h-4 w-4" />}>
+                {labels.adSets?.map((item) => item.name).join(", ") || labels.duplicateAdSetName || "—"}
+              </DetailField>
+            </div>
+            <div className="grid grid-cols-2 gap-6">
+              <DetailField label="Facebook Page" icon={<FacebookIcon className="h-4 w-4" />}>
+                {labels.page?.name || values.pageId || "—"}
+              </DetailField>
+              <DetailField label="Instagram Account" icon={<InstagramIcon className="h-4 w-4" />}>
+                {labels.instagramAccount?.name || values.instagramAccountId || "—"}
+              </DetailField>
+            </div>
+            {messages.length > 0 ? messages.map((message, index) => (
+              <div key={`message-${index}`}>
+                <dt>
+                  <FieldLabel icon={<TemplateIcon className="h-4 w-4" />}>
+                    Primary Text {messages.length > 1 ? index + 1 : ""}
+                  </FieldLabel>
+                </dt>
+                <dd><ExpandableText text={message} /></dd>
+              </div>
+            )) : <DetailField label="Primary Text" icon={<TemplateIcon className="h-4 w-4" />}>—</DetailField>}
+            {headlines.length > 0 ? headlines.map((headline, index) => (
+              <div key={`headline-${index}`}>
+                <dt>
+                  <FieldLabel icon={<TemplateIcon className="h-4 w-4" />}>
+                    Headline {headlines.length > 1 ? index + 1 : ""}
+                  </FieldLabel>
+                </dt>
+                <dd><ExpandableText text={headline} /></dd>
+              </div>
+            )) : <DetailField label="Headline" icon={<TemplateIcon className="h-4 w-4" />}>—</DetailField>}
+            <DetailField label="Link" icon={<LinkIcon className="h-4 w-4" />}>
+              {links.length > 0 ? links.map((item, index) => (
+                <span key={`${item}-${index}`} className="block break-all">{item}</span>
+              )) : "—"}
+            </DetailField>
+            <DetailField label="CTA" icon={<CTAIcon className="h-4 w-4" />}>{values.cta}</DetailField>
+            {values.isPartnershipAd && (
+              <DetailField label="Partner" icon={<Users className="h-4 w-4" />}>
+                {labels.partnerName || values.partnerIgAccountId || "—"}
+              </DetailField>
+            )}
+          </dl>
+        </ScrollArea>
+      </div>
 
-      <ScrollArea className="h-full min-h-0 pr-2">
-        {creativeUnits.length > 0 ? (
-          <div className="grid grid-cols-2 gap-x-4 gap-y-5">
-            {creativeUnits.map((unit) => <CreativeUnit key={unit.id} unit={unit} />)}
-          </div>
-        ) : (
-          <div className="flex h-full min-h-48 items-center justify-center rounded-2xl border border-dashed border-gray-300 bg-gray-50 text-sm text-gray-500">
-            No media saved for this variant.
-          </div>
-        )}
-      </ScrollArea>
+      <div className="flex min-h-0 min-w-0 flex-col">
+        <div className="mb-4 flex h-9 shrink-0 items-center justify-end gap-3">
+          {actions}
+        </div>
+        <ScrollArea className="min-h-0 flex-1 pr-2">
+          {creativeUnits.length > 0 ? (
+            <div className="grid grid-cols-2 gap-x-4 gap-y-5">
+              {indexedCreativeUnits.map(({ unit, groupIndex }) => (
+                <CreativeUnit key={unit.id} unit={unit} groupIndex={groupIndex} />
+              ))}
+            </div>
+          ) : (
+            <div className="flex h-full min-h-48 items-center justify-center rounded-2xl border border-dashed border-gray-300 bg-gray-50 text-sm text-gray-500">
+              No media saved for this variant.
+            </div>
+          )}
+        </ScrollArea>
+      </div>
     </section>
   );
 }
@@ -386,59 +448,44 @@ export default function DraftsModal({ open, onOpenChange, adAccountId, onRestore
               <p>Select a draft to preview it.</p>
             </div>
           ) : (
-            <>
-              <header className="flex shrink-0 items-center gap-3 px-8 py-5">
-                <div className="mr-auto min-w-0">
-                  {forms.length > 1 && (
-                    <ScrollArea className="h-9 max-w-lg">
-                      <div className="flex w-max gap-1 pb-2 pr-2">
-                        {forms.map((form, index) => (
-                          <button
-                            key={form.id || index}
-                            type="button"
-                            onClick={() => setActiveFormIndex(index)}
-                            className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium transition ${
-                              activeFormIndex === index
-                                ? "bg-gray-950 text-white"
-                                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                            }`}
-                          >
-                            Variant {index + 1}
-                          </button>
-                        ))}
-                      </div>
-                    </ScrollArea>
-                  )}
-                </div>
-                <Button
-                  type="button"
-                  onClick={handleRestore}
-                  disabled={working}
-                  className="h-9 min-w-36 rounded-xl bg-gray-800 px-4 text-sm text-white hover:bg-blue-700"
-                >
-                  <RotateCcw className="mr-1 h-4 w-4" /> Restore Draft
-                </Button>
-                <Button
-                  type="button"
-                  onClick={handleShare}
-                  disabled={working}
-                  className="h-9 min-w-36 rounded-xl bg-blue-600 px-4 text-sm text-white hover:bg-blue-700"
-                >
-                  <Link2 className="mr-1 h-3.5 w-3.5" /> {qaUrl ? "Copy QA Link" : "Share QA Link"}
-                </Button>
-                <button
-                  type="button"
-                  onClick={handleDelete}
-                  disabled={working}
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-red-600 transition hover:bg-red-50 hover:text-red-700 disabled:opacity-50"
-                  aria-label={`Delete ${selectedDraft.name}`}
-                  title="Delete draft"
-                >
-                  <Trash2 className="h-5 w-5" />
-                </button>
-              </header>
-              <FormPreview form={activeForm} mediaById={mediaById} state={selectedDraft.state} />
-            </>
+            <FormPreview
+              form={activeForm}
+              forms={forms}
+              activeFormIndex={activeFormIndex}
+              onActiveFormChange={setActiveFormIndex}
+              mediaById={mediaById}
+              state={selectedDraft.state}
+              actions={(
+                <>
+                  <Button
+                    type="button"
+                    onClick={handleRestore}
+                    disabled={working}
+                    className="h-9 min-w-36 rounded-xl bg-gray-800 px-4 text-sm text-white hover:bg-blue-700"
+                  >
+                    <RotateCcw className="mr-1 h-4 w-4" /> Restore Draft
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={handleShare}
+                    disabled={working}
+                    className="h-9 min-w-36 rounded-xl bg-blue-600 px-4 text-sm text-white hover:bg-blue-700"
+                  >
+                    <Link2 className="mr-1 h-3.5 w-3.5" /> {qaUrl ? "Copy QA Link" : "Share QA Link"}
+                  </Button>
+                  <button
+                    type="button"
+                    onClick={handleDelete}
+                    disabled={working}
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-red-600 transition hover:bg-red-50 hover:text-red-700 disabled:opacity-50"
+                    aria-label={`Delete ${selectedDraft.name}`}
+                    title="Delete draft"
+                  >
+                    <Trash2 className="h-5 w-5" />
+                  </button>
+                </>
+              )}
+            />
           )}
         </main>
       </DialogContent>
