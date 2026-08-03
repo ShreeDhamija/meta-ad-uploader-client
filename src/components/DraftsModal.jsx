@@ -5,7 +5,6 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import AdSetIcon from "@/assets/icons/grid.svg?react";
 import CampaignIcon from "@/assets/icons/folder.svg?react";
 import CTAIcon from "@/assets/icons/cta.svg?react";
@@ -65,13 +64,36 @@ function DetailField({ label, icon, children, className = "" }) {
   );
 }
 
-function MediaThumbnail({ media }) {
+function getMediaAspectRatio(media) {
+  const width = Number(media?.width ?? media?.metadata?.width ?? media?.dimensions?.width);
+  const height = Number(media?.height ?? media?.metadata?.height ?? media?.dimensions?.height);
+
+  if (Number.isFinite(width) && width > 0 && Number.isFinite(height) && height > 0) {
+    return `${width} / ${height}`;
+  }
+
+  const rawRatio = media?.aspectRatio ?? media?.metadata?.aspectRatio;
+  if (Number.isFinite(Number(rawRatio)) && Number(rawRatio) > 0) return String(rawRatio);
+  if (typeof rawRatio === "string") {
+    const match = rawRatio.match(/^\s*(\d+(?:\.\d+)?)\s*[:/]\s*(\d+(?:\.\d+)?)\s*$/);
+    if (match && Number(match[1]) > 0 && Number(match[2]) > 0) {
+      return `${match[1]} / ${match[2]}`;
+    }
+  }
+
+  return "1 / 1";
+}
+
+function MediaThumbnail({ media, grouped }) {
   const isVideo = (media.mimeType || "").startsWith("video/");
   const previewUrl = media.deletedAt ? MEDIA_FALLBACK_URL : media.previewUrl;
 
   return (
     <figure className="min-w-0">
-      <div className="group relative aspect-square overflow-hidden rounded-xl border border-gray-200 bg-gray-100">
+      <div
+        className={`group relative overflow-hidden rounded-xl bg-gray-100 ${grouped ? "border border-blue-100" : ""}`}
+        style={{ aspectRatio: getMediaAspectRatio(media) }}
+      >
         {isVideo && !previewUrl ? (
           <video
             src={media.url}
@@ -114,25 +136,16 @@ function MediaThumbnail({ media }) {
 }
 
 function CreativeUnit({ unit }) {
+  const grouped = unit.type === "group";
+
   return (
-    <div className={`min-w-0 rounded-2xl border p-2 ${
-      unit.type === "group" ? "border-blue-200 bg-blue-50/60" : "border-gray-200 bg-white"
+    <div className={`min-w-0 ${
+      grouped ? "col-span-2 rounded-2xl border border-blue-200 bg-blue-50/60 p-2" : ""
     }`}>
       <div className={`grid gap-2 ${unit.media.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}>
-        {unit.media.map((media) => <MediaThumbnail key={media.id} media={media} />)}
-      </div>
-      <div className="mt-2 border-t border-gray-200/80 pt-2">
-        <span className="text-xs text-gray-500">Ad Name</span>
-        <TooltipProvider delayDuration={250}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <p className="truncate text-sm font-semibold text-gray-950">{unit.adName}</p>
-            </TooltipTrigger>
-            <TooltipContent side="top" className="max-w-sm break-words text-xs">
-              {unit.adName}
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        {unit.media.map((media) => (
+          <MediaThumbnail key={media.id} media={media} grouped={grouped} />
+        ))}
       </div>
     </div>
   );
@@ -326,6 +339,7 @@ export default function DraftsModal({ open, onOpenChange, adAccountId, onRestore
       <DialogContent
         hideClose
         disableSlide
+        overlayClassName="bg-gray-950/20"
         className="h-[86vh] max-h-[860px] max-w-[96vw] grid-cols-[220px_minmax(0,1fr)] gap-0 overflow-hidden !rounded-[48px] border-gray-200 bg-white p-0 sm:!rounded-[48px] xl:max-w-7xl"
       >
         <aside className="min-h-0 overflow-hidden border-r border-gray-200 bg-[#f4f4f4]">
@@ -375,9 +389,8 @@ export default function DraftsModal({ open, onOpenChange, adAccountId, onRestore
             <>
               <header className="flex shrink-0 items-center gap-3 px-8 py-5">
                 <div className="mr-auto min-w-0">
-                  <h2 className="truncate text-lg font-semibold text-gray-950">{selectedDraft.name}</h2>
                   {forms.length > 1 && (
-                    <ScrollArea className="mt-2 h-9 max-w-lg">
+                    <ScrollArea className="h-9 max-w-lg">
                       <div className="flex w-max gap-1 pb-2 pr-2">
                         {forms.map((form, index) => (
                           <button
