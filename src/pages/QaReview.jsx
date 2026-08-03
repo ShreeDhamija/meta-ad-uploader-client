@@ -145,7 +145,7 @@ function CreativeReviewCard({ unit, groupIndex, priority = false }) {
 
   return (
     <div className={`min-w-0 ${
-      grouped ? `col-span-2 rounded-2xl border p-2 ${groupColor}` : ""
+      grouped ? `rounded-2xl border p-2 sm:col-span-2 ${groupColor}` : ""
     }`}>
       <div className={`grid gap-2 ${unit.media.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}>
         {unit.media.map((media, index) => (
@@ -200,17 +200,17 @@ function ReviewForm({ form, index, state, mediaById, showLaunchHeading }) {
   const links = (values.link || []).filter(Boolean);
 
   return (
-    <article className="flex h-[min(78vh,760px)] min-h-[620px] flex-col overflow-hidden !rounded-[48px] border border-gray-200 bg-white shadow-sm">
+    <section className={index > 0 ? "border-t border-gray-200" : ""}>
       {showLaunchHeading && (
-        <header className="shrink-0 px-8 py-5">
+        <header className="px-8 pt-8">
           <h2 className="text-lg font-semibold text-gray-950">Launch {index + 1}</h2>
         </header>
       )}
 
-      <div className={`grid min-h-0 flex-1 grid-cols-[minmax(0,1.05fr)_minmax(320px,0.85fr)] gap-8 overflow-hidden px-8 pb-8 ${
-        showLaunchHeading ? "" : "pt-8"
+      <div className={`grid grid-cols-1 items-start gap-8 px-8 pb-10 lg:grid-cols-[minmax(0,1.05fr)_minmax(320px,0.85fr)] ${
+        showLaunchHeading ? "pt-5" : "pt-10"
       }`}>
-        <ScrollArea className="h-full min-h-0 min-w-0">
+        <div className="min-w-0 lg:sticky lg:top-6 lg:self-start">
           <dl className="space-y-5 pr-4">
             <div className="grid grid-cols-2 gap-6">
               <DetailField label="Campaign" icon={<CampaignIcon className="h-4 w-4" />}>
@@ -280,11 +280,11 @@ function ReviewForm({ form, index, state, mediaById, showLaunchHeading }) {
               </DetailField>
             )}
           </dl>
-        </ScrollArea>
+        </div>
 
-        <ScrollArea className="h-full min-h-0 pr-2">
+        <div className="min-w-0 pr-2">
           {creativeUnits.length > 0 ? (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {indexedCreativeUnits.map(({ unit, groupIndex }, unitIndex) => (
                 <CreativeReviewCard
                   key={unit.id}
@@ -299,9 +299,9 @@ function ReviewForm({ form, index, state, mediaById, showLaunchHeading }) {
               This launch uses an existing post or platform media reference.
             </div>
           )}
-        </ScrollArea>
+        </div>
       </div>
-    </article>
+    </section>
   );
 }
 
@@ -359,12 +359,13 @@ export default function QaReview() {
         <div className="mx-auto max-w-7xl">
           <header className="mb-8 px-3">
             <h1 className="text-3xl font-semibold tracking-tight text-blue-600">Ad review for {accountName}</h1>
-            <p className="mt-2 text-sm text-gray-600">
+            <p className="mt-2 text-base font-semibold text-gray-700">{draft.name}</p>
+            <p className="mt-1 text-sm text-gray-600">
               {creativeCount} Ad{creativeCount === 1 ? "" : "s"}
               {forms.length > 1 ? ` across ${forms.length} Launches` : ""}
             </p>
           </header>
-          <div className="space-y-8">
+          <div className="!rounded-[48px] border border-gray-200 bg-white shadow-sm">
             {forms.map((form, index) => (
               <ReviewForm
                 key={form.id || index}

@@ -7357,10 +7357,12 @@ export default function AdCreationForm({
     }
   };
 
-  const handleDraftUpdateMenuChange = async (nextOpen) => {
-    if (savingDraft) return;
-    setDraftUpdateMenuOpen(nextOpen);
-    if (!nextOpen || !selectedAdAccount) return;
+  const loadDraftUpdateOptions = async () => {
+    if (!selectedAdAccount) {
+      setDraftUpdateOptions([]);
+      return;
+    }
+    setDraftUpdateOptions([]);
     setLoadingDraftUpdateOptions(true);
     try {
       setDraftUpdateOptions(await listDrafts(selectedAdAccount));
@@ -7370,6 +7372,11 @@ export default function AdCreationForm({
     } finally {
       setLoadingDraftUpdateOptions(false);
     }
+  };
+
+  const handleDraftUpdateMenuChange = (nextOpen) => {
+    if (savingDraft) return;
+    setDraftUpdateMenuOpen(nextOpen && draftUpdateOptions.length > 0);
   };
 
   const handleCancelDraftSave = () => {
@@ -10157,6 +10164,7 @@ export default function AdCreationForm({
                 if (savingDraft && !nextOpen) return;
                 setDraftMenuOpen(nextOpen);
                 if (!nextOpen) setDraftUpdateMenuOpen(false);
+                if (nextOpen) loadDraftUpdateOptions();
               }}
             >
               <PopoverAnchor asChild>
@@ -10209,7 +10217,7 @@ export default function AdCreationForm({
                       className="h-9 shrink-0 rounded-xl bg-black px-3 text-white hover:bg-blue-700"
                     >
                       {savingDraft && draftSaveMode === "save" ? (
-                        <Loader className="h-4 w-4 animate-spin" />
+                        <><Loader className="mr-1.5 h-4 w-4 animate-spin" /> Saving...</>
                       ) : (
                         <><Save className="mr-1.5 h-4 w-4" /> Save Draft</>
                       )}
@@ -10221,11 +10229,12 @@ export default function AdCreationForm({
                       className="h-9 shrink-0 rounded-xl bg-blue-600 px-3 text-white hover:bg-blue-700"
                     >
                       {savingDraft && draftSaveMode === "preview" ? (
-                        <Loader className="h-4 w-4 animate-spin" />
+                        <><Loader className="mr-1.5 h-4 w-4 animate-spin" /> Copying...</>
                       ) : (
                         <><Link2 className="mr-1.5 h-4 w-4" /> Copy Preview Link</>
                       )}
                     </Button>
+                    {!loadingDraftUpdateOptions && draftUpdateOptions.length > 0 && (
                     <Popover open={draftUpdateMenuOpen} onOpenChange={handleDraftUpdateMenuChange}>
                       <PopoverTrigger asChild>
                         <Button
@@ -10234,17 +10243,15 @@ export default function AdCreationForm({
                           disabled={savingDraft}
                           className="h-9 shrink-0 rounded-xl border-gray-300 bg-white px-3 hover:border-blue-600 hover:bg-blue-600 hover:text-white"
                         >
-                          {savingDraft && draftSaveMode === "update" ? <Loader className="h-4 w-4 animate-spin" /> : "Update Existing Draft"}
+                          {savingDraft && draftSaveMode === "update" ? (
+                            <><Loader className="mr-1.5 h-4 w-4 animate-spin" /> Updating...</>
+                          ) : "Update"}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent align="end" sideOffset={6} className="w-72 rounded-2xl border-gray-200 bg-white p-2 shadow-xl">
                         <p className="px-2 pb-1.5 text-xs font-medium text-gray-500">Select a draft to update</p>
                         <ScrollArea className="h-56">
-                          {loadingDraftUpdateOptions ? (
-                            <Loader className="mx-auto my-5 h-4 w-4 animate-spin text-gray-500" />
-                          ) : draftUpdateOptions.length === 0 ? (
-                            <p className="px-2 py-4 text-center text-sm text-gray-500">No drafts available.</p>
-                          ) : draftUpdateOptions.map((draft) => (
+                          {draftUpdateOptions.map((draft) => (
                             <button
                               key={draft.id}
                               type="button"
@@ -10252,14 +10259,12 @@ export default function AdCreationForm({
                               className="block w-full rounded-lg px-2.5 py-2 text-left hover:bg-gray-100"
                             >
                               <span className="block truncate text-sm font-medium text-gray-900">{draft.name}</span>
-                              <span className="block text-xs text-gray-500">
-                                {draft.formCount} variant{draft.formCount === 1 ? "" : "s"}
-                              </span>
                             </button>
                           ))}
                         </ScrollArea>
                       </PopoverContent>
                     </Popover>
+                    )}
                   </div>
                   {savingDraft && (
                     <div className="mt-2 rounded-xl bg-white px-2 py-1.5">

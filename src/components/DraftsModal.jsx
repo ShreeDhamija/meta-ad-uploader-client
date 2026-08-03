@@ -215,7 +215,7 @@ function FormPreview({
   const adNameFormula = values.adNameFormulaV2?.rawInput?.trim();
 
   return (
-    <section className="grid min-h-0 flex-1 grid-cols-[minmax(0,1.05fr)_minmax(300px,0.85fr)] gap-8 overflow-hidden px-8 pb-8 pt-5">
+    <section className="grid min-h-0 flex-1 grid-cols-[minmax(0,1.05fr)_minmax(300px,0.85fr)] gap-8 overflow-hidden px-8 pt-5">
       <div className="flex min-h-0 min-w-0 flex-col">
         {forms.length > 1 && (
           <ScrollArea className="mb-4 h-9 shrink-0 max-w-lg">
