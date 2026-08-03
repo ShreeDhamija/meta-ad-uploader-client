@@ -450,46 +450,6 @@ export default function AdAccountSettings({
   }, [duplicateCampaign, isDuplicateCampaignDeprecated, newCampaignName, refreshCampaigns, selectedAdAccount, setAdSets, setDuplicateCampaign, setIsLoading, setNewCampaignName, setSelectedAdSets, setSelectedCampaign, setShowDuplicateCampaignBlock, sortAdSets]);
 
 
-  // Auto-populate new ad set name when duplicate ad set is selected
-  useEffect(() => {
-    if (duplicateAdSet) {
-      const selectedAdSet = adSets.find((adset) => adset.id === duplicateAdSet)
-      if (selectedAdSet) {
-        const defaultName = selectedAdSet.name + "_Copy"
-        const isOtherAdSetDefault = adSets.some(
-          adset => adset.id !== duplicateAdSet && newAdSetName === adset.name + "_Copy"
-        )
-
-        if (!newAdSetName || isOtherAdSetDefault) {
-          setNewAdSetName(defaultName)
-        }
-      }
-    } else {
-      setNewAdSetName("")
-    }
-  }, [duplicateAdSet, adSets, newAdSetName, setNewAdSetName])
-
-
-  // Auto-populate new campaign name when duplicate campaign is selected
-  useEffect(() => {
-    if (duplicateCampaign) {
-      const selectedCamp = campaigns.find((campaign) => campaign.id === duplicateCampaign)
-      if (selectedCamp) {
-        const defaultName = selectedCamp.name + "_Copy"
-
-        const isOtherCampaignDefault = campaigns.some(
-          camp => camp.id !== duplicateCampaign && newCampaignName === camp.name + "_Copy"
-        )
-
-        if (!newCampaignName || isOtherCampaignDefault) {
-          setNewCampaignName(defaultName)
-        }
-      }
-    } else {
-      setNewCampaignName("")
-    }
-  }, [duplicateCampaign, campaigns, newCampaignName, setNewCampaignName])
-
   const selectedDynamicAdSets = useMemo(() =>
     selectedAdSets
       .map(id => adSets.find(a => a.id === id))
@@ -887,6 +847,7 @@ transition-all duration-150 hover:!bg-black
                                     value={campaign.name || campaign.id}
                                     onSelect={() => {
                                       setDuplicateCampaign(campaign.id);
+                                      setNewCampaignName(`${campaign.name || campaign.id}_Copy`);
                                       setOpenDuplicateCampaign(false);
                                     }}
                                     className={cn(
@@ -1304,6 +1265,7 @@ transition-all duration-150 hover:!bg-black
                                               value={adset.name || adset.id}
                                               onSelect={() => {
                                                 setDuplicateAdSet(adset.id)
+                                                setNewAdSetName(`${adset.name || adset.id}_Copy`)
                                                 setOpenDuplicateAdSet(false)
                                               }}
                                               className={cn(

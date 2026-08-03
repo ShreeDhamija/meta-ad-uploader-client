@@ -56,8 +56,6 @@ const PixelSelect = memo(({
                 className="min-w-[--radix-popover-trigger-width] w-auto !max-w-none p-0 bg-white shadow-lg rounded-2xl"
                 align="start"
                 sideOffset={4}
-                side="top"
-                avoidCollisions={false}
                 style={{
                     minWidth: "var(--radix-popover-trigger-width)",
                     width: "auto",
