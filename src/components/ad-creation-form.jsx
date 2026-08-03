@@ -117,6 +117,51 @@ function withTimeout(promise, timeoutMs, timeoutMessage, signal) {
     });
 }
 
+function formatAdSetEndTime(endTime) {
+  const date = new Date(endTime);
+  if (Number.isNaN(date.getTime())) return endTime;
+
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(date);
+}
+
+function getAdSetTimingIssue({ selectedAdSets = [], duplicateAdSet, adSets = [], adScheduleEndTime }) {
+  const selectedIds = duplicateAdSet ? [duplicateAdSet] : selectedAdSets;
+  const selectedAdSetsWithEndTime = selectedIds
+    .map((id) => adSets.find((adSet) => adSet.id === id))
+    .filter((adSet) => adSet?.end_time)
+    .map((adSet) => ({
+      adSet,
+      endTime: new Date(adSet.end_time).getTime(),
+    }))
+    .filter(({ endTime }) => Number.isFinite(endTime))
+    .sort((a, b) => a.endTime - b.endTime);
+
+  const endedAdSet = selectedAdSetsWithEndTime.find(({ endTime }) => endTime <= Date.now());
+  if (endedAdSet) {
+    return {
+      type: 'ended',
+      message: `Ad set end date is ${formatAdSetEndTime(endedAdSet.adSet.end_time)}, it has already ended. Select a different ad set`,
+    };
+  }
+
+  const scheduledEndTime = adScheduleEndTime ? new Date(adScheduleEndTime).getTime() : NaN;
+  const adSetEndingBeforeAds = Number.isFinite(scheduledEndTime)
+    ? selectedAdSetsWithEndTime.find(({ endTime }) => scheduledEndTime > endTime)
+    : null;
+
+  if (adSetEndingBeforeAds) {
+    return {
+      type: 'schedule-after-ad-set',
+      message: 'The ads end date is after the ad sets end date. Change the ad schedule to publish ads',
+    };
+  }
+
+  return null;
+}
+
 const UPLOAD_SOURCE_OPTIONS = [
   {
     id: 'local',
@@ -7449,6 +7494,12 @@ export default function AdCreationForm({
         return;
       }
 
+      const jobAdSetTimingIssue = getAdSetTimingIssue(job.formData);
+      if (jobAdSetTimingIssue) {
+        toast.error(`${variant.name}: ${jobAdSetTimingIssue.message}`);
+        return;
+      }
+
       newJobs.push(job);
     }
 
@@ -7500,6 +7551,14 @@ export default function AdCreationForm({
   };
 
   const isPageMissing = !pageId && !isDuplicationMode;
+  const variantsToValidate = populatedVariantSummaries.length > 0
+    ? populatedVariantSummaries
+    : [{ id: activeVariantId }];
+  const adSetTimingIssue = variantsToValidate.reduce((issue, variant) => {
+    if (issue) return issue;
+    const variantState = getVariantState(variant.id);
+    return variantState ? getAdSetTimingIssue(variantState) : null;
+  }, null);
   // Missing ad set is pulled out of the bundled blocking flag below so we can
   // surface a dedicated message only when it's the sole remaining issue.
   const isAdSetMissing = variants.length <= 1 && selectedAdSets.length === 0 && !duplicateAdSet;
@@ -7525,7 +7584,7 @@ export default function AdCreationForm({
       (shouldShowLeadFormSelector && !selectedForm) ||
       (!isCarouselAd && hasDuplicates)
     );
-  const publishDisabled = hasPublishBlockingIssueBeforePage || isAdSetMissing || isPageMissing;
+  const publishDisabled = hasPublishBlockingIssueBeforePage || isAdSetMissing || isPageMissing || Boolean(adSetTimingIssue);
 
   const showImportedPostMode = isDuplicationMode && importedPosts.length > 0;
   const importedSafeIndex = showImportedPostMode
@@ -10327,6 +10386,12 @@ export default function AdCreationForm({
                   )}
                 </PopoverContent>
             </Popover>
+
+            {adSetTimingIssue && (
+              <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                {adSetTimingIssue.message}
+              </div>
+            )}
 
             {variants.length > 1 && hasConfiguredFormSplits && (
               <div className="text-xs text-gray-500 mt-2">
