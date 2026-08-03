@@ -8128,18 +8128,6 @@ export default function AdCreationForm({
             }
           }}
           className="space-y-6">
-          {showPixelTrackingOverride && selectedAdAccount && (
-            <PixelTracking
-              pixelTracking={pixelTrackingOverride}
-              setPixelTracking={setPixelTrackingOverride}
-              selectedAdAccount={selectedAdAccount}
-              title="Pixel Tracking Override"
-              description="Optionally override your saved Website and Offline event tracking for this launch"
-              allowSavedPreference
-              savedPixelTracking={adAccountSettings?.pixelTracking}
-              isModified={isFormFieldModified?.("pixelTrackingOverride")}
-            />
-          )}
           <div className="space-y-10 overflow-hidden">
             {isDuplicationMode ? (
               <div className="relative space-y-6">
@@ -9783,6 +9771,17 @@ export default function AdCreationForm({
                     emptyLabel="No product catalogs available"
                     triggerClassName={formFieldChrome}
                   />
+                  {showPixelTrackingOverride && selectedAdAccount && (
+                    <PixelTracking
+                      pixelTracking={pixelTrackingOverride}
+                      setPixelTracking={setPixelTrackingOverride}
+                      selectedAdAccount={selectedAdAccount}
+                      title="Pixel Tracking Override"
+                      description={null}
+                      isModified={isFormFieldModified?.("pixelTrackingOverride")}
+                      bare
+                    />
+                  )}
                 </div>
 
                 {shouldShowLeadFormSelector && (

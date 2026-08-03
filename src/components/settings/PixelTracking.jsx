@@ -24,20 +24,13 @@ const PixelSelect = memo(({
     onChange,
     loading,
     placeholder,
-    allowSavedPreference = false,
-    savedValue = null,
 }) => {
     const [open, setOpen] = useState(false)
 
     const selected = pixels.find(p => p.id === value)
-    const savedSelection = pixels.find(p => p.id === savedValue)
     const displayText = selected
         ? (selected.name || selected.id)
-        : value
-            ? value
-            : allowSavedPreference
-                ? `Use saved preference${savedValue ? ` — ${savedSelection?.name || savedValue}` : ""}`
-                : "Select a pixel"
+        : (value ? value : "Select a pixel")
 
     return (
         <Popover open={open} onOpenChange={setOpen}>
@@ -77,22 +70,6 @@ const PixelSelect = memo(({
                     <CommandInput placeholder={placeholder || "Search pixels..."} className="bg-transparent" wrapperClassName="bg-gray-50 border-gray-200 rounded-[20px]" />
                     <CommandList className="max-h-[300px] overflow-y-auto rounded-2xl custom-scrollbar">
                         <CommandGroup>
-                            {allowSavedPreference && (
-                                <CommandItem
-                                    value="Use saved preference"
-                                    onSelect={() => { onChange(null); setOpen(false); }}
-                                    className={`px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150 hover:bg-gray-100 ${!value ? "bg-gray-100 font-semibold" : ""}`}
-                                >
-                                    <div className="flex flex-col">
-                                        <span className="text-sm">Use saved preference</span>
-                                        {savedValue && (
-                                            <span className="text-xs text-gray-400">
-                                                {savedSelection?.name || savedValue}
-                                            </span>
-                                        )}
-                                    </div>
-                                </CommandItem>
-                            )}
                             {pixels.map((pixel) => (
                                 <CommandItem
                                     key={pixel.id}
@@ -122,9 +99,8 @@ function PixelTracking({
     selectedAdAccount,
     title = "Pixel Tracking",
     description = "Attach Website & Offline conversion events to every ad you create",
-    allowSavedPreference = false,
-    savedPixelTracking = null,
     isModified = false,
+    bare = false,
 }) {
     const [pixels, setPixels] = useState([])
     const [loading, setLoading] = useState(false)
@@ -161,7 +137,7 @@ function PixelTracking({
     }, [setPixelTracking]);
 
     return (
-        <div className="bg-[#f7f7f7] rounded-2xl p-4 space-y-4">
+        <div className={bare ? "space-y-4" : "bg-[#f7f7f7] rounded-2xl p-4 space-y-4"}>
             <div className="flex items-start gap-2">
                 <Target className="w-5 h-5 grayscale brightness-75 contrast-75 opacity-60" />
                 <div className="flex flex-col">
@@ -169,9 +145,11 @@ function PixelTracking({
                         {isModified && <span className="text-red-500 font-semibold">*</span>}
                         {isModified ? " " : ""}{title}
                     </h3>
-                    <label className="text-xs text-gray-400">
-                        {description}
-                    </label>
+                    {description && (
+                        <label className="text-xs text-gray-400">
+                            {description}
+                        </label>
+                    )}
                 </div>
             </div>
 
@@ -190,8 +168,6 @@ function PixelTracking({
                             value={pixelTracking?.[row.key] || null}
                             onChange={(id) => handleChange(row.key, id)}
                             loading={loading}
-                            allowSavedPreference={allowSavedPreference}
-                            savedValue={savedPixelTracking?.[row.key] || null}
                         />
                     </div>
                 ))}

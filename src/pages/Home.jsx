@@ -571,6 +571,10 @@ export default function Home() {
         setLink([linkToUse]);
 
         setCta(adAccountSettings.defaultCTA || "LEARN_MORE");
+        setPixelTrackingOverride({
+            websitePixelId: adAccountSettings.pixelTracking?.websitePixelId || null,
+            offlineDatasetId: adAccountSettings.pixelTracking?.offlineDatasetId || null,
+        });
         setAdNameFormulaV2(adAccountSettings.adNameFormulaV2 || { rawInput: "" });
 
         const formula = adAccountSettings.adNameFormula;
@@ -593,6 +597,7 @@ export default function Home() {
         adAccountSettings.defaultInstagram,
         adAccountSettings.links,
         adAccountSettings.defaultCTA,
+        adAccountSettings.pixelTracking,
         adAccountSettings.adNameFormula,
         adAccountSettings.adNameFormulaV2,
     ]);
