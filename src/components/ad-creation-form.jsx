@@ -4241,18 +4241,19 @@ export default function AdCreationForm({
   useEffect(() => {
     if (!isCarouselAd) return;
     const fileCount = files.length + driveFiles.length + dropboxFiles.length + (frameioFiles?.length || 0) + importedFiles.length;
+    const cardCount = enablePlacementCustomization ? Math.floor(fileCount / 2) : fileCount;
 
-    if (applyTextToAllCards && fileCount > 0) {
+    if (applyTextToAllCards && cardCount > 0) {
       const firstMessage = messages[0] || "";
-      if (messages.length !== fileCount || messages.some((message) => message !== firstMessage)) {
-        setMessages(new Array(fileCount).fill(firstMessage));
+      if (messages.length !== cardCount || messages.some((message) => message !== firstMessage)) {
+        setMessages(new Array(cardCount).fill(firstMessage));
       }
     }
 
-    if (applyHeadlinesToAllCards && fileCount > 0) {
+    if (applyHeadlinesToAllCards && cardCount > 0) {
       const firstHeadline = headlines[0] || "";
-      if (headlines.length !== fileCount || headlines.some((headline) => headline !== firstHeadline)) {
-        setHeadlines(new Array(fileCount).fill(firstHeadline));
+      if (headlines.length !== cardCount || headlines.some((headline) => headline !== firstHeadline)) {
+        setHeadlines(new Array(cardCount).fill(firstHeadline));
       }
     }
   }, [
@@ -4262,6 +4263,7 @@ export default function AdCreationForm({
     frameioFiles?.length,
     importedFiles.length,
     isCarouselAd,
+    enablePlacementCustomization,
     applyTextToAllCards,
     applyHeadlinesToAllCards,
     messages,
@@ -9218,8 +9220,9 @@ export default function AdCreationForm({
                                   if (checked && messages.length > 0) {
                                     const firstMessage = messages[0];
                                     const fileCount = files.length + driveFiles.length + dropboxFiles.length + importedFiles.length + frameioFiles.length;
-                                    if (fileCount > 0) {
-                                      setMessages(new Array(fileCount).fill(firstMessage));
+                                    const cardCount = enablePlacementCustomization ? Math.floor(fileCount / 2) : fileCount;
+                                    if (cardCount > 0) {
+                                      setMessages(new Array(cardCount).fill(firstMessage));
                                     }
 
                                   } else if (!checked && selectedTemplate && copyTemplates[selectedTemplate]) {
@@ -9334,9 +9337,10 @@ export default function AdCreationForm({
                                 setApplyHeadlinesToAllCards(checked);
                                 if (checked && headlines.length > 0) {
                                   const firstHeadline = headlines[0];
-                                  const fileCount = files.length + driveFiles.length + dropboxFiles.length + importedFiles.length;
-                                  if (fileCount > 0) {
-                                    setHeadlines(new Array(fileCount).fill(firstHeadline));
+                                  const fileCount = files.length + driveFiles.length + dropboxFiles.length + importedFiles.length + frameioFiles.length;
+                                  const cardCount = enablePlacementCustomization ? Math.floor(fileCount / 2) : fileCount;
+                                  if (cardCount > 0) {
+                                    setHeadlines(new Array(cardCount).fill(firstHeadline));
                                   }
                                 } else if (!checked && selectedTemplate && copyTemplates[selectedTemplate]) {
                                   const tpl = copyTemplates[selectedTemplate];
