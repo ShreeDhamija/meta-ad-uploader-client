@@ -10379,7 +10379,7 @@ export default function AdCreationForm({
                         <div className="flex items-center justify-between">
                           <h3 className="min-w-0 truncate font-semibold text-sm">
                             {pendingCsvDriveImport
-                              ? "CSV creatives: open the folder, then select all"
+                              ? "Navigate to Folder"
                               : "Quick Navigate to Folder"}
                           </h3>
                           <Button
@@ -10395,6 +10395,12 @@ export default function AdCreationForm({
 
                           </Button>
                         </div>
+
+                        {pendingCsvDriveImport && (
+                          <p className="text-xs leading-relaxed text-gray-600">
+                            Enter a link to the folder containing these files and select all and import. Google Drive requires explicit file imports into the app. Or manually navigate to the folder in the picker below and import the files
+                          </p>
+                        )}
 
                         <div className="flex flex-col gap-2 sm:flex-row">
                           <Input
