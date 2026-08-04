@@ -5,7 +5,7 @@ import { ChevronDown, CirclePlus, ExternalLink, GripVertical, Loader2, Rocket, T
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
-import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
+import { SortableContext, verticalListSortingStrategy, rectSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { useSortable } from '@dnd-kit/sortable';
 import RocketImg from '@/assets/rocketpreview.webp';
 import Uploadimg from '@/assets/upload.webp';
@@ -49,6 +49,8 @@ const createFileGroup = (fileIds) => ({
   id: uuidv4(),
   fileIds: [...fileIds],
 });
+
+const getPlacementCarouselCardId = (groupId, pair) => JSON.stringify([groupId, ...pair]);
 
 function VariantDot({ variantId, variants }) {
   const idx = variants.findIndex((variant) => variant.id === variantId);
@@ -341,6 +343,50 @@ function LocalVideoScrubber({ file, thumbnailSrc, fallbackSrc, className }) {
   );
 }
 
+function SortablePlacementCarouselCard({ id, cardIndex, children }) {
+  const {
+    attributes,
+    listeners,
+    setActivatorNodeRef,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+        transition,
+        zIndex: isDragging ? 30 : 'auto',
+      }}
+      className={`min-w-0 rounded-xl border border-gray-300 bg-white/90 p-2 shadow-sm ring-1 ring-white/80 ${isDragging ? 'opacity-70 shadow-lg' : ''}`}
+    >
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-1.5">
+          <Button
+            type="button"
+            ref={setActivatorNodeRef}
+            {...attributes}
+            {...listeners}
+            variant="ghost"
+            size="icon"
+            className="h-5 w-5 shrink-0 touch-none cursor-grab rounded-md border border-gray-300 bg-white p-0 active:cursor-grabbing"
+            aria-label={`Reorder card ${cardIndex + 1}`}
+          >
+            <GripVertical className="h-3 w-3 text-gray-500" />
+          </Button>
+          <span className="truncate text-xs font-semibold text-gray-700">Card {cardIndex + 1}</span>
+        </div>
+        <span className="shrink-0 text-[10px] text-gray-400">2 assets</span>
+      </div>
+      {children}
+    </div>
+  );
+}
+
 // Sortable item component
 const SortableMediaItem = React.memo(function SortableMediaItem({
   file,
@@ -360,7 +406,8 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
   variants,
   onAssignVariant,
   onAddVariant,
-  isRemoving
+  isRemoving,
+  disableSorting = false
 }) {
   const {
     attributes,
@@ -377,7 +424,8 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
         ? file.dropboxId
         : file.isFrameio
           ? file.frameioId
-          : (file.isDrive ? file.id : file.uniqueId || file.name)
+          : (file.isDrive ? file.id : file.uniqueId || file.name),
+    disabled: disableSorting,
   });
 
   const style = {
@@ -1331,6 +1379,31 @@ export default function MediaPreview({
     });
   }, [setFileGroups]);
 
+  const handlePlacementCarouselCardDragEnd = useCallback((groupId, event) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    setFileGroups(prev => {
+      const groupIndex = prev.findIndex(group => group.id === groupId);
+      if (groupIndex === -1) return prev;
+
+      const groupFileIds = getGroupFileIds(prev[groupIndex]);
+      const cards = Array.from(
+        { length: Math.ceil(groupFileIds.length / 2) },
+        (_, cardIndex) => groupFileIds.slice(cardIndex * 2, cardIndex * 2 + 2)
+      );
+      const cardIds = cards.map(pair => getPlacementCarouselCardId(groupId, pair));
+      const oldIndex = cardIds.indexOf(String(active.id));
+      const newIndex = cardIds.indexOf(String(over.id));
+      if (oldIndex === -1 || newIndex === -1) return prev;
+
+      const reorderedCards = arrayMove(cards, oldIndex, newIndex);
+      const next = [...prev];
+      next[groupIndex] = { ...prev[groupIndex], fileIds: reorderedCards.flat() };
+      return next;
+    });
+  }, [setFileGroups]);
+
 
   const handleDragEnd = useCallback((event) => {
     const { active, over } = event;
@@ -1579,9 +1652,9 @@ export default function MediaPreview({
 
               {isCarouselAd && (
                 <div className="mt-1 min-w-0 max-w-full">
-                  <CardDescription className="block max-w-full whitespace-normal break-words text-left text-xs leading-5 text-gray-500 [overflow-wrap:anywhere]">
+                  <CardDescription className="block max-w-full whitespace-normal break-words text-left text-xs leading-4 text-gray-500 [overflow-wrap:anywhere]">
                     {isPlacementCustomizedCarousel
-                      ? 'Select in card order: one 9:16 plus one square or 4:5 per pair. Every 2 selected assets become one card; group 4–20 assets per carousel ad.'
+                      ? 'Select files for same card consecutively. Use one 9:16 plus one square or 4:5 per pair. Every 2 selected assets become one card; group 4–20 assets per carousel ad.'
                       : fileGroups.length > 0
                       ? 'Drag to reorder cards within each carousel group. Select files to create new groups.'
                       : 'Select files to group into separate carousel ads, or drag to reorder cards'
@@ -1661,6 +1734,13 @@ export default function MediaPreview({
                   <div className="space-y-4">
                     {fileGroups.map((group, groupIndex) => {
                       const isGroupDimmed = (groupVariantMap[group.id] || 'default') !== activeVariantId;
+                      const groupFileIds = getGroupFileIds(group);
+                      const placementCarouselCards = isPlacementCustomizedCarousel
+                        ? Array.from(
+                          { length: Math.ceil(groupFileIds.length / 2) },
+                          (_, cardIndex) => groupFileIds.slice(cardIndex * 2, cardIndex * 2 + 2)
+                        )
+                        : [];
 
                       return (
                         <div
@@ -1705,50 +1785,59 @@ export default function MediaPreview({
 
                           {isCarouselAd ? (
                             isPlacementCustomizedCarousel ? (
-                              <div className={`grid min-w-0 grid-cols-2 gap-2 p-3 pb-10 pt-12 transition-opacity ${isGroupDimmed ? 'opacity-30' : 'opacity-100'}`}>
-                                {Array.from({ length: Math.ceil(getGroupFileIds(group).length / 2) }, (_, cardIdx) => {
-                                  const pair = getGroupFileIds(group).slice(cardIdx * 2, cardIdx * 2 + 2);
-                                  return (
-                                    <div key={`${group.id}-card-${cardIdx}`} className="min-w-0 rounded-xl border border-gray-300 bg-white/90 p-2 shadow-sm ring-1 ring-white/80">
-                                      <div className="mb-2 flex items-center justify-between gap-2">
-                                        <span className="text-xs font-semibold text-gray-700">Card {cardIdx + 1}</span>
-                                        <span className="text-[10px] text-gray-400">2 assets</span>
-                                      </div>
-                                      <div className="grid min-w-0 grid-cols-2 gap-2">
-                                        {pair.map((fileId, assetIdx) => {
-                                          const file = findFileById(fileId);
-                                          if (!file) return null;
-                                          return (
-                                            <div key={fileId} className="min-w-0">
-                                              <div className="mb-1 text-[10px] font-medium uppercase tracking-wide text-gray-500">
-                                                {assetIdx === 0 ? 'Asset A' : 'Asset B'}
+                              <DndContext
+                                sensors={sensors}
+                                collisionDetection={closestCenter}
+                                onDragEnd={(event) => handlePlacementCarouselCardDragEnd(group.id, event)}
+                              >
+                                <SortableContext
+                                  items={placementCarouselCards.map(pair => getPlacementCarouselCardId(group.id, pair))}
+                                  strategy={rectSortingStrategy}
+                                >
+                                  <div className={`grid min-w-0 grid-cols-2 gap-2 p-3 pb-10 pt-12 transition-opacity ${isGroupDimmed ? 'opacity-30' : 'opacity-100'}`}>
+                                    {placementCarouselCards.map((pair, cardIdx) => (
+                                      <SortablePlacementCarouselCard
+                                        key={getPlacementCarouselCardId(group.id, pair)}
+                                        id={getPlacementCarouselCardId(group.id, pair)}
+                                        cardIndex={cardIdx}
+                                      >
+                                        <div className="grid min-w-0 grid-cols-2 gap-2">
+                                          {pair.map((fileId, assetIdx) => {
+                                            const file = findFileById(fileId);
+                                            if (!file) return null;
+                                            return (
+                                              <div key={fileId} className="min-w-0">
+                                                <div className="mb-1 text-[10px] font-medium uppercase tracking-wide text-gray-500">
+                                                  {assetIdx === 0 ? 'Asset A' : 'Asset B'}
+                                                </div>
+                                                <SortableMediaItem
+                                                  file={file}
+                                                  index={assetIdx}
+                                                  isCarouselAd={false}
+                                                  videoThumbs={videoThumbs}
+                                                  onRemove={() => removeFile(file)}
+                                                  isSelected={false}
+                                                  onSelect={handleFileSelect}
+                                                  groupNumber={groupIndex + 1}
+                                                  enablePlacementCustomization={enablePlacementCustomization}
+                                                  adType={adType}
+                                                  dimmed={false}
+                                                  showVariantDropdown={false}
+                                                  assignedVariantId={groupVariantMap[group.id] || 'default'}
+                                                  variants={variants}
+                                                  onAssignVariant={() => { }}
+                                                  isRemoving={removingMediaIds.has(fileId)}
+                                                  disableSorting
+                                                />
                                               </div>
-                                              <SortableMediaItem
-                                                file={file}
-                                                index={assetIdx}
-                                                isCarouselAd={false}
-                                                videoThumbs={videoThumbs}
-                                                onRemove={() => removeFile(file)}
-                                                isSelected={false}
-                                                onSelect={handleFileSelect}
-                                                groupNumber={groupIndex + 1}
-                                                enablePlacementCustomization={enablePlacementCustomization}
-                                                adType={adType}
-                                                dimmed={false}
-                                                showVariantDropdown={false}
-                                                assignedVariantId={groupVariantMap[group.id] || 'default'}
-                                                variants={variants}
-                                                onAssignVariant={() => { }}
-                                                isRemoving={removingMediaIds.has(fileId)}
-                                              />
-                                            </div>
-                                          );
-                                        })}
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
+                                            );
+                                          })}
+                                        </div>
+                                      </SortablePlacementCarouselCard>
+                                    ))}
+                                  </div>
+                                </SortableContext>
+                              </DndContext>
                             ) : (
                               /* Per-group DndContext for carousel reordering */
                               <div className={`transition-opacity ${isGroupDimmed ? 'opacity-30' : 'opacity-100'}`}>
