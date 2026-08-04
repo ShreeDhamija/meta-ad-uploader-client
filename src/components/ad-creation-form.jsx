@@ -1119,8 +1119,7 @@ export default function AdCreationForm({
   const [folderLinkValue, setFolderLinkValue] = useState("");
   const [isImportingFolder, setIsImportingFolder] = useState(false);
   const [pendingCsvDriveImport, setPendingCsvDriveImport] = useState(null);
-  const [showCsvDriveFolderPrompt, setShowCsvDriveFolderPrompt] = useState(false);
-  const [isOpeningCsvDrivePicker, setIsOpeningCsvDrivePicker] = useState(false);
+  const pendingCsvDriveImportRef = useRef(null);
   const [showFrameioConnectDialog, setShowFrameioConnectDialog] = useState(false);
   const [showFrameioConnectHelp, setShowFrameioConnectHelp] = useState(false);
   const pickerInstanceRef = useRef(null);
@@ -2853,7 +2852,6 @@ export default function AdCreationForm({
         .setMimeTypes(mimeTypes)
         .setSelectFolderEnabled(false)
         .setParent(initialFolderId); // Navigate to specific folder
-      if (csvDriveImport) mainView.setEnableDrives(true);
     } else {
       mainView = new google.picker.DocsView()
         .setIncludeFolders(true)
@@ -2965,13 +2963,14 @@ export default function AdCreationForm({
                 remainingFileIds: nextRemainingFileIds,
                 importedFileIds,
               };
+              pendingCsvDriveImportRef.current = nextPendingImport;
               setPendingCsvDriveImport(nextPendingImport);
-              setShowCsvDriveFolderPrompt(true);
               toast.warning(
-                `${nextRemainingFileIds.length} CSV-linked Drive file${nextRemainingFileIds.length !== 1 ? "s were" : " was"} not selected`
+                `${nextRemainingFileIds.length} CSV-linked Drive file${nextRemainingFileIds.length !== 1 ? "s were" : " was"} not selected. Open Google Drive again to finish the import.`
               );
             } else {
               finalizeCsvDriveGroups(expectedAssignments, importedFileIds);
+              pendingCsvDriveImportRef.current = null;
               setPendingCsvDriveImport(null);
               toast.success(
                 `Attached ${importedFileIds.length} Drive file${importedFileIds.length !== 1 ? "s" : ""} to the imported variants`
@@ -2990,8 +2989,8 @@ export default function AdCreationForm({
           setFolderLinkValue("");
           pickerInstanceRef.current = null;
           if (data.action === "cancel" && csvDriveImport) {
+            pendingCsvDriveImportRef.current = csvDriveImport;
             setPendingCsvDriveImport(csvDriveImport);
-            setShowCsvDriveFolderPrompt(true);
           }
         }
       });
@@ -3125,6 +3124,7 @@ export default function AdCreationForm({
   ]);
 
   const openPicker = useCallback((token) => {
+    const csvDriveImport = pendingCsvDriveImportRef.current;
     if (!window.google || !window.google.picker) {
       const script = document.createElement('script');
       script.src = 'https://apis.google.com/js/api.js?onload=onApiLoad';
@@ -3132,11 +3132,11 @@ export default function AdCreationForm({
 
       window.onApiLoad = () => {
         window.gapi.load('picker', () => {
-          createPicker(token);
+          createPicker(token, null, csvDriveImport);
         });
       };
     } else {
-      createPicker(token);
+      createPicker(token, null, csvDriveImport);
     }
   }, [createPicker]); // Note: createPicker needs to be memoized too
 
@@ -3215,114 +3215,6 @@ export default function AdCreationForm({
 
     window.addEventListener("message", listener);
   }, [openPicker]); // Note: openPicker needs to be memoized too
-
-
-  const openCsvDrivePicker = useCallback((token, folderId, csvDriveImport) => {
-    if (!window.google || !window.google.picker) {
-      const script = document.createElement('script');
-      script.src = 'https://apis.google.com/js/api.js?onload=onApiLoad';
-      document.body.appendChild(script);
-
-      window.onApiLoad = () => {
-        window.gapi.load('picker', () => {
-          createPicker(token, folderId, csvDriveImport);
-        });
-      };
-    } else {
-      createPicker(token, folderId, csvDriveImport);
-    }
-  }, [createPicker]);
-
-  const requestCsvGoogleDriveAccessToken = useCallback(async () => {
-    try {
-      const res = await axios.get(
-        `${API_BASE_URL}/auth/google/status`,
-        { withCredentials: true }
-      );
-      if (res.data.authenticated && res.data.accessToken) {
-        setGoogleAuthStatus({
-          authenticated: true,
-          checking: false,
-          accessToken: res.data.accessToken,
-        });
-        return res.data.accessToken;
-      }
-    } catch {
-      console.warn("No valid Google session for CSV import, proceeding to popup login.");
-    }
-
-    const authWindow = window.open(
-      `${API_BASE_URL}/auth/google?popup=true`,
-      "_blank",
-      "width=1100,height=750"
-    );
-    if (!authWindow) {
-      toast.error("Popup blocked. Please allow popups and try again.");
-      return null;
-    }
-
-    return new Promise((resolve) => {
-      const timeoutId = setTimeout(() => {
-        window.removeEventListener("message", listener);
-        if (!authWindow.closed) authWindow.close();
-        resolve(null);
-      }, 65000);
-
-      const listener = async (event) => {
-        if (event.origin !== `${API_BASE_URL}`) return;
-        const { type } = event.data || {};
-
-        if (type === "google-auth-success") {
-          clearTimeout(timeoutId);
-          window.removeEventListener("message", listener);
-          authWindow.close();
-          try {
-            const res = await axios.get(
-              `${API_BASE_URL}/auth/google/status`,
-              { withCredentials: true }
-            );
-            if (res.data.authenticated && res.data.accessToken) {
-              setGoogleAuthStatus({
-                authenticated: true,
-                checking: false,
-                accessToken: res.data.accessToken,
-              });
-              resolve(res.data.accessToken);
-            } else {
-              toast.error("Google authentication failed");
-              resolve(null);
-            }
-          } catch {
-            toast.error("Google authentication failed");
-            resolve(null);
-          }
-        } else if (type === "google-auth-error") {
-          clearTimeout(timeoutId);
-          window.removeEventListener("message", listener);
-          authWindow.close();
-          toast.error("Google authentication failed");
-          resolve(null);
-        }
-      };
-
-      window.addEventListener("message", listener);
-    });
-  }, []);
-
-  const handleOpenCsvDrivePicker = useCallback(async () => {
-    if (!pendingCsvDriveImport) return;
-
-    setIsOpeningCsvDrivePicker(true);
-    try {
-      const token = await requestCsvGoogleDriveAccessToken();
-      if (!token) return;
-      setShowCsvDriveFolderPrompt(false);
-      setFolderLinkValue("");
-      openCsvDrivePicker(token, null, pendingCsvDriveImport);
-    } finally {
-      setIsOpeningCsvDrivePicker(false);
-    }
-  }, [openCsvDrivePicker, pendingCsvDriveImport, requestCsvGoogleDriveAccessToken]);
 
 
   // Load Dropbox Chooser SDK
@@ -3522,13 +3414,16 @@ export default function AdCreationForm({
       if (result?.driveImport?.fileCount > 0) {
         const fileVariantAssignments = result.driveImport.fileVariantAssignments || {};
         const fileIds = Object.keys(fileVariantAssignments);
-        setPendingCsvDriveImport({
+        const nextPendingCsvDriveImport = {
           ...result.driveImport,
           fileVariantAssignments,
           remainingFileIds: fileIds,
           importedFileIds: [],
-        });
-        setShowCsvDriveFolderPrompt(true);
+        };
+        pendingCsvDriveImportRef.current = nextPendingCsvDriveImport;
+        setPendingCsvDriveImport(nextPendingCsvDriveImport);
+        setShowCsvImportGuide(false);
+        await handleDriveClick();
       }
       if (result?.created > 0 && !hasImportedCsv) {
         setHasImportedCsv(true);
@@ -3543,13 +3438,13 @@ export default function AdCreationForm({
       setIsImportingCsv(false);
       setShowCsvImportGuide(false);
     }
-  }, [hasImportedCsv, isImportingCsv, onImportCsv, setHasImportedCsv]);
+  }, [handleDriveClick, hasImportedCsv, isImportingCsv, onImportCsv, setHasImportedCsv]);
 
   const handleCsvSelection = useCallback((file) => {
     if (!file) return;
     if (pendingCsvDriveImport) {
       toast.error("Finish selecting the Drive files for the current CSV first");
-      setShowCsvDriveFolderPrompt(true);
+      void handleDriveClick();
       return;
     }
     if (!file.name?.toLowerCase().endsWith('.csv') && file.type !== 'text/csv') {
@@ -3566,7 +3461,7 @@ export default function AdCreationForm({
     }
 
     void importCsvFile(file);
-  }, [getCatalogueMediaCount, importCsvFile, importedPosts.length, onImportCsv, pendingCsvDriveImport]);
+  }, [getCatalogueMediaCount, handleDriveClick, importCsvFile, importedPosts.length, onImportCsv, pendingCsvDriveImport]);
 
   const handleCsvSourceClick = useCallback(() => {
     if (!isImportingCsv) csvFileInputRef.current?.click();
@@ -10433,8 +10328,10 @@ export default function AdCreationForm({
                     >
                       <div className="flex flex-col gap-2">
                         <div className="flex items-center justify-between">
-                          <h3 className="font-semibold text-sm">
-                            {pendingCsvDriveImport ? "Select the CSV creatives" : "Quick Navigate to Folder"}
+                          <h3 className="min-w-0 truncate font-semibold text-sm">
+                            {pendingCsvDriveImport
+                              ? "CSV creatives: open the folder, then select all"
+                              : "Quick Navigate to Folder"}
                           </h3>
                           <Button
                             type="button"
@@ -10450,16 +10347,12 @@ export default function AdCreationForm({
                           </Button>
                         </div>
 
-                        {pendingCsvDriveImport && (
-                          <p className="text-xs leading-5 text-gray-600">
-                            Enter a link to the folder containing these files and select all and import. Google Drive requires explicit file imports into the app. Or manually navigate to the folder in the picker and import the files
-                          </p>
-                        )}
-
                         <div className="flex flex-col gap-2 sm:flex-row">
                           <Input
                             type="text"
-                            placeholder="Paste Google Drive folder link here"
+                            placeholder={pendingCsvDriveImport
+                              ? "Paste the CSV creatives folder link"
+                              : "Paste Google Drive folder link here"}
                             value={folderLinkValue}
                             onChange={(e) => setFolderLinkValue(e.target.value)}
                             onKeyDown={(e) => {
@@ -10984,41 +10877,6 @@ export default function AdCreationForm({
                 ) : (
                   "Save"
                 )}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-      {showCsvDriveFolderPrompt && pendingCsvDriveImport && (
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/35" />
-          <div
-            className="relative w-[min(34rem,calc(100vw-2rem))] rounded-[28px] border border-gray-200 bg-white p-6 shadow-xl"
-            style={{ animation: 'templateBtnIn 0.2s ease-out forwards' }}
-          >
-            <div className="flex items-start gap-3">
-              <img
-                src="https://api.withblip.com/googledrive.png"
-                alt=""
-                className="mt-0.5 h-7 w-7 object-contain"
-              />
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900">Select the CSV creatives</h3>
-                <p className="mt-1 text-sm leading-5 text-gray-600">
-                  Enter a link to the folder containing these files and select all and import. Google Drive requires explicit file imports into the app. Or manually navigate to the folder in the picker and import the files
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-5">
-              <Button
-                type="button"
-                className="h-12 w-full rounded-2xl bg-zinc-900 text-white hover:bg-zinc-800"
-                disabled={isOpeningCsvDrivePicker}
-                onClick={() => void handleOpenCsvDrivePicker()}
-              >
-                {isOpeningCsvDrivePicker && <Loader className="mr-2 h-4 w-4 animate-spin" />}
-                Open Google Drive
               </Button>
             </div>
           </div>
