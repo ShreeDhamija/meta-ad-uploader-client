@@ -214,58 +214,6 @@ function findDriveFileIdInRow(row) {
   return null;
 }
 
-async function fetchGoogleAccessToken(apiBaseUrl) {
-  try {
-    const res = await fetch(`${apiBaseUrl}/auth/google/status`, { credentials: "include" });
-    if (!res.ok) return null;
-    const data = await res.json();
-    return data.authenticated ? data.accessToken || null : null;
-  } catch {
-    return null;
-  }
-}
-
-// Build a driveFile object shaped exactly like the Drive Picker produces, so all
-// downstream code (which spreads `{ ...file, isDrive: true }`) works unchanged.
-async function fetchDriveFileMeta(fileId, token) {
-  // supportsAllDrives=true → files in a Shared Drive would otherwise 404.
-  // shortcutDetails → so we can detect + resolve shortcuts (which have no downloadable media).
-  const res = await fetch(
-    `https://www.googleapis.com/drive/v3/files/${fileId}` +
-      `?fields=id,name,mimeType,size,thumbnailLink,shortcutDetails&supportsAllDrives=true`,
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
-  if (!res.ok) throw new Error(`Drive fetch failed (${res.status})`);
-  let data = await res.json();
-
-  // Resolve shortcuts: a shortcut has no media of its own; its real content lives
-  // at shortcutDetails.targetId. The Picker resolves these automatically, the raw API does not.
-  if (data.mimeType === "application/vnd.google-apps.shortcut" && data.shortcutDetails?.targetId) {
-    const targetRes = await fetch(
-      `https://www.googleapis.com/drive/v3/files/${data.shortcutDetails.targetId}` +
-        `?fields=id,name,mimeType,size,thumbnailLink&supportsAllDrives=true`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    if (!targetRes.ok) throw new Error(`Shortcut target fetch failed (${targetRes.status})`);
-    data = await targetRes.json();
-  }
-
-  // Google-native files (Docs/Sheets/Slides/etc.) can't be downloaded with alt=media,
-  // so they'd fail later at upload. Reject them up front.
-  if (data.mimeType?.startsWith("application/vnd.google-apps.")) {
-    throw new Error("Google-native file — not a downloadable image/video");
-  }
-
-  return {
-    id: data.id,
-    name: data.name,
-    mimeType: data.mimeType,
-    size: parseInt(data.size || "0", 10),
-    accessToken: token,
-    pickerThumbnail: data.thumbnailLink || null,
-  };
-}
-
 // --- orchestrator ------------------------------------------------------------
 
 function makeLetterAllocator(existingVariants) {
@@ -301,11 +249,10 @@ function makeLetterAllocator(existingVariants) {
 }
 
 // ctx: {
-//   campaigns, pages, selectedAdAccount, apiBaseUrl, adType,
+//   campaigns, pages, selectedAdAccount, apiBaseUrl,
 //   captureCurrentSnapshot, cloneSnapshotValue, hydrateFromSnapshot, makeId,
 //   existingVariants,
-//   setVariants, setActiveVariantId, setFileVariantMap, setDriveFiles, toast,
-//   setEnablePlacementCustomization, setFileGroups, setGroupVariantMap,
+//   setVariants, setActiveVariantId, toast,
 // }
 export async function importVariantsFromCsv(file, ctx) {
   const {
@@ -313,7 +260,6 @@ export async function importVariantsFromCsv(file, ctx) {
     pages,
     selectedAdAccount,
     apiBaseUrl,
-    adType,
     captureCurrentSnapshot,
     cloneSnapshotValue,
     hydrateFromSnapshot,
@@ -321,11 +267,6 @@ export async function importVariantsFromCsv(file, ctx) {
     existingVariants,
     setVariants,
     setActiveVariantId,
-    setFileVariantMap,
-    setDriveFiles,
-    setEnablePlacementCustomization,
-    setFileGroups,
-    setGroupVariantMap,
     toast,
   } = ctx;
 
@@ -412,15 +353,9 @@ export async function importVariantsFromCsv(file, ctx) {
     })
   );
 
-  // Resolve a Google token only if at least one row carries a Drive link.
-  const googleToken = rows.some((r) => r.driveFileId)
-    ? await fetchGoogleAccessToken(apiBaseUrl)
-    : null;
-
   const nextLetter = makeLetterAllocator(existingVariants);
 
   const newVariants = [];      // variants for rows 1..N (row 0 → Default)
-  const newDriveFiles = [];
   const fileVariantAssignments = {};
   let defaultSnapshot = null;  // row 0 populates the existing Default variant
 
@@ -429,23 +364,21 @@ export async function importVariantsFromCsv(file, ctx) {
   // `fields` already excludes the Drive link, so its serialization is the merge key.
   const signatureToVariantId = new Map();
 
-  // Fetch a row's Drive file and attach it to the given variant. Shared by the
-  // "establishing" row and any later rows that merge into the same variant.
-  const attachDriveFile = async (fileId, variantId, rowNum) => {
+  // Defer Drive access until the user has selected the CSV files through Google
+  // Picker. With drive.file scope, a raw files.get call cannot authorize a new
+  // file, while selecting it in Picker can. Keep the ID → variant relationship
+  // so the form can attach the selected Picker documents after authorization.
+  const attachDriveFile = (fileId, variantId, rowNum) => {
     if (!fileId) return;
-    if (!googleToken) {
-      addWarning("Google Drive Link", `Row ${rowNum}: Google Drive not connected — file skipped`);
+    const existingVariantId = fileVariantAssignments[fileId];
+    if (existingVariantId && existingVariantId !== variantId) {
+      addWarning(
+        "Google Drive Link",
+        `Row ${rowNum}: the same Drive file is assigned to more than one variant; the later assignment was skipped`
+      );
       return;
     }
-    try {
-      const driveFile = await fetchDriveFileMeta(fileId, googleToken);
-      if (!newDriveFiles.some((f) => f.id === driveFile.id)) {
-        newDriveFiles.push(driveFile);
-      }
-      fileVariantAssignments[driveFile.id] = variantId;
-    } catch (err) {
-      addWarning("Google Drive Link", `Row ${rowNum}: couldn't import Drive file — ${err.message || "check sharing/permissions"}`);
-    }
+    fileVariantAssignments[fileId] = variantId;
   };
 
   for (let idx = 0; idx < rows.length; idx++) {
@@ -457,7 +390,7 @@ export async function importVariantsFromCsv(file, ctx) {
     const signature = JSON.stringify(fields);
     const mergeIntoVariantId = signatureToVariantId.get(signature);
     if (mergeIntoVariantId) {
-      await attachDriveFile(driveFileId, mergeIntoVariantId, rowNum);
+      attachDriveFile(driveFileId, mergeIntoVariantId, rowNum);
       continue;
     }
 
@@ -538,7 +471,7 @@ export async function importVariantsFromCsv(file, ctx) {
     const variantId = idx === 0 ? "default" : makeId();
     signatureToVariantId.set(signature, variantId);
 
-    await attachDriveFile(driveFileId, variantId, rowNum);
+    attachDriveFile(driveFileId, variantId, rowNum);
 
     if (idx === 0) {
       defaultSnapshot = snap;
@@ -557,53 +490,15 @@ export async function importVariantsFromCsv(file, ctx) {
   setActiveVariantId("default");
   if (defaultSnapshot) hydrateFromSnapshot(defaultSnapshot);
 
-  if (newDriveFiles.length > 0) {
-    setDriveFiles((prev) => {
-      const existingIds = new Set(prev.map((f) => f.id));
-      return [...prev, ...newDriveFiles.filter((f) => !existingIds.has(f.id))];
-    });
-    setFileVariantMap((prev) => ({ ...prev, ...fileVariantAssignments }));
-  }
-
-  // Auto-group: when the merge above landed 2+ Drive files on the same variant
-  // (rows identical except the Drive link), turn on placement customization and
-  // bundle those files into one group so the variant renders as a single ad across
-  // placements instead of separate ads. Only for regular ads — carousel/flexible
-  // ad types have their own grouping model.
-  if (adType === "regular" && newDriveFiles.length > 0) {
-    const fileIdsByVariant = {};
-    for (const [fileId, variantId] of Object.entries(fileVariantAssignments)) {
-      if (!fileIdsByVariant[variantId]) fileIdsByVariant[variantId] = [];
-      fileIdsByVariant[variantId].push(fileId);
-    }
-
-    const autoGroups = [];                 // { id, fileIds } appended to fileGroups
-    const groupVariantAssignments = {};    // groupId → variantId (default omitted, per app convention)
-    for (const [variantId, fileIds] of Object.entries(fileIdsByVariant)) {
-      if (fileIds.length < 2) continue;    // single-file variants stay ungrouped
-      const groupId = makeId();
-      autoGroups.push({ id: groupId, fileIds: [...fileIds] });
-      if (variantId !== "default") groupVariantAssignments[groupId] = variantId;
-    }
-
-    if (autoGroups.length > 0) {
-      setEnablePlacementCustomization(true);
-      setFileGroups((prev) => [...prev, ...autoGroups]);
-      if (Object.keys(groupVariantAssignments).length > 0) {
-        setGroupVariantMap((prev) => ({ ...prev, ...groupVariantAssignments }));
-      }
-    }
-  }
-
   const totalVariants = newVariants.length + (defaultSnapshot ? 1 : 0);
   const matchedAdSets =
     (defaultSnapshot && (defaultSnapshot.selectedAdSets || []).length > 0 ? 1 : 0) +
     newVariants.filter((v) => (v.snapshot.selectedAdSets || []).length > 0).length;
-  const driveCount = newDriveFiles.length;
+  const driveCount = Object.keys(fileVariantAssignments).length;
   toast.success(
     `Imported ${totalVariants} variant${totalVariants !== 1 ? "s" : ""}` +
       ` · ${matchedAdSets} ad set${matchedAdSets !== 1 ? "s" : ""} matched` +
-      (driveCount > 0 ? ` · ${driveCount} Drive file${driveCount !== 1 ? "s" : ""} attached` : "")
+      (driveCount > 0 ? ` · ${driveCount} Drive file${driveCount !== 1 ? "s" : ""} ready to select` : "")
   );
 
   if (warnings.length > 0) {
@@ -613,5 +508,11 @@ export async function importVariantsFromCsv(file, ctx) {
     );
   }
 
-  return { created: totalVariants, warnings };
+  return {
+    created: totalVariants,
+    warnings,
+    driveImport: driveCount > 0
+      ? { fileVariantAssignments, fileCount: driveCount }
+      : null,
+  };
 }

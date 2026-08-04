@@ -31,6 +31,14 @@ export const AppProvider = ({ children }) => {
   const [adAccountsLoading, setAdAccountsLoading] = useState(false)
   const [tiktokIdentities, setTiktokIdentities] = useState(readCache('tiktokIdentities') || {})
   const [tiktokIdentitiesLoading, setTiktokIdentitiesLoading] = useState({})
+  const tiktokIdentitiesRef = useRef(tiktokIdentities)
+  const tiktokIdentitiesLoaded = useRef(new Set(
+    Object.entries(tiktokIdentities)
+      .filter(([, identities]) => Array.isArray(identities) && identities.length > 0)
+      .map(([advertiserId]) => advertiserId),
+  ))
+  const tiktokIdentityRequests = useRef(new Map())
+  const tiktokIdentityGeneration = useRef(0)
   const [allTikTokAdvertisers, setAllTikTokAdvertisers] = useState(readCache('tiktokAdvertisers') || [])
   const [tiktokAdvertisersLoading, setTiktokAdvertisersLoading] = useState(false)
   const {
@@ -106,32 +114,48 @@ export const AppProvider = ({ children }) => {
 
   const fetchTikTokIdentities = useCallback(async (advertiserId, force = false) => {
     if (!advertiserId || !isTikTokLoggedIn) return []
-    if (!force && tiktokIdentities[advertiserId]?.length > 0) {
-      return tiktokIdentities[advertiserId]
+    const key = String(advertiserId)
+    if (!force && tiktokIdentitiesLoaded.current.has(key)) {
+      return tiktokIdentitiesRef.current[key] || []
+    }
+    if (tiktokIdentityRequests.current.has(key)) {
+      return tiktokIdentityRequests.current.get(key)
     }
 
     setTiktokIdentitiesLoading((previous) => ({ ...previous, [advertiserId]: true }))
-    try {
-      const res = await tiktokFetch(
-        `${API_BASE_URL}/api/tiktok/fetch-identities?advertiserId=${encodeURIComponent(advertiserId)}&_t=${Date.now()}`,
-        { headers: { Accept: 'application/json' } },
-      )
-      if (!res.ok) return []
-      const data = await res.json()
-      const list = data.identities || []
-      setTiktokIdentities((previous) => {
-        const updated = { ...previous, [advertiserId]: list }
-        writeCache('tiktokIdentities', updated)
-        return updated
-      })
-      return list
-    } catch (err) {
-      console.error("Failed to fetch TikTok identities:", err)
-      return []
-    } finally {
-      setTiktokIdentitiesLoading((previous) => ({ ...previous, [advertiserId]: false }))
-    }
-  }, [isTikTokLoggedIn, tiktokFetch, tiktokIdentities])
+    const requestGeneration = tiktokIdentityGeneration.current
+    const request = (async () => {
+      try {
+        const res = await tiktokFetch(
+          `${API_BASE_URL}/api/tiktok/fetch-identities?advertiserId=${encodeURIComponent(advertiserId)}&_t=${Date.now()}`,
+          { headers: { Accept: 'application/json' } },
+        )
+        if (!res.ok) return []
+        const data = await res.json()
+        const list = data.identities || []
+        if (requestGeneration !== tiktokIdentityGeneration.current) return []
+        tiktokIdentitiesLoaded.current.add(key)
+        setTiktokIdentities((previous) => {
+          const updated = { ...previous, [key]: list }
+          tiktokIdentitiesRef.current = updated
+          writeCache('tiktokIdentities', updated)
+          return updated
+        })
+        return list
+      } catch (err) {
+        console.error("Failed to fetch TikTok identities:", err)
+        return []
+      } finally {
+        if (tiktokIdentityRequests.current.get(key) === request) {
+          tiktokIdentityRequests.current.delete(key)
+          setTiktokIdentitiesLoading((previous) => ({ ...previous, [key]: false }))
+        }
+      }
+    })()
+
+    tiktokIdentityRequests.current.set(key, request)
+    return request
+  }, [isTikTokLoggedIn, tiktokFetch])
 
   const fetchTikTokAdvertisers = useCallback(async () => {
     if (!isTikTokLoggedIn) return []
@@ -228,6 +252,10 @@ export const AppProvider = ({ children }) => {
     const subject = tiktokUser?.subject || null
     if (previousTikTokSubject.current !== subject) {
       setTiktokIdentities({})
+      tiktokIdentitiesRef.current = {}
+      tiktokIdentitiesLoaded.current.clear()
+      tiktokIdentityGeneration.current += 1
+      tiktokIdentityRequests.current.clear()
       previousTikTokSubject.current = subject
     }
 
