@@ -1505,7 +1505,7 @@ export default function MediaPreview({
                         className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 rounded-xl"
                       >
                         <Groupads />
-                        {isPlacementCustomizedCarousel ? 'Group Paired Cards' : 'Group Ads'}
+                        {isCarouselAd ? 'Group Cards' : 'Group Ads'}
                       </Button>
 
                       {!isFlexLikeAdType && !isCarouselAd && (
@@ -1578,8 +1578,8 @@ export default function MediaPreview({
               </div>
 
               {isCarouselAd && (
-                <div className="mt-1">
-                  <CardDescription className="text-left text-xs text-gray-500 whitespace-nowrap">
+                <div className="mt-1 min-w-0 max-w-full">
+                  <CardDescription className="block max-w-full whitespace-normal break-words text-left text-xs leading-5 text-gray-500 [overflow-wrap:anywhere]">
                     {isPlacementCustomizedCarousel
                       ? 'Select in card order: one 9:16 plus one square or 4:5 per pair. Every 2 selected assets become one card; group 4–20 assets per carousel ad.'
                       : fileGroups.length > 0
@@ -1705,18 +1705,21 @@ export default function MediaPreview({
 
                           {isCarouselAd ? (
                             isPlacementCustomizedCarousel ? (
-                              <div className={`grid grid-cols-1 gap-3 p-3 pr-24 transition-opacity ${isGroupDimmed ? 'opacity-30' : 'opacity-100'}`}>
+                              <div className={`grid min-w-0 grid-cols-2 gap-2 p-3 pb-10 pt-12 transition-opacity ${isGroupDimmed ? 'opacity-30' : 'opacity-100'}`}>
                                 {Array.from({ length: Math.ceil(getGroupFileIds(group).length / 2) }, (_, cardIdx) => {
                                   const pair = getGroupFileIds(group).slice(cardIdx * 2, cardIdx * 2 + 2);
                                   return (
-                                    <div key={`${group.id}-card-${cardIdx}`} className="rounded-2xl border border-gray-200 bg-white/80 p-3 shadow-sm">
-                                      <div className="mb-2 text-xs font-semibold text-gray-700">Card {cardIdx + 1}</div>
-                                      <div className="grid grid-cols-2 gap-3">
+                                    <div key={`${group.id}-card-${cardIdx}`} className="min-w-0 rounded-xl border border-gray-300 bg-white/90 p-2 shadow-sm ring-1 ring-white/80">
+                                      <div className="mb-2 flex items-center justify-between gap-2">
+                                        <span className="text-xs font-semibold text-gray-700">Card {cardIdx + 1}</span>
+                                        <span className="text-[10px] text-gray-400">2 assets</span>
+                                      </div>
+                                      <div className="grid min-w-0 grid-cols-2 gap-2">
                                         {pair.map((fileId, assetIdx) => {
                                           const file = findFileById(fileId);
                                           if (!file) return null;
                                           return (
-                                            <div key={fileId}>
+                                            <div key={fileId} className="min-w-0">
                                               <div className="mb-1 text-[10px] font-medium uppercase tracking-wide text-gray-500">
                                                 {assetIdx === 0 ? 'Asset A' : 'Asset B'}
                                               </div>
