@@ -1124,6 +1124,33 @@ export default function AdCreationForm({
   const [showFrameioConnectHelp, setShowFrameioConnectHelp] = useState(false);
   const pickerInstanceRef = useRef(null);
   const [pickerDialogHeight, setPickerDialogHeight] = useState(650);
+
+  const disposeDrivePicker = useCallback((picker = pickerInstanceRef.current, hideFirst = true) => {
+    if (!picker) return;
+
+    if (pickerInstanceRef.current === picker) {
+      pickerInstanceRef.current = null;
+    }
+
+    if (hideFirst) {
+      try {
+        picker.setVisible(false);
+      } catch {
+        // The Picker may already have removed its dialog after pick/cancel.
+      }
+    }
+
+    try {
+      picker.dispose?.();
+    } catch {
+      // Disposal is best-effort for older Picker API implementations.
+    }
+  }, []);
+
+  useEffect(() => () => {
+    disposeDrivePicker();
+  }, [disposeDrivePicker]);
+
   //gogle drive pickers
   const [accessToken, setAccessToken] = useState(null)
   //S3 States
@@ -2825,14 +2852,10 @@ export default function AdCreationForm({
 
   // 4. Updated createPicker with folder navigation support
   const createPicker = useCallback((token, initialFolderId = null, csvDriveImport = null) => {
-    // Close existing picker if open
-    if (pickerInstanceRef.current) {
-      try {
-        pickerInstanceRef.current.setVisible(false);
-      } catch (e) {
-        // Picker might already be closed
-      }
-    }
+    // Folder navigation requires a newly configured DocsView. Fully dispose the
+    // previous Picker so it cannot leave a stale, absolutely positioned dialog
+    // behind when the replacement is opened.
+    disposeDrivePicker();
 
     const mimeTypes = [
       "application/vnd.google-apps.folder",
@@ -2881,8 +2904,8 @@ export default function AdCreationForm({
     const viewportWidth = window.visualViewport?.width ?? window.innerWidth;
     const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
     const pickerWidth = Math.floor(Math.min(1051, Math.max(566, viewportWidth - 32)));
-    // Picker dialogs are always centered by Google. Reserve enough space above
-    // the dialog for the quick-navigation panel (which is taller when stacked).
+    // Reserve enough space above the dialog for the quick-navigation panel
+    // (which is taller when stacked).
     const pickerVerticalReserve = viewportWidth < 640 ? 190 : 152;
     const pickerHeight = Math.floor(
       Math.min(620, Math.max(350, viewportHeight - (pickerVerticalReserve * 2) - 24))
@@ -2987,7 +3010,9 @@ export default function AdCreationForm({
         if (data.action === "picked" || data.action === "cancel") {
           setShowFolderInput(false);
           setFolderLinkValue("");
-          pickerInstanceRef.current = null;
+          // Google has already completed its close action; dispose without
+          // asking it to close again and risking a duplicate callback.
+          disposeDrivePicker(picker, false);
           if (data.action === "cancel" && csvDriveImport) {
             pendingCsvDriveImportRef.current = csvDriveImport;
             setPendingCsvDriveImport(csvDriveImport);
@@ -3009,7 +3034,7 @@ export default function AdCreationForm({
     const picker = pickerBuilder.build();
     pickerInstanceRef.current = picker;
     picker.setVisible(true);
-  }, [filterCatalogueImageFiles, finalizeCsvDriveGroups, setDriveFiles, setFileVariantMap, setFolderLinkValue, setShowFolderInput]);
+  }, [disposeDrivePicker, filterCatalogueImageFiles, finalizeCsvDriveGroups, setDriveFiles, setFileVariantMap, setFolderLinkValue, setShowFolderInput]);
 
 
 
@@ -10304,28 +10329,52 @@ export default function AdCreationForm({
                 />
 
 
-                {showFolderInput && (
-                  <>
-                    <style>{`
-                      .picker-dialog,
-                      .picker-dialog-content,
-                      .picker-frame {
-                        border-radius: 16px !important;
-                      }
+                {/* Google Picker normally writes absolute top/left coordinates
+                    when setVisible runs. Keep this stylesheet mounted before the
+                    iframe is created so every launch path is centered from its
+                    first painted frame, including CSV/native-file-picker flows. */}
+                <style>{`
+                  .picker-dialog-bg {
+                    position: fixed !important;
+                    inset: 0 !important;
+                    width: 100vw !important;
+                    height: 100vh !important;
+                    height: 100dvh !important;
+                    z-index: 2147483645 !important;
+                  }
 
-                      .picker-dialog,
-                      .picker-dialog-content {
-                        overflow: hidden !important;
-                      }
-                    `}</style>
-                    <div
-                      className="fixed left-1/2 z-[2147483647] w-[calc(100vw-1rem)] max-w-[500px] -translate-x-1/2 rounded-2xl border border-gray-200 bg-white p-3 shadow-lg"
-                      style={{
-                        // Google centers the picker. Anchor this panel's bottom edge
-                        // above the calculated top edge, allowing for its outer frame.
-                        bottom: `calc(50% + ${Math.ceil(pickerDialogHeight / 2) + 40}px)`
-                      }}
-                    >
+                  .picker-dialog {
+                    position: fixed !important;
+                    top: 50% !important;
+                    left: 50% !important;
+                    right: auto !important;
+                    bottom: auto !important;
+                    margin: 0 !important;
+                    transform: translate(-50%, -50%) !important;
+                    z-index: 2147483646 !important;
+                  }
+
+                  .picker-dialog,
+                  .picker-dialog-content,
+                  .picker-frame {
+                    border-radius: 16px !important;
+                  }
+
+                  .picker-dialog,
+                  .picker-dialog-content {
+                    overflow: hidden !important;
+                  }
+                `}</style>
+
+                {showFolderInput && (
+                  <div
+                    className="fixed left-1/2 z-[2147483647] w-[calc(100vw-1rem)] max-w-[500px] -translate-x-1/2 rounded-2xl border border-gray-200 bg-white p-3 shadow-lg"
+                    style={{
+                      // The CSS contract above centers the picker. Anchor this panel's
+                      // bottom edge above its calculated top edge and outer frame.
+                      bottom: `calc(50% + ${Math.ceil(pickerDialogHeight / 2) + 40}px)`
+                    }}
+                  >
                       <div className="flex flex-col gap-2">
                         <div className="flex items-center justify-between">
                           <h3 className="min-w-0 truncate font-semibold text-sm">
@@ -10382,7 +10431,6 @@ export default function AdCreationForm({
 
                       </div>
                     </div>
-                  </>
                 )}
 
               </>
