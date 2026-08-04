@@ -652,6 +652,7 @@ export default function MediaPreview({
 
   const sensors = useSensors(useSensor(PointerSensor));
   const isFlexLikeAdType = adType === 'flexible' || adType === 'multi_media';
+  const isPlacementCustomizedCarousel = isCarouselAd && enablePlacementCustomization;
   const hideUngroupedVariantDropdowns = isCarouselAd;
 
   const groupedFileIds = useMemo(
@@ -694,12 +695,15 @@ export default function MediaPreview({
   }, [files, driveFiles, dropboxFiles, frameioFiles, importedFiles, importedPosts, selectedIgOrganicPosts]);
 
   const canGroupFiles = useMemo(() => {
+    if (isPlacementCustomizedCarousel) {
+      return selectedFiles.size >= 4 && selectedFiles.size <= 20 && selectedFiles.size % 2 === 0;
+    }
     const maxGroupSize = (isFlexLikeAdType || isCarouselAd) ? 10 : 3;
     if (selectedFiles.size >= 2 && selectedFiles.size <= maxGroupSize) return true;
     // Exactly 2 total files and fewer than 2 selected — allow one-click grouping
     if (enablePlacementCustomization && totalFileCount === 2 && ungroupedFiles.length === 2 && selectedFiles.size === 0) return true;
     return false;
-  }, [selectedFiles.size, isFlexLikeAdType, isCarouselAd, enablePlacementCustomization, totalFileCount, ungroupedFiles.length]);
+  }, [selectedFiles.size, isFlexLikeAdType, isCarouselAd, isPlacementCustomizedCarousel, enablePlacementCustomization, totalFileCount, ungroupedFiles.length]);
 
 
 
@@ -839,8 +843,7 @@ export default function MediaPreview({
     return false;
   }, [selectedAdSets, adSets, duplicateAdSet]);
 
-  const showPlacementCustomizationRow = !isCarouselAd &&
-    !isFlexLikeAdType &&
+  const showPlacementCustomizationRow = !isFlexLikeAdType &&
     importedPosts.length === 0 &&
     selectedIgOrganicPosts.length === 0;
   const showVariantSetupButton = variants.length > 1 || totalFileCount >= 1;
@@ -959,12 +962,12 @@ export default function MediaPreview({
     }
 
     setEnablePlacementCustomization(checked);
-    if (!checked) {
-      // Clear all grouping when disabled
+    if (!checked || isCarouselAd) {
+      // Carousel grouping changes shape when placement customization changes.
       setFileGroups([]);
       setSelectedFiles(new Set());
     }
-  }, [enablePlacementCustomization, fileVariantMap, groupVariantMap, setEnablePlacementCustomization, setFileGroups, setFileVariantMap, setGroupVariantMap, setSelectedFiles, variants.length]);
+  }, [enablePlacementCustomization, fileVariantMap, groupVariantMap, isCarouselAd, setEnablePlacementCustomization, setFileGroups, setFileVariantMap, setGroupVariantMap, setSelectedFiles, variants.length]);
 
   // Auto-disable placement customization when a dynamic ad set is selected
   useEffect(() => {
@@ -988,6 +991,16 @@ export default function MediaPreview({
   }, [setSelectedFiles]);
 
   const handleGroupAds = useCallback(() => {
+    if (isPlacementCustomizedCarousel) {
+      if (selectedFiles.size < 4 || selectedFiles.size > 20 || selectedFiles.size % 2 !== 0) {
+        alert("Select 4–20 assets in pairs: one 9:16 plus one square or 4:5 per carousel card");
+        return;
+      }
+      setFileGroups(prev => [...prev, createFileGroup(Array.from(selectedFiles))]);
+      setSelectedFiles(new Set());
+      return;
+    }
+
     if (isFlexLikeAdType || isCarouselAd) {
       if (selectedFiles.size > 10) {
         alert(isCarouselAd ? "Carousel ads can have maximum 10 cards" : "This ad type can contain maximum 10 files");
@@ -1115,7 +1128,7 @@ export default function MediaPreview({
       ));
       setSelectedFiles(new Set());
     }
-  }, [selectedFiles, setFileGroups, files, driveFiles, dropboxFiles, frameioFiles, importedFiles, setFiles, setDriveFiles, setDropboxFiles, setFrameioFiles, setImportedFiles, setSelectedFiles, adType, enablePlacementCustomization, isCarouselAd, totalFileCount, ungroupedFiles]);
+  }, [selectedFiles, setFileGroups, files, driveFiles, dropboxFiles, frameioFiles, importedFiles, setFiles, setDriveFiles, setDropboxFiles, setFrameioFiles, setImportedFiles, setSelectedFiles, adType, enablePlacementCustomization, isCarouselAd, isFlexLikeAdType, isPlacementCustomizedCarousel, totalFileCount, ungroupedFiles]);
 
 
 
@@ -1492,7 +1505,7 @@ export default function MediaPreview({
                         className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 rounded-xl"
                       >
                         <Groupads />
-                        Group Ads
+                        {isPlacementCustomizedCarousel ? 'Group Paired Cards' : 'Group Ads'}
                       </Button>
 
                       {!isFlexLikeAdType && !isCarouselAd && (
@@ -1567,7 +1580,9 @@ export default function MediaPreview({
               {isCarouselAd && (
                 <div className="mt-1">
                   <CardDescription className="text-left text-xs text-gray-500 whitespace-nowrap">
-                    {fileGroups.length > 0
+                    {isPlacementCustomizedCarousel
+                      ? 'Select in card order: one 9:16 plus one square or 4:5 per pair. Every 2 selected assets become one card; group 4–20 assets per carousel ad.'
+                      : fileGroups.length > 0
                       ? 'Drag to reorder cards within each carousel group. Select files to create new groups.'
                       : 'Select files to group into separate carousel ads, or drag to reorder cards'
                     }
@@ -1590,7 +1605,7 @@ export default function MediaPreview({
                         htmlFor="placementCustomization"
                         className={`text-sm font-medium leading-none ${hasAnyDynamicCreativeAdSets ? 'cursor-not-allowed opacity-50' : 'peer-disabled:cursor-not-allowed peer-disabled:opacity-70'}`}
                       >
-                        Placement Customization <span className="text-xs text-gray-400">(Group Square & Vertical Assets)</span>
+                        Placement Customization <span className="text-xs text-gray-400">{isCarouselAd ? '(2 assets per carousel card)' : '(Group Square & Vertical Assets)'}</span>
                         {hasAnyDynamicCreativeAdSets && (
                           <span className="text-xs text-gray-400 ml-1">(not available for dynamic creative ad sets)</span>
                         )}
@@ -1689,51 +1704,95 @@ export default function MediaPreview({
                           </div>
 
                           {isCarouselAd ? (
-                            /* Per-group DndContext for carousel reordering */
-                            <div className={`transition-opacity ${isGroupDimmed ? 'opacity-30' : 'opacity-100'}`}>
-                              <DndContext
-                                sensors={sensors}
-                                collisionDetection={closestCenter}
-                                onDragEnd={(event) => handleGroupDragEnd(group.id, event)}
-                              >
-                                <SortableContext
-                                  items={getGroupFileIds(group)}
-                                  strategy={verticalListSortingStrategy}
+                            isPlacementCustomizedCarousel ? (
+                              <div className={`grid grid-cols-1 gap-3 p-3 pr-24 transition-opacity ${isGroupDimmed ? 'opacity-30' : 'opacity-100'}`}>
+                                {Array.from({ length: Math.ceil(getGroupFileIds(group).length / 2) }, (_, cardIdx) => {
+                                  const pair = getGroupFileIds(group).slice(cardIdx * 2, cardIdx * 2 + 2);
+                                  return (
+                                    <div key={`${group.id}-card-${cardIdx}`} className="rounded-2xl border border-gray-200 bg-white/80 p-3 shadow-sm">
+                                      <div className="mb-2 text-xs font-semibold text-gray-700">Card {cardIdx + 1}</div>
+                                      <div className="grid grid-cols-2 gap-3">
+                                        {pair.map((fileId, assetIdx) => {
+                                          const file = findFileById(fileId);
+                                          if (!file) return null;
+                                          return (
+                                            <div key={fileId}>
+                                              <div className="mb-1 text-[10px] font-medium uppercase tracking-wide text-gray-500">
+                                                {assetIdx === 0 ? 'Asset A' : 'Asset B'}
+                                              </div>
+                                              <SortableMediaItem
+                                                file={file}
+                                                index={assetIdx}
+                                                isCarouselAd={false}
+                                                videoThumbs={videoThumbs}
+                                                onRemove={() => removeFile(file)}
+                                                isSelected={false}
+                                                onSelect={handleFileSelect}
+                                                groupNumber={groupIndex + 1}
+                                                enablePlacementCustomization={enablePlacementCustomization}
+                                                adType={adType}
+                                                dimmed={false}
+                                                showVariantDropdown={false}
+                                                assignedVariantId={groupVariantMap[group.id] || 'default'}
+                                                variants={variants}
+                                                onAssignVariant={() => { }}
+                                                isRemoving={removingMediaIds.has(fileId)}
+                                              />
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            ) : (
+                              /* Per-group DndContext for carousel reordering */
+                              <div className={`transition-opacity ${isGroupDimmed ? 'opacity-30' : 'opacity-100'}`}>
+                                <DndContext
+                                  sensors={sensors}
+                                  collisionDetection={closestCenter}
+                                  onDragEnd={(event) => handleGroupDragEnd(group.id, event)}
                                 >
-                                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 p-3">
-                                    {getGroupFileIds(group).map((fileId, cardIdx) => {
-                                      const file = findFileById(fileId);
-                                      if (!file) {
-                                        console.warn(`File not found for ID: ${fileId}`);
-                                        return null;
-                                      }
-                                      return (
-                                        <SortableMediaItem
-                                          key={fileId}
-                                          file={file}
-                                          index={cardIdx}
-                                          cardIndex={cardIdx}
-                                          isCarouselAd={isCarouselAd}
-                                          videoThumbs={videoThumbs}
-                                          onRemove={() => removeFile(file)}
-                                          isSelected={false}
-                                          onSelect={handleFileSelect}
-                                          groupNumber={groupIndex + 1}
-                                          enablePlacementCustomization={enablePlacementCustomization}
-                                          adType={adType}
-                                          dimmed={false}
-                                          showVariantDropdown={false}
-                                          assignedVariantId={groupVariantMap[group.id] || 'default'}
-                                          variants={variants}
-                                          onAssignVariant={() => { }}
-                                          isRemoving={removingMediaIds.has(fileId)}
-                                        />
-                                      );
-                                    })}
-                                  </div>
-                                </SortableContext>
-                              </DndContext>
-                            </div>
+                                  <SortableContext
+                                    items={getGroupFileIds(group)}
+                                    strategy={verticalListSortingStrategy}
+                                  >
+                                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 p-3">
+                                      {getGroupFileIds(group).map((fileId, cardIdx) => {
+                                        const file = findFileById(fileId);
+                                        if (!file) {
+                                          console.warn(`File not found for ID: ${fileId}`);
+                                          return null;
+                                        }
+                                        return (
+                                          <SortableMediaItem
+                                            key={fileId}
+                                            file={file}
+                                            index={cardIdx}
+                                            cardIndex={cardIdx}
+                                            isCarouselAd={isCarouselAd}
+                                            videoThumbs={videoThumbs}
+                                            onRemove={() => removeFile(file)}
+                                            isSelected={false}
+                                            onSelect={handleFileSelect}
+                                            groupNumber={groupIndex + 1}
+                                            enablePlacementCustomization={enablePlacementCustomization}
+                                            adType={adType}
+                                            dimmed={false}
+                                            showVariantDropdown={false}
+                                            assignedVariantId={groupVariantMap[group.id] || 'default'}
+                                            variants={variants}
+                                            onAssignVariant={() => { }}
+                                            isRemoving={removingMediaIds.has(fileId)}
+                                          />
+                                        );
+                                      })}
+                                    </div>
+                                  </SortableContext>
+                                </DndContext>
+                              </div>
+                            )
                           ) : (
                             /* Original non-DnD group rendering for placement customization / flexible */
                             <div className={`grid grid-cols-1 sm:grid-cols-4 gap-3 p-3 transition-opacity ${isGroupDimmed ? 'opacity-30' : 'opacity-100'}`}>

@@ -5160,13 +5160,18 @@ export default function AdCreationForm({
     if (isCarouselAd) {
       if (fileGroups && fileGroups.length > 0) {
         for (let i = 0; i < fileGroups.length; i++) {
-          const group = fileGroups[i];
-          if (group.length < 2) {
+          const group = getGroupFileIds(fileGroups[i]);
+          if (enablePlacementCustomization && (group.length < 4 || group.length > 20 || group.length % 2 !== 0)) {
+            toast.error(`Placement carousel group ${i + 1} needs 4–20 assets paired as 9:16 + square/4:5`);
+            setIsLoading(false);
+            throw new Error(`Placement carousel group ${i + 1} needs 4–20 assets paired as 9:16 + square/4:5`);
+          }
+          if (!enablePlacementCustomization && group.length < 2) {
             toast.error(`Carousel group ${i + 1} needs at least 2 cards`);
             setIsLoading(false);
             throw new Error(`Carousel group ${i + 1} needs at least 2 cards`);
           }
-          if (group.length > 10) {
+          if (!enablePlacementCustomization && group.length > 10) {
             toast.error(`Carousel group ${i + 1} can have maximum 10 cards`);
             setIsLoading(false);
             throw new Error(`Carousel group ${i + 1} can have maximum 10 cards`);
@@ -5174,6 +5179,11 @@ export default function AdCreationForm({
         }
       } else {
         const totalFiles = files.length + driveFiles.length + dropboxFiles.length + frameioFiles.length + (importedFiles?.length || 0);
+        if (enablePlacementCustomization) {
+          toast.error("Group files into paired carousel cards before publishing");
+          setIsLoading(false);
+          throw new Error("Placement customized carousel ads require grouped square/vertical asset pairs");
+        }
         if (totalFiles < 2) {
           toast.error("Carousel ads require at least 2 files");
           setIsLoading(false);
@@ -5801,6 +5811,17 @@ export default function AdCreationForm({
      * Build file order metadata for a single carousel group
      * Iterates in group order so card positions match the group's drag order
      */
+    const getCarouselPlacementMetadata = (file, fileId, uploadedFile = null) => {
+      const aspectRatio = uploadedFile?.aspectRatio
+        || aspectRatioMap[fileId]
+        || (file?.width && file?.height ? file.width / file.height : null);
+      return {
+        ...(aspectRatio && { aspectRatio }),
+        ...(file?.width && { width: file.width }),
+        ...(file?.height && { height: file.height }),
+      };
+    };
+
     const buildCarouselFileOrderForGroup = (
       group,
       files,
@@ -5824,10 +5845,10 @@ export default function AdCreationForm({
           if (isVideoFile(localFile) && (localFile.isDraftAsset || localFile.size > S3_UPLOAD_THRESHOLD)) {
             const s3File = s3Results.find(s3f => s3f.uniqueId === fileId || s3f.name === localFile.name);
             if (s3File) {
-              fileOrder.push({ index: fileIndex++, type: 's3', url: s3File.s3Url, name: localFile.name });
+              fileOrder.push({ index: fileIndex++, type: 's3', url: s3File.s3Url, name: localFile.name, ...getCarouselPlacementMetadata(localFile, fileId, s3File) });
             }
           } else {
-            fileOrder.push({ index: fileIndex++, type: 'local', name: localFile.name });
+            fileOrder.push({ index: fileIndex++, type: 'local', name: localFile.name, ...getCarouselPlacementMetadata(localFile, fileId) });
           }
           return;
         }
@@ -5838,10 +5859,10 @@ export default function AdCreationForm({
           if (isVideoFile(driveFile) && driveFile.size > S3_UPLOAD_THRESHOLD) {
             const s3File = s3DriveResults.find(s3f => s3f.id === fileId);
             if (s3File) {
-              fileOrder.push({ index: fileIndex++, type: 's3', url: s3File.s3Url, name: driveFile.name, driveId: driveFile.id });
+              fileOrder.push({ index: fileIndex++, type: 's3', url: s3File.s3Url, name: driveFile.name, driveId: driveFile.id, ...getCarouselPlacementMetadata(driveFile, fileId, s3File) });
             }
           } else {
-            fileOrder.push({ index: fileIndex++, type: 'drive', id: driveFile.id, name: driveFile.name });
+            fileOrder.push({ index: fileIndex++, type: 'drive', id: driveFile.id, name: driveFile.name, ...getCarouselPlacementMetadata(driveFile, fileId) });
           }
           return;
         }
@@ -5852,10 +5873,10 @@ export default function AdCreationForm({
           if (isVideoFile(dropboxFile) && dropboxFile.size > S3_UPLOAD_THRESHOLD) {
             const s3File = s3DropboxResults.find(s3f => s3f.dropboxId === fileId);
             if (s3File) {
-              fileOrder.push({ index: fileIndex++, type: 's3', url: s3File.s3Url, name: dropboxFile.name, dropboxId: dropboxFile.dropboxId });
+              fileOrder.push({ index: fileIndex++, type: 's3', url: s3File.s3Url, name: dropboxFile.name, dropboxId: dropboxFile.dropboxId, ...getCarouselPlacementMetadata(dropboxFile, fileId, s3File) });
             }
           } else {
-            fileOrder.push({ index: fileIndex++, type: 'dropbox', dropboxId: dropboxFile.dropboxId, name: dropboxFile.name });
+            fileOrder.push({ index: fileIndex++, type: 'dropbox', dropboxId: dropboxFile.dropboxId, name: dropboxFile.name, ...getCarouselPlacementMetadata(dropboxFile, fileId) });
           }
           return;
         }
@@ -5866,10 +5887,10 @@ export default function AdCreationForm({
           if (isVideoFile(frameioFile)) {
             const s3File = (s3FrameioResults || []).find(s3f => s3f.frameioId === fileId);
             if (s3File) {
-              fileOrder.push({ index: fileIndex++, type: 's3', url: s3File.s3Url, name: frameioFile.name, frameioId: frameioFile.frameioId });
+              fileOrder.push({ index: fileIndex++, type: 's3', url: s3File.s3Url, name: frameioFile.name, frameioId: frameioFile.frameioId, ...getCarouselPlacementMetadata(frameioFile, fileId, s3File) });
             }
           } else {
-            fileOrder.push({ index: fileIndex++, type: 'frameio', frameioId: frameioFile.frameioId, name: frameioFile.name });
+            fileOrder.push({ index: fileIndex++, type: 'frameio', frameioId: frameioFile.frameioId, name: frameioFile.name, ...getCarouselPlacementMetadata(frameioFile, fileId) });
           }
           return;
         }
@@ -5878,7 +5899,7 @@ export default function AdCreationForm({
         const allS3 = [...s3Results, ...s3DriveResults, ...s3DropboxResults, ...(s3FrameioResults || [])];
         const s3File = allS3.find(f => f.uniqueId === fileId || f.id === fileId || f.dropboxId === fileId || f.frameioId === fileId);
         if (s3File) {
-          fileOrder.push({ index: fileIndex++, type: 's3', url: s3File.s3Url, name: s3File.name });
+          fileOrder.push({ index: fileIndex++, type: 's3', url: s3File.s3Url, name: s3File.name, ...getCarouselPlacementMetadata(s3File, fileId, s3File) });
           return;
         }
 
@@ -5890,9 +5911,9 @@ export default function AdCreationForm({
           );
           if (metaFile) {
             if (metaFile.type === 'image') {
-              fileOrder.push({ index: fileIndex++, type: 'metaImage', hash: metaFile.hash, name: metaFile.name });
+              fileOrder.push({ index: fileIndex++, type: 'metaImage', hash: metaFile.hash, name: metaFile.name, ...getCarouselPlacementMetadata(metaFile, fileId) });
             } else {
-              fileOrder.push({ index: fileIndex++, type: 'metaVideo', id: metaFile.id, name: metaFile.name });
+              fileOrder.push({ index: fileIndex++, type: 'metaVideo', id: metaFile.id, name: metaFile.name, ...getCarouselPlacementMetadata(metaFile, fileId) });
             }
           }
         }
@@ -6318,6 +6339,10 @@ export default function AdCreationForm({
             );
           }
 
+          if (enablePlacementCustomization && group && groupFileOrder.length !== getGroupFileIds(group).length) {
+            throw new Error(`Could not prepare every asset in placement carousel group ${groupIndex + 1}`);
+          }
+
           // Compute ad name for this group
           const firstFile = group
             ? (() => {
@@ -6374,8 +6399,15 @@ export default function AdCreationForm({
 
             // Carousel-specific fields
             formData.append("isCarouselAd", true);
-            formData.append("enablePlacementCustomization", false);
+            formData.append("enablePlacementCustomization", String(enablePlacementCustomization));
             formData.append("fileOrder", JSON.stringify(groupFileOrder));
+            if (enablePlacementCustomization) {
+              const placementCarouselCards = Array.from(
+                { length: groupFileOrder.length / 2 },
+                (_, cardIndex) => [cardIndex * 2, cardIndex * 2 + 1]
+              );
+              formData.append("placementCarouselCards", JSON.stringify(placementCarouselCards));
+            }
 
             // Group index for SSE progress
             formData.append("totalGroups", String(totalCarouselGroups));
