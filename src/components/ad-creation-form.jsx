@@ -1120,8 +1120,7 @@ export default function AdCreationForm({
   const [isImportingFolder, setIsImportingFolder] = useState(false);
   const [pendingCsvDriveImport, setPendingCsvDriveImport] = useState(null);
   const [showCsvDriveFolderPrompt, setShowCsvDriveFolderPrompt] = useState(false);
-  const [csvDriveFolderLink, setCsvDriveFolderLink] = useState("");
-  const [isOpeningCsvDriveFolder, setIsOpeningCsvDriveFolder] = useState(false);
+  const [isOpeningCsvDrivePicker, setIsOpeningCsvDrivePicker] = useState(false);
   const [showFrameioConnectDialog, setShowFrameioConnectDialog] = useState(false);
   const [showFrameioConnectHelp, setShowFrameioConnectHelp] = useState(false);
   const pickerInstanceRef = useRef(null);
@@ -2891,7 +2890,7 @@ export default function AdCreationForm({
       Math.min(620, Math.max(350, viewportHeight - (pickerVerticalReserve * 2) - 24))
     );
     setPickerDialogHeight(pickerHeight);
-    setShowFolderInput(!csvDriveImport);
+    setShowFolderInput(true);
 
     const pickerBuilder = new google.picker.PickerBuilder()
       .setSize(pickerWidth, pickerHeight)
@@ -2974,7 +2973,6 @@ export default function AdCreationForm({
             } else {
               finalizeCsvDriveGroups(expectedAssignments, importedFileIds);
               setPendingCsvDriveImport(null);
-              setCsvDriveFolderLink("");
               toast.success(
                 `Attached ${importedFileIds.length} Drive file${importedFileIds.length !== 1 ? "s" : ""} to the imported variants`
               );
@@ -3025,6 +3023,18 @@ export default function AdCreationForm({
     }
 
     const link = folderLinkValue || "";
+
+    // CSV imports reuse this same proven folder-navigation input, but keep the
+    // pending Drive ID → variant assignments attached to the reopened Picker.
+    if (pendingCsvDriveImport) {
+      const csvFolderId = extractFolderId(link);
+      if (!csvFolderId) {
+        toast.error('Invalid Google Drive folder link');
+        return;
+      }
+      createPicker(googleAuthStatus.accessToken, csvFolderId, pendingCsvDriveImport);
+      return;
+    }
 
     // 1. Check if the URL is a direct FILE link (matches /file/d/ID)
     const fileMatch = link.match(/\/file\/d\/([a-zA-Z0-9-_]+)/);
@@ -3107,6 +3117,7 @@ export default function AdCreationForm({
     folderLinkValue,
     googleAuthStatus.accessToken,
     createPicker,
+    pendingCsvDriveImport,
     setDriveFiles,
     setShowFolderInput,
     setFolderLinkValue,
@@ -3298,24 +3309,20 @@ export default function AdCreationForm({
     });
   }, []);
 
-  const handleOpenCsvDriveFolder = useCallback(async () => {
+  const handleOpenCsvDrivePicker = useCallback(async () => {
     if (!pendingCsvDriveImport) return;
-    const folderId = extractFolderId(csvDriveFolderLink);
-    if (!folderId) {
-      toast.error("Paste a valid Google Drive folder link");
-      return;
-    }
 
-    setIsOpeningCsvDriveFolder(true);
+    setIsOpeningCsvDrivePicker(true);
     try {
       const token = await requestCsvGoogleDriveAccessToken();
       if (!token) return;
       setShowCsvDriveFolderPrompt(false);
-      openCsvDrivePicker(token, folderId, pendingCsvDriveImport);
+      setFolderLinkValue("");
+      openCsvDrivePicker(token, null, pendingCsvDriveImport);
     } finally {
-      setIsOpeningCsvDriveFolder(false);
+      setIsOpeningCsvDrivePicker(false);
     }
-  }, [csvDriveFolderLink, openCsvDrivePicker, pendingCsvDriveImport, requestCsvGoogleDriveAccessToken]);
+  }, [openCsvDrivePicker, pendingCsvDriveImport, requestCsvGoogleDriveAccessToken]);
 
 
   // Load Dropbox Chooser SDK
@@ -3521,7 +3528,6 @@ export default function AdCreationForm({
           remainingFileIds: fileIds,
           importedFileIds: [],
         });
-        setCsvDriveFolderLink("");
         setShowCsvDriveFolderPrompt(true);
       }
       if (result?.created > 0 && !hasImportedCsv) {
@@ -10427,7 +10433,9 @@ export default function AdCreationForm({
                     >
                       <div className="flex flex-col gap-2">
                         <div className="flex items-center justify-between">
-                          <h3 className="font-semibold text-sm">Quick Navigate to Folder</h3>
+                          <h3 className="font-semibold text-sm">
+                            {pendingCsvDriveImport ? "Select the CSV creatives" : "Quick Navigate to Folder"}
+                          </h3>
                           <Button
                             type="button"
                             variant="ghost"
@@ -10441,6 +10449,12 @@ export default function AdCreationForm({
 
                           </Button>
                         </div>
+
+                        {pendingCsvDriveImport && (
+                          <p className="text-xs leading-5 text-gray-600">
+                            Enter a link to the folder containing these files and select all and import. Google Drive requires explicit file imports into the app. Or manually navigate to the folder in the picker and import the files
+                          </p>
+                        )}
 
                         <div className="flex flex-col gap-2 sm:flex-row">
                           <Input
@@ -10991,59 +11005,20 @@ export default function AdCreationForm({
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">Select the CSV creatives</h3>
                 <p className="mt-1 text-sm leading-5 text-gray-600">
-                  Paste the folder containing these files. Google Drive will open inside it;
-                  select all CSV-referenced creatives and click Select.
+                  Enter a link to the folder containing these files and select all and import. Google Drive requires explicit file imports into the app. Or manually navigate to the folder in the picker and import the files
                 </p>
               </div>
             </div>
 
-            <div className="mt-5 rounded-2xl bg-blue-50 px-4 py-3 text-sm text-blue-900">
-              <strong>{pendingCsvDriveImport.remainingFileIds?.length || 0}</strong> of{' '}
-              <strong>{pendingCsvDriveImport.fileCount}</strong> Drive file
-              {pendingCsvDriveImport.fileCount !== 1 ? 's' : ''} remaining. Files are matched by
-              Drive ID, so filenames and selection order do not matter.
-            </div>
-
-            <Input
-              type="text"
-              autoFocus
-              placeholder="Paste Google Drive folder link"
-              value={csvDriveFolderLink}
-              onChange={(event) => setCsvDriveFolderLink(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' && csvDriveFolderLink.trim()) {
-                  void handleOpenCsvDriveFolder();
-                }
-              }}
-              className={cn("mt-4 w-full bg-white", formInputChrome)}
-            />
-
-            <p className="mt-3 text-xs leading-5 text-gray-500">
-              If multiple CSV rows have identical non-Drive fields, their files remain assigned to
-              the same variant and are grouped after every expected file is selected.
-            </p>
-
-            <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <Button
-                type="button"
-                className="h-12 w-full rounded-2xl bg-gray-100 text-black shadow-none hover:bg-gray-200 hover:text-black"
-                onClick={() => {
-                  setShowCsvDriveFolderPrompt(false);
-                  setPendingCsvDriveImport(null);
-                  setCsvDriveFolderLink("");
-                  toast.info("Drive selection skipped; you can assign media to the imported variants manually");
-                }}
-              >
-                Assign manually instead
-              </Button>
+            <div className="mt-5">
               <Button
                 type="button"
                 className="h-12 w-full rounded-2xl bg-zinc-900 text-white hover:bg-zinc-800"
-                disabled={!csvDriveFolderLink.trim() || isOpeningCsvDriveFolder}
-                onClick={() => void handleOpenCsvDriveFolder()}
+                disabled={isOpeningCsvDrivePicker}
+                onClick={() => void handleOpenCsvDrivePicker()}
               >
-                {isOpeningCsvDriveFolder && <Loader className="mr-2 h-4 w-4 animate-spin" />}
-                Open folder
+                {isOpeningCsvDrivePicker && <Loader className="mr-2 h-4 w-4 animate-spin" />}
+                Open Google Drive
               </Button>
             </div>
           </div>
