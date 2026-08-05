@@ -10194,7 +10194,7 @@ export default function AdCreationForm({
                         </PopoverTrigger>
                         <PopoverContent align="end" className="bg-white rounded-xl p-2 w-72 border border-gray-200 shadow-lg">
                           <div className="flex flex-col">
-                            {UPLOAD_SOURCE_OPTIONS.filter((src) => IS_STAGING || src.id !== 'drafts').map((src) => {
+                            {UPLOAD_SOURCE_OPTIONS.map((src) => {
                               const checked = uploadSources.includes(src.id);
                               return (
                                 <label
@@ -10251,7 +10251,6 @@ export default function AdCreationForm({
                   {(() => {
                     const rowSources = uploadSources.filter((s) => {
                       if (s === 'local') return false;
-                      if (!IS_STAGING && s === 'drafts') return false;
                       if (isCatalogueAd && (s === 'instagram' || s === 'meta_library')) return false;
                       return true;
                     });
@@ -10524,18 +10523,16 @@ export default function AdCreationForm({
                   >
                     {isQueueingJobs ? "Publishing Ads..." : "Publish Ads"}
                   </Button>
-                  {IS_STAGING && (
-                    <PopoverTrigger asChild>
-                      <button
-                        type="button"
-                        className="relative flex h-12 w-12 items-center justify-center bg-neutral-950 transition before:pointer-events-none before:absolute before:left-0 before:top-3 before:h-6 before:w-px before:bg-white/25 before:transition-opacity hover:bg-zinc-800 group-hover:before:opacity-0 peer-hover:!bg-blue-700 disabled:opacity-50"
-                        disabled={savingDraft || !selectedAdAccount}
-                        aria-label="Save as draft"
-                      >
-                        <ChevronDown className="h-4 w-4" />
-                      </button>
-                    </PopoverTrigger>
-                  )}
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      className="relative flex h-12 w-12 items-center justify-center bg-neutral-950 transition before:pointer-events-none before:absolute before:left-0 before:top-3 before:h-6 before:w-px before:bg-white/25 before:transition-opacity hover:bg-zinc-800 group-hover:before:opacity-0 peer-hover:!bg-blue-700 disabled:opacity-50"
+                      disabled={savingDraft || !selectedAdAccount}
+                      aria-label="Save as draft"
+                    >
+                      <ChevronDown className="h-4 w-4" />
+                    </button>
+                  </PopoverTrigger>
                 </div>
               </PopoverAnchor>
               <PopoverContent

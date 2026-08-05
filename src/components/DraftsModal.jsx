@@ -193,6 +193,7 @@ function CreativeUnit({ unit, groupIndex }) {
 }
 
 function FormPreview({
+  draftName,
   form,
   forms,
   activeFormIndex,
@@ -229,26 +230,31 @@ function FormPreview({
   return (
     <section className="flex min-h-0 flex-1 flex-col overflow-hidden px-8 pt-5">
       <div className="mb-4 flex min-h-9 shrink-0 items-start justify-between gap-4">
-        {forms.length > 1 && (
-          <ScrollArea className="h-9 min-w-0 max-w-lg flex-1">
-            <div className="flex w-max gap-1 pb-2 pr-2">
-              {forms.map((variantForm, index) => (
-                <button
-                  key={variantForm.id || index}
-                  type="button"
-                  onClick={() => onActiveFormChange(index)}
-                  className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium transition ${
-                    activeFormIndex === index
-                      ? "bg-gray-950 text-white"
-                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                  }`}
-                >
-                  Variant {index + 1}
-                </button>
-              ))}
-            </div>
-          </ScrollArea>
-        )}
+        <div className="flex min-w-0 flex-1 items-center gap-3">
+          <h2 className="min-w-0 truncate text-lg font-semibold leading-9 text-gray-950" title={draftName}>
+            {draftName || "Untitled draft"}
+          </h2>
+          {forms.length > 1 && (
+            <ScrollArea className="h-9 min-w-0 max-w-sm flex-1">
+              <div className="flex w-max gap-1 pb-2 pr-2">
+                {forms.map((variantForm, index) => (
+                  <button
+                    key={variantForm.id || index}
+                    type="button"
+                    onClick={() => onActiveFormChange(index)}
+                    className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium transition ${
+                      activeFormIndex === index
+                        ? "bg-gray-950 text-white"
+                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    }`}
+                  >
+                    Variant {index + 1}
+                  </button>
+                ))}
+              </div>
+            </ScrollArea>
+          )}
+        </div>
         <div className="ml-auto flex shrink-0 items-center justify-end gap-3">
           {actions}
         </div>
@@ -646,6 +652,7 @@ export default function DraftsModal({ open, onOpenChange, adAccountId, adAccount
             </div>
           ) : (
             <FormPreview
+              draftName={selectedDraft.name}
               form={activeForm}
               forms={forms}
               activeFormIndex={activeFormIndex}
