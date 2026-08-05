@@ -1170,6 +1170,7 @@ export default function AdCreationForm({
   const [savingDraft, setSavingDraft] = useState(false);
   const [draftSaveMode, setDraftSaveMode] = useState("save");
   const [draftSaveProgress, setDraftSaveProgress] = useState({ value: 0, message: "" });
+  const [failedPreviewUrl, setFailedPreviewUrl] = useState("");
   const [draftUpdateMenuOpen, setDraftUpdateMenuOpen] = useState(false);
   const [draftUpdateOptions, setDraftUpdateOptions] = useState([]);
   const [loadingDraftUpdateOptions, setLoadingDraftUpdateOptions] = useState(false);
@@ -7477,6 +7478,7 @@ export default function AdCreationForm({
     }
     const controller = new AbortController();
     draftSaveAbortControllerRef.current = controller;
+    if (copyPreviewLink) setFailedPreviewUrl("");
     setDraftSaveMode(copyPreviewLink ? "preview" : targetDraft ? "update" : "save");
     setSavingDraft(true);
     setDraftSaveProgress({
@@ -7488,6 +7490,7 @@ export default function AdCreationForm({
           : "Preparing draft...",
     });
     let draftSaved = false;
+    let previewCopyFailed = false;
     try {
       const resolvedAdName = computeAdNameFromFormula(adNamePreviewFile, 0, link[0], null, adType);
       const creativeSourceFiles = [
@@ -7588,11 +7591,18 @@ export default function AdCreationForm({
           draftId: savedDraft.id,
           adAccountId: selectedAdAccount,
         });
-        await navigator.clipboard.writeText(previewUrl);
+        try {
+          await navigator.clipboard.writeText(previewUrl);
+        } catch (copyError) {
+          console.warn("Automatic preview link copy failed:", copyError);
+          setFailedPreviewUrl(previewUrl);
+          previewCopyFailed = true;
+        }
       }
 
       setDraftUpdateMenuOpen(false);
       setDraftMenuOpen(false);
+      if (previewCopyFailed) return;
       toast.success(
         copyPreviewLink
           ? "Preview link copied"
@@ -7614,6 +7624,18 @@ export default function AdCreationForm({
       draftSaveAbortControllerRef.current = null;
       setSavingDraft(false);
       setDraftSaveProgress({ value: 0, message: "" });
+    }
+  };
+
+  const handleRetryPreviewCopy = async () => {
+    if (!failedPreviewUrl) return;
+
+    try {
+      await navigator.clipboard.writeText(failedPreviewUrl);
+      setFailedPreviewUrl("");
+      toast.success("Preview link copied");
+    } catch (error) {
+      toast.error(`Could not copy the preview link${error?.message ? `: ${error.message}` : "."}`);
     }
   };
 
@@ -11113,6 +11135,32 @@ export default function AdCreationForm({
               </Button>
             </div>
           </div>
+        </div>
+      )}
+      {failedPreviewUrl && (
+        <div
+          role="alert"
+          className="fixed bottom-6 left-6 z-[10000] w-[min(24rem,calc(100vw-3rem))] rounded-2xl border border-gray-200 bg-white p-4 pr-11 shadow-2xl animate-in fade-in slide-in-from-bottom-3 duration-200"
+        >
+          <button
+            type="button"
+            aria-label="Close preview link copy notification"
+            onClick={() => setFailedPreviewUrl("")}
+            className="absolute right-3 top-3 rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
+          >
+            <X className="h-4 w-4" />
+          </button>
+          <p className="text-sm font-medium text-gray-900">
+            Auto link copy failed. Form saved as a draft.
+          </p>
+          <Button
+            type="button"
+            onClick={handleRetryPreviewCopy}
+            className="mt-3 h-9 rounded-xl bg-blue-600 px-3 text-white hover:bg-blue-700"
+          >
+            <Link2 className="mr-1.5 h-4 w-4" />
+            Click to Copy link
+          </Button>
         </div>
       )}
       {variants.length > 1 && (
