@@ -10383,6 +10383,7 @@ export default function AdCreationForm({
                   open={draftsModalOpen}
                   onOpenChange={setDraftsModalOpen}
                   adAccountId={selectedAdAccount}
+                  adAccountName={adAccounts.find((account) => String(account.id) === String(selectedAdAccount))?.name || ""}
                   onRestore={onRestoreDraft}
                 />
 
