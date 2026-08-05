@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef } from 'react';
 import { ChevronDown, CirclePlus, ExternalLink, GripVertical, Loader2, Play, Rocket, Trash, X } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -346,10 +346,32 @@ function LocalVideoScrubber({ file, thumbnailSrc, fallbackSrc, className }) {
 function DriveVideoPreview({ file, isActive, onOpen, onClose }) {
   const thumbnailSrc = `https://drive.google.com/thumbnail?id=${file.id}&sz=w400-h300`;
   const fallbackSrc = "https://api.withblip.com/thumbnail.jpg";
+  const playerContainerRef = useRef(null);
+  const [playerScale, setPlayerScale] = useState(1);
+
+  useLayoutEffect(() => {
+    if (!isActive || !playerContainerRef.current) return undefined;
+
+    const container = playerContainerRef.current;
+    const updatePlayerScale = () => {
+      const { width, height } = container.getBoundingClientRect();
+      if (!width || !height) return;
+
+      // Give Google's player a usable 640x360 viewport, then scale that
+      // viewport down to the exact thumbnail box without changing its layout.
+      setPlayerScale(Math.max(0.05, Math.min(1, width / 640, height / 360)));
+    };
+
+    updatePlayerScale();
+    const resizeObserver = new ResizeObserver(updatePlayerScale);
+    resizeObserver.observe(container);
+
+    return () => resizeObserver.disconnect();
+  }, [isActive]);
 
   if (isActive) {
     return (
-      <div className="relative bg-black">
+      <div ref={playerContainerRef} className="relative overflow-hidden bg-black">
         {/* Keep the thumbnail in flow so opening the player does not resize the card. */}
         <img
           src={thumbnailSrc}
@@ -364,7 +386,13 @@ function DriveVideoPreview({ file, isActive, onOpen, onClose }) {
         <iframe
           src={`https://drive.google.com/file/d/${encodeURIComponent(file.id)}/preview?autoplay=1`}
           title={`Preview ${file.name}`}
-          className="absolute inset-0 h-full w-full border-0 bg-black"
+          className="absolute left-0 top-0 border-0 bg-black"
+          style={{
+            width: `${100 / playerScale}%`,
+            height: `${100 / playerScale}%`,
+            transform: `scale(${playerScale})`,
+            transformOrigin: 'top left',
+          }}
           allow="autoplay; fullscreen"
           allowFullScreen
           referrerPolicy="strict-origin-when-cross-origin"
