@@ -1,6 +1,7 @@
 "use client"
 
-import React, { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { ChevronDown, CirclePlus, ExternalLink, GripVertical, Loader2, Play, Rocket, Trash, X } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -346,98 +347,94 @@ function LocalVideoScrubber({ file, thumbnailSrc, fallbackSrc, className }) {
 function DriveVideoPreview({ file, isActive, onOpen, onClose }) {
   const thumbnailSrc = `https://drive.google.com/thumbnail?id=${file.id}&sz=w400-h300`;
   const fallbackSrc = "https://api.withblip.com/thumbnail.jpg";
-  const playerContainerRef = useRef(null);
-  const [playerScale, setPlayerScale] = useState(1);
 
-  useLayoutEffect(() => {
-    if (!isActive || !playerContainerRef.current) return undefined;
+  useEffect(() => {
+    if (!isActive) return undefined;
 
-    const container = playerContainerRef.current;
-    const updatePlayerScale = () => {
-      const { width, height } = container.getBoundingClientRect();
-      if (!width || !height) return;
-
-      // Give Google's player a usable 640x360 viewport, then scale that
-      // viewport down to the exact thumbnail box without changing its layout.
-      setPlayerScale(Math.max(0.05, Math.min(1, width / 640, height / 360)));
+    const previousBodyOverflow = document.body.style.overflow;
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') onClose();
     };
 
-    updatePlayerScale();
-    const resizeObserver = new ResizeObserver(updatePlayerScale);
-    resizeObserver.observe(container);
+    document.body.style.overflow = 'hidden';
+    document.addEventListener('keydown', handleKeyDown);
 
-    return () => resizeObserver.disconnect();
-  }, [isActive]);
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isActive, onClose]);
 
-  if (isActive) {
-    return (
-      <div ref={playerContainerRef} className="relative overflow-hidden bg-black">
-        {/* Keep the thumbnail in flow so opening the player does not resize the card. */}
+  return (
+    <>
+      <div className="group/drive-preview relative">
         <img
           src={thumbnailSrc}
-          alt=""
-          aria-hidden="true"
-          className="invisible w-full h-auto object-cover"
+          alt={file.name}
+          title={file.name}
+          className="w-full h-auto object-cover"
           onError={(event) => {
             event.currentTarget.onerror = null;
             event.currentTarget.src = fallbackSrc;
           }}
         />
-        <iframe
-          src={`https://drive.google.com/file/d/${encodeURIComponent(file.id)}/preview?autoplay=1`}
-          title={`Preview ${file.name}`}
-          className="absolute left-0 top-0 border-0 bg-black"
-          style={{
-            width: `${100 / playerScale}%`,
-            height: `${100 / playerScale}%`,
-            transform: `scale(${playerScale})`,
-            transformOrigin: 'top left',
-          }}
-          allow="autoplay; fullscreen"
-          allowFullScreen
-          referrerPolicy="strict-origin-when-cross-origin"
-        />
         <button
           type="button"
           onClick={(event) => {
             event.stopPropagation();
-            onClose();
+            onOpen();
           }}
-          className="absolute left-1/2 top-1.5 z-30 flex h-7 w-7 -translate-x-1/2 items-center justify-center rounded-full border border-white/40 bg-black/70 text-white shadow-md transition hover:bg-black/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
-          aria-label={`Close preview for ${file.name}`}
-          title="Close preview"
+          className="absolute left-1/2 top-1/2 z-20 flex h-9 w-9 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-white/60 bg-black/65 text-white opacity-0 shadow-lg transition duration-150 hover:scale-105 hover:bg-black/80 group-hover/drive-preview:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+          aria-label={`Play preview for ${file.name}`}
+          title="Play video preview"
         >
-          <X className="h-4 w-4" />
+          <Play className="ml-0.5 h-4 w-4 fill-current" />
         </button>
       </div>
-    );
-  }
 
-  return (
-    <div className="group/drive-preview relative">
-      <img
-        src={thumbnailSrc}
-        alt={file.name}
-        title={file.name}
-        className="w-full h-auto object-cover"
-        onError={(event) => {
-          event.currentTarget.onerror = null;
-          event.currentTarget.src = fallbackSrc;
-        }}
-      />
-      <button
-        type="button"
-        onClick={(event) => {
-          event.stopPropagation();
-          onOpen();
-        }}
-        className="absolute left-1/2 top-1/2 z-20 flex h-9 w-9 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-white/60 bg-black/65 text-white opacity-0 shadow-lg transition duration-150 hover:scale-105 hover:bg-black/80 group-hover/drive-preview:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
-        aria-label={`Play preview for ${file.name}`}
-        title="Play video preview"
-      >
-        <Play className="ml-0.5 h-4 w-4 fill-current" />
-      </button>
-    </div>
+      {isActive && typeof document !== 'undefined' && createPortal(
+        <div
+          className="fixed inset-0 z-[10000] flex items-center justify-center overflow-y-auto bg-black/75 p-4 backdrop-blur-sm sm:p-8"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Video preview for ${file.name}`}
+          onClick={(event) => {
+            event.stopPropagation();
+            onClose();
+          }}
+        >
+          <div
+            className="relative w-full max-w-4xl overflow-hidden rounded-2xl border border-white/15 bg-neutral-950 shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex h-12 items-center justify-between gap-3 border-b border-white/10 bg-neutral-900 px-4 text-white">
+              <p className="min-w-0 truncate text-sm font-medium" title={file.name}>{file.name}</p>
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white/80 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                aria-label={`Close preview for ${file.name}`}
+                title="Close preview"
+                autoFocus
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="aspect-video w-full bg-black">
+              <iframe
+                src={`https://drive.google.com/file/d/${encodeURIComponent(file.id)}/preview?autoplay=1`}
+                title={`Preview ${file.name}`}
+                className="h-full w-full border-0 bg-black"
+                allow="autoplay; fullscreen"
+                allowFullScreen
+                referrerPolicy="strict-origin-when-cross-origin"
+              />
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+    </>
   );
 }
 
