@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { FileText, Link2, Loader2, Play, RotateCcw, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import AdSetIcon from "@/assets/icons/grid.svg?react";
@@ -327,6 +328,8 @@ export default function DraftsModal({ open, onOpenChange, adAccountId, onRestore
   const [loadingDraft, setLoadingDraft] = useState(false);
   const [working, setWorking] = useState(false);
   const [qaUrl, setQaUrl] = useState("");
+  const [bulkDeleteMode, setBulkDeleteMode] = useState(false);
+  const [selectedDraftIds, setSelectedDraftIds] = useState(() => new Set());
 
   const refresh = useCallback(async () => {
     if (!open || !adAccountId) return;
@@ -336,6 +339,10 @@ export default function DraftsModal({ open, onOpenChange, adAccountId, onRestore
         .sort((left, right) => getDraftTimestamp(right) - getDraftTimestamp(left));
       setDrafts(next);
       setSelectedId(next[0]?.id || null);
+      setSelectedDraftIds((current) => {
+        const availableIds = new Set(next.map((draft) => draft.id));
+        return new Set([...current].filter((id) => availableIds.has(id)));
+      });
     } catch (error) {
       toast.error(error.message);
     } finally {
@@ -346,6 +353,12 @@ export default function DraftsModal({ open, onOpenChange, adAccountId, onRestore
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    if (open) return;
+    setBulkDeleteMode(false);
+    setSelectedDraftIds(new Set());
+  }, [open]);
 
   useEffect(() => {
     if (!open || !adAccountId || !selectedId) {
@@ -419,9 +432,68 @@ export default function DraftsModal({ open, onOpenChange, adAccountId, onRestore
     }
   };
 
+  const toggleDraftSelection = (draftId) => {
+    setSelectedDraftIds((current) => {
+      const next = new Set(current);
+      if (next.has(draftId)) next.delete(draftId);
+      else next.add(draftId);
+      return next;
+    });
+  };
+
+  const handleSelectAllDrafts = (checked) => {
+    setSelectedDraftIds(checked ? new Set(drafts.map((draft) => draft.id)) : new Set());
+  };
+
+  const handleBulkDelete = async () => {
+    const selectedDrafts = drafts.filter((draft) => selectedDraftIds.has(draft.id));
+    if (selectedDrafts.length === 0 || working) return;
+
+    const label = selectedDrafts.length === 1 ? "draft" : "drafts";
+    const linkWarning = selectedDrafts.length === 1
+      ? "Its QA link will stop working."
+      : "Their QA links will stop working.";
+    if (!window.confirm(`Delete ${selectedDrafts.length} ${label}? ${linkWarning}`)) return;
+
+    setWorking(true);
+    const deletedIds = new Set();
+    const failedIds = new Set();
+    try {
+      for (const draft of selectedDrafts) {
+        try {
+          await deleteDraft({ draftId: draft.id, adAccountId });
+          deletedIds.add(draft.id);
+        } catch {
+          failedIds.add(draft.id);
+        }
+      }
+
+      if (deletedIds.has(selectedId)) setSelectedDraft(null);
+
+      if (failedIds.size === 0) {
+        toast.success(`${deletedIds.size} ${deletedIds.size === 1 ? "draft" : "drafts"} deleted`);
+        setSelectedDraftIds(new Set());
+        setBulkDeleteMode(false);
+      } else {
+        setSelectedDraftIds(failedIds);
+        if (deletedIds.size > 0) {
+          toast.error(`${deletedIds.size} deleted, but ${failedIds.size} could not be deleted`);
+        } else {
+          toast.error(`Could not delete ${failedIds.size === 1 ? "the selected draft" : "the selected drafts"}`);
+        }
+      }
+
+      await refresh();
+    } finally {
+      setWorking(false);
+    }
+  };
+
   const forms = selectedDraft?.state?.forms || [];
   const activeForm = forms[activeFormIndex] || forms[0];
   const mediaById = new Map((selectedDraft?.media || []).map((media) => [media.id, media]));
+  const allDraftsSelected = drafts.length > 0 && selectedDraftIds.size === drafts.length;
+  const someDraftsSelected = selectedDraftIds.size > 0 && !allDraftsSelected;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -434,31 +506,101 @@ export default function DraftsModal({ open, onOpenChange, adAccountId, onRestore
         <aside className="min-h-0 overflow-hidden border-r border-gray-200 bg-[#f4f4f4]">
           <ScrollArea className="h-full">
             <div className="px-4 py-7 pr-5">
-              <DialogTitle className="px-3 text-2xl font-bold tracking-tight text-gray-950">Drafts</DialogTitle>
+              <div className="flex min-h-9 items-center justify-between gap-2 px-3">
+                <DialogTitle className="text-2xl font-bold tracking-tight text-gray-950">Drafts</DialogTitle>
+                {bulkDeleteMode ? (
+                  <Button
+                    type="button"
+                    onClick={handleBulkDelete}
+                    disabled={selectedDraftIds.size === 0 || working}
+                    className="h-8 rounded-xl bg-red-600 px-3 text-xs font-semibold text-white hover:bg-red-700 disabled:bg-red-200 disabled:text-red-400"
+                  >
+                    {working ? (
+                      <><Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> Deleting...</>
+                    ) : (
+                      <><Trash2 className="mr-1.5 h-3.5 w-3.5" /> Delete{selectedDraftIds.size > 0 ? ` (${selectedDraftIds.size})` : ""}</>
+                    )}
+                  </Button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedDraftIds(new Set());
+                      setBulkDeleteMode(true);
+                    }}
+                    disabled={loadingList || drafts.length === 0}
+                    className="flex h-8 w-8 items-center justify-center rounded-xl text-gray-500 transition hover:bg-white hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-35"
+                    aria-label="Select drafts to delete"
+                    title="Delete drafts"
+                  >
+                    <Trash2 className="h-[18px] w-[18px]" />
+                  </button>
+                )}
+              </div>
               <div className="mt-3.5">
             {loadingList ? (
               <Loader2 className="mx-auto mt-8 h-5 w-5 animate-spin text-gray-500" />
             ) : drafts.length === 0 ? (
               <p className="px-3 py-4 text-sm text-gray-500">No drafts saved for this ad account.</p>
-            ) : drafts.map((draft) => (
-              <button
-                key={draft.id}
-                type="button"
-                onClick={() => setSelectedId(draft.id)}
-                className={`mb-1.5 w-full rounded-2xl px-4 py-3 text-left transition ${
-                  selectedId === draft.id
-                    ? "border border-gray-200 bg-white shadow-sm"
-                    : "border border-transparent hover:bg-white/70"
-                }`}
-              >
-                <span className="block truncate text-sm font-semibold text-gray-950">{draft.name}</span>
-                {draft.formCount > 1 && (
-                  <span className="mt-0.5 block text-sm font-normal text-gray-500">
-                    {draft.formCount} variants
-                  </span>
+            ) : (
+              <>
+                {bulkDeleteMode && (
+                  <div className="mb-2 flex items-center gap-2 border-b border-gray-200 px-3 pb-2.5">
+                    <Checkbox
+                      id="select-all-drafts"
+                      checked={allDraftsSelected ? true : someDraftsSelected ? "indeterminate" : false}
+                      onCheckedChange={handleSelectAllDrafts}
+                      disabled={working}
+                      className="border-gray-400 data-[state=checked]:border-red-600 data-[state=checked]:bg-red-600 data-[state=indeterminate]:border-red-600 data-[state=indeterminate]:bg-red-600"
+                    />
+                    <label htmlFor="select-all-drafts" className="cursor-pointer text-xs font-medium text-gray-600">
+                      {allDraftsSelected ? "Unselect all" : "Select all"}
+                    </label>
+                  </div>
                 )}
-              </button>
-            ))}
+                {drafts.map((draft) => {
+                  const isBulkSelected = selectedDraftIds.has(draft.id);
+                  return (
+                    <div
+                      key={draft.id}
+                      className={`mb-1.5 flex w-full items-center rounded-2xl border transition ${
+                        bulkDeleteMode && isBulkSelected
+                          ? "border-red-200 bg-red-50"
+                          : selectedId === draft.id
+                            ? "border-gray-200 bg-white shadow-sm"
+                            : "border-transparent hover:bg-white/70"
+                      }`}
+                    >
+                      {bulkDeleteMode && (
+                        <Checkbox
+                          checked={isBulkSelected}
+                          onCheckedChange={() => toggleDraftSelection(draft.id)}
+                          disabled={working}
+                          aria-label={`Select ${draft.name}`}
+                          className="ml-3 border-gray-400 data-[state=checked]:border-red-600 data-[state=checked]:bg-red-600"
+                        />
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (bulkDeleteMode) toggleDraftSelection(draft.id);
+                          else setSelectedId(draft.id);
+                        }}
+                        disabled={working && bulkDeleteMode}
+                        className="min-w-0 flex-1 px-4 py-3 text-left disabled:cursor-not-allowed"
+                      >
+                        <span className="block truncate text-sm font-semibold text-gray-950">{draft.name}</span>
+                        {draft.formCount > 1 && (
+                          <span className="mt-0.5 block text-sm font-normal text-gray-500">
+                            {draft.formCount} variants
+                          </span>
+                        )}
+                      </button>
+                    </div>
+                  );
+                })}
+              </>
+            )}
               </div>
             </div>
           </ScrollArea>

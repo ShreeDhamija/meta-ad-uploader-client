@@ -11146,11 +11146,11 @@ export default function AdCreationForm({
             type="button"
             aria-label="Close preview link copy notification"
             onClick={() => setFailedPreviewUrl("")}
-            className="absolute -right-2 -top-2 flex h-7 w-7 items-center justify-center rounded-full bg-black text-white shadow-md transition-transform hover:scale-105 hover:bg-neutral-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#008a2e] focus-visible:ring-offset-2"
+            className="absolute -right-2 -top-2 flex h-7 w-7 items-center justify-center rounded-full border border-[#bffdd9] bg-[#edfef3] text-[#008a2e] shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#008a2e] focus-visible:ring-offset-2"
           >
-            <X className="h-3.5 w-3.5" />
+            <X className="h-3 w-3" />
           </button>
-          <p className="text-sm font-semibold text-[#008a2e]">
+          <p className="text-sm font-medium text-[#008a2e]">
             Auto link copy failed. Form saved as a draft.
           </p>
           <Button
