@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { ChevronDown, CirclePlus, ExternalLink, GripVertical, Loader2, Rocket, Trash } from 'lucide-react'
+import { ChevronDown, CirclePlus, ExternalLink, GripVertical, Loader2, Play, Rocket, Trash, X } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
@@ -343,6 +343,76 @@ function LocalVideoScrubber({ file, thumbnailSrc, fallbackSrc, className }) {
   );
 }
 
+function DriveVideoPreview({ file, isActive, onOpen, onClose }) {
+  const thumbnailSrc = `https://drive.google.com/thumbnail?id=${file.id}&sz=w400-h300`;
+  const fallbackSrc = "https://api.withblip.com/thumbnail.jpg";
+
+  if (isActive) {
+    return (
+      <div className="relative bg-black">
+        {/* Keep the thumbnail in flow so opening the player does not resize the card. */}
+        <img
+          src={thumbnailSrc}
+          alt=""
+          aria-hidden="true"
+          className="invisible w-full h-auto object-cover"
+          onError={(event) => {
+            event.currentTarget.onerror = null;
+            event.currentTarget.src = fallbackSrc;
+          }}
+        />
+        <iframe
+          src={`https://drive.google.com/file/d/${encodeURIComponent(file.id)}/preview?autoplay=1`}
+          title={`Preview ${file.name}`}
+          className="absolute inset-0 h-full w-full border-0 bg-black"
+          allow="autoplay; fullscreen"
+          allowFullScreen
+          referrerPolicy="strict-origin-when-cross-origin"
+        />
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            onClose();
+          }}
+          className="absolute left-1/2 top-1.5 z-30 flex h-7 w-7 -translate-x-1/2 items-center justify-center rounded-full border border-white/40 bg-black/70 text-white shadow-md transition hover:bg-black/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+          aria-label={`Close preview for ${file.name}`}
+          title="Close preview"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="group/drive-preview relative">
+      <img
+        src={thumbnailSrc}
+        alt={file.name}
+        title={file.name}
+        className="w-full h-auto object-cover"
+        onError={(event) => {
+          event.currentTarget.onerror = null;
+          event.currentTarget.src = fallbackSrc;
+        }}
+      />
+      <button
+        type="button"
+        onClick={(event) => {
+          event.stopPropagation();
+          onOpen();
+        }}
+        className="absolute left-1/2 top-1/2 z-20 flex h-9 w-9 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-white/60 bg-black/65 text-white opacity-0 shadow-lg transition duration-150 hover:scale-105 hover:bg-black/80 group-hover/drive-preview:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+        aria-label={`Play preview for ${file.name}`}
+        title="Play video preview"
+      >
+        <Play className="ml-0.5 h-4 w-4 fill-current" />
+      </button>
+    </div>
+  );
+}
+
 function SortablePlacementCarouselCard({ id, cardIndex, children }) {
   const {
     attributes,
@@ -407,7 +477,10 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
   onAssignVariant,
   onAddVariant,
   isRemoving,
-  disableSorting = false
+  disableSorting = false,
+  isDrivePreviewActive = false,
+  onOpenDrivePreview,
+  onCloseDrivePreview,
 }) {
   const {
     attributes,
@@ -526,16 +599,12 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
               />
             ) : isVideoFile(file) ? (
               file.isDrive ? (
-                // Google Drive video - use Drive's thumbnail API
-                <img
-                  src={`https://drive.google.com/thumbnail?id=${file.id}&sz=w400-h300`}
-                  alt={file.name}
-                  title={file.name}
-                  className="w-full h-auto object-cover"
-                  onError={(e) => {
-                    e.target.onerror = null;
-                    e.target.src = "https://api.withblip.com/thumbnail.jpg";
-                  }}
+                // Load Google's embedded player only after the user asks to preview.
+                <DriveVideoPreview
+                  file={file}
+                  isActive={isDrivePreviewActive}
+                  onOpen={onOpenDrivePreview}
+                  onClose={onCloseDrivePreview}
                 />
               ) : file.isDropbox ? (
                 // Dropbox video - use icon or fallback thumbnail
@@ -609,6 +678,7 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
             style={{ backgroundColor: "white" }}
             onClick={(e) => {
               e.stopPropagation();
+              if (isDrivePreviewActive) onCloseDrivePreview?.();
               onRemove();
             }}
           >
@@ -697,6 +767,7 @@ export default function MediaPreview({
   const [isFlexAutoGrouping, setIsFlexAutoGrouping] = useState(false);
   const [showDisableVariantsDialog, setShowDisableVariantsDialog] = useState(false);
   const [removingMediaIds, setRemovingMediaIds] = useState(new Set());
+  const [activeDrivePreviewId, setActiveDrivePreviewId] = useState(null);
 
   const sensors = useSensors(useSensor(PointerSensor));
   const isFlexLikeAdType = adType === 'flexible' || adType === 'multi_media';
@@ -1642,6 +1713,7 @@ export default function MediaPreview({
                       setSelectedIgOrganicPosts([]);
                       setFileVariantMap({});
                       setGroupVariantMap({});
+                      setActiveDrivePreviewId(null);
                     }}
                     className="bg-red-500 hover:bg-red-600 text-white rounded-xl mt-0"
                   >
@@ -1828,6 +1900,9 @@ export default function MediaPreview({
                                                   onAssignVariant={() => { }}
                                                   isRemoving={removingMediaIds.has(fileId)}
                                                   disableSorting
+                                                  isDrivePreviewActive={activeDrivePreviewId === fileId}
+                                                  onOpenDrivePreview={() => setActiveDrivePreviewId(fileId)}
+                                                  onCloseDrivePreview={() => setActiveDrivePreviewId((current) => current === fileId ? null : current)}
                                                 />
                                               </div>
                                             );
@@ -1877,6 +1952,9 @@ export default function MediaPreview({
                                             variants={variants}
                                             onAssignVariant={() => { }}
                                             isRemoving={removingMediaIds.has(fileId)}
+                                            isDrivePreviewActive={activeDrivePreviewId === fileId}
+                                            onOpenDrivePreview={() => setActiveDrivePreviewId(fileId)}
+                                            onCloseDrivePreview={() => setActiveDrivePreviewId((current) => current === fileId ? null : current)}
                                           />
                                         );
                                       })}
@@ -1914,6 +1992,9 @@ export default function MediaPreview({
                                     variants={variants}
                                     onAssignVariant={() => { }}
                                     isRemoving={removingMediaIds.has(fileId)}
+                                    isDrivePreviewActive={activeDrivePreviewId === fileId}
+                                    onOpenDrivePreview={() => setActiveDrivePreviewId(fileId)}
+                                    onCloseDrivePreview={() => setActiveDrivePreviewId((current) => current === fileId ? null : current)}
                                   />
                                 ) : null;
                               })}
@@ -1954,6 +2035,9 @@ export default function MediaPreview({
                               onAssignVariant={(variantId) => assignFileToVariant(fileId, variantId)}
                               onAddVariant={handleAddVariant}
                               isRemoving={removingMediaIds.has(fileId)}
+                              isDrivePreviewActive={activeDrivePreviewId === fileId}
+                              onOpenDrivePreview={() => setActiveDrivePreviewId(fileId)}
+                              onCloseDrivePreview={() => setActiveDrivePreviewId((current) => current === fileId ? null : current)}
                             />
                           </div>
                         );

@@ -186,6 +186,7 @@ export async function uploadLocalDraftMedia({
   height,
   onProgress,
   signal,
+  retryUploadLimit,
 }) {
   const partCount = Math.max(1, Math.ceil(file.size / CHUNK_SIZE));
   let lastError;
@@ -193,7 +194,8 @@ export async function uploadLocalDraftMedia({
   for (let uploadAttempt = 1; uploadAttempt <= UPLOAD_ATTEMPTS; uploadAttempt += 1) {
     if (signal?.aborted) throw abortError();
     let started;
-    try {
+    const runUploadAttempt = async () => {
+      try {
       const startResponse = await fetch(
         `${API_BASE_URL}/api/drafts/${encodeURIComponent(draftId)}/media/start-upload`,
         {
@@ -214,7 +216,8 @@ export async function uploadLocalDraftMedia({
       onProgress?.(0);
 
       let completedCount = 0;
-      const limit = pLimit(PART_CONCURRENCY);
+      const partConcurrency = uploadAttempt > 1 ? 1 : PART_CONCURRENCY;
+      const limit = pLimit(partConcurrency);
       const completedParts = await Promise.all(started.parts.map(({ partNumber, url }) => limit(async () => {
         const start = (partNumber - 1) * CHUNK_SIZE;
         const chunk = file.slice(start, Math.min(file.size, start + CHUNK_SIZE));
@@ -281,24 +284,34 @@ export async function uploadLocalDraftMedia({
         }
       }
       throw completionError;
+      } catch (error) {
+        if (started?.uploadId && started?.key) {
+          await fetch(
+            `${API_BASE_URL}/api/drafts/${encodeURIComponent(draftId)}/media/abort-upload`,
+            {
+              method: "POST",
+              credentials: "include",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                adAccountId,
+                mediaId,
+                uploadId: started.uploadId,
+                key: started.key,
+              }),
+            }
+          ).catch(() => {});
+        }
+        throw error;
+      }
+    };
+
+    try {
+      const result = uploadAttempt > 1 && retryUploadLimit
+        ? await retryUploadLimit(runUploadAttempt)
+        : await runUploadAttempt();
+      return result;
     } catch (error) {
       lastError = error;
-      if (started?.uploadId && started?.key) {
-        await fetch(
-          `${API_BASE_URL}/api/drafts/${encodeURIComponent(draftId)}/media/abort-upload`,
-          {
-            method: "POST",
-            credentials: "include",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              adAccountId,
-              mediaId,
-              uploadId: started.uploadId,
-              key: started.key,
-            }),
-          }
-        ).catch(() => {});
-      }
       if (isAbortError(error, signal)) throw abortError();
       if (uploadAttempt < UPLOAD_ATTEMPTS) {
         await waitWithSignal(1500 * uploadAttempt, signal);

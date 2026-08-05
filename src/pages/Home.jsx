@@ -1153,6 +1153,7 @@ export default function Home() {
                 reportProgress(5 + (mediaPercent * 87), `Uploading ${fileName}...`);
             };
             const uploadLimit = pLimit(3);
+            const localMediaRetryLimit = pLimit(1);
             const transferController = new AbortController();
             const forwardAbort = () => transferController.abort();
             if (signal?.aborted) forwardAbort();
@@ -1179,6 +1180,7 @@ export default function Home() {
                                 width: file.width,
                                 height: file.height,
                                 signal: transferSignal,
+                                retryUploadLimit: localMediaRetryLimit,
                                 onProgress: (fraction) => updateMediaProgress(index, fraction, file.name),
                             });
                         } else {
@@ -1198,15 +1200,30 @@ export default function Home() {
                         uploadedMediaIds.add(mediaId);
                         return { mediaId, originalKey, role };
                     } catch (error) {
-                        transferController.abort();
+                        // Let sibling files finish their own retry budgets. The draft is
+                        // still finalized only when every media task succeeds.
                         throw error;
                     }
                 })
             );
             const mediaResults = await Promise.allSettled(mediaTasks);
             signal?.removeEventListener("abort", forwardAbort);
-            const failedMedia = mediaResults.find((result) => result.status === "rejected");
-            if (failedMedia) throw failedMedia.reason;
+            const failedMedia = mediaResults.flatMap((result, index) => result.status === "rejected"
+                ? [{ fileName: uniqueMedia[index].file.name, reason: result.reason }]
+                : []
+            );
+            if (failedMedia.length > 0) {
+                if (signal?.aborted) {
+                    throw new DOMException("Draft save cancelled", "AbortError");
+                }
+                const failureDetails = failedMedia.map(({ fileName, reason }) =>
+                    `${fileName}: ${reason?.message || "Unknown media transfer error"}`
+                ).join("; ");
+                throw new Error(failedMedia.length === 1
+                    ? `Failed to save ${failureDetails}`
+                    : `Failed to save ${failedMedia.length} files — ${failureDetails}`
+                );
+            }
             const mediaItems = mediaResults.map((result) => result.value);
 
             reportProgress(95, "Saving form settings...");

@@ -7476,6 +7476,10 @@ export default function AdCreationForm({
       toast.error("Select an ad account before saving a draft");
       return;
     }
+    // React state does not disable the buttons until the next render. The ref
+    // closes the small window where Enter + click or a rapid double-click could
+    // start two competing saves.
+    if (draftSaveAbortControllerRef.current) return;
     const controller = new AbortController();
     draftSaveAbortControllerRef.current = controller;
     if (copyPreviewLink) setFailedPreviewUrl("");
@@ -7611,17 +7615,25 @@ export default function AdCreationForm({
             : "Draft saved"
       );
     } catch (error) {
-      if (error?.name === "AbortError" || controller.signal.aborted) {
+      if (controller.signal.aborted) {
         toast.info(targetDraft ? "Draft update cancelled" : "Draft save cancelled");
       } else if (copyPreviewLink && draftSaved) {
         setDraftUpdateMenuOpen(false);
         setDraftMenuOpen(false);
         toast.error(`Draft saved, but the preview link could not be copied${error.message ? `: ${error.message}` : "."}`);
+      } else if (error?.name === "AbortError") {
+        console.error("Draft save was interrupted without a user cancellation", error);
+        toast.error(targetDraft
+          ? "Draft update was interrupted. Check your connection and try again."
+          : "Draft save was interrupted. Check your connection and try again."
+        );
       } else {
         toast.error(error.message || (targetDraft ? "Failed to update draft" : "Failed to save draft"));
       }
     } finally {
-      draftSaveAbortControllerRef.current = null;
+      if (draftSaveAbortControllerRef.current === controller) {
+        draftSaveAbortControllerRef.current = null;
+      }
       setSavingDraft(false);
       setDraftSaveProgress({ value: 0, message: "" });
     }
