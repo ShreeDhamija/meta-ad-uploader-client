@@ -35,24 +35,34 @@ function DetailField({ label, icon, children }) {
   );
 }
 
+function FormSection({ children, divided = false, className = "" }) {
+  return (
+    <div className={`${divided ? "border-t border-gray-200 pt-5" : ""} ${className}`}>
+      {children}
+    </div>
+  );
+}
+
 function ExpandableText({ text }) {
   const [expanded, setExpanded] = useState(false);
   const value = String(text || "");
   const isLong = value.length > COPY_PREVIEW_LIMIT;
   const displayed = !expanded && isLong ? `${value.slice(0, COPY_PREVIEW_LIMIT).trimEnd()}…` : value;
   return (
-    <p className="whitespace-pre-wrap break-words text-sm font-medium leading-5 text-gray-950">
-      {displayed || "—"}
-      {isLong && (
-        <button
-          type="button"
-          onClick={() => setExpanded((current) => !current)}
-          className="ml-1 whitespace-nowrap text-xs font-semibold text-blue-600 hover:text-blue-700"
-        >
-          {expanded ? "View less" : "View more"}
-        </button>
-      )}
-    </p>
+    <div className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5">
+      <p className="whitespace-pre-wrap break-words text-sm font-medium leading-5 text-gray-950">
+        {displayed || "—"}
+        {isLong && (
+          <button
+            type="button"
+            onClick={() => setExpanded((current) => !current)}
+            className="ml-1 whitespace-nowrap text-xs font-semibold text-blue-600 hover:text-blue-700"
+          >
+            {expanded ? "View less" : "View more"}
+          </button>
+        )}
+      </p>
+    </div>
   );
 }
 
@@ -76,7 +86,7 @@ function getMediaAspectRatio(media) {
   return null;
 }
 
-function ReviewMedia({ media, priority = false, grouped = false }) {
+function ReviewMedia({ media, priority = false }) {
   const isVideo = (media.mimeType || "").startsWith("video/");
   const savedAspectRatio = getMediaAspectRatio(media);
   const [detectedAspectRatio, setDetectedAspectRatio] = useState(null);
@@ -90,7 +100,7 @@ function ReviewMedia({ media, priority = false, grouped = false }) {
 
   return (
     <div
-      className={`relative overflow-hidden rounded-xl bg-gray-100 ${grouped ? "border border-gray-200" : ""}`}
+      className="relative overflow-hidden rounded-xl border border-gray-200 bg-gray-100"
       style={{ aspectRatio }}
     >
       {isVideo ? (
@@ -153,7 +163,6 @@ function CreativeReviewCard({ unit, groupIndex, priority = false }) {
             key={media.id}
             media={media}
             priority={priority && index < 2}
-            grouped={grouped}
           />
         ))}
       </div>
@@ -207,82 +216,102 @@ function ReviewForm({ form, index, state, mediaById, showLaunchHeading }) {
         </header>
       )}
 
-      <div className={`grid grid-cols-1 items-start gap-8 px-8 pb-10 lg:grid-cols-[minmax(0,1.05fr)_minmax(320px,0.85fr)] ${
+      <div className={`grid grid-cols-1 items-start gap-6 px-8 pb-10 lg:grid-cols-[minmax(0,1.45fr)_minmax(280px,0.55fr)] ${
         showLaunchHeading ? "pt-5" : "pt-10"
       }`}>
         <div className="min-w-0 lg:sticky lg:top-6 lg:self-start">
-          <dl className="space-y-5 pr-4">
-            <div className="grid grid-cols-2 gap-6">
-              <DetailField label="Campaign" icon={<CampaignIcon className="h-4 w-4" />}>
-                {labels.campaigns?.map((item) => item.name).join(", ") || labels.duplicateCampaignName || "—"}
-              </DetailField>
-              <DetailField label="Ad Set" icon={<AdSetIcon className="h-4 w-4" />}>
-                {labels.adSets?.map((item) => item.name).join(", ") || labels.duplicateAdSetName || "—"}
-              </DetailField>
-            </div>
-            <div className="grid grid-cols-2 gap-6">
-              <DetailField label="Facebook Page" icon={<FacebookIcon className="h-4 w-4" />}>
-                {labels.page?.name || values.pageId || "—"}
-              </DetailField>
-              <DetailField label="Instagram Account" icon={<InstagramIcon className="h-4 w-4" />}>
-                {labels.instagramAccount?.name || values.instagramAccountId || "—"}
-              </DetailField>
-            </div>
-            {messages.length > 0 ? messages.map((message, messageIndex) => (
-              <div key={`message-${messageIndex}`}>
-                <dt>
-                  <FieldLabel icon={<TemplateIcon className="h-4 w-4" />}>
-                    Primary Text {messages.length > 1 ? messageIndex + 1 : ""}
-                  </FieldLabel>
-                </dt>
-                <dd><ExpandableText text={message} /></dd>
+          <dl className="pr-4">
+            <FormSection>
+              <div className="grid grid-cols-2 gap-6">
+                <DetailField label="Campaign" icon={<CampaignIcon className="h-4 w-4" />}>
+                  {labels.campaigns?.map((item) => item.name).join(", ") || labels.duplicateCampaignName || "—"}
+                </DetailField>
+                <DetailField label="Ad Set" icon={<AdSetIcon className="h-4 w-4" />}>
+                  {labels.adSets?.map((item) => item.name).join(", ") || labels.duplicateAdSetName || "—"}
+                </DetailField>
               </div>
-            )) : <DetailField label="Primary Text" icon={<TemplateIcon className="h-4 w-4" />}>—</DetailField>}
-            {headlines.length > 0 ? headlines.map((headline, headlineIndex) => (
-              <div key={`headline-${headlineIndex}`}>
-                <dt>
-                  <FieldLabel icon={<TemplateIcon className="h-4 w-4" />}>
-                    Headline {headlines.length > 1 ? headlineIndex + 1 : ""}
-                  </FieldLabel>
-                </dt>
-                <dd><ExpandableText text={headline} /></dd>
+            </FormSection>
+            <FormSection divided className="mt-5">
+              <div className="grid grid-cols-2 gap-6">
+                <DetailField label="Facebook Page" icon={<FacebookIcon className="h-4 w-4" />}>
+                  {labels.page?.name || values.pageId || "—"}
+                </DetailField>
+                <DetailField label="Instagram Account" icon={<InstagramIcon className="h-4 w-4" />}>
+                  {labels.instagramAccount?.name || values.instagramAccountId || "—"}
+                </DetailField>
               </div>
-            )) : <DetailField label="Headline" icon={<TemplateIcon className="h-4 w-4" />}>—</DetailField>}
-            {descriptions.map((description, descriptionIndex) => (
-              <div key={`description-${descriptionIndex}`}>
-                <dt>
-                  <FieldLabel icon={<TemplateIcon className="h-4 w-4" />}>
-                    Description {descriptions.length > 1 ? descriptionIndex + 1 : ""}
-                  </FieldLabel>
-                </dt>
-                <dd><ExpandableText text={description} /></dd>
-              </div>
-            ))}
-            <DetailField label="Link" icon={<LinkIcon className="h-4 w-4" />}>
-              {links.length > 0 ? links.map((link, linkIndex) => (
-                <a
-                  key={`${link}-${linkIndex}`}
-                  href={link}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center gap-1 break-all text-blue-600 hover:underline"
-                >
-                  {link}<ExternalLink className="h-3 w-3 shrink-0" />
-                </a>
-              )) : "—"}
-            </DetailField>
-            <DetailField label="CTA" icon={<CTAIcon className="h-4 w-4" />}>
-              {(values.cta || "—").replaceAll("_", " ")}
-            </DetailField>
-            {values.isPartnershipAd && (
-              <DetailField label="Partner" icon={<Users className="h-4 w-4" />}>
-                {labels.partnerName || values.partnerIgAccountId || "—"}
+              {values.isPartnershipAd && (
+                <div className="mt-5">
+                  <DetailField label="Partner" icon={<Users className="h-4 w-4" />}>
+                    {labels.partnerName || values.partnerIgAccountId || "—"}
+                  </DetailField>
+                </div>
+              )}
+            </FormSection>
+            <FormSection divided className="mt-5 space-y-4">
+              {messages.length > 0 ? messages.map((message, messageIndex) => (
+                <div key={`message-${messageIndex}`}>
+                  <dt>
+                    <FieldLabel icon={<TemplateIcon className="h-4 w-4" />}>
+                      Primary Text {messages.length > 1 ? messageIndex + 1 : ""}
+                    </FieldLabel>
+                  </dt>
+                  <dd><ExpandableText text={message} /></dd>
+                </div>
+              )) : (
+                <div>
+                  <dt><FieldLabel icon={<TemplateIcon className="h-4 w-4" />}>Primary Text</FieldLabel></dt>
+                  <dd><ExpandableText text="" /></dd>
+                </div>
+              )}
+              {headlines.length > 0 ? headlines.map((headline, headlineIndex) => (
+                <div key={`headline-${headlineIndex}`}>
+                  <dt>
+                    <FieldLabel icon={<TemplateIcon className="h-4 w-4" />}>
+                      Headline {headlines.length > 1 ? headlineIndex + 1 : ""}
+                    </FieldLabel>
+                  </dt>
+                  <dd><ExpandableText text={headline} /></dd>
+                </div>
+              )) : (
+                <div>
+                  <dt><FieldLabel icon={<TemplateIcon className="h-4 w-4" />}>Headline</FieldLabel></dt>
+                  <dd><ExpandableText text="" /></dd>
+                </div>
+              )}
+              {descriptions.map((description, descriptionIndex) => (
+                <div key={`description-${descriptionIndex}`}>
+                  <dt>
+                    <FieldLabel icon={<TemplateIcon className="h-4 w-4" />}>
+                      Description {descriptions.length > 1 ? descriptionIndex + 1 : ""}
+                    </FieldLabel>
+                  </dt>
+                  <dd><ExpandableText text={description} /></dd>
+                </div>
+              ))}
+            </FormSection>
+            <FormSection divided className="mt-5 grid grid-cols-2 gap-6 pb-2">
+              <DetailField label="Link" icon={<LinkIcon className="h-4 w-4" />}>
+                {links.length > 0 ? links.map((link, linkIndex) => (
+                  <a
+                    key={`${link}-${linkIndex}`}
+                    href={link}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-1 break-all text-blue-600 hover:underline"
+                  >
+                    {link}<ExternalLink className="h-3 w-3 shrink-0" />
+                  </a>
+                )) : "—"}
               </DetailField>
-            )}
+              <DetailField label="CTA" icon={<CTAIcon className="h-4 w-4" />}>
+                {(values.cta || "—").replaceAll("_", " ")}
+              </DetailField>
+            </FormSection>
           </dl>
         </div>
 
-        <div className="min-w-0 pr-2">
+        <div className="min-w-0 pr-2 lg:border-l lg:border-gray-200 lg:pl-6">
           {creativeUnits.length > 0 ? (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {indexedCreativeUnits.map(({ unit, groupIndex }, unitIndex) => (

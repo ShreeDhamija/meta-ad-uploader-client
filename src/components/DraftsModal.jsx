@@ -32,18 +32,20 @@ function ExpandableText({ text }) {
   const displayed = !expanded && isLong ? `${value.slice(0, COPY_PREVIEW_LIMIT).trimEnd()}…` : value;
 
   return (
-    <p className="whitespace-pre-wrap break-words text-sm font-medium leading-5 text-gray-950">
-      {displayed || "—"}
-      {isLong && (
-        <button
-          type="button"
-          onClick={() => setExpanded((current) => !current)}
-          className="ml-1 whitespace-nowrap text-xs font-semibold text-blue-600 hover:text-blue-700"
-        >
-          {expanded ? "View less" : "View more"}
-        </button>
-      )}
-    </p>
+    <div className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5">
+      <p className="whitespace-pre-wrap break-words text-sm font-medium leading-5 text-gray-950">
+        {displayed || "—"}
+        {isLong && (
+          <button
+            type="button"
+            onClick={() => setExpanded((current) => !current)}
+            className="ml-1 whitespace-nowrap text-xs font-semibold text-blue-600 hover:text-blue-700"
+          >
+            {expanded ? "View less" : "View more"}
+          </button>
+        )}
+      </p>
+    </div>
   );
 }
 
@@ -61,6 +63,14 @@ function DetailField({ label, icon, children, className = "" }) {
     <div className={className}>
       <dt><FieldLabel icon={icon}>{label}</FieldLabel></dt>
       <dd className="break-words text-sm font-semibold leading-5 text-gray-950">{children || "—"}</dd>
+    </div>
+  );
+}
+
+function FormSection({ children, divided = false, className = "" }) {
+  return (
+    <div className={`${divided ? "border-t border-gray-200 pt-5" : ""} ${className}`}>
+      {children}
     </div>
   );
 }
@@ -85,7 +95,7 @@ function getMediaAspectRatio(media) {
   return null;
 }
 
-function MediaThumbnail({ media, grouped }) {
+function MediaThumbnail({ media }) {
   const isVideo = (media.mimeType || "").startsWith("video/");
   const previewUrl = media.deletedAt ? MEDIA_FALLBACK_URL : media.previewUrl;
   const savedAspectRatio = getMediaAspectRatio(media);
@@ -101,7 +111,7 @@ function MediaThumbnail({ media, grouped }) {
   return (
     <figure className="min-w-0">
       <div
-        className={`group relative overflow-hidden rounded-xl bg-gray-100 ${grouped ? "border border-gray-200" : ""}`}
+        className="group relative overflow-hidden rounded-xl border border-gray-200 bg-gray-100"
         style={{ aspectRatio }}
       >
         {isVideo && !previewUrl ? (
@@ -175,7 +185,7 @@ function CreativeUnit({ unit, groupIndex }) {
     }`}>
       <div className={`grid gap-2 ${unit.media.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}>
         {unit.media.map((media) => (
-          <MediaThumbnail key={media.id} media={media} grouped={grouped} />
+          <MediaThumbnail key={media.id} media={media} />
         ))}
       </div>
     </div>
@@ -212,11 +222,12 @@ function FormPreview({
   });
   const messages = values.messages?.filter(Boolean) || [];
   const headlines = values.headlines?.filter(Boolean) || [];
+  const descriptions = values.descriptions?.filter(Boolean) || [];
   const links = values.link?.filter(Boolean) || [];
   const adNameFormula = values.adNameFormulaV2?.rawInput?.trim();
 
   return (
-    <section className="grid min-h-0 flex-1 grid-cols-[minmax(0,1.05fr)_minmax(300px,0.85fr)] gap-8 overflow-hidden px-8 pt-5">
+    <section className="grid min-h-0 flex-1 grid-cols-[minmax(0,1.45fr)_minmax(260px,0.55fr)] gap-6 overflow-hidden px-8 pt-5">
       <div className="flex min-h-0 min-w-0 flex-col">
         {forms.length > 1 && (
           <ScrollArea className="mb-4 h-9 shrink-0 max-w-lg">
@@ -239,65 +250,94 @@ function FormPreview({
           </ScrollArea>
         )}
         <ScrollArea className="min-h-0 flex-1">
-          <dl className="space-y-5 pr-4">
+          <dl className="pr-4">
             <DetailField
               label={adNameFormula ? "Ad Name Formula" : "Ad Name"}
               icon={<LabelIcon className="h-4 w-4" />}
+              className="pb-5"
             >
               {adNameFormula || values.adName}
             </DetailField>
-            <div className="grid grid-cols-2 gap-6">
-              <DetailField label="Campaign" icon={<CampaignIcon className="h-4 w-4" />}>
-                {labels.campaigns?.map((item) => item.name).join(", ") || labels.duplicateCampaignName || "—"}
-              </DetailField>
-              <DetailField label="Ad Set" icon={<AdSetIcon className="h-4 w-4" />}>
-                {labels.adSets?.map((item) => item.name).join(", ") || labels.duplicateAdSetName || "—"}
-              </DetailField>
-            </div>
-            <div className="grid grid-cols-2 gap-6">
-              <DetailField label="Facebook Page" icon={<FacebookIcon className="h-4 w-4" />}>
-                {labels.page?.name || values.pageId || "—"}
-              </DetailField>
-              <DetailField label="Instagram Account" icon={<InstagramIcon className="h-4 w-4" />}>
-                {labels.instagramAccount?.name || values.instagramAccountId || "—"}
-              </DetailField>
-            </div>
-            {messages.length > 0 ? messages.map((message, index) => (
-              <div key={`message-${index}`}>
-                <dt>
-                  <FieldLabel icon={<TemplateIcon className="h-4 w-4" />}>
-                    Primary Text {messages.length > 1 ? index + 1 : ""}
-                  </FieldLabel>
-                </dt>
-                <dd><ExpandableText text={message} /></dd>
+            <FormSection divided>
+              <div className="grid grid-cols-2 gap-6">
+                <DetailField label="Campaign" icon={<CampaignIcon className="h-4 w-4" />}>
+                  {labels.campaigns?.map((item) => item.name).join(", ") || labels.duplicateCampaignName || "—"}
+                </DetailField>
+                <DetailField label="Ad Set" icon={<AdSetIcon className="h-4 w-4" />}>
+                  {labels.adSets?.map((item) => item.name).join(", ") || labels.duplicateAdSetName || "—"}
+                </DetailField>
               </div>
-            )) : <DetailField label="Primary Text" icon={<TemplateIcon className="h-4 w-4" />}>—</DetailField>}
-            {headlines.length > 0 ? headlines.map((headline, index) => (
-              <div key={`headline-${index}`}>
-                <dt>
-                  <FieldLabel icon={<TemplateIcon className="h-4 w-4" />}>
-                    Headline {headlines.length > 1 ? index + 1 : ""}
-                  </FieldLabel>
-                </dt>
-                <dd><ExpandableText text={headline} /></dd>
+            </FormSection>
+            <FormSection divided className="mt-5">
+              <div className="grid grid-cols-2 gap-6">
+                <DetailField label="Facebook Page" icon={<FacebookIcon className="h-4 w-4" />}>
+                  {labels.page?.name || values.pageId || "—"}
+                </DetailField>
+                <DetailField label="Instagram Account" icon={<InstagramIcon className="h-4 w-4" />}>
+                  {labels.instagramAccount?.name || values.instagramAccountId || "—"}
+                </DetailField>
               </div>
-            )) : <DetailField label="Headline" icon={<TemplateIcon className="h-4 w-4" />}>—</DetailField>}
-            <DetailField label="Link" icon={<LinkIcon className="h-4 w-4" />}>
-              {links.length > 0 ? links.map((item, index) => (
-                <span key={`${item}-${index}`} className="block break-all">{item}</span>
-              )) : "—"}
-            </DetailField>
-            <DetailField label="CTA" icon={<CTAIcon className="h-4 w-4" />}>{values.cta}</DetailField>
-            {values.isPartnershipAd && (
-              <DetailField label="Partner" icon={<Users className="h-4 w-4" />}>
-                {labels.partnerName || values.partnerIgAccountId || "—"}
+              {values.isPartnershipAd && (
+                <DetailField className="mt-5" label="Partner" icon={<Users className="h-4 w-4" />}>
+                  {labels.partnerName || values.partnerIgAccountId || "—"}
+                </DetailField>
+              )}
+            </FormSection>
+            <FormSection divided className="mt-5 space-y-4">
+              {messages.length > 0 ? messages.map((message, index) => (
+                <div key={`message-${index}`}>
+                  <dt>
+                    <FieldLabel icon={<TemplateIcon className="h-4 w-4" />}>
+                      Primary Text {messages.length > 1 ? index + 1 : ""}
+                    </FieldLabel>
+                  </dt>
+                  <dd><ExpandableText text={message} /></dd>
+                </div>
+              )) : (
+                <div>
+                  <dt><FieldLabel icon={<TemplateIcon className="h-4 w-4" />}>Primary Text</FieldLabel></dt>
+                  <dd><ExpandableText text="" /></dd>
+                </div>
+              )}
+              {headlines.length > 0 ? headlines.map((headline, index) => (
+                <div key={`headline-${index}`}>
+                  <dt>
+                    <FieldLabel icon={<TemplateIcon className="h-4 w-4" />}>
+                      Headline {headlines.length > 1 ? index + 1 : ""}
+                    </FieldLabel>
+                  </dt>
+                  <dd><ExpandableText text={headline} /></dd>
+                </div>
+              )) : (
+                <div>
+                  <dt><FieldLabel icon={<TemplateIcon className="h-4 w-4" />}>Headline</FieldLabel></dt>
+                  <dd><ExpandableText text="" /></dd>
+                </div>
+              )}
+              {descriptions.map((description, index) => (
+                <div key={`description-${index}`}>
+                  <dt>
+                    <FieldLabel icon={<TemplateIcon className="h-4 w-4" />}>
+                      Description {descriptions.length > 1 ? index + 1 : ""}
+                    </FieldLabel>
+                  </dt>
+                  <dd><ExpandableText text={description} /></dd>
+                </div>
+              ))}
+            </FormSection>
+            <FormSection divided className="mt-5 grid grid-cols-2 gap-6 pb-6">
+              <DetailField label="Link" icon={<LinkIcon className="h-4 w-4" />}>
+                {links.length > 0 ? links.map((item, index) => (
+                  <span key={`${item}-${index}`} className="block break-all">{item}</span>
+                )) : "—"}
               </DetailField>
-            )}
+              <DetailField label="CTA" icon={<CTAIcon className="h-4 w-4" />}>{values.cta}</DetailField>
+            </FormSection>
           </dl>
         </ScrollArea>
       </div>
 
-      <div className="flex min-h-0 min-w-0 flex-col">
+      <div className="flex min-h-0 min-w-0 flex-col border-l border-gray-200 pl-6">
         <div className="mb-4 flex h-9 shrink-0 items-center justify-end gap-3">
           {actions}
         </div>
