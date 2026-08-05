@@ -63,7 +63,7 @@ import pLimit from 'p-limit';
 import { cleanupPublishedDraftMedia, createDraftShareUrl, listDrafts, refreshDraftMediaUrl } from '@/lib/draftApi';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 const TEMPLATE_LINK_SYNC_USER_ID = "929470643071391";
-const PIXEL_TRACKING_FORM_ALLOWED_USER_IDS = ["10236978990363167", "10234447959963619"];
+const PIXEL_TRACKING_FORM_ALLOWED_USER_IDS = ["10236978990363167", "10234447959963619", "10162737276661695"];
 const EMPTY_PIXEL_TRACKING_OVERRIDE = {
   websitePixelId: null,
   offlineDatasetId: null,
