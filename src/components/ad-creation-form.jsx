@@ -1175,10 +1175,17 @@ export default function AdCreationForm({
   const [draftUpdateOptions, setDraftUpdateOptions] = useState([]);
   const [loadingDraftUpdateOptions, setLoadingDraftUpdateOptions] = useState(false);
   const draftSaveAbortControllerRef = useRef(null);
+  const draftNameInputRef = useRef(null);
   const [draftsModalOpen, setDraftsModalOpen] = useState(false);
   const [isPagesLoading, setIsPagesLoading] = useState(false);
   // const [isPostSelectorOpen, setIsPostSelectorOpen] = useState(false)
   const [linkCustomStates, setLinkCustomStates] = useState({}) // Track which carousel links are custom
+
+  useEffect(() => {
+    if (!draftMenuOpen) return;
+    const frameId = requestAnimationFrame(() => draftNameInputRef.current?.focus());
+    return () => cancelAnimationFrame(frameId);
+  }, [draftMenuOpen]);
 
   //Porgress Trackers
   const [isCreatingAds, setIsCreatingAds] = useState(false);
@@ -10505,137 +10512,155 @@ export default function AdCreationForm({
 
 
           <div className="space-y-1">
-            <Popover
-              open={draftMenuOpen}
-              onOpenChange={(nextOpen) => {
-                if (savingDraft && !nextOpen) return;
-                setDraftMenuOpen(nextOpen);
-                if (!nextOpen) setDraftUpdateMenuOpen(false);
-                if (nextOpen && SHOW_DRAFT_UPDATE) loadDraftUpdateOptions();
-              }}
+            <div
+              className={cn(
+                "group w-full overflow-hidden rounded-2xl bg-neutral-950 text-white transition-shadow duration-300",
+                draftMenuOpen && "shadow-xl"
+              )}
             >
-              <PopoverAnchor asChild>
-                <div className="group flex h-12 w-full overflow-hidden rounded-2xl bg-neutral-950 text-white">
-                  <Button
-                    type="submit"
-                    className="peer h-12 flex-1 rounded-none bg-neutral-950 text-white hover:bg-blue-700 disabled:bg-zinc-400 disabled:text-white disabled:opacity-100 disabled:hover:bg-zinc-400"
-                    disabled={publishDisabled || isQueueingJobs}
-                  >
-                    {isQueueingJobs ? "Publishing Ads..." : "Publish Ads"}
-                  </Button>
-                  {IS_STAGING && (
-                    <PopoverTrigger asChild>
-                      <button
-                        type="button"
-                        className="relative flex h-12 w-12 items-center justify-center bg-neutral-950 transition before:pointer-events-none before:absolute before:left-0 before:top-3 before:h-6 before:w-px before:bg-white/25 before:transition-opacity hover:bg-zinc-800 group-hover:before:opacity-0 peer-hover:!bg-blue-700 disabled:opacity-50"
-                        disabled={savingDraft || !selectedAdAccount}
-                        aria-label="Save as draft"
-                      >
-                        <ChevronDown className="h-4 w-4" />
-                      </button>
-                    </PopoverTrigger>
+              <div className="flex h-12 w-full">
+                <Button
+                  type={draftMenuOpen ? "button" : "submit"}
+                  onClick={draftMenuOpen ? () => draftNameInputRef.current?.focus() : undefined}
+                  className={cn(
+                    "peer h-12 flex-1 rounded-none bg-neutral-950 text-white disabled:bg-zinc-400 disabled:text-white disabled:opacity-100 disabled:hover:bg-zinc-400",
+                    draftMenuOpen ? "hover:bg-neutral-950" : "hover:bg-blue-700"
                   )}
-                </div>
-              </PopoverAnchor>
-              <PopoverContent
-                align="end"
-                side="bottom"
-                sideOffset={6}
-                avoidCollisions={false}
-                className="w-[var(--radix-popover-trigger-width)] rounded-3xl border border-gray-200 bg-gray-100 p-2 shadow-xl"
-              >
-                <div className="flex items-center gap-1.5">
-                  <Input
-                    value={draftName}
-                    onChange={(event) => setDraftName(event.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter") {
-                        event.preventDefault();
-                        handleSaveDraft();
-                      }
+                  disabled={!draftMenuOpen && (publishDisabled || isQueueingJobs)}
+                >
+                  {isQueueingJobs
+                    ? "Publishing Ads..."
+                    : draftMenuOpen
+                      ? "Save a draft or create a QA Link"
+                      : "Publish Ads"}
+                </Button>
+                {IS_STAGING && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (savingDraft) return;
+                      const nextOpen = !draftMenuOpen;
+                      setDraftMenuOpen(nextOpen);
+                      if (!nextOpen) setDraftUpdateMenuOpen(false);
+                      if (nextOpen && SHOW_DRAFT_UPDATE) loadDraftUpdateOptions();
                     }}
-                    placeholder="Draft name"
-                    maxLength={120}
-                    className="h-9 min-w-0 flex-1 rounded-xl bg-white px-2.5"
-                    autoFocus
-                  />
-                  <Button
-                    type="button"
-                    onClick={() => handleSaveDraft()}
-                    disabled={savingDraft || !draftName.trim()}
-                    className="h-9 shrink-0 rounded-xl bg-black px-3 text-white hover:bg-blue-700"
-                  >
-                    {savingDraft && draftSaveMode === "save" ? (
-                      <><Loader className="mr-1.5 h-4 w-4 animate-spin" /> Saving...</>
-                    ) : (
-                      <><Save className="mr-1 h-4 w-4" /> Save Draft</>
+                    className={cn(
+                      "relative flex h-12 w-12 items-center justify-center bg-neutral-950 transition-colors before:pointer-events-none before:absolute before:left-0 before:top-3 before:h-6 before:w-px before:bg-white/25 before:transition-opacity hover:bg-zinc-800 group-hover:before:opacity-0 disabled:opacity-50",
+                      !draftMenuOpen && "peer-hover:!bg-blue-700"
                     )}
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={() => handleSaveDraft(null, { copyPreviewLink: true })}
-                    disabled={savingDraft || !draftName.trim()}
-                    className="h-9 shrink-0 rounded-xl bg-blue-600 px-3 text-white hover:bg-blue-700"
+                    disabled={savingDraft || !selectedAdAccount}
+                    aria-label={draftMenuOpen ? "Close draft options" : "Open draft options"}
+                    aria-expanded={draftMenuOpen}
                   >
-                    {savingDraft && draftSaveMode === "preview" ? (
-                      <><Loader className="mr-1.5 h-4 w-4 animate-spin" /> Copying...</>
-                    ) : (
-                      <><Link2 className="mr-1 h-4 w-4" /> Copy Preview Link</>
+                    <ChevronDown className={cn("h-4 w-4 transition-transform duration-300", draftMenuOpen && "rotate-180")} />
+                  </button>
+                )}
+              </div>
+
+              <div
+                aria-hidden={!draftMenuOpen}
+                inert={draftMenuOpen ? undefined : ""}
+                className={cn(
+                  "grid border-t transition-[grid-template-rows,opacity,border-color] duration-300 ease-out",
+                  draftMenuOpen
+                    ? "grid-rows-[1fr] border-white/10 opacity-100"
+                    : "pointer-events-none grid-rows-[0fr] border-transparent opacity-0"
+                )}
+              >
+                <div className="min-h-0 overflow-hidden">
+                  <div className="flex flex-col gap-2 p-2 sm:flex-row sm:items-center">
+                    <Input
+                      ref={draftNameInputRef}
+                      value={draftName}
+                      onChange={(event) => setDraftName(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          event.preventDefault();
+                          handleSaveDraft();
+                        }
+                      }}
+                      placeholder="Draft name"
+                      maxLength={120}
+                      className="h-10 min-w-0 flex-1 rounded-xl border-white bg-white px-3 text-gray-950 placeholder:text-gray-400 focus-visible:ring-white/70"
+                    />
+                    <Button
+                      type="button"
+                      onClick={() => handleSaveDraft()}
+                      disabled={savingDraft || !draftName.trim()}
+                      className="h-10 shrink-0 rounded-xl bg-white px-3 text-neutral-950 hover:bg-gray-100 hover:text-neutral-950 disabled:bg-white/40 disabled:text-neutral-600"
+                    >
+                      {savingDraft && draftSaveMode === "save" ? (
+                        <><Loader className="mr-1.5 h-4 w-4 animate-spin" /> Saving...</>
+                      ) : (
+                        <><Save className="mr-1 h-4 w-4" /> Save Draft</>
+                      )}
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={() => handleSaveDraft(null, { copyPreviewLink: true })}
+                      disabled={savingDraft || !draftName.trim()}
+                      className="h-10 shrink-0 rounded-xl bg-blue-600 px-3 text-white hover:bg-blue-700 disabled:bg-blue-400 disabled:text-white"
+                    >
+                      {savingDraft && draftSaveMode === "preview" ? (
+                        <><Loader className="mr-1.5 h-4 w-4 animate-spin" /> Copying...</>
+                      ) : (
+                        <><Link2 className="mr-1 h-4 w-4" /> Copy Preview Link</>
+                      )}
+                    </Button>
+                    {SHOW_DRAFT_UPDATE && !loadingDraftUpdateOptions && draftUpdateOptions.length > 0 && (
+                      <Popover open={draftUpdateMenuOpen} onOpenChange={handleDraftUpdateMenuChange}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            disabled={savingDraft}
+                            className="h-9 shrink-0 rounded-xl border-gray-300 bg-white px-3 hover:border-blue-600 hover:bg-blue-600 hover:text-white"
+                          >
+                            {savingDraft && draftSaveMode === "update" ? (
+                              <><Loader className="mr-1.5 h-4 w-4 animate-spin" /> Updating...</>
+                            ) : "Update"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent align="end" sideOffset={6} className="w-72 rounded-2xl border-gray-200 bg-white p-2 shadow-xl">
+                          <p className="px-2 pb-1.5 text-xs font-medium text-gray-500">Select a draft to update</p>
+                          <ScrollArea className="h-56">
+                            {draftUpdateOptions.map((draft) => (
+                              <button
+                                key={draft.id}
+                                type="button"
+                                onClick={() => handleSaveDraft(draft)}
+                                className="block w-full rounded-lg px-2.5 py-2 text-left hover:bg-gray-100"
+                              >
+                                <span className="block truncate text-sm font-medium text-gray-900">{draft.name}</span>
+                              </button>
+                            ))}
+                          </ScrollArea>
+                        </PopoverContent>
+                      </Popover>
                     )}
-                  </Button>
-                  {SHOW_DRAFT_UPDATE && !loadingDraftUpdateOptions && draftUpdateOptions.length > 0 && (
-                    <Popover open={draftUpdateMenuOpen} onOpenChange={handleDraftUpdateMenuChange}>
-                      <PopoverTrigger asChild>
-                        <Button
+                  </div>
+                  {savingDraft && (
+                    <div className="mx-2 mb-2 rounded-xl bg-white/10 px-2.5 py-2">
+                      <div className="mb-1 flex items-center justify-between gap-3 text-[11px] text-white/70">
+                        <span className="truncate">{draftSaveProgress.message || "Saving draft..."}</span>
+                        <span className="shrink-0 font-medium">{draftSaveProgress.value}%</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Progress value={draftSaveProgress.value} className="h-1.5 flex-1 bg-white/20 [&>div]:bg-blue-500" />
+                        <button
                           type="button"
-                          variant="outline"
-                          disabled={savingDraft}
-                          className="h-9 shrink-0 rounded-xl border-gray-300 bg-white px-3 hover:border-blue-600 hover:bg-blue-600 hover:text-white"
+                          onClick={handleCancelDraftSave}
+                          className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-red-300 transition hover:bg-white/10 hover:text-red-200"
+                          aria-label="Cancel draft save"
                         >
-                          {savingDraft && draftSaveMode === "update" ? (
-                            <><Loader className="mr-1.5 h-4 w-4 animate-spin" /> Updating...</>
-                          ) : "Update"}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent align="end" sideOffset={6} className="w-72 rounded-2xl border-gray-200 bg-white p-2 shadow-xl">
-                        <p className="px-2 pb-1.5 text-xs font-medium text-gray-500">Select a draft to update</p>
-                        <ScrollArea className="h-56">
-                          {draftUpdateOptions.map((draft) => (
-                            <button
-                              key={draft.id}
-                              type="button"
-                              onClick={() => handleSaveDraft(draft)}
-                              className="block w-full rounded-lg px-2.5 py-2 text-left hover:bg-gray-100"
-                            >
-                              <span className="block truncate text-sm font-medium text-gray-900">{draft.name}</span>
-                            </button>
-                          ))}
-                        </ScrollArea>
-                      </PopoverContent>
-                    </Popover>
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </div>
                   )}
                 </div>
-                {savingDraft && (
-                  <div className="mt-2 rounded-xl bg-white px-2 py-1.5">
-                    <div className="mb-1 flex items-center justify-between gap-3 text-[11px] text-gray-600">
-                      <span className="truncate">{draftSaveProgress.message || "Saving draft..."}</span>
-                      <span className="shrink-0 font-medium">{draftSaveProgress.value}%</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <Progress value={draftSaveProgress.value} className="h-1.5 flex-1 bg-gray-200 [&>div]:bg-blue-600" />
-                      <button
-                        type="button"
-                        onClick={handleCancelDraftSave}
-                        className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-red-600 transition hover:bg-red-50 hover:text-red-700"
-                        aria-label="Cancel draft save"
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </PopoverContent>
-            </Popover>
+              </div>
+            </div>
 
             {adSetTimingIssue && (
               <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
@@ -11140,23 +11165,23 @@ export default function AdCreationForm({
       {failedPreviewUrl && (
         <div
           role="alert"
-          className="fixed bottom-6 left-6 z-[10000] w-[min(24rem,calc(100vw-3rem))] rounded-2xl border border-gray-200 bg-white p-4 pr-11 shadow-2xl animate-in fade-in slide-in-from-bottom-3 duration-200"
+          className="fixed bottom-6 left-6 z-[10000] w-[min(24rem,calc(100vw-3rem))] rounded-[28px] border border-green-400 bg-green-50 p-5 shadow-2xl animate-in fade-in slide-in-from-bottom-3 duration-200"
         >
           <button
             type="button"
             aria-label="Close preview link copy notification"
             onClick={() => setFailedPreviewUrl("")}
-            className="absolute right-3 top-3 rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
+            className="absolute -right-2 -top-2 flex h-7 w-7 items-center justify-center rounded-full bg-black text-white shadow-md transition-transform hover:scale-105 hover:bg-neutral-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-700 focus-visible:ring-offset-2"
           >
-            <X className="h-4 w-4" />
+            <X className="h-3.5 w-3.5" />
           </button>
-          <p className="text-sm font-medium text-gray-900">
+          <p className="text-sm font-semibold text-green-950">
             Auto link copy failed. Form saved as a draft.
           </p>
           <Button
             type="button"
             onClick={handleRetryPreviewCopy}
-            className="mt-3 h-9 rounded-xl bg-blue-600 px-3 text-white hover:bg-blue-700"
+            className="mt-3 h-10 w-full rounded-xl bg-green-700 px-3 text-white hover:bg-green-800"
           >
             <Link2 className="mr-1.5 h-4 w-4" />
             Click to Copy link

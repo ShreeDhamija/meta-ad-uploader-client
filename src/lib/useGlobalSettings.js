@@ -46,16 +46,8 @@ export default function useGlobalSettings() {
                     ? data.settings.seenOnboardingCards
                     : []
             );
-            setSelectedAdAccountIds(
-                Array.isArray(data?.settings?.selectedAdAccountIds)
-                    ? data.settings.selectedAdAccountIds.map(String)
-                    : []
-            )
-            setSelectedTikTokAdvertiserIds(
-                Array.isArray(data?.settings?.tiktok?.selectedAdvertiserIds)
-                    ? data.settings.tiktok.selectedAdvertiserIds.map(String)
-                    : []
-            )
+            setSelectedAdAccountIds(data?.settings?.selectedAdAccountIds || [])
+            setSelectedTikTokAdvertiserIds(data?.settings?.tiktok?.selectedAdvertiserIds || [])
             const savedUploadSources = Array.isArray(data?.settings?.uploadSources)
                 ? data.settings.uploadSources
                 : ['local', 'drive', 'dropbox'];

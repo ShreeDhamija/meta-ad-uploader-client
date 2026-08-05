@@ -7,7 +7,6 @@ import { useTikTokAuth } from "@/lib/TikTokAuthContext"
 import { getPlanAccountLimit } from "@/lib/accountSelection"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
-const asArray = (value) => Array.isArray(value) ? value : []
 
 const AppContext = createContext()
 
@@ -25,9 +24,9 @@ export const AppProvider = ({ children }) => {
   const cachedAccounts = bustOnMount ? null : readCache('adAccounts');
   const cachedPages = bustOnMount ? null : readCache('pages');
 
-  const [pages, setPages] = useState(asArray(cachedPages))
-  const [adAccounts, setAdAccounts] = useState(asArray(cachedAccounts))
-  const [allAdAccounts, setAllAdAccounts] = useState(asArray(cachedAccounts))
+  const [pages, setPages] = useState(cachedPages || [])
+  const [adAccounts, setAdAccounts] = useState(cachedAccounts || [])
+  const [allAdAccounts, setAllAdAccounts] = useState(cachedAccounts || [])
   const [pagesLoading, setPagesLoading] = useState(false)
   const [adAccountsLoading, setAdAccountsLoading] = useState(false)
   const [tiktokIdentities, setTiktokIdentities] = useState(readCache('tiktokIdentities') || {})
@@ -81,7 +80,7 @@ export const AppProvider = ({ children }) => {
     try {
       const res = await fetch(`${API_BASE_URL}/auth/fetch-ad-accounts`, { credentials: "include" })
       const data = await res.json()
-      if (data.success && Array.isArray(data.adAccounts)) {
+      if (data.success && data.adAccounts) {
         setAllAdAccounts(data.adAccounts)
         setAdAccounts(data.adAccounts)
         writeCache('adAccounts', data.adAccounts)
@@ -100,7 +99,7 @@ export const AppProvider = ({ children }) => {
     try {
       const res = await fetch(`${API_BASE_URL}/auth/fetch-pages`, { credentials: "include" })
       const data = await res.json()
-      if (data.success && Array.isArray(data.pages)) {
+      if (data.success && data.pages) {
         setPages(data.pages)
         writeCache('pages', data.pages)
         return data.pages

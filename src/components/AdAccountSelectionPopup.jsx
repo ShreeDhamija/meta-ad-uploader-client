@@ -25,18 +25,6 @@ import {
 } from "@/lib/accountSelection"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "https://api.withblip.com"
-const EMPTY_ACCOUNTS = []
-
-// Settings are persisted as JSON, but legacy/manual DB edits can leave these
-// fields as objects or JSON strings. Treat anything other than an actual array
-// as an empty selection so the popup can repair the value instead of crashing.
-const normalizeSelectedIds = (value) => (
-    Array.isArray(value)
-        ? value
-            .filter((id) => id !== null && id !== undefined && id !== "")
-            .map(String)
-        : []
-)
 
 const accountId = (account, platform) => String(
     platform === TIKTOK_PLATFORM
@@ -71,8 +59,7 @@ export default function AdAccountSelectionPopup({
     const isTikTok = platform === TIKTOK_PLATFORM
     const maxAccounts = getPlanAccountLimit(planType)
     const isSingleAccountPlan = maxAccounts === 1
-    const rawAccounts = isTikTok ? allTikTokAdvertisers : allAdAccounts
-    const accounts = Array.isArray(rawAccounts) ? rawAccounts : EMPTY_ACCOUNTS
+    const accounts = isTikTok ? allTikTokAdvertisers : allAdAccounts
     const savedSelection = isTikTok ? selectedTikTokAdvertiserIds : selectedAdAccountIds
 
     useEffect(() => {
@@ -85,7 +72,7 @@ export default function AdAccountSelectionPopup({
 
     useEffect(() => {
         if (!isOpen) return
-        setSelectedAccountIds(normalizeSelectedIds(savedSelection))
+        setSelectedAccountIds((savedSelection || []).map(String))
         setSearchQuery("")
     }, [isOpen, platform, savedSelection])
 
