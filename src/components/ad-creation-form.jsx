@@ -4028,7 +4028,7 @@ export default function AdCreationForm({
   const resolveCtaForServer = (ctaValue) =>
     ctaValue === "BOOK_NOW" &&
       campaignObjective.length > 0 &&
-      campaignObjective.every(obj => obj === "OUTCOME_SALES" || obj === "OUTCOME_LEADS")
+      campaignObjective.every(obj => obj === "OUTCOME_SALES" || obj === "OUTCOME_LEADS" || obj === "OUTCOME_AWARENESS")
       ? "BOOK_TRAVEL"
       : ctaValue;
 
@@ -10301,10 +10301,10 @@ export default function AdCreationForm({
                             const clickHandler =
                               id === 'csv' ? handleCsvSourceClick :
                                 id === 'drive' ? handleDriveClick :
-                              id === 'dropbox' ? handleDropboxClick :
-                                id === 'frameio' ? handleFrameioClick :
-                                  id === 'drafts' ? () => setDraftsModalOpen(true) :
-                                  () => { };
+                                  id === 'dropbox' ? handleDropboxClick :
+                                    id === 'frameio' ? handleFrameioClick :
+                                      id === 'drafts' ? () => setDraftsModalOpen(true) :
+                                        () => { };
 
                             const draftDisabled = id === 'drafts' && !selectedAdAccount;
                             const sourceButton = renderButton(src, clickHandler, draftDisabled);
@@ -10411,68 +10411,68 @@ export default function AdCreationForm({
                       bottom: `calc(50% + ${Math.ceil(pickerDialogHeight / 2) + 40}px)`
                     }}
                   >
-                      <div className="flex flex-col gap-2">
-                        <div className="flex items-center justify-between">
-                          <h3 className="min-w-0 truncate font-semibold text-sm">
-                            {pendingCsvDriveImport
-                              ? "Navigate to Folder"
-                              : "Quick Navigate to Folder"}
-                          </h3>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setShowFolderInput(false);
-                              setFolderLinkValue("");
-                            }}
-                            className="h-6 w-6 p-0"
-                          >
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center justify-between">
+                        <h3 className="min-w-0 truncate font-semibold text-sm">
+                          {pendingCsvDriveImport
+                            ? "Navigate to Folder"
+                            : "Quick Navigate to Folder"}
+                        </h3>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setShowFolderInput(false);
+                            setFolderLinkValue("");
+                          }}
+                          className="h-6 w-6 p-0"
+                        >
 
-                          </Button>
-                        </div>
-
-                        {pendingCsvDriveImport && (
-                          <p className="text-xs leading-relaxed text-gray-600">
-                            Enter a link to the folder containing these files and select all and import. Google Drive requires explicit file imports into the app. Or manually navigate to the folder in the picker below and import the files
-                          </p>
-                        )}
-
-                        <div className="flex flex-col gap-2 sm:flex-row">
-                          <Input
-                            type="text"
-                            placeholder={pendingCsvDriveImport
-                              ? "Paste the CSV creatives folder link"
-                              : "Paste Google Drive folder link here"}
-                            value={folderLinkValue}
-                            onChange={(e) => setFolderLinkValue(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                handleImportFromFolder();
-                              }
-                            }}
-                            className={cn("min-w-0 flex-1 bg-white", formInputChrome)}
-
-                          />
-                          <Button
-                            type="button"
-                            onClick={handleImportFromFolder}
-                            disabled={!folderLinkValue}
-                            className="w-full rounded-xl bg-blue-600 hover:bg-blue-700 sm:w-auto"
-                          >
-                            {isImportingFolder ? (
-                              <>
-                                <Loader className="h-4 w-4 mr-2 animate-spin" />
-                                Opening...
-                              </>
-                            ) : (
-                              "Open"
-                            )}
-                          </Button>
-                        </div>
-
+                        </Button>
                       </div>
+
+                      {pendingCsvDriveImport && (
+                        <p className="text-xs leading-relaxed text-gray-600">
+                          Enter a link to the folder containing these files and select all and import. Google Drive requires explicit file imports into the app. Or manually navigate to the folder in the picker below and import the files
+                        </p>
+                      )}
+
+                      <div className="flex flex-col gap-2 sm:flex-row">
+                        <Input
+                          type="text"
+                          placeholder={pendingCsvDriveImport
+                            ? "Paste the CSV creatives folder link"
+                            : "Paste Google Drive folder link here"}
+                          value={folderLinkValue}
+                          onChange={(e) => setFolderLinkValue(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              handleImportFromFolder();
+                            }
+                          }}
+                          className={cn("min-w-0 flex-1 bg-white", formInputChrome)}
+
+                        />
+                        <Button
+                          type="button"
+                          onClick={handleImportFromFolder}
+                          disabled={!folderLinkValue}
+                          className="w-full rounded-xl bg-blue-600 hover:bg-blue-700 sm:w-auto"
+                        >
+                          {isImportingFolder ? (
+                            <>
+                              <Loader className="h-4 w-4 mr-2 animate-spin" />
+                              Opening...
+                            </>
+                          ) : (
+                            "Open"
+                          )}
+                        </Button>
+                      </div>
+
                     </div>
+                  </div>
                 )}
 
               </>
@@ -10501,67 +10501,67 @@ export default function AdCreationForm({
                   >
                     {isQueueingJobs ? "Publishing Ads..." : "Publish Ads"}
                   </Button>
-                {IS_STAGING && (
-                  <PopoverTrigger asChild>
-                    <button
-                      type="button"
-                      className="relative flex h-12 w-12 items-center justify-center bg-neutral-950 transition before:pointer-events-none before:absolute before:left-0 before:top-3 before:h-6 before:w-px before:bg-white/25 before:transition-opacity hover:bg-zinc-800 group-hover:before:opacity-0 peer-hover:!bg-blue-700 disabled:opacity-50"
-                      disabled={savingDraft || !selectedAdAccount}
-                      aria-label="Save as draft"
-                    >
-                      <ChevronDown className="h-4 w-4" />
-                    </button>
-                  </PopoverTrigger>
-                )}
+                  {IS_STAGING && (
+                    <PopoverTrigger asChild>
+                      <button
+                        type="button"
+                        className="relative flex h-12 w-12 items-center justify-center bg-neutral-950 transition before:pointer-events-none before:absolute before:left-0 before:top-3 before:h-6 before:w-px before:bg-white/25 before:transition-opacity hover:bg-zinc-800 group-hover:before:opacity-0 peer-hover:!bg-blue-700 disabled:opacity-50"
+                        disabled={savingDraft || !selectedAdAccount}
+                        aria-label="Save as draft"
+                      >
+                        <ChevronDown className="h-4 w-4" />
+                      </button>
+                    </PopoverTrigger>
+                  )}
                 </div>
               </PopoverAnchor>
-                <PopoverContent
-                  align="end"
-                  side="bottom"
-                  sideOffset={6}
-                  avoidCollisions={false}
-                  className="w-[var(--radix-popover-trigger-width)] rounded-3xl border border-gray-200 bg-gray-100 p-2 shadow-xl"
-                >
-                  <div className="flex items-center gap-1.5">
-                    <Input
-                      value={draftName}
-                      onChange={(event) => setDraftName(event.target.value)}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter") {
-                          event.preventDefault();
-                          handleSaveDraft();
-                        }
-                      }}
-                      placeholder="Draft name"
-                      maxLength={120}
-                      className="h-9 min-w-0 flex-1 rounded-xl bg-white px-2.5"
-                      autoFocus
-                    />
-                    <Button
-                      type="button"
-                      onClick={() => handleSaveDraft()}
-                      disabled={savingDraft || !draftName.trim()}
-                      className="h-9 shrink-0 rounded-xl bg-black px-3 text-white hover:bg-blue-700"
-                    >
-                      {savingDraft && draftSaveMode === "save" ? (
-                        <><Loader className="mr-1.5 h-4 w-4 animate-spin" /> Saving...</>
-                      ) : (
-                        <><Save className="mr-1 h-4 w-4" /> Save Draft</>
-                      )}
-                    </Button>
-                    <Button
-                      type="button"
-                      onClick={() => handleSaveDraft(null, { copyPreviewLink: true })}
-                      disabled={savingDraft || !draftName.trim()}
-                      className="h-9 shrink-0 rounded-xl bg-blue-600 px-3 text-white hover:bg-blue-700"
-                    >
-                      {savingDraft && draftSaveMode === "preview" ? (
-                        <><Loader className="mr-1.5 h-4 w-4 animate-spin" /> Copying...</>
-                      ) : (
-                        <><Link2 className="mr-1 h-4 w-4" /> Copy Preview Link</>
-                      )}
-                    </Button>
-                    {SHOW_DRAFT_UPDATE && !loadingDraftUpdateOptions && draftUpdateOptions.length > 0 && (
+              <PopoverContent
+                align="end"
+                side="bottom"
+                sideOffset={6}
+                avoidCollisions={false}
+                className="w-[var(--radix-popover-trigger-width)] rounded-3xl border border-gray-200 bg-gray-100 p-2 shadow-xl"
+              >
+                <div className="flex items-center gap-1.5">
+                  <Input
+                    value={draftName}
+                    onChange={(event) => setDraftName(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        handleSaveDraft();
+                      }
+                    }}
+                    placeholder="Draft name"
+                    maxLength={120}
+                    className="h-9 min-w-0 flex-1 rounded-xl bg-white px-2.5"
+                    autoFocus
+                  />
+                  <Button
+                    type="button"
+                    onClick={() => handleSaveDraft()}
+                    disabled={savingDraft || !draftName.trim()}
+                    className="h-9 shrink-0 rounded-xl bg-black px-3 text-white hover:bg-blue-700"
+                  >
+                    {savingDraft && draftSaveMode === "save" ? (
+                      <><Loader className="mr-1.5 h-4 w-4 animate-spin" /> Saving...</>
+                    ) : (
+                      <><Save className="mr-1 h-4 w-4" /> Save Draft</>
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => handleSaveDraft(null, { copyPreviewLink: true })}
+                    disabled={savingDraft || !draftName.trim()}
+                    className="h-9 shrink-0 rounded-xl bg-blue-600 px-3 text-white hover:bg-blue-700"
+                  >
+                    {savingDraft && draftSaveMode === "preview" ? (
+                      <><Loader className="mr-1.5 h-4 w-4 animate-spin" /> Copying...</>
+                    ) : (
+                      <><Link2 className="mr-1 h-4 w-4" /> Copy Preview Link</>
+                    )}
+                  </Button>
+                  {SHOW_DRAFT_UPDATE && !loadingDraftUpdateOptions && draftUpdateOptions.length > 0 && (
                     <Popover open={draftUpdateMenuOpen} onOpenChange={handleDraftUpdateMenuChange}>
                       <PopoverTrigger asChild>
                         <Button
@@ -10591,28 +10591,28 @@ export default function AdCreationForm({
                         </ScrollArea>
                       </PopoverContent>
                     </Popover>
-                    )}
-                  </div>
-                  {savingDraft && (
-                    <div className="mt-2 rounded-xl bg-white px-2 py-1.5">
-                      <div className="mb-1 flex items-center justify-between gap-3 text-[11px] text-gray-600">
-                        <span className="truncate">{draftSaveProgress.message || "Saving draft..."}</span>
-                        <span className="shrink-0 font-medium">{draftSaveProgress.value}%</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <Progress value={draftSaveProgress.value} className="h-1.5 flex-1 bg-gray-200 [&>div]:bg-blue-600" />
-                        <button
-                          type="button"
-                          onClick={handleCancelDraftSave}
-                          className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-red-600 transition hover:bg-red-50 hover:text-red-700"
-                          aria-label="Cancel draft save"
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    </div>
                   )}
-                </PopoverContent>
+                </div>
+                {savingDraft && (
+                  <div className="mt-2 rounded-xl bg-white px-2 py-1.5">
+                    <div className="mb-1 flex items-center justify-between gap-3 text-[11px] text-gray-600">
+                      <span className="truncate">{draftSaveProgress.message || "Saving draft..."}</span>
+                      <span className="shrink-0 font-medium">{draftSaveProgress.value}%</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Progress value={draftSaveProgress.value} className="h-1.5 flex-1 bg-gray-200 [&>div]:bg-blue-600" />
+                      <button
+                        type="button"
+                        onClick={handleCancelDraftSave}
+                        className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-red-600 transition hover:bg-red-50 hover:text-red-700"
+                        aria-label="Cancel draft save"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </PopoverContent>
             </Popover>
 
             {adSetTimingIssue && (
