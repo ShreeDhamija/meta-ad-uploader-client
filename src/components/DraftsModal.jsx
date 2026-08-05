@@ -60,9 +60,9 @@ function FieldLabel({ icon, children }) {
 
 function DetailField({ label, icon, children, className = "" }) {
   return (
-    <div className={className}>
+    <div className={`min-w-0 ${className}`}>
       <dt><FieldLabel icon={icon}>{label}</FieldLabel></dt>
-      <dd className="break-words text-sm font-semibold leading-5 text-gray-950">{children || "—"}</dd>
+      <dd className="min-w-0 break-words text-sm font-semibold leading-5 text-gray-950 [overflow-wrap:anywhere]">{children || "—"}</dd>
     </div>
   );
 }
@@ -227,10 +227,10 @@ function FormPreview({
   const adNameFormula = values.adNameFormulaV2?.rawInput?.trim();
 
   return (
-    <section className="grid min-h-0 flex-1 grid-cols-[minmax(0,1.45fr)_minmax(260px,0.55fr)] gap-6 overflow-hidden px-8 pt-5">
-      <div className="flex min-h-0 min-w-0 flex-col">
+    <section className="flex min-h-0 flex-1 flex-col overflow-hidden px-8 pt-5">
+      <div className="mb-4 flex min-h-9 shrink-0 items-start justify-between gap-4">
         {forms.length > 1 && (
-          <ScrollArea className="mb-4 h-9 shrink-0 max-w-lg">
+          <ScrollArea className="h-9 min-w-0 max-w-lg flex-1">
             <div className="flex w-max gap-1 pb-2 pr-2">
               {forms.map((variantForm, index) => (
                 <button
@@ -249,8 +249,15 @@ function FormPreview({
             </div>
           </ScrollArea>
         )}
-        <ScrollArea className="min-h-0 flex-1">
-          <dl className="pr-4">
+        <div className="ml-auto flex shrink-0 items-center justify-end gap-3">
+          {actions}
+        </div>
+      </div>
+
+      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1.2fr)_minmax(360px,0.8fr)] gap-6 overflow-hidden">
+        <div className="flex min-h-0 min-w-0 flex-col">
+          <ScrollArea className="min-h-0 min-w-0 flex-1">
+            <dl className="min-w-0 pr-8">
             <DetailField
               label={adNameFormula ? "Ad Name Formula" : "Ad Name"}
               icon={<LabelIcon className="h-4 w-4" />}
@@ -333,27 +340,25 @@ function FormPreview({
               </DetailField>
               <DetailField label="CTA" icon={<CTAIcon className="h-4 w-4" />}>{values.cta}</DetailField>
             </FormSection>
-          </dl>
-        </ScrollArea>
-      </div>
-
-      <div className="flex min-h-0 min-w-0 flex-col border-l border-gray-200 pl-6">
-        <div className="mb-4 flex h-9 shrink-0 items-center justify-end gap-3">
-          {actions}
+            </dl>
+          </ScrollArea>
         </div>
-        <ScrollArea className="min-h-0 flex-1 pr-2">
-          {creativeUnits.length > 0 ? (
-            <div className="grid grid-cols-2 gap-x-4 gap-y-5">
-              {indexedCreativeUnits.map(({ unit, groupIndex }) => (
-                <CreativeUnit key={unit.id} unit={unit} groupIndex={groupIndex} />
-              ))}
-            </div>
-          ) : (
-            <div className="flex h-full min-h-48 items-center justify-center rounded-2xl border border-dashed border-gray-300 bg-gray-50 text-sm text-gray-500">
-              No media saved for this variant.
-            </div>
-          )}
-        </ScrollArea>
+
+        <div className="flex min-h-0 min-w-0 flex-col border-l border-gray-200 pl-6">
+          <ScrollArea className="min-h-0 min-w-0 flex-1 pr-2">
+            {creativeUnits.length > 0 ? (
+              <div className="grid grid-cols-2 gap-x-4 gap-y-5">
+                {indexedCreativeUnits.map(({ unit, groupIndex }) => (
+                  <CreativeUnit key={unit.id} unit={unit} groupIndex={groupIndex} />
+                ))}
+              </div>
+            ) : (
+              <div className="flex h-full min-h-48 items-center justify-center rounded-2xl border border-dashed border-gray-300 bg-gray-50 px-4 text-center text-sm text-gray-500">
+                No media saved for this variant.
+              </div>
+            )}
+          </ScrollArea>
+        </div>
       </div>
     </section>
   );

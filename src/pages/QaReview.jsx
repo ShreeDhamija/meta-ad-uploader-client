@@ -28,9 +28,9 @@ function FieldLabel({ icon, children }) {
 
 function DetailField({ label, icon, children }) {
   return (
-    <div>
+    <div className="min-w-0">
       <dt><FieldLabel icon={icon}>{label}</FieldLabel></dt>
-      <dd className="break-words text-sm font-semibold leading-5 text-gray-950">{children || "—"}</dd>
+      <dd className="min-w-0 break-words text-sm font-semibold leading-5 text-gray-950 [overflow-wrap:anywhere]">{children || "—"}</dd>
     </div>
   );
 }
@@ -216,7 +216,7 @@ function ReviewForm({ form, index, state, mediaById, showLaunchHeading }) {
         </header>
       )}
 
-      <div className={`grid grid-cols-1 items-start gap-6 px-8 pb-10 lg:grid-cols-[minmax(0,1.45fr)_minmax(280px,0.55fr)] ${
+      <div className={`grid grid-cols-1 items-start gap-6 px-8 pb-10 lg:grid-cols-[minmax(0,1.2fr)_minmax(340px,0.8fr)] ${
         showLaunchHeading ? "pt-5" : "pt-10"
       }`}>
         <div className="min-w-0 lg:sticky lg:top-6 lg:self-start">
