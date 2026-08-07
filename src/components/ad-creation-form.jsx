@@ -64,7 +64,7 @@ import { cleanupPublishedDraftMedia, createDraftShareUrl, listDrafts, refreshDra
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 const TEMPLATE_LINK_SYNC_USER_ID = "929470643071391";
 const PIXEL_TRACKING_FORM_ALLOWED_USER_IDS = ["10236978990363167", "10234447959963619", "10162737276661695"];
-const LOWERCASE_FILE_NAME_FORMULA_USER_IDS = ["27431350269900471", "10236978990363167"];
+const LOWERCASE_FILE_NAME_FORMULA_USER_IDS = ["27431350269900471"];
 const EMPTY_PIXEL_TRACKING_OVERRIDE = {
   websitePixelId: null,
   offlineDatasetId: null,
