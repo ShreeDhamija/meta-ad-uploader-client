@@ -64,6 +64,7 @@ import { cleanupPublishedDraftMedia, createDraftShareUrl, listDrafts, refreshDra
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 const TEMPLATE_LINK_SYNC_USER_ID = "929470643071391";
 const PIXEL_TRACKING_FORM_ALLOWED_USER_IDS = ["10236978990363167", "10234447959963619", "10162737276661695"];
+const LOWERCASE_FILE_NAME_FORMULA_USER_IDS = ["27431350269900471", "10236978990363167"];
 const EMPTY_PIXEL_TRACKING_OVERRIDE = {
   websitePixelId: null,
   offlineDatasetId: null,
@@ -4132,6 +4133,9 @@ export default function AdCreationForm({
     let fileName = "";
     if (file && file.name) {
       fileName = file.name.replace(/\.[^/.]+$/, "");
+      if (LOWERCASE_FILE_NAME_FORMULA_USER_IDS.includes(String(userId))) {
+        fileName = fileName.toLowerCase();
+      }
     }
 
     let fileType = "";
@@ -4207,7 +4211,7 @@ export default function AdCreationForm({
 
 
     return adName.trim() || "Ad Generated Through Blip";
-  }, [adNameFormulaV2, adValues.dateType, computeAdName, defaultTemplateName, isTemplateLinkSyncUser, selectedTemplate]);
+  }, [adNameFormulaV2, adValues.dateType, computeAdName, defaultTemplateName, isTemplateLinkSyncUser, selectedTemplate, userId]);
 
   const adNamePreviewFile = useMemo(() => {
     const directFile = files[0] || driveFiles[0] || dropboxFiles[0] || frameioFiles[0] || importedFiles[0];
