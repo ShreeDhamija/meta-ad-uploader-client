@@ -19,6 +19,7 @@ const META_CACHE_TTL_MS = 15 * 60 * 1000;
 const metaLibraryMemoryCache = new Map();
 const IG_CREATOR_FILTER_ALL = 'all-posts';
 const IG_CREATOR_FILTER_ANY = 'any-creator';
+const IG_CREATOR_FILTER_UNSET = '';
 
 const getMetaCacheKey = (adAccountId) => `${META_CACHE_KEY_PREFIX}:${adAccountId}`;
 
@@ -215,7 +216,7 @@ export default function MetaMediaLibraryModal({
     const [loadingMoreMetaImages, setLoadingMoreMetaImages] = useState(false);
     const [loadingMoreMetaVideos, setLoadingMoreMetaVideos] = useState(false);
     const [loadingMoreIg, setLoadingMoreIg] = useState(false);
-    const [creatorFilter, setCreatorFilter] = useState(IG_CREATOR_FILTER_ALL);
+    const [creatorFilter, setCreatorFilter] = useState(IG_CREATOR_FILTER_UNSET);
     const [creatorFilterOpen, setCreatorFilterOpen] = useState(false);
     const [creatorSearchQuery, setCreatorSearchQuery] = useState('');
     const [metaSearchQuery, setMetaSearchQuery] = useState('');
@@ -450,7 +451,7 @@ export default function MetaMediaLibraryModal({
         setIsOpen(true);
         setSelectedMetaFiles([]);
         setSelectedIgPosts([]);
-        setCreatorFilter(IG_CREATOR_FILTER_ALL);
+        setCreatorFilter(IG_CREATOR_FILTER_UNSET);
         setCreatorSearchQuery('');
         setMetaSearchQuery('');
         if (mediaSource === 'meta_library') {
@@ -465,7 +466,7 @@ export default function MetaMediaLibraryModal({
         setActiveTab('images');
         setSelectedMetaFiles([]);
         setSelectedIgPosts([]);
-        setCreatorFilter(IG_CREATOR_FILTER_ALL);
+        setCreatorFilter(IG_CREATOR_FILTER_UNSET);
         setCreatorSearchQuery('');
         setMetaSearchQuery('');
 
@@ -560,15 +561,18 @@ export default function MetaMediaLibraryModal({
             : instagramCreators
     ), [instagramCreators, normalizedCreatorSearch]);
     const selectedCreator = instagramCreators.find((creator) => creator.key === creatorFilter);
-    const creatorFilterLabel = creatorFilter === IG_CREATOR_FILTER_ANY
-        ? 'Any creator'
-        : selectedCreator
-            ? `@${selectedCreator.username}`
-            : 'All posts';
+    const creatorFilterLabel = creatorFilter === IG_CREATOR_FILTER_UNSET
+        ? 'Filter by creator'
+        : creatorFilter === IG_CREATOR_FILTER_ANY
+            ? 'Any creator'
+            : selectedCreator
+                ? `@${selectedCreator.username}`
+                : 'All posts';
 
     useEffect(() => {
         if (
-            creatorFilter !== IG_CREATOR_FILTER_ALL
+            creatorFilter
+            && creatorFilter !== IG_CREATOR_FILTER_ALL
             && creatorFilter !== IG_CREATOR_FILTER_ANY
             && !instagramCreators.some((creator) => creator.key === creatorFilter)
         ) {
@@ -583,7 +587,7 @@ export default function MetaMediaLibraryModal({
             return items.filter(item => (item.name || '').toLowerCase().includes(normalizedMetaSearch));
         }
         const items = activeTab === 'images' ? igImages : igVideos;
-        if (creatorFilter === IG_CREATOR_FILTER_ALL) return items;
+        if (!creatorFilter || creatorFilter === IG_CREATOR_FILTER_ALL) return items;
 
         return items.filter((item) => {
             const creators = getInstagramPostCreators(item, instagramAccountId);
@@ -655,7 +659,7 @@ export default function MetaMediaLibraryModal({
         setMediaSource(source);
         setSelectedMetaFiles([]);
         setSelectedIgPosts([]);
-        setCreatorFilter(IG_CREATOR_FILTER_ALL);
+        setCreatorFilter(IG_CREATOR_FILTER_UNSET);
         setCreatorSearchQuery('');
         setMetaSearchQuery('');
         setIsOpen(true);
@@ -790,16 +794,21 @@ export default function MetaMediaLibraryModal({
                                         role="combobox"
                                         aria-expanded={creatorFilterOpen}
                                         aria-label="Filter Instagram posts by creator"
-                                        className="h-10 w-[280px] justify-between rounded-2xl border-gray-300 bg-white px-3 font-normal shadow hover:bg-white"
+                                        className="h-10 w-[280px] justify-between rounded-2xl border-gray-300 !bg-white px-3 font-normal shadow hover:!bg-white"
                                     >
-                                        <span className="truncate">Creator: {creatorFilterLabel}</span>
+                                        <span className="truncate">{creatorFilterLabel}</span>
                                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                     </Button>
                                 </PopoverTrigger>
                                 <PopoverContent
                                     align="start"
                                     sideOffset={4}
-                                    className="w-[--radix-popover-trigger-width] rounded-2xl border-gray-200 !bg-white p-0 shadow-lg"
+                                    className="rounded-2xl border-gray-200 !bg-white p-0 shadow-lg"
+                                    style={{
+                                        width: 'var(--radix-popover-trigger-width)',
+                                        minWidth: 'var(--radix-popover-trigger-width)',
+                                        maxWidth: 'var(--radix-popover-trigger-width)',
+                                    }}
                                 >
                                     <Command filter={() => 1} loop={false} className="!bg-white">
                                         <CommandInput
