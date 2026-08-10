@@ -794,7 +794,8 @@ export default function MetaMediaLibraryModal({
                                         role="combobox"
                                         aria-expanded={creatorFilterOpen}
                                         aria-label="Filter Instagram posts by creator"
-                                        className="h-10 w-[280px] justify-between rounded-2xl border-gray-300 !bg-white px-3 font-normal shadow hover:!bg-white"
+                                        className="h-10 w-[280px] justify-between rounded-2xl border-gray-300 bg-white px-3 font-normal shadow hover:bg-white"
+                                        style={{ backgroundColor: '#ffffff', backgroundImage: 'none' }}
                                     >
                                         <span className="truncate">{creatorFilterLabel}</span>
                                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -803,24 +804,48 @@ export default function MetaMediaLibraryModal({
                                 <PopoverContent
                                     align="start"
                                     sideOffset={4}
-                                    className="rounded-2xl border-gray-200 !bg-white p-0 shadow-lg"
+                                    className="relative isolate z-[100] overflow-hidden rounded-2xl border-gray-200 bg-white p-0 shadow-lg"
                                     style={{
                                         width: 'var(--radix-popover-trigger-width)',
                                         minWidth: 'var(--radix-popover-trigger-width)',
                                         maxWidth: 'var(--radix-popover-trigger-width)',
+                                        backgroundColor: '#ffffff',
+                                        backgroundImage: 'none',
+                                        opacity: 1,
                                     }}
                                 >
-                                    <Command filter={() => 1} loop={false} className="!bg-white">
+                                    <div
+                                        aria-hidden="true"
+                                        className="pointer-events-none absolute inset-0 z-0 rounded-[inherit] bg-white"
+                                        style={{ backgroundColor: '#ffffff', backgroundImage: 'none', opacity: 1 }}
+                                    />
+                                    <Command
+                                        filter={() => 1}
+                                        loop={false}
+                                        className="relative z-10 bg-white"
+                                        style={{ backgroundColor: '#ffffff', backgroundImage: 'none', opacity: 1 }}
+                                    >
                                         <CommandInput
                                             placeholder="Search creators..."
                                             value={creatorSearchQuery}
                                             onValueChange={setCreatorSearchQuery}
-                                            className="bg-transparent"
-                                            wrapperClassName="!bg-white border-gray-200 rounded-[20px]"
+                                            className="bg-white"
+                                            wrapperClassName="bg-white border-gray-200 rounded-[20px]"
                                         />
-                                        <CommandList className="max-h-none overflow-hidden rounded-2xl !bg-white" selectOnFocus={false}>
-                                            <ScrollArea className="bg-white" viewportClassName="max-h-[280px] bg-white">
-                                                <CommandGroup className="bg-white">
+                                        <CommandList
+                                            className="max-h-none overflow-hidden rounded-2xl bg-white"
+                                            style={{ backgroundColor: '#ffffff', backgroundImage: 'none', opacity: 1 }}
+                                            selectOnFocus={false}
+                                        >
+                                            <ScrollArea
+                                                className="bg-white"
+                                                viewportClassName="max-h-[280px] bg-white"
+                                                style={{ backgroundColor: '#ffffff', backgroundImage: 'none', opacity: 1 }}
+                                            >
+                                                <CommandGroup
+                                                    className="bg-white"
+                                                    style={{ backgroundColor: '#ffffff', backgroundImage: 'none', opacity: 1 }}
+                                                >
                                                     {!normalizedCreatorSearch && (
                                                         <>
                                                             <CommandItem
