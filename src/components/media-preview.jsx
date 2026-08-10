@@ -859,7 +859,8 @@ export default function MediaPreview({
       ...(frameioFiles || []).map(f => ({ ...f, isFrameio: true })),
     ];
     const imageFiles = allFiles.filter(file => !isVideoFile(file));
-    return imageFiles.length >= 2;
+    const videoFiles = allFiles.filter(isVideoFile);
+    return imageFiles.length >= 2 || videoFiles.length >= 2;
   }, [files, driveFiles, dropboxFiles, frameioFiles]);
 
   const compressAndConvertToBase64 = async (file) => {
@@ -1352,8 +1353,8 @@ export default function MediaPreview({
       ];
 
       const imageFiles = allFiles.filter(file => !isVideoFile(file));
+      const videoFiles = allFiles.filter(isVideoFile);
 
-      // --- NEW CONCURRENCY BATCHING LOGIC ---
       const processedImages = [];
       const CONCURRENCY_LIMIT = 5; // Process 5 images at a time to prevent browser freeze
 
@@ -1378,44 +1379,79 @@ export default function MediaPreview({
 
         processedImages.push(...batchResults);
       }
-      // --------------------------------------
 
-      const response = await fetch(`${API_BASE_URL}/api/grouping/group-images`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({ images: processedImages }) // All 50 sent together
-      });
+      const requestGroups = async (url, body) => {
+        const response = await fetch(`${API_BASE_URL}${url}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(body),
+        });
+        const responseText = await response.text();
+        if (!response.ok) throw new Error(`Grouping failed: ${responseText}`);
+        return JSON.parse(responseText);
+      };
 
-      const responseText = await response.text();
+      // Video files are intentionally represented by names only. No video bytes,
+      // URLs, thumbnails, or cloud-provider identifiers are sent to the server.
+      const [imageResult, videoResult] = await Promise.all([
+        processedImages.length >= 2
+          ? requestGroups('/api/grouping/group-images', { images: processedImages })
+          : Promise.resolve({ groups: [] }),
+        videoFiles.length >= 2
+          ? requestGroups('/api/grouping/group-videos', {
+            videos: videoFiles.map(file => ({ name: file.name || file.originalname || '' })),
+            maxGroupSize: isPlacementCustomizedCarousel ? 2 : 3,
+          })
+          : Promise.resolve({ groups: [] }),
+      ]);
 
-      if (!response.ok) {
-        throw new Error(`Grouping failed: ${responseText}`);
+      const resolveGroups = (groups, sourceFiles, minSize, maxSize) => (groups || [])
+        .map(indexGroup => indexGroup
+          .map(idx => sourceFiles[idx])
+          .filter(Boolean)
+          .map(file => getFileId(file)))
+        .filter(ids => ids.length >= minSize && ids.length <= maxSize);
+
+      const matchedGroups = [
+        ...resolveGroups(imageResult.groups, imageFiles, 2, 2),
+        ...resolveGroups(videoResult.groups, videoFiles, 2, isPlacementCustomizedCarousel ? 2 : 3),
+      ];
+
+      let newGroups;
+      if (isPlacementCustomizedCarousel) {
+        const cards = matchedGroups.filter(ids => ids.length === 2);
+        const carouselGroups = [];
+
+        for (let i = 0; i < cards.length; i += 10) {
+          carouselGroups.push(cards.slice(i, i + 10));
+        }
+
+        // A placement carousel needs at least two cards. If the final chunk has
+        // only one, borrow a card from the preceding chunk when possible.
+        if (carouselGroups.length > 1 && carouselGroups.at(-1).length === 1) {
+          const previous = carouselGroups.at(-2);
+          carouselGroups.at(-1).unshift(previous.pop());
+        }
+
+        newGroups = carouselGroups
+          .filter(groupCards => groupCards.length >= 2)
+          .map(groupCards => createFileGroup(groupCards.flat()));
+      } else {
+        // For a regular carousel each matched asset becomes a card in the same
+        // shape produced by the manual "Group Cards" action.
+        newGroups = matchedGroups.map(ids => createFileGroup(ids));
       }
-
-      const result = JSON.parse(responseText);
-
-      const newGroups = result.groups
-        .map(indexGroup =>
-          indexGroup
-            .map(idx => imageFiles[idx])      // may be undefined if server sends a bad index
-            .filter(Boolean)                   // drop anything that didn't resolve to a real file
-            .map(file => getFileId(file))
-        )
-        .filter(ids => ids.length === 2)       // only keep complete pairs
-        .map(ids => createFileGroup(ids));
 
       setFileGroups(newGroups);
       setSelectedFiles(new Set());
     } catch (error) {
       console.error('AI grouping error:', error);
-      alert(`Failed to group images: ${error.message}`);
+      alert(`Failed to group media: ${error.message}`);
     } finally {
       setIsAIGrouping(false);
     }
-  }, [files, driveFiles, dropboxFiles, frameioFiles, setFileGroups, setSelectedFiles]);
+  }, [files, driveFiles, dropboxFiles, frameioFiles, isPlacementCustomizedCarousel, setFileGroups, setSelectedFiles]);
 
 
 
@@ -1677,7 +1713,7 @@ export default function MediaPreview({
                         {isCarouselAd ? 'Group Cards' : 'Group Ads'}
                       </Button>
 
-                      {!isFlexLikeAdType && !isCarouselAd && (
+                      {!isFlexLikeAdType && (
                         <Button
                           variant="outline"
                           size="sm"
