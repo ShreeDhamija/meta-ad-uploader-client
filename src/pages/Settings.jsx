@@ -3,7 +3,7 @@
 import { useAuth } from "@/lib/AuthContext"
 import { Navigate, useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
-import { LogOutIcon } from "lucide-react"
+import { CircleHelp, LogOutIcon } from "lucide-react"
 import { Toaster } from "sonner"
 import { useState, useEffect } from "react"
 import PropTypes from "prop-types"
@@ -19,6 +19,7 @@ import RocketBtn from '@/assets/rocket2.webp';
 import Folder from '@/assets/icons/cog-three.svg?react';
 import Card from '@/assets/icons/card.svg?react';
 import TeamSettings from "@/components/settings/TeamSettings"
+import HelpFAQs from "@/components/settings/HelpFAQs"
 import { useIntercom } from "@/lib/useIntercom";
 import UsersIcon from "@/assets/icons/users.svg?react";
 import TikTokIcon from "@/assets/icons/tiktok.svg?react"
@@ -34,8 +35,8 @@ import {
 } from "@/lib/accountSelection"
 import "../settings.css"
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
-const META_SETTINGS_TABS = ["adaccount", "billing", "team"]
-const TIKTOK_SETTINGS_TABS = ["tiktok", "billing", "team"]
+const META_SETTINGS_TABS = ["adaccount", "billing", "team", "help"]
+const TIKTOK_SETTINGS_TABS = ["tiktok", "billing", "team", "help"]
 const TIKTOK_SWITCH_TAB = "tiktok-switch"
 const META_SWITCH_TAB = "meta-switch"
 
@@ -72,6 +73,7 @@ export default function Settings({ platform = "meta" }) {
         [META_SWITCH_TAB]: MetaIcon,
         billing: Card,
         team: UsersIcon,
+        help: CircleHelp,
     }
 
     const {
@@ -87,6 +89,7 @@ export default function Settings({ platform = "meta" }) {
         tiktok: "Configure default settings, UTMs and ad copy for your TikTok advertiser accounts.",
         billing: "Manage your subscription, billing methods, and view invoices.",
         team: "Manage your team, invite members, or join an existing team.",
+        help: "Find quick answers and step-by-step video walkthroughs for common Blip workflows.",
     }
 
     const tabTitleMap = {
@@ -94,6 +97,7 @@ export default function Settings({ platform = "meta" }) {
         tiktok: "TikTok Ad Account Settings",
         billing: "Billing and Subscription",
         team: "Team Management",
+        help: "Help & FAQs",
     };
 
     const tabLabelMap = {
@@ -103,6 +107,7 @@ export default function Settings({ platform = "meta" }) {
         [META_SWITCH_TAB]: "Meta",
         billing: "Billing",
         team: "Team",
+        help: "Help & FAQs",
     }
 
 
@@ -323,6 +328,7 @@ export default function Settings({ platform = "meta" }) {
                                     )}
                                     {activeTab === "billing" && <BillingSettings platform={platform} />}
                                     {activeTab === "team" && <TeamSettings />}
+                                    {activeTab === "help" && <HelpFAQs />}
 
                                 </div>
                             </div>

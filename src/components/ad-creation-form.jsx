@@ -4366,10 +4366,10 @@ export default function AdCreationForm({
     setInstantExperienceId('');
     setInstantExperiences([]);
     setInstantExperiencesError('');
-    setLink([defaultLink?.url || '']);
+    setLink(['']);
     setCustomLink('');
     setShowCustomLink(false);
-  }, [defaultLink?.url, destinationType, setCustomLink, setDestinationType, setInstantExperienceId, setLink, setShowCustomLink, supportsInstantExperience]);
+  }, [destinationType, setCustomLink, setDestinationType, setInstantExperienceId, setLink, setShowCustomLink, supportsInstantExperience]);
 
   useEffect(() => {
     if (destinationType !== 'instant_experience' || !supportsInstantExperience) {
@@ -9842,14 +9842,14 @@ export default function AdCreationForm({
                                 setDestinationType('instant_experience');
                                 setInstantExperienceId('');
                                 setLink(['']);
+                                setCustomLink('');
+                                setShowCustomLink(false);
                                 return;
                               }
 
                               setDestinationType('website');
                               setInstantExperienceId('');
-                              setLink([defaultLink?.url || '']);
-                              setCustomLink('');
-                              setShowCustomLink(false);
+                              setLink(['']);
                             }}
                           >
                             <TabsList className="h-8 rounded-xl bg-gray-100 p-0.5">
@@ -9945,7 +9945,7 @@ export default function AdCreationForm({
                               }
                             />
                           </SelectTrigger>
-                          <SelectContent className="max-h-72 bg-white shadow-lg rounded-xl">
+                          <SelectContent className="max-h-[300px] overflow-y-auto bg-white shadow-lg rounded-xl">
                             {instantExperiences.map((experience) => (
                               <SelectItem
                                 key={experience.id}
