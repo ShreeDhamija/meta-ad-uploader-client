@@ -986,8 +986,6 @@ export default function AdCreationForm({
   setDestinationType,
   instantExperienceId,
   setInstantExperienceId,
-  websiteLink,
-  setWebsiteLink,
   phoneNumber,
   setPhoneNumber,
   showCustomLink,
@@ -1613,7 +1611,6 @@ export default function AdCreationForm({
     link,
     destinationType,
     instantExperienceId,
-    websiteLink,
     cta,
     phoneNumber,
     selectedAdAccount,
@@ -1648,7 +1645,6 @@ export default function AdCreationForm({
     link,
     destinationType,
     instantExperienceId,
-    websiteLink,
     cta,
     phoneNumber,
     selectedAdAccount,
@@ -1878,7 +1874,6 @@ export default function AdCreationForm({
       link: [...(variantState.link || [''])],
       destinationType: variantState.destinationType === 'instant_experience' ? 'instant_experience' : 'website',
       instantExperienceId: variantState.instantExperienceId || '',
-      websiteLink: [...(variantState.websiteLink || variantState.link || [''])],
       phoneNumber: variantState.phoneNumber || '',
       cta: variantState.cta || 'LEARN_MORE',
       files: [...variantFiles],
@@ -1988,7 +1983,6 @@ export default function AdCreationForm({
     setLink(d.link || ['']);
     setDestinationType(d.destinationType === 'instant_experience' ? 'instant_experience' : 'website');
     setInstantExperienceId(d.instantExperienceId || '');
-    setWebsiteLink(d.websiteLink || (d.destinationType === 'instant_experience' ? [''] : d.link) || ['']);
     setPhoneNumber(d.phoneNumber || '');
     setCta(d.cta || '');
     setSelectedAdAccount(d.selectedAdAccount || '');
@@ -2041,7 +2035,7 @@ export default function AdCreationForm({
     setCompletedJobs(prev => prev.filter(j => j.id !== job.id));
 
     toast.success('Form restored — review and resubmit when ready.');
-  }, [setActiveVariantId, setAdNameFormulaV2, setAdScheduleEndTime, setAdScheduleStartTime, setAdType, setCta, setDescriptions, setDestinationType, setDiscloseAiMedia, setDriveFiles, setDropboxFiles, setFrameioFiles, setDuplicateAdSet, setEnablePlacementCustomization, setFileGroups, setFileVariantMap, setFiles, setGroupVariantMap, setHeadlines, setImportedFiles, setImportedPosts, setInstagramAccountId, setInstantExperienceId, setIsCarouselAd, setIsPartnershipAd, setLaunchPaused, setLink, setMessages, setNewAdSetName, setPageId, setPartnerFbPageId, setPartnerIgAccountId, setPartnershipIdentityMode, setPartnershipPrimaryIdentity, setPhoneNumber, setPixelTrackingOverride, setPostVariantMap, setSelectedAdAccount, setSelectedAdSets, setSelectedCampaign, setSelectedFiles, setSelectedForm, setSelectedIgOrganicPosts, setSelectedShopDestination, setSelectedShopDestinationType, setSelectedTemplate, setThumbnail, setVariants, setVideoThumbs, setWebsiteLink]);
+  }, [setActiveVariantId, setAdNameFormulaV2, setAdScheduleEndTime, setAdScheduleStartTime, setAdType, setCta, setDescriptions, setDestinationType, setDiscloseAiMedia, setDriveFiles, setDropboxFiles, setFrameioFiles, setDuplicateAdSet, setEnablePlacementCustomization, setFileGroups, setFileVariantMap, setFiles, setGroupVariantMap, setHeadlines, setImportedFiles, setImportedPosts, setInstagramAccountId, setInstantExperienceId, setIsCarouselAd, setIsPartnershipAd, setLaunchPaused, setLink, setMessages, setNewAdSetName, setPageId, setPartnerFbPageId, setPartnerIgAccountId, setPartnershipIdentityMode, setPartnershipPrimaryIdentity, setPhoneNumber, setPixelTrackingOverride, setPostVariantMap, setSelectedAdAccount, setSelectedAdSets, setSelectedCampaign, setSelectedFiles, setSelectedForm, setSelectedIgOrganicPosts, setSelectedShopDestination, setSelectedShopDestinationType, setSelectedTemplate, setThumbnail, setVariants, setVideoThumbs]);
 
 
   const adLimitWarning = useMemo(() => {
@@ -4372,11 +4366,10 @@ export default function AdCreationForm({
     setInstantExperienceId('');
     setInstantExperiences([]);
     setInstantExperiencesError('');
-    const restoredWebsiteLink = websiteLink?.some(Boolean)
-      ? websiteLink
-      : [defaultLink?.url || ''];
-    setLink([...restoredWebsiteLink]);
-  }, [defaultLink?.url, destinationType, setDestinationType, setInstantExperienceId, setLink, supportsInstantExperience, websiteLink]);
+    setLink([defaultLink?.url || '']);
+    setCustomLink('');
+    setShowCustomLink(false);
+  }, [defaultLink?.url, destinationType, setCustomLink, setDestinationType, setInstantExperienceId, setLink, setShowCustomLink, supportsInstantExperience]);
 
   useEffect(() => {
     if (destinationType !== 'instant_experience' || !supportsInstantExperience) {
@@ -9825,7 +9818,7 @@ export default function AdCreationForm({
                 <div className="space-y-3">
                   <div className="space-y-2">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="flex items-center gap-2">
+                      <Label className="flex items-center gap-2">
                         {renderDiffMark(isCatalogueAd ? "link" : (showPhoneNumberField ? "phoneNumber" : "link"))}
                         {!isCatalogueAd && showPhoneNumberField ? (
                           <Phone className="w-4 h-4" />
@@ -9837,7 +9830,7 @@ export default function AdCreationForm({
                           : destinationType === 'instant_experience'
                             ? "Instant Experience"
                             : "Link (URL)"}
-                      </span>
+                      </Label>
                       <div className="ml-auto flex flex-wrap items-center justify-end gap-3">
                         {supportsInstantExperience && (
                           <Tabs
@@ -9846,26 +9839,24 @@ export default function AdCreationForm({
                               if (nextDestinationType === destinationType) return;
 
                               if (nextDestinationType === 'instant_experience') {
-                                setWebsiteLink([...link]);
                                 setDestinationType('instant_experience');
                                 setInstantExperienceId('');
                                 setLink(['']);
                                 return;
                               }
 
-                              const restoredWebsiteLink = websiteLink?.some(Boolean)
-                                ? websiteLink
-                                : [defaultLink?.url || ''];
                               setDestinationType('website');
                               setInstantExperienceId('');
-                              setLink([...restoredWebsiteLink]);
+                              setLink([defaultLink?.url || '']);
+                              setCustomLink('');
+                              setShowCustomLink(false);
                             }}
                           >
-                            <TabsList className="h-8 rounded-lg bg-gray-100 p-0.5">
-                              <TabsTrigger value="website" className="h-7 rounded-md px-2.5 py-1 text-[11px]">
+                            <TabsList className="h-8 rounded-xl bg-gray-100 p-0.5">
+                              <TabsTrigger value="website" className="h-7 rounded-lg px-2.5 py-1 text-[11px]">
                                 Website
                               </TabsTrigger>
-                              <TabsTrigger value="instant_experience" className="h-7 rounded-md px-2.5 py-1 text-[11px]">
+                              <TabsTrigger value="instant_experience" className="h-7 rounded-lg px-2.5 py-1 text-[11px]">
                                 Instant Experience
                               </TabsTrigger>
                             </TabsList>
