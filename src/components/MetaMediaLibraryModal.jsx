@@ -450,6 +450,8 @@ export default function MetaMediaLibraryModal({
         setIsOpen(true);
         setSelectedMetaFiles([]);
         setSelectedIgPosts([]);
+        setCreatorFilter(IG_CREATOR_FILTER_ALL);
+        setCreatorSearchQuery('');
         setMetaSearchQuery('');
         if (mediaSource === 'meta_library') {
             fetchMetaLibrary();
@@ -463,6 +465,8 @@ export default function MetaMediaLibraryModal({
         setActiveTab('images');
         setSelectedMetaFiles([]);
         setSelectedIgPosts([]);
+        setCreatorFilter(IG_CREATOR_FILTER_ALL);
+        setCreatorSearchQuery('');
         setMetaSearchQuery('');
 
         if (source === 'instagram') {
@@ -651,6 +655,8 @@ export default function MetaMediaLibraryModal({
         setMediaSource(source);
         setSelectedMetaFiles([]);
         setSelectedIgPosts([]);
+        setCreatorFilter(IG_CREATOR_FILTER_ALL);
+        setCreatorSearchQuery('');
         setMetaSearchQuery('');
         setIsOpen(true);
         if (source === 'meta_library') {
@@ -801,33 +807,37 @@ export default function MetaMediaLibraryModal({
                                             value={creatorSearchQuery}
                                             onValueChange={setCreatorSearchQuery}
                                             className="bg-transparent"
-                                            wrapperClassName="bg-gray-50 border-gray-200 rounded-[20px]"
+                                            wrapperClassName="!bg-white border-gray-200 rounded-[20px]"
                                         />
-                                        <CommandList className="max-h-none overflow-hidden rounded-2xl" selectOnFocus={false}>
-                                            <ScrollArea viewportClassName="max-h-[280px]">
-                                                <CommandGroup>
-                                                    <CommandItem
-                                                        value={IG_CREATOR_FILTER_ANY}
-                                                        onSelect={() => {
-                                                            setCreatorFilter(IG_CREATOR_FILTER_ANY);
-                                                            setCreatorFilterOpen(false);
-                                                        }}
-                                                        className="m-1 cursor-pointer rounded-2xl px-3 py-2 transition-colors hover:bg-gray-100 data-[selected=true]:bg-gray-100"
-                                                    >
-                                                        <Check className={`h-4 w-4 ${creatorFilter === IG_CREATOR_FILTER_ANY ? 'opacity-100' : 'opacity-0'}`} />
-                                                        <span>Any creator</span>
-                                                    </CommandItem>
-                                                    <CommandItem
-                                                        value={IG_CREATOR_FILTER_ALL}
-                                                        onSelect={() => {
-                                                            setCreatorFilter(IG_CREATOR_FILTER_ALL);
-                                                            setCreatorFilterOpen(false);
-                                                        }}
-                                                        className="m-1 cursor-pointer rounded-2xl px-3 py-2 transition-colors hover:bg-gray-100 data-[selected=true]:bg-gray-100"
-                                                    >
-                                                        <Check className={`h-4 w-4 ${creatorFilter === IG_CREATOR_FILTER_ALL ? 'opacity-100' : 'opacity-0'}`} />
-                                                        <span>All posts</span>
-                                                    </CommandItem>
+                                        <CommandList className="max-h-none overflow-hidden rounded-2xl !bg-white" selectOnFocus={false}>
+                                            <ScrollArea className="bg-white" viewportClassName="max-h-[280px] bg-white">
+                                                <CommandGroup className="bg-white">
+                                                    {!normalizedCreatorSearch && (
+                                                        <>
+                                                            <CommandItem
+                                                                value={IG_CREATOR_FILTER_ALL}
+                                                                onSelect={() => {
+                                                                    setCreatorFilter(IG_CREATOR_FILTER_ALL);
+                                                                    setCreatorFilterOpen(false);
+                                                                }}
+                                                                className="m-1 cursor-pointer rounded-2xl bg-white px-3 py-2 transition-colors hover:bg-gray-100 data-[selected=true]:bg-gray-100"
+                                                            >
+                                                                <Check className={`h-4 w-4 ${creatorFilter === IG_CREATOR_FILTER_ALL ? 'opacity-100' : 'opacity-0'}`} />
+                                                                <span>All posts</span>
+                                                            </CommandItem>
+                                                            <CommandItem
+                                                                value={IG_CREATOR_FILTER_ANY}
+                                                                onSelect={() => {
+                                                                    setCreatorFilter(IG_CREATOR_FILTER_ANY);
+                                                                    setCreatorFilterOpen(false);
+                                                                }}
+                                                                className="m-1 cursor-pointer rounded-2xl bg-white px-3 py-2 transition-colors hover:bg-gray-100 data-[selected=true]:bg-gray-100"
+                                                            >
+                                                                <Check className={`h-4 w-4 ${creatorFilter === IG_CREATOR_FILTER_ANY ? 'opacity-100' : 'opacity-0'}`} />
+                                                                <span>Any creator</span>
+                                                            </CommandItem>
+                                                        </>
+                                                    )}
                                                     {filteredInstagramCreators.map((creator) => (
                                                         <CommandItem
                                                             key={creator.key}
@@ -836,7 +846,7 @@ export default function MetaMediaLibraryModal({
                                                                 setCreatorFilter(creator.key);
                                                                 setCreatorFilterOpen(false);
                                                             }}
-                                                            className="m-1 cursor-pointer rounded-2xl px-3 py-2 transition-colors hover:bg-gray-100 data-[selected=true]:bg-gray-100"
+                                                            className="m-1 cursor-pointer rounded-2xl bg-white px-3 py-2 transition-colors hover:bg-gray-100 data-[selected=true]:bg-gray-100"
                                                         >
                                                             <Check className={`h-4 w-4 ${creatorFilter === creator.key ? 'opacity-100' : 'opacity-0'}`} />
                                                             <span className="truncate">@{creator.username}</span>

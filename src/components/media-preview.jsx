@@ -1826,7 +1826,8 @@ export default function MediaPreview({
                   </div>
                   {enablePlacementCustomization && (
                     <span className="block text-xs leading-tight text-gray-500 mt-0">
-                      AI Auto Group only works for images
+                      <span className="font-semibold">AI Auto grouping analyzes the actual file for images.</span>{' '}
+                      For Videos it only analyzes file names to detect relevant pairings
                     </span>
                   )}
                   {showVariantButtonInPlacementRow && renderSingleMediaSplitNote()}
