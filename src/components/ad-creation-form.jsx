@@ -980,6 +980,10 @@ export default function AdCreationForm({
   setLink,
   customLink,
   setCustomLink,
+  destinationType,
+  setDestinationType,
+  instantExperienceId,
+  setInstantExperienceId,
   phoneNumber,
   setPhoneNumber,
   showCustomLink,
@@ -1180,6 +1184,10 @@ export default function AdCreationForm({
   const [isPagesLoading, setIsPagesLoading] = useState(false);
   // const [isPostSelectorOpen, setIsPostSelectorOpen] = useState(false)
   const [linkCustomStates, setLinkCustomStates] = useState({}) // Track which carousel links are custom
+  const [instantExperiences, setInstantExperiences] = useState([])
+  const [instantExperiencesLoading, setInstantExperiencesLoading] = useState(false)
+  const [instantExperiencesError, setInstantExperiencesError] = useState("")
+  const instantExperiencesCacheRef = useRef(new Map())
 
   //Porgress Trackers
   const [isCreatingAds, setIsCreatingAds] = useState(false);
@@ -1599,6 +1607,8 @@ export default function AdCreationForm({
     descriptions,
     messages,
     link,
+    destinationType,
+    instantExperienceId,
     cta,
     phoneNumber,
     selectedAdAccount,
@@ -1631,6 +1641,8 @@ export default function AdCreationForm({
     descriptions,
     messages,
     link,
+    destinationType,
+    instantExperienceId,
     cta,
     phoneNumber,
     selectedAdAccount,
@@ -1858,6 +1870,8 @@ export default function AdCreationForm({
       descriptions: formDescriptions,
       messages: [...(variantState.messages || [''])],
       link: [...(variantState.link || [''])],
+      destinationType: variantState.destinationType === 'instant_experience' ? 'instant_experience' : 'website',
+      instantExperienceId: variantState.instantExperienceId || '',
       phoneNumber: variantState.phoneNumber || '',
       cta: variantState.cta || 'LEARN_MORE',
       files: [...variantFiles],
@@ -1965,6 +1979,8 @@ export default function AdCreationForm({
     setAddDescriptions((d.descriptions || []).some((description) => description !== ""));
     setMessages(d.messages || ['']);
     setLink(d.link || ['']);
+    setDestinationType(d.destinationType === 'instant_experience' ? 'instant_experience' : 'website');
+    setInstantExperienceId(d.instantExperienceId || '');
     setPhoneNumber(d.phoneNumber || '');
     setCta(d.cta || '');
     setSelectedAdAccount(d.selectedAdAccount || '');
@@ -2017,7 +2033,7 @@ export default function AdCreationForm({
     setCompletedJobs(prev => prev.filter(j => j.id !== job.id));
 
     toast.success('Form restored — review and resubmit when ready.');
-  }, [setActiveVariantId, setAdNameFormulaV2, setAdScheduleEndTime, setAdScheduleStartTime, setAdType, setCta, setDescriptions, setDiscloseAiMedia, setDriveFiles, setDropboxFiles, setFrameioFiles, setDuplicateAdSet, setEnablePlacementCustomization, setFileGroups, setFileVariantMap, setFiles, setGroupVariantMap, setHeadlines, setImportedFiles, setImportedPosts, setInstagramAccountId, setIsCarouselAd, setIsPartnershipAd, setLaunchPaused, setLink, setMessages, setNewAdSetName, setPageId, setPartnerFbPageId, setPartnerIgAccountId, setPartnershipIdentityMode, setPartnershipPrimaryIdentity, setPhoneNumber, setPixelTrackingOverride, setPostVariantMap, setSelectedAdAccount, setSelectedAdSets, setSelectedCampaign, setSelectedFiles, setSelectedForm, setSelectedIgOrganicPosts, setSelectedShopDestination, setSelectedShopDestinationType, setSelectedTemplate, setThumbnail, setVariants, setVideoThumbs]);
+  }, [setActiveVariantId, setAdNameFormulaV2, setAdScheduleEndTime, setAdScheduleStartTime, setAdType, setCta, setDescriptions, setDestinationType, setDiscloseAiMedia, setDriveFiles, setDropboxFiles, setFrameioFiles, setDuplicateAdSet, setEnablePlacementCustomization, setFileGroups, setFileVariantMap, setFiles, setGroupVariantMap, setHeadlines, setImportedFiles, setImportedPosts, setInstagramAccountId, setInstantExperienceId, setIsCarouselAd, setIsPartnershipAd, setLaunchPaused, setLink, setMessages, setNewAdSetName, setPageId, setPartnerFbPageId, setPartnerIgAccountId, setPartnershipIdentityMode, setPartnershipPrimaryIdentity, setPhoneNumber, setPixelTrackingOverride, setPostVariantMap, setSelectedAdAccount, setSelectedAdSets, setSelectedCampaign, setSelectedFiles, setSelectedForm, setSelectedIgOrganicPosts, setSelectedShopDestination, setSelectedShopDestinationType, setSelectedTemplate, setThumbnail, setVariants, setVideoThumbs]);
 
 
   const adLimitWarning = useMemo(() => {
@@ -4319,6 +4335,12 @@ export default function AdCreationForm({
     campaignObjective.length > 0 &&
     campaignObjective.every((objective) => ["OUTCOME_SALES", "OUTCOME_TRAFFIC"].includes(objective));
   const showPhoneNumberField = areAllAdSetsPhoneCall();
+  const supportsInstantExperience = !isCatalogueAd &&
+    !showPhoneNumberField &&
+    !showShopDestinationSelector &&
+    !isDuplicationMode &&
+    importedPosts.length === 0 &&
+    selectedIgOrganicPosts.length === 0;
   const hasCatalogueInvalidMedia = isCatalogueAd && (
     [...files, ...driveFiles, ...dropboxFiles, ...(frameioFiles || []), ...importedFiles].some((file) => isVideoFile(file) || isGifFile(file) || !isImageFile(file))
   );
@@ -4329,9 +4351,89 @@ export default function AdCreationForm({
   const isMissingDestinationValue = requiresDestinationValue && (
     showPhoneNumberField
       ? !phoneNumber.trim()
-      : ((!showCustomLink && !link[0]) || (showCustomLink && !customLink.trim()))
+      : destinationType === 'instant_experience'
+        ? !instantExperienceId || instantExperiencesLoading || !instantExperiences.some((experience) => experience.id === instantExperienceId)
+        : ((!showCustomLink && !link[0]) || (showCustomLink && !customLink.trim()))
   );
   const hasAdNameFormulaConfigured = Boolean(adNameFormulaV2?.rawInput?.trim());
+
+  useEffect(() => {
+    if (supportsInstantExperience || destinationType !== 'instant_experience') return;
+    setDestinationType('website');
+    setInstantExperienceId('');
+    setInstantExperiences([]);
+    setInstantExperiencesError('');
+    const fallbackLink = defaultLink?.url || '';
+    setLink([fallbackLink]);
+    setCustomLink('');
+    setShowCustomLink(false);
+  }, [defaultLink?.url, destinationType, setCustomLink, setDestinationType, setInstantExperienceId, setLink, setShowCustomLink, supportsInstantExperience]);
+
+  useEffect(() => {
+    if (destinationType !== 'instant_experience' || !supportsInstantExperience) {
+      setInstantExperiences([]);
+      setInstantExperiencesLoading(false);
+      setInstantExperiencesError('');
+      return undefined;
+    }
+
+    if (!pageId) {
+      setInstantExperiences([]);
+      setInstantExperiencesLoading(false);
+      setInstantExperiencesError('Select a Facebook Page first.');
+      return undefined;
+    }
+
+    const applyExperiences = (experiences) => {
+      setInstantExperiences(experiences);
+      setInstantExperiencesError(experiences.length === 0 ? 'This page has no published Instant Experiences.' : '');
+
+      if (!instantExperienceId) return;
+      const selectedExperienceExists = experiences.some((experience) => experience.id === instantExperienceId);
+      if (selectedExperienceExists) {
+        setLink([`https://fb.com/canvas_doc/${instantExperienceId}`]);
+      } else {
+        setInstantExperienceId('');
+        setLink(['']);
+      }
+    };
+
+    const cachedExperiences = instantExperiencesCacheRef.current.get(pageId);
+    if (cachedExperiences) {
+      applyExperiences(cachedExperiences);
+      setInstantExperiencesLoading(false);
+      return undefined;
+    }
+
+    const controller = new AbortController();
+    setInstantExperiences([]);
+    setInstantExperiencesLoading(true);
+    setInstantExperiencesError('');
+
+    fetch(`${API_BASE_URL}/auth/fetch-instant-experiences?pageId=${encodeURIComponent(pageId)}`, {
+      credentials: 'include',
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || 'Failed to fetch Instant Experiences');
+        return Array.isArray(data.instantExperiences) ? data.instantExperiences : [];
+      })
+      .then((experiences) => {
+        instantExperiencesCacheRef.current.set(pageId, experiences);
+        applyExperiences(experiences);
+      })
+      .catch((error) => {
+        if (error.name === 'AbortError') return;
+        setInstantExperiences([]);
+        setInstantExperiencesError(error.message || 'Failed to fetch Instant Experiences');
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setInstantExperiencesLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [destinationType, instantExperienceId, pageId, setInstantExperienceId, setLink, supportsInstantExperience]);
 
   useEffect(() => {
     const defaultCta = adAccountSettings?.defaultCTA || "LEARN_MORE";
@@ -4358,6 +4460,8 @@ export default function AdCreationForm({
 
 
   const shouldShowLeadFormSelector = useMemo(() => {
+    if (destinationType === 'instant_experience') return false;
+
     // Must have selections
     if (selectedCampaign.length === 0 || selectedAdSets.length === 0) {
       return false;
@@ -4381,7 +4485,7 @@ export default function AdCreationForm({
     });
 
     return allAdSetsValid;
-  }, [selectedCampaign, selectedAdSets, campaigns, adSets]);
+  }, [destinationType, selectedCampaign, selectedAdSets, campaigns, adSets]);
 
   // Fetch leadgen forms when conditions are met
   useEffect(() => {
@@ -4658,6 +4762,8 @@ export default function AdCreationForm({
       descriptions,
       messages,
       link,
+      destinationType,
+      instantExperienceId,
       cta,
 
       // Files
@@ -5287,6 +5393,10 @@ export default function AdCreationForm({
         formData.append("phoneNumber", phoneNumber);
       } else {
         formData.append("link", linkJSON);
+        formData.append("destinationType", destinationType === "instant_experience" ? "instant_experience" : "website");
+        if (destinationType === "instant_experience" && instantExperienceId) {
+          formData.append("instantExperienceId", instantExperienceId);
+        }
       }
       formData.append("cta", resolveCtaForServer(cta));
       formData.append("launchPaused", launchPaused);
@@ -8531,6 +8641,10 @@ export default function AdCreationForm({
                                       key={page.id}
                                       value={page.id}
                                       onSelect={() => {
+                                        if (destinationType === 'instant_experience' && page.id !== pageId) {
+                                          setInstantExperienceId('')
+                                          setLink([''])
+                                        }
                                         setPageId(page.id)
                                         setOpenPage(false)
                                         if (page.instagramAccount?.id) {
@@ -9701,7 +9815,7 @@ export default function AdCreationForm({
 
                 <div className="space-y-3">
                   <div className="space-y-2">
-                    <Label className="flex items-center justify-between">
+                    <Label className="flex flex-wrap items-center justify-between gap-2">
                       <span className="flex items-center gap-2">
                         {renderDiffMark(isCatalogueAd ? "link" : (showPhoneNumberField ? "phoneNumber" : "link"))}
                         {!isCatalogueAd && showPhoneNumberField ? (
@@ -9709,29 +9823,55 @@ export default function AdCreationForm({
                         ) : (
                           <LinkIcon className="w-4 h-4" />
                         )}
-                        {!isCatalogueAd && showPhoneNumberField ? "Phone Number" : "Link (URL)"}
+                        {!isCatalogueAd && showPhoneNumberField
+                          ? "Phone Number"
+                          : destinationType === 'instant_experience'
+                            ? "Instant Experience"
+                            : "Link (URL)"}
                       </span>
-                      {isCarouselAd && !showPhoneNumberField && !isCatalogueAd && (
-                        <div className="flex items-center space-x-1">
-                          <Checkbox
-                            id="apply-link-all"
-                            checked={link.length === 1}
-                            onCheckedChange={(checked) => {
-                              if (checked) {
-                                const currentLink = customLink.trim() || link[0] || "";
-                                setLink([currentLink]);
-                              } else {
-                                const currentLink = customLink.trim() || link[0] || "";
-                                setLink([currentLink, ""]);
-                              }
-                            }}
-                            className="border-gray-300 w-4 h-4 rounded-md"
-                          />
-                          <label htmlFor="apply-link-all" className="text-xs font-medium">
-                            Apply To All Cards
-                          </label>
-                        </div>
-                      )}
+                      <div className="ml-auto flex flex-wrap items-center justify-end gap-3">
+                        {supportsInstantExperience && (
+                          <div className="flex items-center gap-1.5 text-[11px] font-medium text-gray-600">
+                            <span className={destinationType === 'website' ? 'text-gray-900' : ''}>Website</span>
+                            <Switch
+                              id="destination-type-toggle"
+                              checked={destinationType === 'instant_experience'}
+                              onCheckedChange={(checked) => {
+                                const nextDestinationType = checked ? 'instant_experience' : 'website';
+                                setDestinationType(nextDestinationType);
+                                setInstantExperienceId('');
+                                setCustomLink('');
+                                setShowCustomLink(false);
+                                setLinkCustomStates({});
+                                setLink(checked ? [''] : [defaultLink?.url || '']);
+                              }}
+                              className="scale-90"
+                            />
+                            <span className={destinationType === 'instant_experience' ? 'text-gray-900' : ''}>Instant Experience</span>
+                          </div>
+                        )}
+                        {isCarouselAd && destinationType === 'website' && !showPhoneNumberField && !isCatalogueAd && (
+                          <div className="flex items-center space-x-1">
+                            <Checkbox
+                              id="apply-link-all"
+                              checked={link.length === 1}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  const currentLink = customLink.trim() || link[0] || "";
+                                  setLink([currentLink]);
+                                } else {
+                                  const currentLink = customLink.trim() || link[0] || "";
+                                  setLink([currentLink, ""]);
+                                }
+                              }}
+                              className="border-gray-300 w-4 h-4 rounded-md"
+                            />
+                            <label htmlFor="apply-link-all" className="text-xs font-medium">
+                              Apply To All Cards
+                            </label>
+                          </div>
+                        )}
+                      </div>
                     </Label>
                     <p className="text-gray-500 text-[12px] font-regular">
                       {!isCatalogueAd && showPhoneNumberField ? (
@@ -9741,6 +9881,8 @@ export default function AdCreationForm({
                         </>
                       ) : isCatalogueAd ? (
                         "Optional destination URL for the catalogue creative."
+                      ) : destinationType === 'instant_experience' ? (
+                        "Choose a published Instant Experience connected to the selected Facebook Page."
                       ) : (
                         "Your UTMs will be auto applied from Preferences"
                       )}
@@ -9769,6 +9911,41 @@ export default function AdCreationForm({
                           disabled={!isLoggedIn}
                           required
                         />
+                      </div>
+                    ) : destinationType === 'instant_experience' ? (
+                      <div className="space-y-2">
+                        <Select
+                          value={instantExperienceId || ''}
+                          onValueChange={(experienceId) => {
+                            setInstantExperienceId(experienceId);
+                            setLink([`https://fb.com/canvas_doc/${experienceId}`]);
+                          }}
+                          disabled={!isLoggedIn || !pageId || instantExperiencesLoading || instantExperiences.length === 0}
+                        >
+                          <SelectTrigger className={cn("w-full", formFieldChrome)}>
+                            <SelectValue placeholder={instantExperiencesLoading ? "Loading Instant Experiences..." : "Select an Instant Experience"} />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-72 bg-white shadow-lg rounded-xl">
+                            {instantExperiences.map((experience) => (
+                              <SelectItem
+                                key={experience.id}
+                                value={experience.id}
+                                className="cursor-pointer px-3 py-2 hover:bg-gray-100 rounded-xl mx-2 my-1"
+                              >
+                                {experience.name || `Instant Experience ${experience.id}`}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {instantExperiencesLoading && (
+                          <div className="flex items-center gap-2 text-xs text-gray-500">
+                            <Loader className="h-3.5 w-3.5 animate-spin" />
+                            Fetching published Instant Experiences...
+                          </div>
+                        )}
+                        {!instantExperiencesLoading && instantExperiencesError && (
+                          <p className="text-xs text-amber-700">{instantExperiencesError}</p>
+                        )}
                       </div>
                     ) : !isCarouselAd || link.length === 1 ? (
                       // Single link mode (normal ads or carousel with "apply to all")

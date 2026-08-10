@@ -213,6 +213,8 @@ export default function Home() {
     const [instagramAccountId, setInstagramAccountId] = useState("")
     const [link, setLink] = useState([""])
     const [customLink, setCustomLink] = useState("")
+    const [destinationType, setDestinationType] = useState("website")
+    const [instantExperienceId, setInstantExperienceId] = useState("")
     const [phoneNumber, setPhoneNumber] = useState("")
     const [showCustomLink, setShowCustomLink] = useState(false)
     const [cta, setCta] = useState("LEARN_MORE")
@@ -648,6 +650,8 @@ export default function Home() {
         if (!hadPrevious) return;
         setVariants((prev) => prev.map((variant) => ({ ...variant, snapshot: null })));
         setCustomLink("");
+        setDestinationType("website");
+        setInstantExperienceId("");
         setShowCustomLink(false);
     }, [selectedAdAccount]);
 
@@ -748,6 +752,8 @@ export default function Home() {
         messages: cloneSnapshotValue(messages),
         link: cloneSnapshotValue(link),
         customLink,
+        destinationType,
+        instantExperienceId,
         showCustomLink,
         cta,
         phoneNumber,
@@ -791,6 +797,8 @@ export default function Home() {
         messages,
         link,
         customLink,
+        destinationType,
+        instantExperienceId,
         showCustomLink,
         cta,
         phoneNumber,
@@ -838,6 +846,8 @@ export default function Home() {
         setMessages(cloneSnapshotValue(snapshot.messages) || [""]);
         setLink(cloneSnapshotValue(snapshot.link) || [""]);
         setCustomLink(snapshot.customLink || "");
+        setDestinationType(snapshot.destinationType === "instant_experience" ? "instant_experience" : "website");
+        setInstantExperienceId(snapshot.instantExperienceId || "");
         setShowCustomLink(Boolean(snapshot.showCustomLink));
         setCta(snapshot.cta || "LEARN_MORE");
         setPhoneNumber(snapshot.phoneNumber || "");
@@ -890,6 +900,8 @@ export default function Home() {
         setMessages,
         setLink,
         setCustomLink,
+        setDestinationType,
+        setInstantExperienceId,
         setShowCustomLink,
         setCta,
         setPhoneNumber,
@@ -2064,6 +2076,10 @@ export default function Home() {
                             setLink={setLink}
                             customLink={customLink}
                             setCustomLink={setCustomLink}
+                            destinationType={destinationType}
+                            setDestinationType={setDestinationType}
+                            instantExperienceId={instantExperienceId}
+                            setInstantExperienceId={setInstantExperienceId}
                             phoneNumber={phoneNumber}
                             setPhoneNumber={setPhoneNumber}
                             showCustomLink={showCustomLink}
