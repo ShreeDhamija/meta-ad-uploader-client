@@ -215,9 +215,17 @@ export default function Home() {
     const [customLink, setCustomLink] = useState("")
     const [destinationType, setDestinationType] = useState("website")
     const [instantExperienceId, setInstantExperienceId] = useState("")
+    const [websiteLink, setWebsiteLink] = useState([""])
     const [phoneNumber, setPhoneNumber] = useState("")
     const [showCustomLink, setShowCustomLink] = useState(false)
     const [cta, setCta] = useState("LEARN_MORE")
+
+    useEffect(() => {
+        if (destinationType !== "website") return;
+        setWebsiteLink((previous) => (
+            JSON.stringify(previous) === JSON.stringify(link) ? previous : [...link]
+        ));
+    }, [destinationType, link]);
 
     const [thumbnail, setThumbnail] = useState(null)
     const [selectedTemplate, setSelectedTemplate] = useState("")
@@ -652,6 +660,7 @@ export default function Home() {
         setCustomLink("");
         setDestinationType("website");
         setInstantExperienceId("");
+        setWebsiteLink([""]);
         setShowCustomLink(false);
     }, [selectedAdAccount]);
 
@@ -754,6 +763,7 @@ export default function Home() {
         customLink,
         destinationType,
         instantExperienceId,
+        websiteLink: cloneSnapshotValue(websiteLink),
         showCustomLink,
         cta,
         phoneNumber,
@@ -799,6 +809,7 @@ export default function Home() {
         customLink,
         destinationType,
         instantExperienceId,
+        websiteLink,
         showCustomLink,
         cta,
         phoneNumber,
@@ -848,6 +859,11 @@ export default function Home() {
         setCustomLink(snapshot.customLink || "");
         setDestinationType(snapshot.destinationType === "instant_experience" ? "instant_experience" : "website");
         setInstantExperienceId(snapshot.instantExperienceId || "");
+        setWebsiteLink(
+            cloneSnapshotValue(snapshot.websiteLink) ||
+            (snapshot.destinationType === "instant_experience" ? [""] : cloneSnapshotValue(snapshot.link)) ||
+            [""]
+        );
         setShowCustomLink(Boolean(snapshot.showCustomLink));
         setCta(snapshot.cta || "LEARN_MORE");
         setPhoneNumber(snapshot.phoneNumber || "");
@@ -902,6 +918,7 @@ export default function Home() {
         setCustomLink,
         setDestinationType,
         setInstantExperienceId,
+        setWebsiteLink,
         setShowCustomLink,
         setCta,
         setPhoneNumber,
@@ -2080,6 +2097,8 @@ export default function Home() {
                             setDestinationType={setDestinationType}
                             instantExperienceId={instantExperienceId}
                             setInstantExperienceId={setInstantExperienceId}
+                            websiteLink={websiteLink}
+                            setWebsiteLink={setWebsiteLink}
                             phoneNumber={phoneNumber}
                             setPhoneNumber={setPhoneNumber}
                             showCustomLink={showCustomLink}
