@@ -1,7 +1,7 @@
 // Creative-strategy module shell. The page header and sidebar are shared;
 // brand/product context controls move into each workflow so the first screen
 // of every tab can follow its own hierarchy without losing shared state.
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   AudioLines,
@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/AuthContext";
+import { useAppData } from "@/lib/AppContext";
 import { creativeApi } from "@/lib/creativeApi";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import CostTracker from "./CostTracker";
@@ -63,6 +64,8 @@ const DESCRIPTIONS = {
 export default function CreativeStrategyLayout() {
   const navigate = useNavigate();
   const { userName, profilePicUrl, handleLogout } = useAuth();
+  const { adAccounts, adAccountsLoading, refetchAdAccounts } = useAppData();
+  const mirroredAccountsRef = useRef("");
 
   const [activeTab, setActiveTab] = useState("brands");
   const [brands, setBrands] = useState([]);
@@ -75,8 +78,9 @@ export default function CreativeStrategyLayout() {
 
   // Auto-create/refresh brands from the user's linked Meta ad accounts on load.
   // Falls back to listing existing brands if the Meta sync fails (e.g. no token).
-  const loadBrands = () => {
+  const loadBrands = useCallback(() => {
     setBrandsLoading(true);
+    refetchAdAccounts().catch(() => {});
     return creativeApi.syncBrands()
       .then((r) => setBrands(r.clients))
       .catch((e) => {
@@ -84,7 +88,7 @@ export default function CreativeStrategyLayout() {
         return creativeApi.listClients().then((r) => setBrands(r.clients)).catch(() => {});
       })
       .finally(() => setBrandsLoading(false));
-  };
+  }, [refetchAdAccounts]);
   const loadProducts = (brandId) => {
     setProductsLoading(true);
     return creativeApi.listProducts(brandId)
@@ -93,7 +97,48 @@ export default function CreativeStrategyLayout() {
       .finally(() => setProductsLoading(false));
   };
 
-  useEffect(() => { loadBrands(); }, []);
+  useEffect(() => { loadBrands(); }, [loadBrands]);
+
+  // Preferences and the launchers get Meta accounts from AppContext. The
+  // creative service normally mirrors the same accounts through /clients/sync,
+  // but use the already-loaded app list as a repair path when that sync lags or
+  // returns an incomplete set.
+  useEffect(() => {
+    if (brandsLoading || adAccountsLoading || adAccounts.length === 0) return;
+
+    const normaliseId = (value) => String(value || "").replace(/^act_/, "");
+    const knownIds = new Set(brands.map((brand) => normaliseId(brand.metaAdAccountId)));
+    const missing = adAccounts.filter((account) => {
+      const metaId = account.id || account.account_id;
+      return metaId && !knownIds.has(normaliseId(metaId));
+    });
+    if (missing.length === 0) return;
+
+    const attemptKey = missing
+      .map((account) => normaliseId(account.id || account.account_id))
+      .sort()
+      .join(",");
+    if (!attemptKey || mirroredAccountsRef.current === attemptKey) return;
+    mirroredAccountsRef.current = attemptKey;
+
+    setBrandsLoading(true);
+    Promise.allSettled(missing.map((account) => creativeApi.createClient({
+      name: account.name || account.account_name || `Meta Account ${account.id || account.account_id}`,
+      metaAdAccountId: account.id || `act_${account.account_id}`,
+    })))
+      .then(() => creativeApi.listClients())
+      .then((response) => {
+        const nextBrands = response.clients || [];
+        setBrands(nextBrands);
+        if (nextBrands.length === 0) {
+          setError("Meta accounts are connected, but Creative Strategy could not mirror them yet. Try Sync Brands.");
+        } else {
+          setError(null);
+        }
+      })
+      .catch((syncError) => setError(`Creative Strategy account sync failed: ${syncError.message}`))
+      .finally(() => setBrandsLoading(false));
+  }, [adAccounts, adAccountsLoading, brands, brandsLoading]);
   useEffect(() => {
     if (selectedBrandId) loadProducts(selectedBrandId);
     else setProducts([]);
@@ -104,7 +149,7 @@ export default function CreativeStrategyLayout() {
   const selectedProduct = products.find((p) => p.id === selectedProductId) || null;
 
   const ctx = {
-    brands, brandsLoading, selectedBrand, selectedBrandId, setSelectedBrandId, reloadBrands: loadBrands,
+    brands, brandsLoading: brandsLoading || adAccountsLoading, selectedBrand, selectedBrandId, setSelectedBrandId, reloadBrands: loadBrands,
     products, productsLoading, selectedProduct, selectedProductId, setSelectedProductId, reloadProducts: () => loadProducts(selectedBrandId),
     goTo: setActiveTab,
   };
@@ -134,53 +179,57 @@ export default function CreativeStrategyLayout() {
     <JobsProvider>
     <div className="creative-strategy flex min-h-screen">
       {/* Sidebar */}
-      <aside className="relative z-10 flex h-screen w-[330px] min-w-[330px] flex-col overflow-hidden px-7 py-7 max-xl:w-[280px] max-xl:min-w-[280px] max-xl:px-5 max-lg:w-[88px] max-lg:min-w-[88px] max-lg:px-2 max-md:fixed max-md:bottom-0 max-md:left-0 max-md:right-0 max-md:top-auto max-md:h-[72px] max-md:w-full max-md:min-w-full max-md:bg-white max-md:p-2 max-md:shadow-[0_-2px_12px_rgba(0,0,0,0.1)]">
+      <aside className="relative z-10 flex h-screen w-[290px] flex-col overflow-hidden px-4 py-6 max-lg:w-[80px] max-lg:min-w-[80px] max-lg:px-2">
         <img
           src={doodle}
           alt=""
           aria-hidden="true"
           className="pointer-events-none absolute -left-[205px] bottom-0 z-0 w-[720px] max-w-none opacity-95 max-lg:hidden"
         />
-        <div className="relative z-10 flex h-full flex-col max-md:flex-row">
-          <div className="flex flex-1 flex-col max-md:flex-row">
+        <div className="relative z-10 flex h-full flex-col rounded-3xl bg-neutral-100 p-4">
+          <div className="flex flex-1 flex-col">
             <button
               onClick={() => navigate("/")}
-              className="mb-5 flex min-h-[70px] w-full items-center justify-start gap-3 rounded-[24px] border border-black/10 bg-white px-5 font-semibold text-[var(--cs-ink)] shadow-[var(--cs-shadow-sm)] transition hover:-translate-y-0.5 hover:shadow-md max-lg:justify-center max-lg:px-2 max-md:hidden"
+              className="mb-4 flex w-full items-center justify-start gap-1 rounded-[20px] border border-neutral-200 bg-white py-7 pl-3 font-medium text-neutral-700 shadow-xs transition hover:bg-white hover:shadow-sm max-lg:justify-center max-lg:px-2"
             >
-              <img src={rocket} alt="" aria-hidden="true" className="h-10 w-10 object-contain" />
+              <img src={rocket} alt="" aria-hidden="true" className="h-8 w-8 object-contain" />
+              <div className="mr-2 h-6 w-px bg-neutral-300 max-lg:hidden" />
               <span className="max-lg:hidden">Back To Launcher</span>
             </button>
 
-            <nav className="space-y-2 max-md:flex max-md:w-full max-md:items-center max-md:justify-around max-md:space-y-0">
+            <nav className="space-y-2">
               {NAV.map(({ key, label, icon: Icon }) => (
                 <button
                   key={key}
                   onClick={() => setActiveTab(key)}
                   className={cn(
-                    "relative flex h-[52px] w-full items-center justify-start gap-4 rounded-2xl px-5 transition-all max-lg:justify-center max-lg:px-2 max-md:h-12 max-md:w-12",
+                    "relative flex h-10 w-full items-center justify-start gap-2 rounded-2xl px-4 py-2 transition-all max-lg:justify-center max-lg:px-2",
                     activeTab === key
-                      ? "border border-black/10 bg-white font-semibold text-neutral-950 shadow-[var(--cs-shadow-sm)]"
-                      : "border border-transparent text-neutral-800 hover:bg-white/65",
-                    key !== "brands" && key !== "products" ? "max-md:hidden" : "",
+                      ? "border border-gray-300 bg-white font-semibold text-neutral-900 shadow"
+                      : "border border-transparent text-neutral-700 hover:bg-neutral-200",
                   )}
                 >
-                  <Icon className="h-7 w-7 flex-shrink-0 text-neutral-950" strokeWidth={1.8} />
-                  <span className="text-[15px] font-semibold max-lg:hidden">{label}</span>
+                  <Icon className="h-5 w-5 flex-shrink-0 text-neutral-700 transition-all max-lg:h-6 max-lg:w-6" />
+                  <span className="text-sm font-medium max-lg:hidden">{label}</span>
+                  {activeTab === key && (
+                    <span className="ml-auto h-1.5 w-1.5 rounded-full bg-neutral-500 max-lg:hidden" aria-hidden="true" />
+                  )}
                 </button>
               ))}
             </nav>
           </div>
 
           {/* Footer profile */}
-          <div className="relative z-10 mt-auto pt-4 max-md:hidden">
-            <div className="flex min-h-[70px] w-full items-center rounded-[24px] border border-black/5 bg-white px-4 shadow-[var(--cs-shadow-sm)] max-lg:justify-center max-lg:p-2">
+          <div className="relative z-10 mt-auto pt-4">
+            <div className="flex w-full items-center rounded-[20px] border border-neutral-200 bg-neutral-50 py-2 pl-3 pr-3 shadow-xs max-lg:justify-center max-lg:p-2">
               <div className="flex items-center gap-2 flex-grow max-lg:hidden">
-                <img src={profilePicUrl || "/placeholder.svg"} alt="Profile" className="h-10 w-10 rounded-full object-cover grayscale" />
-                <span className="max-w-[150px] truncate text-sm font-semibold text-neutral-900">{userName}</span>
+                <img src={profilePicUrl || "/placeholder.svg"} alt="Profile" className="h-8 w-8 rounded-full object-cover" />
+                <span className="max-w-[120px] truncate text-sm font-medium text-neutral-800">{userName}</span>
               </div>
               <div className="flex items-center">
+                <div className="h-6 w-px bg-neutral-300 max-lg:hidden" />
                 <button onClick={handleLogout} className="ml-3 rounded-full transition max-lg:ml-0" title="Logout">
-                  <LogOut className="h-5 w-5 text-neutral-800" />
+                  <LogOut className="h-4 w-4 text-neutral-700 max-lg:h-5 max-lg:w-5" />
                 </button>
               </div>
             </div>
@@ -189,8 +238,8 @@ export default function CreativeStrategyLayout() {
       </aside>
 
       {/* Main */}
-      <main className="min-w-0 flex-1 py-7 pr-7 max-lg:pr-3 max-md:p-2 max-md:pb-[82px]">
-        <div className="cs-main-surface flex h-[calc(100vh-3.5rem)] flex-col overflow-hidden max-md:h-[calc(100vh-84px)]">
+      <main className="min-w-0 flex-1 py-6 pr-6">
+        <div className="cs-main-surface flex h-[calc(100vh-3rem)] flex-col overflow-hidden">
           <header className="cs-page-header flex items-center justify-between gap-6 px-12 py-7 max-lg:px-7 max-md:px-5 max-md:py-5">
             <div className="min-w-0">
               <h1 className="text-[32px] font-bold leading-none tracking-[-0.035em] max-md:text-2xl">{active?.label}</h1>
