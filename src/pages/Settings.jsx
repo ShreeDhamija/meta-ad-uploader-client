@@ -60,7 +60,7 @@ export default function Settings({ platform = "meta" }) {
         subscriptionData,
         loading: subscriptionLoading,
     } = useSubscription()
-    useIntercom(true)
+    const { showMessenger } = useIntercom(true)
     const urlParams = new URLSearchParams(window.location.search)
     const requestedTab = urlParams.get('tab')
     const defaultTab = isTikTok ? "tiktok" : "adaccount"
@@ -330,7 +330,7 @@ export default function Settings({ platform = "meta" }) {
                                     )}
                                     {activeTab === "billing" && <BillingSettings platform={platform} />}
                                     {activeTab === "team" && <TeamSettings />}
-                                    {activeTab === "help" && <HelpFAQs />}
+                                    {activeTab === "help" && <HelpFAQs onOpenChat={showMessenger} />}
 
                                 </div>
                             </div>
