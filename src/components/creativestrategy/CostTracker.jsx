@@ -4,7 +4,7 @@
 // selected Brand when one is chosen, else across all the owner's brands.
 import { useCallback, useEffect, useRef, useState } from "react";
 import PropTypes from "prop-types";
-import { DollarSign, ChevronDown } from "lucide-react";
+import { Sparkles, ChevronDown } from "lucide-react";
 import { creativeApi } from "@/lib/creativeApi";
 
 const WINDOWS = [
@@ -14,7 +14,7 @@ const WINDOWS = [
 ];
 
 const fmtUsd = (n) =>
-  n >= 1 ? `$${n.toFixed(2)}` : n > 0 ? `$${n.toFixed(3)}` : "$0.00";
+  n >= 1 ? `$${Number(n.toFixed(2))}` : n > 0 ? `$${n.toFixed(3)}` : "$0";
 
 export default function CostTracker({ clientId }) {
   const [window, setWindow] = useState("7d");
@@ -46,16 +46,17 @@ export default function CostTracker({ clientId }) {
   const total = data?.totals?.costUsd ?? 0;
 
   return (
-    <div className="relative ml-auto" ref={ref}>
+    <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1.5 rounded-2xl border border-neutral-200 bg-white shadow-xs px-3 py-2 text-sm hover:bg-neutral-50"
+        className="cs-pill-control flex min-w-[220px] items-center justify-center gap-2 px-5 text-sm hover:bg-neutral-50 max-md:min-w-0 max-md:px-3"
         title="LLM spend — click for breakdown"
       >
-        <DollarSign className="w-4 h-4 text-emerald-600" />
-        <span className="font-semibold tabular-nums">{loading && !data ? "…" : fmtUsd(total)}</span>
-        <span className="text-neutral-400 text-xs">/ {WINDOWS.find((w) => w.key === window)?.label}</span>
-        <ChevronDown className={`w-3.5 h-3.5 text-neutral-400 transition-transform ${open ? "rotate-180" : ""}`} />
+        <Sparkles className="h-5 w-5 text-fuchsia-500" />
+        <span className="font-semibold max-md:hidden">AI Cost :</span>
+        <span className="font-bold tabular-nums">{loading && !data ? "…" : fmtUsd(total)}</span>
+        <span className="text-xs font-semibold uppercase text-neutral-400">({WINDOWS.find((w) => w.key === window)?.label})</span>
+        <ChevronDown className={`h-4 w-4 text-neutral-700 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
 
       {open && (
