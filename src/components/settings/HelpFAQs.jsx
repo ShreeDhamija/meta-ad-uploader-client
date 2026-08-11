@@ -1,6 +1,13 @@
 import { ExternalLink, Play } from "lucide-react"
 
-import FaqVideoThumbnail from "@/assets/Home.webp"
+import ConnectNewAccountsThumbnail from "@/assets/help/Connect New Accounts.webp"
+import DraftsThumbnail from "@/assets/help/Drafts.webp"
+import InstagramThumbnail from "@/assets/help/Instagram.webp"
+import MetaMediaLibraryThumbnail from "@/assets/help/Meta Media Library.webp"
+import MultipleNewAdSetsThumbnail from "@/assets/help/Multiple New Ad Sets.webp"
+import PagesNotShowingUpThumbnail from "@/assets/help/Pages Not Showing Up.webp"
+import PlacementCustomizationThumbnail from "@/assets/help/Placement Customization.webp"
+import SplitAdDataThumbnail from "@/assets/help/Split Ad Data.webp"
 import {
     Accordion,
     AccordionContent,
@@ -11,60 +18,83 @@ import {
 // Add future FAQs here. Omit videoUrl to show the thumbnail as a plain image instead of a video link.
 const FAQS = [
     {
-        question: "How do I upload and launch a batch of ads?",
-        answer: "Create a batch from the launcher, then review the generated ads before publishing them.",
+        question: "How can I assign different copy to different ads in one launch?",
+        answer: "Variants let you use different copy, landing pages, or other form data for different ads within the same launch.",
         steps: [
-            "Open the launcher and select the ad account you want to use.",
-            "Upload your creative files and complete the default campaign settings.",
-            "Review the generated ads, make any final edits, and click Publish.",
+            "Upload your media files.",
+            "Click Split Ad Data in the top-right corner to create form variants.",
+            "Edit each variant with the copy or other fields you want to change.",
+            "Assign the media on the right to the appropriate variant.",
         ],
-        thumbnail: FaqVideoThumbnail,
+        thumbnail: SplitAdDataThumbnail,
     },
     {
-        question: "How do I set default values for new ads?",
-        answer: "Preferences let you pre-fill common values so every new batch starts with the right setup.",
+        question: "How can I launch multiple new ad sets at the same time?",
+        answer: "Use form variants to configure several new ad sets within a single launch.",
         steps: [
-            "Open Settings and select Preferences.",
-            "Choose the ad account whose defaults you want to edit.",
-            "Update the fields you use most often.",
-            "Save your changes at the bottom of the page.",
+            "Upload your media files and click Split Ad Data in the top-right corner.",
+            "Create a variant for each new ad set you want to launch.",
+            "In each variant, choose to launch ads in a new ad set and select the ad set to duplicate.",
+            "Give every variant a unique ad set name; otherwise, they will all launch with the same name.",
         ],
-        thumbnail: FaqVideoThumbnail,
-        videoUrl: "https://www.loom.com/",
+        thumbnail: MultipleNewAdSetsThumbnail,
     },
     {
-        question: "How do I connect another ad account?",
-        answer: "You can add another eligible ad account from the account selection area in Settings.",
+        question: "How can I assign vertical and square assets to one ad and customize their placements?",
+        answer: "Group related assets so each aspect ratio can be assigned to the correct placement within the same ad.",
         steps: [
-            "Go to Settings and open Preferences.",
-            "Open the ad account selector.",
-            "Select the accounts you want available in Blip and confirm your selection.",
+            "Upload your media, then select Group Assets for placement customization above the files.",
+            "Group the related files manually, or use AI Grouping to identify pairs automatically.",
+            "Review the groups and assign the placements you want for each asset.",
+            "Use manual grouping when an ad has three aspect ratios. AI Grouping supports two-asset ads and analyzes image content or similar video filenames.",
         ],
-        thumbnail: FaqVideoThumbnail,
-        videoUrl: "https://www.loom.com/",
+        thumbnail: PlacementCustomizationThumbnail,
     },
     {
-        question: "How do I create and use an ad naming formula?",
-        answer: "Ad naming formulas combine reusable properties to create consistent names automatically.",
+        question: "How do I boost existing Instagram posts?",
+        answer: "Import an existing Instagram post as your media, then use it to create the ad.",
         steps: [
-            "Open the Ad Name Formula section in Preferences.",
-            "Select the properties you want included in every ad name.",
-            "Drag the properties into your preferred order.",
-            "Add custom text where needed, then save your settings.",
+            "Click Manage Upload Sources near the file upload area.",
+            "Select Instagram as the source.",
+            "Browse your posts and import the one you want to boost.",
         ],
-        thumbnail: FaqVideoThumbnail,
-        videoUrl: "https://www.loom.com/",
+        thumbnail: InstagramThumbnail,
     },
     {
-        question: "How do I switch between Meta and TikTok?",
-        answer: "Use the platform button at the bottom of the Settings navigation to move between launchers.",
+        question: "How can I connect or change the accounts connected to Blip?",
+        answer: "You can update the Meta accounts available to Blip by repeating the authorization flow from Preferences.",
         steps: [
-            "Open Settings from your current launcher.",
-            "Click Meta or TikTok in the left sidebar.",
-            "Connect the platform if prompted, then select an advertiser account.",
+            "Open Preferences and click Edit active accounts beside the ad account dropdown.",
+            "Continue through the Facebook authorization flow.",
+            "On the first Facebook screen, choose Edit Settings and explicitly link or unlink the accounts you want.",
         ],
-        thumbnail: FaqVideoThumbnail,
-        videoUrl: "https://www.loom.com/",
+        thumbnail: ConnectNewAccountsThumbnail,
+    },
+    {
+        question: "How can I share a preview or QA sheet with my clients?",
+        answer: "Open the arrow beside Publish Ads to save the launch in its current state and create a public preview link for your client to review before you publish.",
+        thumbnail: DraftsThumbnail,
+    },
+    {
+        question: "How can I use existing assets from the Meta Media Library?",
+        answer: "Import files already stored in Meta Ads Manager and relaunch them as new ads.",
+        steps: [
+            "Click Manage Upload Sources near the file upload area.",
+            "Select Meta Media Library.",
+            "Browse your existing assets and import the files you want to use.",
+        ],
+        thumbnail: MetaMediaLibraryThumbnail,
+    },
+    {
+        question: "My pages or ad accounts are not showing up. How do I fix this?",
+        answer: "Missing pages or ad accounts are usually caused by permissions that were not granted during the initial Facebook authorization.",
+        steps: [
+            "Open Preferences and click Edit active accounts.",
+            "Continue through the Facebook authorization flow and choose Edit Settings on the first screen.",
+            "Explicitly select the pages and ad accounts you want Blip to access.",
+            "If they still do not appear, they may be personal Facebook pages or not linked to your Business Manager. Contact us through chat and we’ll help connect them.",
+        ],
+        thumbnail: PagesNotShowingUpThumbnail,
     },
 ]
 
@@ -84,16 +114,18 @@ export default function HelpFAQs() {
                             <div className="space-y-5 border-t border-gray-200 pt-4">
                                 <p className="text-sm leading-6 text-gray-600">{faq.answer}</p>
 
-                                <ol className="space-y-3">
-                                    {faq.steps.map((step, stepIndex) => (
-                                        <li key={step} className="flex items-start gap-3 text-sm leading-6 text-gray-700">
-                                            <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-orange-500 text-xs font-semibold text-white">
-                                                {stepIndex + 1}
-                                            </span>
-                                            <span>{step}</span>
-                                        </li>
-                                    ))}
-                                </ol>
+                                {faq.steps?.length > 0 && (
+                                    <ol className="space-y-3">
+                                        {faq.steps.map((step, stepIndex) => (
+                                            <li key={step} className="flex items-start gap-3 text-sm leading-6 text-gray-700">
+                                                <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-orange-500 text-xs font-semibold text-white">
+                                                    {stepIndex + 1}
+                                                </span>
+                                                <span>{step}</span>
+                                            </li>
+                                        ))}
+                                    </ol>
+                                )}
 
                                 {faq.videoUrl ? (
                                     <a
