@@ -35,10 +35,8 @@ import {
 } from "@/lib/accountSelection"
 import "../settings.css"
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
-const IS_STAGING = import.meta.env.VITE_ENV === 'staging' || API_BASE_URL.includes('staging')
-const STAGING_ONLY_TABS = IS_STAGING ? ["help"] : []
-const META_SETTINGS_TABS = ["adaccount", "billing", "team", ...STAGING_ONLY_TABS]
-const TIKTOK_SETTINGS_TABS = ["tiktok", "billing", "team", ...STAGING_ONLY_TABS]
+const META_SETTINGS_TABS = ["adaccount", "billing", "team", "help"]
+const TIKTOK_SETTINGS_TABS = ["tiktok", "billing", "team", "help"]
 const TIKTOK_SWITCH_TAB = "tiktok-switch"
 const META_SWITCH_TAB = "meta-switch"
 
