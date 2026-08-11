@@ -22,7 +22,7 @@ export default function BrandsView({ ctx }) {
         </p>
         <button onClick={resync} disabled={syncing} className="cs-primary-button">
           <RefreshCw className={`w-4 h-4 ${syncing ? "animate-spin" : ""}`} />
-          {syncing ? "Syncing…" : "Sync Brands"}
+          {syncing ? "Refreshing…" : "Refresh Accounts"}
         </button>
       </div>
 
@@ -32,8 +32,8 @@ export default function BrandsView({ ctx }) {
         <EmptyState
           icon={Layers}
           title="No connected accounts"
-          hint="Sync Brands to pull your linked Meta ad accounts."
-          action={<button onClick={resync} disabled={syncing} className="cs-primary-button mt-2">Sync Brands</button>}
+          hint="Refresh Accounts to reload the same Meta accounts used by Preferences."
+          action={<button onClick={resync} disabled={syncing} className="cs-primary-button mt-2">Refresh Accounts</button>}
           className="min-h-[360px] rounded-[28px]"
         />
       ) : (
@@ -42,12 +42,14 @@ export default function BrandsView({ ctx }) {
             const active = selectedBrandId === b.id;
             const productCount = b.productCount ?? b.productsCount ?? b.products?.length;
             return (
-              <button key={b.id} onClick={() => { setSelectedBrandId(b.id); goTo("products"); }}
-                className={`cs-brand-card text-left ${active ? "ring-2 ring-black/20 ring-offset-2" : ""}`}>
+              <button key={b.id} disabled={b.mappingPending} onClick={() => { setSelectedBrandId(b.id); goTo("products"); }}
+                className={`cs-brand-card text-left disabled:cursor-wait disabled:opacity-70 ${active ? "ring-2 ring-black/20 ring-offset-2" : ""}`}>
                 <div className="cs-brand-card__top flex min-h-[72px] items-center justify-between gap-4 px-6">
                   <span className="truncate text-base font-semibold text-neutral-950">{b.name}</span>
                   <span className="shrink-0 text-sm font-semibold text-neutral-900">
-                    {productCount == null ? "View Products" : `${productCount} Product${productCount === 1 ? "" : "s"}`}
+                    {b.mappingPending
+                      ? "Preparing…"
+                      : productCount == null ? "View Products" : `${productCount} Product${productCount === 1 ? "" : "s"}`}
                   </span>
                 </div>
                 <div className="px-6 py-4 text-sm font-semibold text-[#3b170b]">

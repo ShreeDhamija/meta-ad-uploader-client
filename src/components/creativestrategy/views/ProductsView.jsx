@@ -65,7 +65,7 @@ export default function ProductsView({ ctx }) {
               <SelectValue placeholder="Select Brand" />
             </SelectTrigger>
             <SelectContent>
-              {brands.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
+              {brands.map((b) => <SelectItem key={b.id} value={b.id} disabled={b.mappingPending}>{b.name}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={selectedProductId || ""} onValueChange={(v) => setSelectedProductId(v || null)} disabled={!selectedBrandId}>
