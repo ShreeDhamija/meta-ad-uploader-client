@@ -110,9 +110,9 @@ export default function TikTokCampaignDuplicator({ advertiserId }) {
       }
 
       setDuplicationResult(result)
-      toast.success('Smart Campaign duplicated successfully!')
+      toast.success('Campaign duplicated successfully!')
     } catch (err) {
-      console.error('Smart campaign duplication error:', err)
+      console.error('Duplication error:', err)
       toast.error(err.message)
     } finally {
       setIsDuplicating(false)
