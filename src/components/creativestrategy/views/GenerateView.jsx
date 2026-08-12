@@ -1,14 +1,11 @@
-// Generate — static image ads from a creative format + brand/product context.
-// Pick a format, options (creativity / production style / aspect ratio /
-// variations), Run → a background generate_ad job renders images to R2.
-// JobStatus polls; results render as a signed-URL image grid.
+// Generate workspace — statics, copy/scripts, briefs, and the product's saved
+// generation gallery share one shell while retaining their existing API flows.
 import { useEffect, useMemo, useState } from "react";
 import PropTypes from "prop-types";
-import { Flame, Box } from "lucide-react";
+import { Box, ClipboardList, FileText, Flame, Images, Loader2, RefreshCw, Sparkles, ThumbsDown, ThumbsUp } from "lucide-react";
 import { creativeApi } from "@/lib/creativeApi";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { EmptyState, ErrorBanner } from "../ui";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ErrorBanner } from "../ui";
 import { useJobRunner, JobBadge } from "../JobsContext";
 
 const CREATIVITY = [
@@ -21,24 +18,29 @@ const PRODUCTION = [
   { key: "studio", label: "Studio" },
 ];
 const ASPECT = [
-  { key: "", label: "Reference ratio" },
+  { key: "reference", label: "Reference ratio" },
   { key: "1:1", label: "1:1" },
   { key: "4:5", label: "4:5" },
   { key: "9:16", label: "9:16" },
 ];
-
-const TABS = [
-  { key: "ads", label: "Ads (images)" },
-  { key: "copy", label: "Copy" },
-  { key: "brief", label: "Brief / Script" },
+const MODES = [
+  { key: "statics", label: "Statics" },
+  { key: "scripts", label: "Scripts" },
+  { key: "briefs", label: "Briefs" },
+  { key: "gallery", label: "Gallery" },
 ];
 
 export default function GenerateView({ ctx }) {
-  const { selectedProduct, selectedProductId } = ctx;
-  const [mode, setMode] = useState("ads");
+  const {
+    brands, brandsLoading, selectedBrandId, setSelectedBrandId, products, productsLoading,
+    selectedProductId, setSelectedProductId,
+  } = ctx;
+  const [mode, setMode] = useState("statics");
   const [formats, setFormats] = useState([]);
+  const [formatsLoading, setFormatsLoading] = useState(true);
   const [items, setItems] = useState([]);
   const [err, setErr] = useState(null);
+  const [galleryLoading, setGalleryLoading] = useState(false);
 
   const [formatSlug, setFormatSlug] = useState("");
   const [creativityMode, setCreativityMode] = useState("inspired");
@@ -48,44 +50,47 @@ export default function GenerateView({ ctx }) {
   const [userInputs, setUserInputs] = useState({});
   const [filling, setFilling] = useState(false);
 
-  const load = async (pid) => {
-    try { const r = await creativeApi.getGenerated(pid); setItems(r.items); }
-    catch (e) { setErr(e.message); }
-  };
-
-  const rate = async (id, rating) => {
-    setItems((arr) => arr.map((x) => (x.id === id ? { ...x, myRating: x.myRating === rating ? x.myRating : rating } : x))); // optimistic
-    try { await creativeApi.rateGenerated(id, rating); } catch (e) { setErr(e.message); }
+  const load = async (productId) => {
+    if (!productId) { setItems([]); return; }
+    setGalleryLoading(true);
+    try {
+      const response = await creativeApi.getGenerated(productId);
+      setItems(response.items || []);
+    } catch (error) {
+      setErr(error.message);
+    } finally {
+      setGalleryLoading(false);
+    }
   };
 
   useEffect(() => {
-    creativeApi.getFormats().then((r) => setFormats(r.formats)).catch((e) => setErr(e.message));
+    setFormatsLoading(true);
+    creativeApi.getFormats()
+      .then((response) => setFormats(response.formats || []))
+      .catch((error) => setErr(error.message))
+      .finally(() => setFormatsLoading(false));
   }, []);
 
-  useEffect(() => {
-    if (selectedProductId) load(selectedProductId); else setItems([]);
-  }, [selectedProductId]);
+  useEffect(() => { load(selectedProductId); }, [selectedProductId]);
 
   const selectedFormat = useMemo(
-    () => formats.find((f) => f.slug === formatSlug) || null,
+    () => formats.find((format) => format.slug === formatSlug) || null,
     [formats, formatSlug],
   );
 
   const { job, start } = useJobRunner({
-    kind: "generate_ad", productId: selectedProductId, onComplete: () => load(selectedProductId),
+    kind: "generate_ad",
+    productId: selectedProductId,
+    onComplete: () => load(selectedProductId),
   });
 
-  if (!selectedProductId) {
-    return <EmptyState icon={Box} title="No product selected" hint="Select a product in the top bar to generate ads, copy, or briefs." />;
-  }
-
-  const run = async () => {
+  const runStatics = async () => {
+    if (!selectedProductId) return;
     setErr(null);
     try {
-      const fields = selectedFormat?.requiresUserInput || [];
       const cleanedInputs = {};
-      for (const f of fields) {
-        if (userInputs[f.key] != null && userInputs[f.key] !== "") cleanedInputs[f.key] = userInputs[f.key];
+      for (const field of selectedFormat?.requiresUserInput || []) {
+        if (userInputs[field.key] != null && userInputs[field.key] !== "") cleanedInputs[field.key] = userInputs[field.key];
       }
       const { jobId } = await creativeApi.runGenerate({
         productId: selectedProductId,
@@ -97,125 +102,176 @@ export default function GenerateView({ ctx }) {
         userInputs: Object.keys(cleanedInputs).length ? cleanedInputs : undefined,
       });
       start(jobId);
-    } catch (e) { setErr(e.message); }
+    } catch (error) {
+      setErr(error.message);
+    }
   };
 
   const autofill = async () => {
+    if (!selectedProductId || !formatSlug) return;
     setErr(null);
     setFilling(true);
     try {
-      const { user_inputs } = await creativeApi.fillCopy({ productId: selectedProductId, formatSlug });
-      setUserInputs((u) => ({ ...u, ...(user_inputs || {}) }));
-    } catch (e) { setErr(e.message); }
-    finally { setFilling(false); }
+      const response = await creativeApi.fillCopy({ productId: selectedProductId, formatSlug });
+      setUserInputs((current) => ({ ...current, ...(response.user_inputs || {}) }));
+    } catch (error) {
+      setErr(error.message);
+    } finally {
+      setFilling(false);
+    }
   };
 
-  const hasInputFields = (selectedFormat?.requiresUserInput || []).length > 0;
+  const rate = async (id, rating) => {
+    setItems((current) => current.map((item) => (item.id === id ? { ...item, myRating: rating } : item)));
+    try { await creativeApi.rateGenerated(id, rating); } catch (error) { setErr(error.message); }
+  };
+
+  const inputFields = selectedFormat?.requiresUserInput || [];
+  const imageItems = items.filter((item) => item.imageUrl);
+  const generationActive = job && (job.status == null || job.status === "queued" || job.status === "running");
 
   return (
-    <Tabs value={mode} onValueChange={setMode} className="space-y-5">
-      <TabsList>
-        {TABS.map((t) => <TabsTrigger key={t.key} value={t.key}>{t.label}</TabsTrigger>)}
-      </TabsList>
-
-      <TabsContent value="copy"><CopyPanel productId={selectedProductId} productName={selectedProduct?.name} /></TabsContent>
-      <TabsContent value="brief"><BriefPanel productId={selectedProductId} productName={selectedProduct?.name} /></TabsContent>
-
-      <TabsContent value="ads" className="space-y-5">
-      <div className="grid grid-cols-2 gap-3 max-w-2xl">
-        <Field label="Format">
-          <select value={formatSlug} onChange={(e) => { setFormatSlug(e.target.value); setUserInputs({}); }}
-            className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm">
-            <option value="">Auto (no specific format)</option>
-            {formats.map((f) => <option key={f.slug} value={f.slug}>{f.category}</option>)}
-          </select>
-        </Field>
-        <Field label="Variations">
-          <input type="number" min={1} max={8} value={variationCount}
-            onChange={(e) => setVariationCount(Math.max(1, Math.min(8, Number(e.target.value) || 1)))}
-            className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm" />
-        </Field>
-        <Field label="Creativity">
-          <Pills options={CREATIVITY} value={creativityMode} onChange={setCreativityMode} />
-        </Field>
-        <Field label="Production">
-          <Pills options={PRODUCTION} value={productionStyle} onChange={setProductionStyle} />
-        </Field>
-        <Field label="Aspect ratio">
-          <Pills options={ASPECT} value={aspectRatio} onChange={setAspectRatio} />
-        </Field>
-      </div>
-
-      {hasInputFields && (
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-neutral-500">Concept inputs</span>
-          <button type="button" onClick={autofill} disabled={filling}
-            className="rounded-xl border border-neutral-200 px-3 py-1 text-xs text-neutral-700 disabled:opacity-50">
-            {filling ? "Filling…" : "Auto-fill copy ✨"}
-          </button>
+    <div className="cs-generate-view">
+      <div className="cs-generate-toolbar">
+        <div className="flex flex-wrap items-center gap-3">
+          <Select value={selectedBrandId || ""} onValueChange={(value) => setSelectedBrandId(value || null)}>
+            <SelectTrigger className="cs-pill-control w-[210px] px-4">
+              <SelectValue placeholder={brandsLoading ? "Loading Brands…" : "Select Brand"} />
+            </SelectTrigger>
+            <SelectContent className="cs-select-content bg-white">
+              {brands.map((brand) => <SelectItem key={brand.id} value={brand.id}>{brand.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={selectedProductId || ""} onValueChange={(value) => setSelectedProductId(value || null)} disabled={!selectedBrandId || productsLoading}>
+            <SelectTrigger className="cs-pill-control w-[210px] px-4">
+              <SelectValue placeholder={productsLoading ? "Loading Products…" : "Select Product"} />
+            </SelectTrigger>
+            <SelectContent className="cs-select-content bg-white">
+              {products.map((product) => <SelectItem key={product.id} value={product.id}>{product.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
         </div>
-      )}
 
-      {hasInputFields && (
-        <div className="grid grid-cols-2 gap-3 max-w-2xl">
-          {selectedFormat.requiresUserInput.map((f) => (
-            <Field key={f.key} label={f.label || f.key}>
-              {f.type === "textarea" ? (
-                <textarea rows={3} placeholder={f.placeholder || ""} value={userInputs[f.key] ?? ""}
-                  onChange={(e) => setUserInputs((u) => ({ ...u, [f.key]: e.target.value }))}
-                  className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm" />
-              ) : (
-                <input type={f.type === "number" ? "number" : "text"} placeholder={f.placeholder || ""} value={userInputs[f.key] ?? ""}
-                  onChange={(e) => setUserInputs((u) => ({ ...u, [f.key]: e.target.value }))}
-                  className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm" />
-              )}
-            </Field>
+        <div className="cs-generate-switcher" aria-label="Generate mode">
+          {MODES.map((item) => (
+            <button
+              key={item.key}
+              type="button"
+              onClick={() => setMode(item.key)}
+              className={`cs-generate-switcher__item ${mode === item.key ? "is-active" : ""}`}
+              aria-pressed={mode === item.key}
+            >
+              {item.label}
+            </button>
           ))}
         </div>
+      </div>
+
+      {mode === "statics" && (
+        <GenerateWorkspace
+          sidebar={(
+            <>
+              <div className="space-y-4">
+                {formatsLoading ? (
+                  <SidebarLoading label="Loading formats…" />
+                ) : (
+                  <SidebarSelect
+                    label="Format"
+                    value={formatSlug || "auto"}
+                    onChange={(value) => { setFormatSlug(value === "auto" ? "" : value); setUserInputs({}); }}
+                    options={[{ key: "auto", label: "Auto format" }, ...formats.map((format) => ({ key: format.slug, label: format.category }))]}
+                  />
+                )}
+                <SidebarNumber label="Variations" value={variationCount} min={1} max={8} onChange={setVariationCount} />
+                <SidebarSelect label="Creativity" value={creativityMode} onChange={setCreativityMode} options={CREATIVITY} />
+                <SidebarSelect label="Aspect Ratio" value={aspectRatio || "reference"} onChange={(value) => setAspectRatio(value === "reference" ? "" : value)} options={ASPECT} />
+                <SidebarSelect label="Production" value={productionStyle} onChange={setProductionStyle} options={PRODUCTION} />
+
+                {inputFields.length > 0 && (
+                  <div className="cs-generate-sidebar__group space-y-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-semibold text-[#6c3403]">Concept inputs</span>
+                      <button type="button" onClick={autofill} disabled={filling || !formatSlug} className="cs-generate-autofill">
+                        <Sparkles className="h-3.5 w-3.5" /> {filling ? "Filling…" : "Auto-fill"}
+                      </button>
+                    </div>
+                    {inputFields.map((field) => (
+                      <SidebarInput
+                        key={field.key}
+                        label={field.label || field.key}
+                        type={field.type}
+                        placeholder={field.placeholder}
+                        value={userInputs[field.key] ?? ""}
+                        onChange={(value) => setUserInputs((current) => ({ ...current, [field.key]: value }))}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="mt-auto space-y-3 pt-5">
+                <JobBadge job={job} />
+                <button type="button" onClick={runStatics} disabled={!selectedProductId} className="cs-primary-button w-full">
+                  Generate Ads
+                </button>
+              </div>
+            </>
+          )}
+        >
+          <ErrorBanner message={err} />
+          {!selectedProductId ? (
+            <WorkspaceEmpty icon={Box} title="Select a product" hint="Choose a brand and product above to configure and generate static ads." />
+          ) : formatsLoading || (galleryLoading && imageItems.length === 0) ? (
+            <GenerateLoading label={formatsLoading ? "Loading generation options…" : "Loading previous images…"} />
+          ) : generationActive ? (
+            <GenerateLoading label="Generating static variations…" />
+          ) : imageItems.length === 0 ? (
+            <WorkspaceEmpty icon={Flame} title="No generated ads yet" hint="Choose your settings in the sidebar and generate the first variations." />
+          ) : (
+            <GenerationGrid items={imageItems.slice(0, Math.max(variationCount, 4))} rate={rate} />
+          )}
+        </GenerateWorkspace>
       )}
 
-      <div className="flex items-center gap-3">
-        <Button onClick={run} size="sm" className="rounded-xl">Generate ads</Button>
-        <JobBadge job={job} />
-        <span className="text-sm text-neutral-400">{selectedProduct?.name} · needs product assets or analyzed image ads</span>
-      </div>
-      <ErrorBanner message={err} />
-
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        {items.map((it) => (
-          <div key={it.id} className="rounded-2xl border border-neutral-200 overflow-hidden">
-            {it.imageUrl
-              ? <img src={it.imageUrl} alt={it.formatSlug || "generated ad"} className="w-full object-cover bg-neutral-50" />
-              : <div className="aspect-square grid place-items-center text-xs text-neutral-400">image unavailable</div>}
-            <div className="p-2 flex flex-wrap items-center gap-1">
-              <Tag>{it.model}</Tag>
-              {it.formatSlug && <Tag>{it.formatSlug}</Tag>}
-              <span className="flex-1" />
-              <button onClick={() => rate(it.id, "up")} className={`text-xs px-1 ${it.myRating === "up" ? "text-green-600" : "text-neutral-300 hover:text-neutral-500"}`}>▲</button>
-              <button onClick={() => rate(it.id, "down")} className={`text-xs px-1 ${it.myRating === "down" ? "text-red-600" : "text-neutral-300 hover:text-neutral-500"}`}>▼</button>
-            </div>
-          </div>
-        ))}
-        {items.length === 0 && (
-          <div className="col-span-full">
-            <EmptyState icon={Flame} title="No generated ads yet" hint="Pick a format and click Generate ads. Needs product assets or analyzed image ads." />
-          </div>
-        )}
-      </div>
-      </TabsContent>
-    </Tabs>
+      {mode === "scripts" && <ScriptsPanel productId={selectedProductId} />}
+      {mode === "briefs" && <BriefPanel productId={selectedProductId} />}
+      {mode === "gallery" && (
+        <GenerateWorkspace
+          sidebar={(
+            <>
+              <div className="rounded-2xl border border-[#6c3403]/25 bg-[#ffe9d6] p-4 text-sm font-medium text-[#6c3403]">
+                {galleryLoading ? "Loading saved images…" : `${imageItems.length} saved image${imageItems.length === 1 ? "" : "s"}`}
+              </div>
+              <button type="button" onClick={() => load(selectedProductId)} disabled={!selectedProductId || galleryLoading} className="cs-primary-button mt-auto w-full">
+                <RefreshCw className={`h-4 w-4 ${galleryLoading ? "animate-spin" : ""}`} /> Refresh Gallery
+              </button>
+            </>
+          )}
+        >
+          <ErrorBanner message={err} />
+          {!selectedProductId ? (
+            <WorkspaceEmpty icon={Box} title="Select a product" hint="The gallery is scoped to the selected product." />
+          ) : galleryLoading && imageItems.length === 0 ? (
+            <WorkspaceEmpty icon={RefreshCw} title="Loading gallery" hint="Fetching generated images from the database." />
+          ) : imageItems.length === 0 ? (
+            <WorkspaceEmpty icon={Images} title="No images in this gallery" hint="Generate statics and they will appear here automatically." />
+          ) : (
+            <GenerationGrid items={imageItems} rate={rate} gallery />
+          )}
+        </GenerateWorkspace>
+      )}
+    </div>
   );
 }
 
-// ── Copy panel — N hooks / headlines / primary texts for one persona ─────────
 const COPY_TYPES = [
   { key: "hook", label: "Hooks" },
   { key: "headline", label: "Headlines" },
   { key: "primary_text", label: "Primary text" },
 ];
 
-function CopyPanel({ productId, productName }) {
+function ScriptsPanel({ productId }) {
   const [personas, setPersonas] = useState([]);
+  const [personasLoading, setPersonasLoading] = useState(false);
   const [copyType, setCopyType] = useState("hook");
   const [avatar, setAvatar] = useState("");
   const [count, setCount] = useState(8);
@@ -225,67 +281,81 @@ function CopyPanel({ productId, productName }) {
   const [err, setErr] = useState(null);
 
   useEffect(() => {
-    if (!productId) { setPersonas([]); return; }
+    if (!productId) { setPersonas([]); setPersonasLoading(false); return; }
+    setPersonasLoading(true);
     creativeApi.getResearch(productId)
-      .then((r) => {
-        const p = r.intel?.personas?.personas || (Array.isArray(r.intel?.personas) ? r.intel.personas : []);
-        setPersonas(p.map((x) => x.name || x.label).filter(Boolean));
+      .then((response) => {
+        const found = response.intel?.personas?.personas || (Array.isArray(response.intel?.personas) ? response.intel.personas : []);
+        setPersonas(found.map((persona) => persona.name || persona.label).filter(Boolean));
       })
-      .catch(() => setPersonas([]));
+      .catch(() => setPersonas([]))
+      .finally(() => setPersonasLoading(false));
   }, [productId]);
 
   const run = async () => {
+    if (!productId) return;
     setErr(null); setBusy(true); setResults([]); setSaved(null);
     try {
-      const r = await creativeApi.generateCopy({ productId, copyType, count, selectedAvatar: avatar || undefined });
-      setResults(r.results || []);
-      setSaved(r.saved ?? 0);
-    } catch (e) { setErr(e.message); } finally { setBusy(false); }
+      const response = await creativeApi.generateCopy({ productId, copyType, count, selectedAvatar: avatar || undefined });
+      setResults(response.results || []);
+      setSaved(response.saved ?? 0);
+    } catch (error) {
+      setErr(error.message);
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-3 max-w-2xl">
-        <Field label="Type"><Pills options={COPY_TYPES} value={copyType} onChange={setCopyType} /></Field>
-        <Field label="Count">
-          <input type="number" min={1} max={20} value={count}
-            onChange={(e) => setCount(Math.max(1, Math.min(20, Number(e.target.value) || 1)))}
-            className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm" />
-        </Field>
-        <Field label="Persona">
-          <select value={avatar} onChange={(e) => setAvatar(e.target.value)}
-            className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm">
-            <option value="">Auto (first persona)</option>
-            {personas.map((p) => <option key={p} value={p}>{p}</option>)}
-          </select>
-        </Field>
-      </div>
-      <div className="flex items-center gap-3">
-        <button onClick={run} disabled={busy} className="rounded-xl bg-neutral-900 text-white px-4 py-2 text-sm disabled:opacity-50">
-          {busy ? "Generating…" : "Generate copy"}
-        </button>
-        <span className="text-sm text-neutral-400">{productName} · saved to Library as drafts</span>
-      </div>
-      {err && <p className="text-sm text-red-600">{err}</p>}
-      {saved != null && <p className="text-xs text-green-600">{results.length} generated · {saved} saved to Library</p>}
-      <div className="space-y-2 max-w-2xl">
-        {results.map((r, i) => (
-          <div key={i} className="rounded-xl border border-neutral-200 p-3 text-sm whitespace-pre-wrap">{r}</div>
-        ))}
-      </div>
-    </div>
+    <GenerateWorkspace
+      sidebar={(
+        <>
+          <div className="space-y-4">
+            <SidebarSelect label="Script Type" value={copyType} onChange={setCopyType} options={COPY_TYPES} />
+            <SidebarNumber label="Count" value={count} min={1} max={20} onChange={setCount} />
+            {personasLoading ? (
+              <SidebarLoading label="Loading personas…" />
+            ) : (
+              <SidebarSelect
+                label="Persona"
+                value={avatar || "auto"}
+                onChange={(value) => setAvatar(value === "auto" ? "" : value)}
+                options={[{ key: "auto", label: "Auto persona" }, ...personas.map((persona) => ({ key: persona, label: persona }))]}
+              />
+            )}
+          </div>
+          <button type="button" onClick={run} disabled={!productId || busy} className="cs-primary-button mt-auto w-full">
+            {busy ? "Generating…" : "Generate Scripts"}
+          </button>
+        </>
+      )}
+    >
+      <ErrorBanner message={err} />
+      {!productId ? (
+        <WorkspaceEmpty icon={Box} title="Select a product" hint="Choose a product above before generating copy." />
+      ) : personasLoading ? (
+        <GenerateLoading label="Loading personas and script options…" />
+      ) : busy ? (
+        <GenerateLoading label="Generating scripts…" />
+      ) : results.length === 0 ? (
+        <WorkspaceEmpty icon={FileText} title="No scripts generated yet" hint="Set the script type, count, and persona in the sidebar." />
+      ) : (
+        <div className="space-y-3">
+          {saved != null && <p className="text-xs font-medium text-[#6c3403]">{results.length} generated · {saved} saved to Library</p>}
+          {results.map((result, index) => <div key={index} className="cs-generate-result whitespace-pre-wrap">{result}</div>)}
+        </div>
+      )}
+    </GenerateWorkspace>
   );
 }
-CopyPanel.propTypes = { productId: PropTypes.string, productName: PropTypes.string };
 
-// ── Brief panel — strategist picks a concept, then writes a script/static brief ─
-const BRIEF_FORMAT = [
-  { key: "", label: "Auto (picker decides)" },
+const BRIEF_FORMATS = [
+  { key: "auto", label: "Auto (picker decides)" },
   { key: "video", label: "Video script" },
   { key: "static", label: "Static brief" },
 ];
 
-function BriefPanel({ productId, productName }) {
+function BriefPanel({ productId }) {
   const [format, setFormat] = useState("");
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
@@ -293,111 +363,209 @@ function BriefPanel({ productId, productName }) {
   const [err, setErr] = useState(null);
 
   const run = async () => {
+    if (!productId) return;
     setErr(null); setBusy(true); setData(null);
     try {
-      const r = await creativeApi.generateConceptBrief({ productId, format: format || undefined, notes: notes || undefined });
-      setData(r);
-    } catch (e) { setErr(e.message); } finally { setBusy(false); }
+      setData(await creativeApi.generateConceptBrief({ productId, format: format || undefined, notes: notes || undefined }));
+    } catch (error) {
+      setErr(error.message);
+    } finally {
+      setBusy(false);
+    }
   };
 
-  const c = data?.concept;
-  const b = data?.brief;
+  const concept = data?.concept;
+  const brief = data?.brief;
 
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-3 max-w-2xl">
-        <Field label="Format"><Pills options={BRIEF_FORMAT} value={format} onChange={setFormat} /></Field>
-        <Field label="Notes (optional steer)">
-          <input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="e.g. lean into the new bundle offer"
-            className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm" />
-        </Field>
-      </div>
-      <div className="flex items-center gap-3">
-        <button onClick={run} disabled={busy} className="rounded-xl bg-neutral-900 text-white px-4 py-2 text-sm disabled:opacity-50">
-          {busy ? "Working… (picks a concept, then writes)" : "Generate brief"}
-        </button>
-        <span className="text-sm text-neutral-400">{productName}</span>
-      </div>
-      {err && <p className="text-sm text-red-600">{err}</p>}
-
-      {c && (
-        <div className="rounded-2xl border border-neutral-200 p-4 space-y-1 max-w-3xl">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-semibold text-sm">{c.concept_name}</span>
-            <Tag>{b?.format}</Tag>
-            {c.persona_label && <Tag>{c.persona_label}</Tag>}
-            {c.awareness_stage && <Tag>{c.awareness_stage}</Tag>}
-            {c.gap_or_extension && <Tag>{c.gap_or_extension}</Tag>}
+    <GenerateWorkspace
+      sidebar={(
+        <>
+          <div className="space-y-4">
+            <SidebarSelect label="Format" value={format || "auto"} onChange={(value) => setFormat(value === "auto" ? "" : value)} options={BRIEF_FORMATS} />
+            <SidebarInput label="Notes (optional)" type="textarea" value={notes} onChange={setNotes} placeholder="e.g. lean into the new bundle offer" />
           </div>
-          {c.hypothesis && <p className="text-xs text-neutral-600"><b>Hypothesis:</b> {c.hypothesis}</p>}
-          {c.angle && <p className="text-xs text-neutral-600"><b>Angle:</b> {c.angle}</p>}
-          {c.concept_direction && <p className="text-xs text-neutral-600"><b>Direction:</b> {c.concept_direction}</p>}
+          <button type="button" onClick={run} disabled={!productId || busy} className="cs-primary-button mt-auto w-full">
+            {busy ? "Writing Brief…" : "Generate Brief"}
+          </button>
+        </>
+      )}
+    >
+      <ErrorBanner message={err} />
+      {!productId ? (
+        <WorkspaceEmpty icon={Box} title="Select a product" hint="Choose a product above before generating a brief." />
+      ) : busy ? (
+        <GenerateLoading label="Building the creative brief…" />
+      ) : !brief ? (
+        <WorkspaceEmpty icon={ClipboardList} title="No brief generated yet" hint="Choose a format and add optional direction in the sidebar." />
+      ) : (
+        <div className="space-y-4">
+          {concept && (
+            <div className="cs-generate-result space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-semibold">{concept.concept_name}</span>
+                <Tag>{brief.format}</Tag>
+                {concept.persona_label && <Tag>{concept.persona_label}</Tag>}
+                {concept.awareness_stage && <Tag>{concept.awareness_stage}</Tag>}
+              </div>
+              {concept.hypothesis && <p><strong>Hypothesis:</strong> {concept.hypothesis}</p>}
+              {concept.angle && <p><strong>Angle:</strong> {concept.angle}</p>}
+              {concept.concept_direction && <p><strong>Direction:</strong> {concept.concept_direction}</p>}
+            </div>
+          )}
+          {brief.hooks?.length > 0 && <ResultSection title="Hooks"><ul className="list-disc space-y-1 pl-5">{brief.hooks.map((hook, index) => <li key={index}>{hook}</li>)}</ul></ResultSection>}
+          {brief.headlines?.length > 0 && <ResultSection title="Headlines"><ul className="list-disc space-y-1 pl-5">{brief.headlines.map((headline, index) => <li key={index}>{headline}</li>)}</ul></ResultSection>}
+          {brief.script && <ResultSection title="Script"><pre className="whitespace-pre-wrap font-sans">{brief.script}</pre></ResultSection>}
+          {brief.static_brief && <ResultSection title="Static Brief"><pre className="whitespace-pre-wrap font-sans">{brief.static_brief}</pre></ResultSection>}
         </div>
       )}
+    </GenerateWorkspace>
+  );
+}
 
-      {b && (b.format === "video" ? (
-        <div className="space-y-3 max-w-3xl">
-          {b.hooks?.length > 0 && (
-            <div className="rounded-2xl border border-neutral-200 p-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500 mb-2">Hooks</p>
-              <ul className="list-disc pl-5 space-y-1 text-sm">{b.hooks.map((h, i) => <li key={i}>{h}</li>)}</ul>
-            </div>
-          )}
-          {b.script && (
-            <div className="rounded-2xl border border-neutral-200 p-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500 mb-2">Script</p>
-              <pre className="text-sm whitespace-pre-wrap font-sans">{b.script}</pre>
-            </div>
-          )}
-        </div>
-      ) : (
-        <div className="space-y-3 max-w-3xl">
-          {b.headlines?.length > 0 && (
-            <div className="rounded-2xl border border-neutral-200 p-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500 mb-2">Headlines</p>
-              <ul className="list-disc pl-5 space-y-1 text-sm">{b.headlines.map((h, i) => <li key={i}>{h}</li>)}</ul>
-            </div>
-          )}
-          {b.static_brief && (
-            <div className="rounded-2xl border border-neutral-200 p-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500 mb-2">Static brief</p>
-              <pre className="text-sm whitespace-pre-wrap font-sans">{b.static_brief}</pre>
-            </div>
-          )}
-        </div>
-      ))}
+function GenerateWorkspace({ sidebar, children }) {
+  return (
+    <div className="cs-generate-layout">
+      <aside className="cs-generate-sidebar">{sidebar}</aside>
+      <section className="cs-generate-canvas">{children}</section>
     </div>
   );
 }
-BriefPanel.propTypes = { productId: PropTypes.string, productName: PropTypes.string };
+
+function WorkspaceEmpty({ icon: Icon, title, hint }) {
+  return (
+    <div className="flex min-h-[420px] flex-col items-center justify-center text-center">
+      <span className="mb-3 grid h-11 w-11 place-items-center rounded-full bg-[#ffe9d6] text-[#6c3403]">
+        <Icon className="h-5 w-5" />
+      </span>
+      <p className="text-sm font-semibold text-neutral-800">{title}</p>
+      <p className="mt-1 max-w-sm text-xs leading-5 text-neutral-500">{hint}</p>
+    </div>
+  );
+}
+
+function GenerateLoading({ label }) {
+  return (
+    <div className="flex min-h-[420px] flex-col items-center justify-center gap-3 text-sm text-neutral-500">
+      <Loader2 className="h-6 w-6 animate-spin text-[#6c3403]" />
+      <span>{label}</span>
+    </div>
+  );
+}
+
+function SidebarSelect({ label, value, onChange, options }) {
+  return (
+    <Field label={label}>
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger className="cs-generate-control w-full px-4">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent className="cs-select-content bg-white">
+          {options.map((option) => <SelectItem key={option.key} value={option.key}>{option.label}</SelectItem>)}
+        </SelectContent>
+      </Select>
+    </Field>
+  );
+}
+
+function SidebarNumber({ label, value, min, max, onChange }) {
+  return (
+    <Field label={label}>
+      <input
+        type="number"
+        min={min}
+        max={max}
+        value={value}
+        onChange={(event) => onChange(Math.max(min, Math.min(max, Number(event.target.value) || min)))}
+        className="cs-generate-control w-full px-4"
+      />
+    </Field>
+  );
+}
+
+function SidebarLoading({ label }) {
+  return (
+    <Field label={label}>
+      <div className="cs-generate-control flex w-full items-center gap-2 px-4 text-xs font-normal text-neutral-400">
+        <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading…
+      </div>
+    </Field>
+  );
+}
+
+function SidebarInput({ label, type, value, onChange, placeholder }) {
+  return (
+    <Field label={label}>
+      {type === "textarea" ? (
+        <textarea value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder || ""} className="cs-generate-textarea w-full" />
+      ) : (
+        <input type={type === "number" ? "number" : "text"} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder || ""} className="cs-generate-control w-full px-4" />
+      )}
+    </Field>
+  );
+}
 
 function Field({ label, children }) {
   return (
     <label className="block">
-      <span className="block text-xs text-neutral-500 mb-1">{label}</span>
+      <span className="mb-1.5 block text-xs font-medium text-[#4f3329]">{label}</span>
       {children}
     </label>
   );
 }
-Field.propTypes = { label: PropTypes.string.isRequired, children: PropTypes.node };
 
-function Pills({ options, value, onChange }) {
+function GenerationGrid({ items, rate, gallery = false }) {
   return (
-    <div className="flex flex-wrap gap-1.5">
-      {options.map((o) => (
-        <button key={o.key} type="button" onClick={() => onChange(o.key)}
-          className={`rounded-xl px-2.5 py-1 text-xs border ${value === o.key ? "bg-neutral-900 text-white border-neutral-900" : "border-neutral-200 text-neutral-600"}`}>
-          {o.label}
-        </button>
-      ))}
+    <div className={`cs-generate-gallery ${gallery ? "is-gallery" : ""}`}>
+      {items.map((item) => <GeneratedImage key={item.id || item.imageUrl} item={item} rate={rate} />)}
     </div>
   );
 }
-Pills.propTypes = { options: PropTypes.array.isRequired, value: PropTypes.string, onChange: PropTypes.func.isRequired };
+
+function GeneratedImage({ item, rate }) {
+  const [loaded, setLoaded] = useState(false);
+  return (
+    <article className="cs-generate-image-card group relative aspect-square">
+      {!loaded && <div className="absolute inset-0 grid place-items-center"><Loader2 className="h-5 w-5 animate-spin text-[#6c3403]" /></div>}
+      <img
+        src={item.imageUrl}
+        alt={item.formatSlug || "Generated ad"}
+        onLoad={() => setLoaded(true)}
+        onError={() => setLoaded(true)}
+        className={`h-full w-full object-cover transition-opacity duration-200 ${loaded ? "opacity-100" : "opacity-0"}`}
+      />
+      <div className="absolute bottom-3 right-3 flex items-center gap-2 opacity-90 transition-opacity group-hover:opacity-100">
+        <button type="button" onClick={() => rate(item.id, "up")} className={`cs-generate-rating ${item.myRating === "up" ? "is-active" : ""}`} aria-label="Thumbs up">
+          <ThumbsUp className="h-3.5 w-3.5" />
+        </button>
+        <button type="button" onClick={() => rate(item.id, "down")} className={`cs-generate-rating ${item.myRating === "down" ? "is-active" : ""}`} aria-label="Thumbs down">
+          <ThumbsDown className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    </article>
+  );
+}
+
+function ResultSection({ title, children }) {
+  return <div className="cs-generate-result"><p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#6c3403]">{title}</p>{children}</div>;
+}
 
 function Tag({ children }) {
-  return <span className="text-xs rounded-full bg-neutral-100 px-2 py-0.5 text-neutral-500">{children}</span>;
+  return <span className="rounded-full border border-[#6c3403]/20 bg-[#ffe9d6] px-2 py-0.5 text-[10px] font-medium text-[#6c3403]">{children}</span>;
 }
-Tag.propTypes = { children: PropTypes.node };
 
 GenerateView.propTypes = { ctx: PropTypes.object.isRequired };
+GenerateWorkspace.propTypes = { sidebar: PropTypes.node.isRequired, children: PropTypes.node.isRequired };
+WorkspaceEmpty.propTypes = { icon: PropTypes.elementType.isRequired, title: PropTypes.string.isRequired, hint: PropTypes.string.isRequired };
+GenerateLoading.propTypes = { label: PropTypes.string.isRequired };
+SidebarSelect.propTypes = { label: PropTypes.string.isRequired, value: PropTypes.string.isRequired, onChange: PropTypes.func.isRequired, options: PropTypes.array.isRequired };
+SidebarNumber.propTypes = { label: PropTypes.string.isRequired, value: PropTypes.number.isRequired, min: PropTypes.number.isRequired, max: PropTypes.number.isRequired, onChange: PropTypes.func.isRequired };
+SidebarLoading.propTypes = { label: PropTypes.string.isRequired };
+SidebarInput.propTypes = { label: PropTypes.string.isRequired, type: PropTypes.string, value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired, onChange: PropTypes.func.isRequired, placeholder: PropTypes.string };
+Field.propTypes = { label: PropTypes.string.isRequired, children: PropTypes.node.isRequired };
+GenerationGrid.propTypes = { items: PropTypes.array.isRequired, rate: PropTypes.func.isRequired, gallery: PropTypes.bool };
+GeneratedImage.propTypes = { item: PropTypes.object.isRequired, rate: PropTypes.func.isRequired };
+ResultSection.propTypes = { title: PropTypes.string.isRequired, children: PropTypes.node.isRequired };
+Tag.propTypes = { children: PropTypes.node };
+ScriptsPanel.propTypes = { productId: PropTypes.string };
+BriefPanel.propTypes = { productId: PropTypes.string };

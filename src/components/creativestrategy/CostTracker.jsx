@@ -49,10 +49,10 @@ export default function CostTracker({ clientId }) {
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="cs-pill-control flex min-w-[220px] items-center justify-center gap-2 px-5 text-sm hover:bg-neutral-50 max-md:min-w-0 max-md:px-3"
+        className="cs-compact-control flex min-w-[190px] items-center justify-center gap-2 px-4 text-xs hover:bg-neutral-50 max-md:min-w-0 max-md:px-3"
         title="LLM spend — click for breakdown"
       >
-        <Sparkles className="h-5 w-5 text-fuchsia-500" />
+        <Sparkles className="h-4 w-4 text-fuchsia-500" />
         <span className="font-semibold max-md:hidden">AI Cost :</span>
         <span className="font-bold tabular-nums">{loading && !data ? "…" : fmtUsd(total)}</span>
         <span className="text-xs font-semibold uppercase text-neutral-400">({WINDOWS.find((w) => w.key === window)?.label})</span>

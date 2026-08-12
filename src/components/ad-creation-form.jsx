@@ -2773,14 +2773,20 @@ export default function AdCreationForm({
 
 
 
-  useEffect(() => {
-    if (!selectedTemplate || !copyTemplates[selectedTemplate]) return;
-    const tpl = copyTemplates[selectedTemplate];
-    setMessages(tpl.primaryTexts || [""]);
-    setHeadlines(tpl.headlines || [""]);
-    setDescriptions(tpl.descriptions || [""]);
-    setAddDescriptions((tpl.descriptions || []).some((description) => description !== ""));
-  }, [selectedTemplate, copyTemplates]);
+  const handleTemplateSelect = useCallback((templateName) => {
+    const template = copyTemplates[templateName];
+    if (!template) return;
+
+    // Loading a template is an explicit user action. Do not derive the copy from
+    // selectedTemplate in an effect: variant hydration restores both the selected
+    // template and independently edited copy, and that effect would overwrite the
+    // restored edits with the template's saved values.
+    setSelectedTemplate(templateName);
+    setMessages([...(template.primaryTexts || [""])]);
+    setHeadlines([...(template.headlines || [""])]);
+    setDescriptions([...(template.descriptions || [""])]);
+    setAddDescriptions((template.descriptions || []).some((description) => description !== ""));
+  }, [copyTemplates, setDescriptions, setHeadlines, setMessages, setSelectedTemplate]);
 
   useEffect(() => {
     if (!isCarouselAd) return;
@@ -9319,7 +9325,7 @@ export default function AdCreationForm({
                                     if (bulkDeleteMode) {
                                       toggleDeleteSelection(tplName);
                                     } else {
-                                      setSelectedTemplate(tplName);
+                                      handleTemplateSelect(tplName);
                                       setTemplateDropdownOpen(false);
                                       setTemplateSearch("");
                                     }

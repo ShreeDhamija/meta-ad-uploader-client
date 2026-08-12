@@ -129,7 +129,7 @@ export default function CreativeStrategyLayout() {
   };
 
   const active = NAV.find((n) => n.key === activeTab);
-  const showContextSelectors = activeTab !== "brands" && activeTab !== "products";
+  const showContextSelectors = activeTab !== "brands" && activeTab !== "products" && activeTab !== "generate";
 
   return (
     <JobsProvider>
@@ -140,7 +140,7 @@ export default function CreativeStrategyLayout() {
           src={doodle}
           alt=""
           aria-hidden="true"
-          className="pointer-events-none absolute -left-[205px] bottom-0 z-0 w-[720px] max-w-none opacity-95 max-lg:hidden"
+          className="pointer-events-none absolute -left-[205px] -bottom-[38px] z-0 w-[720px] max-w-none origin-bottom-left rotate-[8deg] opacity-95 max-lg:hidden"
         />
         <div className="relative z-10 flex h-full flex-col rounded-3xl p-4">
           <div className="flex flex-1 flex-col">
@@ -197,10 +197,10 @@ export default function CreativeStrategyLayout() {
       {/* Main */}
       <main className="min-w-0 flex-1 py-6 pr-6">
         <div className="cs-main-surface flex h-[calc(100vh-3rem)] flex-col overflow-hidden">
-          <header className="cs-page-header flex items-center justify-between gap-6 px-12 py-7 max-lg:px-7 max-md:px-5 max-md:py-5">
+          <header className="cs-page-header flex items-center justify-between gap-6 px-12 pb-5 pt-7 max-lg:px-7 max-md:px-5 max-md:py-5">
             <div className="min-w-0">
-              <h1 className="text-[32px] font-bold leading-none tracking-[-0.035em] max-md:text-2xl">{active?.label}</h1>
-              {DESCRIPTIONS[activeTab] && <p className="mt-2 truncate text-[15px] font-medium text-[var(--cs-muted)] max-md:text-xs">{DESCRIPTIONS[activeTab]}</p>}
+              <h1 className="text-[28px] font-bold leading-none tracking-[-0.035em] max-md:text-2xl">{active?.label}</h1>
+              {DESCRIPTIONS[activeTab] && <p className="mt-1.5 truncate text-[14px] font-normal text-[var(--cs-muted)]">{DESCRIPTIONS[activeTab]}</p>}
             </div>
             <div className="flex shrink-0 items-center gap-2">
               <CostTracker clientId={selectedBrandId} />
@@ -209,14 +209,17 @@ export default function CreativeStrategyLayout() {
           </header>
 
           <div className="flex-1 overflow-auto">
-            <div className="w-full p-12 pt-9 max-lg:p-7 max-md:p-5">
+            <div className={cn(
+              "w-full px-12 pb-12 pt-6 max-lg:px-7 max-lg:pb-7 max-lg:pt-5 max-md:p-5",
+              activeTab === "generate" && "flex min-h-full flex-col pb-6 max-lg:pb-5",
+            )}>
               {showContextSelectors && (
                 <div className="mb-7 flex flex-wrap items-center gap-4">
                   <Select value={selectedBrandId || ""} onValueChange={(v) => setSelectedBrandId(v || null)}>
                     <SelectTrigger className="cs-pill-control w-[240px] px-5">
                       <SelectValue placeholder="Select Brand" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="cs-select-content bg-white">
                       {brands.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
                     </SelectContent>
                   </Select>
@@ -224,7 +227,7 @@ export default function CreativeStrategyLayout() {
                     <SelectTrigger className="cs-pill-control w-[240px] px-5">
                       <SelectValue placeholder="Select Product" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="cs-select-content bg-white">
                       {products.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
                     </SelectContent>
                   </Select>

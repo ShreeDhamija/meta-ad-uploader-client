@@ -57,7 +57,7 @@ export function EmptyState({ icon: Icon, title, hint, action, className }) {
   );
 }
 EmptyState.propTypes = {
-  icon: PropTypes.elementType, title: PropTypes.string.isRequired,
+  icon: PropTypes.elementType, title: PropTypes.node.isRequired,
   hint: PropTypes.string, action: PropTypes.node, className: PropTypes.string,
 };
 
