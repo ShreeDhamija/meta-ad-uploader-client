@@ -3108,11 +3108,108 @@ export default function TikTokAdCreationForm({
     }
   }
 
-  // Handle Campaign Duplication request
+  // Separate function for duplicating Smart Performance / Smart Plus Campaigns
+  const handleDuplicateSmartCampaign = useCallback(async (campaignId) => {
+    if (!campaignId || !selectedAdvertiser || !newCampaignName.trim()) {
+      toast.error('Missing required parameters for Smart Campaign duplication');
+      return;
+    }
+    const campaign = campaigns.find(c => c.campaign_id === campaignId)
+    if (!campaign) {
+      toast.error('Source Smart Campaign not found');
+      return;
+    }
+    setIsDuplicating(true)
+    const duplicatedName = newCampaignName.trim()
+    try {
+      const payload = {
+        advertiser_id: selectedAdvertiser,
+        source_campaign_id: campaignId,
+        new_campaign_name: duplicatedName,
+        duplicate_ads: duplicateIncludeAds,
+        is_smart: true
+      }
+      const res = await tiktokFetch(`${API_BASE_URL}/api/tiktok/campaign/duplicate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      const data = await res.json()
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Smart campaign duplication failed')
+      }
+      toast.success('Smart Campaign duplicated successfully!')
+      setNewCampaignName('')
+      setDuplicateCampaign('')
+      setShowDuplicateCampaignBlock(false)
+
+      const newCampaignObj = {
+        campaign_id: data.new_campaign_id,
+        campaign_name: duplicatedName,
+        operation_status: "DISABLE",
+        is_smart_performance_campaign: true
+      }
+
+      if (data.new_campaign_id) {
+        if (data.new_adgroups && data.new_adgroups.length > 0) {
+          const mappedNewAdGroups = data.new_adgroups.map(ag => {
+            return {
+              ...ag,
+              campaignId: data.new_campaign_id,
+              campaign_id: data.new_campaign_id,
+              campaignName: duplicatedName,
+              operation_status: ag.operation_status || "DISABLE",
+              secondary_status: ag.secondary_status || "DISABLE",
+              ad_count: 0
+            }
+          });
+          setAdGroups(mappedNewAdGroups)
+          adGroupsLoadedForSelectionRef.current = `${selectedAdvertiser}:${JSON.stringify([data.new_campaign_id])}`
+        }
+
+        setCampaigns(prev => {
+          if (prev.some(c => c.campaign_id === data.new_campaign_id)) return prev;
+          return [newCampaignObj, ...prev];
+        });
+        setSelectedCampaign([data.new_campaign_id])
+        setSelectedAdGroup([])
+        setOpenCampaign(false)
+      }
+
+      const params = new URLSearchParams({ advertiserId: selectedAdvertiser, page: '1', pageSize: '100' })
+      try {
+        const listRes = await tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-campaigns?${params}`)
+        const listData = await listRes.json()
+        const list = listData.campaigns || []
+        const mergedList = [
+          newCampaignObj,
+          ...list.filter(c => c.campaign_id !== data.new_campaign_id)
+        ]
+        setCampaigns(mergedList)
+      } catch (err) {
+        console.error('Failed to refetch campaigns after smart duplication:', err)
+      }
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setIsDuplicating(false)
+    }
+  }, [selectedAdvertiser, campaigns, duplicateIncludeAds, newCampaignName, tiktokFetch, setCampaigns, setSelectedCampaign, setSelectedAdGroup, setAdGroups])
+
+  // Handle Regular or Delegated Campaign Duplication request
   const handleDuplicateCampaign = useCallback(async (campaignId) => {
     if (!campaignId || !selectedAdvertiser || !newCampaignName.trim()) return
     const campaign = campaigns.find(c => c.campaign_id === campaignId)
     if (!campaign) return
+
+    const isSmart = campaign.is_smart_performance_campaign === true ||
+      campaign.is_smart_performance_campaign === "true" ||
+      campaign.is_smart_performance_campaign === 1;
+
+    if (isSmart) {
+      return handleDuplicateSmartCampaign(campaignId);
+    }
+
     if (campaign.adgroup_count >= 20) {
       return toast.error(`Cannot duplicate this campaign. It has ${campaign.adgroup_count} ad groups, which reaches or exceeds the limit of 20.`)
     }
@@ -3189,7 +3286,7 @@ export default function TikTokAdCreationForm({
     } finally {
       setIsDuplicating(false)
     }
-  }, [selectedAdvertiser, campaigns, duplicateIncludeAds, newCampaignName, tiktokFetch, setCampaigns, setSelectedCampaign, setSelectedAdGroup, adGroups, setAdGroups])
+  }, [selectedAdvertiser, campaigns, duplicateIncludeAds, newCampaignName, tiktokFetch, setCampaigns, setSelectedCampaign, setSelectedAdGroup, adGroups, setAdGroups, handleDuplicateSmartCampaign])
 
   const getMimeFromName = (name) => {
     const ext = name.split('.').pop().toLowerCase()
@@ -4361,8 +4458,8 @@ export default function TikTokAdCreationForm({
                     isAdvertiserLocked
                       ? "text-gray-300 cursor-not-allowed"
                       : refreshingAdvertisers
-                      ? "h-3.5 w-3.5 text-gray-300 animate-[spin_3s_linear_infinite]"
-                      : "text-gray-500 hover:text-gray-700"
+                        ? "h-3.5 w-3.5 text-gray-300 animate-[spin_3s_linear_infinite]"
+                        : "text-gray-500 hover:text-gray-700"
                   )}
                   onClick={isAdvertiserLocked ? undefined : handleRefreshAdvertisers}
                 />

@@ -77,7 +77,7 @@ export default function TikTokCampaignDuplicator({ advertiserId }) {
     }
   }, [selectedCampaign, campaigns])
 
-  const handleDuplicate = async () => {
+  const handleDuplicateSmartCampaign = async () => {
     if (!advertiserId) return toast.error('Please select an advertiser')
     if (!selectedCampaign) return toast.error('Please select a campaign to duplicate')
     if (!newCampaignName.trim()) return toast.error('Please enter a new campaign name')
@@ -86,18 +86,63 @@ export default function TikTokCampaignDuplicator({ advertiserId }) {
     setDuplicationResult(null)
 
     try {
-      const campaignObj = campaigns.find(c => c.campaign_id === selectedCampaign)
-      if (campaignObj) {
-        if (campaignObj.is_smart_performance_campaign) {
-          setIsDuplicating(false)
-          return toast.error("Cannot duplicate this campaign. Duplication of Smart Performance Campaigns (SPC) is not supported.")
-        }
-        if (campaignObj.adgroup_count >= 20) {
-          setIsDuplicating(false)
-          return toast.error(`Cannot duplicate this campaign. It has ${campaignObj.adgroup_count} ad groups, which reaches or exceeds the limit of 20.`)
-        }
+      const payload = {
+        advertiser_id: advertiserId,
+        source_campaign_id: selectedCampaign,
+        duplicate_ads: duplicateAds,
+        new_campaign_name: newCampaignName.trim(),
+        adgroup_name_suffix: adgroupSuffix,
+        ad_name_suffix: adSuffix,
+        status: status,
+        is_smart: true
       }
 
+      const response = await tiktokFetch(`${API_BASE_URL}/api/tiktok/campaign/duplicate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+
+      const result = await response.json()
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Smart campaign duplication failed')
+      }
+
+      setDuplicationResult(result)
+      toast.success('Smart Campaign duplicated successfully!')
+    } catch (err) {
+      console.error('Smart campaign duplication error:', err)
+      toast.error(err.message)
+    } finally {
+      setIsDuplicating(false)
+    }
+  }
+
+  const handleDuplicate = async () => {
+    if (!advertiserId) return toast.error('Please select an advertiser')
+    if (!selectedCampaign) return toast.error('Please select a campaign to duplicate')
+    if (!newCampaignName.trim()) return toast.error('Please enter a new campaign name')
+
+    const campaignObj = campaigns.find(c => c.campaign_id === selectedCampaign)
+    if (campaignObj) {
+      const isSmart = campaignObj.is_smart_performance_campaign === true ||
+        campaignObj.is_smart_performance_campaign === "true" ||
+        campaignObj.is_smart_performance_campaign === 1;
+
+      if (isSmart) {
+        return handleDuplicateSmartCampaign()
+      }
+
+      if (campaignObj.adgroup_count >= 20) {
+        return toast.error(`Cannot duplicate this campaign. It has ${campaignObj.adgroup_count} ad groups, which reaches or exceeds the limit of 20.`)
+      }
+    }
+
+    setIsDuplicating(true)
+    setDuplicationResult(null)
+
+    try {
       const payload = {
         advertiser_id: advertiserId,
         source_campaign_id: selectedCampaign,
