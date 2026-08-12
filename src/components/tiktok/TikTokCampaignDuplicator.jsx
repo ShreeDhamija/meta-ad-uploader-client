@@ -78,6 +78,7 @@ export default function TikTokCampaignDuplicator({ advertiserId }) {
   }, [selectedCampaign, campaigns])
 
   const handleDuplicateSmartCampaign = async () => {
+    console.log("🚀 [TikTok CampaignDuplicator] handleDuplicateSmartCampaign triggered for campaign ID:", selectedCampaign);
     if (!advertiserId) return toast.error('Please select an advertiser')
     if (!selectedCampaign) return toast.error('Please select a campaign to duplicate')
     if (!newCampaignName.trim()) return toast.error('Please enter a new campaign name')
@@ -96,6 +97,7 @@ export default function TikTokCampaignDuplicator({ advertiserId }) {
         status: status,
         is_smart: true
       }
+      console.log("🚀 [TikTok CampaignDuplicator] Sending POST to /api/tiktok/campaign/duplicate with payload:", JSON.stringify(payload, null, 2));
 
       const response = await tiktokFetch(`${API_BASE_URL}/api/tiktok/campaign/duplicate`, {
         method: 'POST',
@@ -104,6 +106,7 @@ export default function TikTokCampaignDuplicator({ advertiserId }) {
       })
 
       const result = await response.json()
+      console.log("✅ [TikTok CampaignDuplicator] Smart duplication response:", result);
 
       if (!response.ok || !result.success) {
         throw new Error(result.error || 'Smart campaign duplication failed')
@@ -112,7 +115,7 @@ export default function TikTokCampaignDuplicator({ advertiserId }) {
       setDuplicationResult(result)
       toast.success('Smart Campaign duplicated successfully!')
     } catch (err) {
-      console.error('Smart campaign duplication error:', err)
+      console.error('❌ [TikTok CampaignDuplicator] Smart campaign duplication error:', err)
       toast.error(err.message)
     } finally {
       setIsDuplicating(false)
@@ -120,6 +123,7 @@ export default function TikTokCampaignDuplicator({ advertiserId }) {
   }
 
   const handleDuplicate = async () => {
+    console.log("⚡ [TikTok CampaignDuplicator] handleDuplicate called for selectedCampaign:", selectedCampaign);
     if (!advertiserId) return toast.error('Please select an advertiser')
     if (!selectedCampaign) return toast.error('Please select a campaign to duplicate')
     if (!newCampaignName.trim()) return toast.error('Please enter a new campaign name')
@@ -128,9 +132,20 @@ export default function TikTokCampaignDuplicator({ advertiserId }) {
     if (campaignObj) {
       const isSmart = campaignObj.is_smart_performance_campaign === true ||
         campaignObj.is_smart_performance_campaign === "true" ||
-        campaignObj.is_smart_performance_campaign === 1;
+        campaignObj.is_smart_performance_campaign === 1 ||
+        campaignObj.campaign_automation_type === "UPGRADED_SMART_PLUS" ||
+        campaignObj.campaign_automation_type === "SMART_PLUS" ||
+        campaignObj.campaign_automation_type === "SMART_PERFORMANCE_CAMPAIGN";
+
+      console.log(`⚡ [TikTok CampaignDuplicator] Campaign evaluation for ${selectedCampaign}:`, {
+        campaign_name: campaignObj.campaign_name,
+        is_smart_performance_campaign: campaignObj.is_smart_performance_campaign,
+        campaign_automation_type: campaignObj.campaign_automation_type,
+        isSmartEvaluated: isSmart
+      });
 
       if (isSmart) {
+        console.log("🚀 [TikTok CampaignDuplicator] Campaign is Smart Plus -> Routing to handleDuplicateSmartCampaign");
         return handleDuplicateSmartCampaign()
       }
 

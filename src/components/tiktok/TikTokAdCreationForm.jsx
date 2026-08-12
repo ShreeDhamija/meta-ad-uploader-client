@@ -3110,12 +3110,15 @@ export default function TikTokAdCreationForm({
 
   // Separate function for duplicating Smart Performance / Smart Plus Campaigns
   const handleDuplicateSmartCampaign = useCallback(async (campaignId) => {
+    console.log("🚀 [TikTok Frontend Form] handleDuplicateSmartCampaign triggered for campaign ID:", campaignId);
     if (!campaignId || !selectedAdvertiser || !newCampaignName.trim()) {
+      console.warn("⚠️ [TikTok Frontend Form] Missing parameters for Smart Campaign duplication");
       toast.error('Missing required parameters for Smart Campaign duplication');
       return;
     }
     const campaign = campaigns.find(c => c.campaign_id === campaignId)
     if (!campaign) {
+      console.warn("⚠️ [TikTok Frontend Form] Source Smart Campaign not found in campaigns list");
       toast.error('Source Smart Campaign not found');
       return;
     }
@@ -3129,12 +3132,15 @@ export default function TikTokAdCreationForm({
         duplicate_ads: duplicateIncludeAds,
         is_smart: true
       }
+      console.log("🚀 [TikTok Frontend Form] Sending POST to /api/tiktok/campaign/duplicate with payload:", JSON.stringify(payload, null, 2));
+
       const res = await tiktokFetch(`${API_BASE_URL}/api/tiktok/campaign/duplicate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       })
       const data = await res.json()
+      console.log("✅ [TikTok Frontend Form] Smart duplication API response:", data);
       if (!res.ok || !data.success) {
         throw new Error(data.error || 'Smart campaign duplication failed')
       }
@@ -3147,7 +3153,8 @@ export default function TikTokAdCreationForm({
         campaign_id: data.new_campaign_id,
         campaign_name: duplicatedName,
         operation_status: "DISABLE",
-        is_smart_performance_campaign: true
+        is_smart_performance_campaign: true,
+        campaign_automation_type: campaign.campaign_automation_type || "SMART_PLUS"
       }
 
       if (data.new_campaign_id) {
@@ -3190,6 +3197,7 @@ export default function TikTokAdCreationForm({
         console.error('Failed to refetch campaigns after smart duplication:', err)
       }
     } catch (err) {
+      console.error('❌ [TikTok Frontend Form] Smart duplication error:', err.message);
       toast.error(err.message)
     } finally {
       setIsDuplicating(false)
@@ -3198,15 +3206,27 @@ export default function TikTokAdCreationForm({
 
   // Handle Regular or Delegated Campaign Duplication request
   const handleDuplicateCampaign = useCallback(async (campaignId) => {
+    console.log("⚡ [TikTok Frontend Form] handleDuplicateCampaign called for campaign ID:", campaignId);
     if (!campaignId || !selectedAdvertiser || !newCampaignName.trim()) return
     const campaign = campaigns.find(c => c.campaign_id === campaignId)
     if (!campaign) return
 
     const isSmart = campaign.is_smart_performance_campaign === true ||
       campaign.is_smart_performance_campaign === "true" ||
-      campaign.is_smart_performance_campaign === 1;
+      campaign.is_smart_performance_campaign === 1 ||
+      campaign.campaign_automation_type === "UPGRADED_SMART_PLUS" ||
+      campaign.campaign_automation_type === "SMART_PLUS" ||
+      campaign.campaign_automation_type === "SMART_PERFORMANCE_CAMPAIGN";
+
+    console.log(`⚡ [TikTok Frontend Form] Campaign evaluation for ${campaignId}:`, {
+      campaign_name: campaign.campaign_name,
+      is_smart_performance_campaign: campaign.is_smart_performance_campaign,
+      campaign_automation_type: campaign.campaign_automation_type,
+      isSmartEvaluated: isSmart
+    });
 
     if (isSmart) {
+      console.log("🚀 [TikTok Frontend Form] Campaign is Smart Plus -> Routing to handleDuplicateSmartCampaign");
       return handleDuplicateSmartCampaign(campaignId);
     }
 
