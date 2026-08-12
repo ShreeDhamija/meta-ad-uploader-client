@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import PropTypes from "prop-types"
 import { Button } from "@/components/ui/button"
 import { LogOutIcon, Settings, Clock, Bell } from "lucide-react"
 import ZapIcon from "@/assets/icons/Zap.svg?react"
@@ -8,6 +9,8 @@ import ChatIcon from "@/assets/icons/chat.svg?react"
 import AnalyticsIcon from "@/assets/icons/Analytics.svg?react"
 import RocketBtn from "@/assets/rocket2.webp"
 import { useAuth } from "@/lib/AuthContext"
+import { useTikTokAuth } from "@/lib/TikTokAuthContext"
+import LauncherSwitcher from "@/components/LauncherSwitcher"
 import { useLocation, useNavigate } from "react-router-dom"
 import useSubscription from "@/lib/useSubscriptionSettings"
 import useNotifications from "@/lib/useNotifications"
@@ -20,8 +23,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
-export default function Header({ showMessenger, hideMessenger }) {
-  const { isLoggedIn, userName, profilePicUrl, handleLogout } = useAuth()
+export default function Header({ showMessenger }) {
+  const { userName, profilePicUrl, handleLogout, features } = useAuth()
+  const { isTikTokLoggedIn, isLoading: tiktokLoading } = useTikTokAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const {
@@ -29,7 +33,6 @@ export default function Header({ showMessenger, hideMessenger }) {
     isOnTrial,
     isTrialExpired,
     hasActiveAccess,
-    isPaidSubscriber,
     loading: subscriptionLoading
   } = useSubscription()
 
@@ -100,7 +103,7 @@ export default function Header({ showMessenger, hideMessenger }) {
 
   return (
     <header className="flex justify-between items-center py-3 mb-4">
-      {/* Profile Section (Left) */}
+      {/* Profile Section */}
       {isAnalyticsPage ? (
         <button
           onClick={() => navigate("/")}
@@ -114,14 +117,12 @@ export default function Header({ showMessenger, hideMessenger }) {
           <span className="text-[14px] font-medium text-gray-700 whitespace-nowrap">Go To Launcher</span>
         </button>
       ) : (
-        <div className={`flex items-center gap-3 bg-white border border-black/10 rounded-[20px] px-3 py-2 ${headerCardShadow}`}>
-          <img
-            src={profilePicUrl}
-            alt="Profile"
-            className="w-9 h-9 rounded-full border border-zinc-300 object-cover"
-          />
-          <span className="text-[14px] font-medium text-gray-700 whitespace-nowrap">{userName}</span>
-        </div>
+        <LauncherSwitcher
+          platform="meta"
+          displayName={userName}
+          profilePicUrl={profilePicUrl}
+          canSwitch={features.tiktokLauncher === true && !tiktokLoading && isTikTokLoggedIn}
+        />
       )}
 
       {/* Action Buttons (Right) */}
@@ -170,7 +171,7 @@ export default function Header({ showMessenger, hideMessenger }) {
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-80 bg-white rounded-2xl">
-                <DropdownMenuLabel>What's New</DropdownMenuLabel>
+                <DropdownMenuLabel>What&apos;s New</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {notificationsLoading ? (
                   <div className="flex justify-center py-4">
@@ -245,4 +246,8 @@ export default function Header({ showMessenger, hideMessenger }) {
       </div>
     </header>
   )
+}
+
+Header.propTypes = {
+  showMessenger: PropTypes.func,
 }

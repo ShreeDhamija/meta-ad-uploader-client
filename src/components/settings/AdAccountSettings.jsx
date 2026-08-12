@@ -44,6 +44,13 @@ const DEFAULT_ENHANCEMENTS = {
   reveal: false,
   summary: false,
   animation: false,
+  flexMedia: false,
+  dynamicDescriptions: false,
+  siteExtensions: false,
+  siteLinks: [],
+  dynamicOverlays: false,
+  highlightCard: false,
+  profileEndCard: false,
 };
 
 const DEFAULT_PIXEL_TRACKING = {
@@ -52,7 +59,7 @@ const DEFAULT_PIXEL_TRACKING = {
 };
 
 // Pixel Tracking settings are currently limited to these user IDs.
-const PIXEL_TRACKING_ALLOWED_USER_IDS = ["10236978990363167", "10163794086700369", "122113601127356755"];
+const PIXEL_TRACKING_ALLOWED_USER_IDS = ["10236978990363167", "10234447959963619", "10163794086700369", "122113601127356755", "10162737276661695"];
 
 // Single cache key for draft settings
 const DRAFT_CACHE_KEY = 'adAccountSettings_draft';
@@ -155,7 +162,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
       if (result.success) {
         toast.success(
           result.seededCount > 0
-            ? `Sync enabled! ${result.seededCount} ad account settings synced.`
+            ? `Sync enabled! ${result.seededCount} account settings synced across Meta and TikTok.`
             : "Sync enabled! Settings will be shared when anyone saves next."
         )
       }
@@ -326,12 +333,23 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
 
   // Optimized save handler
   const handleSave = useCallback(async () => {
-
-    setSavingSettings(true);
     if (!selectedAdAccount) {
-      alert("Select an Ad Account first");
+      toast.error("Select an Ad Account first");
       return;
     }
+
+    if (enhancements.siteExtensions) {
+      const siteLinks = Array.isArray(enhancements.siteLinks) ? enhancements.siteLinks : [];
+      const hasIncompleteSiteLink = siteLinks.some(link =>
+        !link.site_link_title?.trim() || !link.site_link_url?.trim()
+      );
+      if (siteLinks.length === 0 || hasIncompleteSiteLink) {
+        toast.error("Add a title and URL for every enabled site link before saving");
+        return;
+      }
+    }
+
+    setSavingSettings(true);
 
     // 1. Construct settings object directly from state variables
     const adAccountSettings = {
@@ -571,6 +589,13 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
       }
     }
   }, [adAccounts]); // Only depend on adAccounts, not selectedAdAccount
+
+  useEffect(() => {
+    // Auto-select ad account if only one exists and none is currently selected
+    if (adAccounts.length === 1 && !selectedAdAccount && !adAccountsLoading) {
+      handleAdAccountSelect(adAccounts[0].id);
+    }
+  }, [adAccounts, selectedAdAccount, adAccountsLoading, handleAdAccountSelect]);
 
 
   return (
@@ -836,7 +861,11 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
 
           <DefaultCTA defaultCTA={defaultCTA} setDefaultCTA={setDefaultCTA} />
 
-          <CreativeEnhancements enhancements={enhancements} setEnhancements={setEnhancements} />
+          <CreativeEnhancements
+            enhancements={enhancements}
+            setEnhancements={setEnhancements}
+            selectedAdAccount={selectedAdAccount}
+          />
           <MultiAdvertiserAds enabled={multiAdvertiserAds} setEnabled={setMultiAdvertiserAds} />
           {showPixelTracking && (
             <PixelTracking
@@ -905,12 +934,12 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
               <div className="text-sm text-gray-600 space-y-2">
                 {syncConfirmAction === "enable" ? (
                   <>
-                    <p>This will share your ad account settings and copy templates with all team members.</p>
-                    <p className="font-semibold">The admin's settings will be used as the starting point and will override any existing team member settings. If the admin hasn't saved settings for an ad account, the first team member with saved settings will be used instead.</p>
-                    <p>Once enabled, any team member can edit settings and changes will be visible to everyone.</p>
+                    <p>This single team sync setting applies to both Meta and TikTok account preferences and copy templates.</p>
+                    <p className="font-semibold">For each account, the admin&apos;s saved settings will be used first. If the admin has no saved settings for that account, the first team member with saved settings will be used instead.</p>
+                    <p>Existing shared settings will be preserved. Once enabled, any team member can edit shared settings.</p>
                   </>
                 ) : (
-                  <p>Each team member will return to using their own personal settings. Their current settings (copied from the shared ones) will be preserved.</p>
+                  <p>Sync will be disabled for both Meta and TikTok. Each member will receive a personal copy of the current shared settings before returning to personal preferences.</p>
                 )}
               </div>
               <div className="flex gap-3 pt-2 w-full">

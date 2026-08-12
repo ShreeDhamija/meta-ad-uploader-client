@@ -18,7 +18,13 @@ const EVENT_ROWS = [
 ];
 
 // Single combobox for selecting a pixel/dataset (or none) for one event type.
-const PixelSelect = memo(({ pixels, value, onChange, loading, placeholder }) => {
+const PixelSelect = memo(({
+    pixels,
+    value,
+    onChange,
+    loading,
+    placeholder,
+}) => {
     const [open, setOpen] = useState(false)
 
     const selected = pixels.find(p => p.id === value)
@@ -50,8 +56,6 @@ const PixelSelect = memo(({ pixels, value, onChange, loading, placeholder }) => 
                 className="min-w-[--radix-popover-trigger-width] w-auto !max-w-none p-0 bg-white shadow-lg rounded-2xl"
                 align="start"
                 sideOffset={4}
-                side="top"
-                avoidCollisions={false}
                 style={{
                     minWidth: "var(--radix-popover-trigger-width)",
                     width: "auto",
@@ -87,7 +91,15 @@ const PixelSelect = memo(({ pixels, value, onChange, loading, placeholder }) => 
 
 PixelSelect.displayName = 'PixelSelect';
 
-function PixelTracking({ pixelTracking, setPixelTracking, selectedAdAccount }) {
+function PixelTracking({
+    pixelTracking,
+    setPixelTracking,
+    selectedAdAccount,
+    title = "Pixel Tracking",
+    description = "Attach Website & Offline conversion events to every ad you create",
+    isModified = false,
+    bare = false,
+}) {
     const [pixels, setPixels] = useState([])
     const [loading, setLoading] = useState(false)
 
@@ -123,16 +135,19 @@ function PixelTracking({ pixelTracking, setPixelTracking, selectedAdAccount }) {
     }, [setPixelTracking]);
 
     return (
-        <div className="bg-[#f7f7f7] rounded-2xl p-4 space-y-4">
+        <div className={bare ? "space-y-4" : "bg-[#f7f7f7] rounded-2xl p-4 space-y-4"}>
             <div className="flex items-start gap-2">
                 <Target className="w-5 h-5 grayscale brightness-75 contrast-75 opacity-60" />
                 <div className="flex flex-col">
                     <h3 className="font-medium text-[14px] text-zinc-950">
-                        Pixel Tracking
+                        {isModified && <span className="text-red-500 font-semibold">*</span>}
+                        {isModified ? " " : ""}{title}
                     </h3>
-                    <label className="text-xs text-gray-400">
-                        Attach Website &amp; Offline conversion events to every ad you create
-                    </label>
+                    {description && (
+                        <label className="text-xs text-gray-400">
+                            {description}
+                        </label>
+                    )}
                 </div>
             </div>
 

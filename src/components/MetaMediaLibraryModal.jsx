@@ -1,7 +1,7 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import { toast } from "sonner"
-import { Loader2, Image as ImageIcon, Video, FolderOpen, Heart, MessageCircle, Users, CalendarDays, Search, ExternalLink } from "lucide-react";
+import { Loader2, Image as ImageIcon, Video, FolderOpen, Heart, MessageCircle, CalendarDays, Search, ExternalLink, Check, ChevronsUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import IGColor from "@/assets/icons/IGColor.webp";
@@ -10,11 +10,16 @@ import Instagram from "@/assets/icons/ig.svg";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 const IG_CACHE_KEY = 'ig_media_cache';
 const META_CACHE_KEY_PREFIX = 'meta_media_library_cache_v2';
 const META_CACHE_TTL_MS = 15 * 60 * 1000;
 const metaLibraryMemoryCache = new Map();
+const IG_CREATOR_FILTER_ALL = 'all-posts';
+const IG_CREATOR_FILTER_ANY = 'any-creator';
+const IG_CREATOR_FILTER_UNSET = '';
 
 const getMetaCacheKey = (adAccountId) => `${META_CACHE_KEY_PREFIX}:${adAccountId}`;
 
@@ -95,9 +100,32 @@ const formatInstagramTimestamp = (timestamp) => {
     }).format(date);
 };
 
+const getInstagramPostCreators = (item, instagramAccountId) => {
+    const creatorsByKey = new Map();
+    const addCreator = (username, id = '') => {
+        const normalizedUsername = String(username || '').trim().replace(/^@/, '');
+        if (!normalizedUsername) return;
+
+        const key = normalizedUsername.toLocaleLowerCase();
+        if (!creatorsByKey.has(key)) {
+            creatorsByKey.set(key, { key, username: normalizedUsername, id: String(id || '') });
+        }
+    };
+
+    if (item.taggedBy) addCreator(item.taggedBy);
+    (item.collaborators || []).forEach((creator) => {
+        if (String(creator.id || '') !== String(instagramAccountId || '')) {
+            addCreator(creator.username, creator.id);
+        }
+    });
+
+    return Array.from(creatorsByKey.values());
+};
+
 // Shared card info section used by both images and videos tabs
 const IgCardInfo = ({ item, instagramAccountId }) => {
     const formattedDate = formatInstagramTimestamp(item.timestamp);
+    const creators = getInstagramPostCreators(item, instagramAccountId);
 
     return (
         <div className="bg-white border-t border-gray-200 px-2.5 py-2 h-32 flex flex-col">
@@ -136,19 +164,11 @@ const IgCardInfo = ({ item, instagramAccountId }) => {
                 </p>
             )}
             {/* Show who tagged/collaborated */}
-            {item.taggedBy && (
+            {creators.length > 0 && (
                 <p className="text-xs text-purple-600 font-medium mt-1 truncate">
-                    @{item.taggedBy}
+                    {creators.map((creator) => `@${creator.username}`).join(', ')}
                 </p>
             )}
-            {item.collaborators && item.collaborators.length > 0 && (() => {
-                const others = item.collaborators.filter(c => c.id !== instagramAccountId);
-                return others.length > 0 ? (
-                    <p className="text-xs text-purple-600 font-medium mt-1 truncate">
-                        {others.map(c => `@${c.username}`).join(', ')}
-                    </p>
-                ) : null;
-            })()}
             {/* Spacer pushes action to bottom */}
             <div className="flex-1" />
             {item.permalink && (
@@ -196,7 +216,9 @@ export default function MetaMediaLibraryModal({
     const [loadingMoreMetaImages, setLoadingMoreMetaImages] = useState(false);
     const [loadingMoreMetaVideos, setLoadingMoreMetaVideos] = useState(false);
     const [loadingMoreIg, setLoadingMoreIg] = useState(false);
-    const [filterCollaborators, setFilterCollaborators] = useState(false);
+    const [creatorFilter, setCreatorFilter] = useState(IG_CREATOR_FILTER_UNSET);
+    const [creatorFilterOpen, setCreatorFilterOpen] = useState(false);
+    const [creatorSearchQuery, setCreatorSearchQuery] = useState('');
     const [metaSearchQuery, setMetaSearchQuery] = useState('');
 
     const mapMetaImages = (rawImages) => rawImages.map(img => ({
@@ -379,7 +401,7 @@ export default function MetaMediaLibraryModal({
         if (!igPagination.nextCursor && !igPagination.tagsNextCursor && !igPagination.bcNextCursor) return;
         setLoadingMoreIg(true);
         try {
-            const params = { igUserId: instagramAccountId };
+            const params = { igUserId: instagramAccountId, limit: 100 };
             if (igPagination.nextCursor) {
                 params.after = igPagination.nextCursor;
             }
@@ -429,6 +451,8 @@ export default function MetaMediaLibraryModal({
         setIsOpen(true);
         setSelectedMetaFiles([]);
         setSelectedIgPosts([]);
+        setCreatorFilter(IG_CREATOR_FILTER_UNSET);
+        setCreatorSearchQuery('');
         setMetaSearchQuery('');
         if (mediaSource === 'meta_library') {
             fetchMetaLibrary();
@@ -442,6 +466,8 @@ export default function MetaMediaLibraryModal({
         setActiveTab('images');
         setSelectedMetaFiles([]);
         setSelectedIgPosts([]);
+        setCreatorFilter(IG_CREATOR_FILTER_UNSET);
+        setCreatorSearchQuery('');
         setMetaSearchQuery('');
 
         if (source === 'instagram') {
@@ -516,6 +542,44 @@ export default function MetaMediaLibraryModal({
 
     const isLoading = mediaSource === 'meta_library' ? loadingMeta : loadingIg;
     const normalizedMetaSearch = metaSearchQuery.trim().toLowerCase();
+    const instagramCreators = useMemo(() => {
+        const creatorsByKey = new Map();
+        [...igImages, ...igVideos].forEach((item) => {
+            getInstagramPostCreators(item, instagramAccountId).forEach((creator) => {
+                if (!creatorsByKey.has(creator.key)) creatorsByKey.set(creator.key, creator);
+            });
+        });
+
+        return Array.from(creatorsByKey.values()).sort((a, b) => (
+            a.username.localeCompare(b.username, undefined, { sensitivity: 'base' })
+        ));
+    }, [igImages, igVideos, instagramAccountId]);
+    const normalizedCreatorSearch = creatorSearchQuery.trim().toLocaleLowerCase();
+    const filteredInstagramCreators = useMemo(() => (
+        normalizedCreatorSearch
+            ? instagramCreators.filter((creator) => creator.username.toLocaleLowerCase().includes(normalizedCreatorSearch))
+            : instagramCreators
+    ), [instagramCreators, normalizedCreatorSearch]);
+    const selectedCreator = instagramCreators.find((creator) => creator.key === creatorFilter);
+    const creatorFilterLabel = creatorFilter === IG_CREATOR_FILTER_UNSET
+        ? 'Filter by creator'
+        : creatorFilter === IG_CREATOR_FILTER_ANY
+            ? 'Any creator'
+            : selectedCreator
+                ? `@${selectedCreator.username}`
+                : 'All posts';
+
+    useEffect(() => {
+        if (
+            creatorFilter
+            && creatorFilter !== IG_CREATOR_FILTER_ALL
+            && creatorFilter !== IG_CREATOR_FILTER_ANY
+            && !instagramCreators.some((creator) => creator.key === creatorFilter)
+        ) {
+            setCreatorFilter(IG_CREATOR_FILTER_ALL);
+        }
+    }, [creatorFilter, instagramCreators]);
+
     const displayItems = useMemo(() => {
         if (mediaSource === 'meta_library') {
             const items = activeTab === 'images' ? metaImages : metaVideos;
@@ -523,8 +587,15 @@ export default function MetaMediaLibraryModal({
             return items.filter(item => (item.name || '').toLowerCase().includes(normalizedMetaSearch));
         }
         const items = activeTab === 'images' ? igImages : igVideos;
-        return filterCollaborators ? items.filter(item => item.collaborators && item.collaborators.length > 0) : items;
-    }, [activeTab, filterCollaborators, igImages, igVideos, mediaSource, metaImages, metaVideos, normalizedMetaSearch]);
+        if (!creatorFilter || creatorFilter === IG_CREATOR_FILTER_ALL) return items;
+
+        return items.filter((item) => {
+            const creators = getInstagramPostCreators(item, instagramAccountId);
+            return creatorFilter === IG_CREATOR_FILTER_ANY
+                ? creators.length > 0
+                : creators.some((creator) => creator.key === creatorFilter);
+        });
+    }, [activeTab, creatorFilter, igImages, igVideos, instagramAccountId, mediaSource, metaImages, metaVideos, normalizedMetaSearch]);
 
     const activeMetaPagination = activeTab === 'images' ? metaImagesPagination : metaVideosPagination;
     const isMetaSearchActive = mediaSource === 'meta_library' && normalizedMetaSearch.length > 0;
@@ -588,6 +659,8 @@ export default function MetaMediaLibraryModal({
         setMediaSource(source);
         setSelectedMetaFiles([]);
         setSelectedIgPosts([]);
+        setCreatorFilter(IG_CREATOR_FILTER_UNSET);
+        setCreatorSearchQuery('');
         setMetaSearchQuery('');
         setIsOpen(true);
         if (source === 'meta_library') {
@@ -706,16 +779,124 @@ export default function MetaMediaLibraryModal({
                         </TabsTrigger>
                     </TabsList>
                     {mediaSource === 'instagram' && (
-                        <div className="flex items-center gap-2 mt-3 mb-1 px-1">
-                            <Checkbox
-                                id="collab-filter"
-                                checked={filterCollaborators}
-                                onCheckedChange={(checked) => setFilterCollaborators(!!checked)}
-                                className="rounded-md h-4 w-4 border-gray-300"
-                            />
-                            <label htmlFor="collab-filter" className="text-xs font-medium text-gray-700 flex items-center gap-1 cursor-pointer">
-                                <Users className="h-3.5 w-3.5" /> Show only posts with collaborators
-                            </label>
+                        <div className="mt-3 mb-1 px-1">
+                            <Popover
+                                open={creatorFilterOpen}
+                                onOpenChange={(open) => {
+                                    setCreatorFilterOpen(open);
+                                    if (!open) setCreatorSearchQuery('');
+                                }}
+                            >
+                                <PopoverTrigger asChild>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        role="combobox"
+                                        aria-expanded={creatorFilterOpen}
+                                        aria-label="Filter Instagram posts by creator"
+                                        className="h-10 w-[280px] justify-between rounded-2xl border-gray-300 bg-white px-3 font-normal shadow hover:bg-white"
+                                        style={{ backgroundColor: '#ffffff', backgroundImage: 'none' }}
+                                    >
+                                        <span className="truncate">{creatorFilterLabel}</span>
+                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent
+                                    align="start"
+                                    sideOffset={4}
+                                    className="relative isolate z-[100] overflow-hidden rounded-2xl border-gray-200 bg-white p-0 shadow-lg"
+                                    style={{
+                                        width: 'var(--radix-popover-trigger-width)',
+                                        minWidth: 'var(--radix-popover-trigger-width)',
+                                        maxWidth: 'var(--radix-popover-trigger-width)',
+                                        backgroundColor: '#ffffff',
+                                        backgroundImage: 'none',
+                                        opacity: 1,
+                                    }}
+                                >
+                                    <div
+                                        aria-hidden="true"
+                                        className="pointer-events-none absolute inset-0 z-0 rounded-[inherit] bg-white"
+                                        style={{ backgroundColor: '#ffffff', backgroundImage: 'none', opacity: 1 }}
+                                    />
+                                    <Command
+                                        filter={() => 1}
+                                        loop={false}
+                                        className="relative z-10 bg-white"
+                                        style={{ backgroundColor: '#ffffff', backgroundImage: 'none', opacity: 1 }}
+                                    >
+                                        <CommandInput
+                                            placeholder="Search creators..."
+                                            value={creatorSearchQuery}
+                                            onValueChange={setCreatorSearchQuery}
+                                            className="bg-white"
+                                            wrapperClassName="bg-white border-gray-200 rounded-[20px]"
+                                        />
+                                        <CommandList
+                                            className="max-h-none overflow-hidden rounded-2xl bg-white"
+                                            style={{ backgroundColor: '#ffffff', backgroundImage: 'none', opacity: 1 }}
+                                            selectOnFocus={false}
+                                        >
+                                            <ScrollArea
+                                                className="bg-white"
+                                                viewportClassName="max-h-[280px] bg-white"
+                                                style={{ backgroundColor: '#ffffff', backgroundImage: 'none', opacity: 1 }}
+                                            >
+                                                <CommandGroup
+                                                    className="bg-white"
+                                                    style={{ backgroundColor: '#ffffff', backgroundImage: 'none', opacity: 1 }}
+                                                >
+                                                    {!normalizedCreatorSearch && (
+                                                        <>
+                                                            <CommandItem
+                                                                value={IG_CREATOR_FILTER_ALL}
+                                                                onSelect={() => {
+                                                                    setCreatorFilter(IG_CREATOR_FILTER_ALL);
+                                                                    setCreatorFilterOpen(false);
+                                                                }}
+                                                                className="m-1 cursor-pointer rounded-2xl bg-white px-3 py-2 transition-colors hover:bg-gray-100 data-[selected=true]:bg-gray-100"
+                                                            >
+                                                                <Check className={`h-4 w-4 ${creatorFilter === IG_CREATOR_FILTER_ALL ? 'opacity-100' : 'opacity-0'}`} />
+                                                                <span>All posts</span>
+                                                            </CommandItem>
+                                                            <CommandItem
+                                                                value={IG_CREATOR_FILTER_ANY}
+                                                                onSelect={() => {
+                                                                    setCreatorFilter(IG_CREATOR_FILTER_ANY);
+                                                                    setCreatorFilterOpen(false);
+                                                                }}
+                                                                className="m-1 cursor-pointer rounded-2xl bg-white px-3 py-2 transition-colors hover:bg-gray-100 data-[selected=true]:bg-gray-100"
+                                                            >
+                                                                <Check className={`h-4 w-4 ${creatorFilter === IG_CREATOR_FILTER_ANY ? 'opacity-100' : 'opacity-0'}`} />
+                                                                <span>Any creator</span>
+                                                            </CommandItem>
+                                                        </>
+                                                    )}
+                                                    {filteredInstagramCreators.map((creator) => (
+                                                        <CommandItem
+                                                            key={creator.key}
+                                                            value={creator.key}
+                                                            onSelect={() => {
+                                                                setCreatorFilter(creator.key);
+                                                                setCreatorFilterOpen(false);
+                                                            }}
+                                                            className="m-1 cursor-pointer rounded-2xl bg-white px-3 py-2 transition-colors hover:bg-gray-100 data-[selected=true]:bg-gray-100"
+                                                        >
+                                                            <Check className={`h-4 w-4 ${creatorFilter === creator.key ? 'opacity-100' : 'opacity-0'}`} />
+                                                            <span className="truncate">@{creator.username}</span>
+                                                        </CommandItem>
+                                                    ))}
+                                                    {filteredInstagramCreators.length === 0 && (
+                                                        <p className="px-4 py-6 text-center text-sm text-gray-500">
+                                                            {instagramCreators.length === 0 ? 'No creators found.' : 'No matching creators.'}
+                                                        </p>
+                                                    )}
+                                                </CommandGroup>
+                                            </ScrollArea>
+                                        </CommandList>
+                                    </Command>
+                                </PopoverContent>
+                            </Popover>
                         </div>
                     )}
 

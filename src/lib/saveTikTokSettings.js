@@ -1,7 +1,7 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 /**
- * Save TikTok advertiser preferences to the tiktokDb Firestore database.
+ * Save TikTok advertiser preferences beneath the authenticated Blip user.
  * Mirrors the Meta saveSettings utility but targets the TikTok preferences routes.
  *
  * @param {string} advertiserId  - TikTok advertiser ID

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import PropTypes from "prop-types"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -16,204 +16,251 @@ import {
 } from "@/components/ui/dialog"
 import { toast } from "sonner"
 import { useAppData } from "@/lib/AppContext"
-import useSubscription from "@/lib/useSubscriptionSettings"
 import { cn } from "@/lib/utils"
 import { Search } from "lucide-react"
+import {
+    getPlanAccountLimit,
+    META_PLATFORM,
+    TIKTOK_PLATFORM,
+} from "@/lib/accountSelection"
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
+const API_BASE_URL = import.meta.env.VITE_API_URL || "https://api.withblip.com"
 
-export default function AdAccountSelectionPopup({ isOpen, onClose, onSave, selectedAdAccountIds }) {
-    const { allAdAccounts } = useAppData()
-    const { subscriptionData } = useSubscription()
+const accountId = (account, platform) => String(
+    platform === TIKTOK_PLATFORM
+        ? account.advertiser_id || account.id
+        : account.id
+)
+
+const accountName = (account, platform) => (
+    platform === TIKTOK_PLATFORM
+        ? account.advertiser_name || account.name || accountId(account, platform)
+        : account.name || accountId(account, platform)
+)
+
+export default function AdAccountSelectionPopup({
+    isOpen,
+    onClose,
+    onSave,
+    selectedAdAccountIds,
+    selectedTikTokAdvertiserIds,
+    platforms = [META_PLATFORM],
+    planType,
+}) {
+    const { allAdAccounts, allTikTokAdvertisers } = useAppData()
+    const [activePlatforms, setActivePlatforms] = useState(platforms)
+    const [stepIndex, setStepIndex] = useState(0)
     const [selectedAccountIds, setSelectedAccountIds] = useState([])
     const [searchQuery, setSearchQuery] = useState("")
     const [isLoading, setIsLoading] = useState(false)
+    const wasOpen = useRef(false)
 
-    const isStarterPlan = subscriptionData.planType === 'starter'
-    const isBrandPlan = subscriptionData.planType === 'brand'
-    const maxAccounts = isStarterPlan ? 1 : (isBrandPlan ? 5 : Infinity)
+    const platform = activePlatforms[stepIndex] || activePlatforms[0] || META_PLATFORM
+    const isTikTok = platform === TIKTOK_PLATFORM
+    const maxAccounts = getPlanAccountLimit(planType)
+    const isSingleAccountPlan = maxAccounts === 1
+    const accounts = isTikTok ? allTikTokAdvertisers : allAdAccounts
+    const savedSelection = isTikTok ? selectedTikTokAdvertiserIds : selectedAdAccountIds
 
     useEffect(() => {
-        if (isOpen) {
-            setSelectedAccountIds(selectedAdAccountIds || [])
-            setSearchQuery("")
+        if (isOpen && !wasOpen.current) {
+            setActivePlatforms(platforms.length > 0 ? platforms : [META_PLATFORM])
+            setStepIndex(0)
         }
-    }, [isOpen, selectedAdAccountIds])
+        wasOpen.current = isOpen
+    }, [isOpen, platforms])
 
-    // Memoized filtered accounts - only recalculates when allAdAccounts or searchQuery changes
+    useEffect(() => {
+        if (!isOpen) return
+        setSelectedAccountIds((savedSelection || []).map(String))
+        setSearchQuery("")
+    }, [isOpen, platform, savedSelection])
+
     const filteredAccounts = useMemo(() => {
-        if (!searchQuery.trim()) {
-            return allAdAccounts
-        }
-
         const query = searchQuery.toLowerCase().trim()
-        return allAdAccounts.filter(account =>
-            account.name.toLowerCase().includes(query) ||
-            account.id.toLowerCase().includes(query)
-        )
-    }, [allAdAccounts, searchQuery])
+        if (!query) return accounts
+        return accounts.filter((account) => (
+            accountName(account, platform).toLowerCase().includes(query)
+            || accountId(account, platform).toLowerCase().includes(query)
+        ))
+    }, [accounts, platform, searchQuery])
 
-    const saveSelection = async (emptySelectionMessage = "Please select an ad account") => {
-        if (isLoading) {
-            return false
-        }
-
+    const saveSelection = async () => {
+        if (isLoading) return
         if (selectedAccountIds.length === 0) {
-            toast.error(emptySelectionMessage)
-            return false
+            toast.error(`Please select at least one ${isTikTok ? "TikTok advertiser" : "Meta ad account"}`)
+            return
+        }
+        if (Number.isFinite(maxAccounts) && selectedAccountIds.length > maxAccounts) {
+            toast.error(`Your plan allows ${maxAccounts} ad account${maxAccounts === 1 ? "" : "s"}`)
+            return
         }
 
-        const accountIdsToSave = [...selectedAccountIds]
+        const endpoint = isTikTok
+            ? `${API_BASE_URL}/api/tiktok/settings/global/save`
+            : `${API_BASE_URL}/settings/save`
+        const body = isTikTok
+            ? { selectedAdvertiserIds: selectedAccountIds }
+            : { globalSettings: { selectedAdAccountIds: selectedAccountIds } }
+
         setIsLoading(true)
         try {
-            const response = await fetch(`${API_BASE_URL}/settings/save`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                credentials: 'include',
-                body: JSON.stringify({
-                    globalSettings: {
-                        selectedAdAccountIds: accountIdsToSave
-                    }
-                })
+            const response = await fetch(endpoint, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify(body),
             })
+            if (!response.ok) throw new Error(`Selection save failed: ${response.status}`)
 
-            if (response.ok) {
-                toast.success("Ad account selected successfully!")
-                window.dispatchEvent(new Event('globalSettingsUpdated'))
-                onSave?.(accountIdsToSave)
-                onClose()
-                return true
+            toast.success(`${isTikTok ? "TikTok" : "Meta"} ad accounts saved`)
+            window.dispatchEvent(new Event("globalSettingsUpdated"))
+            onSave?.({ platform, accountIds: [...selectedAccountIds] })
+
+            if (stepIndex < activePlatforms.length - 1) {
+                setStepIndex((current) => current + 1)
             } else {
-                toast.error("Failed to save ad account selection")
-                return false
+                onClose()
             }
         } catch (error) {
-            console.error("Error saving ad account:", error)
+            console.error("Error saving ad account selection:", error)
             toast.error("Failed to save ad account selection")
-            return false
         } finally {
             setIsLoading(false)
         }
     }
 
-    const handleSave = () => {
-        saveSelection()
-    }
-
     const getDialogDescription = () => {
-        if (isStarterPlan) {
-            return "As a Starter plan subscriber, you can use 1 ad account. Please select which account you'd like to use."
-        } else if (isBrandPlan) {
-            return "As a Light plan subscriber, you can use up to 5 ad accounts. Please select which accounts you'd like to use."
+        const platformName = isTikTok ? "TikTok advertiser" : "Meta ad"
+        if (planType === "starter") {
+            return `Your Starter plan includes 1 ${platformName} account. Choose the account you want to use.`
         }
-        return "Please select your ad accounts."
+        if (planType === "brand") {
+            return `Your Light plan includes up to 5 ${platformName} accounts. Choose the accounts you want to use.`
+        }
+        if (planType === "free_trial") {
+            return `Choose the ${platformName} accounts you want available during your free trial.`
+        }
+        return `Choose the ${platformName} accounts you want to use.`
     }
 
-    const handleClose = (open) => {
-        // Only allow closing if not opening (i.e., trying to close) and at least one account is selected
-        if (!open) {
-            saveSelection("Please select at least one ad account before closing")
+    const handleOpenChange = (open) => {
+        if (!open && isOpen) {
+            toast.error("Save your account selection before continuing")
         }
     }
+
+    const titlePlatform = isTikTok ? "TikTok" : "Meta"
+    const hasMultipleSteps = activePlatforms.length > 1
 
     return (
-        <Dialog open={isOpen} onOpenChange={handleClose}>
+        <Dialog open={isOpen} onOpenChange={handleOpenChange}>
             <DialogOverlay className="bg-black/80 backdrop-blur-sm" />
             <DialogContent className="sm:max-w-[500px] !rounded-[30px] p-8 data-[state=open]:!slide-in-from-left-0 data-[state=closed]:!slide-out-to-left-0 data-[state=open]:!slide-in-from-top-0 data-[state=closed]:!slide-out-to-top-0">
                 <DialogHeader className="space-y-4">
-                    <DialogTitle className="text-xl">Select Your Ad Account{maxAccounts > 1 ? 's' : ''}</DialogTitle>
+                    {hasMultipleSteps && (
+                        <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">
+                            Step {stepIndex + 1} of {activePlatforms.length}
+                        </p>
+                    )}
+                    <DialogTitle className="text-xl">
+                        Select Your {titlePlatform} Ad Account{maxAccounts > 1 ? "s" : ""}
+                    </DialogTitle>
                     <DialogDescription className="text-base leading-relaxed">
                         {getDialogDescription()}
                     </DialogDescription>
                 </DialogHeader>
 
-                <div className="py-4 space-y-4">
-                    {/* Search Input */}
+                <div className="space-y-4 py-4">
                     <div className="relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                         <Input
                             type="text"
                             placeholder="Search by ad account name or ID..."
                             value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-9 rounded-xl"
+                            onChange={(event) => setSearchQuery(event.target.value)}
+                            className="rounded-xl pl-9"
                         />
                     </div>
 
-                    {/* Account List */}
                     {filteredAccounts.length === 0 ? (
-                        <p className="text-gray-500 text-center py-8">
-                            {searchQuery ? "No accounts found matching your search" : "No ad accounts found"}
+                        <p className="py-8 text-center text-gray-500">
+                            {searchQuery ? "No accounts found matching your search" : `No ${titlePlatform} ad accounts found`}
                         </p>
-                    ) : isStarterPlan ? (
-                        // Radio buttons for Starter plan (1 account)
+                    ) : isSingleAccountPlan ? (
                         <RadioGroup
                             value={selectedAccountIds[0] || ""}
                             onValueChange={(value) => setSelectedAccountIds([value])}
-                            className="space-y-2 max-h-60 overflow-y-auto"
+                            className="max-h-60 space-y-2 overflow-y-auto"
                         >
-                            {filteredAccounts.map((account) => (
-                                <div key={account.id} className="flex items-center space-x-2 p-3 rounded-lg border hover:bg-gray-50">
-                                    <RadioGroupItem value={account.id} id={account.id} />
-                                    <Label
-                                        htmlFor={account.id}
-                                        className="flex-1 cursor-pointer"
-                                    >
-                                        <div className="font-medium">{account.name}</div>
-                                        <div className="text-sm text-gray-500">ID: {account.id}</div>
-                                    </Label>
-                                </div>
-                            ))}
+                            {filteredAccounts.map((account) => {
+                                const id = accountId(account, platform)
+                                return (
+                                    <div key={id} className="flex items-center space-x-2 rounded-lg border p-3 hover:bg-gray-50">
+                                        <RadioGroupItem value={id} id={`${platform}-${id}`} />
+                                        <Label htmlFor={`${platform}-${id}`} className="flex-1 cursor-pointer">
+                                            <div className="font-medium">{accountName(account, platform)}</div>
+                                            <div className="text-sm text-gray-500">ID: {id}</div>
+                                        </Label>
+                                    </div>
+                                )
+                            })}
                         </RadioGroup>
                     ) : (
-                        // Checkboxes for Brand/Light plan (3 accounts) and Pro plan
-                        <div className="space-y-2 max-h-60 overflow-y-auto">
-                            {filteredAccounts.map((account) => (
-                                <div key={account.id} className={cn(
-                                    "flex items-center space-x-2 p-3 rounded-lg border hover:bg-gray-50",
-                                    selectedAccountIds.length >= maxAccounts && !selectedAccountIds.includes(account.id)
-                                        ? "opacity-50 cursor-not-allowed bg-gray-50"
-                                        : ""
-                                )}>
-                                    <Checkbox
-                                        id={account.id}
-                                        checked={selectedAccountIds.includes(account.id)}
-                                        disabled={selectedAccountIds.length >= maxAccounts && !selectedAccountIds.includes(account.id)}
-                                        onCheckedChange={(checked) => {
-                                            if (checked) {
-                                                setSelectedAccountIds(prev => [...prev, account.id])
-                                            } else {
-                                                setSelectedAccountIds(prev => prev.filter(id => id !== account.id))
-                                            }
-                                        }}
-                                    />
-                                    <Label
-                                        htmlFor={account.id}
+                        <div className="max-h-60 space-y-2 overflow-y-auto">
+                            {filteredAccounts.map((account) => {
+                                const id = accountId(account, platform)
+                                const disabled = Number.isFinite(maxAccounts)
+                                    && selectedAccountIds.length >= maxAccounts
+                                    && !selectedAccountIds.includes(id)
+                                return (
+                                    <div
+                                        key={id}
                                         className={cn(
-                                            "flex-1 cursor-pointer",
-                                            selectedAccountIds.length >= maxAccounts && !selectedAccountIds.includes(account.id)
-                                                ? "cursor-not-allowed text-gray-400"
-                                                : ""
+                                            "flex items-center space-x-2 rounded-lg border p-3 hover:bg-gray-50",
+                                            disabled && "cursor-not-allowed bg-gray-50 opacity-50"
                                         )}
                                     >
-                                        <div className="font-medium">{account.name}</div>
-                                        <div className="text-sm text-gray-500">ID: {account.id}</div>
-                                    </Label>
-                                </div>
-                            ))}
+                                        <Checkbox
+                                            id={`${platform}-${id}`}
+                                            checked={selectedAccountIds.includes(id)}
+                                            disabled={disabled}
+                                            onCheckedChange={(checked) => {
+                                                setSelectedAccountIds((previous) => (
+                                                    checked
+                                                        ? [...previous, id]
+                                                        : previous.filter((selectedId) => selectedId !== id)
+                                                ))
+                                            }}
+                                        />
+                                        <Label
+                                            htmlFor={`${platform}-${id}`}
+                                            className={cn(
+                                                "flex-1 cursor-pointer",
+                                                disabled && "cursor-not-allowed text-gray-400"
+                                            )}
+                                        >
+                                            <div className="font-medium">{accountName(account, platform)}</div>
+                                            <div className="text-sm text-gray-500">ID: {id}</div>
+                                        </Label>
+                                    </div>
+                                )
+                            })}
                         </div>
                     )}
                 </div>
 
-                <DialogFooter className="flex flex-col sm:flex-row gap-3">
+                <DialogFooter>
                     <Button
-                        onClick={handleSave}
+                        onClick={saveSelection}
                         disabled={selectedAccountIds.length === 0 || isLoading}
-                        className="h-[46px] rounded-2xl flex-1"
+                        className="h-[46px] flex-1 rounded-2xl"
                     >
-                        {isLoading ? "Saving..." : "Save Selection"}
+                        {isLoading
+                            ? "Saving..."
+                            : stepIndex < activePlatforms.length - 1
+                                ? "Save and Continue"
+                                : "Save Selection"}
                     </Button>
                 </DialogFooter>
             </DialogContent>
@@ -226,4 +273,7 @@ AdAccountSelectionPopup.propTypes = {
     onClose: PropTypes.func.isRequired,
     onSave: PropTypes.func,
     selectedAdAccountIds: PropTypes.arrayOf(PropTypes.string),
+    selectedTikTokAdvertiserIds: PropTypes.arrayOf(PropTypes.string),
+    platforms: PropTypes.arrayOf(PropTypes.oneOf([META_PLATFORM, TIKTOK_PLATFORM])),
+    planType: PropTypes.string.isRequired,
 }

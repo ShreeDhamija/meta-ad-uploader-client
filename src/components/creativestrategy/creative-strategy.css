@@ -1,0 +1,164 @@
+/*
+ * Creative Strategy design system
+ * Keep new tabs on these tokens and shared classes so screenshot references can
+ * refine one vocabulary instead of producing one-off colors and shadows.
+ */
+.creative-strategy {
+  --cs-ink: #1d1d1d;
+  --cs-muted: #858585;
+  --cs-canvas: #f5f5f4;
+  --cs-surface: #ffffff;
+  --cs-cream: #fffaf4;
+  --cs-peach: #ffe3d0;
+  --cs-orange: #ffbe85;
+  --cs-orange-ink: #6c3403;
+  --cs-border: rgba(29, 29, 29, 0.14);
+  --cs-border-strong: #3b170b;
+  --cs-shadow-sm: 0 2px 5px rgba(0, 0, 0, 0.12);
+  --cs-shadow-card: 0 4px 4px rgba(0, 0, 0, 0.12);
+  --cs-shadow-cta: 0 2px 10px rgba(0, 0, 0, 0.25);
+  color: var(--cs-ink);
+  background: var(--cs-canvas);
+}
+
+.cs-main-surface {
+  border: 1px solid var(--cs-border);
+  border-radius: 40px;
+  background: var(--cs-surface);
+  box-shadow: var(--cs-shadow-sm);
+}
+
+.cs-page-header {
+  border-bottom: 1px solid var(--cs-border);
+}
+
+.cs-primary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 22px;
+  border: 2px solid #3f3e3e;
+  border-radius: 999px;
+  color: #fff;
+  background: linear-gradient(0deg, #414141 0%, #000 77.88%);
+  box-shadow: var(--cs-shadow-cta);
+  font-weight: 600;
+  transition: transform 180ms ease, opacity 180ms ease, box-shadow 180ms ease;
+}
+
+.cs-primary-button:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+}
+
+.cs-primary-button:active {
+  transform: translateY(0);
+}
+
+.cs-primary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+  transform: none;
+}
+
+.cs-pill-control {
+  min-height: 54px;
+  border: 1px solid var(--cs-border);
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: var(--cs-shadow-sm);
+}
+
+.cs-brand-card {
+  overflow: hidden;
+  border: 1.5px solid var(--cs-border-strong);
+  border-radius: 24px;
+  background: var(--cs-peach);
+  box-shadow: var(--cs-shadow-card);
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.cs-brand-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 18px rgba(51, 12, 0, 0.12);
+}
+
+.cs-brand-card__top {
+  border-bottom: 1.5px solid var(--cs-border-strong);
+  border-radius: 22px;
+  background: var(--cs-cream);
+  box-shadow: 0 2px 2px rgba(0, 0, 0, 0.14);
+}
+
+.cs-product-card {
+  position: relative;
+  overflow: visible;
+  border: 1.5px solid var(--cs-border-strong);
+  border-radius: 25px;
+  background: var(--cs-cream);
+  box-shadow: var(--cs-shadow-card);
+}
+
+.cs-product-card__header {
+  border-radius: 22px 22px 0 0;
+  background: #310b00;
+  color: #fff;
+}
+
+.cs-product-action {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 12px;
+  min-height: 46px;
+  padding: 9px 20px;
+  border: 1.5px solid var(--cs-orange-ink);
+  border-radius: 999px;
+  color: #2e1107;
+  background: var(--cs-orange);
+  box-shadow: 0 2px 2px rgba(0, 0, 0, 0.18);
+  font-weight: 500;
+  transition: transform 160ms ease, filter 160ms ease;
+}
+
+.cs-product-action:hover {
+  filter: brightness(1.025);
+  transform: translateY(-1px);
+}
+
+.cs-modal {
+  width: calc(100% - 32px);
+  max-width: 480px;
+  border: 2px solid var(--cs-ink);
+  border-radius: 28px;
+  background: #fff;
+  box-shadow: 0 4px 4px rgba(0, 0, 0, 0.25);
+  padding: 34px;
+}
+
+.cs-modal-input {
+  min-height: 52px;
+  border: 1.5px solid var(--cs-ink);
+  border-radius: 999px;
+  padding-inline: 22px;
+  background: #fff;
+  font-size: 15px;
+}
+
+@media (max-width: 1024px) {
+  .cs-main-surface {
+    border-radius: 28px;
+  }
+}
+
+@media (max-width: 767px) {
+  .cs-main-surface {
+    border-radius: 24px;
+  }
+
+  .cs-modal {
+    padding: 28px 22px 24px;
+  }
+}

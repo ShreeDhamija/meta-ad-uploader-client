@@ -1,114 +1,46 @@
 import { useTikTokAuth } from '@/lib/TikTokAuthContext'
-import { useEffect, useState, useRef } from 'react'
+import { useAuth } from '@/lib/AuthContext'
+import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
-
-const TIKTOK_PINK = '#FE2C55'
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com'
-
-// ✅ GLOBAL GUARD: Module-level variable persists across React remounts/StrictMode
-let isExchangeInProgress = false;
 
 export default function TikTokCallback() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { isTikTokLoggedIn, refreshTikTokUser, setTikTokSession } = useTikTokAuth()
-  const [status, setStatus] = useState('processing')
+  const { refreshTikTokUser } = useTikTokAuth()
+  const { refreshAuth } = useAuth()
   const [error, setError] = useState(null)
-
-  const hasExchanged = useRef(false)
+  const handled = useRef(false)
 
   useEffect(() => {
+    if (handled.current) return
+    handled.current = true
+
     const params = new URLSearchParams(location.search)
     const connected = params.get('connected')
-    const errorMsg = params.get('error')
-    const exchangeToken = params.get('t')
-    const loginType = params.get('login_type') || 'business'
+    const errorCode = params.get('error')
+    window.history.replaceState({}, document.title, location.pathname)
 
-    // 1. Check if already logged in (context might already have it)
-    if (isTikTokLoggedIn) {
-      setStatus('success')
-      navigate('/tiktok-ads')
+    if (errorCode || connected !== 'true') {
+      const message = errorCode || 'Authentication was not successful'
+      setError(message)
+      toast.error(`TikTok connection failed: ${message}`)
       return
     }
 
-    // 2. Prevent double-execution using the GLOBAL guard
-    if (isExchangeInProgress) {
-      return
-    }
-
-
-
-    if (errorMsg) {
-      isExchangeInProgress = true
-      const decodedError = decodeURIComponent(errorMsg)
-      console.error('❌ [TikTokCallback] Error param received:', decodedError)
-      setStatus('error')
-      setError(decodedError)
-      toast.error(`TikTok Connection Failed: ${decodedError}`)
-      return
-    }
-
-    if (connected === 'true') {
-      if (exchangeToken) {
-        isExchangeInProgress = true
-        // Note: Using 'api/tiktok' prefix as seen in logs
-        const exchangeUrl = `${API_BASE_URL}/api/tiktok/auth/exchange?t=${exchangeToken}`
-
-        fetch(exchangeUrl, { credentials: 'include' })
-          .then(async (res) => {
-            const body = await res.text()
-            let data
-            try {
-              data = JSON.parse(body)
-            } catch (e) {
-              console.error('❌ [TikTokCallback] Failed to parse backend response:', body)
-              throw new Error('Invalid response from server')
-            }
-            if (data.connected && data.user) {
-              setStatus('success')
-              toast.success('Successfully connected to TikTok Ads!')
-              setTikTokSession(data.user, data.advertisers || [], data.accessToken || null)
-
-              // Clean up URL to prevent reuse on refresh
-              window.history.replaceState({}, document.title, window.location.pathname)
-
-              navigate('/tiktok-ads')
-            } else {
-              console.warn('⚠️ [TikTokCallback] Exchange returned connected=false:', data)
-
-              // Handle "token consumed" as a possible success if we already have a session
-              if (data.error === 'Invalid or expired exchange token') {
-                return refreshTikTokUser().then(() => {
-                  setStatus('success')
-                  navigate('/tiktok-ads')
-                })
-              }
-
-              setStatus('error')
-              setError(data.error || 'Failed to connect TikTok account')
-              isExchangeInProgress = false // Allow retry on real failure
-            }
-          })
-          .catch((err) => {
-            console.error('❌ [TikTokCallback] Exchange fetch failed:', err)
-            setStatus('error')
-            setError('Network error during authentication')
-            isExchangeInProgress = false
-          })
-      } else {
-        isExchangeInProgress = true
-        refreshTikTokUser().then(() => {
-          setStatus('success')
-          navigate('/tiktok-ads')
-        })
+    const finishConnection = async () => {
+      await refreshAuth()
+      const status = await refreshTikTokUser()
+      if (!status?.connected) {
+        setError('TikTok connection could not be verified')
+        return
       }
-    } else if (connected === 'false' || (!connected && !errorMsg)) {
-      console.warn('⚠️ [TikTokCallback] No connected=true and no error. search:', location.search)
-      setStatus('error')
-      setError('Authentication was not successful')
+      toast.success('Successfully connected to TikTok Ads!')
+      navigate('/tiktok-ads', { replace: true })
     }
-  }, [isTikTokLoggedIn]) // Re-run if login state changes
+
+    finishConnection()
+  }, [location.pathname, location.search, navigate, refreshAuth, refreshTikTokUser])
 
   return (
     <div
@@ -119,16 +51,13 @@ export default function TikTokCallback() {
         backgroundSize: '18px 18px',
       }}
     >
-
-      {status === 'error' && (
+      {error && (
         <div className="bg-white p-8 rounded-3xl border border-zinc-200 shadow-sm max-w-md w-full text-center space-y-4 mx-4">
           <div className="text-4xl">❌</div>
           <h2 className="text-xl font-bold text-zinc-900">Connection Failed</h2>
-          <p className="text-sm text-zinc-500">
-            {error || 'An unexpected error occurred during authentication.'}
-          </p>
+          <p className="text-sm text-zinc-500">{error}</p>
           <button
-            onClick={() => navigate('/tiktok-login')}
+            onClick={() => navigate('/tiktok-login', { replace: true })}
             className="w-full bg-[#010101] hover:bg-[#121212] text-white py-2.5 rounded-xl font-semibold transition-colors"
           >
             Try Again
@@ -138,4 +67,3 @@ export default function TikTokCallback() {
     </div>
   )
 }
-

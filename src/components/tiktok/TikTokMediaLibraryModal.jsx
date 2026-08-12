@@ -25,13 +25,13 @@ export default function TikTokMediaLibraryModal({
 
     const fetchVideos = useCallback(async (isLoadMore = false) => {
         if (!advertiserId) return;
-        
+
         if (isLoadMore) setLoadingMore(true);
         else setLoading(true);
 
         try {
             const res = await axios.get(`${API_BASE_URL}/api/tiktok/fetch-library-videos`, {
-                params: { 
+                params: {
                     advertiserId,
                     page: isLoadMore ? page + 1 : 1,
                     pageSize: 20
@@ -63,7 +63,7 @@ export default function TikTokMediaLibraryModal({
         }
     }, [open, advertiserId]);
 
-    const filteredVideos = videos.filter(v => 
+    const filteredVideos = videos.filter(v =>
         v.video_name?.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
@@ -80,7 +80,7 @@ export default function TikTokMediaLibraryModal({
         <>
             <div className="fixed inset-0 bg-black/60 z-[110] backdrop-blur-sm animate-in fade-in duration-200" onClick={onClose} />
             <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[120] w-full max-w-4xl max-h-[85vh] rounded-[32px] bg-white p-8 shadow-2xl flex flex-col animate-in zoom-in-95 duration-200 border border-gray-100">
-                
+
                 {/* Header */}
                 <div className="flex items-center justify-between mb-6">
                     <div>
@@ -96,16 +96,16 @@ export default function TikTokMediaLibraryModal({
                 <div className="flex gap-3 mb-6">
                     <div className="relative flex-1">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                        <Input 
-                            placeholder="Search videos by name..." 
+                        <Input
+                            placeholder="Search videos by name..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="pl-11 border-gray-200 rounded-2xl h-12 bg-gray-50/50 focus:bg-white transition-colors"
                         />
                     </div>
-                    <Button 
-                        variant="outline" 
-                        onClick={() => fetchVideos()} 
+                    <Button
+                        variant="outline"
+                        onClick={() => fetchVideos()}
                         className="rounded-2xl h-12 px-5 border-gray-200 hover:bg-gray-50"
                         disabled={loading}
                     >
@@ -131,7 +131,7 @@ export default function TikTokMediaLibraryModal({
                             {filteredVideos.map((video) => {
                                 const isSelected = selectedVideo?.video_id === video.video_id;
                                 return (
-                                    <div 
+                                    <div
                                         key={video.video_id}
                                         onClick={() => setSelectedVideo(video)}
                                         className={`group relative cursor-pointer rounded-2xl overflow-hidden border-2 transition-all duration-200 ${
@@ -140,8 +140,8 @@ export default function TikTokMediaLibraryModal({
                                     >
                                         <div className="aspect-[9/16] bg-black flex items-center justify-center relative">
                                             {video.poster_url ? (
-                                                <img 
-                                                    src={video.poster_url} 
+                                                <img
+                                                    src={video.poster_url}
                                                     alt={video.video_name}
                                                     className="w-full h-full object-cover"
                                                 />
@@ -168,12 +168,12 @@ export default function TikTokMediaLibraryModal({
                             })}
                         </div>
                     )}
-                    
+
                     {hasMore && (
                         <div className="py-6 flex justify-center">
-                            <Button 
-                                variant="ghost" 
-                                onClick={() => fetchVideos(true)} 
+                            <Button
+                                variant="ghost"
+                                onClick={() => fetchVideos(true)}
                                 disabled={loadingMore}
                                 className="rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-100"
                             >
@@ -193,8 +193,8 @@ export default function TikTokMediaLibraryModal({
                         <Button variant="ghost" onClick={onClose} className="rounded-2xl h-12 px-8 font-semibold">
                             Cancel
                         </Button>
-                        <Button 
-                            onClick={handleSelect} 
+                        <Button
+                            onClick={handleSelect}
                             disabled={!selectedVideo}
                             className="bg-black text-white hover:bg-zinc-800 rounded-2xl h-12 px-10 font-bold shadow-xl shadow-black/10 transition-transform active:scale-95"
                         >

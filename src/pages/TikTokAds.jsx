@@ -3,7 +3,6 @@ import TikTokHeader from '@/components/tiktokheader'
 import TikTokMediaPreview from '@/components/tiktok/TikTokMediaPreview'
 import TikTokAdCreationForm from '@/components/tiktok/TikTokAdCreationForm'
 import { useTikTokAuth } from '@/lib/TikTokAuthContext'
-import { useAuth } from '@/lib/AuthContext'
 import useSubscription from '@/lib/useSubscriptionSettings'
 import { useIntercom } from '@/lib/useIntercom'
 import useTikTokAdvertiserSettings from '@/lib/useTikTokAdvertiserSettings'
@@ -13,6 +12,13 @@ import React, { useCallback, useEffect, useRef, useState } from "react"
 import { useNavigate } from 'react-router-dom'
 import { toast, Toaster } from 'sonner'
 import { v4 as uuidv4 } from "uuid"
+import { useAppData } from "@/lib/AppContext"
+import useGlobalSettings from "@/lib/useGlobalSettings"
+import AdAccountSelectionPopup from "@/components/AdAccountSelectionPopup"
+import {
+  getRequiredSelectionPlatforms,
+  normalizeCheckoutPlanType,
+} from "@/lib/accountSelection"
 
 const TIKTOK_CACHE_KEY = 'tiktok_ads_cache';
 const MEDIA_PREVIEW_LAUNCH_DURATION_MS = 560;
@@ -71,9 +77,29 @@ const getFileId = (file) => {
 
 export default function TikTokAds() {
   const navigate = useNavigate()
-  const { isTikTokLoggedIn, tiktokAdvertisers, refreshTikTokUser, isLoading: authLoading } = useTikTokAuth()
-  const { isLoggedIn, authLoading: metaAuthLoading } = useAuth()
-  const { hasActiveAccess, loading: subscriptionLoading } = useSubscription()
+  const { isTikTokLoggedIn, isLoading: authLoading } = useTikTokAuth()
+  const { tiktokAdvertisers } = useAppData()
+  const {
+    loading: globalSettingsLoading,
+    selectedAdAccountIds,
+    selectedTikTokAdvertiserIds,
+  } = useGlobalSettings()
+  const {
+    hasActiveAccess,
+    loading: subscriptionLoading,
+    subscriptionData,
+  } = useSubscription()
+  const [checkoutPlanType, setCheckoutPlanType] = useState(null)
+  const [showAdAccountPopup, setShowAdAccountPopup] = useState(false)
+  const stripeSessionHandledRef = useRef(false)
+  const effectivePlanType = checkoutPlanType || subscriptionData.planType
+  const requiredSelectionPlatforms = getRequiredSelectionPlatforms({
+    planType: effectivePlanType,
+    selectedMetaIds: selectedAdAccountIds,
+    selectedTikTokIds: selectedTikTokAdvertiserIds,
+    isTikTokConnected: isTikTokLoggedIn,
+    requireTikTokTrialSelection: true,
+  })
   const userHasActiveAccess = hasActiveAccess ? hasActiveAccess() : true
   const { showMessenger, hideMessenger } = useIntercom()
 
@@ -130,6 +156,11 @@ export default function TikTokAds() {
   const [driveFiles, setDriveFiles] = useState([])
   const [dropboxFiles, setDropboxFiles] = useState([])
   const [selectedIdentity, setSelectedIdentity] = useState('')
+  const [adNameFormulaV2, setAdNameFormulaV2] = useState({ rawInput: "" })
+  const [selectedTemplate, setSelectedTemplate] = useState("")
+  const [showCustomLink, setShowCustomLink] = useState(false)
+  const [customLink, setCustomLink] = useState("")
+  const [launchPaused, setLaunchPaused] = useState(false)
   const [formStoreId, setFormStoreId] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.formStoreId : null) || null)
   const [formStoreName, setFormStoreName] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.formStoreName : null) || null)
   const [formStoreProductId, setFormStoreProductId] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.formStoreProductId : null) || [])
@@ -140,6 +171,7 @@ export default function TikTokAds() {
   const [formCatalogName, setFormCatalogName] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.formCatalogName : null) || null)
   const [formProductId, setFormProductId] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.formProductId : null) || [])
   const [formProductName, setFormProductName] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.formProductName : null) || null)
+  const [formCatalogProducts, setFormCatalogProducts] = useState([])
   const [sparkAuthCodes, setSparkAuthCodes] = useState([''])
   const [urlMode, setUrlMode] = useState('WEBSITE')
   const [adType, setAdType] = useState('NORMAL')
@@ -519,26 +551,60 @@ export default function TikTokAds() {
     }
   }, [files])
 
-  useEffect(() => {
-    localStorage.setItem('last_active_launcher', '/tiktok-ads');
-  }, []);
-
-  // Handle OAuth callback
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    if (params.get('connected') === 'true') {
-      toast.success('TikTok connected successfully!')
-      refreshTikTokUser()
-      window.history.replaceState({}, '', '/tiktok-ads')
-    }
-  }, [refreshTikTokUser])
-
   // Auth guard
   useEffect(() => {
     if (!authLoading && !isTikTokLoggedIn) {
       navigate('/tiktok-login')
     }
   }, [isTikTokLoggedIn, authLoading, navigate])
+
+  useEffect(() => {
+    if (stripeSessionHandledRef.current) return
+    const sessionId = new URLSearchParams(window.location.search).get("session_id")
+    if (!sessionId) return
+    stripeSessionHandledRef.current = true
+
+    fetch(`${API_BASE_URL}/api/stripe/session/${encodeURIComponent(sessionId)}`, {
+      credentials: "include",
+    })
+      .then(async (response) => {
+        if (!response.ok) throw new Error(`Session fetch failed: ${response.status}`)
+        const data = await response.json()
+        const planType = normalizeCheckoutPlanType(data.planType)
+        setCheckoutPlanType(planType)
+        window.dispatchEvent(new CustomEvent("subscriptionUpdated", {
+          detail: { planType },
+        }))
+
+        if (data.amount_total) {
+          window.dataLayer = window.dataLayer || []
+          window.dataLayer.push({
+            event: "purchase",
+            value: data.amount_total,
+            customer_name: data.customer_name,
+            customer_email: data.customer_email,
+          })
+        }
+      })
+      .catch((error) => {
+        console.error("[TikTok Billing] Error fetching Stripe session:", error)
+      })
+      .finally(() => {
+        const url = new URL(window.location.href)
+        url.searchParams.delete("session_id")
+        window.history.replaceState({}, "", url)
+      })
+  }, [])
+
+  useEffect(() => {
+    if (authLoading || globalSettingsLoading || subscriptionLoading) return
+    setShowAdAccountPopup(requiredSelectionPlatforms.length > 0)
+  }, [
+    authLoading,
+    globalSettingsLoading,
+    requiredSelectionPlatforms.length,
+    subscriptionLoading,
+  ])
 
   // Auto-select advertiser account if only one exists
   useEffect(() => {
@@ -547,6 +613,17 @@ export default function TikTokAds() {
       setSelectedAdvertiser(firstId)
     }
   }, [tiktokAdvertisers, selectedAdvertiser])
+
+  useEffect(() => {
+    if (!selectedAdvertiser || tiktokAdvertisers.length === 0) return
+    const selectionIsAllowed = tiktokAdvertisers.some((advertiser) => (
+      String(advertiser.advertiser_id || advertiser.id) === String(selectedAdvertiser)
+    ))
+    if (!selectionIsAllowed) {
+      setSelectedAdvertiser("")
+      localStorage.removeItem("last_selected_tiktok_advertiser")
+    }
+  }, [selectedAdvertiser, tiktokAdvertisers])
 
   // Save selected advertiser to localStorage to persist selection across page navigations
   useEffect(() => {
@@ -658,6 +735,21 @@ export default function TikTokAds() {
     advertiserPrefs?.copyTemplates
   ]);
 
+  // Keep advertiser selection global across variants. When it changes from an
+  // existing account, discard account-specific snapshots so stale campaigns,
+  // ad groups, identities, and products cannot be restored by variant switching.
+  const previousAdvertiserRef = useRef(selectedAdvertiser);
+  useEffect(() => {
+    if (previousAdvertiserRef.current === selectedAdvertiser) return;
+    const hadPreviousAdvertiser = Boolean(previousAdvertiserRef.current);
+    previousAdvertiserRef.current = selectedAdvertiser;
+    if (!hadPreviousAdvertiser) return;
+
+    setVariants((prev) => prev.map((variant) => ({ ...variant, snapshot: null })));
+    setCustomLink("");
+    setShowCustomLink(false);
+  }, [selectedAdvertiser]);
+
   // Reset form fields when selected advertiser is cleared (mirrors Meta's Home.jsx pattern)
   useEffect(() => {
     if (selectedAdvertiser) return;
@@ -724,14 +816,18 @@ export default function TikTokAds() {
 
   const captureCurrentSnapshot = useCallback(() => ({
     adName,
-    adTexts,
-    cta,
+    adTexts: cloneSnapshotValue(adTexts),
+    cta: cloneSnapshotValue(cta),
     landingUrl,
+    customLink,
+    showCustomLink,
     selectedIdentity,
-    sparkAuthCodes,
+    sparkAuthCodes: cloneSnapshotValue(sparkAuthCodes),
     urlMode,
-    selectedCampaign,
-    selectedAdGroup,
+    selectedAdvertiser,
+    selectedCampaign: cloneSnapshotValue(selectedCampaign),
+    selectedAdGroup: cloneSnapshotValue(selectedAdGroup),
+    adGroups: cloneSnapshotValue(adGroups),
     duplicateAdGroup,
     newAdGroupName,
     showDuplicateAdGroupBlock,
@@ -740,28 +836,36 @@ export default function TikTokAds() {
     showDuplicateCampaignBlock,
     productName,
     productImageUrl,
-    sellingPoints,
+    sellingPoints: cloneSnapshotValue(sellingPoints),
     selectedSavedProductId,
     formCatalogId,
     formCatalogName,
-    formProductId: Array.isArray(formProductId) ? [...formProductId] : formProductId,
+    formProductId: cloneSnapshotValue(formProductId),
     formProductName,
+    formCatalogProducts: cloneSnapshotValue(formCatalogProducts),
     formStoreId,
     formStoreName,
-    formStoreProductId: Array.isArray(formStoreProductId) ? [...formStoreProductId] : formStoreProductId,
+    formStoreProductId: cloneSnapshotValue(formStoreProductId),
     formStoreProductName,
     formStoreBcId,
     formStoreCatalogId,
+    adNameFormulaV2: cloneSnapshotValue(adNameFormulaV2),
+    selectedTemplate,
+    launchPaused,
   }), [
     adName,
     adTexts,
     cta,
     landingUrl,
+    customLink,
+    showCustomLink,
     selectedIdentity,
     sparkAuthCodes,
     urlMode,
+    selectedAdvertiser,
     selectedCampaign,
     selectedAdGroup,
+    adGroups,
     duplicateAdGroup,
     newAdGroupName,
     showDuplicateAdGroupBlock,
@@ -776,28 +880,38 @@ export default function TikTokAds() {
     formCatalogName,
     formProductId,
     formProductName,
+    formCatalogProducts,
     formStoreId,
     formStoreName,
     formStoreProductId,
     formStoreProductName,
     formStoreBcId,
     formStoreCatalogId,
+    adNameFormulaV2,
+    selectedTemplate,
+    launchPaused,
   ]);
 
   const hydrateFromSnapshot = useCallback((snapshot) => {
     if (!snapshot) return;
     setAdName(snapshot.adName || "");
-    setAdTexts(snapshot.adTexts || [""]);
+    setAdTexts(cloneSnapshotValue(snapshot.adTexts) || [""]);
     const rawCta = snapshot.cta;
-    setCta(Array.isArray(rawCta) ? rawCta : (rawCta ? [rawCta] : ["SHOP_NOW"]));
+    setCta(Array.isArray(rawCta) ? cloneSnapshotValue(rawCta) : (rawCta ? [rawCta] : ["SHOP_NOW"]));
     setLandingUrl(snapshot.landingUrl || "");
+    setCustomLink(snapshot.customLink || "");
+    setShowCustomLink(Boolean(snapshot.showCustomLink));
     setSelectedIdentity(snapshot.selectedIdentity || "");
-    setSparkAuthCodes(snapshot.sparkAuthCodes || [""]);
+    setSparkAuthCodes(cloneSnapshotValue(snapshot.sparkAuthCodes) || [""]);
     setUrlMode(snapshot.urlMode || "WEBSITE");
+    setSelectedAdvertiser(snapshot.selectedAdvertiser || "");
     const rawCampaign = snapshot.selectedCampaign || "";
-    setSelectedCampaign(Array.isArray(rawCampaign) ? rawCampaign : (rawCampaign ? [rawCampaign] : []));
+    setSelectedCampaign(Array.isArray(rawCampaign) ? cloneSnapshotValue(rawCampaign) : (rawCampaign ? [rawCampaign] : []));
     const rawAdGroup = snapshot.selectedAdGroup || "";
-    setSelectedAdGroup(Array.isArray(rawAdGroup) ? rawAdGroup : (rawAdGroup ? [rawAdGroup] : []));
+    setSelectedAdGroup(Array.isArray(rawAdGroup) ? cloneSnapshotValue(rawAdGroup) : (rawAdGroup ? [rawAdGroup] : []));
+    if (snapshot.adGroups) {
+      setAdGroups(cloneSnapshotValue(snapshot.adGroups));
+    }
     setDuplicateAdGroup(snapshot.duplicateAdGroup || "");
     setNewAdGroupName(snapshot.newAdGroupName || "");
     setShowDuplicateAdGroupBlock(Boolean(snapshot.showDuplicateAdGroupBlock));
@@ -806,20 +920,24 @@ export default function TikTokAds() {
     setShowDuplicateCampaignBlock(Boolean(snapshot.showDuplicateCampaignBlock));
     setProductName(snapshot.productName || "");
     setProductImageUrl(snapshot.productImageUrl || "");
-    setSellingPoints(snapshot.sellingPoints || []);
+    setSellingPoints(cloneSnapshotValue(snapshot.sellingPoints) || []);
     setSelectedSavedProductId(snapshot.selectedSavedProductId || "");
     setFormCatalogId(snapshot.formCatalogId ?? null);
     setFormCatalogName(snapshot.formCatalogName ?? null);
     const rawProductId = snapshot.formProductId;
-    setFormProductId(Array.isArray(rawProductId) ? rawProductId : (rawProductId ? [rawProductId] : []));
+    setFormProductId(Array.isArray(rawProductId) ? cloneSnapshotValue(rawProductId) : (rawProductId ? [rawProductId] : []));
     setFormProductName(snapshot.formProductName ?? null);
+    setFormCatalogProducts(cloneSnapshotValue(snapshot.formCatalogProducts) || []);
     setFormStoreId(snapshot.formStoreId ?? null);
     setFormStoreName(snapshot.formStoreName ?? null);
     const rawStoreProductId = snapshot.formStoreProductId;
-    setFormStoreProductId(Array.isArray(rawStoreProductId) ? rawStoreProductId : (rawStoreProductId ? [rawStoreProductId] : []));
+    setFormStoreProductId(Array.isArray(rawStoreProductId) ? cloneSnapshotValue(rawStoreProductId) : (rawStoreProductId ? [rawStoreProductId] : []));
     setFormStoreProductName(snapshot.formStoreProductName ?? null);
     setFormStoreBcId(snapshot.formStoreBcId ?? null);
     setFormStoreCatalogId(snapshot.formStoreCatalogId ?? null);
+    setAdNameFormulaV2(cloneSnapshotValue(snapshot.adNameFormulaV2) || { rawInput: "" });
+    setSelectedTemplate(snapshot.selectedTemplate ?? "");
+    setLaunchPaused(Boolean(snapshot.launchPaused));
   }, []);
 
   const switchVariant = useCallback((targetId) => {
@@ -869,11 +987,20 @@ export default function TikTokAds() {
         .filter((variant) => variant.id !== "default")
         .map((variant) => variant.name.replace(/^(Form|Variant)\s+/, ""))
     );
-    const nextLetter = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").find((letter) => !usedLetters.has(letter));
+    let letterIndex = 0;
+    let nextLetter = "";
+    while (!nextLetter) {
+      let current = letterIndex;
+      let candidate = "";
+      do {
+        candidate = String.fromCharCode(65 + (current % 26)) + candidate;
+        current = Math.floor(current / 26) - 1;
+      } while (current >= 0);
+      letterIndex += 1;
 
-    if (!nextLetter) {
-      toast.error("Maximum 26 Variants");
-      return;
+      if (!usedLetters.has(candidate)) {
+        nextLetter = candidate;
+      }
     }
 
     const currentSnapshot = captureCurrentSnapshot();
@@ -1036,8 +1163,37 @@ export default function TikTokAds() {
     })
   }, [files, driveFiles, dropboxFiles])
 
+  useEffect(() => {
+    const validGroupIds = new Set(fileGroups.map((group) => group.id))
+    setGroupVariantMap((prev) => {
+      const next = { ...prev }
+      let changed = false
+      Object.keys(next).forEach((key) => {
+        if (!validGroupIds.has(key)) {
+          delete next[key]
+          changed = true
+        }
+      })
+      return changed ? next : prev
+    })
+  }, [fileGroups])
+
+  useEffect(() => {
+    const validPostKeys = new Set(importedPosts.map((post) => `post:${post.id}`))
+    setPostVariantMap((prev) => {
+      const next = { ...prev }
+      let changed = false
+      Object.keys(next).forEach((key) => {
+        if (!validPostKeys.has(key)) {
+          delete next[key]
+          changed = true
+        }
+      })
+      return changed ? next : prev
+    })
+  }, [importedPosts])
+
   if (authLoading) return null;
-  if (!isTikTokLoggedIn && metaAuthLoading) return null;
   if (!isTikTokLoggedIn) return null;
 
   return (
@@ -1062,6 +1218,15 @@ export default function TikTokAds() {
 
       <div className="w-full max-w-[1600px] mx-auto py-8 px-2 sm:px-4 md:px-6">
         <Toaster richColors position="bottom-left" closeButton />
+
+        <AdAccountSelectionPopup
+          isOpen={showAdAccountPopup}
+          onClose={() => setShowAdAccountPopup(false)}
+          selectedAdAccountIds={selectedAdAccountIds}
+          selectedTikTokAdvertiserIds={selectedTikTokAdvertiserIds}
+          platforms={requiredSelectionPlatforms}
+          planType={effectivePlanType}
+        />
 
         <TikTokHeader showMessenger={showMessenger} hideMessenger={hideMessenger} />
 
@@ -1101,9 +1266,15 @@ export default function TikTokAds() {
               formCatalogName={formCatalogName} setFormCatalogName={setFormCatalogName}
               formProductId={formProductId} setFormProductId={setFormProductId}
               formProductName={formProductName} setFormProductName={setFormProductName}
+              formCatalogProducts={formCatalogProducts} setFormCatalogProducts={setFormCatalogProducts}
               sparkAuthCodes={sparkAuthCodes} setSparkAuthCodes={setSparkAuthCodes}
               urlMode={urlMode} setUrlMode={setUrlMode}
               adType={adType} setAdType={setAdType}
+              adNameFormulaV2={adNameFormulaV2} setAdNameFormulaV2={setAdNameFormulaV2}
+              selectedTemplate={selectedTemplate} setSelectedTemplate={setSelectedTemplate}
+              showCustomLink={showCustomLink} setShowCustomLink={setShowCustomLink}
+              customLink={customLink} setCustomLink={setCustomLink}
+              launchPaused={launchPaused} setLaunchPaused={setLaunchPaused}
               importedPosts={importedPosts} setImportedPosts={setImportedPosts}
 
               // Form Fetching States
@@ -1174,7 +1345,7 @@ export default function TikTokAds() {
                 setSelectedIgOrganicPosts={setSelectedIgOrganicPosts}
                 variants={variants}
                 activeVariantId={activeVariantId}
-                handleAddVariant={() => { }} // Safe no-op to disable adding variants in TikTok
+                handleAddVariant={handleAddVariant}
                 handleDeleteAllVariants={handleDeleteAllVariants}
                 fileVariantMap={fileVariantMap}
                 setFileVariantMap={setFileVariantMap}

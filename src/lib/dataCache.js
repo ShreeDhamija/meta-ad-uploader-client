@@ -34,12 +34,6 @@ export const clearCache = (name) => {
       Object.keys(localStorage)
         .filter((key) => key.startsWith(CACHE_PREFIX))
         .forEach((key) => localStorage.removeItem(key));
-
-      // Clear non-prefixed application caches
-      localStorage.removeItem('home_adAccountSettings_cache');
-      localStorage.removeItem('adAccountSettings_draft');
-      localStorage.removeItem('tiktokAdvertiserSettings_draft');
-      localStorage.removeItem('current_user_id');
     }
   } catch { }
 };
@@ -55,20 +49,17 @@ export const clearAnalyticsCache = () => {
 
 export const clearTikTokSessionData = () => {
   try {
-    const keys = [
+    [
       'tiktok_uid',
       'tiktok_token',
       'tiktok_advertiser_ids',
       'tiktok_user',
       'tiktok_ads_cache',
       'last_selected_tiktok_advertiser',
-      'tiktokAdvertiserSettings_draft'
-    ];
-    keys.forEach((key) => {
-      try { localStorage.removeItem(key) } catch (_) { }
-    });
+      'tiktokAdvertiserSettings_draft',
+    ].forEach((key) => localStorage.removeItem(key));
     clearCache('tiktokAdvertisers');
     clearCache('tiktokIdentities');
     clearCache('tiktokSettings');
-  } catch (_) { }
+  } catch { }
 };

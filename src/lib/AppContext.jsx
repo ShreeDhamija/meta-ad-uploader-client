@@ -1,8 +1,10 @@
 import { useEffect, useState, useContext, useMemo, useCallback, createContext, useRef } from "react"
+import PropTypes from "prop-types"
 import useSubscription from "@/lib/useSubscriptionSettings"
 import useGlobalSettings from "@/lib/useGlobalSettings"
 import { readCache, writeCache, clearCache } from "@/lib/dataCache"
-import { useTikTokAuth } from "./TikTokAuthContext"
+import { useTikTokAuth } from "@/lib/TikTokAuthContext"
+import { getPlanAccountLimit } from "@/lib/accountSelection"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
@@ -27,17 +29,29 @@ export const AppProvider = ({ children }) => {
   const [allAdAccounts, setAllAdAccounts] = useState(cachedAccounts || [])
   const [pagesLoading, setPagesLoading] = useState(false)
   const [adAccountsLoading, setAdAccountsLoading] = useState(false)
-
-  const cachedTiktokIdentities = readCache('tiktokIdentities') || {}
-  const [tiktokIdentities, setTiktokIdentities] = useState(cachedTiktokIdentities)
+  const [tiktokIdentities, setTiktokIdentities] = useState(readCache('tiktokIdentities') || {})
   const [tiktokIdentitiesLoading, setTiktokIdentitiesLoading] = useState({})
-
-  const cachedTiktokAdvertisers = readCache('tiktokAdvertisers')
-  const [tiktokAdvertisers, setTiktokAdvertisers] = useState(cachedTiktokAdvertisers || [])
+  const tiktokIdentitiesRef = useRef(tiktokIdentities)
+  const tiktokIdentitiesLoaded = useRef(new Set(
+    Object.entries(tiktokIdentities)
+      .filter(([, identities]) => Array.isArray(identities) && identities.length > 0)
+      .map(([advertiserId]) => advertiserId),
+  ))
+  const tiktokIdentityRequests = useRef(new Map())
+  const tiktokIdentityGeneration = useRef(0)
+  const [allTikTokAdvertisers, setAllTikTokAdvertisers] = useState(readCache('tiktokAdvertisers') || [])
   const [tiktokAdvertisersLoading, setTiktokAdvertisersLoading] = useState(false)
+  const {
+    tiktokUser,
+    isTikTokLoggedIn,
+    tiktokAdvertisers: authenticatedTikTokAdvertisers,
+    isLoading: tiktokAuthLoading,
+    tiktokFetch,
+  } = useTikTokAuth()
+  const previousTikTokSubject = useRef(tiktokUser?.subject || null)
 
   const { subscriptionData } = useSubscription()
-  const { selectedAdAccountIds } = useGlobalSettings()
+  const { selectedAdAccountIds, selectedTikTokAdvertiserIds } = useGlobalSettings()
 
   const filteredAdAccounts = useMemo(() => {
     if (subscriptionData.planType === 'starter' && selectedAdAccountIds.length > 0) {
@@ -47,6 +61,19 @@ export const AppProvider = ({ children }) => {
     }
     return allAdAccounts
   }, [allAdAccounts, subscriptionData.planType, selectedAdAccountIds])
+
+  const filteredTikTokAdvertisers = useMemo(() => {
+    const limit = getPlanAccountLimit(subscriptionData.planType)
+    const shouldFilter = (
+      (Number.isFinite(limit) || subscriptionData.planType === 'free_trial')
+      && selectedTikTokAdvertiserIds.length > 0
+    )
+    if (!shouldFilter) return allTikTokAdvertisers
+    return allTikTokAdvertisers.filter((advertiser) => {
+      const id = String(advertiser.advertiser_id || advertiser.id)
+      return selectedTikTokAdvertiserIds.includes(id)
+    })
+  }, [allTikTokAdvertisers, selectedTikTokAdvertiserIds, subscriptionData.planType])
 
   const fetchAdAccounts = useCallback(async () => {
     setAdAccountsLoading(true);
@@ -85,59 +112,71 @@ export const AppProvider = ({ children }) => {
     }
   }, [])
 
-
   const fetchTikTokIdentities = useCallback(async (advertiserId, force = false) => {
-    if (!advertiserId) return [];
+    if (!advertiserId || !isTikTokLoggedIn) return []
+    const key = String(advertiserId)
+    if (!force && tiktokIdentitiesLoaded.current.has(key)) {
+      return tiktokIdentitiesRef.current[key] || []
+    }
+    if (tiktokIdentityRequests.current.has(key)) {
+      return tiktokIdentityRequests.current.get(key)
+    }
 
-    if (!force) {
-      if (tiktokIdentities[advertiserId]?.length > 0) {
-        return tiktokIdentities[advertiserId];
+    setTiktokIdentitiesLoading((previous) => ({ ...previous, [advertiserId]: true }))
+    const requestGeneration = tiktokIdentityGeneration.current
+    const request = (async () => {
+      try {
+        const res = await tiktokFetch(
+          `${API_BASE_URL}/api/tiktok/fetch-identities?advertiserId=${encodeURIComponent(advertiserId)}&_t=${Date.now()}`,
+          { headers: { Accept: 'application/json' } },
+        )
+        if (!res.ok) return []
+        const data = await res.json()
+        const list = data.identities || []
+        if (requestGeneration !== tiktokIdentityGeneration.current) return []
+        tiktokIdentitiesLoaded.current.add(key)
+        setTiktokIdentities((previous) => {
+          const updated = { ...previous, [key]: list }
+          tiktokIdentitiesRef.current = updated
+          writeCache('tiktokIdentities', updated)
+          return updated
+        })
+        return list
+      } catch (err) {
+        console.error("Failed to fetch TikTok identities:", err)
+        return []
+      } finally {
+        if (tiktokIdentityRequests.current.get(key) === request) {
+          tiktokIdentityRequests.current.delete(key)
+          setTiktokIdentitiesLoading((previous) => ({ ...previous, [key]: false }))
+        }
       }
-    }
+    })()
 
-    setTiktokIdentitiesLoading(prev => ({ ...prev, [advertiserId]: true }));
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/tiktok/fetch-identities?advertiserId=${advertiserId}&_t=${Date.now()}`, {
-        credentials: "include",
-        headers: { 'Content-Type': 'application/json' }
-      });
-      const data = await res.json();
-      const list = data.identities || [];
-
-      setTiktokIdentities(prev => {
-        const updated = { ...prev, [advertiserId]: list };
-        writeCache('tiktokIdentities', updated);
-        return updated;
-      });
-      return list;
-    } catch (err) {
-      console.error("Failed to fetch TikTok identities:", err);
-      return [];
-    } finally {
-      setTiktokIdentitiesLoading(prev => ({ ...prev, [advertiserId]: false }));
-    }
-  }, [tiktokIdentities]);
+    tiktokIdentityRequests.current.set(key, request)
+    return request
+  }, [isTikTokLoggedIn, tiktokFetch])
 
   const fetchTikTokAdvertisers = useCallback(async () => {
-    setTiktokAdvertisersLoading(true);
+    if (!isTikTokLoggedIn) return []
+    setTiktokAdvertisersLoading(true)
     try {
-      const res = await fetch(`${API_BASE_URL}/api/tiktok/fetch-advertisers`, {
-        credentials: "include",
-        headers: { 'Content-Type': 'application/json' }
-      });
-      const data = await res.json();
-      if (data.advertisers) {
-        setTiktokAdvertisers(data.advertisers)
-        writeCache('tiktokAdvertisers', data.advertisers)
-        return data.advertisers
-      }
+      const res = await tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-advertisers`, {
+        headers: { Accept: 'application/json' },
+      })
+      if (!res.ok) return []
+      const data = await res.json()
+      const advertisers = data.advertisers || []
+      setAllTikTokAdvertisers(advertisers)
+      writeCache('tiktokAdvertisers', advertisers)
+      return advertisers
     } catch (err) {
       console.error("Failed to fetch TikTok advertisers:", err)
+      return []
     } finally {
-      setTiktokAdvertisersLoading(false);
+      setTiktokAdvertisersLoading(false)
     }
-  }, []);
-
+  }, [isTikTokLoggedIn, tiktokFetch])
 
 
   const refreshPagePictures = useCallback(async (pagesToRefresh) => {
@@ -203,28 +242,39 @@ export const AppProvider = ({ children }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const { tiktokUser } = useTikTokAuth()
-  const prevTikTokUidRef = useRef(tiktokUser?.tiktokId || null)
-
-  useEffect(() => {
-    const activeUid = tiktokUser?.tiktokId || null
-    if (prevTikTokUidRef.current !== activeUid) {
-      setTiktokIdentities({})
-      setTiktokAdvertisers([])
-      prevTikTokUidRef.current = activeUid
-    }
-
-    if (activeUid) {
-      const cached = readCache('tiktokAdvertisers')
-      if (!cached) {
-        fetchTikTokAdvertisers()
-      }
-    }
-  }, [tiktokUser, fetchTikTokAdvertisers])
-
   useEffect(() => {
     setAdAccounts(filteredAdAccounts)
   }, [filteredAdAccounts])
+
+  useEffect(() => {
+    if (tiktokAuthLoading) return
+
+    const subject = tiktokUser?.subject || null
+    if (previousTikTokSubject.current !== subject) {
+      setTiktokIdentities({})
+      tiktokIdentitiesRef.current = {}
+      tiktokIdentitiesLoaded.current.clear()
+      tiktokIdentityGeneration.current += 1
+      tiktokIdentityRequests.current.clear()
+      previousTikTokSubject.current = subject
+    }
+
+    if (!subject || !isTikTokLoggedIn) {
+      setAllTikTokAdvertisers([])
+      return
+    }
+
+    // /api/tiktok/auth/me already returns the current advertiser list. Keep the
+    // shared app state in sync with that response instead of clearing it and
+    // relying on a second fetch or a manual refresh.
+    setAllTikTokAdvertisers(authenticatedTikTokAdvertisers)
+    writeCache('tiktokAdvertisers', authenticatedTikTokAdvertisers)
+  }, [
+    authenticatedTikTokAdvertisers,
+    isTikTokLoggedIn,
+    tiktokAuthLoading,
+    tiktokUser,
+  ])
 
   return (
     <AppContext.Provider value={{
@@ -237,13 +287,18 @@ export const AppProvider = ({ children }) => {
       tiktokIdentities,
       tiktokIdentitiesLoading,
       fetchTikTokIdentities,
-      tiktokAdvertisers,
+      tiktokAdvertisers: filteredTikTokAdvertisers,
+      allTikTokAdvertisers,
       tiktokAdvertisersLoading,
       fetchTikTokAdvertisers,
     }}>
       {children}
     </AppContext.Provider>
   )
+}
+
+AppProvider.propTypes = {
+  children: PropTypes.node.isRequired,
 }
 
 export const useAppData = () => useContext(AppContext)

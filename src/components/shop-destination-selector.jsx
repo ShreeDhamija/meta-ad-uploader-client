@@ -1,14 +1,29 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Button } from "@/components/ui/button"
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
-import { ChevronsUpDown, Check } from 'lucide-react'
+import { Command, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { ChevronsUpDown, Check, Loader } from 'lucide-react'
 import { cn } from "@/lib/utils"
 import ShopIcon from '@/assets/icons/bag.svg?react';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
+
+// Module-level so the default doesn't churn the memo deps on every render
+const DEFAULT_ALLOWED_TYPES = ["shop", "product_set", "product"]
+
+// Options can repeat across catalogs/sets; keep the first occurrence of each id so the
+// dropdown never renders duplicate rows (React keys included).
+function dedupeById(options) {
+    const seen = new Set()
+    return options.filter((option) => {
+        if (!option.id || seen.has(option.id)) return false
+        seen.add(option.id)
+        return true
+    })
+}
 
 export default function ShopDestinationSelector({
     pageId,
@@ -17,7 +32,7 @@ export default function ShopDestinationSelector({
     setSelectedShopDestinationType,
     isFieldModified,
     isVisible = false,
-    allowedTypes = ["shop", "product_set", "product"],
+    allowedTypes = DEFAULT_ALLOWED_TYPES,
     label = "Shop Destination",
     description = "Select a shop or product set for your shop ads",
     placeholder = "Select shop destination",
@@ -33,28 +48,32 @@ export default function ShopDestinationSelector({
         products: [],
     })
     const [isLoading, setIsLoading] = useState(false)
-    const [lastFetchedPageId, setLastFetchedPageId] = useState(null)
+    const [isLoadingMore, setIsLoadingMore] = useState(false)
+    const [productSetCursor, setProductSetCursor] = useState(null)
+    const [lastFetchKey, setLastFetchKey] = useState(null)
+    const isProductSetOnly = allowedTypes.length === 1 && allowedTypes[0] === "product_set"
 
 
 
-    // Fetch shop data only when pageId changes (not when isVisible changes)
+    // Hidden selector instances must not duplicate this relatively expensive request.
     useEffect(() => {
         if (!pageId) {
             setShopData({ shops: [], productSets: [], products: [] })
-            setLastFetchedPageId(null)
+            setProductSetCursor(null)
+            setLastFetchKey(null)
             return
         }
+        if (!isVisible) return
 
-        // Skip fetch if we already have data for this pageId
-        if (pageId === lastFetchedPageId) {
-            return
-        }
+        const fetchKey = `${pageId}:${isProductSetOnly ? "product_sets" : "all"}`
+        if (fetchKey === lastFetchKey) return
 
         const fetchShopData = async () => {
             setIsLoading(true)
             try {
+                const scope = isProductSetOnly ? "&scope=product_sets" : ""
                 const res = await fetch(
-                    `${API_BASE_URL}/auth/fetch-shop-data?pageId=${pageId}`,
+                    `${API_BASE_URL}/auth/fetch-shop-data?pageId=${encodeURIComponent(pageId)}${scope}`,
                     { credentials: "include" },
                 )
                 const data = await res.json()
@@ -65,57 +84,185 @@ export default function ShopDestinationSelector({
                         productSets: data.product_sets || [],
                         products: data.products || [],
                     })
-                    setLastFetchedPageId(pageId)
+                    setProductSetCursor(data.product_set_cursor || null)
+                    setLastFetchKey(fetchKey)
                 } else {
                     console.error("Failed to fetch shop data:", data.error)
                     setShopData({ shops: [], productSets: [], products: [] })
-                    setLastFetchedPageId(null)
+                    setProductSetCursor(null)
+                    setLastFetchKey(null)
                 }
             } catch (err) {
                 console.error("Error fetching shop data:", err)
                 setShopData({ shops: [], productSets: [], products: [] })
-                setLastFetchedPageId(null)
+                setProductSetCursor(null)
+                setLastFetchKey(null)
             } finally {
                 setIsLoading(false)
             }
         }
 
         fetchShopData()
-    }, [pageId, lastFetchedPageId])
+    }, [isProductSetOnly, isVisible, lastFetchKey, pageId])
 
-    // Create options for the dropdown
-    const shopOptions = shopData.shops
-        //.filter((shop) => shop.shop_status === "ACTIVE" && shop.fb_sales_channel_status === "ENABLED")
-        .map((shop) => ({
-            id: shop.storefront_shop_id,
-            label: shop.fb_page_name,
-            type: "shop",
-        }))
+    const handleLoadMoreProductSets = async () => {
+        if (!productSetCursor || isLoadingMore) return
+        setIsLoadingMore(true)
+        try {
+            const res = await fetch(
+                `${API_BASE_URL}/auth/fetch-shop-product-sets` +
+                    `?pageId=${encodeURIComponent(pageId)}&cursor=${encodeURIComponent(productSetCursor)}`,
+                { credentials: "include" },
+            )
+            const data = await res.json()
+            if (!res.ok) throw new Error(data.error || "Failed to load more product sets")
 
-    const productSetOptions = shopData.productSets.map((set) => ({
-        id: set.id,
-        label: set.name,
-        type: "product_set",
-    }))
+            setShopData((previous) => ({
+                ...previous,
+                productSets: dedupeById([
+                    ...previous.productSets,
+                    ...(data.product_sets || []),
+                ]),
+            }))
+            setProductSetCursor(data.product_set_cursor || null)
+        } catch (err) {
+            console.error("Failed to load more product sets:", err)
+        } finally {
+            setIsLoadingMore(false)
+        }
+    }
 
-    const productOptions = shopData.products.map((product) => ({
-        id: product.id,
-        label: product.name,
-        type: "product",
-    }))
+    // Create options for the dropdown. `meta` is the gray subtext that tells otherwise
+    // identically-named entries apart (products in particular repeat names constantly).
+    const shopOptions = useMemo(
+        () =>
+            dedupeById(
+                shopData.shops
+                    //.filter((shop) => shop.shop_status === "ACTIVE" && shop.fb_sales_channel_status === "ENABLED")
+                    .map((shop) => ({
+                        id: shop.storefront_shop_id,
+                        label: (shop.fb_page_name || "").replace("Shop: ", ""),
+                        meta: shop.storefront_shop_id,
+                        type: "shop",
+                    })),
+            ),
+        [shopData.shops],
+    )
 
+    const productSetOptions = useMemo(
+        () =>
+            dedupeById(
+                shopData.productSets.map((set) => ({
+                    id: set.id,
+                    label: (set.name || "").replace("Product Set: ", ""),
+                    meta: isProductSetOnly ? null : (set.catalog_name || set.catalog_id || null),
+                    catalogId: set.catalog_id || "unknown",
+                    catalogName: set.catalog_name || "Catalog",
+                    type: "product_set",
+                })),
+            ),
+        [isProductSetOnly, shopData.productSets],
+    )
 
-    const allOptions = [
-        ...(allowedTypes.includes("shop") ? shopOptions : []),
-        ...(allowedTypes.includes("product_set") ? productSetOptions : []),
-        ...(allowedTypes.includes("product") ? productOptions : []),
-    ]
-    // const filteredOptions = allOptions.filter((option) => option.label.toLowerCase().includes(searchValue.toLowerCase()))
+    const productOptions = useMemo(
+        () =>
+            dedupeById(
+                shopData.products.map((product) => ({
+                    id: product.id,
+                    label: (product.name || "").replace("Product: ", ""),
+                    meta:
+                        [product.set_name || product.catalog_name, product.retailer_id]
+                            .filter(Boolean)
+                            .join(" · ") || null,
+                    type: "product",
+                })),
+            ),
+        [shopData.products],
+    )
+
+    const allOptions = useMemo(
+        () => [
+            ...(allowedTypes.includes("shop") ? shopOptions : []),
+            ...(allowedTypes.includes("product_set") ? productSetOptions : []),
+            ...(allowedTypes.includes("product") ? productOptions : []),
+        ],
+        [allowedTypes, shopOptions, productSetOptions, productOptions],
+    )
+
+    // Search matches the name or the gray subtext, so a retailer id or catalog name works too
+    const query = searchValue.trim().toLowerCase()
+    const filterOptions = (options, q) =>
+        q
+            ? options.filter(
+                  (option) =>
+                      option.label.toLowerCase().includes(q) ||
+                      (option.meta || "").toLowerCase().includes(q) ||
+                      (option.catalogName || "").toLowerCase().includes(q),
+              )
+            : options
+
+    const filteredShopOptions = useMemo(() => filterOptions(shopOptions, query), [shopOptions, query])
+    const filteredProductOptions = useMemo(() => filterOptions(productOptions, query), [productOptions, query])
+    const filteredProductSetOptions = useMemo(
+        () => filterOptions(productSetOptions, query),
+        [productSetOptions, query],
+    )
+    const filteredProductSetGroups = useMemo(() => {
+        const groups = new Map()
+        for (const option of filteredProductSetOptions) {
+            const key = option.catalogId
+            if (!groups.has(key)) {
+                groups.set(key, {
+                    name: option.catalogName,
+                    options: [],
+                })
+            }
+            groups.get(key).options.push(option)
+        }
+        return Array.from(groups.entries())
+    }, [filteredProductSetOptions])
+
+    const visibleCount =
+        (allowedTypes.includes("shop") ? filteredShopOptions.length : 0) +
+        (allowedTypes.includes("product") ? filteredProductOptions.length : 0) +
+        (allowedTypes.includes("product_set") ? filteredProductSetOptions.length : 0)
+
     const selectedOption = allOptions.find((option) => option.id === selectedShopDestination)
 
     if (!isVisible) {
         return null
     }
+
+    const sectionHeader = (title, count) => (
+        <div className="sticky top-0 z-10 flex items-center justify-between rounded-lg bg-gray-200 px-2 py-1.5 text-xs font-semibold text-gray-600">
+            <span>{title}</span>
+            <span className="font-normal text-gray-500">{count}</span>
+        </div>
+    )
+
+    const renderItem = (option) => (
+        <CommandItem
+            key={option.id}
+            value={option.id}
+            onSelect={() => {
+                setSelectedShopDestination(option.id)
+                setSelectedShopDestinationType(option.type)
+                setOpen(false)
+            }}
+            className={cn(
+                "px-3 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
+                "data-[selected=true]:bg-gray-100",
+                selectedShopDestination === option.id && "bg-gray-100 rounded-2xl font-semibold",
+                "hover:bg-gray-100",
+                "flex items-center gap-2",
+            )}
+            data-selected={option.id === selectedShopDestination}
+        >
+            <span className="truncate">{option.label}</span>
+            {option.meta && <span className="ml-auto truncate text-xs text-gray-400">{option.meta}</span>}
+            {selectedShopDestination === option.id && <Check className="ml-2 h-4 w-4 shrink-0" />}
+        </CommandItem>
+    )
 
     return (
         <div className="space-y-2">
@@ -136,23 +283,28 @@ export default function ShopDestinationSelector({
                         aria-expanded={open}
                         disabled={isLoading || allOptions.length === 0}
                         className={cn(
-                            "w-full justify-between border border-gray-400 rounded-xl bg-white shadow hover:bg-white",
+                            "w-full justify-between border-gray-300 rounded-2xl py-4.5 bg-white shadow hover:bg-white",
                             triggerClassName,
                         )}
                     >
-                        {isLoading
-                            ? "Loading shop destinations..."
-                                : selectedOption
-                                    ? selectedOption.label
-                                    : allOptions.length === 0
-                                        ? emptyLabel
-                                        : placeholder}
+                        {isLoading ? (
+                            <div className="flex items-center gap-2">
+                                <Loader className="h-4 w-4 animate-spin" />
+                                <span>Loading shop destinations...</span>
+                            </div>
+                        ) : selectedOption ? (
+                            <span className="truncate">{selectedOption.label}</span>
+                        ) : allOptions.length === 0 ? (
+                            emptyLabel
+                        ) : (
+                            placeholder
+                        )}
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                 </PopoverTrigger>
 
                 <PopoverContent
-                    className="min-w-[--radix-popover-trigger-width] !max-w-none p-0 bg-white shadow-lg rounded-xl"
+                    className="min-w-[--radix-popover-trigger-width] !max-w-none p-0 bg-white shadow-lg rounded-2xl"
                     align="start"
                     sideOffset={4}
                     side="bottom"
@@ -160,7 +312,7 @@ export default function ShopDestinationSelector({
                     style={{
                         minWidth: "var(--radix-popover-trigger-width)",
                         width: "auto",
-                        maxWidth: "none",
+                        maxWidth: "var(--radix-popover-trigger-width)",
                     }}
                 >
                     <Command filter={() => 1} loop={false} shouldFilter={false}>
@@ -168,116 +320,69 @@ export default function ShopDestinationSelector({
                             placeholder={searchPlaceholder}
                             value={searchValue}
                             onValueChange={setSearchValue}
+                            className="bg-transparent"
+                            wrapperClassName="bg-gray-50 border-gray-200 rounded-[20px]"
                         />
-                        <CommandEmpty>No shop destinations found.</CommandEmpty>
-                        <CommandList className="max-h-[300px] overflow-y-auto rounded-xl custom-scrollbar" selectOnFocus={false}>
-                            {/* Shops Section */}
-                            {allowedTypes.includes("shop") && shopOptions.length > 0 && (
-                                <CommandGroup>
-                                    <div className="px-2 py-1.5 text-xs font-semibold text-gray-600 bg-gray-200 sticky top-0 rounded-lg">
-                                        Shops
+                        <CommandList className="max-h-none overflow-hidden rounded-2xl" selectOnFocus={false}>
+                            {/* [&>div]:!block overrides Radix's inline `display: table` on the
+                                viewport content, which otherwise breaks the sticky headers */}
+                            <ScrollArea viewportClassName="max-h-[325px] [&>div]:!block">
+                                {/* Shops Section */}
+                                {allowedTypes.includes("shop") && filteredShopOptions.length > 0 && (
+                                    <CommandGroup>
+                                        {sectionHeader("Shops", filteredShopOptions.length)}
+                                        {filteredShopOptions.map(renderItem)}
+                                    </CommandGroup>
+                                )}
+
+                                {/* Products Section */}
+                                {allowedTypes.includes("product") && filteredProductOptions.length > 0 && (
+                                    <CommandGroup>
+                                        {sectionHeader("Products", filteredProductOptions.length)}
+                                        {filteredProductOptions.map(renderItem)}
+                                    </CommandGroup>
+                                )}
+
+                                {/* Product Sets Sections */}
+                                {allowedTypes.includes("product_set") && filteredProductSetGroups.map(
+                                    ([catalogId, group]) => (
+                                        <CommandGroup key={catalogId}>
+                                            {sectionHeader(
+                                                `${group.name} Product Sets`,
+                                                group.options.length,
+                                            )}
+                                            {group.options.map(renderItem)}
+                                        </CommandGroup>
+                                    ),
+                                )}
+
+                                {/* No results */}
+                                {visibleCount === 0 && (
+                                    <div className="px-4 py-5 text-center text-sm text-gray-500">
+                                        {query ? "No results found." : emptyLabel}
                                     </div>
-                                    {shopOptions
-                                        .filter((option) => option.label.toLowerCase().includes(searchValue.toLowerCase()))
-                                        .map((option) => (
-                                            <CommandItem
-                                                key={option.id}
-                                                value={option.id}
-                                                onSelect={() => {
-                                                    setSelectedShopDestination(option.id)
-                                                    setSelectedShopDestinationType(option.type)
-                                                    setOpen(false)
-                                                }}
-                                                className={cn(
-                                                    "px-4 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150",
-                                                    "data-[selected=true]:bg-gray-100",
-                                                    selectedShopDestination === option.id && "bg-gray-100 rounded-xl font-semibold",
-                                                    "hover:bg-gray-100",
-                                                    "flex items-center justify-between",
-                                                )}
-                                                data-selected={option.id === selectedShopDestination}
-                                            >
-                                                <span>{option.label.replace('Shop: ', '')}</span> {/* Remove prefix */}
-                                                {selectedShopDestination === option.id && <Check className="ml-2 h-4 w-4" />}
-                                            </CommandItem>
-                                        ))}
-                                </CommandGroup>
-                            )}
+                                )}
 
-                            {/* Products Section */}
-                            {allowedTypes.includes("product") && productOptions.length > 0 && (
-                                <CommandGroup>
-                                    <div className="px-2 py-1.5 text-xs font-semibold text-gray-600 bg-gray-200 sticky top-0 rounded-lg">
-                                        Products
+                                {productSetCursor && (
+                                    <div className="px-3 py-2">
+                                        <button
+                                            type="button"
+                                            onClick={handleLoadMoreProductSets}
+                                            disabled={isLoadingMore}
+                                            className="w-full rounded-xl bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-60"
+                                        >
+                                            {isLoadingMore ? (
+                                                <span className="flex items-center gap-2">
+                                                    <Loader className="h-3.5 w-3.5 animate-spin" />
+                                                    Loading...
+                                                </span>
+                                            ) : (
+                                                "Load More"
+                                            )}
+                                        </button>
                                     </div>
-                                    {productOptions
-                                        .filter((option) => option.label.toLowerCase().includes(searchValue.toLowerCase()))
-                                        .map((option) => (
-                                            <CommandItem
-                                                key={option.id}
-                                                value={option.id}
-                                                onSelect={() => {
-                                                    setSelectedShopDestination(option.id)
-                                                    setSelectedShopDestinationType(option.type)
-                                                    setOpen(false)
-                                                }}
-                                                className={cn(
-                                                    "px-4 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150",
-                                                    "data-[selected=true]:bg-gray-100",
-                                                    selectedShopDestination === option.id && "bg-gray-100 rounded-xl font-semibold",
-                                                    "hover:bg-gray-100",
-                                                    "flex items-center justify-between",
-                                                )}
-                                                data-selected={option.id === selectedShopDestination}
-                                            >
-                                                <span>{option.label.replace('Product: ', '')}</span> {/* Remove prefix */}
-                                                {selectedShopDestination === option.id && <Check className="ml-2 h-4 w-4" />}
-                                            </CommandItem>
-                                        ))}
-                                </CommandGroup>
-                            )}
-
-                            {/* Product Sets Section */}
-                            {allowedTypes.includes("product_set") && productSetOptions.length > 0 && (
-                                <CommandGroup>
-                                    <div className="px-2 py-1.5 text-xs font-semibold text-gray-600 bg-gray-200 sticky top-0 rounded-lg">
-                                        Product Sets
-                                    </div>
-                                    {productSetOptions
-                                        .filter((option) => option.label.toLowerCase().includes(searchValue.toLowerCase()))
-                                        .map((option) => (
-                                            <CommandItem
-                                                key={option.id}
-                                                value={option.id}
-                                                onSelect={() => {
-                                                    setSelectedShopDestination(option.id)
-                                                    setSelectedShopDestinationType(option.type)
-                                                    setOpen(false)
-                                                }}
-                                                className={cn(
-                                                    "px-4 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150",
-                                                    "data-[selected=true]:bg-gray-100",
-                                                    selectedShopDestination === option.id && "bg-gray-100 rounded-xl font-semibold",
-                                                    "hover:bg-gray-100",
-                                                    "flex items-center justify-between",
-                                                )}
-                                                data-selected={option.id === selectedShopDestination}
-                                            >
-                                                <span>{option.label.replace('Product Set: ', '')}</span>
-                                                {selectedShopDestination === option.id && <Check className="ml-2 h-4 w-4" />}
-                                            </CommandItem>
-                                        ))}
-                                </CommandGroup>
-                            )}
-
-
-
-                            {/* No results */}
-                            {allOptions.length === 0 && (
-                                <CommandItem disabled className="opacity-50 cursor-not-allowed">
-                                    No shop destinations found.
-                                </CommandItem>
-                            )}
+                                )}
+                            </ScrollArea>
                         </CommandList>
                     </Command>
                 </PopoverContent>

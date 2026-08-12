@@ -1,11 +1,9 @@
-// Creative-strategy module shell. Left vertical sidebar (mirrors the Settings
-// page design system) + a shared top context bar (Select Brand / Select
-// Product) + the active view. Brands + Products are functional (Phase 3); the
-// other nav items are placeholders their phases fill in.
-import { useEffect, useState } from "react";
+// Creative-strategy module shell. The page header and sidebar are shared;
+// brand/product context controls move into each workflow so the first screen
+// of every tab can follow its own hierarchy without losing shared state.
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Rocket,
   AudioLines,
   Layers,
   Box,
@@ -19,7 +17,9 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/AuthContext";
+import { useAppData } from "@/lib/AppContext";
 import { creativeApi } from "@/lib/creativeApi";
+import { Button } from "@/components/ui/button";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import CostTracker from "./CostTracker";
 import { JobsProvider } from "./JobsContext";
@@ -34,6 +34,9 @@ import GenerateView from "./views/GenerateView";
 import InspirationView from "./views/InspirationView";
 import WeeklyView from "./views/WeeklyView";
 import ComingSoon from "./views/ComingSoon";
+import doodle from "@/assets/doodle.webp";
+import rocket from "@/assets/rocket2.webp";
+import "./creative-strategy.css";
 
 const NAV = [
   { key: "overview", label: "Overview", icon: AudioLines, phase: "later" },
@@ -49,8 +52,8 @@ const NAV = [
 
 const DESCRIPTIONS = {
   overview: "Snapshot of the selected brand and product.",
-  brands: "Create and manage brands (each maps to one Meta ad account).",
-  products: "Products under the selected brand. Meta ad account is required.",
+  brands: "Create and manage Brands (Each brand maps to 1 Meta Ad Account)",
+  products: "Create and manage Products for the selected Brand",
   intelligence: "Run Meta ad analysis and review analyzed creatives + the strategy audit.",
   research: "Run the 7-phase research agent → personas, brand deep dive, language bank.",
   library: "Generate draft hooks, headlines, and primary text per persona.",
@@ -62,6 +65,8 @@ const DESCRIPTIONS = {
 export default function CreativeStrategyLayout() {
   const navigate = useNavigate();
   const { userName, profilePicUrl, handleLogout } = useAuth();
+  const { adAccounts, adAccountsLoading, refetchAdAccounts } = useAppData();
+  const reconciledAccountsRef = useRef("");
 
   const [activeTab, setActiveTab] = useState("brands");
   const [brands, setBrands] = useState([]);
@@ -72,18 +77,92 @@ export default function CreativeStrategyLayout() {
   const [selectedProductId, setSelectedProductId] = useState(null);
   const [error, setError] = useState(null);
 
-  // Auto-create/refresh brands from the user's linked Meta ad accounts on load.
-  // Falls back to listing existing brands if the Meta sync fails (e.g. no token).
-  const loadBrands = () => {
+  // AppContext is the only source of truth for which Meta accounts exist and
+  // are available on the user's plan. Creative clients are internal mappings
+  // for downstream product APIs; they never contribute accounts to this list.
+  const reconcileCreativeClients = useCallback(async (accounts) => {
+    const sourceAccounts = Array.isArray(accounts) ? accounts : [];
+    const normaliseId = (value) => String(value || "").replace(/^act_/, "");
+    const accountMetaId = (account) => account.id || (account.account_id ? `act_${account.account_id}` : "");
+    const accountKey = sourceAccounts
+      .map((account) => `${normaliseId(accountMetaId(account))}:${account.name || account.account_name || ""}`)
+      .sort()
+      .join(",");
+
+    reconciledAccountsRef.current = accountKey || "__empty__";
     setBrandsLoading(true);
-    return creativeApi.syncBrands()
-      .then((r) => setBrands(r.clients))
-      .catch((e) => {
-        setError(`Meta sync failed (${e.message}) — showing existing brands`);
-        return creativeApi.listClients().then((r) => setBrands(r.clients)).catch(() => {});
-      })
-      .finally(() => setBrandsLoading(false));
-  };
+    if (sourceAccounts.length === 0) {
+      setBrands([]);
+      setError(null);
+      setBrandsLoading(false);
+      return [];
+    }
+
+    try {
+      const existingResponse = await creativeApi.listClients();
+      let creativeClients = existingResponse.clients || [];
+      let clientsByMetaId = new Map(
+        creativeClients.map((client) => [normaliseId(client.metaAdAccountId), client]),
+      );
+      const missingAccounts = sourceAccounts.filter((account) => !clientsByMetaId.has(normaliseId(accountMetaId(account))));
+
+      if (missingAccounts.length > 0) {
+        await Promise.allSettled(missingAccounts.map((account) => creativeApi.createClient({
+          name: account.name || account.account_name || `Meta Account ${accountMetaId(account)}`,
+          metaAdAccountId: accountMetaId(account),
+        })));
+        const refreshedResponse = await creativeApi.listClients();
+        creativeClients = refreshedResponse.clients || [];
+        clientsByMetaId = new Map(
+          creativeClients.map((client) => [normaliseId(client.metaAdAccountId), client]),
+        );
+      }
+
+      const mappedBrands = sourceAccounts.map((account) => {
+        const metaAdAccountId = accountMetaId(account);
+        const client = clientsByMetaId.get(normaliseId(metaAdAccountId));
+        if (!client) {
+          return {
+            id: `meta:${normaliseId(metaAdAccountId)}`,
+            name: account.name || account.account_name || `Meta Account ${metaAdAccountId}`,
+            metaAdAccountId,
+            mappingPending: true,
+          };
+        }
+        return {
+          ...client,
+          name: account.name || account.account_name || client.name,
+          metaAdAccountId,
+        };
+      });
+
+      setBrands(mappedBrands);
+      setError(mappedBrands.every((brand) => !brand.mappingPending)
+        ? null
+        : "Some Meta accounts could not be prepared for Creative Strategy. Refresh Accounts to retry.");
+      return mappedBrands;
+    } catch (mappingError) {
+      setBrands([]);
+      setError(`Creative Strategy could not prepare your Meta accounts: ${mappingError.message}`);
+      return [];
+    } finally {
+      setBrandsLoading(false);
+    }
+  }, []);
+
+  const loadBrands = useCallback(async () => {
+    setBrandsLoading(true);
+    try {
+      const freshAccounts = await refetchAdAccounts();
+      return reconcileCreativeClients(freshAccounts || adAccounts);
+    } catch (accountError) {
+      if (adAccounts.length > 0) return reconcileCreativeClients(adAccounts);
+      setBrands([]);
+      setBrandsLoading(false);
+      setError(`Could not refresh Meta accounts: ${accountError.message}`);
+      return [];
+    }
+  }, [adAccounts, reconcileCreativeClients, refetchAdAccounts]);
   const loadProducts = (brandId) => {
     setProductsLoading(true);
     return creativeApi.listProducts(brandId)
@@ -92,7 +171,27 @@ export default function CreativeStrategyLayout() {
       .finally(() => setProductsLoading(false));
   };
 
-  useEffect(() => { loadBrands(); }, []);
+  // Consume the same AppContext account list as Home and Preferences. No Meta
+  // account fetch or sync is performed through the Creative API.
+  useEffect(() => {
+    if (adAccountsLoading) {
+      setBrandsLoading(true);
+      return;
+    }
+    const accountKey = adAccounts
+      .map((account) => `${String(account.id || account.account_id || "").replace(/^act_/, "")}:${account.name || account.account_name || ""}`)
+      .sort()
+      .join(",");
+    if (adAccounts.length === 0) {
+      reconciledAccountsRef.current = "__empty__";
+      setBrands([]);
+      setBrandsLoading(false);
+      setError(null);
+      return;
+    }
+    if (reconciledAccountsRef.current === accountKey) return;
+    reconcileCreativeClients(adAccounts);
+  }, [adAccounts, adAccountsLoading, reconcileCreativeClients]);
   useEffect(() => {
     if (selectedBrandId) loadProducts(selectedBrandId);
     else setProducts([]);
@@ -103,7 +202,7 @@ export default function CreativeStrategyLayout() {
   const selectedProduct = products.find((p) => p.id === selectedProductId) || null;
 
   const ctx = {
-    brands, brandsLoading, selectedBrand, selectedBrandId, setSelectedBrandId, reloadBrands: loadBrands,
+    brands, brandsLoading: brandsLoading || adAccountsLoading, selectedBrand, selectedBrandId, setSelectedBrandId, reloadBrands: loadBrands,
     products, productsLoading, selectedProduct, selectedProductId, setSelectedProductId, reloadProducts: () => loadProducts(selectedBrandId),
     goTo: setActiveTab,
   };
@@ -127,93 +226,108 @@ export default function CreativeStrategyLayout() {
   };
 
   const active = NAV.find((n) => n.key === activeTab);
+  const showContextSelectors = activeTab !== "brands" && activeTab !== "products";
 
   return (
     <JobsProvider>
-    <div className="flex min-h-screen bg-neutral-100">
+    <div className="creative-strategy flex min-h-screen">
       {/* Sidebar */}
-      <div className="w-[290px] flex flex-col h-screen sticky top-0 px-4 py-6 max-lg:w-[80px] max-lg:min-w-[80px] max-lg:px-2">
-        <div className="rounded-3xl bg-neutral-100 p-4 flex flex-col h-full">
-          <div className="flex-1 flex flex-col">
-            <button
+      <aside className="relative z-10 flex h-screen w-[290px] flex-col overflow-hidden px-4 py-6 max-lg:w-[80px] max-lg:min-w-[80px] max-lg:px-2">
+        <img
+          src={doodle}
+          alt=""
+          aria-hidden="true"
+          className="pointer-events-none absolute -left-[205px] bottom-0 z-0 w-[720px] max-w-none opacity-95 max-lg:hidden"
+        />
+        <div className="relative z-10 flex h-full flex-col rounded-3xl p-4">
+          <div className="flex flex-1 flex-col">
+            <Button
               onClick={() => navigate("/")}
-              className="flex items-center pl-3 justify-start gap-2 bg-white hover:shadow-sm border border-neutral-200 shadow-xs rounded-[20px] py-6 font-medium w-full mb-4 text-neutral-700"
+              className="flex items-center pl-3 justify-start gap-1 bg-white hover:bg-white border border-neutral-200 shadow-xs hover:shadow-sm rounded-[20px] py-7 font-medium w-full mb-4 text-neutral-700"
+              variant="ghost"
             >
-              <Rocket className="w-7 h-7 text-orange-500" />
-              <div className="h-6 w-px bg-neutral-300 mr-1 max-lg:hidden" />
+              <img src={rocket} alt="Home" className="w-8 h-8 object-contain" />
+              <div className="h-6 w-px bg-neutral-300 mr-2 max-lg:hidden" />
               <span className="text-neutral-700 font-semibold max-lg:hidden">Back To Launcher</span>
-            </button>
+            </Button>
 
-            <div className="space-y-2">
+            <nav className="space-y-2">
               {NAV.map(({ key, label, icon: Icon }) => (
                 <button
                   key={key}
                   onClick={() => setActiveTab(key)}
                   className={cn(
-                    "w-full flex items-center gap-2 px-4 py-2 rounded-2xl transition-all h-10 justify-start max-lg:justify-center max-lg:px-2 relative",
+                    "relative flex h-10 w-full items-center justify-start gap-2 rounded-2xl px-4 py-2 transition-all max-lg:justify-center max-lg:px-2",
                     activeTab === key
-                      ? "bg-white border border-gray-300 shadow font-semibold text-neutral-900"
+                      ? "border border-gray-300 bg-white font-semibold text-neutral-900 shadow"
                       : "border border-transparent text-neutral-700 hover:bg-neutral-200",
                   )}
                 >
-                  <Icon className="w-5 h-5 flex-shrink-0 text-neutral-700" />
+                  <Icon className="h-5 w-5 flex-shrink-0 text-neutral-700 transition-all max-lg:h-6 max-lg:w-6" />
                   <span className="text-sm font-medium max-lg:hidden">{label}</span>
                   {activeTab === key && (
                     <span className="ml-auto h-1.5 w-1.5 rounded-full bg-neutral-500 max-lg:hidden" aria-hidden="true" />
                   )}
                 </button>
               ))}
-            </div>
+            </nav>
           </div>
 
           {/* Footer profile */}
-          <div className="pt-4 mt-auto">
-            <div className="w-full flex items-center bg-neutral-50 border border-neutral-200 shadow-xs rounded-[20px] pl-3 pr-3 py-2 max-lg:justify-center max-lg:p-2">
+          <div className="relative z-10 mt-auto pt-4">
+            <div className="flex w-full items-center rounded-[20px] border border-neutral-200 bg-neutral-50 py-2 pl-3 pr-3 shadow-xs max-lg:justify-center max-lg:p-2">
               <div className="flex items-center gap-2 flex-grow max-lg:hidden">
-                <img src={profilePicUrl || "/placeholder.svg"} alt="Profile" className="w-8 h-8 rounded-full object-cover" />
-                <span className="text-sm font-medium text-neutral-800 truncate max-w-[120px]">{userName}</span>
+                <img src={profilePicUrl || "/placeholder.svg"} alt="Profile" className="h-8 w-8 rounded-full object-cover" />
+                <span className="max-w-[120px] truncate text-sm font-medium text-neutral-800">{userName}</span>
               </div>
               <div className="flex items-center">
                 <div className="h-6 w-px bg-neutral-300 max-lg:hidden" />
                 <button onClick={handleLogout} className="ml-3 rounded-full transition max-lg:ml-0" title="Logout">
-                  <LogOut className="w-4 h-4 text-neutral-700" />
+                  <LogOut className="h-4 w-4 text-neutral-700 max-lg:h-5 max-lg:w-5" />
                 </button>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </aside>
 
       {/* Main */}
-      <main className="flex-1 py-6 pr-6">
-        <div className="bg-white rounded-3xl border border-gray-200 shadow-xs h-[calc(100vh-3rem)] flex flex-col overflow-hidden">
-          {/* Top context bar */}
-          <div className="border-b border-neutral-100 px-8 py-4 flex items-center gap-3">
-            <Select value={selectedBrandId || ""} onValueChange={(v) => setSelectedBrandId(v || null)}>
-              <SelectTrigger className="w-[200px] rounded-2xl border-neutral-200 bg-white shadow-xs">
-                <SelectValue placeholder="Select Brand" />
-              </SelectTrigger>
-              <SelectContent>
-                {brands.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={selectedProductId || ""} onValueChange={(v) => setSelectedProductId(v || null)} disabled={!selectedBrandId}>
-              <SelectTrigger className="w-[200px] rounded-2xl border-neutral-200 bg-white shadow-xs">
-                <SelectValue placeholder="Select Product" />
-              </SelectTrigger>
-              <SelectContent>
-                {products.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <CostTracker clientId={selectedBrandId} />
-            <JobsIndicator />
-          </div>
+      <main className="min-w-0 flex-1 py-6 pr-6">
+        <div className="cs-main-surface flex h-[calc(100vh-3rem)] flex-col overflow-hidden">
+          <header className="cs-page-header flex items-center justify-between gap-6 px-12 py-7 max-lg:px-7 max-md:px-5 max-md:py-5">
+            <div className="min-w-0">
+              <h1 className="text-[32px] font-bold leading-none tracking-[-0.035em] max-md:text-2xl">{active?.label}</h1>
+              {DESCRIPTIONS[activeTab] && <p className="mt-2 truncate text-[15px] font-medium text-[var(--cs-muted)] max-md:text-xs">{DESCRIPTIONS[activeTab]}</p>}
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <CostTracker clientId={selectedBrandId} />
+              <JobsIndicator />
+            </div>
+          </header>
 
           <div className="flex-1 overflow-auto">
-            <div className="w-full max-w-5xl mx-auto p-10">
-              <h1 className="text-2xl font-semibold tracking-tight mb-1">{active?.label}</h1>
-              {DESCRIPTIONS[activeTab] && <p className="text-neutral-400 text-sm mb-6">{DESCRIPTIONS[activeTab]}</p>}
-              {error && <div className="text-sm text-red-600 mb-4">{error}</div>}
+            <div className="w-full p-12 pt-9 max-lg:p-7 max-md:p-5">
+              {showContextSelectors && (
+                <div className="mb-7 flex flex-wrap items-center gap-4">
+                  <Select value={selectedBrandId || ""} onValueChange={(v) => setSelectedBrandId(v || null)}>
+                    <SelectTrigger className="cs-pill-control w-[240px] px-5">
+                      <SelectValue placeholder="Select Brand" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {brands.map((b) => <SelectItem key={b.id} value={b.id} disabled={b.mappingPending}>{b.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <Select value={selectedProductId || ""} onValueChange={(v) => setSelectedProductId(v || null)} disabled={!selectedBrandId}>
+                    <SelectTrigger className="cs-pill-control w-[240px] px-5">
+                      <SelectValue placeholder="Select Product" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {products.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              {error && <div className="mb-4 text-sm text-red-600">{error}</div>}
               {renderView()}
             </div>
           </div>

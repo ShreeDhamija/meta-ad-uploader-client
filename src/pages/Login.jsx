@@ -12,7 +12,15 @@ import Rocket from "../assets/rocket2.webp?url"
 import Check from "../assets/icons/check.svg"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com'
-const IS_STAGING = import.meta.env.VITE_ENV === 'staging' || API_BASE_URL.includes('staging')
+const IS_STAGING =
+  import.meta.env.VITE_ENV === 'staging' ||
+  import.meta.env.VITE_ENV === 'dev' ||
+  API_BASE_URL.includes('staging') ||
+  API_BASE_URL.includes('dev') ||
+  (typeof window !== 'undefined' && (
+    window.location.hostname.includes('staging.withblip.com') ||
+    window.location.hostname.includes('dev.withblip.com')
+  ))
 
 const ROLE_OPTIONS = [
     "Freelancer Marketing Specialist",

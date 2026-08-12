@@ -38,25 +38,17 @@ export default function useTikTokAdvertiserSettings(advertiserId) {
     });
   }
 
-  const fetchTikTokSettings = useCallback(async (force = false) => {
+  const fetchTikTokSettings = useCallback(async () => {
     if (!advertiserId) return;
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/tiktok/settings/advertiser?advertiserId=${advertiserId}&_t=${Date.now()}`, {
+      const res = await fetch(`${API_BASE_URL}/api/tiktok/settings/advertiser?advertiserId=${encodeURIComponent(advertiserId)}&_t=${Date.now()}`, {
         credentials: "include",
         headers: { 'Content-Type': 'application/json' }
       });
       const data = await res.json();
 
-      const hasConfiguredSettings = !!(
-        data.settings && (
-          (data.settings.links && data.settings.links.length > 0) ||
-          (data.settings.copyTemplates && Object.keys(data.settings.copyTemplates).length > 0) ||
-          (data.settings.defaultUTMs && data.settings.defaultUTMs.length > 0) ||
-          data.settings.defaultIdentityId ||
-          data.settings.catalogSelection
-        )
-      );
+      const hasConfiguredSettings = data.documentExists === true && !!data.settings;
 
       if (res.status === 404 || !hasConfiguredSettings || data.error === 'Document not found') {
         setDocumentExists(false);
@@ -99,7 +91,7 @@ export default function useTikTokAdvertiserSettings(advertiserId) {
   }, []);
 
   const refetch = useCallback(() => {
-    return fetchTikTokSettings(true);
+    return fetchTikTokSettings();
   }, [fetchTikTokSettings]);
 
   return {

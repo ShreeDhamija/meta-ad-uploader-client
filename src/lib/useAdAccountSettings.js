@@ -80,7 +80,7 @@ export default function useAdAccountSettings(adAccountId) {
                         defaultUTMs: [],
                         copyTemplates: {},
                         defaultTemplateName: "",
-                        creativeEnhancements: {},
+                        creativeEnhancements: { siteExtensions: false, siteLinks: [] },
                         adNameFormulaV2: { rawInput: "" },
                         // Analytics settings (defaults)
                         anomalyThresholds: { cpaSpike: 50, overspend: 150 },
@@ -119,7 +119,13 @@ export default function useAdAccountSettings(adAccountId) {
                         displayLink: s.displayLink || "",
                         copyTemplates: s.copyTemplates,
                         defaultTemplateName: s.defaultTemplateName || "" || {},
-                        creativeEnhancements: s.creativeEnhancements || {},
+                        creativeEnhancements: {
+                            ...(s.creativeEnhancements || {}),
+                            siteExtensions: s.creativeEnhancements?.siteExtensions === true,
+                            siteLinks: Array.isArray(s.creativeEnhancements?.siteLinks)
+                                ? s.creativeEnhancements.siteLinks
+                                : [],
+                        },
                         adNameFormulaV2: s.adNameFormulaV2 || { rawInput: "" },
                         adsCreatedCount: s.adsCreatedCount || 0,
                         // Analytics settings (from Firestore)

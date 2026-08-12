@@ -3,8 +3,6 @@
 import { useState } from "react";
 import PropTypes from "prop-types";
 import { Layers, RefreshCw } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { ViewLoading, EmptyState } from "../ui";
 
 export default function BrandsView({ ctx }) {
@@ -17,31 +15,46 @@ export default function BrandsView({ ctx }) {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-neutral-500">{brands.length} linked Meta ad account{brands.length === 1 ? "" : "s"}</p>
-        <Button onClick={resync} disabled={syncing} variant="outline" size="sm" className="rounded-xl gap-1.5">
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <p className="text-base font-semibold text-neutral-900">
+          {brands.length} Connected Account{brands.length === 1 ? "" : "s"}
+        </p>
+        <button onClick={resync} disabled={syncing} className="cs-primary-button">
           <RefreshCw className={`w-4 h-4 ${syncing ? "animate-spin" : ""}`} />
-          {syncing ? "Syncing…" : "Resync from Meta"}
-        </Button>
+          {syncing ? "Refreshing…" : "Refresh Accounts"}
+        </button>
       </div>
 
       {brandsLoading && brands.length === 0 ? (
         <ViewLoading label="Loading brands from Meta…" />
       ) : brands.length === 0 ? (
-        <EmptyState icon={Layers} title="No linked ad accounts" hint="Click “Resync from Meta” to pull your linked ad accounts." />
+        <EmptyState
+          icon={Layers}
+          title="No connected accounts"
+          hint="Refresh Accounts to reload the same Meta accounts used by Preferences."
+          action={<button onClick={resync} disabled={syncing} className="cs-primary-button mt-2">Refresh Accounts</button>}
+          className="min-h-[360px] rounded-[28px]"
+        />
       ) : (
-        <div className="grid grid-cols-3 gap-4 max-lg:grid-cols-2">
+        <div className="grid max-w-[1040px] grid-cols-2 gap-5 max-lg:grid-cols-1">
           {brands.map((b) => {
             const active = selectedBrandId === b.id;
+            const productCount = b.productCount ?? b.productsCount ?? b.products?.length;
             return (
-              <button key={b.id} onClick={() => { setSelectedBrandId(b.id); goTo("products"); }}
-                className={`text-left rounded-2xl border bg-white p-5 transition-all ${active ? "border-neutral-900 shadow" : "border-neutral-200 shadow-xs hover:shadow-sm"}`}>
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-medium text-neutral-900 truncate">{b.name}</span>
-                  {active && <Badge variant="secondary" className="rounded-full text-[10px]">selected</Badge>}
+              <button key={b.id} disabled={b.mappingPending} onClick={() => { setSelectedBrandId(b.id); goTo("products"); }}
+                className={`cs-brand-card text-left disabled:cursor-wait disabled:opacity-70 ${active ? "ring-2 ring-black/20 ring-offset-2" : ""}`}>
+                <div className="cs-brand-card__top flex min-h-[72px] items-center justify-between gap-4 px-6">
+                  <span className="truncate text-base font-semibold text-neutral-950">{b.name}</span>
+                  <span className="shrink-0 text-sm font-semibold text-neutral-900">
+                    {b.mappingPending
+                      ? "Preparing…"
+                      : productCount == null ? "View Products" : `${productCount} Product${productCount === 1 ? "" : "s"}`}
+                  </span>
                 </div>
-                <div className="text-xs text-neutral-400 mt-1">{b.metaAdAccountId || "no ad account"}</div>
+                <div className="px-6 py-4 text-sm font-semibold text-[#3b170b]">
+                  {b.metaAdAccountId || "No ad account ID"}
+                </div>
               </button>
             );
           })}
