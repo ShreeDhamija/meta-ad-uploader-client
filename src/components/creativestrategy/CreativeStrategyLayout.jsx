@@ -1,7 +1,7 @@
 // Creative-strategy module shell. The page header and sidebar are shared;
 // brand/product context controls move into each workflow so the first screen
 // of every tab can follow its own hierarchy without losing shared state.
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   AudioLines,
@@ -17,7 +17,6 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/AuthContext";
-import { useAppData } from "@/lib/AppContext";
 import { creativeApi } from "@/lib/creativeApi";
 import { Button } from "@/components/ui/button";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
@@ -65,8 +64,6 @@ const DESCRIPTIONS = {
 export default function CreativeStrategyLayout() {
   const navigate = useNavigate();
   const { userName, profilePicUrl, handleLogout } = useAuth();
-  const { adAccounts, adAccountsLoading, refetchAdAccounts } = useAppData();
-  const reconciledAccountsRef = useRef("");
 
   const [activeTab, setActiveTab] = useState("brands");
   const [brands, setBrands] = useState([]);
@@ -77,92 +74,18 @@ export default function CreativeStrategyLayout() {
   const [selectedProductId, setSelectedProductId] = useState(null);
   const [error, setError] = useState(null);
 
-  // AppContext is the only source of truth for which Meta accounts exist and
-  // are available on the user's plan. Creative clients are internal mappings
-  // for downstream product APIs; they never contribute accounts to this list.
-  const reconcileCreativeClients = useCallback(async (accounts) => {
-    const sourceAccounts = Array.isArray(accounts) ? accounts : [];
-    const normaliseId = (value) => String(value || "").replace(/^act_/, "");
-    const accountMetaId = (account) => account.id || (account.account_id ? `act_${account.account_id}` : "");
-    const accountKey = sourceAccounts
-      .map((account) => `${normaliseId(accountMetaId(account))}:${account.name || account.account_name || ""}`)
-      .sort()
-      .join(",");
-
-    reconciledAccountsRef.current = accountKey || "__empty__";
+  // Auto-create/refresh brands from the user's linked Meta ad accounts on load.
+  // Falls back to listing existing brands if the Meta sync fails (e.g. no token).
+  const loadBrands = () => {
     setBrandsLoading(true);
-    if (sourceAccounts.length === 0) {
-      setBrands([]);
-      setError(null);
-      setBrandsLoading(false);
-      return [];
-    }
-
-    try {
-      const existingResponse = await creativeApi.listClients();
-      let creativeClients = existingResponse.clients || [];
-      let clientsByMetaId = new Map(
-        creativeClients.map((client) => [normaliseId(client.metaAdAccountId), client]),
-      );
-      const missingAccounts = sourceAccounts.filter((account) => !clientsByMetaId.has(normaliseId(accountMetaId(account))));
-
-      if (missingAccounts.length > 0) {
-        await Promise.allSettled(missingAccounts.map((account) => creativeApi.createClient({
-          name: account.name || account.account_name || `Meta Account ${accountMetaId(account)}`,
-          metaAdAccountId: accountMetaId(account),
-        })));
-        const refreshedResponse = await creativeApi.listClients();
-        creativeClients = refreshedResponse.clients || [];
-        clientsByMetaId = new Map(
-          creativeClients.map((client) => [normaliseId(client.metaAdAccountId), client]),
-        );
-      }
-
-      const mappedBrands = sourceAccounts.map((account) => {
-        const metaAdAccountId = accountMetaId(account);
-        const client = clientsByMetaId.get(normaliseId(metaAdAccountId));
-        if (!client) {
-          return {
-            id: `meta:${normaliseId(metaAdAccountId)}`,
-            name: account.name || account.account_name || `Meta Account ${metaAdAccountId}`,
-            metaAdAccountId,
-            mappingPending: true,
-          };
-        }
-        return {
-          ...client,
-          name: account.name || account.account_name || client.name,
-          metaAdAccountId,
-        };
-      });
-
-      setBrands(mappedBrands);
-      setError(mappedBrands.every((brand) => !brand.mappingPending)
-        ? null
-        : "Some Meta accounts could not be prepared for Creative Strategy. Refresh Accounts to retry.");
-      return mappedBrands;
-    } catch (mappingError) {
-      setBrands([]);
-      setError(`Creative Strategy could not prepare your Meta accounts: ${mappingError.message}`);
-      return [];
-    } finally {
-      setBrandsLoading(false);
-    }
-  }, []);
-
-  const loadBrands = useCallback(async () => {
-    setBrandsLoading(true);
-    try {
-      const freshAccounts = await refetchAdAccounts();
-      return reconcileCreativeClients(freshAccounts || adAccounts);
-    } catch (accountError) {
-      if (adAccounts.length > 0) return reconcileCreativeClients(adAccounts);
-      setBrands([]);
-      setBrandsLoading(false);
-      setError(`Could not refresh Meta accounts: ${accountError.message}`);
-      return [];
-    }
-  }, [adAccounts, reconcileCreativeClients, refetchAdAccounts]);
+    return creativeApi.syncBrands()
+      .then((r) => setBrands(r.clients))
+      .catch((e) => {
+        setError(`Meta sync failed (${e.message}) — showing existing brands`);
+        return creativeApi.listClients().then((r) => setBrands(r.clients)).catch(() => {});
+      })
+      .finally(() => setBrandsLoading(false));
+  };
   const loadProducts = (brandId) => {
     setProductsLoading(true);
     return creativeApi.listProducts(brandId)
@@ -171,27 +94,7 @@ export default function CreativeStrategyLayout() {
       .finally(() => setProductsLoading(false));
   };
 
-  // Consume the same AppContext account list as Home and Preferences. No Meta
-  // account fetch or sync is performed through the Creative API.
-  useEffect(() => {
-    if (adAccountsLoading) {
-      setBrandsLoading(true);
-      return;
-    }
-    const accountKey = adAccounts
-      .map((account) => `${String(account.id || account.account_id || "").replace(/^act_/, "")}:${account.name || account.account_name || ""}`)
-      .sort()
-      .join(",");
-    if (adAccounts.length === 0) {
-      reconciledAccountsRef.current = "__empty__";
-      setBrands([]);
-      setBrandsLoading(false);
-      setError(null);
-      return;
-    }
-    if (reconciledAccountsRef.current === accountKey) return;
-    reconcileCreativeClients(adAccounts);
-  }, [adAccounts, adAccountsLoading, reconcileCreativeClients]);
+  useEffect(() => { loadBrands(); }, []);
   useEffect(() => {
     if (selectedBrandId) loadProducts(selectedBrandId);
     else setProducts([]);
@@ -202,7 +105,7 @@ export default function CreativeStrategyLayout() {
   const selectedProduct = products.find((p) => p.id === selectedProductId) || null;
 
   const ctx = {
-    brands, brandsLoading: brandsLoading || adAccountsLoading, selectedBrand, selectedBrandId, setSelectedBrandId, reloadBrands: loadBrands,
+    brands, brandsLoading, selectedBrand, selectedBrandId, setSelectedBrandId, reloadBrands: loadBrands,
     products, productsLoading, selectedProduct, selectedProductId, setSelectedProductId, reloadProducts: () => loadProducts(selectedBrandId),
     goTo: setActiveTab,
   };
@@ -314,7 +217,7 @@ export default function CreativeStrategyLayout() {
                       <SelectValue placeholder="Select Brand" />
                     </SelectTrigger>
                     <SelectContent>
-                      {brands.map((b) => <SelectItem key={b.id} value={b.id} disabled={b.mappingPending}>{b.name}</SelectItem>)}
+                      {brands.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
                     </SelectContent>
                   </Select>
                   <Select value={selectedProductId || ""} onValueChange={(v) => setSelectedProductId(v || null)} disabled={!selectedBrandId}>

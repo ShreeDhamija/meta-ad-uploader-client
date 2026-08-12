@@ -7297,7 +7297,7 @@ export default function AdCreationForm({
 
       if (promises.length === 0) {
         setIsLoading(false);
-        throw new Error("All your files failed to upload. This usually means a network bandwidth issue. Try again with less data or a more stable connection.");
+        throw new Error("All your files failed to upload or import. Please retry; for cloud files, reconnect the source if the issue continues.");
       }
 
 
