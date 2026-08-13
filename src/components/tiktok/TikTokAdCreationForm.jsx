@@ -5773,12 +5773,12 @@ export default function TikTokAdCreationForm({
                     </Label>
 
                     <div className="space-y-2">
-                      {adTexts.map((text, i) => (
+                      {(isSmartCampaign ? adTexts : adTexts.slice(0, 1)).map((text, i) => (
                         <div key={i} className="flex items-start gap-2">
                           <div className="flex flex-col w-full">
                             <div className="flex items-center justify-between mb-1">
                               <span className="text-[10px] text-zinc-400 font-medium">{(text || "").length}/100</span>
-                              {i > 0 && (
+                              {isSmartCampaign && i > 0 && (
                                 <button
                                   type="button"
                                   onClick={() => setAdTexts(prev => prev.filter((_, idx) => idx !== i))}
@@ -5818,7 +5818,7 @@ export default function TikTokAdCreationForm({
                       )}
 
                       {!isSmartCampaign && selectedCampaign && selectedCampaign.length > 0 && (
-                        <p className="text-[10px] text-zinc-400 mt-1">Select a Smart+ campaign to add up to 5 text options</p>
+                        <p className="text-[10px] text-zinc-400 mt-1">For manual ads the first text will be applied</p>
                       )}
                     </div>
                   </div>
