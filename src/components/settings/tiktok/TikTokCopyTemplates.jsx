@@ -5,7 +5,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
 import { Command, CommandInput, CommandList, CommandItem } from "@/components/ui/command"
 import { toast } from "sonner"
-import { FileText, CirclePlus, Trash2, X, Loader, ChevronsUpDown, ArrowUpDown, Check, Info, Download } from 'lucide-react';
+import { FileText, CirclePlus, Plus, Trash2, X, Loader, ChevronsUpDown, ArrowUpDown, Check, Info, Download } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import TextareaAutosize from 'react-textarea-autosize'
 import { RotateLoader } from "react-spinners"
@@ -26,7 +26,7 @@ export default function TikTokCopyTemplates({
 }) {
     const [selectedName, setSelectedName] = useState("")
     const [templateName, setTemplateName] = useState("")
-    const [text, setText] = useState("")
+    const [texts, setTexts] = useState([""])
     const [isProcessing, setIsProcessing] = useState(false)
     const [templateSearch, setTemplateSearch] = useState("")
     const [templateDropdownOpen, setTemplateDropdownOpen] = useState(false)
@@ -44,8 +44,6 @@ export default function TikTokCopyTemplates({
     const [previouslyFetched, setPreviouslyFetched] = useState([])
     const [isLoadingMore, setIsLoadingMore] = useState(false)
     const [nextPage, setNextPage] = useState(null)
-
-
 
     // Fetch recent ad copy
     useEffect(() => {
@@ -124,15 +122,23 @@ export default function TikTokCopyTemplates({
         }
     }, [advertiserId, previouslyFetched, nextPage]);
 
-    const normalizeText = (text) => text.trim().toLowerCase().replace(/\s+/g, ' ');
+    const normalizeText = (t) => t.trim().toLowerCase().replace(/\s+/g, ' ');
 
     const textExistsInTemplate = useCallback((textVal) => {
         const normalizedText = normalizeText(textVal);
-        return normalizeText(text) === normalizedText;
-    }, [text]);
+        return texts.some(t => normalizeText(t) === normalizedText);
+    }, [texts]);
 
     const createTextImportHandler = useCallback((textVal) => () => {
-        setText(textVal);
+        setTexts(prev => {
+            const active = prev.filter(t => t.trim() !== "");
+            if (active.length < 5) {
+                return [...active, textVal];
+            } else {
+                toast.error("Maximum 5 ad texts reached");
+                return prev;
+            }
+        });
         toast.success("Imported text");
     }, []);
 
@@ -145,19 +151,19 @@ export default function TikTokCopyTemplates({
 
     const templateChanged = useMemo(() => {
         const currentTemplate = templates[selectedName] || {};
-        const currentTemplateText = currentTemplate.text || (currentTemplate.texts && currentTemplate.texts[0]) || "";
-        const trimmedText = text.trim();
-        const originalText = currentTemplateText.trim();
+        const originalTexts = currentTemplate.texts && currentTemplate.texts.length > 0
+            ? currentTemplate.texts.map(t => t.trim()).filter(Boolean)
+            : (currentTemplate.text ? [currentTemplate.text.trim()] : []);
+        const currentActiveTexts = texts.map(t => t.trim()).filter(Boolean);
 
         if (!selectedName) {
-            return !!(templateName.trim() || trimmedText);
+            return !!(templateName.trim() || currentActiveTexts.length > 0);
         }
 
-        return (
-            templateName !== selectedName ||
-            trimmedText !== originalText
-        );
-    }, [templateName, selectedName, templates, text]);
+        if (templateName !== selectedName) return true;
+        if (currentActiveTexts.length !== originalTexts.length) return true;
+        return currentActiveTexts.some((t, i) => t !== originalTexts[i]);
+    }, [templateName, selectedName, templates, texts]);
 
     const blocker = useBlocker(templateChanged);
 
@@ -187,10 +193,11 @@ export default function TikTokCopyTemplates({
         if (selectedName && templates[selectedName]) {
             const t = templates[selectedName];
             setTemplateName(t.name || selectedName);
-            setText(t.text || (t.texts && t.texts[0]) || "");
+            const loadedTexts = t.texts && t.texts.length > 0 ? t.texts : [t.text || ""];
+            setTexts(loadedTexts);
         } else if (!selectedName) {
             setTemplateName("");
-            setText("");
+            setTexts([""]);
         }
     }, [selectedName, templates]);
 
@@ -204,7 +211,7 @@ export default function TikTokCopyTemplates({
             lastInitializedAdvertiserRef.current = null; // Force re-initialization
             setSelectedName("");
             setTemplateName("");
-            setText("");
+            setTexts([""]);
         }
     }, [advertiserId]);
 
@@ -224,7 +231,7 @@ export default function TikTokCopyTemplates({
     const handleNewTemplate = useCallback(() => {
         setSelectedName("")
         setTemplateName("")
-        setText("")
+        setTexts([""])
     }, [])
 
     const executePendingAction = useCallback((action, payload) => {
@@ -251,15 +258,16 @@ export default function TikTokCopyTemplates({
             return false
         }
 
-        const trimmedText = text.trim();
-        if (!trimmedText) {
-            toast.error("Text is required")
+        const activeTexts = texts.map(t => t.trim()).filter(Boolean);
+        if (activeTexts.length === 0) {
+            toast.error("At least one text option is required")
             return false
         }
 
         const newTemplate = {
             name: templateName,
-            text: trimmedText,
+            text: activeTexts[0] || "",
+            texts: activeTexts,
         }
 
         setIsProcessing(true)
@@ -289,21 +297,22 @@ export default function TikTokCopyTemplates({
     const handleSetAsDefault = async () => {
         if (!templateName.trim() || defaultName === templateName) return
 
-        const trimmedText = text.trim();
+        const activeTexts = texts.map(t => t.trim()).filter(Boolean);
 
         setIsProcessing(true)
         try {
             // If the template has unsaved changes (new template or modified), save it first —
             // exactly like Meta's CopyTemplates.jsx handleSetAsDefault does.
             if (templateChanged) {
-                if (!trimmedText) {
-                    toast.error("Text is required before setting as default")
+                if (activeTexts.length === 0) {
+                    toast.error("At least one text option is required before setting as default")
                     return
                 }
 
                 const newTemplate = {
                     name: templateName,
-                    text: trimmedText,
+                    text: activeTexts[0] || "",
+                    texts: activeTexts,
                 }
 
                 const isEditing = selectedName !== null && selectedName !== ""
@@ -617,18 +626,49 @@ export default function TikTokCopyTemplates({
 
             <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                    <label className="text-[14px] text-gray-700">Text</label>
+                    <label className="text-[14px] text-gray-700 font-medium">Ad Text Options ({texts.length}/5)</label>
                 </div>
-                <div className="flex flex-col w-full">
-                    <TextareaAutosize
-                        placeholder="Enter Caption"
-                        value={text}
-                        onChange={(e) => setText(e.target.value)}
-                        className={`${settingsTextareaChrome} w-full text-sm resize-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0`}
-                        minRows={3}
-                        maxRows={10}
-                        disabled={isProcessing}
-                    />
+                <div className="space-y-2">
+                    {texts.map((t, idx) => (
+                        <div key={idx} className="flex flex-col w-full">
+                            <div className="flex items-center justify-between mb-1">
+                                <span className="text-[10px] text-zinc-400 font-medium">{t.length}/100</span>
+                                {idx > 0 && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setTexts(prev => prev.filter((_, i) => i !== idx))}
+                                        className="text-zinc-400 hover:text-red-500 transition-colors"
+                                        title="Remove this text"
+                                    >
+                                        <X className="w-3.5 h-3.5" />
+                                    </button>
+                                )}
+                            </div>
+                            <TextareaAutosize
+                                placeholder={idx === 0 ? "Enter Caption" : `Enter Caption Option ${idx + 1}`}
+                                value={t}
+                                onChange={(e) => setTexts(prev => prev.map((item, i) => i === idx ? e.target.value : item))}
+                                className={`${settingsTextareaChrome} w-full text-sm resize-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 ${t.length > 100 ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]" : ""}`}
+                                minRows={2}
+                                maxRows={8}
+                                disabled={isProcessing}
+                            />
+                            {t.length > 100 && (
+                                <p className="text-xs text-red-500 font-medium mt-1">Text cannot exceed 100 characters</p>
+                            )}
+                        </div>
+                    ))}
+                    {texts.length < 5 && (
+                        <Button
+                            type="button"
+                            size="sm"
+                            className="w-full rounded-xl shadow bg-zinc-600 hover:bg-black text-white mt-2"
+                            onClick={() => setTexts(prev => [...prev, ""])}
+                        >
+                            <Plus className="mr-2 h-4 w-4 text-white" />
+                            Add text option
+                        </Button>
+                    )}
                 </div>
             </div>
 
@@ -636,7 +676,7 @@ export default function TikTokCopyTemplates({
                 <Button
                     className="bg-blue-500 text-white w-full rounded-xl hover:bg-blue-600 h-[45px]"
                     onClick={handleSaveTemplate}
-                    disabled={!templateName.trim() || isProcessing || nameAlreadyExists || !templateChanged || !text.trim()}
+                    disabled={!templateName.trim() || isProcessing || nameAlreadyExists || !templateChanged || texts.map(t => t.trim()).filter(Boolean).length === 0}
                 >
                     {nameAlreadyExists
                         ? "This template name already exists"
@@ -647,7 +687,7 @@ export default function TikTokCopyTemplates({
                                     Saving...
                                 </>
                             )
-                            : !templateName.trim() && text.trim()
+                            : !templateName.trim() && texts.map(t => t.trim()).filter(Boolean).length > 0
                                 ? "Enter Template Name to Save"
                                 : "Save Template"
                     }

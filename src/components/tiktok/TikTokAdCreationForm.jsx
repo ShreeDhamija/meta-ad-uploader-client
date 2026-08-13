@@ -5842,7 +5842,6 @@ export default function TikTokAdCreationForm({
                       {renderDiffMark("adTexts")}
                       <span className="font-semibold text-sm">Ad Text</span>
                       {adType === 'SPARK' && <span className="text-gray-400 font-normal text-xs">(Optional)</span>}
-                      {isSmartCampaign && <span className="text-[10px] bg-violet-100 text-violet-700 px-1.5 py-0.5 rounded-md font-semibold">Smart+</span>}
                     </Label>
 
                     <div className="space-y-2">
@@ -5879,14 +5878,15 @@ export default function TikTokAdCreationForm({
                       ))}
 
                       {isSmartCampaign && adTexts.length < 5 && (
-                        <button
+                        <Button
                           type="button"
+                          size="sm"
+                          className="w-full rounded-xl shadow bg-zinc-600 hover:bg-black text-white mt-2"
                           onClick={() => setAdTexts(prev => [...prev, ""])}
-                          className="flex items-center gap-1.5 text-xs text-violet-600 hover:text-violet-800 font-medium transition-colors mt-1"
                         >
-                          <Plus className="w-3.5 h-3.5" />
-                          Add Text ({adTexts.length}/5)
-                        </button>
+                          <Plus className="mr-2 h-4 w-4 text-white" />
+                          Add text option
+                        </Button>
                       )}
 
                       {!isSmartCampaign && selectedCampaign && selectedCampaign.length > 0 && (
