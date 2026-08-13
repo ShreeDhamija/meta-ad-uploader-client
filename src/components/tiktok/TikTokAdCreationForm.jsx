@@ -1968,8 +1968,10 @@ export default function TikTokAdCreationForm({
           adName
         )
 
+        const sourceAgForDuplication = isDuplicatingAdGroupMode ? jobAdGroups.find(ag => ag.adgroup_id === duplicateAdGroup) : null
+
         for (const adgroupId of adGroupIdsToSubmit) {
-          const adGroupObj = jobAdGroups.find(ag => ag.adgroup_id === adgroupId)
+          const adGroupObj = jobAdGroups.find(ag => ag.adgroup_id === adgroupId) || sourceAgForDuplication
           const shoppingAdsType = adGroupObj?.shopping_ads_type || null
           const productSource = adGroupObj?.product_source || null
           const isShoppingAg = !!(
@@ -2141,7 +2143,7 @@ export default function TikTokAdCreationForm({
           creatives.push(creative)
 
           if (!adGroupsMap[adgroupId]) {
-            const adGroupObj = jobAdGroups.find(ag => ag.adgroup_id === adgroupId)
+            const adGroupObj = jobAdGroups.find(ag => ag.adgroup_id === adgroupId) || sourceAgForDuplication
             adGroupsMap[adgroupId] = {
               adgroupId: adgroupId,
               adName: adType === 'SPARK' ? ' ' : finalAdName,
@@ -5773,7 +5775,7 @@ export default function TikTokAdCreationForm({
                       {adType === 'SPARK' && <span className="text-gray-400 font-normal text-xs">(Optional)</span>}
                     </Label>
 
-                    <div className="space-y-2">
+                    <div className="space-y-2 mb-0">
                       {(isSmartCampaign ? adTexts : adTexts.slice(0, 1)).map((text, i) => (
                         <div key={i} className="flex items-start gap-2">
                           <div className="flex flex-col w-full">
