@@ -5817,9 +5817,22 @@ export default function TikTokAdCreationForm({
                         </Button>
                       )}
 
-                      {!isSmartCampaign && selectedCampaign && selectedCampaign.length > 0 && (
-                        <p className="text-[10px] text-zinc-400 mt-1">For manual ads the first text will be applied</p>
-                      )}
+                      {isSmartCampaign && selectedCampaign && selectedCampaign.some(campId => {
+                        const c = campaigns.find(x => x.campaign_id === campId);
+                        if (!c) return false;
+                        return !(
+                          c.is_smart_performance_campaign === true ||
+                          c.is_smart_performance_campaign === "true" ||
+                          c.is_smart_performance_campaign === 1 ||
+                          c.campaign_automation_type === "UPGRADED_SMART_PLUS" ||
+                          c.campaign_automation_type === "SMART_PLUS" ||
+                          c.campaign_automation_type === "SMART_PERFORMANCE_CAMPAIGN" ||
+                          c.is_smart === true ||
+                          c.is_smart === "true"
+                        );
+                      }) && (
+                          <p className="text-[10px] text-zinc-400 mt-1">For manual ads the first text will be applied</p>
+                        )}
                     </div>
                   </div>
                 </div>
