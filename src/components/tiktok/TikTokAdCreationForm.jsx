@@ -892,17 +892,48 @@ export default function TikTokAdCreationForm({
     return false;
   }, [selectedCampaign, campaigns, selectedAdGroup, showDuplicateAdGroupBlock, duplicateAdGroup, adGroups]);
 
-  // Detect if the selected campaign is a Smart+ campaign
+  // Detect if any selected campaign or ad group belongs to a Smart+ campaign
   // Smart+ campaigns use a different API endpoint (/smart_plus/ad/create/)
   // and support up to 5 ad texts via ad_text_list
   const isSmartCampaign = useMemo(() => {
-    if (!selectedCampaign || selectedCampaign.length === 0) return false;
-    return selectedCampaign.some(campId => {
-      const c = campaigns.find(x => x.campaign_id === campId);
-      const t = c?.campaign_automation_type;
-      return t === 'UPGRADED_SMART_PLUS' || t === 'SMART_PLUS' || t === 'SMART_PERFORMANCE_CAMPAIGN';
-    });
-  }, [selectedCampaign, campaigns]);
+    const isSmartObj = (c) => {
+      if (!c) return false;
+      return Boolean(
+        c.is_smart_performance_campaign === true ||
+        c.is_smart_performance_campaign === "true" ||
+        c.is_smart_performance_campaign === 1 ||
+        c.campaign_automation_type === "UPGRADED_SMART_PLUS" ||
+        c.campaign_automation_type === "SMART_PLUS" ||
+        c.campaign_automation_type === "SMART_PERFORMANCE_CAMPAIGN" ||
+        c.is_smart === true ||
+        c.is_smart === "true"
+      );
+    };
+
+    if (selectedCampaign && selectedCampaign.length > 0) {
+      const hasSmart = selectedCampaign.some(campId => {
+        const c = campaigns.find(x => x.campaign_id === campId);
+        return isSmartObj(c);
+      });
+      if (hasSmart) return true;
+    }
+
+    const activeAdGroups = showDuplicateAdGroupBlock && duplicateAdGroup
+      ? [duplicateAdGroup]
+      : (selectedAdGroup || []);
+
+    if (activeAdGroups.length > 0) {
+      return activeAdGroups.some(agId => {
+        const agObj = adGroups.find(g => g.adgroup_id === agId);
+        if (!agObj) return false;
+        const campId = agObj.campaignId || agObj.campaign_id;
+        const c = campaigns.find(x => x.campaign_id === campId);
+        return isSmartObj(c);
+      });
+    }
+
+    return false;
+  }, [selectedCampaign, campaigns, selectedAdGroup, showDuplicateAdGroupBlock, duplicateAdGroup, adGroups]);
 
   useEffect(() => {
     const activeAdGroups = showDuplicateAdGroupBlock && duplicateAdGroup
@@ -2045,19 +2076,28 @@ export default function TikTokAdCreationForm({
           if (isSalesCampaign && creativeCTAs.length > 0) {
             creativeCTAs = [creativeCTAs[0]]
           }
-          // For Smart+ campaigns: send up to 5 texts (ad_text_list).
+          // For Smart+ campaigns: send up to 5 texts in 1 creative object (ad_text_list).
           // For normal campaigns: only send the first text.
-          const isSmartForThisCampaign = (() => {
-            const t = campaignObj?.campaign_automation_type;
-            return t === 'UPGRADED_SMART_PLUS' || t === 'SMART_PLUS' || t === 'SMART_PERFORMANCE_CAMPAIGN';
-          })();
+          const currentAgCampaignId = adGroupObj?.campaignId || adGroupObj?.campaign_id || selectedCampaign[0];
+          const targetCampaignObj = campaigns.find(c => c.campaign_id === currentAgCampaignId) || campaignObj;
+
+          const isSmartForThisCampaign = Boolean(
+            targetCampaignObj?.is_smart_performance_campaign === true ||
+            targetCampaignObj?.is_smart_performance_campaign === "true" ||
+            targetCampaignObj?.is_smart_performance_campaign === 1 ||
+            targetCampaignObj?.campaign_automation_type === "UPGRADED_SMART_PLUS" ||
+            targetCampaignObj?.campaign_automation_type === "SMART_PLUS" ||
+            targetCampaignObj?.campaign_automation_type === "SMART_PERFORMANCE_CAMPAIGN" ||
+            targetCampaignObj?.is_smart === true ||
+            targetCampaignObj?.is_smart === "true"
+          );
           const activeCaptions = (adTexts || []).filter(t => t.trim() !== '')
           let finalCaptions = activeCaptions.length > 0
             ? isSmartForThisCampaign ? activeCaptions.slice(0, 5) : [activeCaptions[0]]
             : ['']
 
           const creatives = []
-          const useMultipleTextsNative = false;
+          const useMultipleTextsNative = isSmartForThisCampaign;
 
           if (useMultipleTextsNative) {
             const singleCta = creativeCTAs[0] || 'SHOP_NOW';
@@ -2067,6 +2107,7 @@ export default function TikTokAdCreationForm({
                 ? { image_ids: videoId }
                 : { video_id: videoId }
               ),
+              ad_text: finalCaptions[0] || "",
               ad_texts: finalCaptions,
               call_to_action: singleCta,
               ad_name: adType === 'SPARK' ? ' ' : finalAdName,
