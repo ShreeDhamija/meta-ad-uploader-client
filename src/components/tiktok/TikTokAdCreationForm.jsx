@@ -892,6 +892,18 @@ export default function TikTokAdCreationForm({
     return false;
   }, [selectedCampaign, campaigns, selectedAdGroup, showDuplicateAdGroupBlock, duplicateAdGroup, adGroups]);
 
+  // Detect if the selected campaign is a Smart+ campaign
+  // Smart+ campaigns use a different API endpoint (/smart_plus/ad/create/)
+  // and support up to 5 ad texts via ad_text_list
+  const isSmartCampaign = useMemo(() => {
+    if (!selectedCampaign || selectedCampaign.length === 0) return false;
+    return selectedCampaign.some(campId => {
+      const c = campaigns.find(x => x.campaign_id === campId);
+      const t = c?.campaign_automation_type;
+      return t === 'UPGRADED_SMART_PLUS' || t === 'SMART_PLUS' || t === 'SMART_PERFORMANCE_CAMPAIGN';
+    });
+  }, [selectedCampaign, campaigns]);
+
   useEffect(() => {
     const activeAdGroups = showDuplicateAdGroupBlock && duplicateAdGroup
       ? [duplicateAdGroup]
@@ -2033,8 +2045,16 @@ export default function TikTokAdCreationForm({
           if (isSalesCampaign && creativeCTAs.length > 0) {
             creativeCTAs = [creativeCTAs[0]]
           }
+          // For Smart+ campaigns: send up to 5 texts (ad_text_list).
+          // For normal campaigns: only send the first text.
+          const isSmartForThisCampaign = (() => {
+            const t = campaignObj?.campaign_automation_type;
+            return t === 'UPGRADED_SMART_PLUS' || t === 'SMART_PLUS' || t === 'SMART_PERFORMANCE_CAMPAIGN';
+          })();
           const activeCaptions = (adTexts || []).filter(t => t.trim() !== '')
-          let finalCaptions = activeCaptions.length > 0 ? [activeCaptions[0]] : ['']
+          let finalCaptions = activeCaptions.length > 0
+            ? isSmartForThisCampaign ? activeCaptions.slice(0, 5) : [activeCaptions[0]]
+            : ['']
 
           const creatives = []
           const useMultipleTextsNative = false;
@@ -2095,6 +2115,7 @@ export default function TikTokAdCreationForm({
                     : { video_id: videoId }
                   ),
                   ad_text: singleCaption,
+                  ad_texts: finalCaptions,
                   ad_name: adType === 'SPARK' ? ' ' : creativeAdName,
                   identity_type: currentIdentityType,
                   landing_page_type: urlMode === 'WEBSITE' ? 'EXTERNAL_WEBSITE' : 'INSTANT_PAGE',
@@ -2147,6 +2168,7 @@ export default function TikTokAdCreationForm({
                       : { video_id: videoId }
                     ),
                     ad_text: singleCaption,
+                    ad_texts: finalCaptions,
                     call_to_action: singleCta,
                     ad_name: adType === 'SPARK' ? ' ' : creativeAdName,
                     identity_type: currentIdentityType,
@@ -2210,6 +2232,10 @@ export default function TikTokAdCreationForm({
         advertiserId: selectedAdvertiser,
         jobId: jobToProcess.id,
         campaignAutomationType: campaignObj?.campaign_automation_type || null,
+        isSmartCampaign: (() => {
+          const t = campaignObj?.campaign_automation_type;
+          return t === 'UPGRADED_SMART_PLUS' || t === 'SMART_PLUS' || t === 'SMART_PERFORMANCE_CAMPAIGN';
+        })(),
         cta: Array.isArray(cta) ? cta : [cta],
         initialFailureCount: uploadErrors.length * (isDuplicatingAdGroupMode ? 1 : selectedAdGroup.length),
         initialErrorMessages: uploadErrors.map(e => ({ error: e.error, fileName: e.fileName })),
@@ -2735,9 +2761,13 @@ export default function TikTokAdCreationForm({
   const hasUnsavedTemplateChangesRaw = useMemo(() => {
     if (!selectedTemplate || !copyTemplates[selectedTemplate]) return false;
     const tpl = copyTemplates[selectedTemplate];
-    const currentText = adTexts.map(t => t.trim()).filter(Boolean)[0] || "";
-    const originalText = tpl.text || (tpl.texts && tpl.texts[0]) || "";
-    return currentText.trim() !== originalText.trim();
+    const currentTexts = adTexts.map(t => t.trim()).filter(Boolean);
+    const originalTexts = tpl.texts && tpl.texts.length > 0
+      ? tpl.texts.map(t => t.trim()).filter(Boolean)
+      : (tpl.text ? [tpl.text.trim()] : []);
+
+    if (currentTexts.length !== originalTexts.length) return true;
+    return currentTexts.some((t, i) => t !== originalTexts[i]);
   }, [adTexts, copyTemplates, selectedTemplate]);
 
   const [hasUnsavedTemplateChanges, setHasUnsavedTemplateChanges] = useState(false);
@@ -2753,12 +2783,16 @@ export default function TikTokAdCreationForm({
 
   // Does this exact combo already exist in another template?
   const existingDuplicateTemplate = useMemo(() => {
-    const currentText = adTexts.map(t => t.trim()).filter(Boolean)[0] || "";
-    if (!currentText) return null;
+    const currentTexts = adTexts.map(t => t.trim()).filter(Boolean);
+    if (currentTexts.length === 0) return null;
+    const currentJoined = currentTexts.join("|||");
+
     for (const [name, tpl] of Object.entries(copyTemplates)) {
       if (name === selectedTemplate) continue;
-      const originalText = tpl.text || (tpl.texts && tpl.texts[0]) || "";
-      if (currentText.trim() === originalText.trim()) {
+      const originalTexts = tpl.texts && tpl.texts.length > 0
+        ? tpl.texts.map(t => t.trim()).filter(Boolean)
+        : (tpl.text ? [tpl.text.trim()] : []);
+      if (currentJoined === originalTexts.join("|||")) {
         return name;
       }
     }
@@ -2774,9 +2808,11 @@ export default function TikTokAdCreationForm({
     }
     setIsSavingNew(true);
     try {
+      const activeTexts = adTexts.map(t => t.trim()).filter(Boolean);
       const templateData = {
         name,
-        text: adTexts.map(t => t.trim()).filter(Boolean)[0] || "",
+        text: activeTexts[0] || "",
+        texts: activeTexts,
       };
       const updated = { ...(copyTemplates || {}) };
       updated[name] = templateData;
@@ -2804,9 +2840,11 @@ export default function TikTokAdCreationForm({
     if (!selectedTemplate || !copyTemplates[selectedTemplate]) return;
     setIsUpdatingTemplate(true);
     try {
+      const activeTexts = adTexts.map(t => t.trim()).filter(Boolean);
       const templateData = {
         name: selectedTemplate,
-        text: adTexts.map(t => t.trim()).filter(Boolean)[0] || "",
+        text: activeTexts[0] || "",
+        texts: activeTexts,
       };
       const updated = { ...(copyTemplates || {}) };
       updated[selectedTemplate] = templateData;
@@ -5761,8 +5799,11 @@ export default function TikTokAdCreationForm({
                                       toggleDeleteSelection(name);
                                     } else {
                                       setSelectedTemplate(name);
-                                      const loadedText = data.text || (data.texts && data.texts[0]) || "";
-                                      setAdTexts([loadedText]);
+                                      // Restore all texts from template (multi-text support)
+                                      const loadedTexts = data.texts && data.texts.length > 0
+                                        ? data.texts
+                                        : [data.text || ""];
+                                      setAdTexts(loadedTexts);
                                       setTemplateDropdownOpen(false);
                                       setTemplateSearch("");
                                     }
@@ -5795,36 +5836,62 @@ export default function TikTokAdCreationForm({
                     </div>
                   </div>
 
-                  {/* Single Text Option Textarea */}
+                  {/* Multi-Text Option Textareas */}
                   <div className="space-y-3">
                     <Label className="flex items-center gap-1.5">
                       {renderDiffMark("adTexts")}
                       <span className="font-semibold text-sm">Ad Text</span>
                       {adType === 'SPARK' && <span className="text-gray-400 font-normal text-xs">(Optional)</span>}
+                      {isSmartCampaign && <span className="text-[10px] bg-violet-100 text-violet-700 px-1.5 py-0.5 rounded-md font-semibold">Smart+</span>}
                     </Label>
 
-                    <div className="space-y-4">
-                      <div className="flex items-start gap-2">
-                        <div className="flex flex-col w-full">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-[10px] text-zinc-400 font-medium">{(adTexts[0] || "").length}/100</span>
+                    <div className="space-y-2">
+                      {adTexts.map((text, i) => (
+                        <div key={i} className="flex items-start gap-2">
+                          <div className="flex flex-col w-full">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-[10px] text-zinc-400 font-medium">{(text || "").length}/100</span>
+                              {i > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => setAdTexts(prev => prev.filter((_, idx) => idx !== i))}
+                                  className="text-zinc-400 hover:text-red-500 transition-colors"
+                                  title="Remove this text"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                            </div>
+                            <TextareaAutosize
+                              value={text || ""}
+                              onChange={(e) => setAdTexts(prev => prev.map((t, idx) => idx === i ? e.target.value : t))}
+                              placeholder={i === 0 ? "Add text option" : `Text option ${i + 1}`}
+                              minRows={2}
+                              maxRows={8}
+                              className={`${formTextareaChrome} ${(text || "").length > 100 ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]" : ""}`}
+                              style={{ scrollbarWidth: 'thin', scrollbarColor: '#e5e7eb transparent' }}
+                            />
+                            {(text || "").length > 100 && (
+                              <p className="text-xs text-red-500 font-medium mt-1">Text cannot exceed 100 characters</p>
+                            )}
                           </div>
-                          <TextareaAutosize
-                            value={adTexts[0] || ""}
-                            onChange={(e) => {
-                              setAdTexts([e.target.value]);
-                            }}
-                            placeholder="Add text option"
-                            minRows={2}
-                            maxRows={8}
-                            className={`${formTextareaChrome} ${(adTexts[0] || "").length > 100 ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]" : ""}`}
-                            style={{ scrollbarWidth: 'thin', scrollbarColor: '#e5e7eb transparent' }}
-                          />
-                          {(adTexts[0] || "").length > 100 && (
-                            <p className="text-xs text-red-500 font-medium mt-1">Text cannot exceed 100 characters</p>
-                          )}
                         </div>
-                      </div>
+                      ))}
+
+                      {isSmartCampaign && adTexts.length < 5 && (
+                        <button
+                          type="button"
+                          onClick={() => setAdTexts(prev => [...prev, ""])}
+                          className="flex items-center gap-1.5 text-xs text-violet-600 hover:text-violet-800 font-medium transition-colors mt-1"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          Add Text ({adTexts.length}/5)
+                        </button>
+                      )}
+
+                      {!isSmartCampaign && selectedCampaign && selectedCampaign.length > 0 && (
+                        <p className="text-[10px] text-zinc-400 mt-1">Select a Smart+ campaign to add up to 5 text options</p>
+                      )}
                     </div>
                   </div>
                 </div>
