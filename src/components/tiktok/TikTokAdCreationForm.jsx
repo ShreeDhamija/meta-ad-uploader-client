@@ -3086,12 +3086,12 @@ export default function TikTokAdCreationForm({
   // Separate function for duplicating Smart Performance / Smart Plus Campaigns
   const handleDuplicateSmartCampaign = useCallback(async (campaignId) => {
     if (!campaignId || !selectedAdvertiser || !newCampaignName.trim()) {
-      toast.error('Missing required parameters for Smart Campaign duplication');
+      toast.error('Missing required parameters for Campaign duplication');
       return;
     }
     const campaign = campaigns.find(c => c.campaign_id === campaignId)
     if (!campaign) {
-      toast.error('Source Smart Campaign not found');
+      toast.error('Source Campaign not found');
       return;
     }
     setIsDuplicating(true)
@@ -3112,9 +3112,9 @@ export default function TikTokAdCreationForm({
       })
       const data = await res.json()
       if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Smart campaign duplication failed')
+        throw new Error(data.error || ' campaign duplication failed')
       }
-      toast.success('Smart Campaign duplicated successfully!')
+      toast.success('Campaign duplicated successfully!')
       setNewCampaignName('')
       setDuplicateCampaign('')
       setShowDuplicateCampaignBlock(false)
