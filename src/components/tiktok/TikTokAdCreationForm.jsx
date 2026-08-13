@@ -2099,152 +2099,45 @@ export default function TikTokAdCreationForm({
           const creatives = []
           const useMultipleTextsNative = isSmartForThisCampaign;
 
-          if (useMultipleTextsNative) {
-            const singleCta = creativeCTAs[0] || 'SHOP_NOW';
-            const creative = {
-              adFormat: isImage ? 'SINGLE_IMAGE' : 'SINGLE_VIDEO',
-              ...(isImage
-                ? { image_ids: videoId }
-                : { video_id: videoId }
-              ),
-              ad_text: finalCaptions[0] || "",
-              ad_texts: finalCaptions,
-              call_to_action: singleCta,
-              ad_name: adType === 'SPARK' ? ' ' : finalAdName,
-              identity_type: currentIdentityType,
-              landing_page_type: urlMode === 'WEBSITE' ? 'EXTERNAL_WEBSITE' : 'INSTANT_PAGE',
-              operation_status: launchPaused ? 'DISABLE' : 'ENABLE',
-              ...(urlMode === 'WEBSITE'
-                ? { landing_page_url: finalUrl }
-                : { page_id: landingUrl }
-              ),
-              ...(adType === 'SPARK' ? {
-                is_spark_ad: true,
-                spark_ad_auth_code: item.file.authCode,
-                tiktok_item_id: videoId,
-                adType: 'SPARK'
-              } : {}),
-              ...(shoppingAdsType ? { shopping_ads_type: shoppingAdsType } : {}),
-              ...(productSource ? { product_source: productSource } : {})
-            }
-            if (currentIdentityId) creative.identity_id = currentIdentityId
-            if (currentIdentityAuthorizedBcId) creative.identity_authorized_bc_id = currentIdentityAuthorizedBcId
+          const creative = {
+            adFormat: isImage ? 'SINGLE_IMAGE' : 'SINGLE_VIDEO',
+            ...(isImage
+              ? { image_ids: videoId }
+              : { video_id: videoId }
+            ),
+            ad_text: finalCaptions[0] || "",
+            ad_texts: finalCaptions,
+            call_to_action: creativeCTAs,
+            ad_name: adType === 'SPARK' ? ' ' : finalAdName,
+            identity_type: currentIdentityType,
+            landing_page_type: urlMode === 'WEBSITE' ? 'EXTERNAL_WEBSITE' : 'INSTANT_PAGE',
+            operation_status: launchPaused ? 'DISABLE' : 'ENABLE',
+            ...(urlMode === 'WEBSITE'
+              ? { landing_page_url: finalUrl }
+              : { page_id: landingUrl }
+            ),
+            ...(adType === 'SPARK' ? {
+              is_spark_ad: true,
+              spark_ad_auth_code: item.file.authCode,
+              tiktok_item_id: videoId,
+              adType: 'SPARK'
+            } : {}),
+            ...(shoppingAdsType ? { shopping_ads_type: shoppingAdsType } : {}),
+            ...(productSource ? { product_source: productSource } : {})
+          }
+          if (currentIdentityId) creative.identity_id = currentIdentityId
+          if (currentIdentityAuthorizedBcId) creative.identity_authorized_bc_id = currentIdentityAuthorizedBcId
 
-            if (isShoppingAg) {
-              if (catalogIdToUse) creative.catalog_id = catalogIdToUse;
-              if (skuIdToUse) creative.sku_id = skuIdToUse;
-              if (itemGroupIdToUse) creative.item_group_id = itemGroupIdToUse;
-              if (productSource === 'SHOWCASE') {
-                creative.store_id = jobFormStoreId || adGroupObj?.store_id || null;
-              }
-            }
-
-            creatives.push(creative)
-          } else {
-            for (const singleCaption of finalCaptions) {
-              if (creativeCTAs.length > 1) {
-                let creativeAdName = finalAdName
-                if (finalCaptions.length > 1) {
-                  const cleanCap = singleCaption.trim().substring(0, 15)
-                  creativeAdName = `${finalAdName} - ${cleanCap ? `"${cleanCap}"` : `Text ${finalCaptions.indexOf(singleCaption) + 1}`}`
-                }
-
-                const creative = {
-                  adFormat: isImage ? 'SINGLE_IMAGE' : 'SINGLE_VIDEO',
-                  ...(isImage
-                    ? { image_ids: videoId }
-                    : { video_id: videoId }
-                  ),
-                  ad_text: singleCaption,
-                  ad_texts: finalCaptions,
-                  ad_name: adType === 'SPARK' ? ' ' : creativeAdName,
-                  identity_type: currentIdentityType,
-                  landing_page_type: urlMode === 'WEBSITE' ? 'EXTERNAL_WEBSITE' : 'INSTANT_PAGE',
-                  operation_status: launchPaused ? 'DISABLE' : 'ENABLE',
-                  ...(urlMode === 'WEBSITE'
-                    ? { landing_page_url: finalUrl }
-                    : { page_id: landingUrl }
-                  ),
-                  ...(adType === 'SPARK' ? {
-                    is_spark_ad: true,
-                    spark_ad_auth_code: item.file.authCode,
-                    tiktok_item_id: videoId,
-                    adType: 'SPARK'
-                  } : {}),
-                  ...(shoppingAdsType ? { shopping_ads_type: shoppingAdsType } : {}),
-                  ...(productSource ? { product_source: productSource } : {})
-                }
-                if (currentIdentityId) creative.identity_id = currentIdentityId
-                if (currentIdentityAuthorizedBcId) creative.identity_authorized_bc_id = currentIdentityAuthorizedBcId
-
-                if (isShoppingAg) {
-                  if (catalogIdToUse) creative.catalog_id = catalogIdToUse;
-                  if (skuIdToUse) creative.sku_id = skuIdToUse;
-                  if (itemGroupIdToUse) creative.item_group_id = itemGroupIdToUse;
-                  if (productSource === 'SHOWCASE') {
-                    creative.store_id = jobFormStoreId || adGroupObj?.store_id || null;
-                  }
-                }
-
-                creatives.push(creative)
-              } else {
-                for (const singleCta of creativeCTAs) {
-                  let creativeAdName = finalAdName
-                  const modifiers = []
-                  if (finalCaptions.length > 1) {
-                    const cleanCap = singleCaption.trim().substring(0, 15)
-                    modifiers.push(cleanCap ? `"${cleanCap}"` : `Text ${finalCaptions.indexOf(singleCaption) + 1}`)
-                  }
-                  if (creativeCTAs.length > 1) {
-                    modifiers.push(singleCta)
-                  }
-                  if (modifiers.length > 0) {
-                    creativeAdName = `${finalAdName} - ${modifiers.join(' - ')}`
-                  }
-
-                  const creative = {
-                    adFormat: isImage ? 'SINGLE_IMAGE' : 'SINGLE_VIDEO',
-                    ...(isImage
-                      ? { image_ids: videoId }
-                      : { video_id: videoId }
-                    ),
-                    ad_text: singleCaption,
-                    ad_texts: finalCaptions,
-                    call_to_action: singleCta,
-                    ad_name: adType === 'SPARK' ? ' ' : creativeAdName,
-                    identity_type: currentIdentityType,
-                    landing_page_type: urlMode === 'WEBSITE' ? 'EXTERNAL_WEBSITE' : 'INSTANT_PAGE',
-                    operation_status: launchPaused ? 'DISABLE' : 'ENABLE',
-                    ...(urlMode === 'WEBSITE'
-                      ? { landing_page_url: finalUrl }
-                      : { page_id: landingUrl }
-                    ),
-                    ...(adType === 'SPARK' ? {
-                      is_spark_ad: true,
-                      spark_ad_auth_code: item.file.authCode,
-                      tiktok_item_id: videoId,
-                      adType: 'SPARK'
-                    } : {}),
-                    ...(shoppingAdsType ? { shopping_ads_type: shoppingAdsType } : {}),
-                    ...(productSource ? { product_source: productSource } : {})
-                  }
-                  if (currentIdentityId) creative.identity_id = currentIdentityId
-                  if (currentIdentityAuthorizedBcId) creative.identity_authorized_bc_id = currentIdentityAuthorizedBcId
-
-                  if (isShoppingAg) {
-                    if (catalogIdToUse) creative.catalog_id = catalogIdToUse;
-                    if (skuIdToUse) creative.sku_id = skuIdToUse;
-                    if (itemGroupIdToUse) creative.item_group_id = itemGroupIdToUse;
-                    if (productSource === 'SHOWCASE') {
-                      creative.store_id = jobFormStoreId || adGroupObj?.store_id || null;
-                    }
-                  }
-
-                  creatives.push(creative)
-                }
-              }
+          if (isShoppingAg) {
+            if (catalogIdToUse) creative.catalog_id = catalogIdToUse;
+            if (skuIdToUse) creative.sku_id = skuIdToUse;
+            if (itemGroupIdToUse) creative.item_group_id = itemGroupIdToUse;
+            if (productSource === 'SHOWCASE') {
+              creative.store_id = jobFormStoreId || adGroupObj?.store_id || null;
             }
           }
+
+          creatives.push(creative)
 
           if (!adGroupsMap[adgroupId]) {
             const adGroupObj = jobAdGroups.find(ag => ag.adgroup_id === adgroupId)
@@ -3946,8 +3839,7 @@ export default function TikTokAdCreationForm({
           fileCount = fd.importedPosts.length;
         }
 
-        const ctaCount = (fd.cta && Array.isArray(fd.cta) && fd.cta.length > 0) ? fd.cta.length : 1;
-        const adsToBeCreated = fileCount * ctaCount;
+        const adsToBeCreated = fileCount;
 
         if (adsToBeCreated > 50) {
           toast.error(`${variant.name}: you cannot launch more than 50 ads at once (current selection: ${adsToBeCreated} ads).`);
@@ -3969,8 +3861,7 @@ export default function TikTokAdCreationForm({
                   if (qfd.adType === 'SPARK') {
                     qFileCount = qfd.importedPosts.length;
                   }
-                  const qCtaCount = (qfd.cta && Array.isArray(qfd.cta) && qfd.cta.length > 0) ? qfd.cta.length : 1;
-                  queuedAdsCount += qFileCount * qCtaCount;
+                  queuedAdsCount += qFileCount;
                 }
               });
 
@@ -3982,8 +3873,7 @@ export default function TikTokAdCreationForm({
                   if (qfd.adType === 'SPARK') {
                     qFileCount = qfd.importedPosts.length;
                   }
-                  const qCtaCount = (qfd.cta && Array.isArray(qfd.cta) && qfd.cta.length > 0) ? qfd.cta.length : 1;
-                  queuedAdsCount += qFileCount * qCtaCount;
+                  queuedAdsCount += qFileCount;
                 }
               }
 
