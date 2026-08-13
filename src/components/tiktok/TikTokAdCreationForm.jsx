@@ -1910,7 +1910,8 @@ export default function TikTokAdCreationForm({
             advertiser_id: selectedAdvertiser,
             source_adgroup_id: duplicateAdGroup,
             new_campaign_id: selectedCampaign[0],
-            new_adgroup_name: newAdGroupName.trim()
+            new_adgroup_name: newAdGroupName.trim(),
+            is_smart: isSmartCampaign
           }),
           signal
         })
