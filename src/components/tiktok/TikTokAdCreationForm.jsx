@@ -3946,9 +3946,8 @@ export default function TikTokAdCreationForm({
           fileCount = fd.importedPosts.length;
         }
 
-        const activeTexts = fd.adTexts ? fd.adTexts.filter(t => t.trim() !== '') : [];
-        const captionCount = activeTexts.length > 0 ? activeTexts.length : 1;
-        const adsToBeCreated = fileCount * captionCount;
+        const ctaCount = (fd.cta && Array.isArray(fd.cta) && fd.cta.length > 0) ? fd.cta.length : 1;
+        const adsToBeCreated = fileCount * ctaCount;
 
         if (adsToBeCreated > 50) {
           toast.error(`${variant.name}: you cannot launch more than 50 ads at once (current selection: ${adsToBeCreated} ads).`);
@@ -3970,9 +3969,8 @@ export default function TikTokAdCreationForm({
                   if (qfd.adType === 'SPARK') {
                     qFileCount = qfd.importedPosts.length;
                   }
-                  const qActiveTexts = qfd.adTexts ? qfd.adTexts.filter(t => t.trim() !== '') : [];
-                  const qCaptionCount = qActiveTexts.length > 0 ? qActiveTexts.length : 1;
-                  queuedAdsCount += qFileCount * qCaptionCount;
+                  const qCtaCount = (qfd.cta && Array.isArray(qfd.cta) && qfd.cta.length > 0) ? qfd.cta.length : 1;
+                  queuedAdsCount += qFileCount * qCtaCount;
                 }
               });
 
@@ -3984,9 +3982,8 @@ export default function TikTokAdCreationForm({
                   if (qfd.adType === 'SPARK') {
                     qFileCount = qfd.importedPosts.length;
                   }
-                  const qActiveTexts = qfd.adTexts ? qfd.adTexts.filter(t => t.trim() !== '') : [];
-                  const qCaptionCount = qActiveTexts.length > 0 ? qActiveTexts.length : 1;
-                  queuedAdsCount += qFileCount * qCaptionCount;
+                  const qCtaCount = (qfd.cta && Array.isArray(qfd.cta) && qfd.cta.length > 0) ? qfd.cta.length : 1;
+                  queuedAdsCount += qFileCount * qCtaCount;
                 }
               }
 
