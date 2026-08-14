@@ -80,6 +80,22 @@ const IS_STAGING = import.meta.env.VITE_ENV === 'staging' || API_BASE_URL.includ
 const SHOW_DRAFT_UPDATE = false;
 const PRE_JOB_RESIZE_TIMEOUT_MS = 2 * 60 * 1000;
 const DUPLICATE_AD_SET_TIMEOUT_MS = 90 * 1000;
+const META_UNSUPPORTED_TEXT_SEPARATOR_PATTERN = /[\u2028\u2029]/;
+const META_UNSUPPORTED_TEXT_SEPARATOR_GLOBAL_PATTERN = /[\u2028\u2029]/g;
+
+function sanitizeMetaAdTextOptions(values) {
+  const hasUnsupportedSeparator = values.some(
+    (value) => typeof value === 'string' && META_UNSUPPORTED_TEXT_SEPARATOR_PATTERN.test(value)
+  );
+
+  if (!hasUnsupportedSeparator) return values;
+
+  return values.map((value) =>
+    typeof value === 'string'
+      ? value.replace(META_UNSUPPORTED_TEXT_SEPARATOR_GLOBAL_PATTERN, ' ')
+      : value
+  );
+}
 
 function createTimeoutError(message) {
   const error = new Error(message);
@@ -5352,9 +5368,9 @@ export default function AdCreationForm({
      */
     const preComputeCommonValues = (headlines, descriptions, messages, link) => {
       return {
-        headlinesJSON: JSON.stringify(headlines),
-        descriptionsJSON: JSON.stringify(descriptions),
-        messagesJSON: JSON.stringify(messages),
+        headlinesJSON: JSON.stringify(sanitizeMetaAdTextOptions(headlines)),
+        descriptionsJSON: JSON.stringify(sanitizeMetaAdTextOptions(descriptions)),
+        messagesJSON: JSON.stringify(sanitizeMetaAdTextOptions(messages)),
         linkJSON: JSON.stringify(link)
       };
     };

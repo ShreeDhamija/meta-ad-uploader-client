@@ -129,7 +129,7 @@ export default function CreativeStrategyLayout() {
   };
 
   const active = NAV.find((n) => n.key === activeTab);
-  const showContextSelectors = activeTab !== "brands" && activeTab !== "products" && activeTab !== "generate";
+  const showContextSelectors = activeTab !== "brands" && activeTab !== "products" && activeTab !== "generate" && activeTab !== "library" && activeTab !== "weekly" && activeTab !== "research" && activeTab !== "intelligence";
 
   return (
     <JobsProvider>

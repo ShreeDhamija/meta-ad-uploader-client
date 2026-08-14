@@ -25,6 +25,8 @@ function loadPersisted() {
     const now = Date.now();
     const out = {};
     for (const [id, j] of Object.entries(raw)) {
+      // User-cancelled jobs should never be resurrected by persisted UI state.
+      if (j.error === "cancelled by user") continue;
       // Drop stale finished jobs; keep anything still active or recently done.
       if (!ACTIVE(j.status) && now - (j.finishedAt || 0) > KEEP_DONE_MS) continue;
       out[id] = j;
@@ -73,6 +75,10 @@ export function JobsProvider({ children }) {
         try {
           const { job } = await creativeApi.getJob(j.id);
           if (cancelled || !job) return;
+          if (job.status === "failed" && job.error === "cancelled by user") {
+            untrack(j.id);
+            return;
+          }
           const finished = job.status === "completed" || job.status === "failed";
           upsert(j.id, {
             type: job.type, status: job.status, progress: job.progress || {},
@@ -85,7 +91,7 @@ export function JobsProvider({ children }) {
     tick();
     const iv = setInterval(tick, POLL_MS);
     return () => { cancelled = true; clearInterval(iv); };
-  }, [upsert]);
+  }, [upsert, untrack]);
 
   // Auto-prune finished jobs after KEEP_DONE_MS so badges/indicator clear.
   useEffect(() => {

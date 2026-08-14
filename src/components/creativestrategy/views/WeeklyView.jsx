@@ -1,73 +1,108 @@
-// Weekly Strategy — run the agentic strategist for the selected brand, then
-// review tiered concept cards (iteration / format-flip / inspired / big-swing /
-// net-new) and approve the ones worth briefing. Approving seeds a
-// reference_file_metadata row (source=weekly_strategy). Run is a background job.
+// Weekly Strategy — generate, filter, review, and brief strategist concepts.
+// The existing weekly APIs are retained behind the shared Creative Strategy UI.
 import { useEffect, useState } from "react";
 import PropTypes from "prop-types";
-import { MousePointerClick, Activity } from "lucide-react";
+import {
+  Activity, CircleCheck, CircleX, ClipboardList, Loader2, MousePointerClick, RefreshCw,
+} from "lucide-react";
 import { creativeApi } from "@/lib/creativeApi";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { ViewLoading, EmptyState, ErrorBanner, SectionCard, StatTile } from "../ui";
+import { ViewLoading, EmptyState, ErrorBanner } from "../ui";
 import { useJobRunner, JobBadge } from "../JobsContext";
 
 const TIERS = [
   { key: "all", label: "All" },
   { key: "iteration", label: "Iterations" },
-  { key: "format_transformation", label: "Format flips" },
+  { key: "format_transformation", label: "Format Flips" },
   { key: "inspired", label: "Inspired" },
-  { key: "big_swing", label: "Big swings" },
+  { key: "big_swing", label: "Big Swings" },
   { key: "net_new", label: "Net-new" },
 ];
 
+const STATUSES = [
+  { key: "pending", label: "Pending" },
+  { key: "approved", label: "Approved" },
+  { key: "rejected", label: "Dismissed" },
+];
+
 export default function WeeklyView({ ctx }) {
-  const { selectedBrand, selectedBrandId, selectedProductId } = ctx;
+  const {
+    brands, brandsLoading, selectedBrandId, setSelectedBrandId,
+    products, productsLoading, selectedProductId, setSelectedProductId,
+  } = ctx;
   const [ideas, setIdeas] = useState([]);
   const [run, setRun] = useState(null);
   const [err, setErr] = useState(null);
-  const [tab, setTab] = useState("all");
-  const [statusTab, setStatusTab] = useState("pending");
+  const [tier, setTier] = useState("all");
+  const [status, setStatusFilter] = useState("pending");
   const [filters, setFilters] = useState({ persona: "all", angle: "all", format: "all", awareness: "all" });
-  const [briefs, setBriefs] = useState({}); // ideaId -> brief
-  const [briefing, setBriefing] = useState(null); // ideaId being generated
+  const [briefs, setBriefs] = useState({});
+  const [briefing, setBriefing] = useState(null);
   const [heartbeat, setHeartbeat] = useState(null);
   const [hbLoading, setHbLoading] = useState(false);
-
   const [loading, setLoading] = useState(false);
+  const [updating, setUpdating] = useState(null);
 
-  const load = async (cid) => {
+  const load = async (brandId) => {
+    if (!brandId) { setIdeas([]); setRun(null); return; }
     setLoading(true);
-    try { const r = await creativeApi.getWeekly(cid); setIdeas(r.ideas); setRun(r.latestRun); }
-    catch (e) { setErr(e.message); } finally { setLoading(false); }
+    try {
+      const response = await creativeApi.getWeekly(brandId);
+      setIdeas(response.ideas || []);
+      setRun(response.latestRun || null);
+    } catch (error) {
+      setErr(error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
-    if (selectedBrandId) load(selectedBrandId); else { setIdeas([]); setRun(null); }
+    setHeartbeat(null);
+    setBriefs({});
+    if (selectedBrandId) load(selectedBrandId);
+    else { setIdeas([]); setRun(null); }
   }, [selectedBrandId]);
 
   const { job: weeklyJob, start: startWeekly } = useJobRunner({
-    kind: "weekly_strategy", brandId: selectedBrandId, onComplete: () => load(selectedBrandId),
+    kind: "weekly_strategy",
+    brandId: selectedBrandId,
+    onComplete: () => load(selectedBrandId),
   });
 
-  if (!selectedBrandId) {
-    return <EmptyState icon={MousePointerClick} title="No brand selected" hint="Select a brand in the top bar to run the weekly strategist." />;
-  }
-
-  const run_ = async () => {
+  const runStrategy = async () => {
+    if (!selectedBrandId) return;
     setErr(null);
-    try { const { jobId } = await creativeApi.runWeekly(selectedBrandId); startWeekly(jobId); }
-    catch (e) { setErr(e.message); }
+    try {
+      const { jobId } = await creativeApi.runWeekly(selectedBrandId);
+      startWeekly(jobId);
+    } catch (error) {
+      setErr(error.message);
+    }
   };
 
   const approve = async (id) => {
-    try { await creativeApi.approveIdea(id); load(selectedBrandId); }
-    catch (e) { setErr(e.message); }
+    setUpdating(`${id}:approved`);
+    try {
+      await creativeApi.approveIdea(id);
+      await load(selectedBrandId);
+    } catch (error) {
+      setErr(error.message);
+    } finally {
+      setUpdating(null);
+    }
   };
-  const setStatus = async (id, status) => {
-    try { await creativeApi.setIdeaStatus(id, status); load(selectedBrandId); }
-    catch (e) { setErr(e.message); }
+
+  const updateStatus = async (id, nextStatus) => {
+    setUpdating(`${id}:${nextStatus}`);
+    try {
+      await creativeApi.setIdeaStatus(id, nextStatus);
+      await load(selectedBrandId);
+    } catch (error) {
+      setErr(error.message);
+    } finally {
+      setUpdating(null);
+    }
   };
 
   const makeBrief = async (id) => {
@@ -75,196 +110,388 @@ export default function WeeklyView({ ctx }) {
     setBriefing(id);
     try {
       const { brief } = await creativeApi.generateBrief(id, selectedProductId || undefined);
-      setBriefs((b) => ({ ...b, [id]: brief }));
-    } catch (e) { setErr(e.message); }
-    finally { setBriefing(null); }
+      setBriefs((current) => ({ ...current, [id]: brief }));
+    } catch (error) {
+      setErr(error.message);
+    } finally {
+      setBriefing(null);
+    }
   };
 
   const loadHeartbeat = async (force) => {
+    if (!selectedBrandId) return;
     setErr(null);
     setHbLoading(true);
-    try { const r = await creativeApi.getHeartbeat(selectedBrandId, force); setHeartbeat(r.markdown); }
-    catch (e) { setErr(e.message); }
-    finally { setHbLoading(false); }
+    try {
+      const response = await creativeApi.getHeartbeat(selectedBrandId, force);
+      setHeartbeat(response.markdown);
+    } catch (error) {
+      setErr(error.message);
+    } finally {
+      setHbLoading(false);
+    }
   };
 
-  // Status tab first (his pending/approved/rejected), then tier tab, then the
-  // orthogonal persona/angle/format/awareness dropdowns.
-  const byStatus = ideas.filter((i) => (statusTab === "pending" ? (i.status ?? "pending") === "pending"
-    : statusTab === "approved" ? i.status === "approved" || i.status === "sent_to_inspo"
-    : i.status === "rejected"));
-  const counts = TIERS.reduce((acc, t) => {
-    acc[t.key] = t.key === "all" ? byStatus.length : byStatus.filter((i) => i.tier === t.key).length;
-    return acc;
+  const byStatus = ideas.filter((idea) => (
+    status === "pending" ? (idea.status ?? "pending") === "pending"
+      : status === "approved" ? idea.status === "approved" || idea.status === "sent_to_inspo"
+        : idea.status === "rejected"
+  ));
+  const tierCounts = TIERS.reduce((result, item) => {
+    result[item.key] = item.key === "all" ? byStatus.length : byStatus.filter((idea) => idea.tier === item.key).length;
+    return result;
   }, {});
   const statusCounts = {
-    pending: ideas.filter((i) => (i.status ?? "pending") === "pending").length,
-    approved: ideas.filter((i) => i.status === "approved" || i.status === "sent_to_inspo").length,
-    rejected: ideas.filter((i) => i.status === "rejected").length,
+    pending: ideas.filter((idea) => (idea.status ?? "pending") === "pending").length,
+    approved: ideas.filter((idea) => idea.status === "approved" || idea.status === "sent_to_inspo").length,
+    rejected: ideas.filter((idea) => idea.status === "rejected").length,
   };
-  const uniq = (key) => [...new Set(ideas.map((i) => i[key]).filter(Boolean))];
-  const opts = { persona: uniq("targetPersona"), angle: uniq("suggestedAngle"), format: uniq("format"), awareness: uniq("awarenessStage") };
-  const shown = byStatus.filter((i) =>
-    (tab === "all" || i.tier === tab) &&
-    (filters.persona === "all" || i.targetPersona === filters.persona) &&
-    (filters.angle === "all" || i.suggestedAngle === filters.angle) &&
-    (filters.format === "all" || i.format === filters.format) &&
-    (filters.awareness === "all" || i.awarenessStage === filters.awareness),
-  );
+  const unique = (key) => [...new Set(ideas.map((idea) => idea[key]).filter(Boolean))];
+  const options = {
+    persona: unique("targetPersona"),
+    angle: unique("suggestedAngle"),
+    format: unique("format"),
+    awareness: unique("awarenessStage"),
+  };
+  const shown = byStatus.filter((idea) =>
+    (tier === "all" || idea.tier === tier) &&
+    (filters.persona === "all" || idea.targetPersona === filters.persona) &&
+    (filters.angle === "all" || idea.suggestedAngle === filters.angle) &&
+    (filters.format === "all" || idea.format === filters.format) &&
+    (filters.awareness === "all" || idea.awarenessStage === filters.awareness));
+  const conceptColumns = [
+    shown.filter((_, index) => index % 2 === 0),
+    shown.filter((_, index) => index % 2 === 1),
+  ];
   const summary = run?.summary;
-
-  const filtersActive = filters.persona !== "all" || filters.angle !== "all" || filters.format !== "all" || filters.awareness !== "all";
+  const filtersActive = Object.values(filters).some((value) => value !== "all");
+  const jobActive = weeklyJob && (weeklyJob.status == null || weeklyJob.status === "queued" || weeklyJob.status === "running");
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center gap-3">
-        <Button onClick={run_} size="sm" className="rounded-xl">Run strategy</Button>
-        <JobBadge job={weeklyJob} />
-        <span className="text-sm text-neutral-400">{selectedBrand?.name} · needs analyzed ads + research</span>
-      </div>
-      <ErrorBanner message={err} />
-
-      {summary && (
-        <div className="space-y-3">
-          <div className="grid grid-cols-3 gap-3">
-            <StatTile label="Concepts" value={ideas.length} />
-            <StatTile label="Top ads analyzed" value={summary.signals?.top_ads_analyzed ?? "—"} />
-            <StatTile label="Run cost" value={run?.costCents != null ? `$${(run.costCents / 100).toFixed(2)}` : "—"} sub={`${summary.signals?.learnings_count ?? 0} learnings`} />
-          </div>
-          {summary.signals?.concept_distribution_hint && (
-            <SectionCard title="Why these ideas"><p className="text-sm text-neutral-600">{summary.signals.concept_distribution_hint}</p></SectionCard>
-          )}
-        </div>
-      )}
-
-      <SectionCard title="Heartbeat" description="14-day performance digest" icon={Activity}
-        actions={
-          <div className="flex gap-2">
-            <Button onClick={() => loadHeartbeat(false)} disabled={hbLoading} variant="outline" size="sm" className="rounded-lg h-7 text-xs">{hbLoading ? "Loading…" : "View"}</Button>
-            <Button onClick={() => loadHeartbeat(true)} disabled={hbLoading} variant="outline" size="sm" className="rounded-lg h-7 text-xs">Refresh</Button>
-          </div>
-        }>
-        {(heartbeat || summary?.heartbeat_markdown)
-          ? <pre className="whitespace-pre-wrap font-sans text-xs text-neutral-600">{heartbeat || summary.heartbeat_markdown}</pre>
-          : <p className="text-xs text-neutral-400">Click View to load the digest.</p>}
-      </SectionCard>
-
-      {loading && ideas.length === 0 ? (
-        <ViewLoading label="Loading concepts…" />
-      ) : ideas.length === 0 ? (
-        <EmptyState icon={MousePointerClick} title="No concepts yet"
-          hint="Click Run strategy to generate tiered concept cards (worker must be running; needs analyzed ads + research)." />
-      ) : (
-      <div className="space-y-4">
-        {/* Status filter (shadcn tabs) */}
-        <Tabs value={statusTab} onValueChange={setStatusTab}>
-          <TabsList>
-            {["pending", "approved", "rejected"].map((s) => (
-              <TabsTrigger key={s} value={s} className="capitalize">{s} ({statusCounts[s] || 0})</TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
-
-        {/* Tier filter (shadcn tabs) */}
-        <Tabs value={tab} onValueChange={setTab}>
-          <TabsList className="flex-wrap h-auto">
-            {TIERS.map((t) => <TabsTrigger key={t.key} value={t.key}>{t.label} ({counts[t.key] || 0})</TabsTrigger>)}
-          </TabsList>
-        </Tabs>
-
-        {/* Orthogonal dropdown filters */}
-        <div className="flex flex-wrap items-center gap-2">
-          {[["persona", "Persona", opts.persona], ["angle", "Angle", opts.angle], ["format", "Format", opts.format], ["awareness", "Awareness", opts.awareness]].map(([key, label, options]) => (
-            <Select key={key} value={filters[key]} onValueChange={(v) => setFilters((f) => ({ ...f, [key]: v }))}>
-              <SelectTrigger className="w-auto min-w-[120px] rounded-xl h-8 text-xs"><SelectValue placeholder={label} /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{label}: all</SelectItem>
-                {options.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <div className="flex flex-wrap items-center gap-4">
+            <Select value={selectedBrandId || ""} onValueChange={(value) => setSelectedBrandId(value || null)}>
+              <SelectTrigger className="cs-pill-control w-[230px] px-4">
+                <SelectValue placeholder={brandsLoading ? "Loading Brands…" : "Select Brand"} />
+              </SelectTrigger>
+              <SelectContent className="cs-select-content bg-white">
+                {brands.map((brand) => <SelectItem key={brand.id} value={brand.id}>{brand.name}</SelectItem>)}
               </SelectContent>
             </Select>
-          ))}
-          {filtersActive && (
-            <Button onClick={() => setFilters({ persona: "all", angle: "all", format: "all", awareness: "all" })} variant="ghost" size="sm" className="h-8 text-xs text-neutral-500">clear</Button>
+            <Select
+              value={selectedProductId || ""}
+              onValueChange={(value) => setSelectedProductId(value || null)}
+              disabled={!selectedBrandId || productsLoading}
+            >
+              <SelectTrigger className="cs-pill-control w-[230px] px-4">
+                <SelectValue placeholder={productsLoading ? "Loading Products…" : "Select Product"} />
+              </SelectTrigger>
+              <SelectContent className="cs-select-content bg-white">
+                {products.map((product) => <SelectItem key={product.id} value={product.id}>{product.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <p className="mt-0.5 text-xs font-normal text-neutral-400">Needs analyzed ads and completed research</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <JobBadge job={weeklyJob} />
+          <button type="button" onClick={runStrategy} disabled={!selectedBrandId || jobActive} className="cs-primary-button">
+            {jobActive && <Loader2 className="h-4 w-4 animate-spin" />}
+            {jobActive ? "Running Strategy…" : "Run Strategy"}
+          </button>
+        </div>
+      </div>
+
+      <ErrorBanner message={err} />
+
+      {!selectedBrandId ? (
+        <EmptyState icon={MousePointerClick} title="No brand selected" hint="Select a brand above to run the weekly strategist." className="min-h-[420px]" />
+      ) : loading && ideas.length === 0 ? (
+        <ViewLoading label="Loading weekly strategy…" className="min-h-[420px]" />
+      ) : (
+        <>
+          {summary && (
+            <section className="cs-weekly-summary">
+              <div className="cs-weekly-summary__pills">
+                <span>{ideas.length} New Concepts Generated</span>
+                <span>{summary.signals?.top_ads_analyzed ?? "—"} Top Ads Analyzed</span>
+              </div>
+              <h2>Why These Ideas</h2>
+              <p>{summary.signals?.concept_distribution_hint || "Concepts are balanced across current performance signals, audience awareness, and creative opportunity."}</p>
+            </section>
+          )}
+
+          <section className="cs-weekly-heartbeat">
+            <header className="cs-weekly-heartbeat__header">
+              <div className="flex items-center gap-2">
+                <Activity className="h-4 w-4 text-[#6c3403]" />
+                <div>
+                  <h2 className="text-sm font-semibold text-[#3b170b]">Heartbeat</h2>
+                  <p className="text-[11px] font-normal text-[#6c3403]/65">14-day performance digest</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button type="button" onClick={() => loadHeartbeat(false)} disabled={hbLoading} className="cs-weekly-small-button">
+                  {hbLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "View"}
+                </button>
+                <button type="button" onClick={() => loadHeartbeat(true)} disabled={hbLoading} className="cs-weekly-small-button">
+                  <RefreshCw className="h-3.5 w-3.5" /> Refresh
+                </button>
+              </div>
+            </header>
+            <div className="cs-weekly-heartbeat__body">
+              {(heartbeat || summary?.heartbeat_markdown)
+                ? <HeartbeatMarkdown markdown={heartbeat || summary.heartbeat_markdown} />
+                : <p className="text-xs font-normal text-[#6c3403]/55">Click View to load the digest.</p>}
+            </div>
+          </section>
+
+          {ideas.length === 0 ? (
+            <EmptyState icon={MousePointerClick} title="No concepts yet" hint="Run Strategy to generate concepts from analyzed ads and research." />
+          ) : (
+            <div className="space-y-4">
+              <div className="cs-weekly-filters">
+                <div className="cs-weekly-switchers-row">
+                  <SegmentedFilter items={STATUSES} value={status} onChange={setStatusFilter} counts={statusCounts} />
+                  <SegmentedFilter items={TIERS} value={tier} onChange={setTier} counts={tierCounts} compact />
+                </div>
+                <div className="cs-weekly-dropdown-row">
+                  {[
+                    ["persona", "Persona", options.persona],
+                    ["angle", "Angle", options.angle],
+                    ["format", "Format", options.format],
+                    ["awareness", "Awareness", options.awareness],
+                  ].map(([key, label, values]) => (
+                    <Select key={key} value={filters[key]} onValueChange={(value) => setFilters((current) => ({ ...current, [key]: value }))}>
+                      <SelectTrigger className="cs-weekly-filter-select w-full px-3">
+                        <SelectValue placeholder={label} />
+                      </SelectTrigger>
+                      <SelectContent className="cs-select-content bg-white">
+                        <SelectItem value="all">{label}: All</SelectItem>
+                        {values.map((value) => <SelectItem key={value} value={value}>{value}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  ))}
+                  {filtersActive && (
+                    <button type="button" onClick={() => setFilters({ persona: "all", angle: "all", format: "all", awareness: "all" })} className="cs-weekly-clear">Clear filters</button>
+                  )}
+                </div>
+              </div>
+
+              {shown.length === 0 ? (
+                <EmptyState icon={MousePointerClick} title="Nothing here" hint={filtersActive ? "No concepts match these filters." : `No ${status} concepts in this tier.`} />
+              ) : (
+                <div className="cs-weekly-grid">
+                  {conceptColumns.map((column, columnIndex) => (
+                    <div key={columnIndex} className="cs-weekly-grid__column">
+                      {column.map((idea, cardIndex) => (
+                        <ConceptCard
+                          key={idea.id}
+                          idea={idea}
+                          brief={briefs[idea.id]}
+                          briefing={briefing}
+                          updating={updating}
+                          approve={approve}
+                          updateStatus={updateStatus}
+                          makeBrief={makeBrief}
+                          orange={(cardIndex + columnIndex) % 2 === 1}
+                        />
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+function SegmentedFilter({ items, value, onChange, counts, compact = false }) {
+  return (
+    <div className={`cs-weekly-switcher ${compact ? "is-compact" : ""}`}>
+      {items.map((item) => (
+        <button key={item.key} type="button" onClick={() => onChange(item.key)} className={`cs-weekly-switcher__item ${value === item.key ? "is-active" : ""}`}>
+          {item.label} <span>{counts[item.key] || 0}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function ConceptCard({ idea, brief, briefing, updating, approve, updateStatus, makeBrief, orange }) {
+  const approved = idea.status === "approved" || idea.status === "sent_to_inspo";
+  const rejected = idea.status === "rejected";
+  const approving = updating === `${idea.id}:approved`;
+  const rejecting = updating === `${idea.id}:rejected`;
+  const resetting = updating === `${idea.id}:pending`;
+
+  return (
+    <article className={`cs-weekly-card ${orange ? "is-orange" : ""}`}>
+      <header className="cs-weekly-card__header">
+        <h3>{idea.title}</h3>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <span className="cs-weekly-pill is-tier">{formatTier(idea.tier)}</span>
+          {approved && <span className="cs-weekly-pill is-status">Approved</span>}
+          {rejected && <span className="cs-weekly-pill is-status">Dismissed</span>}
+        </div>
+      </header>
+
+      <div className="cs-weekly-card__body">
+        <p className="text-sm font-normal leading-6 text-[#5f524c]">{idea.conceptDescription}</p>
+        {idea.suggestedAngle && <p className="mt-4 text-sm text-[#3b2c26]"><strong>Angle:</strong> <span className="underline decoration-[#6c3403]/35 underline-offset-4">{idea.suggestedAngle}</span></p>}
+        {idea.hypothesis && <p className="mt-3 text-xs font-normal leading-5 text-[#6d605a]"><strong className="text-[#4f4039]">Hypothesis:</strong> {idea.hypothesis}</p>}
+        {idea.whyNow && <p className="mt-2 text-xs font-normal leading-5 text-[#6d605a]"><strong className="text-[#4f4039]">Why now:</strong> {idea.whyNow}</p>}
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          {idea.format && <span className="cs-weekly-pill">{idea.format}</span>}
+          {idea.awarenessStage && <span className="cs-weekly-pill">{idea.awarenessStage}</span>}
+          {idea.targetPersona && <span className="cs-weekly-pill">{idea.targetPersona}</span>}
+        </div>
+
+        <div className="mt-5 flex flex-wrap items-center gap-3">
+          <button type="button" onClick={() => makeBrief(idea.id)} disabled={briefing === idea.id} className="cs-weekly-brief-button">
+            {briefing === idea.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <ClipboardList className="h-4 w-4" />}
+            {briefing === idea.id ? "Writing…" : idea.format === "static" ? "Generate Brief" : "Generate Script"}
+          </button>
+          <span className="flex-1" />
+          {!approved && (
+            <button type="button" onClick={() => approve(idea.id)} disabled={Boolean(updating)} className="cs-weekly-decision is-approve">
+              {approving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CircleCheck className="h-4 w-4" />} Approve
+            </button>
+          )}
+          {!rejected && (
+            <button type="button" onClick={() => updateStatus(idea.id, "rejected")} disabled={Boolean(updating)} className="cs-weekly-decision is-dismiss">
+              {rejecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CircleX className="h-4 w-4" />} Dismiss
+            </button>
+          )}
+          {(approved || rejected) && (
+            <button type="button" onClick={() => updateStatus(idea.id, "pending")} disabled={Boolean(updating)} className="cs-weekly-reset">
+              {resetting ? "Resetting…" : "Reset"}
+            </button>
           )}
         </div>
 
-        <div className="space-y-3">
-          {shown.map((it) => {
-            const approved = it.status === "approved" || it.status === "sent_to_inspo";
-            return (
-              <div key={it.id} className="rounded-2xl border border-neutral-200 bg-white shadow-xs p-4 space-y-2">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="font-semibold text-neutral-900">{it.title}</div>
-                    <div className="flex flex-wrap items-center gap-1 mt-1.5">
-                      <Badge variant="secondary" className="rounded-full text-[10px]">{it.tier}</Badge>
-                      {it.targetPersona && <Badge variant="outline" className="rounded-full text-[10px] font-normal text-neutral-500">{it.targetPersona}</Badge>}
-                      {it.awarenessStage && <Badge variant="outline" className="rounded-full text-[10px] font-normal text-neutral-500">{it.awarenessStage}</Badge>}
-                      {it.format && <Badge variant="outline" className="rounded-full text-[10px] font-normal text-neutral-500">{it.format}</Badge>}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1.5 whitespace-nowrap">
-                    {it.status === "rejected" && <Badge className="rounded-full border-0 bg-red-100 text-red-700">rejected</Badge>}
-                    {approved && <Badge className="rounded-full border-0 bg-emerald-100 text-emerald-700">approved</Badge>}
-                    {!approved && <Button onClick={() => approve(it.id)} variant="outline" size="sm" className="rounded-xl h-7 text-xs">Approve</Button>}
-                    {it.status !== "rejected" && <Button onClick={() => setStatus(it.id, "rejected")} variant="ghost" size="sm" className="rounded-xl h-7 text-xs text-neutral-500">Reject</Button>}
-                    {(approved || it.status === "rejected") && <button onClick={() => setStatus(it.id, "pending")} className="text-xs text-neutral-400 underline">reset</button>}
-                  </div>
-                </div>
-                <div className="text-sm text-neutral-700">{it.conceptDescription}</div>
-                {it.suggestedAngle && <div className="text-xs text-neutral-500"><span className="text-neutral-400">Angle:</span> {it.suggestedAngle}</div>}
-                {it.hypothesis && <div className="text-xs text-neutral-500"><span className="text-neutral-400">Hypothesis:</span> {it.hypothesis}</div>}
-                {it.whyNow && <div className="text-xs text-neutral-500"><span className="text-neutral-400">Why now:</span> {it.whyNow}</div>}
-                <div className="pt-1">
-                  <Button onClick={() => makeBrief(it.id)} disabled={briefing === it.id} variant="outline" size="sm" className="rounded-xl h-7 text-xs">
-                    {briefing === it.id ? "Writing brief…" : (it.format === "static" ? "Generate brief" : "Generate script")}
-                  </Button>
-                </div>
-                {briefs[it.id] && <Brief brief={briefs[it.id]} />}
-              </div>
-            );
-          })}
-          {shown.length === 0 && (
-            <EmptyState icon={MousePointerClick} title="Nothing here"
-              hint={filtersActive ? "No concepts match these filters." : `No ${statusTab} concepts in this tier.`} />
-          )}
-        </div>
+        {brief && <Brief brief={brief} />}
       </div>
-      )}
-    </div>
+    </article>
   );
 }
 
 function Brief({ brief }) {
   return (
-    <div className="mt-2 rounded-xl bg-neutral-50 border border-neutral-200 p-3 text-xs text-neutral-700 space-y-2">
-      {brief.hooks?.length > 0 && (
-        <div>
-          <div className="font-medium text-neutral-800">Hooks</div>
-          <ol className="list-decimal ml-4">{brief.hooks.map((h, i) => <li key={i}>{h}</li>)}</ol>
-        </div>
-      )}
-      {brief.script && (
-        <div>
-          <div className="font-medium text-neutral-800">Script</div>
-          <pre className="whitespace-pre-wrap font-sans">{brief.script}</pre>
-        </div>
-      )}
-      {brief.headlines?.length > 0 && (
-        <div>
-          <div className="font-medium text-neutral-800">Headlines</div>
-          <ol className="list-decimal ml-4">{brief.headlines.map((h, i) => <li key={i}>{h}</li>)}</ol>
-        </div>
-      )}
-      {brief.static_brief && (
-        <div>
-          <div className="font-medium text-neutral-800">Static brief</div>
-          <pre className="whitespace-pre-wrap font-sans">{brief.static_brief}</pre>
-        </div>
-      )}
+    <div className="cs-weekly-brief-result">
+      {brief.hooks?.length > 0 && <BriefSection title="Hooks"><ol className="ml-4 list-decimal">{brief.hooks.map((hook, index) => <li key={index}>{hook}</li>)}</ol></BriefSection>}
+      {brief.script && <BriefSection title="Script"><pre className="whitespace-pre-wrap font-sans">{brief.script}</pre></BriefSection>}
+      {brief.headlines?.length > 0 && <BriefSection title="Headlines"><ol className="ml-4 list-decimal">{brief.headlines.map((headline, index) => <li key={index}>{headline}</li>)}</ol></BriefSection>}
+      {brief.static_brief && <BriefSection title="Static Brief"><pre className="whitespace-pre-wrap font-sans">{brief.static_brief}</pre></BriefSection>}
     </div>
   );
 }
-Brief.propTypes = { brief: PropTypes.object.isRequired };
+
+function BriefSection({ title, children }) {
+  return <div><p className="font-semibold text-[#3b170b]">{title}</p>{children}</div>;
+}
+
+function HeartbeatMarkdown({ markdown }) {
+  const lines = String(markdown || "").replace(/\r/g, "").split("\n");
+  const blocks = [];
+  let index = 0;
+
+  while (index < lines.length) {
+    const line = lines[index].trim();
+    if (!line) { index += 1; continue; }
+
+    const heading = line.match(/^(#{1,3})\s+(.+)$/);
+    if (heading) {
+      const level = heading[1].length;
+      const Tag = level === 1 ? "h2" : level === 2 ? "h3" : "h4";
+      blocks.push(<Tag key={`heading-${index}`} className={`cs-heartbeat-heading is-level-${level}`}>{renderInline(heading[2])}</Tag>);
+      index += 1;
+      continue;
+    }
+
+    if (/^---+$/.test(line)) {
+      blocks.push(<hr key={`rule-${index}`} className="cs-heartbeat-rule" />);
+      index += 1;
+      continue;
+    }
+
+    if (line.startsWith("- ")) {
+      const items = [];
+      while (index < lines.length && lines[index].trim().startsWith("- ")) {
+        items.push(lines[index].trim().slice(2));
+        index += 1;
+      }
+      blocks.push(<ul key={`list-${index}`} className="cs-heartbeat-list">{items.map((item, itemIndex) => <li key={itemIndex}>{renderInline(item)}</li>)}</ul>);
+      continue;
+    }
+
+    if (line.includes("|") && lines[index + 1] && /^\|?\s*:?-+/.test(lines[index + 1].trim())) {
+      const headers = splitTableRow(line);
+      index += 2;
+      const rows = [];
+      while (index < lines.length && lines[index].trim().includes("|")) {
+        rows.push(splitTableRow(lines[index].trim()));
+        index += 1;
+      }
+      blocks.push(
+        <div key={`table-${index}`} className="cs-heartbeat-table-wrap">
+          <table className="cs-heartbeat-table">
+            <thead><tr>{headers.map((cell, cellIndex) => <th key={cellIndex}>{renderInline(cell)}</th>)}</tr></thead>
+            <tbody>{rows.map((row, rowIndex) => <tr key={rowIndex}>{row.map((cell, cellIndex) => <td key={cellIndex}>{renderInline(cell)}</td>)}</tr>)}</tbody>
+          </table>
+        </div>,
+      );
+      continue;
+    }
+
+    const paragraph = [line];
+    index += 1;
+    while (index < lines.length) {
+      const next = lines[index].trim();
+      if (!next || /^(#{1,3})\s+/.test(next) || /^---+$/.test(next) || next.startsWith("- ") || (next.includes("|") && lines[index + 1] && /^\|?\s*:?-+/.test(lines[index + 1].trim()))) break;
+      paragraph.push(next);
+      index += 1;
+    }
+    blocks.push(<p key={`paragraph-${index}`} className="cs-heartbeat-paragraph">{renderInline(paragraph.join(" "))}</p>);
+  }
+
+  return <div className="cs-heartbeat-markdown">{blocks}</div>;
+}
+
+function splitTableRow(row) {
+  return row.replace(/^\|/, "").replace(/\|$/, "").split("|").map((cell) => cell.trim());
+}
+
+function renderInline(value) {
+  return String(value).replace(/\\_/g, "_").split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g).filter(Boolean).map((part, index) => {
+    if (part.startsWith("**") && part.endsWith("**")) return <strong key={index}>{part.slice(2, -2)}</strong>;
+    if (part.startsWith("*") && part.endsWith("*")) return <em key={index}>{part.slice(1, -1)}</em>;
+    return <span key={index}>{part}</span>;
+  });
+}
+
+function formatTier(value) {
+  return TIERS.find((tier) => tier.key === value)?.label || value || "Concept";
+}
 
 WeeklyView.propTypes = { ctx: PropTypes.object.isRequired };
+SegmentedFilter.propTypes = { items: PropTypes.array.isRequired, value: PropTypes.string.isRequired, onChange: PropTypes.func.isRequired, counts: PropTypes.object.isRequired, compact: PropTypes.bool };
+ConceptCard.propTypes = {
+  idea: PropTypes.object.isRequired,
+  brief: PropTypes.object,
+  briefing: PropTypes.string,
+  updating: PropTypes.string,
+  approve: PropTypes.func.isRequired,
+  updateStatus: PropTypes.func.isRequired,
+  makeBrief: PropTypes.func.isRequired,
+  orange: PropTypes.bool,
+};
+Brief.propTypes = { brief: PropTypes.object.isRequired };
+BriefSection.propTypes = { title: PropTypes.string.isRequired, children: PropTypes.node.isRequired };
+HeartbeatMarkdown.propTypes = { markdown: PropTypes.string.isRequired };
