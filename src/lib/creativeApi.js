@@ -29,7 +29,10 @@ async function request(path, { method = "GET", body } = {}) {
 export const creativeApi = {
   me: () => request("/me"),
   listClients: () => request("/clients"),
-  syncBrands: () => request("/clients/sync", { method: "POST" }),
+  syncBrands: (accounts) => request("/clients/sync", {
+    method: "POST",
+    body: Array.isArray(accounts) ? { accounts } : undefined,
+  }),
   createClient: (body) => request("/clients", { method: "POST", body }),
   getClient: (id) => request(`/clients/${id}`),
   listProducts: (clientId) => request(`/products?clientId=${encodeURIComponent(clientId)}`),

@@ -1,313 +1,292 @@
-"use client"
+"use client";
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import TikTokPostSelectorInline from "./TikTokPostSelectorInline"
-import TikTokReorderAdNameParts from "@/components/ui/TikTokReorderAdNameParts"
-import { useNavigate } from "react-router-dom"
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import TikTokReorderAdNameParts from "@/components/ui/TikTokReorderAdNameParts";
+import { useNavigate } from "react-router-dom";
+import TikTokPostSelectorInline from "./TikTokPostSelectorInline";
 
-import { useTikTokVideoUpload } from "@/hooks/useTikTokVideoUpload"
-import { readCache, writeCache, clearCache } from "@/lib/dataCache"
-import { useTikTokAuth } from "@/lib/TikTokAuthContext"
-import { cn } from "@/lib/utils"
-import { saveTikTokSettings, deleteTikTokCopyTemplate } from "@/lib/saveTikTokSettings"
+import CheckBlackIcon from "@/assets/icons/CheckBlack.svg?react";
+import CTAIcon from "@/assets/icons/cta.svg?react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useTikTokVideoUpload } from "@/hooks/useTikTokVideoUpload";
+import { useAppData } from "@/lib/AppContext";
+import { readCache, writeCache } from "@/lib/dataCache";
+import { deleteTikTokCopyTemplate, saveTikTokSettings } from "@/lib/saveTikTokSettings";
+import { useTikTokAuth } from "@/lib/TikTokAuthContext";
+import { cn } from "@/lib/utils";
+import axios from "axios";
 import {
+  AlertTriangle,
+  ArrowUpDown,
+  BookOpen,
   Check,
-  ChevronDown,
   ChevronsUpDown,
   CloudUpload,
   Copy,
-  FileText,
-  Globe,
+  CopyIcon,
   Link as LinkIcon,
   Loader,
   Plus,
   PlusCircle,
   RefreshCcw,
-
+  Search,
+  Store,
   Trash,
   Trash2,
   Upload,
   Users,
-  Video,
   X,
   Zap,
-  AlertTriangle,
-  Ban,
-  CircleX,
-  Eye,
-  RotateCcw,
-  Image,
-  CopyIcon,
-  ArrowUpDown,
-  Info,
-  Search,
-  BookOpen,
-  Store
-} from "lucide-react"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { useDropzone } from "react-dropzone"
-import TextareaAutosize from 'react-textarea-autosize'
-import { toast } from "sonner"
-import CTAIcon from '@/assets/icons/cta.svg?react';
-import CheckBlackIcon from '@/assets/icons/CheckBlack.svg?react';
-import { Checkbox } from "@/components/ui/checkbox"
-import { Switch } from "@/components/ui/switch"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import axios from "axios"
-import pLimit from "p-limit"
-import { useAppData } from "@/lib/AppContext"
+} from "lucide-react";
+import pLimit from "p-limit";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useDropzone } from "react-dropzone";
+import TextareaAutosize from "react-textarea-autosize";
+import { toast } from "sonner";
 
-import DesktopIcon from '@/assets/Desktop.webp'
-import DropboxIcon from '@/assets/Dropbox.png'
-import AdAccountIcon from '@/assets/icons/adaccount.svg?react'
-import CogIcon from '@/assets/icons/cog.svg?react'
-import ConfigIcon from '@/assets/icons/plus.svg?react'
-import CampaignIcon from '@/assets/icons/folder.svg?react'
-import AdSetIcon from '@/assets/icons/grid.svg?react'
-import TemplateIcon from '@/assets/icons/file.svg?react'
-import RocketIcon2 from '@/assets/icons/rocket.svg?react'
-import CheckIcon from '@/assets/icons/check.svg?react'
-import UploadIcon from '@/assets/icons/upload.svg?react'
-import QueueIcon from '@/assets/icons/queue.svg?react'
-import PartialSuccess from '@/assets/icons/partialsuccess.svg?react'
-import LabelIcon from '@/assets/icons/label.svg?react'
-import TikTokIconUrl from '@/assets/icons/tiktok.svg'
-import TikTokJobQueue from './TikTokJobQueue'
+import DesktopIcon from "@/assets/Desktop.webp";
+import DropboxIcon from "@/assets/Dropbox.png";
+import AdAccountIcon from "@/assets/icons/adaccount.svg?react";
+import CogIcon from "@/assets/icons/cog.svg?react";
+import TemplateIcon from "@/assets/icons/file.svg?react";
+import CampaignIcon from "@/assets/icons/folder.svg?react";
+import AdSetIcon from "@/assets/icons/grid.svg?react";
+import LabelIcon from "@/assets/icons/label.svg?react";
+import ConfigIcon from "@/assets/icons/plus.svg?react";
+import TikTokIconUrl from "@/assets/icons/tiktok.svg";
+import TikTokJobQueue from "./TikTokJobQueue";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com'
-const TIKTOK_PINK = '#FE2C55'
+const API_BASE_URL = import.meta.env.VITE_API_URL || "https://api.withblip.com";
+const TIKTOK_PINK = "#FE2C55";
 
-const VARIANT_COLORS = ['#6b7280', '#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899']
+const VARIANT_COLORS = ["#6b7280", "#ef4444", "#f59e0b", "#10b981", "#3b82f6", "#8b5cf6", "#ec4899"];
 
 function VariantDot({ variantId, variants }) {
-  const idx = variants.findIndex((v) => v.id === variantId)
-  const color = VARIANT_COLORS[Math.max(0, idx) % VARIANT_COLORS.length]
-  return <span className="inline-block h-2 w-2 rounded-full shrink-0" style={{ background: color }} />
+  const idx = variants.findIndex((v) => v.id === variantId);
+  const color = VARIANT_COLORS[Math.max(0, idx) % VARIANT_COLORS.length];
+  return <span className="inline-block h-2 w-2 rounded-full shrink-0" style={{ background: color }} />;
 }
 
 const isSalesObjective = (c) => {
   if (!c) return false;
   const obj = String(c.virtual_objective_type || c.objective_type || c.objective || "").toUpperCase();
-  return obj === 'SALES' || obj === 'PRODUCT_SALES' || obj === 'CATALOG_SALES';
+  return obj === "SALES" || obj === "PRODUCT_SALES" || obj === "CATALOG_SALES";
 };
 
 const CTA_ASSET_MAPPING = {
   LEARN_MORE: {
     asset_content: "Learn more ",
-    asset_ids: ["201781", "201535"]
+    asset_ids: ["201781", "201535"],
   },
   SHOP_NOW: {
     asset_content: "Shop now",
-    asset_ids: ["201885", "201387"]
+    asset_ids: ["201885", "201387"],
   },
   SIGN_UP: {
     asset_content: "Sign up",
-    asset_ids: ["202162", "201512"]
+    asset_ids: ["202162", "201512"],
   },
   DOWNLOAD_NOW: {
     asset_content: "Download",
-    asset_ids: ["201902", "201404"]
+    asset_ids: ["201902", "201404"],
   },
   CONTACT_US: {
     asset_content: "Contact us",
-    asset_ids: ["202006", "201562"]
+    asset_ids: ["202006", "201562"],
   },
   ORDER_NOW: {
     asset_content: "Order now",
-    asset_ids: ["202046", "201641"]
+    asset_ids: ["202046", "201641"],
   },
   BOOK_NOW: {
     asset_content: "Book now",
-    asset_ids: ["201751", "201455"]
+    asset_ids: ["201751", "201455"],
   },
   PLAY_GAME: {
     asset_content: "Play game",
-    asset_ids: ["202005", "201561"]
+    asset_ids: ["202005", "201561"],
   },
   APPLY_NOW: {
     asset_content: "Apply now",
-    asset_ids: ["201963", "201489"]
+    asset_ids: ["201963", "201489"],
   },
   WATCH_NOW: {
     asset_content: "Watch now",
-    asset_ids: ["201964", "201490"]
+    asset_ids: ["201964", "201490"],
   },
   INSTALL_NOW: {
     asset_content: "Install now",
-    asset_ids: ["202114", "201743"]
+    asset_ids: ["202114", "201743"],
   },
   GET_QUOTE: {
     asset_content: "Get quote",
-    asset_ids: ["202023", "201579"]
+    asset_ids: ["202023", "201579"],
   },
   SUBSCRIBE: {
     asset_content: "Subscribe",
-    asset_ids: ["201753", "201457"]
+    asset_ids: ["201753", "201457"],
   },
   LISTEN_NOW: {
     asset_content: "Listen now",
-    asset_ids: ["201995", "201523"]
+    asset_ids: ["201995", "201523"],
   },
   VISIT_STORE: {
     asset_content: "Visit store",
-    asset_ids: ["201824", "201616"]
+    asset_ids: ["201824", "201616"],
   },
   READ_MORE: {
     asset_content: "Read more",
-    asset_ids: ["201829", "201621"]
+    asset_ids: ["201829", "201621"],
   },
   GET_TICKETS_NOW: {
     asset_content: "Get tickets now",
-    asset_ids: ["201913", "201415"]
+    asset_ids: ["201913", "201415"],
   },
   GET_SHOWTIMES: {
     asset_content: "Get showtimes",
-    asset_ids: ["201953", "201452"]
+    asset_ids: ["201953", "201452"],
   },
   EXPERIENCE_NOW: {
     asset_content: "Experience now",
-    asset_ids: ["202098", "201693"]
+    asset_ids: ["202098", "201693"],
   },
   INTERESTED: {
     asset_content: "Interested",
-    asset_ids: ["201867", "201369"]
+    asset_ids: ["201867", "201369"],
   },
   VIEW_NOW: {
     asset_content: "View now",
-    asset_ids: ["202001", "201529"]
+    asset_ids: ["202001", "201529"],
   },
   PREORDER_NOW: {
     asset_content: "Pre-order now",
-    asset_ids: ["202013", "201569"]
+    asset_ids: ["202013", "201569"],
   },
   TAKE_A_LOOK: {
     asset_content: "Take a look",
-    asset_ids: ["201960", "201486"]
+    asset_ids: ["201960", "201486"],
   },
   GO_STREAM_IT: {
     asset_content: "Go stream it",
-    asset_ids: ["201912", "201414"]
+    asset_ids: ["201912", "201414"],
   },
   FOLLOW_US_TO_WATCH: {
     asset_content: "Follow us to watch",
-    asset_ids: ["201924", "201426"]
+    asset_ids: ["201924", "201426"],
   },
   CLICK_TO_WATCH: {
     asset_content: "Click to watch",
-    asset_ids: ["201783", "201537"]
+    asset_ids: ["201783", "201537"],
   },
   CLICK_TO_WATCH_NOW: {
     asset_content: "Click to watch now",
-    asset_ids: ["201898", "201400"]
+    asset_ids: ["201898", "201400"],
   },
   FOLLOW_FOR_MORE: {
     asset_content: "Follow for more",
-    asset_ids: ["201789", "201545"]
+    asset_ids: ["201789", "201545"],
   },
   FOLLOW_US_NOW: {
     asset_content: "Follow us now",
-    asset_ids: ["201826", "201618"]
+    asset_ids: ["201826", "201618"],
   },
   STREAM_NOW: {
     asset_content: "Stream now",
-    asset_ids: ["202038", "201633"]
+    asset_ids: ["202038", "201633"],
   },
   CHECK_IT_OUT: {
     asset_content: "Check it out",
-    asset_ids: ["202156", "202150"]
+    asset_ids: ["202156", "202150"],
   },
   DONATE_NOW: {
     asset_content: "Donate now",
-    asset_ids: ["201865", "201367"]
+    asset_ids: ["201865", "201367"],
   },
   COMPARE_NOW: {
     asset_content: "Compare now",
-    asset_ids: ["205597", "205596"]
-  }
+    asset_ids: ["205597", "205596"],
+  },
 };
 
 const CTA_OPTIONS = [
-  { value: 'LEARN_MORE', label: 'Learn More' },
-  { value: 'SHOP_NOW', label: 'Shop Now' },
-  { value: 'SIGN_UP', label: 'Sign Up' },
-  { value: 'DOWNLOAD_NOW', label: 'Download' },
-  { value: 'CONTACT_US', label: 'Contact Us' },
-  { value: 'ORDER_NOW', label: 'Order Now' },
-  { value: 'BOOK_NOW', label: 'Book Now' },
-  { value: 'PLAY_GAME', label: 'Play Game' },
-  { value: 'APPLY_NOW', label: 'Apply Now' },
-  { value: 'WATCH_NOW', label: 'Watch Now' },
-  { value: 'INSTALL_NOW', label: 'Install Now' },
-  { value: 'GET_QUOTE', label: 'Get Quote' },
-  { value: 'SUBSCRIBE', label: 'Subscribe' },
-  { value: 'LISTEN_NOW', label: 'Listen Now' },
-  { value: 'VISIT_STORE', label: 'Visit Store' },
-  { value: 'READ_MORE', label: 'Read More' },
-  { value: 'GET_TICKETS_NOW', label: 'Get Tickets Now' },
-  { value: 'GET_SHOWTIMES', label: 'Get Showtimes' },
-  { value: 'EXPERIENCE_NOW', label: 'Experience Now' },
-  { value: 'INTERESTED', label: 'Interested' },
-  { value: 'VIEW_NOW', label: 'View Now' },
-  { value: 'PREORDER_NOW', label: 'Pre-order Now' },
-  { value: 'TAKE_A_LOOK', label: 'Take a Look' },
-  { value: 'GO_STREAM_IT', label: 'Go Stream It' },
-  { value: 'FOLLOW_US_TO_WATCH', label: 'Follow Us to Watch' },
-  { value: 'CLICK_TO_WATCH', label: 'Click to Watch' },
-  { value: 'CLICK_TO_WATCH_NOW', label: 'Click to Watch Now' },
-  { value: 'FOLLOW_FOR_MORE', label: 'Follow for More' },
-  { value: 'FOLLOW_US_NOW', label: 'Follow Us Now' },
-  { value: 'STREAM_NOW', label: 'Stream Now' },
-  { value: 'CHECK_IT_OUT', label: 'Check It Out' },
-  { value: 'DONATE_NOW', label: 'Donate Now' },
-  { value: 'COMPARE_NOW', label: 'Compare Now' }
+  { value: "LEARN_MORE", label: "Learn More" },
+  { value: "SHOP_NOW", label: "Shop Now" },
+  { value: "SIGN_UP", label: "Sign Up" },
+  { value: "DOWNLOAD_NOW", label: "Download" },
+  { value: "CONTACT_US", label: "Contact Us" },
+  { value: "ORDER_NOW", label: "Order Now" },
+  { value: "BOOK_NOW", label: "Book Now" },
+  { value: "PLAY_GAME", label: "Play Game" },
+  { value: "APPLY_NOW", label: "Apply Now" },
+  { value: "WATCH_NOW", label: "Watch Now" },
+  { value: "INSTALL_NOW", label: "Install Now" },
+  { value: "GET_QUOTE", label: "Get Quote" },
+  { value: "SUBSCRIBE", label: "Subscribe" },
+  { value: "LISTEN_NOW", label: "Listen Now" },
+  { value: "VISIT_STORE", label: "Visit Store" },
+  { value: "READ_MORE", label: "Read More" },
+  { value: "GET_TICKETS_NOW", label: "Get Tickets Now" },
+  { value: "GET_SHOWTIMES", label: "Get Showtimes" },
+  { value: "EXPERIENCE_NOW", label: "Experience Now" },
+  { value: "INTERESTED", label: "Interested" },
+  { value: "VIEW_NOW", label: "View Now" },
+  { value: "PREORDER_NOW", label: "Pre-order Now" },
+  { value: "TAKE_A_LOOK", label: "Take a Look" },
+  { value: "GO_STREAM_IT", label: "Go Stream It" },
+  { value: "FOLLOW_US_TO_WATCH", label: "Follow Us to Watch" },
+  { value: "CLICK_TO_WATCH", label: "Click to Watch" },
+  { value: "CLICK_TO_WATCH_NOW", label: "Click to Watch Now" },
+  { value: "FOLLOW_FOR_MORE", label: "Follow for More" },
+  { value: "FOLLOW_US_NOW", label: "Follow Us Now" },
+  { value: "STREAM_NOW", label: "Stream Now" },
+  { value: "CHECK_IT_OUT", label: "Check It Out" },
+  { value: "DONATE_NOW", label: "Donate Now" },
+  { value: "COMPARE_NOW", label: "Compare Now" },
 ];
 
 const UPLOAD_SOURCE_OPTIONS = [
   {
-    id: 'local',
-    name: 'My Computer',
+    id: "local",
+    name: "My Computer",
     icon: DesktopIcon,
-    fullLabel: 'Upload from Computer',
-    compactLabel: 'Local PC'
+    fullLabel: "Upload from Computer",
+    compactLabel: "Local PC",
   },
   {
-    id: 'drive',
-    name: 'Google Drive',
-    icon: 'https://api.withblip.com/googledrive.png',
-    fullLabel: 'Google Drive',
-    compactLabel: 'Google Drive'
+    id: "drive",
+    name: "Google Drive",
+    icon: "https://api.withblip.com/googledrive.png",
+    fullLabel: "Google Drive",
+    compactLabel: "Google Drive",
   },
   {
-    id: 'dropbox',
-    name: 'Dropbox',
+    id: "dropbox",
+    name: "Dropbox",
     icon: DropboxIcon,
-    fullLabel: 'Dropbox',
-    compactLabel: 'Dropbox'
+    fullLabel: "Dropbox",
+    compactLabel: "Dropbox",
   },
-]
+];
 
 const ErrorFileName = ({ name }) => {
   const [expanded, setExpanded] = useState(false);
   const LIMIT = 50;
   const needsTruncation = name.length > LIMIT;
-  const display = !needsTruncation || expanded ? name : name.slice(0, LIMIT) + '…';
+  const display = !needsTruncation || expanded ? name : name.slice(0, LIMIT) + "…";
   return (
     <li className="break-words text-[#FF0000] leading-snug">
       {display}
       {needsTruncation && !expanded && (
-        <button
-          type="button"
-          onClick={() => setExpanded(true)}
-          className="ml-1 text-[#FF8080] hover:text-[#FF0000] underline underline-offset-2"
-        >
+        <button type="button" onClick={() => setExpanded(true)} className="ml-1 text-[#FF8080] hover:text-[#FF0000] underline underline-offset-2">
           View Full Ad Name
         </button>
       )}
@@ -317,28 +296,28 @@ const ErrorFileName = ({ name }) => {
 
 const useAdCreationProgress = (jobId) => {
   const [progress, setProgress] = useState(0);
-  const [message, setMessage] = useState('');
-  const [status, setStatus] = useState('idle');
+  const [message, setMessage] = useState("");
+  const [status, setStatus] = useState("idle");
   const [metaData, setMetadata] = useState({});
 
   const resetProgress = useCallback(() => {
     setProgress(0);
-    setMessage('');
-    setStatus('idle');
+    setMessage("");
+    setStatus("idle");
     setMetadata({});
   }, []);
 
   useEffect(() => {
     if (!jobId) {
       setProgress(0);
-      setMessage('');
-      setStatus('idle');
+      setMessage("");
+      setStatus("idle");
       return;
     }
 
     setProgress(0);
-    setMessage('');
-    setStatus('idle');
+    setMessage("");
+    setStatus("idle");
 
     let eventSource = null;
     let retryTimeoutId = null;
@@ -375,17 +354,14 @@ const useAdCreationProgress = (jobId) => {
     const scheduleConnectionRetry = (reason) => {
       if (!isSubscribed || retryCount >= maxConnectionRetries) {
         if (retryCount >= maxConnectionRetries) {
-          setStatus('error');
-          setMessage('Connection failed. Please check your internet connection.');
+          setStatus("error");
+          setMessage("Connection failed. Please check your internet connection.");
         }
         return;
       }
 
       retryCount++;
-      const delay = Math.min(
-        baseRetryDelay * Math.pow(2, retryCount - 1),
-        maxRetryDelay
-      );
+      const delay = Math.min(baseRetryDelay * Math.pow(2, retryCount - 1), maxRetryDelay);
 
       retryTimeoutId = setTimeout(() => {
         if (isSubscribed) connectSSE();
@@ -395,8 +371,8 @@ const useAdCreationProgress = (jobId) => {
     const scheduleJobRetry = () => {
       if (!isSubscribed || jobNotFoundCount >= maxJobNotFoundRetries) {
         if (jobNotFoundCount >= maxJobNotFoundRetries) {
-          setStatus('job-not-found');
-          setMessage('Job not found. The task may have expired or been cancelled.');
+          setStatus("job-not-found");
+          setMessage("Job not found. The task may have expired or been cancelled.");
         }
         return;
       }
@@ -423,7 +399,7 @@ const useAdCreationProgress = (jobId) => {
         connectionTimeoutId = setTimeout(() => {
           if (eventSource && eventSource.readyState === EventSource.CONNECTING) {
             eventSource.close();
-            scheduleConnectionRetry('Connection timeout');
+            scheduleConnectionRetry("Connection timeout");
           }
         }, connectionTimeout);
 
@@ -445,7 +421,7 @@ const useAdCreationProgress = (jobId) => {
           try {
             const data = JSON.parse(event.data);
 
-            if (data.message === 'Job not found') {
+            if (data.message === "Job not found") {
               if (eventSource) {
                 eventSource.close();
                 eventSource = null;
@@ -466,15 +442,15 @@ const useAdCreationProgress = (jobId) => {
                 successCount: data.successCount,
                 failureCount: data.failureCount,
                 totalCount: data.totalCount,
-                errorMessages: data.errorMessages
+                errorMessages: data.errorMessages,
               });
 
-              if (data.status === 'complete' || data.status === 'error' || data.status === 'partial-success' || data.status === 'cancelled') {
+              if (data.status === "complete" || data.status === "error" || data.status === "partial-success" || data.status === "cancelled") {
                 cleanup();
               }
             }
           } catch (err) {
-            console.error('Failed to parse SSE message:', err);
+            console.error("Failed to parse SSE message:", err);
           }
         };
 
@@ -494,13 +470,12 @@ const useAdCreationProgress = (jobId) => {
             connectionTimeoutId = null;
           }
 
-          scheduleConnectionRetry('Connection error');
+          scheduleConnectionRetry("Connection error");
         };
-
       } catch (error) {
         if (isSubscribed) {
-          setStatus('error');
-          setMessage('Failed to initialize progress tracking.');
+          setStatus("error");
+          setMessage("Failed to initialize progress tracking.");
         }
         cleanup();
       }
@@ -523,38 +498,68 @@ export default function TikTokAdCreationForm({
   loadingPrefs,
 
   // Lifted Form State
-  adName, setAdName,
-  adTexts, setAdTexts,
-  cta, setCta,
-  landingUrl, setLandingUrl,
-  videoFile, setVideoFile,
-  videoPreview, setVideoPreview,
-  driveFiles, setDriveFiles,
-  dropboxFiles, setDropboxFiles,
-  selectedIdentity, setSelectedIdentity,
-  sparkAuthCodes, setSparkAuthCodes,
-  urlMode, setUrlMode,
-  adType, setAdType,
-  adNameFormulaV2, setAdNameFormulaV2,
-  selectedTemplate, setSelectedTemplate,
-  showCustomLink, setShowCustomLink,
-  customLink, setCustomLink,
-  launchPaused, setLaunchPaused,
-  importedPosts, setImportedPosts,
+  adName,
+  setAdName,
+  adTexts,
+  setAdTexts,
+  cta,
+  setCta,
+  landingUrl,
+  setLandingUrl,
+  videoFile,
+  setVideoFile,
+  videoPreview,
+  setVideoPreview,
+  driveFiles,
+  setDriveFiles,
+  dropboxFiles,
+  setDropboxFiles,
+  selectedIdentity,
+  setSelectedIdentity,
+  sparkAuthCodes,
+  setSparkAuthCodes,
+  urlMode,
+  setUrlMode,
+  adType,
+  setAdType,
+  adNameFormulaV2,
+  setAdNameFormulaV2,
+  selectedTemplate,
+  setSelectedTemplate,
+  showCustomLink,
+  setShowCustomLink,
+  customLink,
+  setCustomLink,
+  launchPaused,
+  setLaunchPaused,
+  importedPosts,
+  setImportedPosts,
 
   // Form Fetching States
-  campaigns, setCampaigns,
-  adGroups, setAdGroups,
-  selectedCampaign, setSelectedCampaign,
-  selectedAdGroup, setSelectedAdGroup,
-  duplicateAdGroup, setDuplicateAdGroup,
-  newAdGroupName, setNewAdGroupName,
-  showDuplicateAdGroupBlock, setShowDuplicateAdGroupBlock,
-  duplicateCampaign, setDuplicateCampaign,
-  newCampaignName, setNewCampaignName,
-  showDuplicateCampaignBlock, setShowDuplicateCampaignBlock,
-  identities, setIdentities,
-  files, setFiles,
+  campaigns,
+  setCampaigns,
+  adGroups,
+  setAdGroups,
+  selectedCampaign,
+  setSelectedCampaign,
+  selectedAdGroup,
+  setSelectedAdGroup,
+  duplicateAdGroup,
+  setDuplicateAdGroup,
+  newAdGroupName,
+  setNewAdGroupName,
+  showDuplicateAdGroupBlock,
+  setShowDuplicateAdGroupBlock,
+  duplicateCampaign,
+  setDuplicateCampaign,
+  newCampaignName,
+  setNewCampaignName,
+  showDuplicateCampaignBlock,
+  setShowDuplicateCampaignBlock,
+  identities,
+  setIdentities,
+  files,
+  setFiles,
 
   // Variants Props
   variants,
@@ -574,29 +579,45 @@ export default function TikTokAdCreationForm({
   setPostVariantMap,
 
   // Lifted Product States
-  productName, setProductName,
-  productImageUrl, setProductImageUrl,
-  sellingPoints, setSellingPoints,
-  selectedSavedProductId, setSelectedSavedProductId,
-  formStoreId, setFormStoreId,
-  formStoreName, setFormStoreName,
-  formStoreProductId, setFormStoreProductId,
-  formStoreProductName, setFormStoreProductName,
-  formStoreBcId, setFormStoreBcId,
-  formStoreCatalogId, setFormStoreCatalogId,
-  formCatalogId, setFormCatalogId,
-  formCatalogName, setFormCatalogName,
-  formProductId, setFormProductId,
-  formProductName, setFormProductName,
-  formCatalogProducts, setFormCatalogProducts,
+  productName,
+  setProductName,
+  productImageUrl,
+  setProductImageUrl,
+  sellingPoints,
+  setSellingPoints,
+  selectedSavedProductId,
+  setSelectedSavedProductId,
+  formStoreId,
+  setFormStoreId,
+  formStoreName,
+  setFormStoreName,
+  formStoreProductId,
+  setFormStoreProductId,
+  formStoreProductName,
+  setFormStoreProductName,
+  formStoreBcId,
+  setFormStoreBcId,
+  formStoreCatalogId,
+  setFormStoreCatalogId,
+  formCatalogId,
+  setFormCatalogId,
+  formCatalogName,
+  setFormCatalogName,
+  formProductId,
+  setFormProductId,
+  formProductName,
+  setFormProductName,
+  formCatalogProducts,
+  setFormCatalogProducts,
   selectedFiles,
   setSelectedFiles,
-  onBeforeMediaClear
+  onBeforeMediaClear,
 }) {
-  const navigate = useNavigate()
-  const formFieldChrome = "border-gray-300 rounded-2xl py-4.5 bg-white shadow"
-  const formInputChrome = `${formFieldChrome} focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0`
-  const formTextareaChrome = "w-full border border-gray-300 rounded-2xl bg-white px-3 pt-2.5 pb-2.5 text-sm leading-5 resize-none shadow focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+  const navigate = useNavigate();
+  const formFieldChrome = "border-gray-300 rounded-2xl py-4.5 bg-white shadow";
+  const formInputChrome = `${formFieldChrome} focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0`;
+  const formTextareaChrome =
+    "w-full border border-gray-300 rounded-2xl bg-white px-3 pt-2.5 pb-2.5 text-sm leading-5 resize-none shadow focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0";
 
   const addField = (setter, values) => {
     setter([...values, ""]);
@@ -604,235 +625,219 @@ export default function TikTokAdCreationForm({
 
   const removeField = (setter, values, index) => {
     if (values.length > 1) {
-      setter(values.filter((_, i) => i !== index))
+      setter(values.filter((_, i) => i !== index));
     }
-  }
+  };
 
   const updateField = (setter, values, index, newValue) => {
-    const newValues = [...values]
-    newValues[index] = newValue
-    setter(newValues)
-  }
+    const newValues = [...values];
+    newValues[index] = newValue;
+    setter(newValues);
+  };
 
   const renderDiffMark = (fieldKeys) => {
     if (isFormFieldModified && isFormFieldModified(fieldKeys)) {
-      return (
-        <span className="w-1.5 h-1.5 rounded-full bg-orange-500 inline-block shrink-0" style={{ transform: 'translateY(-1px)' }} />
-      )
+      return <span className="w-1.5 h-1.5 rounded-full bg-orange-500 inline-block shrink-0" style={{ transform: "translateY(-1px)" }} />;
     }
-    return null
-  }
+    return null;
+  };
 
-  const { tiktokFetch, refreshTikTokUser, isLoading: authLoading } = useTikTokAuth()
-  const { tiktokIdentities, tiktokIdentitiesLoading, fetchTikTokIdentities } = useAppData()
+  const { tiktokFetch, refreshTikTokUser, isLoading: authLoading } = useTikTokAuth();
+  const { tiktokIdentities, tiktokIdentitiesLoading, fetchTikTokIdentities } = useAppData();
 
-  const [selectedAdvertiser, setSelectedAdvertiser] = useState(advertiserId || '')
-  const [refreshingAdvertisers, setRefreshingAdvertisers] = useState(false)
+  const [selectedAdvertiser, setSelectedAdvertiser] = useState(advertiserId || "");
+  const [refreshingAdvertisers, setRefreshingAdvertisers] = useState(false);
 
   const handleRefreshAdvertisers = async () => {
-    setRefreshingAdvertisers(true)
+    setRefreshingAdvertisers(true);
     try {
-      await refreshTikTokUser()
-      toast.success("Advertiser list refreshed successfully.")
+      await refreshTikTokUser();
+      toast.success("Advertiser list refreshed successfully.");
     } catch (err) {
-      console.error("Failed to refresh advertiser list:", err)
-      toast.error("Failed to refresh advertiser list.")
+      console.error("Failed to refresh advertiser list:", err);
+      toast.error("Failed to refresh advertiser list.");
     } finally {
-      setRefreshingAdvertisers(false)
+      setRefreshingAdvertisers(false);
     }
-  }
+  };
 
   // ---------------------------------------------------------------------------
   // formStateRef — always mirrors the latest form state so that
   // captureFormDataAsJob() reads the EXACT values present at publish-click time,
   // regardless of React's useCallback closure staleness.
   // ---------------------------------------------------------------------------
-  const formStateRef = useRef({})
-  const [newSellingPoint, setNewSellingPoint] = useState("")
+  const formStateRef = useRef({});
+  const [newSellingPoint, setNewSellingPoint] = useState("");
 
-  const campaignsLoadedForAdvertiserRef = useRef(campaigns.length > 0 ? selectedAdvertiser : null)
+  const campaignsLoadedForAdvertiserRef = useRef(campaigns.length > 0 ? selectedAdvertiser : null);
   const adGroupsLoadedForSelectionRef = useRef(
-    (adGroups.length > 0 && selectedCampaign.length > 0)
-      ? `${selectedAdvertiser}:${JSON.stringify([...selectedCampaign].sort())}`
-      : ""
-  )
-  const campaignsRef = useRef(campaigns)
-  campaignsRef.current = campaigns
-
+    adGroups.length > 0 && selectedCampaign.length > 0 ? `${selectedAdvertiser}:${JSON.stringify([...selectedCampaign].sort())}` : "",
+  );
+  const campaignsRef = useRef(campaigns);
+  campaignsRef.current = campaigns;
 
   useEffect(() => {
-    if (advertiserId) setSelectedAdvertiser(advertiserId)
-  }, [advertiserId])
+    if (advertiserId) setSelectedAdvertiser(advertiserId);
+  }, [advertiserId]);
 
   // Video upload hook
   const {
     uploadVideo: uploadVideoToTikTok,
     uploading: videoUploading,
     uploadProgress: videoUploadProgress,
-  } = useTikTokVideoUpload(selectedAdvertiser)
+  } = useTikTokVideoUpload(selectedAdvertiser);
 
   // Local state for combobox visibility
-  const [openAdvertiser, setOpenAdvertiser] = useState(false)
-  const [openCampaign, setOpenCampaign] = useState(false)
-  const [openAdGroup, setOpenAdGroup] = useState(false)
-  const [openIdentity, setOpenIdentity] = useState(false)
-  const [openCta, setOpenCta] = useState(false)
-  const [templateDropdownOpen, setTemplateDropdownOpen] = useState(false)
+  const [openAdvertiser, setOpenAdvertiser] = useState(false);
+  const [openCampaign, setOpenCampaign] = useState(false);
+  const [openAdGroup, setOpenAdGroup] = useState(false);
+  const [openIdentity, setOpenIdentity] = useState(false);
+  const [openCta, setOpenCta] = useState(false);
+  const [templateDropdownOpen, setTemplateDropdownOpen] = useState(false);
 
   useEffect(() => {
-    if (variants.length > 1 && activeVariantId !== 'default') {
-      setOpenAdvertiser(false)
+    if (variants.length > 1 && activeVariantId !== "default") {
+      setOpenAdvertiser(false);
     }
-  }, [activeVariantId, variants.length])
+  }, [activeVariantId, variants.length]);
 
   // Copy template state
-  const [templateSearch, setTemplateSearch] = useState("")
-  const [sortMode, setSortMode] = useState(() => localStorage.getItem("tiktokHomeTemplateSortMode") || "default")
-  const [showSortMenu, setShowSortMenu] = useState(false)
-  const [bulkDeleteMode, setBulkDeleteMode] = useState(false)
-  const [selectedForDelete, setSelectedForDelete] = useState(new Set())
-  const [isDeletingTemplates, setIsDeletingTemplates] = useState(false)
-  const [isSavingNew, setIsSavingNew] = useState(false)
-  const [isUpdatingTemplate, setIsUpdatingTemplate] = useState(false)
-  const [sparkSourceTab, setSparkSourceTab] = useState("video_list") // "auth_codes" | "video_list"
-  const [isResolvingCodes, setIsResolvingCodes] = useState(false)
-  const [resolvedCodes, setResolvedCodes] = useState([])
-  const [showSaveNewDialog, setShowSaveNewDialog] = useState(false)
-  const [newTemplateNameInput, setNewTemplateNameInput] = useState("")
+  const [templateSearch, setTemplateSearch] = useState("");
+  const [sortMode, setSortMode] = useState(() => localStorage.getItem("tiktokHomeTemplateSortMode") || "default");
+  const [showSortMenu, setShowSortMenu] = useState(false);
+  const [bulkDeleteMode, setBulkDeleteMode] = useState(false);
+  const [selectedForDelete, setSelectedForDelete] = useState(new Set());
+  const [isDeletingTemplates, setIsDeletingTemplates] = useState(false);
+  const [isSavingNew, setIsSavingNew] = useState(false);
+  const [isUpdatingTemplate, setIsUpdatingTemplate] = useState(false);
+  const [sparkSourceTab, setSparkSourceTab] = useState("video_list"); // "auth_codes" | "video_list"
+  const [isResolvingCodes, setIsResolvingCodes] = useState(false);
+  const [resolvedCodes, setResolvedCodes] = useState([]);
+  const [showSaveNewDialog, setShowSaveNewDialog] = useState(false);
+  const [newTemplateNameInput, setNewTemplateNameInput] = useState("");
 
   // Duplication local states
-  const [duplicateIncludeAds, setDuplicateIncludeAds] = useState(false)
-  const [isDuplicating, setIsDuplicating] = useState(false)
-  const [openDuplicateCampaign, setOpenDuplicateCampaign] = useState(false)
-  const [duplicateCampaignSearchValue, setDuplicateCampaignSearchValue] = useState('')
-  const [openDuplicateAdGroup, setOpenDuplicateAdGroup] = useState(false)
-  const [duplicateAdGroupSearchValue, setDuplicateAdGroupSearchValue] = useState('')
+  const [duplicateIncludeAds, setDuplicateIncludeAds] = useState(false);
+  const [isDuplicating, setIsDuplicating] = useState(false);
+  const [openDuplicateCampaign, setOpenDuplicateCampaign] = useState(false);
+  const [duplicateCampaignSearchValue, setDuplicateCampaignSearchValue] = useState("");
+  const [openDuplicateAdGroup, setOpenDuplicateAdGroup] = useState(false);
+  const [duplicateAdGroupSearchValue, setDuplicateAdGroupSearchValue] = useState("");
 
   // Search input local states
-  const [advertiserSearch, setAdvertiserSearch] = useState('')
-  const [campaignSearch, setCampaignSearch] = useState('')
-  const [adGroupSearch, setAdGroupSearch] = useState('')
+  const [advertiserSearch, setAdvertiserSearch] = useState("");
+  const [campaignSearch, setCampaignSearch] = useState("");
+  const [adGroupSearch, setAdGroupSearch] = useState("");
 
   // Library / Upload status local states
-  const [tiktokLibraryFiles] = useState([]) // Keep library files array empty to default upload paths
+  const [tiktokLibraryFiles] = useState([]); // Keep library files array empty to default upload paths
 
   // Google/Dropbox state variables
-  const [googleAuthStatus, setGoogleAuthStatus] = useState({ checking: true, authenticated: false, accessToken: null })
-  const [uploadSources, setUploadSources] = useState(['local', 'drive', 'dropbox'])
-  const [uploadSourcesOpen, setUploadSourcesOpen] = useState(false)
-  const [showFolderInput, setShowFolderInput] = useState(false)
-  const [folderLinkValue, setFolderLinkValue] = useState("")
-  const [isImportingFolder, setIsImportingFolder] = useState(false)
+  const [googleAuthStatus, setGoogleAuthStatus] = useState({ checking: true, authenticated: false, accessToken: null });
+  const [uploadSources, setUploadSources] = useState(["local", "drive", "dropbox"]);
+  const [uploadSourcesOpen, setUploadSourcesOpen] = useState(false);
+  const [showFolderInput, setShowFolderInput] = useState(false);
+  const [folderLinkValue, setFolderLinkValue] = useState("");
+  const [isImportingFolder, setIsImportingFolder] = useState(false);
 
-  const [loadingCampaigns, setLoadingCampaigns] = useState(false)
-  const [loadingAdGroups, setLoadingAdGroups] = useState(false)
-  const loadingIdentities = tiktokIdentitiesLoading[selectedAdvertiser] || false
-  const [instantPages, setInstantPages] = useState([])
-  const [loadingPages, setLoadingPages] = useState(false)
-  const [lastWebsiteUrl, setLastWebsiteUrl] = useState("")
-  const [lastInstantPageId, setLastInstantPageId] = useState("")
-  const [showDeleteAllVariantsDialog, setShowDeleteAllVariantsDialog] = useState(false)
+  const [loadingCampaigns, setLoadingCampaigns] = useState(false);
+  const [loadingAdGroups, setLoadingAdGroups] = useState(false);
+  const loadingIdentities = tiktokIdentitiesLoading[selectedAdvertiser] || false;
+  const [instantPages, setInstantPages] = useState([]);
+  const [loadingPages, setLoadingPages] = useState(false);
+  const [lastWebsiteUrl, setLastWebsiteUrl] = useState("");
+  const [lastInstantPageId, setLastInstantPageId] = useState("");
+  const [showDeleteAllVariantsDialog, setShowDeleteAllVariantsDialog] = useState(false);
 
   // Job Queue / Progress tracking states
-  const [jobId, setJobId] = useState(null)
-  const [progress, setProgress] = useState(0)
-  const [progressMessage, setProgressMessage] = useState('')
+  const [jobId, setJobId] = useState(null);
+  const [progress, setProgress] = useState(0);
+  const [progressMessage, setProgressMessage] = useState("");
   const {
     progress: trackedProgress,
     message: trackedMessage,
     status: trackedStatus,
     metaData: trackedMetaData,
-    resetProgress
-  } = useAdCreationProgress(jobId)
+    resetProgress,
+  } = useAdCreationProgress(jobId);
 
-  const [jobQueue, setJobQueue] = useState([])
-  const [currentJob, setCurrentJob] = useState(null)
-  const [isProcessingQueue, setIsProcessingQueue] = useState(false)
-  const [isJobTrackerExpanded, setIsJobTrackerExpanded] = useState(true)
-  const [completedJobs, setCompletedJobs] = useState([])
-  const [hasStartedAnyJob, setHasStartedAnyJob] = useState(false)
-  const [isCancelling, setIsCancelling] = useState(false)
-  const [currentAbortController, setCurrentAbortController] = useState(null)
-  const [isQueueingJobs, setIsQueueingJobs] = useState(false)
-  const currentJobIdRef = useRef(null)
-  const isInPromisePhase = useRef(false)
+  const [jobQueue, setJobQueue] = useState([]);
+  const [currentJob, setCurrentJob] = useState(null);
+  const [isProcessingQueue, setIsProcessingQueue] = useState(false);
+  const [isJobTrackerExpanded, setIsJobTrackerExpanded] = useState(true);
+  const [completedJobs, setCompletedJobs] = useState([]);
+  const [hasStartedAnyJob, setHasStartedAnyJob] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [currentAbortController, setCurrentAbortController] = useState(null);
+  const [isQueueingJobs, setIsQueueingJobs] = useState(false);
+  const currentJobIdRef = useRef(null);
+  const isInPromisePhase = useRef(false);
   const [liveProgress, setLiveProgress] = useState({
     completed: 0,
     succeeded: 0,
     failed: 0,
     total: 0,
-    errors: []
-  })
-  const [preserveMedia, setPreserveMedia] = useState(false)
+    errors: [],
+  });
+  const [preserveMedia, setPreserveMedia] = useState(false);
 
-  const [formCatalogs, setFormCatalogs] = useState([])
-  const [loadingFormCatalogs, setLoadingFormCatalogs] = useState(false)
-  const [loadingFormProducts, setLoadingFormProducts] = useState(false)
-  const [openFormCatalog, setOpenFormCatalog] = useState(false)
-  const [openFormProduct, setOpenFormProduct] = useState(false)
-  const [formCatalogSearch, setFormCatalogSearch] = useState("")
-  const [formProductSearch, setFormProductSearch] = useState("")
+  const [formCatalogs, setFormCatalogs] = useState([]);
+  const [loadingFormCatalogs, setLoadingFormCatalogs] = useState(false);
+  const [loadingFormProducts, setLoadingFormProducts] = useState(false);
+  const [openFormCatalog, setOpenFormCatalog] = useState(false);
+  const [openFormProduct, setOpenFormProduct] = useState(false);
+  const [formCatalogSearch, setFormCatalogSearch] = useState("");
+  const [formProductSearch, setFormProductSearch] = useState("");
 
-
-
-  const [formStores, setFormStores] = useState([])
-  const [formStoreProducts, setFormStoreProducts] = useState([])
-  const [loadingFormStores, setLoadingFormStores] = useState(false)
-  const [loadingFormStoreProducts, setLoadingFormStoreProducts] = useState(false)
-  const [openFormStore, setOpenFormStore] = useState(false)
-  const [openFormStoreProduct, setOpenFormStoreProduct] = useState(false)
-  const [formStoreSearch, setFormStoreSearch] = useState("")
-  const [formStoreProductSearch, setFormStoreProductSearch] = useState("")
+  const [formStores, setFormStores] = useState([]);
+  const [formStoreProducts, setFormStoreProducts] = useState([]);
+  const [loadingFormStores, setLoadingFormStores] = useState(false);
+  const [loadingFormStoreProducts, setLoadingFormStoreProducts] = useState(false);
+  const [openFormStore, setOpenFormStore] = useState(false);
+  const [openFormStoreProduct, setOpenFormStoreProduct] = useState(false);
+  const [formStoreSearch, setFormStoreSearch] = useState("");
+  const [formStoreProductSearch, setFormStoreProductSearch] = useState("");
 
   const isShoppingAdGroup = useMemo(() => {
-    const activeAdGroups = showDuplicateAdGroupBlock && duplicateAdGroup
-      ? [duplicateAdGroup]
-      : (selectedAdGroup || []);
+    const activeAdGroups = showDuplicateAdGroupBlock && duplicateAdGroup ? [duplicateAdGroup] : selectedAdGroup || [];
 
     if (activeAdGroups.length === 0) return false;
 
-    return activeAdGroups.some(agId => {
-      const agObj = adGroups.find(g => g.adgroup_id === agId);
-      return agObj && (
-        (agObj.shopping_ads_type && agObj.shopping_ads_type !== 'UNSET') ||
-        (agObj.product_source && agObj.product_source !== 'UNSET')
+    return activeAdGroups.some((agId) => {
+      const agObj = adGroups.find((g) => g.adgroup_id === agId);
+      return (
+        agObj && ((agObj.shopping_ads_type && agObj.shopping_ads_type !== "UNSET") || (agObj.product_source && agObj.product_source !== "UNSET"))
       );
     });
   }, [selectedAdGroup, adGroups, showDuplicateAdGroupBlock, duplicateAdGroup]);
 
   const areAllSelectedAdGroupsShopping = useMemo(() => {
-    const activeAdGroups = showDuplicateAdGroupBlock && duplicateAdGroup
-      ? [duplicateAdGroup]
-      : (selectedAdGroup || []);
+    const activeAdGroups = showDuplicateAdGroupBlock && duplicateAdGroup ? [duplicateAdGroup] : selectedAdGroup || [];
 
     if (activeAdGroups.length === 0) return false;
 
     // Only return true (disappear/hide landing URL) if ALL selected ad groups are product_source: "SHOWCASE"
-    return activeAdGroups.every(agId => {
-      const agObj = adGroups.find(g => g.adgroup_id === agId);
-      return agObj && agObj.product_source === 'SHOWCASE';
+    return activeAdGroups.every((agId) => {
+      const agObj = adGroups.find((g) => g.adgroup_id === agId);
+      return agObj && agObj.product_source === "SHOWCASE";
     });
   }, [selectedAdGroup, adGroups, showDuplicateAdGroupBlock, duplicateAdGroup]);
 
   const isShowcaseSelection = useMemo(() => {
-    const activeAdGroups = showDuplicateAdGroupBlock && duplicateAdGroup
-      ? [duplicateAdGroup]
-      : (selectedAdGroup || []);
+    const activeAdGroups = showDuplicateAdGroupBlock && duplicateAdGroup ? [duplicateAdGroup] : selectedAdGroup || [];
 
-    return activeAdGroups.some(agId => {
-      const agObj = adGroups.find(g => g.adgroup_id === agId);
-      return agObj && agObj.product_source === 'SHOWCASE';
+    return activeAdGroups.some((agId) => {
+      const agObj = adGroups.find((g) => g.adgroup_id === agId);
+      return agObj && agObj.product_source === "SHOWCASE";
     });
   }, [selectedAdGroup, adGroups, showDuplicateAdGroupBlock, duplicateAdGroup]);
 
   const isStoreSelection = useMemo(() => {
-    const activeAdGroups = showDuplicateAdGroupBlock && duplicateAdGroup
-      ? [duplicateAdGroup]
-      : (selectedAdGroup || []);
+    const activeAdGroups = showDuplicateAdGroupBlock && duplicateAdGroup ? [duplicateAdGroup] : selectedAdGroup || [];
 
-    return activeAdGroups.some(agId => {
-      const agObj = adGroups.find(g => g.adgroup_id === agId);
-      return agObj && agObj.product_source === 'STORE';
+    return activeAdGroups.some((agId) => {
+      const agObj = adGroups.find((g) => g.adgroup_id === agId);
+      return agObj && agObj.product_source === "STORE";
     });
   }, [selectedAdGroup, adGroups, showDuplicateAdGroupBlock, duplicateAdGroup]);
 
@@ -845,8 +850,8 @@ export default function TikTokAdCreationForm({
     if (showStoreProductSelection) return true;
 
     if (selectedCampaign && selectedCampaign.length > 0) {
-      const hasSalesCampaign = selectedCampaign.some(campId => {
-        const c = campaigns.find(x => x.campaign_id === campId);
+      const hasSalesCampaign = selectedCampaign.some((campId) => {
+        const c = campaigns.find((x) => x.campaign_id === campId);
         return isSalesObjective(c);
       });
       if (hasSalesCampaign) return true;
@@ -854,12 +859,12 @@ export default function TikTokAdCreationForm({
 
     const activeAgId = selectedAdGroup?.[0] || (showDuplicateAdGroupBlock ? duplicateAdGroup : null);
     if (activeAgId) {
-      const agObj = adGroups.find(g => g.adgroup_id === activeAgId);
+      const agObj = adGroups.find((g) => g.adgroup_id === activeAgId);
       if (agObj) {
         if (agObj.catalog_id) return true;
 
         const campId = agObj.campaignId || agObj.campaign_id;
-        const c = campaigns.find(x => x.campaign_id === campId);
+        const c = campaigns.find((x) => x.campaign_id === campId);
         if (isSalesObjective(c)) {
           return true;
         }
@@ -867,12 +872,21 @@ export default function TikTokAdCreationForm({
     }
 
     return false;
-  }, [selectedCampaign, campaigns, selectedAdGroup, showDuplicateAdGroupBlock, duplicateAdGroup, adGroups, showStoreProductSelection, isShoppingAdGroup]);
+  }, [
+    selectedCampaign,
+    campaigns,
+    selectedAdGroup,
+    showDuplicateAdGroupBlock,
+    duplicateAdGroup,
+    adGroups,
+    showStoreProductSelection,
+    isShoppingAdGroup,
+  ]);
 
   const isSalesCampaignSelected = useMemo(() => {
     if (selectedCampaign && selectedCampaign.length > 0) {
-      const hasSalesCampaign = selectedCampaign.some(campId => {
-        const c = campaigns.find(x => x.campaign_id === campId);
+      const hasSalesCampaign = selectedCampaign.some((campId) => {
+        const c = campaigns.find((x) => x.campaign_id === campId);
         return isSalesObjective(c);
       });
       if (hasSalesCampaign) return true;
@@ -880,10 +894,10 @@ export default function TikTokAdCreationForm({
 
     const activeAgId = selectedAdGroup?.[0] || (showDuplicateAdGroupBlock ? duplicateAdGroup : null);
     if (activeAgId) {
-      const agObj = adGroups.find(g => g.adgroup_id === activeAgId);
+      const agObj = adGroups.find((g) => g.adgroup_id === activeAgId);
       if (agObj) {
         const campId = agObj.campaignId || agObj.campaign_id;
-        const c = campaigns.find(x => x.campaign_id === campId);
+        const c = campaigns.find((x) => x.campaign_id === campId);
         if (isSalesObjective(c)) {
           return true;
         }
@@ -907,28 +921,26 @@ export default function TikTokAdCreationForm({
         c.campaign_automation_type === "SMART_PLUS" ||
         c.campaign_automation_type === "SMART_PERFORMANCE_CAMPAIGN" ||
         c.is_smart === true ||
-        c.is_smart === "true"
+        c.is_smart === "true",
       );
     };
 
     if (selectedCampaign && selectedCampaign.length > 0) {
-      const hasSmart = selectedCampaign.some(campId => {
-        const c = campaigns.find(x => x.campaign_id === campId);
+      const hasSmart = selectedCampaign.some((campId) => {
+        const c = campaigns.find((x) => x.campaign_id === campId);
         return isSmartObj(c);
       });
       if (hasSmart) return true;
     }
 
-    const activeAdGroups = showDuplicateAdGroupBlock && duplicateAdGroup
-      ? [duplicateAdGroup]
-      : (selectedAdGroup || []);
+    const activeAdGroups = showDuplicateAdGroupBlock && duplicateAdGroup ? [duplicateAdGroup] : selectedAdGroup || [];
 
     if (activeAdGroups.length > 0) {
-      return activeAdGroups.some(agId => {
-        const agObj = adGroups.find(g => g.adgroup_id === agId);
+      return activeAdGroups.some((agId) => {
+        const agObj = adGroups.find((g) => g.adgroup_id === agId);
         if (!agObj) return false;
         const campId = agObj.campaignId || agObj.campaign_id;
-        const c = campaigns.find(x => x.campaign_id === campId);
+        const c = campaigns.find((x) => x.campaign_id === campId);
         return isSmartObj(c);
       });
     }
@@ -937,9 +949,7 @@ export default function TikTokAdCreationForm({
   }, [selectedCampaign, campaigns, selectedAdGroup, showDuplicateAdGroupBlock, duplicateAdGroup, adGroups]);
 
   useEffect(() => {
-    const activeAdGroups = showDuplicateAdGroupBlock && duplicateAdGroup
-      ? [duplicateAdGroup]
-      : (selectedAdGroup || []);
+    const activeAdGroups = showDuplicateAdGroupBlock && duplicateAdGroup ? [duplicateAdGroup] : selectedAdGroup || [];
 
     if (activeAdGroups.length === 0) {
       setFormCatalogId(null);
@@ -948,30 +958,30 @@ export default function TikTokAdCreationForm({
     }
 
     // Find the first selected ad group that has a catalog_id (catalog-based)
-    const catalogAgId = activeAdGroups.find(agId => {
-      const agObj = adGroups.find(g => g.adgroup_id === agId);
+    const catalogAgId = activeAdGroups.find((agId) => {
+      const agObj = adGroups.find((g) => g.adgroup_id === agId);
       return agObj && agObj.catalog_id;
     });
 
     if (catalogAgId) {
-      const agObj = adGroups.find(g => g.adgroup_id === catalogAgId);
+      const agObj = adGroups.find((g) => g.adgroup_id === catalogAgId);
       setFormCatalogId(agObj.catalog_id);
-      const matched = formCatalogs.find(c => c.catalog_id === agObj.catalog_id);
+      const matched = formCatalogs.find((c) => c.catalog_id === agObj.catalog_id);
       setFormCatalogName(matched ? matched.catalog_name : `Catalog ${agObj.catalog_id}`);
     } else {
       // Fallback: if no direct catalog ad group, but there is a showcase ad group with a store catalog
-      const showcaseAgId = activeAdGroups.find(agId => {
-        const agObj = adGroups.find(g => g.adgroup_id === agId);
-        return agObj && (agObj.product_source === 'SHOWCASE' || agObj.product_source === 'STORE');
+      const showcaseAgId = activeAdGroups.find((agId) => {
+        const agObj = adGroups.find((g) => g.adgroup_id === agId);
+        return agObj && (agObj.product_source === "SHOWCASE" || agObj.product_source === "STORE");
       });
 
       if (showcaseAgId) {
-        const agObj = adGroups.find(g => g.adgroup_id === showcaseAgId);
-        const matchedStore = formStores.find(s => s.store_id === agObj.store_id);
+        const agObj = adGroups.find((g) => g.adgroup_id === showcaseAgId);
+        const matchedStore = formStores.find((s) => s.store_id === agObj.store_id);
         const cid = matchedStore?.catalog_id || formStoreCatalogId;
         if (cid) {
           setFormCatalogId(cid);
-          const matchedCat = formCatalogs.find(c => c.catalog_id === cid);
+          const matchedCat = formCatalogs.find((c) => c.catalog_id === cid);
           setFormCatalogName(matchedCat ? matchedCat.catalog_name : `Catalog ${cid}`);
         } else {
           setFormCatalogId(null);
@@ -986,7 +996,7 @@ export default function TikTokAdCreationForm({
 
   useEffect(() => {
     if (formCatalogId && formCatalogs.length > 0) {
-      const matched = formCatalogs.find(c => c.catalog_id === formCatalogId);
+      const matched = formCatalogs.find((c) => c.catalog_id === formCatalogId);
       if (matched) {
         setFormCatalogName(matched.catalog_name);
       }
@@ -997,18 +1007,16 @@ export default function TikTokAdCreationForm({
   const activeFormProductImage = useMemo(() => {
     const firstId = Array.isArray(formProductId) ? formProductId[0] : formProductId;
     if (!firstId) return null;
-    const matched = formCatalogProducts.find(p => p.product_id === firstId);
+    const matched = formCatalogProducts.find((p) => p.product_id === firstId);
     if (matched) return matched.image_url || null;
 
     const catSel = advertiserPrefs?.catalogSelection;
     if (catSel) {
       const savedProductId = catSel.product_id;
-      const isProductMatched = Array.isArray(savedProductId)
-        ? savedProductId.includes(firstId)
-        : firstId === savedProductId;
+      const isProductMatched = Array.isArray(savedProductId) ? savedProductId.includes(firstId) : firstId === savedProductId;
       if (isProductMatched) {
         const products = catSel.products || [];
-        const matchedProd = products.find(p => p.product_id === firstId);
+        const matchedProd = products.find((p) => p.product_id === firstId);
         return matchedProd?.product_image_url || catSel.product_image_url || null;
       }
     }
@@ -1016,20 +1024,18 @@ export default function TikTokAdCreationForm({
   }, [formCatalogProducts, formProductId, advertiserPrefs]);
 
   const selectedProductsLabel = useMemo(() => {
-    const productIds = Array.isArray(formProductId) ? formProductId : (formProductId ? [formProductId] : []);
-    if (productIds.length === 0) return 'Select a Product';
+    const productIds = Array.isArray(formProductId) ? formProductId : formProductId ? [formProductId] : [];
+    if (productIds.length === 0) return "Select a Product";
     if (productIds.length === 1) {
-      const matched = formCatalogProducts.find(p => p.product_id === productIds[0]);
+      const matched = formCatalogProducts.find((p) => p.product_id === productIds[0]);
       if (matched) return matched.product_name;
       const catSel = advertiserPrefs?.catalogSelection;
       if (catSel) {
         const savedProductId = catSel.product_id;
-        const isProductMatched = Array.isArray(savedProductId)
-          ? savedProductId.includes(productIds[0])
-          : productIds[0] === savedProductId;
+        const isProductMatched = Array.isArray(savedProductId) ? savedProductId.includes(productIds[0]) : productIds[0] === savedProductId;
         if (isProductMatched) {
           const products = catSel.products || [];
-          const matchedProd = products.find(p => p.product_id === productIds[0]);
+          const matchedProd = products.find((p) => p.product_id === productIds[0]);
           return matchedProd?.product_name || catSel.product_name || productIds[0];
         }
       }
@@ -1047,9 +1053,7 @@ export default function TikTokAdCreationForm({
       const sel = advertiserPrefs.catalogSelection;
       setFormCatalogId(sel.catalog_id || null);
       setFormCatalogName(sel.catalog_name || null);
-      const initialProductIds = Array.isArray(sel.product_id)
-        ? sel.product_id
-        : sel.product_id ? [sel.product_id] : [];
+      const initialProductIds = Array.isArray(sel.product_id) ? sel.product_id : sel.product_id ? [sel.product_id] : [];
       setFormProductId(initialProductIds);
       setFormProductName(sel.product_name || null);
       formCatalogInitRef.current[selectedAdvertiser] = true;
@@ -1064,15 +1068,15 @@ export default function TikTokAdCreationForm({
     }
     setLoadingFormCatalogs(true);
     fetch(`${API_BASE_URL}/api/tiktok/catalog/list?advertiserId=${selectedAdvertiser}`, {
-      credentials: 'include',
+      credentials: "include",
     })
-      .then(res => res.json())
-      .then(data => {
+      .then((res) => res.json())
+      .then((data) => {
         if (data.success) {
           setFormCatalogs(data.catalogs || []);
         }
       })
-      .catch(err => console.warn('[CreationForm] Failed to load catalogs:', err.message))
+      .catch((err) => console.warn("[CreationForm] Failed to load catalogs:", err.message))
       .finally(() => setLoadingFormCatalogs(false));
   }, [selectedAdvertiser]);
 
@@ -1084,15 +1088,15 @@ export default function TikTokAdCreationForm({
     }
     setLoadingFormProducts(true);
     fetch(`${API_BASE_URL}/api/tiktok/catalog/products?advertiserId=${selectedAdvertiser}&catalog_id=${formCatalogId}`, {
-      credentials: 'include',
+      credentials: "include",
     })
-      .then(res => res.json())
-      .then(data => {
+      .then((res) => res.json())
+      .then((data) => {
         if (data.success) {
           setFormCatalogProducts(data.products || []);
         }
       })
-      .catch(err => console.warn('[CreationForm] Failed to load products:', err.message))
+      .catch((err) => console.warn("[CreationForm] Failed to load products:", err.message))
       .finally(() => setLoadingFormProducts(false));
   }, [selectedAdvertiser, formCatalogId]);
 
@@ -1101,7 +1105,7 @@ export default function TikTokAdCreationForm({
   const activeFormStoreProductImage = useMemo(() => {
     const firstId = Array.isArray(formStoreProductId) ? formStoreProductId[0] : formStoreProductId;
     if (!firstId) return null;
-    const matched = formStoreProducts.find(p => p.item_group_id === firstId);
+    const matched = formStoreProducts.find((p) => p.item_group_id === firstId);
     if (matched) return matched.product_image_url || null;
     if (firstId === advertiserPrefs?.storeSelection?.product_id) {
       return advertiserPrefs?.storeSelection?.product_image_url || null;
@@ -1110,10 +1114,10 @@ export default function TikTokAdCreationForm({
   }, [formStoreProducts, formStoreProductId, advertiserPrefs]);
 
   const selectedStoreProductsLabel = useMemo(() => {
-    const productIds = Array.isArray(formStoreProductId) ? formStoreProductId : (formStoreProductId ? [formStoreProductId] : []);
-    if (productIds.length === 0) return 'Select a Store Product';
+    const productIds = Array.isArray(formStoreProductId) ? formStoreProductId : formStoreProductId ? [formStoreProductId] : [];
+    if (productIds.length === 0) return "Select a Store Product";
     if (productIds.length === 1) {
-      const matched = formStoreProducts.find(p => p.item_group_id === productIds[0]);
+      const matched = formStoreProducts.find((p) => p.item_group_id === productIds[0]);
       if (matched) return matched.title;
       const storeSel = advertiserPrefs?.storeSelection;
       if (storeSel && storeSel.product_id === productIds[0]) {
@@ -1134,9 +1138,7 @@ export default function TikTokAdCreationForm({
       const sel = advertiserPrefs.storeSelection;
       setFormStoreId(sel.store_id || null);
       setFormStoreName(sel.store_name || null);
-      const initialProductIds = Array.isArray(sel.product_id)
-        ? sel.product_id
-        : sel.product_id ? [sel.product_id] : [];
+      const initialProductIds = Array.isArray(sel.product_id) ? sel.product_id : sel.product_id ? [sel.product_id] : [];
       setFormStoreProductId(initialProductIds);
       setFormStoreProductName(sel.product_name || null);
       setFormStoreBcId(sel.bc_id || null);
@@ -1147,22 +1149,20 @@ export default function TikTokAdCreationForm({
 
   // Sync selected adgroup's store preferences if they are modified on ad group select
   useEffect(() => {
-    const activeAdGroups = showDuplicateAdGroupBlock && duplicateAdGroup
-      ? [duplicateAdGroup]
-      : (selectedAdGroup || []);
+    const activeAdGroups = showDuplicateAdGroupBlock && duplicateAdGroup ? [duplicateAdGroup] : selectedAdGroup || [];
 
     if (activeAdGroups.length === 0) return;
 
     // Find the first selected ad group that is a showcase ad group
-    const showcaseAgId = activeAdGroups.find(agId => {
-      const agObj = adGroups.find(g => g.adgroup_id === agId);
-      return agObj && (agObj.product_source === 'SHOWCASE' || agObj.product_source === 'STORE');
+    const showcaseAgId = activeAdGroups.find((agId) => {
+      const agObj = adGroups.find((g) => g.adgroup_id === agId);
+      return agObj && (agObj.product_source === "SHOWCASE" || agObj.product_source === "STORE");
     });
 
     if (showcaseAgId) {
-      const agObj = adGroups.find(g => g.adgroup_id === showcaseAgId);
+      const agObj = adGroups.find((g) => g.adgroup_id === showcaseAgId);
       // Find matches in formStores if loaded
-      const matched = formStores.find(s => s.store_id === agObj.store_id);
+      const matched = formStores.find((s) => s.store_id === agObj.store_id);
       if (matched) {
         setFormStoreId(matched.store_id);
         setFormStoreName(matched.store_name);
@@ -1180,24 +1180,24 @@ export default function TikTokAdCreationForm({
     }
     setLoadingFormStores(true);
     fetch(`${API_BASE_URL}/api/tiktok/store/list?advertiserId=${selectedAdvertiser}`, {
-      credentials: 'include',
+      credentials: "include",
     })
-      .then(res => res.json())
-      .then(data => {
+      .then((res) => res.json())
+      .then((data) => {
         if (data.success) {
           setFormStores(data.stores || []);
         }
       })
-      .catch(err => console.warn('[CreationForm] Failed to load stores:', err.message))
+      .catch((err) => console.warn("[CreationForm] Failed to load stores:", err.message))
       .finally(() => setLoadingFormStores(false));
   }, [selectedAdvertiser]);
 
   const selectedLocationIds = useMemo(() => {
     const locs = new Set();
-    selectedAdGroup.forEach(agId => {
-      const agObj = adGroups.find(g => g.adgroup_id === agId);
+    selectedAdGroup.forEach((agId) => {
+      const agObj = adGroups.find((g) => g.adgroup_id === agId);
       if (agObj && Array.isArray(agObj.location_ids)) {
-        agObj.location_ids.forEach(loc => locs.add(loc));
+        agObj.location_ids.forEach((loc) => locs.add(loc));
       }
     });
     return Array.from(locs);
@@ -1219,13 +1219,13 @@ export default function TikTokAdCreationForm({
     const cached = readCache(cacheKey);
     if (cached) {
       setFormStoreProducts(cached);
-      setFormStoreProductId(prev => {
-        const current = Array.isArray(prev) ? prev : (prev ? [prev] : []);
-        const valid = current.filter(id => cached.some(p => p.item_group_id === id));
+      setFormStoreProductId((prev) => {
+        const current = Array.isArray(prev) ? prev : prev ? [prev] : [];
+        const valid = current.filter((id) => cached.some((p) => p.item_group_id === id));
         if (valid.length === 0) {
           setFormStoreProductName(null);
         } else {
-          const matched = cached.find(p => p.item_group_id === valid[0]);
+          const matched = cached.find((p) => p.item_group_id === valid[0]);
           if (matched) setFormStoreProductName(matched.title || null);
         }
         return valid;
@@ -1234,47 +1234,47 @@ export default function TikTokAdCreationForm({
     }
 
     setLoadingFormStoreProducts(true);
-    const identityObj = identities.find(i => i.identity_id === selectedIdentity);
-    const identityType = identityObj?.identity_type || 'BC_AUTH_TT';
+    const identityObj = identities.find((i) => i.identity_id === selectedIdentity);
+    const identityType = identityObj?.identity_type || "BC_AUTH_TT";
     const url = `${API_BASE_URL}/api/tiktok/showcase/products?advertiserId=${selectedAdvertiser}&identityId=${selectedIdentity}&identityType=${identityType}`;
 
     fetch(url, {
-      credentials: 'include',
+      credentials: "include",
     })
-      .then(res => res.json())
-      .then(data => {
+      .then((res) => res.json())
+      .then((data) => {
         if (data.success) {
           const mappedProducts = (data.products || [])
-            .filter(p => {
-              const status = (p.status || p.product_status || '').toUpperCase();
+            .filter((p) => {
+              const status = (p.status || p.product_status || "").toUpperCase();
               // Only show products explicitly marked AVAILABLE, or with no status field
-              return !status || status === 'AVAILABLE';
+              return !status || status === "AVAILABLE";
             })
-            .map(p => ({
+            .map((p) => ({
               item_group_id: p.item_group_id || p.product_id || p.id,
-              title: p.title || p.product_name || p.name || 'Unnamed Product',
-              product_image_url: p.product_image_url || p.image_url || p.logo_url || (p.image_info?.web_uri) || null,
+              title: p.title || p.product_name || p.name || "Unnamed Product",
+              product_image_url: p.product_image_url || p.image_url || p.logo_url || p.image_info?.web_uri || null,
               store_id: p.store_id || null,
               min_price: p.min_price || null,
-              currency: p.currency || null
+              currency: p.currency || null,
             }));
           setFormStoreProducts(mappedProducts);
           writeCache(cacheKey, mappedProducts);
 
-          setFormStoreProductId(prev => {
-            const current = Array.isArray(prev) ? prev : (prev ? [prev] : []);
-            const valid = current.filter(id => mappedProducts.some(p => p.item_group_id === id));
+          setFormStoreProductId((prev) => {
+            const current = Array.isArray(prev) ? prev : prev ? [prev] : [];
+            const valid = current.filter((id) => mappedProducts.some((p) => p.item_group_id === id));
             if (valid.length === 0) {
               setFormStoreProductName(null);
             } else {
-              const matched = mappedProducts.find(p => p.item_group_id === valid[0]);
+              const matched = mappedProducts.find((p) => p.item_group_id === valid[0]);
               if (matched) setFormStoreProductName(matched.title || null);
             }
             return valid;
           });
         }
       })
-      .catch(err => console.warn('[CreationForm] Failed to load showcase products:', err.message))
+      .catch((err) => console.warn("[CreationForm] Failed to load showcase products:", err.message))
       .finally(() => setLoadingFormStoreProducts(false));
   }, [selectedAdvertiser, isShowcaseSelection, selectedIdentity, identities]);
 
@@ -1300,50 +1300,44 @@ export default function TikTokAdCreationForm({
       url += `&bc_id=${formStoreBcId}`;
     }
     fetch(url, {
-      credentials: 'include',
+      credentials: "include",
     })
-      .then(res => res.json())
-      .then(data => {
+      .then((res) => res.json())
+      .then((data) => {
         if (data.success) {
           const mappedProducts = (data.products || [])
-            .filter(p => {
-              const status = (p.status || p.product_status || '').toUpperCase();
-              return !status || status === 'AVAILABLE';
+            .filter((p) => {
+              const status = (p.status || p.product_status || "").toUpperCase();
+              return !status || status === "AVAILABLE";
             })
-            .map(p => ({
+            .map((p) => ({
               item_group_id: p.item_group_id || p.product_id || p.id,
-              title: p.title || p.product_name || p.name || 'Unnamed Product',
-              product_image_url: p.product_image_url || p.image_url || p.logo_url || (p.image_info?.web_uri) || null,
+              title: p.title || p.product_name || p.name || "Unnamed Product",
+              product_image_url: p.product_image_url || p.image_url || p.logo_url || p.image_info?.web_uri || null,
               store_id: p.store_id || null,
               min_price: p.min_price || null,
-              currency: p.currency || null
+              currency: p.currency || null,
             }));
           setFormStoreProducts(mappedProducts);
           writeCache(cacheKey, mappedProducts);
         }
       })
-      .catch(err => console.warn('[CreationForm] Failed to load store products:', err.message))
+      .catch((err) => console.warn("[CreationForm] Failed to load store products:", err.message))
       .finally(() => setLoadingFormStoreProducts(false));
   }, [selectedAdvertiser, isStoreSelection, formStoreId, formStoreBcId]);
 
+  const fileRef = useRef();
+  const pickerInstanceRef = useRef(null);
 
+  const filteredCampaigns = useMemo(
+    () => campaigns.filter((c) => (c.campaign_name || c.campaign_id || "").toLowerCase().includes(campaignSearch.toLowerCase())),
+    [campaigns, campaignSearch],
+  );
 
-  const fileRef = useRef()
-  const pickerInstanceRef = useRef(null)
-
-  const filteredCampaigns = useMemo(() =>
-    campaigns.filter((c) =>
-      (c.campaign_name || c.campaign_id || '').toLowerCase().includes(campaignSearch.toLowerCase())
-    ),
-    [campaigns, campaignSearch]
-  )
-
-  const filteredAdGroups = useMemo(() =>
-    adGroups.filter((ag) =>
-      (ag.adgroup_name || ag.adgroup_id || '').toLowerCase().includes(adGroupSearch.toLowerCase())
-    ),
-    [adGroups, adGroupSearch]
-  )
+  const filteredAdGroups = useMemo(
+    () => adGroups.filter((ag) => (ag.adgroup_name || ag.adgroup_id || "").toLowerCase().includes(adGroupSearch.toLowerCase())),
+    [adGroups, adGroupSearch],
+  );
 
   const countFilesForVariant = (variantId) => {
     const allFiles = [
@@ -1351,27 +1345,23 @@ export default function TikTokAdCreationForm({
       ...(driveFiles || []).map((file) => ({ ...file, isDrive: true })),
       ...(dropboxFiles || []).map((file) => ({ ...file, isDropbox: true })),
       ...(tiktokLibraryFiles || []),
-    ]
-    const totalMediaCount = allFiles.length + (importedPosts || []).length
-    if (totalMediaCount === 1) return 1
+    ];
+    const totalMediaCount = allFiles.length + (importedPosts || []).length;
+    if (totalMediaCount === 1) return 1;
 
-    const fileCount = allFiles.filter((file) => (
-      (fileVariantMap[getFileId(file)] || 'default') === variantId
-    )).length
-    const postCount = (importedPosts || []).filter((post) => (
-      (postVariantMap[`post:${post.id}`] || 'default') === variantId
-    )).length
+    const fileCount = allFiles.filter((file) => (fileVariantMap[getFileId(file)] || "default") === variantId).length;
+    const postCount = (importedPosts || []).filter((post) => (postVariantMap[`post:${post.id}`] || "default") === variantId).length;
 
-    return fileCount + postCount
-  }
+    return fileCount + postCount;
+  };
 
   const getFileId = (file) => {
-    if (!file) return ''
-    if (file.isDrive) return file.id
-    if (file.isDropbox) return file.dropboxId
-    if (file.isFrameio) return file.frameioId
-    return file.uniqueId || file.id || file.videoId || file.name || ''
-  }
+    if (!file) return "";
+    if (file.isDrive) return file.id;
+    if (file.isDropbox) return file.dropboxId;
+    if (file.isFrameio) return file.frameioId;
+    return file.uniqueId || file.id || file.videoId || file.name || "";
+  };
 
   // Keep formStateRef in sync with every render so captureFormDataAsJob always
   // reads the absolutely latest values — not stale useCallback closure values.
@@ -1452,62 +1442,63 @@ export default function TikTokAdCreationForm({
       customLink,
       launchPaused,
     },
-  }
+  };
 
   // captureFormDataAsJob reads exclusively from formStateRef.current so it
   // always captures the EXACT state present at publish-click time, immune to
   // useCallback closure staleness.
-  const captureFormDataAsJob = useCallback((variantId = 'default') => {
+  const captureFormDataAsJob = useCallback((variantId = "default") => {
     // Read from the ref for guaranteed freshness
-    const s = formStateRef.current
+    const s = formStateRef.current;
 
     const getVariantState = (vid) => {
-      if (vid === s.activeVariantId) return s.liveVariantSnapshot
-      const v = (s.variants || []).find(val => val.id === vid)
-      if (!v) return null
-      return v.snapshot || null
-    }
+      if (vid === s.activeVariantId) return s.liveVariantSnapshot;
+      const v = (s.variants || []).find((val) => val.id === vid);
+      if (!v) return null;
+      return v.snapshot || null;
+    };
 
-    const variantState = getVariantState(variantId)
-    if (!variantState) return null
+    const variantState = getVariantState(variantId);
+    if (!variantState) return null;
 
-    const totalMediaCount = (
+    const totalMediaCount =
       (s.files || []).length +
       (s.driveFiles || []).length +
       (s.dropboxFiles || []).length +
       (s.tiktokLibraryFiles || []).length +
-      (s.importedPosts || []).length
-    )
-    const isSingleMediaSplit = totalMediaCount === 1
+      (s.importedPosts || []).length;
+    const isSingleMediaSplit = totalMediaCount === 1;
 
-    const filterFiles = (items, mapper = (item) => item) => items.filter((item) => {
-      if (isSingleMediaSplit) return true
-      const file = mapper(item)
-      const fileId = getFileId(file)
-      return ((s.fileVariantMap || {})[fileId] || 'default') === variantId
-    })
+    const filterFiles = (items, mapper = (item) => item) =>
+      items.filter((item) => {
+        if (isSingleMediaSplit) return true;
+        const file = mapper(item);
+        const fileId = getFileId(file);
+        return ((s.fileVariantMap || {})[fileId] || "default") === variantId;
+      });
 
-    const filterPosts = (items) => items.filter((post) => {
-      if (isSingleMediaSplit) return true
-      const postKey = `post:${post.id}`
-      return ((s.postVariantMap || {})[postKey] || 'default') === variantId
-    })
+    const filterPosts = (items) =>
+      items.filter((post) => {
+        if (isSingleMediaSplit) return true;
+        const postKey = `post:${post.id}`;
+        return ((s.postVariantMap || {})[postKey] || "default") === variantId;
+      });
 
-    const variantFiles = filterFiles(s.files || [])
-    const variantDriveFiles = filterFiles(s.driveFiles || [], (file) => ({ ...file, isDrive: true })).map(f => ({ ...f, isDrive: true }))
-    const variantDropboxFiles = filterFiles(s.dropboxFiles || [], (file) => ({ ...file, isDropbox: true })).map(f => ({ ...f, isDropbox: true }))
-    const variantLibraryFiles = filterFiles(s.tiktokLibraryFiles || [])
-    const variantImportedPosts = filterPosts(s.importedPosts || [])
-    const variantAdGroups = Array.isArray(variantState.adGroups) ? variantState.adGroups : s.adGroups || []
+    const variantFiles = filterFiles(s.files || []);
+    const variantDriveFiles = filterFiles(s.driveFiles || [], (file) => ({ ...file, isDrive: true })).map((f) => ({ ...f, isDrive: true }));
+    const variantDropboxFiles = filterFiles(s.dropboxFiles || [], (file) => ({ ...file, isDropbox: true })).map((f) => ({ ...f, isDropbox: true }));
+    const variantLibraryFiles = filterFiles(s.tiktokLibraryFiles || []);
+    const variantImportedPosts = filterPosts(s.importedPosts || []);
+    const variantAdGroups = Array.isArray(variantState.adGroups) ? variantState.adGroups : s.adGroups || [];
 
     const formData = {
-      adName: variantState.adName ?? '',
-      adTexts: [...(variantState.adTexts || (variantState.adText ? [variantState.adText] : ['']))],
-      cta: [...(variantState.cta || ['SHOP_NOW'])],
-      landingUrl: variantState.landingUrl ?? '',
-      sparkAuthCodes: [...(variantState.sparkAuthCodes || [''])],
-      urlMode: variantState.urlMode || 'WEBSITE',
-      adType: s.adType || 'NORMAL',
+      adName: variantState.adName ?? "",
+      adTexts: [...(variantState.adTexts || (variantState.adText ? [variantState.adText] : [""]))],
+      cta: [...(variantState.cta || ["SHOP_NOW"])],
+      landingUrl: variantState.landingUrl ?? "",
+      sparkAuthCodes: [...(variantState.sparkAuthCodes || [""])],
+      urlMode: variantState.urlMode || "WEBSITE",
+      adType: s.adType || "NORMAL",
 
       files: [...variantFiles],
       driveFiles: [...variantDriveFiles],
@@ -1521,13 +1512,13 @@ export default function TikTokAdCreationForm({
       adGroups: [...variantAdGroups],
 
       isDuplicatingAdGroupMode: Boolean(variantState.showDuplicateAdGroupBlock && variantState.duplicateAdGroup),
-      duplicateAdGroup: variantState.duplicateAdGroup || '',
-      newAdGroupName: variantState.newAdGroupName || '',
-      selectedIdentity: variantState.selectedIdentity || '',
+      duplicateAdGroup: variantState.duplicateAdGroup || "",
+      newAdGroupName: variantState.newAdGroupName || "",
+      selectedIdentity: variantState.selectedIdentity || "",
       launchPaused: Boolean(variantState.launchPaused),
 
-      productName: variantState.productName ?? '',
-      productImageUrl: variantState.productImageUrl ?? '',
+      productName: variantState.productName ?? "",
+      productImageUrl: variantState.productImageUrl ?? "",
       sellingPoints: [...(variantState.sellingPoints || [])],
 
       adNameFormulaV2: variantState.adNameFormulaV2 ? { ...variantState.adNameFormulaV2 } : null,
@@ -1541,100 +1532,128 @@ export default function TikTokAdCreationForm({
       formStoreProductId: [...(variantState.formStoreProductId || [])],
       formStoreProductName: variantState.formStoreProductName ?? null,
       formStoreCatalogId: variantState.formStoreCatalogId ?? null,
+    };
+
+    let fileCount = formData.files.length + formData.driveFiles.length + formData.dropboxFiles.length + formData.tiktokLibraryFiles.length;
+    if (formData.adType === "SPARK") {
+      fileCount = formData.importedPosts.length;
     }
 
-    let fileCount = formData.files.length + formData.driveFiles.length + formData.dropboxFiles.length + formData.tiktokLibraryFiles.length
-    if (formData.adType === 'SPARK') {
-      fileCount = formData.importedPosts.length
-    }
-
-    const activeAdGroups = formData.selectedAdGroup || []
+    const activeAdGroups = formData.selectedAdGroup || [];
     const adGroupDisplayName = formData.isDuplicatingAdGroupMode
-      ? (formData.newAdGroupName || 'New Ad Group')
+      ? formData.newAdGroupName || "New Ad Group"
       : activeAdGroups.length === 1
-        ? (variantAdGroups.find(ag => ag.adgroup_id === activeAdGroups[0])?.adgroup_name || 'selected ad group')
-        : `${activeAdGroups.length} ad groups`
+        ? variantAdGroups.find((ag) => ag.adgroup_id === activeAdGroups[0])?.adgroup_name || "selected ad group"
+        : `${activeAdGroups.length} ad groups`;
 
     return {
       id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       variantId,
-      variantName: (s.variants || []).find(v => v.id === variantId)?.name || 'Default',
+      variantName: (s.variants || []).find((v) => v.id === variantId)?.name || "Default",
       adCount: fileCount * (formData.selectedAdGroup?.length || 1),
       adGroupDisplayName,
       formData,
-    }
-  }, []) // No deps — reads exclusively from formStateRef.current at call time
+    };
+  }, []); // No deps — reads exclusively from formStateRef.current at call time
 
   const addCompletedJob = useCallback((completedJob) => {
-    setCompletedJobs(prev => {
-      const updated = [...prev, completedJob]
-      return updated.map((j, i) =>
-        i < updated.length - 3 ? { ...j, formData: null } : j
-      )
-    })
-  }, [])
+    setCompletedJobs((prev) => {
+      const updated = [...prev, completedJob];
+      return updated.map((j, i) => (i < updated.length - 3 ? { ...j, formData: null } : j));
+    });
+  }, []);
 
-  const handleRetryJob = useCallback((job) => {
-    const d = job.formData
-    if (!d) return
+  const handleRetryJob = useCallback(
+    (job) => {
+      const d = job.formData;
+      if (!d) return;
 
-    setAdName(d.adName || '')
-    setAdTexts(d.adTexts || (d.adText ? [d.adText] : ['']))
-    setCta(d.cta || ['SHOP_NOW'])
-    setLandingUrl(d.landingUrl || '')
-    setSparkAuthCodes(d.sparkAuthCodes || [''])
-    setUrlMode(d.urlMode || 'WEBSITE')
-    setAdType(d.adType || 'NORMAL')
+      setAdName(d.adName || "");
+      setAdTexts(d.adTexts || (d.adText ? [d.adText] : [""]));
+      setCta(d.cta || ["SHOP_NOW"]);
+      setLandingUrl(d.landingUrl || "");
+      setSparkAuthCodes(d.sparkAuthCodes || [""]);
+      setUrlMode(d.urlMode || "WEBSITE");
+      setAdType(d.adType || "NORMAL");
 
-    setFiles(d.files || [])
-    setDriveFiles(d.driveFiles || [])
-    setDropboxFiles(d.dropboxFiles || [])
-    if (setSparkAuthCodes) setSparkAuthCodes(d.sparkAuthCodes || [''])
+      setFiles(d.files || []);
+      setDriveFiles(d.driveFiles || []);
+      setDropboxFiles(d.dropboxFiles || []);
+      if (setSparkAuthCodes) setSparkAuthCodes(d.sparkAuthCodes || [""]);
 
-    setSelectedAdvertiser(d.selectedAdvertiser || '')
-    setSelectedCampaign(d.selectedCampaign || [])
-    setSelectedAdGroup(d.selectedAdGroup || [])
-    setAdGroups(d.adGroups || [])
-    setShowDuplicateAdGroupBlock(Boolean(d.isDuplicatingAdGroupMode))
-    setDuplicateAdGroup(d.duplicateAdGroup || '')
-    setNewAdGroupName(d.newAdGroupName || '')
-    setSelectedIdentity(d.selectedIdentity || '')
-    setLaunchPaused(Boolean(d.launchPaused))
-    setAdNameFormulaV2(d.adNameFormulaV2 || { rawInput: '' })
-    setFormCatalogId(d.formCatalogId ?? null)
-    setFormCatalogName(d.formCatalogName ?? null)
-    setFormProductId(d.formProductId || [])
-    setFormProductName(d.formProductName ?? null)
-    setFormCatalogProducts(d.formCatalogProducts || [])
-    setFormStoreId(d.formStoreId ?? null)
-    setFormStoreName(d.formStoreName ?? null)
-    setFormStoreProductId(d.formStoreProductId || [])
-    setFormStoreProductName(d.formStoreProductName ?? null)
-    setFormStoreCatalogId(d.formStoreCatalogId ?? null)
+      setSelectedAdvertiser(d.selectedAdvertiser || "");
+      setSelectedCampaign(d.selectedCampaign || []);
+      setSelectedAdGroup(d.selectedAdGroup || []);
+      setAdGroups(d.adGroups || []);
+      setShowDuplicateAdGroupBlock(Boolean(d.isDuplicatingAdGroupMode));
+      setDuplicateAdGroup(d.duplicateAdGroup || "");
+      setNewAdGroupName(d.newAdGroupName || "");
+      setSelectedIdentity(d.selectedIdentity || "");
+      setLaunchPaused(Boolean(d.launchPaused));
+      setAdNameFormulaV2(d.adNameFormulaV2 || { rawInput: "" });
+      setFormCatalogId(d.formCatalogId ?? null);
+      setFormCatalogName(d.formCatalogName ?? null);
+      setFormProductId(d.formProductId || []);
+      setFormProductName(d.formProductName ?? null);
+      setFormCatalogProducts(d.formCatalogProducts || []);
+      setFormStoreId(d.formStoreId ?? null);
+      setFormStoreName(d.formStoreName ?? null);
+      setFormStoreProductId(d.formStoreProductId || []);
+      setFormStoreProductName(d.formStoreProductName ?? null);
+      setFormStoreCatalogId(d.formStoreCatalogId ?? null);
 
-    setVariants([{ id: 'default', name: 'Default', snapshot: null }])
-    setActiveVariantId('default')
-    setFileVariantMap({})
-    setGroupVariantMap({})
-    setPostVariantMap({})
-  }, [
-    setAdName, setAdTexts, setCta, setLandingUrl, setSparkAuthCodes, setUrlMode,
-    setAdType, setFiles, setDriveFiles, setDropboxFiles, setSelectedAdvertiser,
-    setSelectedCampaign, setSelectedAdGroup, setAdGroups, setShowDuplicateAdGroupBlock,
-    setDuplicateAdGroup, setNewAdGroupName, setSelectedIdentity, setLaunchPaused,
-    setAdNameFormulaV2, setFormCatalogId, setFormCatalogName, setFormProductId,
-    setFormProductName, setFormCatalogProducts, setFormStoreId, setFormStoreName,
-    setFormStoreProductId, setFormStoreProductName, setFormStoreCatalogId,
-    setVariants, setActiveVariantId, setFileVariantMap, setGroupVariantMap, setPostVariantMap
-  ])
+      setVariants([{ id: "default", name: "Default", snapshot: null }]);
+      setActiveVariantId("default");
+      setFileVariantMap({});
+      setGroupVariantMap({});
+      setPostVariantMap({});
+    },
+    [
+      setAdName,
+      setAdTexts,
+      setCta,
+      setLandingUrl,
+      setSparkAuthCodes,
+      setUrlMode,
+      setAdType,
+      setFiles,
+      setDriveFiles,
+      setDropboxFiles,
+      setSelectedAdvertiser,
+      setSelectedCampaign,
+      setSelectedAdGroup,
+      setAdGroups,
+      setShowDuplicateAdGroupBlock,
+      setDuplicateAdGroup,
+      setNewAdGroupName,
+      setSelectedIdentity,
+      setLaunchPaused,
+      setAdNameFormulaV2,
+      setFormCatalogId,
+      setFormCatalogName,
+      setFormProductId,
+      setFormProductName,
+      setFormCatalogProducts,
+      setFormStoreId,
+      setFormStoreName,
+      setFormStoreProductId,
+      setFormStoreProductName,
+      setFormStoreCatalogId,
+      setVariants,
+      setActiveVariantId,
+      setFileVariantMap,
+      setGroupVariantMap,
+      setPostVariantMap,
+    ],
+  );
 
   // Sequentially process the publishing job queue
   // Sequentially process the publishing job queue
   const handleCreateAd = async (jobToProcess) => {
-    const abortController = new AbortController()
-    const signal = abortController.signal
-    setCurrentAbortController(abortController)
-    currentJobIdRef.current = jobToProcess.id
+    const abortController = new AbortController();
+    const signal = abortController.signal;
+    setCurrentAbortController(abortController);
+    currentJobIdRef.current = jobToProcess.id;
 
     const {
       adName,
@@ -1669,58 +1688,58 @@ export default function TikTokAdCreationForm({
       formStoreProductId: jobFormStoreProductId,
       formStoreProductName: jobFormStoreProductName,
       formStoreCatalogId: jobFormStoreCatalogId,
-    } = jobToProcess.formData
+    } = jobToProcess.formData;
 
-    const campaignObj = campaigns.find(c => c.campaign_id === selectedCampaign[0])
+    const campaignObj = campaigns.find((c) => c.campaign_id === selectedCampaign[0]);
 
-    setProgress(0)
-    setProgressMessage('Starting TikTok ad creation...')
+    setProgress(0);
+    setProgressMessage("Starting TikTok ad creation...");
 
-    const itemsToUpload = []
-    if (adType === 'SPARK') {
-      (importedPosts || []).forEach(post => {
+    const itemsToUpload = [];
+    if (adType === "SPARK") {
+      (importedPosts || []).forEach((post) => {
         itemsToUpload.push({
-          type: 'spark',
+          type: "spark",
           file: {
-            name: post.ad_name || 'Spark Ad',
+            name: post.ad_name || "Spark Ad",
             id: post.id,
             authCode: post.auth_code,
             identityId: post.identity_id,
             identityType: post.identity_type,
-            identityAuthorizedBcId: post.identity_authorized_bc_id || ""
-          }
-        })
-      })
+            identityAuthorizedBcId: post.identity_authorized_bc_id || "",
+          },
+        });
+      });
     } else {
-      (files || []).forEach(f => itemsToUpload.push({ type: 'local', file: f }));
-      (driveFiles || []).forEach(f => itemsToUpload.push({ type: 'drive', file: f }));
-      (dropboxFiles || []).forEach(f => itemsToUpload.push({ type: 'dropbox', file: f }));
-      (tiktokLibraryFiles || []).forEach(f => itemsToUpload.push({ type: 'library', file: f }));
+      (files || []).forEach((f) => itemsToUpload.push({ type: "local", file: f }));
+      (driveFiles || []).forEach((f) => itemsToUpload.push({ type: "drive", file: f }));
+      (dropboxFiles || []).forEach((f) => itemsToUpload.push({ type: "dropbox", file: f }));
+      (tiktokLibraryFiles || []).forEach((f) => itemsToUpload.push({ type: "library", file: f }));
     }
 
-    let totalCount = itemsToUpload.length * (isDuplicatingAdGroupMode ? 1 : selectedAdGroup.length)
+    let totalCount = itemsToUpload.length * (isDuplicatingAdGroupMode ? 1 : selectedAdGroup.length);
 
     setLiveProgress({
       completed: 0,
       succeeded: 0,
       failed: 0,
       total: totalCount,
-      errors: []
-    })
+      errors: [],
+    });
 
     const updateProgress = (pct, msg) => {
-      setProgress(pct)
-      setProgressMessage(msg)
-    }
+      setProgress(pct);
+      setProgressMessage(msg);
+    };
 
     try {
-      const uploadedItems = []
-      const uploadErrors = []
+      const uploadedItems = [];
+      const uploadErrors = [];
 
       // Calculate total chunks to track upload progress across parallel uploads
       const totalChunks = itemsToUpload.reduce((sum, item) => {
-        if (adType === 'SPARK' || item.type === 'library') return sum;
-        if (item.type === 'local') {
+        if (adType === "SPARK" || item.type === "library") return sum;
+        if (item.type === "local") {
           return sum + Math.ceil((item.file.size || 0) / (10 * 1024 * 1024));
         }
         return sum + 1; // Google Drive / Dropbox are counted as 1 step
@@ -1735,56 +1754,53 @@ export default function TikTokAdCreationForm({
           uploadedChunks++;
           const percent = totalChunks > 0 ? Math.min(Math.round((uploadedChunks / totalChunks) * 100), 100) : 100;
           setProgress(percent);
-          setProgressMessage('Uploading files for processing...');
+          setProgressMessage("Uploading files for processing...");
         };
 
         // Stage 1: Upload media files in parallel using pLimit(3)
         const limit = pLimit(3);
         const uploadPromises = itemsToUpload.map((item) =>
           limit(async () => {
-            if (signal.aborted) throw new DOMException('Job cancelled.', 'AbortError');
+            if (signal.aborted) throw new DOMException("Job cancelled.", "AbortError");
 
             let videoId = null;
             let currentS3Url = null;
 
             try {
-              if (item.type === 'local') {
-                const isImage = !!(
-                  (item.file?.type?.startsWith('image/')) ||
-                  (/\.(png|jpg|jpeg|gif|webp|bmp)($|\?)/i.test(item.file?.name || ''))
-                )
+              if (item.type === "local") {
+                const isImage = !!(item.file?.type?.startsWith("image/") || /\.(png|jpg|jpeg|gif|webp|bmp)($|\?)/i.test(item.file?.name || ""));
 
                 if (isImage) {
-                  const uploadParams = new URLSearchParams({ advertiserId: selectedAdvertiser })
-                  const bodyFormData = new FormData()
-                  bodyFormData.append("image", item.file)
+                  const uploadParams = new URLSearchParams({ advertiserId: selectedAdvertiser });
+                  const bodyFormData = new FormData();
+                  bodyFormData.append("image", item.file);
 
                   const uploadRes = await fetch(`${API_BASE_URL}/api/tiktok/upload-image?${uploadParams}`, {
-                    method: 'POST',
-                    credentials: 'include',
+                    method: "POST",
+                    credentials: "include",
                     body: bodyFormData,
                     signal,
-                  })
-                  const uploadData = await uploadRes.json()
+                  });
+                  const uploadData = await uploadRes.json();
                   if (!uploadRes.ok || !uploadData.success) {
-                    throw new Error(uploadData.error || `Image upload failed for "${item.file.name}"`)
+                    throw new Error(uploadData.error || `Image upload failed for "${item.file.name}"`);
                   }
-                  videoId = uploadData.imageId || uploadData.image_id
-                  currentS3Url = null
-                  handleChunkUploaded()
+                  videoId = uploadData.imageId || uploadData.image_id;
+                  currentS3Url = null;
+                  handleChunkUploaded();
                 } else {
-                  const uploadResult = await uploadVideoToTikTok(item.file, signal, handleChunkUploaded)
+                  const uploadResult = await uploadVideoToTikTok(item.file, signal, handleChunkUploaded);
                   if (!uploadResult?.videoId) {
-                    throw new Error(`Video upload failed for "${item.file.name}"`)
+                    throw new Error(`Video upload failed for "${item.file.name}"`);
                   }
-                  videoId = uploadResult.videoId
-                  currentS3Url = uploadResult.s3Url || null
+                  videoId = uploadResult.videoId;
+                  currentS3Url = uploadResult.s3Url || null;
                 }
-              } else if (item.type === 'drive' || item.type === 'dropbox') {
+              } else if (item.type === "drive" || item.type === "dropbox") {
                 const uploadParams = new URLSearchParams({ advertiserId: selectedAdvertiser });
 
                 let uploadUrl, uploadBody;
-                if (item.type === 'drive') {
+                if (item.type === "drive") {
                   uploadUrl = `${API_BASE_URL}/api/tiktok/upload-from-drive?${uploadParams}`;
                   uploadBody = JSON.stringify({
                     driveFileUrl: `https://www.googleapis.com/drive/v3/files/${item.file.id}?alt=media`,
@@ -1805,8 +1821,8 @@ export default function TikTokAdCreationForm({
                 }
 
                 const uploadRes = await tiktokFetch(uploadUrl, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
                   body: uploadBody,
                   signal,
                 });
@@ -1817,7 +1833,7 @@ export default function TikTokAdCreationForm({
                 videoId = uploadData.videoId;
                 currentS3Url = uploadData.s3Url || null;
                 handleChunkUploaded();
-              } else if (item.type === 'library') {
+              } else if (item.type === "library") {
                 videoId = item.file.videoId;
               }
 
@@ -1825,62 +1841,62 @@ export default function TikTokAdCreationForm({
                 item,
                 videoId,
                 s3Url: currentS3Url,
-                success: true
+                success: true,
               };
             } catch (err) {
-              if (err.name === 'AbortError' || signal.aborted) {
+              if (err.name === "AbortError" || signal.aborted) {
                 throw err;
               }
               console.error(`Upload failed for ${item.file.name}:`, err);
-              const errDetail = err.message || 'Upload failed';
+              const errDetail = err.message || "Upload failed";
               const failedAdCount = isDuplicatingAdGroupMode ? 1 : selectedAdGroup.length;
 
-              setLiveProgress(prev => ({
+              setLiveProgress((prev) => ({
                 ...prev,
                 completed: prev.completed + failedAdCount,
                 failed: prev.failed + failedAdCount,
-                errors: [...prev.errors, { error: errDetail, fileName: item.file.name }]
+                errors: [...prev.errors, { error: errDetail, fileName: item.file.name }],
               }));
 
               return {
                 item,
                 error: errDetail,
-                success: false
+                success: false,
               };
             }
-          })
+          }),
         );
 
         const uploadResults = await Promise.all(uploadPromises);
 
-        uploadResults.forEach(res => {
+        uploadResults.forEach((res) => {
           if (res.success) {
             uploadedItems.push({
               item: res.item,
               videoId: res.videoId,
-              s3Url: res.s3Url
+              s3Url: res.s3Url,
             });
           } else {
             uploadErrors.push({ error: res.error, fileName: res.item.file.name });
           }
         });
 
-        if (signal.aborted) throw new DOMException('Job cancelled.', 'AbortError');
+        if (signal.aborted) throw new DOMException("Job cancelled.", "AbortError");
         setProgress(100);
-        setProgressMessage('File upload complete! Creating ads...');
+        setProgressMessage("File upload complete! Creating ads...");
       } else {
         // No uploading needed (Spark Ads or TikTok Library files)
-        itemsToUpload.forEach(item => {
+        itemsToUpload.forEach((item) => {
           let videoId = null;
-          if (adType === 'SPARK') {
+          if (adType === "SPARK") {
             videoId = item.file.id;
-          } else if (item.type === 'library') {
+          } else if (item.type === "library") {
             videoId = item.file.videoId;
           }
           uploadedItems.push({
             item,
             videoId,
-            s3Url: null
+            s3Url: null,
           });
         });
       }
@@ -1889,41 +1905,39 @@ export default function TikTokAdCreationForm({
       isInPromisePhase.current = true;
       setJobId(jobToProcess.id);
       // Small delay to let SSE connect
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       // Stage 2: Compilation & bulk ad group submission
-      setProgressMessage('Compiling ad groups payload... ')
+      setProgressMessage("Compiling ad groups payload... ");
 
-      const selectedIdentityObj = identities.find(i => i.identity_id === selectedIdentity)
-      const isCustomized = !selectedIdentity || selectedIdentity === 'CUSTOMIZED_USER'
-      const finalUrl = urlMode === 'WEBSITE'
-        ? applyUtmsToUrl(landingUrl, advertiserPrefs?.defaultUTMs || [])
-        : landingUrl
+      const selectedIdentityObj = identities.find((i) => i.identity_id === selectedIdentity);
+      const isCustomized = !selectedIdentity || selectedIdentity === "CUSTOMIZED_USER";
+      const finalUrl = urlMode === "WEBSITE" ? applyUtmsToUrl(landingUrl, advertiserPrefs?.defaultUTMs || []) : landingUrl;
 
-      let adGroupIdsToSubmit = [...selectedAdGroup]
+      let adGroupIdsToSubmit = [...selectedAdGroup];
 
       if (isDuplicatingAdGroupMode && uploadedItems.length > 0) {
-        setProgressMessage('Duplicating ad group on-the-fly...')
+        setProgressMessage("Duplicating ad group on-the-fly...");
         const dupRes = await tiktokFetch(`${API_BASE_URL}/api/tiktok/adgroup/duplicate`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             advertiser_id: selectedAdvertiser,
             source_adgroup_id: duplicateAdGroup,
             new_campaign_id: selectedCampaign[0],
             new_adgroup_name: newAdGroupName.trim(),
-            is_smart: isSmartCampaign
+            is_smart: isSmartCampaign,
           }),
-          signal
-        })
-        const dupData = await dupRes.json()
+          signal,
+        });
+        const dupData = await dupRes.json();
         if (!dupRes.ok || !dupData.success || !dupData.copied_adgroup_id) {
-          throw new Error(dupData.error || 'Ad group duplication failed')
+          throw new Error(dupData.error || "Ad group duplication failed");
         }
-        adGroupIdsToSubmit = [dupData.copied_adgroup_id]
+        adGroupIdsToSubmit = [dupData.copied_adgroup_id];
 
         // Proactively add the newly duplicated ad group to local state and cache with ad_count = 0
-        const sourceAg = jobAdGroups.find(ag => ag.adgroup_id === duplicateAdGroup)
+        const sourceAg = jobAdGroups.find((ag) => ag.adgroup_id === duplicateAdGroup);
         if (sourceAg) {
           const newAgObj = {
             ...sourceAg,
@@ -1931,89 +1945,81 @@ export default function TikTokAdCreationForm({
             adgroup_name: dupData.adgroup_name || newAdGroupName.trim(),
             campaignId: selectedCampaign[0],
             campaign_id: selectedCampaign[0],
-            campaignName: campaigns.find(c => c.campaign_id === selectedCampaign[0])?.campaign_name || sourceAg.campaignName,
+            campaignName: campaigns.find((c) => c.campaign_id === selectedCampaign[0])?.campaign_name || sourceAg.campaignName,
             ad_count: 0,
             operation_status: "DISABLE",
-            secondary_status: "DISABLE"
-          }
+            secondary_status: "DISABLE",
+          };
           if (setAdGroups) {
-            setAdGroups(prev => {
-              if (prev.some(ag => ag.adgroup_id === newAgObj.adgroup_id)) return prev;
+            setAdGroups((prev) => {
+              if (prev.some((ag) => ag.adgroup_id === newAgObj.adgroup_id)) return prev;
               return [newAgObj, ...prev];
-            })
+            });
           }
         }
       }
 
-      const adGroupsMap = {}
+      const adGroupsMap = {};
 
       for (let idx = 0; idx < uploadedItems.length; idx++) {
-        const { item, videoId, s3Url } = uploadedItems[idx]
+        const { item, videoId, s3Url } = uploadedItems[idx];
 
         const isImage = !!(
-          (item.file?.type?.startsWith('image/')) ||
-          (item.file?.mimeType?.startsWith('image/')) ||
-          (/\.(png|jpg|jpeg|gif|webp|bmp)($|\?)/i.test(item.file?.name || ''))
-        )
+          item.file?.type?.startsWith("image/") ||
+          item.file?.mimeType?.startsWith("image/") ||
+          /\.(png|jpg|jpeg|gif|webp|bmp)($|\?)/i.test(item.file?.name || "")
+        );
 
-        const currentIdentityId = adType === 'SPARK' ? item.file.identityId : (isCustomized ? undefined : selectedIdentity)
-        const currentIdentityType = adType === 'SPARK' ? item.file.identityType : (isCustomized ? 'CUSTOMIZED_USER' : (selectedIdentityObj?.identity_type || 'TT_USER'))
-        const currentIdentityAuthorizedBcId = adType === 'SPARK' ? item.file.identityAuthorizedBcId : (isCustomized ? undefined : (selectedIdentityObj?.identity_authorized_bc_id || ''))
+        const currentIdentityId = adType === "SPARK" ? item.file.identityId : isCustomized ? undefined : selectedIdentity;
+        const currentIdentityType =
+          adType === "SPARK" ? item.file.identityType : isCustomized ? "CUSTOMIZED_USER" : selectedIdentityObj?.identity_type || "TT_USER";
+        const currentIdentityAuthorizedBcId =
+          adType === "SPARK" ? item.file.identityAuthorizedBcId : isCustomized ? undefined : selectedIdentityObj?.identity_authorized_bc_id || "";
 
-        const finalAdName = computeAdNameFromFormula(
-          item.file,
-          idx,
-          landingUrl,
-          jobAdNameFormula,
-          adType,
-          adName
-        )
+        const finalAdName = computeAdNameFromFormula(item.file, idx, landingUrl, jobAdNameFormula, adType, adName);
 
-        const sourceAgForDuplication = isDuplicatingAdGroupMode ? jobAdGroups.find(ag => ag.adgroup_id === duplicateAdGroup) : null
+        const sourceAgForDuplication = isDuplicatingAdGroupMode ? jobAdGroups.find((ag) => ag.adgroup_id === duplicateAdGroup) : null;
 
         for (const adgroupId of adGroupIdsToSubmit) {
-          const adGroupObj = jobAdGroups.find(ag => ag.adgroup_id === adgroupId) || sourceAgForDuplication
-          const shoppingAdsType = adGroupObj?.shopping_ads_type || null
-          const productSource = adGroupObj?.product_source || null
-          const isShoppingAg = !!(
-            (shoppingAdsType && shoppingAdsType !== 'UNSET') ||
-            (productSource && productSource !== 'UNSET')
-          )
+          const adGroupObj = jobAdGroups.find((ag) => ag.adgroup_id === adgroupId) || sourceAgForDuplication;
+          const shoppingAdsType = adGroupObj?.shopping_ads_type || null;
+          const productSource = adGroupObj?.product_source || null;
+          const isShoppingAg = !!((shoppingAdsType && shoppingAdsType !== "UNSET") || (productSource && productSource !== "UNSET"));
 
-          const showProductCatalogForAdGroup = campaignObj && isSalesObjective(campaignObj)
+          const showProductCatalogForAdGroup = campaignObj && isSalesObjective(campaignObj);
 
-          let catalogIdToUse = null
-          let skuIdToUse = null
-          let itemGroupIdToUse = null
+          let catalogIdToUse = null;
+          let skuIdToUse = null;
+          let itemGroupIdToUse = null;
 
           if (isShoppingAg) {
-            if (productSource === 'SHOWCASE') {
-              catalogIdToUse = jobFormStoreCatalogId || adGroupObj?.catalog_id || null
-              const productIds = Array.isArray(jobFormStoreProductId) ? jobFormStoreProductId : (jobFormStoreProductId ? [jobFormStoreProductId] : [])
+            if (productSource === "SHOWCASE") {
+              catalogIdToUse = jobFormStoreCatalogId || adGroupObj?.catalog_id || null;
+              const productIds = Array.isArray(jobFormStoreProductId) ? jobFormStoreProductId : jobFormStoreProductId ? [jobFormStoreProductId] : [];
               if (productIds.length > 0) {
-                skuIdToUse = productIds.join(',')
+                skuIdToUse = productIds.join(",");
               }
             } else if (showProductCatalogForAdGroup && jobFormCatalogId) {
-              catalogIdToUse = jobFormCatalogId
-              const productIds = Array.isArray(jobFormProductId) ? jobFormProductId : (jobFormProductId ? [jobFormProductId] : [])
-              const skuIds = []
-              const itemGroupIds = []
+              catalogIdToUse = jobFormCatalogId;
+              const productIds = Array.isArray(jobFormProductId) ? jobFormProductId : jobFormProductId ? [jobFormProductId] : [];
+              const skuIds = [];
+              const itemGroupIds = [];
 
-              productIds.forEach(id => {
-                const matchedProd = jobFormCatalogProducts.find(p => p.product_id === id)
+              productIds.forEach((id) => {
+                const matchedProd = jobFormCatalogProducts.find((p) => p.product_id === id);
                 if (matchedProd) {
                   if (matchedProd.item_group_id) {
-                    itemGroupIds.push(matchedProd.item_group_id)
+                    itemGroupIds.push(matchedProd.item_group_id);
                   }
-                  const resolvedSku = matchedProd.sku_id || matchedProd.product_id
+                  const resolvedSku = matchedProd.sku_id || matchedProd.product_id;
                   if (resolvedSku) {
-                    skuIds.push(resolvedSku)
+                    skuIds.push(resolvedSku);
                   }
                 } else {
                   const catSel = advertiserPrefs?.catalogSelection;
                   if (catSel) {
                     const products = catSel.products || [];
-                    const matchedProd = products.find(p => p.product_id === id);
+                    const matchedProd = products.find((p) => p.product_id === id);
                     if (matchedProd) {
                       if (matchedProd.item_group_id) {
                         itemGroupIds.push(matchedProd.item_group_id);
@@ -2024,9 +2030,7 @@ export default function TikTokAdCreationForm({
                       }
                     } else {
                       const savedProductId = catSel.product_id;
-                      const isProductMatched = Array.isArray(savedProductId)
-                        ? savedProductId.includes(id)
-                        : id === savedProductId;
+                      const isProductMatched = Array.isArray(savedProductId) ? savedProductId.includes(id) : id === savedProductId;
                       if (isProductMatched) {
                         if (catSel.item_group_id) {
                           itemGroupIds.push(catSel.item_group_id);
@@ -2043,45 +2047,42 @@ export default function TikTokAdCreationForm({
                     skuIds.push(id);
                   }
                 }
-              })
+              });
 
               if (skuIds.length > 0) {
-                skuIdToUse = skuIds.join(',')
+                skuIdToUse = skuIds.join(",");
               }
               if (itemGroupIds.length > 0) {
-                itemGroupIdToUse = itemGroupIds.join(',')
+                itemGroupIdToUse = itemGroupIds.join(",");
               }
             } else {
               if (adGroupObj?.catalog_id) {
-                catalogIdToUse = adGroupObj.catalog_id
+                catalogIdToUse = adGroupObj.catalog_id;
               }
               if (adGroupObj?.sku_ids) {
                 if (Array.isArray(adGroupObj.sku_ids) && adGroupObj.sku_ids.length > 0) {
-                  skuIdToUse = adGroupObj.sku_ids[0]
-                } else if (typeof adGroupObj.sku_ids === 'string' && adGroupObj.sku_ids.trim() !== '') {
-                  skuIdToUse = adGroupObj.sku_ids
+                  skuIdToUse = adGroupObj.sku_ids[0];
+                } else if (typeof adGroupObj.sku_ids === "string" && adGroupObj.sku_ids.trim() !== "") {
+                  skuIdToUse = adGroupObj.sku_ids;
                 }
               }
               if (adGroupObj?.item_group_ids) {
                 if (Array.isArray(adGroupObj.item_group_ids) && adGroupObj.item_group_ids.length > 0) {
-                  itemGroupIdToUse = adGroupObj.item_group_ids[0]
-                } else if (typeof adGroupObj.item_group_ids === 'string' && adGroupObj.item_group_ids.trim() !== '') {
-                  itemGroupIdToUse = adGroupObj.item_group_ids
+                  itemGroupIdToUse = adGroupObj.item_group_ids[0];
+                } else if (typeof adGroupObj.item_group_ids === "string" && adGroupObj.item_group_ids.trim() !== "") {
+                  itemGroupIdToUse = adGroupObj.item_group_ids;
                 }
               }
             }
           }
 
-          const isSalesCampaign = !!(
-            (campaignObj && isSalesObjective(campaignObj)) ||
-            isShoppingAg
-          )
-          let creativeCTAs = Array.isArray(cta) ? cta : [cta]
+          const isSalesCampaign = !!((campaignObj && isSalesObjective(campaignObj)) || isShoppingAg);
+          let creativeCTAs = Array.isArray(cta) ? cta : [cta];
 
           // For Smart+ campaigns: send up to 5 texts in 1 creative object (ad_text_list).
           // For normal campaigns: only send the first text.
           const currentAgCampaignId = adGroupObj?.campaignId || adGroupObj?.campaign_id || selectedCampaign[0];
-          const targetCampaignObj = campaigns.find(c => c.campaign_id === currentAgCampaignId) || campaignObj;
+          const targetCampaignObj = campaigns.find((c) => c.campaign_id === currentAgCampaignId) || campaignObj;
 
           const isSmartForThisCampaign = Boolean(
             targetCampaignObj?.is_smart_performance_campaign === true ||
@@ -2091,85 +2092,79 @@ export default function TikTokAdCreationForm({
             targetCampaignObj?.campaign_automation_type === "SMART_PLUS" ||
             targetCampaignObj?.campaign_automation_type === "SMART_PERFORMANCE_CAMPAIGN" ||
             targetCampaignObj?.is_smart === true ||
-            targetCampaignObj?.is_smart === "true"
+            targetCampaignObj?.is_smart === "true",
           );
 
           if (isSalesCampaign && !isSmartForThisCampaign && creativeCTAs.length > 0) {
-            creativeCTAs = [creativeCTAs[0]]
+            creativeCTAs = [creativeCTAs[0]];
           }
           // For Smart+ campaigns: send up to 5 texts in 1 creative object (ad_text_list).
           // For normal campaigns: only send the first text.
 
-          const activeCaptions = (adTexts || []).filter(t => t.trim() !== '')
-          let finalCaptions = activeCaptions.length > 0
-            ? isSmartForThisCampaign ? activeCaptions.slice(0, 5) : [activeCaptions[0]]
-            : ['']
+          const activeCaptions = (adTexts || []).filter((t) => t.trim() !== "");
+          let finalCaptions = activeCaptions.length > 0 ? (isSmartForThisCampaign ? activeCaptions.slice(0, 5) : [activeCaptions[0]]) : [""];
 
-          const creatives = []
+          const creatives = [];
           const useMultipleTextsNative = isSmartForThisCampaign;
 
           const creative = {
-            adFormat: isImage ? 'SINGLE_IMAGE' : 'SINGLE_VIDEO',
-            ...(isImage
-              ? { image_ids: videoId }
-              : { video_id: videoId }
-            ),
+            adFormat: isImage ? "SINGLE_IMAGE" : "SINGLE_VIDEO",
+            ...(isImage ? { image_ids: videoId } : { video_id: videoId }),
             ad_text: finalCaptions[0] || "",
             ad_texts: finalCaptions,
             call_to_action: creativeCTAs,
-            ad_name: adType === 'SPARK' ? ' ' : finalAdName,
+            ad_name: adType === "SPARK" ? " " : finalAdName,
             identity_type: currentIdentityType,
-            landing_page_type: urlMode === 'WEBSITE' ? 'EXTERNAL_WEBSITE' : 'INSTANT_PAGE',
-            operation_status: launchPaused ? 'DISABLE' : 'ENABLE',
-            ...(urlMode === 'WEBSITE'
-              ? { landing_page_url: finalUrl }
-              : { page_id: landingUrl }
-            ),
-            ...(adType === 'SPARK' ? {
-              is_spark_ad: true,
-              spark_ad_auth_code: item.file.authCode,
-              tiktok_item_id: videoId,
-              adType: 'SPARK'
-            } : {}),
+            landing_page_type: urlMode === "WEBSITE" ? "EXTERNAL_WEBSITE" : "INSTANT_PAGE",
+            operation_status: launchPaused ? "DISABLE" : "ENABLE",
+            ...(urlMode === "WEBSITE" ? { landing_page_url: finalUrl } : { page_id: landingUrl }),
+            ...(adType === "SPARK"
+              ? {
+                  is_spark_ad: true,
+                  spark_ad_auth_code: item.file.authCode,
+                  tiktok_item_id: videoId,
+                  adType: "SPARK",
+                }
+              : {}),
             ...(shoppingAdsType ? { shopping_ads_type: shoppingAdsType } : {}),
-            ...(productSource ? { product_source: productSource } : {})
-          }
-          if (currentIdentityId) creative.identity_id = currentIdentityId
-          if (currentIdentityAuthorizedBcId) creative.identity_authorized_bc_id = currentIdentityAuthorizedBcId
+            ...(productSource ? { product_source: productSource } : {}),
+          };
+          if (currentIdentityId) creative.identity_id = currentIdentityId;
+          if (currentIdentityAuthorizedBcId) creative.identity_authorized_bc_id = currentIdentityAuthorizedBcId;
 
           if (isShoppingAg) {
             if (catalogIdToUse) creative.catalog_id = catalogIdToUse;
             if (skuIdToUse) creative.sku_id = skuIdToUse;
             if (itemGroupIdToUse) creative.item_group_id = itemGroupIdToUse;
-            if (productSource === 'SHOWCASE') {
+            if (productSource === "SHOWCASE") {
               creative.store_id = jobFormStoreId || adGroupObj?.store_id || null;
             }
           }
 
-          creatives.push(creative)
+          creatives.push(creative);
 
           if (!adGroupsMap[adgroupId]) {
-            const adGroupObj = jobAdGroups.find(ag => ag.adgroup_id === adgroupId) || sourceAgForDuplication
+            const adGroupObj = jobAdGroups.find((ag) => ag.adgroup_id === adgroupId) || sourceAgForDuplication;
             adGroupsMap[adgroupId] = {
               adgroupId: adgroupId,
-              adName: adType === 'SPARK' ? ' ' : finalAdName,
+              adName: adType === "SPARK" ? " " : finalAdName,
               adType: adType,
               s3Url: s3Url,
               ad_count: adGroupObj?.ad_count !== undefined ? adGroupObj.ad_count : 0,
-              creatives: []
-            }
+              creatives: [],
+            };
           }
-          adGroupsMap[adgroupId].creatives.push(...creatives)
+          adGroupsMap[adgroupId].creatives.push(...creatives);
         }
       }
 
-      const adGroupsPayload = Object.values(adGroupsMap)
+      const adGroupsPayload = Object.values(adGroupsMap);
 
       if (adGroupsPayload.length === 0) {
-        throw new Error('All video uploads failed. Cannot create TikTok ads.')
+        throw new Error("All video uploads failed. Cannot create TikTok ads.");
       }
 
-      setProgressMessage('Creating TikTok ads...')
+      setProgressMessage("Creating TikTok ads...");
 
       const createPayload = {
         advertiserId: selectedAdvertiser,
@@ -2177,100 +2172,101 @@ export default function TikTokAdCreationForm({
         campaignAutomationType: campaignObj?.campaign_automation_type || null,
         isSmartCampaign: (() => {
           const t = campaignObj?.campaign_automation_type;
-          return t === 'UPGRADED_SMART_PLUS' || t === 'SMART_PLUS' || t === 'SMART_PERFORMANCE_CAMPAIGN';
+          return t === "UPGRADED_SMART_PLUS" || t === "SMART_PLUS" || t === "SMART_PERFORMANCE_CAMPAIGN";
         })(),
         cta: Array.isArray(cta) ? cta : [cta],
         initialFailureCount: uploadErrors.length * (isDuplicatingAdGroupMode ? 1 : selectedAdGroup.length),
-        initialErrorMessages: uploadErrors.map(e => ({ error: e.error, fileName: e.fileName })),
+        initialErrorMessages: uploadErrors.map((e) => ({ error: e.error, fileName: e.fileName })),
         adGroups: adGroupsPayload,
-        s3Urls: uploadedItems.map(item => item.s3Url).filter(Boolean),
+        s3Urls: uploadedItems.map((item) => item.s3Url).filter(Boolean),
         campaignId: selectedCampaign[0],
-        campaignName: campaignObj?.campaign_name || "Unknown Campaign"
-      }
+        campaignName: campaignObj?.campaign_name || "Unknown Campaign",
+      };
 
-      console.log(`[TikTok create-ads frontend] Campaign: "${createPayload.campaignName}" (ID: ${createPayload.campaignId}), CTA: [${createPayload.cta.join(", ")}]`);
+      console.log(
+        `[TikTok create-ads frontend] Campaign: "${createPayload.campaignName}" (ID: ${createPayload.campaignId}), CTA: [${createPayload.cta.join(", ")}]`,
+      );
       console.log("📋 [TikTokAdCreationForm] Copyable JSON Payload:", JSON.stringify(createPayload, null, 2));
 
       const createRes = await tiktokFetch(`${API_BASE_URL}/api/tiktok/create-ads`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(createPayload),
-        signal
-      })
-      const createData = await createRes.json()
+        signal,
+      });
+      const createData = await createRes.json();
       if (!createRes.ok || !createData.success) {
-        throw new Error(createData.error || 'Batch ad creation failed')
+        throw new Error(createData.error || "Batch ad creation failed");
       }
 
       // ad_count update is deferred to SSE job-completion listener (see trackedStatus === 'complete' effect)
       // so the badge only updates after the ads are actually created, not optimistically on API call.
-
     } catch (err) {
-      if (err.name === 'AbortError' || signal.aborted) {
-        updateProgress(100, 'Job cancelled.')
+      if (err.name === "AbortError" || signal.aborted) {
+        updateProgress(100, "Job cancelled.");
 
         await fetch(`${API_BASE_URL}/auth/cancel-job`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ jobId: jobToProcess.id })
-        }).catch(() => { })
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ jobId: jobToProcess.id }),
+        }).catch(() => {});
       } else {
-        updateProgress(100, `Job Failed: ${err.message}`)
+        updateProgress(100, `Job Failed: ${err.message}`);
 
         await fetch(`${API_BASE_URL}/auth/complete-job`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             jobId: jobToProcess.id,
             message: `Job Failed: ${err.message}`,
-            status: 'error',
+            status: "error",
             successCount: 0,
             failureCount: totalCount,
             totalCount,
-            errorMessages: [{ error: err.message }]
-          })
-        }).catch(() => { })
+            errorMessages: [{ error: err.message }],
+          }),
+        }).catch(() => {});
       }
       throw err;
     } finally {
-      isInPromisePhase.current = false
-      setCurrentAbortController(null)
-      currentJobIdRef.current = null
+      isInPromisePhase.current = false;
+      setCurrentAbortController(null);
+      currentJobIdRef.current = null;
     }
-  }
+  };
 
   // Store handleCreateAd in a ref so the queue-processor useEffect always
   // invokes the latest version of the function, preventing stale closures from
   // bleeding in live-state values that belong to a later job.
-  const handleCreateAdRef = useRef(handleCreateAd)
-  handleCreateAdRef.current = handleCreateAd
+  const handleCreateAdRef = useRef(handleCreateAd);
+  handleCreateAdRef.current = handleCreateAd;
 
   useEffect(() => {
     if (jobQueue.length === 0 || isProcessingQueue) {
-      return
+      return;
     }
 
-    const jobToProcess = jobQueue[0]
+    const jobToProcess = jobQueue[0];
 
-    setIsProcessingQueue(true)
-    setCurrentJob(jobToProcess)
-    setHasStartedAnyJob(true)
+    setIsProcessingQueue(true);
+    setCurrentJob(jobToProcess);
+    setHasStartedAnyJob(true);
 
-    resetProgress()
-    setProgress(0)
-    setProgressMessage('Initializing...')
-    setJobId(null)
-    setIsCancelling(false)
-    setLiveProgress({ completed: 0, succeeded: 0, failed: 0, total: 0, errors: [] })
+    resetProgress();
+    setProgress(0);
+    setProgressMessage("Initializing...");
+    setJobId(null);
+    setIsCancelling(false);
+    setLiveProgress({ completed: 0, succeeded: 0, failed: 0, total: 0, errors: [] });
 
-    handleCreateAdRef.current(jobToProcess).catch(err => {
+    handleCreateAdRef.current(jobToProcess).catch((err) => {
       // Don't treat cancellation as a critical error
-      if (err.name === 'AbortError' || axios.isCancel(err)) {
+      if (err.name === "AbortError" || axios.isCancel(err)) {
         const cancelledJob = {
           id: jobToProcess.id,
-          message: 'Job cancelled. Some Ads might still have been made.',
+          message: "Job cancelled. Some Ads might still have been made.",
           completedAt: Date.now(),
-          status: 'cancelled',
+          status: "cancelled",
           formData: jobToProcess.formData,
           selectedAdvertiser: jobToProcess.formData?.selectedAdvertiser || "",
           selectedAdGroup: jobToProcess.formData?.selectedAdGroup || [],
@@ -2278,20 +2274,20 @@ export default function TikTokAdCreationForm({
           failureCount: 0,
           totalCount: jobToProcess.adCount,
           errorMessages: [],
-        }
-        addCompletedJob(cancelledJob)
-        setJobQueue(prev => prev.slice(1))
-        setCurrentJob(null)
-        setIsProcessingQueue(false)
-        setIsCancelling(false)
-        return
+        };
+        addCompletedJob(cancelledJob);
+        setJobQueue((prev) => prev.slice(1));
+        setCurrentJob(null);
+        setIsProcessingQueue(false);
+        setIsCancelling(false);
+        return;
       }
 
       const failedJob = {
         id: jobToProcess.id,
-        message: `Job Failed: ${err.message || 'An initialization error occurred.'}`,
+        message: `Job Failed: ${err.message || "An initialization error occurred."}`,
         completedAt: Date.now(),
-        status: 'error',
+        status: "error",
         formData: jobToProcess.formData,
         selectedAdvertiser: jobToProcess.formData?.selectedAdvertiser || "",
         selectedAdGroup: jobToProcess.formData?.selectedAdGroup || [],
@@ -2299,44 +2295,44 @@ export default function TikTokAdCreationForm({
         failureCount: 0,
         totalCount: jobToProcess.adCount,
         errorMessages: [{ error: err.message }],
-      }
-      addCompletedJob(failedJob)
-      setJobQueue(prev => prev.slice(1))
-      setCurrentJob(null)
-      setIsProcessingQueue(false)
-      setIsCancelling(false)
-    })
-  }, [jobQueue, isProcessingQueue, resetProgress])
+      };
+      addCompletedJob(failedJob);
+      setJobQueue((prev) => prev.slice(1));
+      setCurrentJob(null);
+      setIsProcessingQueue(false);
+      setIsCancelling(false);
+    });
+  }, [jobQueue, isProcessingQueue, resetProgress]);
 
   // Sync SSE progress to local progress state
   useEffect(() => {
-    if (currentJob && trackedStatus !== 'idle') {
-      setProgress(trackedProgress)
-      setProgressMessage(trackedMessage)
+    if (currentJob && trackedStatus !== "idle") {
+      setProgress(trackedProgress);
+      setProgressMessage(trackedMessage);
     }
-  }, [trackedProgress, trackedMessage, currentJob, trackedStatus])
+  }, [trackedProgress, trackedMessage, currentJob, trackedStatus]);
 
   // Listen to final status updates from SSE to complete the job and advance the queue
   useEffect(() => {
     if (!isProcessingQueue || !currentJob) {
-      return
+      return;
     }
 
-    if (trackedStatus === 'idle') {
-      return
+    if (trackedStatus === "idle") {
+      return;
     }
 
     if (
-      trackedStatus === 'complete' ||
-      trackedStatus === 'partial-success' ||
-      trackedStatus === 'error' ||
-      trackedStatus === 'job-not-found' ||
-      trackedStatus === 'cancelled'
+      trackedStatus === "complete" ||
+      trackedStatus === "partial-success" ||
+      trackedStatus === "error" ||
+      trackedStatus === "job-not-found" ||
+      trackedStatus === "cancelled"
     ) {
-      const successCount = trackedMetaData?.successCount || 0
-      const failureCount = trackedMetaData?.failureCount || 0
-      const totalCount = trackedMetaData?.totalCount || currentJob.adCount || 1
-      const errorMessages = trackedMetaData?.errorMessages || []
+      const successCount = trackedMetaData?.successCount || 0;
+      const failureCount = trackedMetaData?.failureCount || 0;
+      const totalCount = trackedMetaData?.totalCount || currentJob.adCount || 1;
+      const errorMessages = trackedMetaData?.errorMessages || [];
 
       let completedJob = {
         id: currentJob.id,
@@ -2347,141 +2343,154 @@ export default function TikTokAdCreationForm({
         successCount,
         failureCount,
         totalCount,
-        errorMessages: errorMessages.map(msg => typeof msg === 'string' ? { error: msg } : msg)
-      }
+        errorMessages: errorMessages.map((msg) => (typeof msg === "string" ? { error: msg } : msg)),
+      };
 
-      if (trackedStatus === 'complete' || trackedStatus === 'partial-success') {
-        const isPartial = trackedStatus === 'partial-success'
-        completedJob.status = isPartial ? 'partial-success' : 'success'
+      if (trackedStatus === "complete" || trackedStatus === "partial-success") {
+        const isPartial = trackedStatus === "partial-success";
+        completedJob.status = isPartial ? "partial-success" : "success";
         completedJob.message = isPartial
-          ? `${successCount} Ad${successCount !== 1 ? 's' : ''} successfully posted to ${currentJob.adGroupDisplayName} (with ${failureCount} failure${failureCount !== 1 ? 's' : ''})`
-          : `${currentJob.adCount || 1} Ad${currentJob.adCount !== 1 ? 's' : ''} successfully posted to ${currentJob.adGroupDisplayName}`
+          ? `${successCount} Ad${successCount !== 1 ? "s" : ""} successfully posted to ${currentJob.adGroupDisplayName} (with ${failureCount} failure${failureCount !== 1 ? "s" : ""})`
+          : `${currentJob.adCount || 1} Ad${currentJob.adCount !== 1 ? "s" : ""} successfully posted to ${currentJob.adGroupDisplayName}`;
 
-        if (isPartial) toast.warning(completedJob.message)
+        if (isPartial) toast.warning(completedJob.message);
 
         // 1. Immediately update ad_count badge in state
-        const effectiveCount = successCount > 0 ? successCount : (currentJob.adCount || 1)
+        const effectiveCount = successCount > 0 ? successCount : currentJob.adCount || 1;
         if (setAdGroups && effectiveCount > 0) {
-          const targetAdGroups = currentJob.formData?.selectedAdGroup || []
-          const adGroupCount = targetAdGroups.length || 1
-          const perAdGroup = Math.max(1, Math.round(effectiveCount / adGroupCount))
-          setAdGroups(prevAdGroups => prevAdGroups.map(ag => {
-            if (targetAdGroups.includes(ag.adgroup_id)) {
-              return { ...ag, ad_count: (ag.ad_count || 0) + perAdGroup }
-            }
-            return ag
-          }))
+          const targetAdGroups = currentJob.formData?.selectedAdGroup || [];
+          const adGroupCount = targetAdGroups.length || 1;
+          const perAdGroup = Math.max(1, Math.round(effectiveCount / adGroupCount));
+          setAdGroups((prevAdGroups) =>
+            prevAdGroups.map((ag) => {
+              if (targetAdGroups.includes(ag.adgroup_id)) {
+                return { ...ag, ad_count: (ag.ad_count || 0) + perAdGroup };
+              }
+              return ag;
+            }),
+          );
         }
-      } else if (trackedStatus === 'partial-success') {
-        completedJob.status = 'partial-success'
-        completedJob.message = `${successCount} Ad${successCount !== 1 ? 's' : ''} successfully posted to ${currentJob.adGroupDisplayName} (with ${failureCount} failure${failureCount !== 1 ? 's' : ''})`
-        toast.warning(completedJob.message)
-      } else if (trackedStatus === 'cancelled') {
+      } else if (trackedStatus === "partial-success") {
+        completedJob.status = "partial-success";
+        completedJob.message = `${successCount} Ad${successCount !== 1 ? "s" : ""} successfully posted to ${currentJob.adGroupDisplayName} (with ${failureCount} failure${failureCount !== 1 ? "s" : ""})`;
+        toast.warning(completedJob.message);
+      } else if (trackedStatus === "cancelled") {
         if (isInPromisePhase.current) {
-          return // Let the promise .catch() handler handle it
+          return; // Let the promise .catch() handler handle it
         }
-        completedJob.status = 'cancelled'
-        completedJob.message = trackedMessage || 'Job cancelled.'
-      } else if (trackedStatus === 'job-not-found') {
-        completedJob.status = 'retry'
-        completedJob.message = 'Job timed out. Refresh page to try again.'
+        completedJob.status = "cancelled";
+        completedJob.message = trackedMessage || "Job cancelled.";
+      } else if (trackedStatus === "job-not-found") {
+        completedJob.status = "retry";
+        completedJob.message = "Job timed out. Refresh page to try again.";
       } else {
-        completedJob.status = 'error'
-        completedJob.message = `Job Failed: ${trackedMessage || 'An unknown error occurred.'}`
-        toast.error(completedJob.message)
+        completedJob.status = "error";
+        completedJob.message = `Job Failed: ${trackedMessage || "An unknown error occurred."}`;
+        toast.error(completedJob.message);
       }
 
-      addCompletedJob(completedJob)
+      addCompletedJob(completedJob);
 
       // Advance queue
-      setJobQueue(prev => prev.slice(1))
-      setCurrentJob(null)
-      setIsProcessingQueue(false)
-      setIsCancelling(false)
+      setJobQueue((prev) => prev.slice(1));
+      setCurrentJob(null);
+      setIsProcessingQueue(false);
+      setIsCancelling(false);
     }
-  }, [trackedStatus, trackedMessage, trackedMetaData, isProcessingQueue, currentJob, addCompletedJob, setAdGroups])
+  }, [trackedStatus, trackedMessage, trackedMetaData, isProcessingQueue, currentJob, addCompletedJob, setAdGroups]);
 
   // Sync SSE metadata updates to liveProgress
   useEffect(() => {
     if (currentJob && trackedMetaData && (trackedMetaData.successCount !== undefined || trackedMetaData.failureCount !== undefined)) {
-      setLiveProgress(prev => ({
+      setLiveProgress((prev) => ({
         ...prev,
         succeeded: trackedMetaData.successCount || 0,
         failed: trackedMetaData.failureCount || 0,
         completed: (trackedMetaData.successCount || 0) + (trackedMetaData.failureCount || 0),
-        errors: (trackedMetaData.errorMessages || []).map(err => typeof err === 'string' ? { error: err } : err)
-      }))
+        errors: (trackedMetaData.errorMessages || []).map((err) => (typeof err === "string" ? { error: err } : err)),
+      }));
     }
-  }, [trackedMetaData, currentJob])
+  }, [trackedMetaData, currentJob]);
 
   // Handle advertiser account change
-  const handleAdvertiserChange = useCallback((value) => {
-    setSelectedAdvertiser(value)
-    if (onAdvertiserChange) {
-      onAdvertiserChange(value)
-    }
-    setSelectedCampaign([])
-    setSelectedAdGroup([])
-    setCampaigns([])
-    setAdGroups([])
+  const handleAdvertiserChange = useCallback(
+    (value) => {
+      setSelectedAdvertiser(value);
+      if (onAdvertiserChange) {
+        onAdvertiserChange(value);
+      }
+      setSelectedCampaign([]);
+      setSelectedAdGroup([]);
+      setCampaigns([]);
+      setAdGroups([]);
 
-    // Reset duplicate states
-    setShowDuplicateAdGroupBlock(false)
-    setDuplicateAdGroup("")
-    setNewAdGroupName("")
-    setShowDuplicateCampaignBlock(false)
-    setDuplicateCampaign("")
-    setNewCampaignName("")
-  }, [
-    onAdvertiserChange, setCampaigns, setAdGroups, setSelectedCampaign, setSelectedAdGroup,
-    setShowDuplicateAdGroupBlock, setDuplicateAdGroup, setNewAdGroupName,
-    setShowDuplicateCampaignBlock, setDuplicateCampaign, setNewCampaignName
-  ])
+      // Reset duplicate states
+      setShowDuplicateAdGroupBlock(false);
+      setDuplicateAdGroup("");
+      setNewAdGroupName("");
+      setShowDuplicateCampaignBlock(false);
+      setDuplicateCampaign("");
+      setNewCampaignName("");
+    },
+    [
+      onAdvertiserChange,
+      setCampaigns,
+      setAdGroups,
+      setSelectedCampaign,
+      setSelectedAdGroup,
+      setShowDuplicateAdGroupBlock,
+      setDuplicateAdGroup,
+      setNewAdGroupName,
+      setShowDuplicateCampaignBlock,
+      setDuplicateCampaign,
+      setNewCampaignName,
+    ],
+  );
 
   // Fetch Campaigns on Advertiser change
   useEffect(() => {
     if (!selectedAdvertiser) {
-      campaignsLoadedForAdvertiserRef.current = null
-      setCampaigns([])
-      setSelectedCampaign([])
-      return
+      campaignsLoadedForAdvertiserRef.current = null;
+      setCampaigns([]);
+      setSelectedCampaign([]);
+      return;
     }
 
     if (campaignsLoadedForAdvertiserRef.current === selectedAdvertiser) {
-      return
+      return;
     }
 
-    setLoadingCampaigns(true)
-    const params = new URLSearchParams({ advertiserId: selectedAdvertiser, page: '1', pageSize: '100' })
+    setLoadingCampaigns(true);
+    const params = new URLSearchParams({ advertiserId: selectedAdvertiser, page: "1", pageSize: "100" });
     tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-campaigns?${params}`)
-      .then(r => r.json())
-      .then(d => {
-        const list = d.campaigns || []
-        setCampaigns(list)
-        campaignsLoadedForAdvertiserRef.current = selectedAdvertiser
+      .then((r) => r.json())
+      .then((d) => {
+        const list = d.campaigns || [];
+        setCampaigns(list);
+        campaignsLoadedForAdvertiserRef.current = selectedAdvertiser;
       })
-      .catch(() => toast.error('Failed to load campaigns'))
-      .finally(() => setLoadingCampaigns(false))
-  }, [selectedAdvertiser, setCampaigns, setSelectedCampaign, tiktokFetch])
+      .catch(() => toast.error("Failed to load campaigns"))
+      .finally(() => setLoadingCampaigns(false));
+  }, [selectedAdvertiser, setCampaigns, setSelectedCampaign, tiktokFetch]);
 
   // Fetch Identities on Advertiser change
   useEffect(() => {
     if (!selectedAdvertiser) {
-      setIdentities([])
-      return
+      setIdentities([]);
+      return;
     }
 
-    fetchTikTokIdentities(selectedAdvertiser).then(list => {
-      const filtered = (list || []).filter(i => i.identity_type === 'BC_AUTH_TT');
+    fetchTikTokIdentities(selectedAdvertiser).then((list) => {
+      const filtered = (list || []).filter((i) => i.identity_type === "BC_AUTH_TT");
       // DISABLED: console.log('[IDENTITY DEBUG] fetchTikTokIdentities .then:', { count: filtered.length, selectedIdentity, ids: filtered.map(i => i.identity_id).slice(0, 3) });
-      setIdentities(filtered)
-    })
-  }, [selectedAdvertiser, setIdentities, fetchTikTokIdentities])
+      setIdentities(filtered);
+    });
+  }, [selectedAdvertiser, setIdentities, fetchTikTokIdentities]);
 
   // Automatically sync identities from context cache when selectedAdvertiser or context value changes
   useEffect(() => {
     if (selectedAdvertiser && tiktokIdentities[selectedAdvertiser]) {
-      const filtered = tiktokIdentities[selectedAdvertiser].filter(i => i.identity_type === 'BC_AUTH_TT');
+      const filtered = tiktokIdentities[selectedAdvertiser].filter((i) => i.identity_type === "BC_AUTH_TT");
       // DISABLED: console.log('[IDENTITY DEBUG] context sync:', { count: filtered.length, selectedIdentity, ids: filtered.map(i => i.identity_id).slice(0, 3) });
       setIdentities(filtered);
     }
@@ -2493,18 +2502,18 @@ export default function TikTokAdCreationForm({
 
     const isFetched = tiktokIdentities[selectedAdvertiser] !== undefined;
     const rawList = tiktokIdentities[selectedAdvertiser] || [];
-    const filteredList = rawList.filter(i => i.identity_type === 'BC_AUTH_TT');
+    const filteredList = rawList.filter((i) => i.identity_type === "BC_AUTH_TT");
 
     if (isFetched) {
       if (filteredList.length > 0) {
-        const currentExists = filteredList.some(i => i.identity_id === selectedIdentity);
-        if (!currentExists && selectedIdentity && selectedIdentity !== 'CUSTOMIZED_USER') {
-          setSelectedIdentity('');
+        const currentExists = filteredList.some((i) => i.identity_id === selectedIdentity);
+        if (!currentExists && selectedIdentity && selectedIdentity !== "CUSTOMIZED_USER") {
+          setSelectedIdentity("");
         }
       } else if (!loadingIdentities) {
-        setSelectedIdentity('');
-        if (adType === 'SPARK') {
-          setAdType('NORMAL');
+        setSelectedIdentity("");
+        if (adType === "SPARK") {
+          setAdType("NORMAL");
         }
       }
     }
@@ -2512,90 +2521,90 @@ export default function TikTokAdCreationForm({
 
   // Fetch Ad Groups on Campaign change
   useEffect(() => {
-    let active = true
+    let active = true;
 
     if (!selectedCampaign || selectedCampaign.length === 0) {
-      adGroupsLoadedForSelectionRef.current = ""
-      setAdGroups([])
-      setSelectedAdGroup([])
-      return
+      adGroupsLoadedForSelectionRef.current = "";
+      setAdGroups([]);
+      setSelectedAdGroup([]);
+      return;
     }
 
-    const selectionKey = `${selectedAdvertiser}:${JSON.stringify([...selectedCampaign].sort())}`
+    const selectionKey = `${selectedAdvertiser}:${JSON.stringify([...selectedCampaign].sort())}`;
     if (adGroupsLoadedForSelectionRef.current === selectionKey) {
-      return
+      return;
     }
 
     // Synchronously set the ref to prevent re-entrant loops triggered by subsequent setAdGroups/setLoadingAdGroups re-renders
-    adGroupsLoadedForSelectionRef.current = selectionKey
+    adGroupsLoadedForSelectionRef.current = selectionKey;
 
-    setLoadingAdGroups(true)
-    setAdGroups([]) // Clear old ad groups immediately to avoid showing stale data from the previous campaign!
+    setLoadingAdGroups(true);
+    setAdGroups([]); // Clear old ad groups immediately to avoid showing stale data from the previous campaign!
 
-    const fetchPromises = selectedCampaign.map(campId => {
+    const fetchPromises = selectedCampaign.map((campId) => {
       return tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-adgroups?advertiserId=${selectedAdvertiser}&campaignId=${campId}`)
-        .then(r => r.json())
-        .then(d => {
-          const list = d.adGroups || d.adgroups || []
-          return list.map(ag => ({
+        .then((r) => r.json())
+        .then((d) => {
+          const list = d.adGroups || d.adgroups || [];
+          return list.map((ag) => ({
             ...ag,
             campaignId: campId,
-            campaignName: campaignsRef.current.find(c => c.campaign_id === campId)?.campaign_name || campId
-          }))
-        })
-    })
+            campaignName: campaignsRef.current.find((c) => c.campaign_id === campId)?.campaign_name || campId,
+          }));
+        });
+    });
 
     Promise.all(fetchPromises)
-      .then(results => {
-        if (!active) return
-        const combined = results.flat()
+      .then((results) => {
+        if (!active) return;
+        const combined = results.flat();
         // Unique by adgroup_id
-        const unique = []
-        const seen = new Set()
+        const unique = [];
+        const seen = new Set();
         for (const ag of combined) {
           if (!seen.has(ag.adgroup_id)) {
-            seen.add(ag.adgroup_id)
-            unique.push(ag)
+            seen.add(ag.adgroup_id);
+            unique.push(ag);
           }
         }
-        setAdGroups(unique)
+        setAdGroups(unique);
 
-        setSelectedAdGroup(prevSelected => {
+        setSelectedAdGroup((prevSelected) => {
           // Keep any currently selected ad groups that are actually present in the newly fetched ad groups
-          return prevSelected.filter(id => unique.some(g => g.adgroup_id === id))
-        })
+          return prevSelected.filter((id) => unique.some((g) => g.adgroup_id === id));
+        });
       })
       .catch(() => {
-        if (!active) return
+        if (!active) return;
         // Reset ref so that if fetching failed, a retry is possible
-        adGroupsLoadedForSelectionRef.current = ""
-        toast.error('Failed to load ad groups')
+        adGroupsLoadedForSelectionRef.current = "";
+        toast.error("Failed to load ad groups");
       })
       .finally(() => {
-        if (active) setLoadingAdGroups(false)
-      })
+        if (active) setLoadingAdGroups(false);
+      });
 
     return () => {
-      active = false
-    }
-  }, [selectedCampaign, selectedAdvertiser, tiktokFetch, setAdGroups, setSelectedAdGroup])
+      active = false;
+    };
+  }, [selectedCampaign, selectedAdvertiser, tiktokFetch, setAdGroups, setSelectedAdGroup]);
 
   // Fetch Instant Pages when advertiser changes or urlMode switches to INSTANT_PAGE
   useEffect(() => {
-    if (!selectedAdvertiser) return
-    setLoadingPages(true)
+    if (!selectedAdvertiser) return;
+    setLoadingPages(true);
     tiktokFetch(`${API_BASE_URL}/api/tiktok/instant-pages?advertiserId=${selectedAdvertiser}`)
-      .then(r => r.json())
-      .then(d => setInstantPages(d.pages || []))
-      .catch(() => { })
-      .finally(() => setLoadingPages(false))
-  }, [selectedAdvertiser, tiktokFetch])
+      .then((r) => r.json())
+      .then((d) => setInstantPages(d.pages || []))
+      .catch(() => {})
+      .finally(() => setLoadingPages(false));
+  }, [selectedAdvertiser, tiktokFetch]);
 
   // Sync advertiser preferences for Ad Name Formula — only update when the formula actually changes
   useEffect(() => {
     if (advertiserPrefs) {
       const incoming = advertiserPrefs.adNameFormulaV2 || { rawInput: "" };
-      setAdNameFormulaV2(prev => {
+      setAdNameFormulaV2((prev) => {
         const prevStr = JSON.stringify(prev);
         const nextStr = JSON.stringify(incoming);
         return prevStr === nextStr ? prev : incoming;
@@ -2612,7 +2621,7 @@ export default function TikTokAdCreationForm({
 
     const availableLinks = advertiserPrefs?.links || [];
     const isUrl = /^https?:\/\//i.test(landingUrl || "");
-    const isWebsiteUrl = availableLinks.some(l => l.url === landingUrl);
+    const isWebsiteUrl = availableLinks.some((l) => l.url === landingUrl);
 
     console.log("[URL_MODE_DEBUG] Synchronization triggered:", {
       urlMode,
@@ -2625,11 +2634,11 @@ export default function TikTokAdCreationForm({
       lastInstantPageId,
       availableLinksCount: availableLinks.length,
       instantPagesCount: instantPages.length,
-      advertiserId
+      advertiserId,
     });
 
-    if (urlMode === 'WEBSITE') {
-      const defaultLink = availableLinks.find(l => l.isDefault) || availableLinks[0];
+    if (urlMode === "WEBSITE") {
+      const defaultLink = availableLinks.find((l) => l.isDefault) || availableLinks[0];
       const defaultUrl = defaultLink?.url || "";
 
       if (isUrl) {
@@ -2656,7 +2665,7 @@ export default function TikTokAdCreationForm({
           setLandingUrl(urlToRestore);
         }
       }
-    } else if (urlMode === 'INSTANT_PAGE') {
+    } else if (urlMode === "INSTANT_PAGE") {
       const defaultPageId = instantPages[0]?.page_id || "";
 
       // If INSTANT_PAGE mode but landingUrl is empty or is a website URL
@@ -2673,16 +2682,7 @@ export default function TikTokAdCreationForm({
       }
       setShowCustomLink(false);
     }
-  }, [
-    urlMode,
-    landingUrl,
-    advertiserPrefs?.links,
-    instantPages,
-    showCustomLink,
-    lastWebsiteUrl,
-    lastInstantPageId,
-    advertiserId
-  ]);
+  }, [urlMode, landingUrl, advertiserPrefs?.links, instantPages, showCustomLink, lastWebsiteUrl, lastInstantPageId, advertiserId]);
 
   // Sync copy templates — use defaultTemplateName if set, otherwise fall back to first template
   useEffect(() => {
@@ -2699,15 +2699,13 @@ export default function TikTokAdCreationForm({
   const copyTemplates = advertiserPrefs?.copyTemplates || {};
   const defaultTemplateName = advertiserPrefs?.defaultTemplateName || "";
 
-  const hasAnyContent = adTexts.some(t => t.trim() !== "");
+  const hasAnyContent = adTexts.some((t) => t.trim() !== "");
 
   const hasUnsavedTemplateChangesRaw = useMemo(() => {
     if (!selectedTemplate || !copyTemplates[selectedTemplate]) return false;
     const tpl = copyTemplates[selectedTemplate];
-    const currentTexts = adTexts.map(t => t.trim()).filter(Boolean);
-    const originalTexts = tpl.texts && tpl.texts.length > 0
-      ? tpl.texts.map(t => t.trim()).filter(Boolean)
-      : (tpl.text ? [tpl.text.trim()] : []);
+    const currentTexts = adTexts.map((t) => t.trim()).filter(Boolean);
+    const originalTexts = tpl.texts && tpl.texts.length > 0 ? tpl.texts.map((t) => t.trim()).filter(Boolean) : tpl.text ? [tpl.text.trim()] : [];
 
     if (currentTexts.length !== originalTexts.length) return true;
     return currentTexts.some((t, i) => t !== originalTexts[i]);
@@ -2726,15 +2724,13 @@ export default function TikTokAdCreationForm({
 
   // Does this exact combo already exist in another template?
   const existingDuplicateTemplate = useMemo(() => {
-    const currentTexts = adTexts.map(t => t.trim()).filter(Boolean);
+    const currentTexts = adTexts.map((t) => t.trim()).filter(Boolean);
     if (currentTexts.length === 0) return null;
     const currentJoined = currentTexts.join("|||");
 
     for (const [name, tpl] of Object.entries(copyTemplates)) {
       if (name === selectedTemplate) continue;
-      const originalTexts = tpl.texts && tpl.texts.length > 0
-        ? tpl.texts.map(t => t.trim()).filter(Boolean)
-        : (tpl.text ? [tpl.text.trim()] : []);
+      const originalTexts = tpl.texts && tpl.texts.length > 0 ? tpl.texts.map((t) => t.trim()).filter(Boolean) : tpl.text ? [tpl.text.trim()] : [];
       if (currentJoined === originalTexts.join("|||")) {
         return name;
       }
@@ -2751,7 +2747,7 @@ export default function TikTokAdCreationForm({
     }
     setIsSavingNew(true);
     try {
-      const activeTexts = adTexts.map(t => t.trim()).filter(Boolean);
+      const activeTexts = adTexts.map((t) => t.trim()).filter(Boolean);
       const templateData = {
         name,
         text: activeTexts[0] || "",
@@ -2783,7 +2779,7 @@ export default function TikTokAdCreationForm({
     if (!selectedTemplate || !copyTemplates[selectedTemplate]) return;
     setIsUpdatingTemplate(true);
     try {
-      const activeTexts = adTexts.map(t => t.trim()).filter(Boolean);
+      const activeTexts = adTexts.map((t) => t.trim()).filter(Boolean);
       const templateData = {
         name: selectedTemplate,
         text: activeTexts[0] || "",
@@ -2872,115 +2868,115 @@ export default function TikTokAdCreationForm({
   // Setup Campaign Duplication name automatic suffixing
   useEffect(() => {
     if (selectedCampaign && selectedCampaign.length === 1) {
-      const campId = selectedCampaign[0]
-      const camp = campaigns.find(c => c.campaign_id === campId)
+      const campId = selectedCampaign[0];
+      const camp = campaigns.find((c) => c.campaign_id === campId);
       if (camp) {
-        let generatedName = (camp.campaign_name || '') + "_Copy"
-        while (campaigns.some(c => c.campaign_name === generatedName)) {
-          generatedName += "_Copy"
+        let generatedName = (camp.campaign_name || "") + "_Copy";
+        while (campaigns.some((c) => c.campaign_name === generatedName)) {
+          generatedName += "_Copy";
         }
-        setNewCampaignName(generatedName)
+        setNewCampaignName(generatedName);
       }
     } else {
-      setNewCampaignName('')
+      setNewCampaignName("");
     }
-  }, [selectedCampaign, campaigns])
+  }, [selectedCampaign, campaigns]);
 
   // Setup Ad Group Duplication name automatic suffixing
   useEffect(() => {
     if (duplicateAdGroup) {
-      const adGroup = adGroups.find(ag => ag.adgroup_id === duplicateAdGroup)
+      const adGroup = adGroups.find((ag) => ag.adgroup_id === duplicateAdGroup);
       if (adGroup) {
-        let generatedName = (adGroup.adgroup_name || '') + "_Copy"
-        while (adGroups.some(ag => ag.adgroup_name === generatedName)) {
-          generatedName += "_Copy"
+        let generatedName = (adGroup.adgroup_name || "") + "_Copy";
+        while (adGroups.some((ag) => ag.adgroup_name === generatedName)) {
+          generatedName += "_Copy";
         }
-        setNewAdGroupName(generatedName)
+        setNewAdGroupName(generatedName);
       }
     } else {
-      setNewAdGroupName('')
+      setNewAdGroupName("");
     }
-  }, [duplicateAdGroup, adGroups, setNewAdGroupName])
+  }, [duplicateAdGroup, adGroups, setNewAdGroupName]);
 
   // Force refreshes
   const forceRefreshCampaigns = (e) => {
-    e.stopPropagation()
-    if (!selectedAdvertiser) return
-    setLoadingCampaigns(true)
-    const params = new URLSearchParams({ advertiserId: selectedAdvertiser, page: '1', pageSize: '100' })
+    e.stopPropagation();
+    if (!selectedAdvertiser) return;
+    setLoadingCampaigns(true);
+    const params = new URLSearchParams({ advertiserId: selectedAdvertiser, page: "1", pageSize: "100" });
     tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-campaigns?${params}`)
-      .then(r => r.json())
-      .then(d => {
-        const list = d.campaigns || []
-        setCampaigns(list)
+      .then((r) => r.json())
+      .then((d) => {
+        const list = d.campaigns || [];
+        setCampaigns(list);
         // Prune any selectedCampaign IDs that no longer exist in the fresh list
-        setSelectedCampaign(prev => prev.filter(id => list.some(c => c.campaign_id === id)))
-        toast.success('Campaigns refreshed!')
+        setSelectedCampaign((prev) => prev.filter((id) => list.some((c) => c.campaign_id === id)));
+        toast.success("Campaigns refreshed!");
       })
-      .catch(() => toast.error('Failed to refresh campaigns'))
-      .finally(() => setLoadingCampaigns(false))
-  }
+      .catch(() => toast.error("Failed to refresh campaigns"))
+      .finally(() => setLoadingCampaigns(false));
+  };
 
   function forceRefreshAdGroups(e, showToast = true) {
-    if (e && typeof e.stopPropagation === 'function') {
+    if (e && typeof e.stopPropagation === "function") {
       e.stopPropagation();
     }
-    if (!selectedCampaign || selectedCampaign.length === 0) return
-    setLoadingAdGroups(true)
+    if (!selectedCampaign || selectedCampaign.length === 0) return;
+    setLoadingAdGroups(true);
 
-    const fetchPromises = selectedCampaign.map(campId => {
+    const fetchPromises = selectedCampaign.map((campId) => {
       return tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-adgroups?advertiserId=${selectedAdvertiser}&campaignId=${campId}`)
-        .then(r => r.json())
-        .then(d => {
-          const list = d.adGroups || d.adgroups || []
-          return list.map(ag => ({
+        .then((r) => r.json())
+        .then((d) => {
+          const list = d.adGroups || d.adgroups || [];
+          return list.map((ag) => ({
             ...ag,
             campaignId: campId,
-            campaignName: campaigns.find(c => c.campaign_id === campId)?.campaign_name || campId
-          }))
-        })
-    })
+            campaignName: campaigns.find((c) => c.campaign_id === campId)?.campaign_name || campId,
+          }));
+        });
+    });
 
     Promise.all(fetchPromises)
-      .then(results => {
-        const combined = results.flat()
-        const unique = []
-        const seen = new Set()
+      .then((results) => {
+        const combined = results.flat();
+        const unique = [];
+        const seen = new Set();
         for (const ag of combined) {
           if (!seen.has(ag.adgroup_id)) {
-            seen.add(ag.adgroup_id)
-            unique.push(ag)
+            seen.add(ag.adgroup_id);
+            unique.push(ag);
           }
         }
-        setAdGroups(unique)
+        setAdGroups(unique);
         if (showToast) {
-          toast.success('Ad Groups refreshed!')
+          toast.success("Ad Groups refreshed!");
         }
       })
       .catch(() => {
         if (showToast) {
-          toast.error('Failed to refresh ad groups')
+          toast.error("Failed to refresh ad groups");
         }
       })
-      .finally(() => setLoadingAdGroups(false))
+      .finally(() => setLoadingAdGroups(false));
   }
 
   const forceRefreshIdentities = (e) => {
-    e.stopPropagation()
-    if (!selectedAdvertiser || loadingIdentities) return
+    e.stopPropagation();
+    if (!selectedAdvertiser || loadingIdentities) return;
     fetchTikTokIdentities(selectedAdvertiser, true)
-      .then(list => {
-        const filtered = (list || []).filter(i => i.identity_type === 'BC_AUTH_TT')
-        setIdentities(filtered)
+      .then((list) => {
+        const filtered = (list || []).filter((i) => i.identity_type === "BC_AUTH_TT");
+        setIdentities(filtered);
         if (filtered.length > 0) {
-          setSelectedIdentity(filtered[0].identity_id)
+          setSelectedIdentity(filtered[0].identity_id);
         } else {
-          setSelectedIdentity('')
+          setSelectedIdentity("");
         }
-        toast.success('Identities refreshed!')
+        toast.success("Identities refreshed!");
       })
-      .catch(() => toast.error('Failed to refresh identities'))
-  }
+      .catch(() => toast.error("Failed to refresh identities"));
+  };
 
   const forceRefreshStoreProducts = (e) => {
     if (e) {
@@ -2997,51 +2993,51 @@ export default function TikTokAdCreationForm({
         setLoadingFormStoreProducts(false);
         return;
       }
-      const identityObj = identities.find(i => i.identity_id === selectedIdentity);
-      const identityType = identityObj?.identity_type || 'BC_AUTH_TT';
+      const identityObj = identities.find((i) => i.identity_id === selectedIdentity);
+      const identityType = identityObj?.identity_type || "BC_AUTH_TT";
       const url = `${API_BASE_URL}/api/tiktok/showcase/products?advertiserId=${selectedAdvertiser}&identityId=${selectedIdentity}&identityType=${identityType}`;
 
       fetch(url, {
-        credentials: 'include',
+        credentials: "include",
       })
-        .then(res => res.json())
-        .then(data => {
+        .then((res) => res.json())
+        .then((data) => {
           if (data.success) {
             const mappedProducts = (data.products || [])
-              .filter(p => {
-                const status = (p.status || p.product_status || '').toUpperCase();
-                return !status || status === 'AVAILABLE';
+              .filter((p) => {
+                const status = (p.status || p.product_status || "").toUpperCase();
+                return !status || status === "AVAILABLE";
               })
-              .map(p => ({
+              .map((p) => ({
                 item_group_id: p.item_group_id || p.product_id || p.id,
-                title: p.title || p.product_name || p.name || 'Unnamed Product',
-                product_image_url: p.product_image_url || p.image_url || p.logo_url || (p.image_info?.web_uri) || null,
+                title: p.title || p.product_name || p.name || "Unnamed Product",
+                product_image_url: p.product_image_url || p.image_url || p.logo_url || p.image_info?.web_uri || null,
                 store_id: p.store_id || null,
                 min_price: p.min_price || null,
-                currency: p.currency || null
+                currency: p.currency || null,
               }));
             setFormStoreProducts(mappedProducts);
             writeCache(`tiktok_showcase_products_${selectedAdvertiser}_${selectedIdentity}`, mappedProducts);
 
-            setFormStoreProductId(prev => {
-              const current = Array.isArray(prev) ? prev : (prev ? [prev] : []);
-              const valid = current.filter(id => mappedProducts.some(p => p.item_group_id === id));
+            setFormStoreProductId((prev) => {
+              const current = Array.isArray(prev) ? prev : prev ? [prev] : [];
+              const valid = current.filter((id) => mappedProducts.some((p) => p.item_group_id === id));
               if (valid.length === 0) {
                 setFormStoreProductName(null);
               } else {
-                const matched = mappedProducts.find(p => p.item_group_id === valid[0]);
+                const matched = mappedProducts.find((p) => p.item_group_id === valid[0]);
                 if (matched) setFormStoreProductName(matched.title || null);
               }
               return valid;
             });
-            toast.success('Showcase products refreshed!');
+            toast.success("Showcase products refreshed!");
           } else {
-            toast.error('Failed to refresh showcase products');
+            toast.error("Failed to refresh showcase products");
           }
         })
-        .catch(err => {
-          console.warn('[CreationForm] Failed to refresh showcase products:', err.message);
-          toast.error('Failed to refresh showcase products');
+        .catch((err) => {
+          console.warn("[CreationForm] Failed to refresh showcase products:", err.message);
+          toast.error("Failed to refresh showcase products");
         })
         .finally(() => setLoadingFormStoreProducts(false));
     } else {
@@ -3056,237 +3052,260 @@ export default function TikTokAdCreationForm({
       }
 
       fetch(url, {
-        credentials: 'include',
+        credentials: "include",
       })
-        .then(res => res.json())
-        .then(data => {
+        .then((res) => res.json())
+        .then((data) => {
           if (data.success) {
             const mappedProducts = (data.products || [])
-              .filter(p => {
-                const status = (p.status || p.product_status || '').toUpperCase();
-                return !status || status === 'AVAILABLE';
+              .filter((p) => {
+                const status = (p.status || p.product_status || "").toUpperCase();
+                return !status || status === "AVAILABLE";
               })
-              .map(p => ({
+              .map((p) => ({
                 item_group_id: p.item_group_id || p.product_id || p.id,
-                title: p.title || p.product_name || p.name || 'Unnamed Product',
-                product_image_url: p.product_image_url || p.image_url || p.logo_url || (p.image_info?.web_uri) || null,
+                title: p.title || p.product_name || p.name || "Unnamed Product",
+                product_image_url: p.product_image_url || p.image_url || p.logo_url || p.image_info?.web_uri || null,
                 store_id: p.store_id || null,
                 min_price: p.min_price || null,
-                currency: p.currency || null
+                currency: p.currency || null,
               }));
             setFormStoreProducts(mappedProducts);
             writeCache(`tiktok_store_products_${selectedAdvertiser}_${formStoreId}`, mappedProducts);
-            toast.success('Store products refreshed!');
+            toast.success("Store products refreshed!");
           } else {
-            toast.error('Failed to refresh store products');
+            toast.error("Failed to refresh store products");
           }
         })
-        .catch(err => {
-          console.warn('[CreationForm] Failed to refresh store products:', err.message);
-          toast.error('Failed to refresh store products');
+        .catch((err) => {
+          console.warn("[CreationForm] Failed to refresh store products:", err.message);
+          toast.error("Failed to refresh store products");
         })
         .finally(() => setLoadingFormStoreProducts(false));
     }
-  }
+  };
 
   // Separate function for duplicating Smart Performance / Smart Plus Campaigns
-  const handleDuplicateSmartCampaign = useCallback(async (campaignId) => {
-    if (!campaignId || !selectedAdvertiser || !newCampaignName.trim()) {
-      toast.error('Missing required parameters for Campaign duplication');
-      return;
-    }
-    const campaign = campaigns.find(c => c.campaign_id === campaignId)
-    if (!campaign) {
-      toast.error('Source Campaign not found');
-      return;
-    }
-    setIsDuplicating(true)
-    const duplicatedName = newCampaignName.trim()
-    try {
-      const payload = {
-        advertiser_id: selectedAdvertiser,
-        source_campaign_id: campaignId,
-        new_campaign_name: duplicatedName,
-        duplicate_ads: duplicateIncludeAds,
-        is_smart: true
+  const handleDuplicateSmartCampaign = useCallback(
+    async (campaignId) => {
+      if (!campaignId || !selectedAdvertiser || !newCampaignName.trim()) {
+        toast.error("Missing required parameters for Campaign duplication");
+        return;
       }
-
-      const res = await tiktokFetch(`${API_BASE_URL}/api/tiktok/campaign/duplicate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      })
-      const data = await res.json()
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || ' campaign duplication failed')
+      const campaign = campaigns.find((c) => c.campaign_id === campaignId);
+      if (!campaign) {
+        toast.error("Source Campaign not found");
+        return;
       }
-      toast.success('Campaign duplicated successfully!')
-      setNewCampaignName('')
-      setDuplicateCampaign('')
-      setShowDuplicateCampaignBlock(false)
-
-      const newCampaignObj = {
-        campaign_id: data.new_campaign_id,
-        campaign_name: duplicatedName,
-        operation_status: "DISABLE",
-        is_smart_performance_campaign: true,
-        campaign_automation_type: campaign.campaign_automation_type || "SMART_PLUS"
-      }
-
-      if (data.new_campaign_id) {
-        if (data.new_adgroups && data.new_adgroups.length > 0) {
-          const mappedNewAdGroups = data.new_adgroups.map(ag => {
-            return {
-              ...ag,
-              campaignId: data.new_campaign_id,
-              campaign_id: data.new_campaign_id,
-              campaignName: duplicatedName,
-              operation_status: ag.operation_status || "DISABLE",
-              secondary_status: ag.secondary_status || "DISABLE",
-              ad_count: 0
-            }
-          });
-          setAdGroups(mappedNewAdGroups)
-          adGroupsLoadedForSelectionRef.current = `${selectedAdvertiser}:${JSON.stringify([data.new_campaign_id])}`
-        }
-
-        setCampaigns(prev => {
-          if (prev.some(c => c.campaign_id === data.new_campaign_id)) return prev;
-          return [newCampaignObj, ...prev];
-        });
-        setSelectedCampaign([data.new_campaign_id])
-        setSelectedAdGroup([])
-        setOpenCampaign(false)
-      }
-
-      const params = new URLSearchParams({ advertiserId: selectedAdvertiser, page: '1', pageSize: '100' })
+      setIsDuplicating(true);
+      const duplicatedName = newCampaignName.trim();
       try {
-        const listRes = await tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-campaigns?${params}`)
-        const listData = await listRes.json()
-        const list = listData.campaigns || []
-        const mergedList = [
-          newCampaignObj,
-          ...list.filter(c => c.campaign_id !== data.new_campaign_id)
-        ]
-        setCampaigns(mergedList)
-      } catch (err) {
-        console.error('Failed to refetch campaigns after smart duplication:', err)
-      }
-    } catch (err) {
-      toast.error(err.message)
-    } finally {
-      setIsDuplicating(false)
-    }
-  }, [selectedAdvertiser, campaigns, duplicateIncludeAds, newCampaignName, tiktokFetch, setCampaigns, setSelectedCampaign, setSelectedAdGroup, setAdGroups])
-
-  // Handle Regular or Delegated Campaign Duplication request
-  const handleDuplicateCampaign = useCallback(async (campaignId) => {
-    if (!campaignId || !selectedAdvertiser || !newCampaignName.trim()) return
-    const campaign = campaigns.find(c => c.campaign_id === campaignId)
-    if (!campaign) return
-
-    const isSmart = campaign.is_smart_performance_campaign === true ||
-      campaign.is_smart_performance_campaign === "true" ||
-      campaign.is_smart_performance_campaign === 1 ||
-      campaign.campaign_automation_type === "UPGRADED_SMART_PLUS" ||
-      campaign.campaign_automation_type === "SMART_PLUS" ||
-      campaign.campaign_automation_type === "SMART_PERFORMANCE_CAMPAIGN";
-
-    if (isSmart) {
-      return handleDuplicateSmartCampaign(campaignId);
-    }
-
-    if (campaign.adgroup_count >= 20) {
-      return toast.error(`Cannot duplicate this campaign. It has ${campaign.adgroup_count} ad groups, which reaches or exceeds the limit of 20.`)
-    }
-    setIsDuplicating(true)
-    const duplicatedName = newCampaignName.trim()
-    try {
-      const res = await tiktokFetch(`${API_BASE_URL}/api/tiktok/campaign/duplicate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        const payload = {
           advertiser_id: selectedAdvertiser,
           source_campaign_id: campaignId,
           new_campaign_name: duplicatedName,
-          duplicate_ads: duplicateIncludeAds
-        })
-      })
-      const data = await res.json()
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Duplication failed')
-      }
-      toast.success('Campaign duplicated successfully!')
-      setNewCampaignName('')
-      setDuplicateCampaign('')
-      setShowDuplicateCampaignBlock(false)
+          duplicate_ads: duplicateIncludeAds,
+          is_smart: true,
+        };
 
-      const newCampaignObj = {
-        campaign_id: data.new_campaign_id,
-        campaign_name: duplicatedName,
-        operation_status: "DISABLE"
-      }
+        const res = await tiktokFetch(`${API_BASE_URL}/api/tiktok/campaign/duplicate`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || " campaign duplication failed");
+        }
+        toast.success("Campaign duplicated successfully!");
+        setNewCampaignName("");
+        setDuplicateCampaign("");
+        setShowDuplicateCampaignBlock(false);
 
-      if (data.new_campaign_id) {
-        if (data.new_adgroups && data.new_adgroups.length > 0) {
-          const mappedNewAdGroups = data.new_adgroups.map(ag => {
-            return {
-              ...ag,
-              campaignId: data.new_campaign_id,
-              campaign_id: data.new_campaign_id,
-              campaignName: duplicatedName,
-              operation_status: ag.operation_status || "DISABLE",
-              secondary_status: ag.secondary_status || "DISABLE",
-              ad_count: 0
-            }
+        const newCampaignObj = {
+          campaign_id: data.new_campaign_id,
+          campaign_name: duplicatedName,
+          operation_status: "DISABLE",
+          is_smart_performance_campaign: true,
+          campaign_automation_type: campaign.campaign_automation_type || "SMART_PLUS",
+        };
+
+        if (data.new_campaign_id) {
+          if (data.new_adgroups && data.new_adgroups.length > 0) {
+            const mappedNewAdGroups = data.new_adgroups.map((ag) => {
+              return {
+                ...ag,
+                campaignId: data.new_campaign_id,
+                campaign_id: data.new_campaign_id,
+                campaignName: duplicatedName,
+                operation_status: ag.operation_status || "DISABLE",
+                secondary_status: ag.secondary_status || "DISABLE",
+                ad_count: 0,
+              };
+            });
+            setAdGroups(mappedNewAdGroups);
+            adGroupsLoadedForSelectionRef.current = `${selectedAdvertiser}:${JSON.stringify([data.new_campaign_id])}`;
+          }
+
+          setCampaigns((prev) => {
+            if (prev.some((c) => c.campaign_id === data.new_campaign_id)) return prev;
+            return [newCampaignObj, ...prev];
           });
-
-          setAdGroups(mappedNewAdGroups)
-          adGroupsLoadedForSelectionRef.current = `${selectedAdvertiser}:${JSON.stringify([data.new_campaign_id])}`
+          setSelectedCampaign([data.new_campaign_id]);
+          setSelectedAdGroup([]);
+          setOpenCampaign(false);
         }
 
-        setCampaigns(prev => {
-          if (prev.some(c => c.campaign_id === data.new_campaign_id)) return prev;
-          return [newCampaignObj, ...prev];
-        });
-        setSelectedCampaign([data.new_campaign_id])
-        setSelectedAdGroup([])
-        setOpenCampaign(false)
+        const params = new URLSearchParams({ advertiserId: selectedAdvertiser, page: "1", pageSize: "100" });
+        try {
+          const listRes = await tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-campaigns?${params}`);
+          const listData = await listRes.json();
+          const list = listData.campaigns || [];
+          const mergedList = [newCampaignObj, ...list.filter((c) => c.campaign_id !== data.new_campaign_id)];
+          setCampaigns(mergedList);
+        } catch (err) {
+          console.error("Failed to refetch campaigns after smart duplication:", err);
+        }
+      } catch (err) {
+        toast.error(err.message);
+      } finally {
+        setIsDuplicating(false);
+      }
+    },
+    [
+      selectedAdvertiser,
+      campaigns,
+      duplicateIncludeAds,
+      newCampaignName,
+      tiktokFetch,
+      setCampaigns,
+      setSelectedCampaign,
+      setSelectedAdGroup,
+      setAdGroups,
+    ],
+  );
+
+  // Handle Regular or Delegated Campaign Duplication request
+  const handleDuplicateCampaign = useCallback(
+    async (campaignId) => {
+      if (!campaignId || !selectedAdvertiser || !newCampaignName.trim()) return;
+      const campaign = campaigns.find((c) => c.campaign_id === campaignId);
+      if (!campaign) return;
+
+      const isSmart =
+        campaign.is_smart_performance_campaign === true ||
+        campaign.is_smart_performance_campaign === "true" ||
+        campaign.is_smart_performance_campaign === 1 ||
+        campaign.campaign_automation_type === "UPGRADED_SMART_PLUS" ||
+        campaign.campaign_automation_type === "SMART_PLUS" ||
+        campaign.campaign_automation_type === "SMART_PERFORMANCE_CAMPAIGN";
+
+      if (isSmart) {
+        return handleDuplicateSmartCampaign(campaignId);
       }
 
-      const params = new URLSearchParams({ advertiserId: selectedAdvertiser, page: '1', pageSize: '100' })
-      try {
-        const listRes = await tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-campaigns?${params}`)
-        const listData = await listRes.json()
-        const list = listData.campaigns || []
-        const mergedList = [
-          newCampaignObj,
-          ...list.filter(c => c.campaign_id !== data.new_campaign_id)
-        ]
-        setCampaigns(mergedList)
-      } catch (err) {
-        console.error('Failed to refetch campaigns:', err)
+      if (campaign.adgroup_count >= 20) {
+        return toast.error(`Cannot duplicate this campaign. It has ${campaign.adgroup_count} ad groups, which reaches or exceeds the limit of 20.`);
       }
-    } catch (err) {
-      toast.error(err.message)
-    } finally {
-      setIsDuplicating(false)
-    }
-  }, [selectedAdvertiser, campaigns, duplicateIncludeAds, newCampaignName, tiktokFetch, setCampaigns, setSelectedCampaign, setSelectedAdGroup, adGroups, setAdGroups, handleDuplicateSmartCampaign])
+      setIsDuplicating(true);
+      const duplicatedName = newCampaignName.trim();
+      try {
+        const res = await tiktokFetch(`${API_BASE_URL}/api/tiktok/campaign/duplicate`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            advertiser_id: selectedAdvertiser,
+            source_campaign_id: campaignId,
+            new_campaign_name: duplicatedName,
+            duplicate_ads: duplicateIncludeAds,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || "Duplication failed");
+        }
+        toast.success("Campaign duplicated successfully!");
+        setNewCampaignName("");
+        setDuplicateCampaign("");
+        setShowDuplicateCampaignBlock(false);
+
+        const newCampaignObj = {
+          campaign_id: data.new_campaign_id,
+          campaign_name: duplicatedName,
+          operation_status: "DISABLE",
+        };
+
+        if (data.new_campaign_id) {
+          if (data.new_adgroups && data.new_adgroups.length > 0) {
+            const mappedNewAdGroups = data.new_adgroups.map((ag) => {
+              return {
+                ...ag,
+                campaignId: data.new_campaign_id,
+                campaign_id: data.new_campaign_id,
+                campaignName: duplicatedName,
+                operation_status: ag.operation_status || "DISABLE",
+                secondary_status: ag.secondary_status || "DISABLE",
+                ad_count: 0,
+              };
+            });
+
+            setAdGroups(mappedNewAdGroups);
+            adGroupsLoadedForSelectionRef.current = `${selectedAdvertiser}:${JSON.stringify([data.new_campaign_id])}`;
+          }
+
+          setCampaigns((prev) => {
+            if (prev.some((c) => c.campaign_id === data.new_campaign_id)) return prev;
+            return [newCampaignObj, ...prev];
+          });
+          setSelectedCampaign([data.new_campaign_id]);
+          setSelectedAdGroup([]);
+          setOpenCampaign(false);
+        }
+
+        const params = new URLSearchParams({ advertiserId: selectedAdvertiser, page: "1", pageSize: "100" });
+        try {
+          const listRes = await tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-campaigns?${params}`);
+          const listData = await listRes.json();
+          const list = listData.campaigns || [];
+          const mergedList = [newCampaignObj, ...list.filter((c) => c.campaign_id !== data.new_campaign_id)];
+          setCampaigns(mergedList);
+        } catch (err) {
+          console.error("Failed to refetch campaigns:", err);
+        }
+      } catch (err) {
+        toast.error(err.message);
+      } finally {
+        setIsDuplicating(false);
+      }
+    },
+    [
+      selectedAdvertiser,
+      campaigns,
+      duplicateIncludeAds,
+      newCampaignName,
+      tiktokFetch,
+      setCampaigns,
+      setSelectedCampaign,
+      setSelectedAdGroup,
+      adGroups,
+      setAdGroups,
+      handleDuplicateSmartCampaign,
+    ],
+  );
 
   const getMimeFromName = (name) => {
-    const ext = name.split('.').pop().toLowerCase()
+    const ext = name.split(".").pop().toLowerCase();
     const map = {
-      'mp4': 'video/mp4',
-      'mov': 'video/quicktime',
-      'webm': 'video/webm',
-      'jpg': 'image/jpeg',
-      'jpeg': 'image/jpeg',
-      'png': 'image/png',
-      'gif': 'image/gif'
-    }
-    return map[ext] || 'application/octet-stream'
-  }
+      mp4: "video/mp4",
+      mov: "video/quicktime",
+      webm: "video/webm",
+      jpg: "image/jpeg",
+      jpeg: "image/jpeg",
+      png: "image/png",
+      gif: "image/gif",
+    };
+    return map[ext] || "application/octet-stream";
+  };
 
   // Supported TikTok file types
   const TIKTOK_SUPPORTED_EXTENSIONS = /\.(mp4|mov|webm|jpg|jpeg|png|gif)$/i;
@@ -3299,8 +3318,8 @@ export default function TikTokAdCreationForm({
   };
 
   const handleVideoSelect = (e) => {
-    const selectedFiles = Array.from(e.target.files)
-    if (selectedFiles.length === 0) return
+    const selectedFiles = Array.from(e.target.files);
+    if (selectedFiles.length === 0) return;
 
     // Filter out unsupported file types
     const supportedFiles = [];
@@ -3336,282 +3355,291 @@ export default function TikTokAdCreationForm({
           const targetRatio = 9 / 16;
           const diff = Math.abs(ratio - targetRatio);
           if (diff > 0.05) {
-            toast.warning(`"${file.name}" has an aspect ratio of ${width}x${height} (${ratio.toFixed(2)}). TikTok strongly recommends a vertical 9:16 ratio (0.56) for optimal delivery.`, {
-              duration: 8000
-            });
+            toast.warning(
+              `"${file.name}" has an aspect ratio of ${width}x${height} (${ratio.toFixed(2)}). TikTok strongly recommends a vertical 9:16 ratio (0.56) for optimal delivery.`,
+              {
+                duration: 8000,
+              },
+            );
           }
           URL.revokeObjectURL(url);
         };
       }
     });
 
-    const taggedFiles = supportedFiles.map(file => {
+    const taggedFiles = supportedFiles.map((file) => {
       if (file.uniqueId) return file;
       file.uniqueId = `${file.name}-${file.lastModified || Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
       return file;
     });
 
     if (setFiles) {
-      setFiles(prev => [...(prev || []), ...taggedFiles])
+      setFiles((prev) => [...(prev || []), ...taggedFiles]);
     } else {
-      setVideoFile(taggedFiles[0])
-      setVideoPreview(URL.createObjectURL(taggedFiles[0]))
+      setVideoFile(taggedFiles[0]);
+      setVideoPreview(URL.createObjectURL(taggedFiles[0]));
     }
-    e.target.value = ""
-  }
+    e.target.value = "";
+  };
 
-  const onDrop = useCallback((acceptedFiles) => {
-    if (acceptedFiles.length === 0) return
+  const onDrop = useCallback(
+    (acceptedFiles) => {
+      if (acceptedFiles.length === 0) return;
 
-    // Filter out unsupported file types and show error for rejected ones
-    const supportedFiles = [];
-    const rejectedFiles = [];
-    acceptedFiles.forEach((file) => {
-      if (isTikTokSupportedFile(file)) {
-        supportedFiles.push(file);
-      } else {
-        rejectedFiles.push(file);
-      }
-    });
-
-    if (rejectedFiles.length > 0) {
-      rejectedFiles.forEach((file) => {
-        toast.error(`Job Failed: The type of file is not supported. (${file.name})`, { duration: 6000 });
+      // Filter out unsupported file types and show error for rejected ones
+      const supportedFiles = [];
+      const rejectedFiles = [];
+      acceptedFiles.forEach((file) => {
+        if (isTikTokSupportedFile(file)) {
+          supportedFiles.push(file);
+        } else {
+          rejectedFiles.push(file);
+        }
       });
-    }
 
-    if (supportedFiles.length === 0) return;
-
-    supportedFiles.forEach((file) => {
-      if (file.type.startsWith("video/") || /\.(mp4|mov|webm)$/i.test(file.name)) {
-        const url = URL.createObjectURL(file);
-        const tempVideo = document.createElement("video");
-        tempVideo.src = url;
-        tempVideo.onloadedmetadata = () => {
-          const width = tempVideo.videoWidth;
-          const height = tempVideo.videoHeight;
-          const ratio = width / height;
-          const targetRatio = 9 / 16;
-          const diff = Math.abs(ratio - targetRatio);
-          if (diff > 0.05) {
-            toast.warning(`"${file.name}" has an aspect ratio of ${width}x${height} (${ratio.toFixed(2)}). TikTok strongly recommends a vertical 9:16 ratio (0.56) for optimal delivery.`, {
-              duration: 8000
-            });
-          }
-          URL.revokeObjectURL(url);
-        };
+      if (rejectedFiles.length > 0) {
+        rejectedFiles.forEach((file) => {
+          toast.error(`Job Failed: The type of file is not supported. (${file.name})`, { duration: 6000 });
+        });
       }
-    });
 
-    const taggedFiles = supportedFiles.map(file => {
-      if (file.uniqueId) return file;
-      file.uniqueId = `${file.name}-${file.lastModified || Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
-      return file;
-    });
+      if (supportedFiles.length === 0) return;
 
-    if (setFiles) {
-      setFiles(prev => [...(prev || []), ...taggedFiles])
-    } else {
-      setVideoFile(taggedFiles[0])
-      setVideoPreview(URL.createObjectURL(taggedFiles[0]))
-    }
-  }, [setFiles, setVideoFile, setVideoPreview])
+      supportedFiles.forEach((file) => {
+        if (file.type.startsWith("video/") || /\.(mp4|mov|webm)$/i.test(file.name)) {
+          const url = URL.createObjectURL(file);
+          const tempVideo = document.createElement("video");
+          tempVideo.src = url;
+          tempVideo.onloadedmetadata = () => {
+            const width = tempVideo.videoWidth;
+            const height = tempVideo.videoHeight;
+            const ratio = width / height;
+            const targetRatio = 9 / 16;
+            const diff = Math.abs(ratio - targetRatio);
+            if (diff > 0.05) {
+              toast.warning(
+                `"${file.name}" has an aspect ratio of ${width}x${height} (${ratio.toFixed(2)}). TikTok strongly recommends a vertical 9:16 ratio (0.56) for optimal delivery.`,
+                {
+                  duration: 8000,
+                },
+              );
+            }
+            URL.revokeObjectURL(url);
+          };
+        }
+      });
+
+      const taggedFiles = supportedFiles.map((file) => {
+        if (file.uniqueId) return file;
+        file.uniqueId = `${file.name}-${file.lastModified || Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+        return file;
+      });
+
+      if (setFiles) {
+        setFiles((prev) => [...(prev || []), ...taggedFiles]);
+      } else {
+        setVideoFile(taggedFiles[0]);
+        setVideoPreview(URL.createObjectURL(taggedFiles[0]));
+      }
+    },
+    [setFiles, setVideoFile, setVideoPreview],
+  );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     multiple: true,
     // No 'accept' filter — unsupported types are handled manually inside onDrop
     // so the user gets a proper error message instead of silent rejection
-  })
+  });
 
   const applyUtmsToUrl = (url, pairs = []) => {
-    if (!url || !pairs || pairs.length === 0) return url
+    if (!url || !pairs || pairs.length === 0) return url;
     try {
-      const urlObj = new URL(url.startsWith('http') ? url : `https://${url}`)
+      const urlObj = new URL(url.startsWith("http") ? url : `https://${url}`);
       pairs.forEach(({ key, value }) => {
         if (key && value && !urlObj.searchParams.has(key)) {
-          urlObj.searchParams.set(key, value)
+          urlObj.searchParams.set(key, value);
         }
-      })
-      return urlObj.toString()
+      });
+      return urlObj.toString();
     } catch (e) {
-      console.error('Failed to apply UTMs:', e)
-      return url
+      console.error("Failed to apply UTMs:", e);
+      return url;
     }
-  }
+  };
 
   const toggleUploadSource = (id) => {
-    setUploadSources(prev =>
-      prev.includes(id)
-        ? (prev.length > 1 ? prev.filter(s => s !== id) : prev)
-        : [...prev, id]
-    )
-  }
+    setUploadSources((prev) => (prev.includes(id) ? (prev.length > 1 ? prev.filter((s) => s !== id) : prev) : [...prev, id]));
+  };
 
   const handleUploadSourcesOpenChange = (open) => {
-    setUploadSourcesOpen(open)
-  }
+    setUploadSourcesOpen(open);
+  };
 
   // Google Drive Auth Status
   useEffect(() => {
     const checkGoogleAuth = async () => {
       try {
-        const response = await axios.get(`${API_BASE_URL}/auth/google/status`, { withCredentials: true })
+        const response = await axios.get(`${API_BASE_URL}/auth/google/status`, { withCredentials: true });
         setGoogleAuthStatus({
           checking: false,
           authenticated: response.data.authenticated,
-          accessToken: response.data.accessToken
-        })
+          accessToken: response.data.accessToken,
+        });
       } catch (error) {
-        setGoogleAuthStatus({ checking: false, authenticated: false, accessToken: null })
+        setGoogleAuthStatus({ checking: false, authenticated: false, accessToken: null });
       }
-    }
-    checkGoogleAuth()
-  }, [])
+    };
+    checkGoogleAuth();
+  }, []);
 
   // Google Picker Logic
-  const createPicker = useCallback((token, initialFolderId = null) => {
-    if (pickerInstanceRef.current) {
-      try { pickerInstanceRef.current.setVisible(false); } catch (e) { }
-    }
-    setShowFolderInput(true)
-    const mimeTypes = ["application/vnd.google-apps.folder", "image/jpeg", "image/png", "image/gif", "video/mp4", "video/webm", "video/quicktime"].join(",")
-
-    let mainView
-    if (initialFolderId) {
-      mainView = new google.picker.DocsView()
-        .setIncludeFolders(true)
-        .setMimeTypes(mimeTypes)
-        .setSelectFolderEnabled(false)
-        .setParent(initialFolderId)
-    } else {
-      mainView = new google.picker.DocsView()
-        .setIncludeFolders(true)
-        .setMimeTypes(mimeTypes)
-        .setSelectFolderEnabled(false)
-    }
-
-    const myFolders = new google.picker.DocsView()
-      .setOwnedByMe(true)
-      .setIncludeFolders(true)
-      .setMimeTypes(mimeTypes)
-      .setSelectFolderEnabled(false)
-
-    const sharedDriveFolders = new google.picker.DocsView()
-      .setOwnedByMe(true)
-      .setIncludeFolders(true)
-      .setMimeTypes(mimeTypes)
-      .setSelectFolderEnabled(false)
-      .setEnableDrives(true)
-
-    const onlySharedFolders = new google.picker.DocsView()
-      .setOwnedByMe(false)
-      .setIncludeFolders(true)
-      .setMimeTypes(mimeTypes)
-      .setSelectFolderEnabled(false)
-
-    const pickerBuilder = new google.picker.PickerBuilder()
-      .setOAuthToken(token)
-      .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
-      .enableFeature(google.picker.Feature.SUPPORT_DRIVES)
-      .hideTitleBar()
-      .setAppId("102886794705")
-      .setCallback((data) => {
-        if (data.action === "picked") {
-          const selected = data.docs.map(doc => {
-            const thumb = doc.thumbnails && doc.thumbnails.length > 0
-              ? doc.thumbnails[doc.thumbnails.length - 1].url
-              : null
-
-            return {
-              id: doc.id,
-              name: doc.name,
-              mimeType: doc.mimeType,
-              size: doc.sizeBytes,
-              accessToken: token,
-              isDrive: true,
-              pickerThumbnail: thumb
-            }
-          })
-          setDriveFiles((prev) => [...prev, ...selected])
-          if (selected.length > 0) {
-            setVideoFile(null)
-            // Do NOT clear dropboxFiles — both sources can accumulate together
-          }
-        }
-        if (data.action === "picked" || data.action === "cancel") {
-          setShowFolderInput(false)
-          setFolderLinkValue("")
-          pickerInstanceRef.current = null
-        }
-      })
-
-    if (initialFolderId) {
-      pickerBuilder.addView(mainView)
-    }
-    pickerBuilder
-      .addView(myFolders)
-      .addView(sharedDriveFolders)
-      .addView(onlySharedFolders)
-
-    const picker = pickerBuilder.build()
-    pickerInstanceRef.current = picker
-    picker.setVisible(true)
-  }, [setDriveFiles, setVideoFile, setDropboxFiles])
-
-  const openPicker = useCallback((token) => {
-    if (!window.google || !window.google.picker) {
-      const script = document.createElement('script')
-      script.src = 'https://apis.google.com/js/api.js?onload=onApiLoad'
-      document.body.appendChild(script)
-      window.onApiLoad = () => {
-        window.gapi.load('picker', () => createPicker(token))
+  const createPicker = useCallback(
+    (token, initialFolderId = null) => {
+      if (pickerInstanceRef.current) {
+        try {
+          pickerInstanceRef.current.setVisible(false);
+        } catch (e) {}
       }
-    } else {
-      createPicker(token)
-    }
-  }, [createPicker])
+      setShowFolderInput(true);
+      const mimeTypes = [
+        "application/vnd.google-apps.folder",
+        "image/jpeg",
+        "image/png",
+        "image/gif",
+        "video/mp4",
+        "video/webm",
+        "video/quicktime",
+      ].join(",");
+
+      let mainView;
+      if (initialFolderId) {
+        mainView = new google.picker.DocsView()
+          .setIncludeFolders(true)
+          .setMimeTypes(mimeTypes)
+          .setSelectFolderEnabled(false)
+          .setParent(initialFolderId);
+      } else {
+        mainView = new google.picker.DocsView().setIncludeFolders(true).setMimeTypes(mimeTypes).setSelectFolderEnabled(false);
+      }
+
+      const myFolders = new google.picker.DocsView().setOwnedByMe(true).setIncludeFolders(true).setMimeTypes(mimeTypes).setSelectFolderEnabled(false);
+
+      const sharedDriveFolders = new google.picker.DocsView()
+        .setOwnedByMe(true)
+        .setIncludeFolders(true)
+        .setMimeTypes(mimeTypes)
+        .setSelectFolderEnabled(false)
+        .setEnableDrives(true);
+
+      const onlySharedFolders = new google.picker.DocsView()
+        .setOwnedByMe(false)
+        .setIncludeFolders(true)
+        .setMimeTypes(mimeTypes)
+        .setSelectFolderEnabled(false);
+
+      const pickerBuilder = new google.picker.PickerBuilder()
+        .setOAuthToken(token)
+        .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
+        .enableFeature(google.picker.Feature.SUPPORT_DRIVES)
+        .hideTitleBar()
+        .setAppId("102886794705")
+        .setCallback((data) => {
+          if (data.action === "picked") {
+            const selected = data.docs.map((doc) => {
+              const thumb = doc.thumbnails && doc.thumbnails.length > 0 ? doc.thumbnails[doc.thumbnails.length - 1].url : null;
+
+              return {
+                id: doc.id,
+                name: doc.name,
+                mimeType: doc.mimeType,
+                size: doc.sizeBytes,
+                accessToken: token,
+                isDrive: true,
+                pickerThumbnail: thumb,
+              };
+            });
+            setDriveFiles((prev) => [...prev, ...selected]);
+            if (selected.length > 0) {
+              setVideoFile(null);
+              // Do NOT clear dropboxFiles — both sources can accumulate together
+            }
+          }
+          if (data.action === "picked" || data.action === "cancel") {
+            setShowFolderInput(false);
+            setFolderLinkValue("");
+            pickerInstanceRef.current = null;
+          }
+        });
+
+      if (initialFolderId) {
+        pickerBuilder.addView(mainView);
+      }
+      pickerBuilder.addView(myFolders).addView(sharedDriveFolders).addView(onlySharedFolders);
+
+      const picker = pickerBuilder.build();
+      pickerInstanceRef.current = picker;
+      picker.setVisible(true);
+    },
+    [setDriveFiles, setVideoFile, setDropboxFiles],
+  );
+
+  const openPicker = useCallback(
+    (token) => {
+      if (!window.google || !window.google.picker) {
+        const script = document.createElement("script");
+        script.src = "https://apis.google.com/js/api.js?onload=onApiLoad";
+        document.body.appendChild(script);
+        window.onApiLoad = () => {
+          window.gapi.load("picker", () => createPicker(token));
+        };
+      } else {
+        createPicker(token);
+      }
+    },
+    [createPicker],
+  );
 
   const handleDriveClick = useCallback(async () => {
     try {
-      const res = await axios.get(`${API_BASE_URL}/auth/google/status`, { withCredentials: true })
+      const res = await axios.get(`${API_BASE_URL}/auth/google/status`, { withCredentials: true });
       if (res.data.authenticated && res.data.accessToken) {
-        setGoogleAuthStatus({ authenticated: true, checking: false, accessToken: res.data.accessToken })
-        openPicker(res.data.accessToken)
-        return
+        setGoogleAuthStatus({ authenticated: true, checking: false, accessToken: res.data.accessToken });
+        openPicker(res.data.accessToken);
+        return;
       }
-    } catch (err) { }
+    } catch (err) {}
 
-    const authWindow = window.open(`${API_BASE_URL}/auth/google?popup=true`, "_blank", "width=1100,height=750")
-    if (!authWindow) return toast.error("Popup blocked. Please allow popups and try again.")
+    const authWindow = window.open(`${API_BASE_URL}/auth/google?popup=true`, "_blank", "width=1100,height=750");
+    if (!authWindow) return toast.error("Popup blocked. Please allow popups and try again.");
 
     const listener = (event) => {
-      if (event.origin !== `${API_BASE_URL}`) return
-      const { type, accessToken } = event.data || {}
+      if (event.origin !== `${API_BASE_URL}`) return;
+      const { type, accessToken } = event.data || {};
       if (type === "google-auth-success") {
-        window.removeEventListener("message", listener)
-        authWindow.close()
-        setGoogleAuthStatus({ authenticated: true, checking: false, accessToken })
-        openPicker(accessToken)
+        window.removeEventListener("message", listener);
+        authWindow.close();
+        setGoogleAuthStatus({ authenticated: true, checking: false, accessToken });
+        openPicker(accessToken);
       }
-    }
-    window.addEventListener("message", listener)
-  }, [openPicker])
+    };
+    window.addEventListener("message", listener);
+  }, [openPicker]);
 
   const handleImportFromFolder = useCallback(async () => {
-    if (!googleAuthStatus.accessToken) return toast.error('Not authenticated with Google Drive')
-    const link = folderLinkValue || ""
-    const fileMatch = link.match(/\/file\/d\/([a-zA-Z0-9-_]+)/)
-    const fileId = fileMatch ? fileMatch[1] : null
+    if (!googleAuthStatus.accessToken) return toast.error("Not authenticated with Google Drive");
+    const link = folderLinkValue || "";
+    const fileMatch = link.match(/\/file\/d\/([a-zA-Z0-9-_]+)/);
+    const fileId = fileMatch ? fileMatch[1] : null;
 
     if (fileId) {
       try {
-        setIsImportingFolder(true)
+        setIsImportingFolder(true);
         const response = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?fields=id,name,mimeType,size,thumbnailLink`, {
-          headers: { Authorization: `Bearer ${googleAuthStatus.accessToken}` }
-        })
-        if (!response.ok) throw new Error("File not found or permission denied.")
-        const data = await response.json()
+          headers: { Authorization: `Bearer ${googleAuthStatus.accessToken}` },
+        });
+        if (!response.ok) throw new Error("File not found or permission denied.");
+        const data = await response.json();
         const newFile = {
           id: data.id,
           name: data.name,
@@ -3619,186 +3647,192 @@ export default function TikTokAdCreationForm({
           size: parseInt(data.size || "0", 10),
           accessToken: googleAuthStatus.accessToken,
           isDrive: true,
-          pickerThumbnail: data.thumbnailLink || null
-        }
-        setDriveFiles((prev) => [...prev, newFile])
-        setVideoFile(null)
+          pickerThumbnail: data.thumbnailLink || null,
+        };
+        setDriveFiles((prev) => [...prev, newFile]);
+        setVideoFile(null);
         // Do NOT clear dropboxFiles — both sources can accumulate together
-        setShowFolderInput(false)
-        setFolderLinkValue("")
+        setShowFolderInput(false);
+        setFolderLinkValue("");
       } catch (error) {
-        toast.error("Failed to import file.")
+        toast.error("Failed to import file.");
       } finally {
-        setIsImportingFolder(false)
+        setIsImportingFolder(false);
       }
-      return
+      return;
     }
 
-    const folderId = link.match(/folders\/([a-zA-Z0-9-_]+)/) ? link.match(/folders\/([a-zA-Z0-9-_]+)/)[1] : null
-    if (!folderId) return toast.error('Invalid Google Drive link')
-    createPicker(googleAuthStatus.accessToken, folderId)
-  }, [folderLinkValue, googleAuthStatus.accessToken, createPicker, setDriveFiles, setVideoFile])
+    const folderId = link.match(/folders\/([a-zA-Z0-9-_]+)/) ? link.match(/folders\/([a-zA-Z0-9-_]+)/)[1] : null;
+    if (!folderId) return toast.error("Invalid Google Drive link");
+    createPicker(googleAuthStatus.accessToken, folderId);
+  }, [folderLinkValue, googleAuthStatus.accessToken, createPicker, setDriveFiles, setVideoFile]);
 
   // Dropbox Logic
   useEffect(() => {
-    if (document.getElementById('dropboxjs')) return
-    const script = document.createElement('script')
-    script.src = 'https://www.dropbox.com/static/api/2/dropins.js'
-    script.id = 'dropboxjs'
-    script.setAttribute('data-app-key', import.meta.env.VITE_DROPBOX_APP_KEY || 'YOUR_DROPBOX_APP_KEY')
-    script.async = true
-    document.head.appendChild(script)
-  }, [])
+    if (document.getElementById("dropboxjs")) return;
+    const script = document.createElement("script");
+    script.src = "https://www.dropbox.com/static/api/2/dropins.js";
+    script.id = "dropboxjs";
+    script.setAttribute("data-app-key", import.meta.env.VITE_DROPBOX_APP_KEY || "YOUR_DROPBOX_APP_KEY");
+    script.async = true;
+    document.head.appendChild(script);
+  }, []);
 
-  const openDropboxChooser = useCallback((accessToken) => {
-    window.Dropbox.choose({
-      success: (selectedFiles) => {
-        const dropboxFilesData = selectedFiles.map(file => ({
-          dropboxId: file.id,
-          name: file.name,
-          link: file.link,
-          directLink: file.link,
-          size: file.bytes,
-          isDropbox: true,
-          mimeType: getMimeFromName(file.name),
-          accessToken
-        }))
-        setDropboxFiles((prev) => [...prev, ...dropboxFilesData])
-        if (dropboxFilesData.length > 0) {
-          setVideoFile(null)
-          // Do NOT clear driveFiles — both sources can accumulate together
-        }
-      },
-      linkType: 'direct',
-      multiselect: true,
-      extensions: ['.mp4', '.mov', '.webm'],
-    })
-  }, [setDropboxFiles, setVideoFile])
+  const openDropboxChooser = useCallback(
+    (accessToken) => {
+      window.Dropbox.choose({
+        success: (selectedFiles) => {
+          const dropboxFilesData = selectedFiles.map((file) => ({
+            dropboxId: file.id,
+            name: file.name,
+            link: file.link,
+            directLink: file.link,
+            size: file.bytes,
+            isDropbox: true,
+            mimeType: getMimeFromName(file.name),
+            accessToken,
+          }));
+          setDropboxFiles((prev) => [...prev, ...dropboxFilesData]);
+          if (dropboxFilesData.length > 0) {
+            setVideoFile(null);
+            // Do NOT clear driveFiles — both sources can accumulate together
+          }
+        },
+        linkType: "direct",
+        multiselect: true,
+        extensions: [".mp4", ".mov", ".webm"],
+      });
+    },
+    [setDropboxFiles, setVideoFile],
+  );
 
   const handleDropboxClick = useCallback(async () => {
-    if (!window.Dropbox) return toast.error("Dropbox is still loading.")
+    if (!window.Dropbox) return toast.error("Dropbox is still loading.");
     try {
-      const statusRes = await fetch(`${API_BASE_URL}/auth/dropbox/status`, { credentials: 'include' })
-      const statusData = await statusRes.json()
+      const statusRes = await fetch(`${API_BASE_URL}/auth/dropbox/status`, { credentials: "include" });
+      const statusData = await statusRes.json();
       if (statusData.authenticated && statusData.accessToken) {
-        openDropboxChooser(statusData.accessToken)
-        return
+        openDropboxChooser(statusData.accessToken);
+        return;
       }
-    } catch (err) { }
+    } catch (err) {}
 
-    const authWindow = window.open(`${API_BASE_URL}/auth/dropbox?popup=true`, 'dropbox-auth', "width=600,height=700")
+    const authWindow = window.open(`${API_BASE_URL}/auth/dropbox?popup=true`, "dropbox-auth", "width=600,height=700");
     const handleMessage = (event) => {
-      if (event.origin !== API_BASE_URL) return
-      if (event.data?.type === 'dropbox-auth-success') {
-        window.removeEventListener('message', handleMessage)
-        openDropboxChooser(event.data.accessToken)
+      if (event.origin !== API_BASE_URL) return;
+      if (event.data?.type === "dropbox-auth-success") {
+        window.removeEventListener("message", handleMessage);
+        openDropboxChooser(event.data.accessToken);
       }
-    }
-    window.addEventListener('message', handleMessage)
-  }, [openDropboxChooser])
-
-  const computeAdNameFromFormula = useCallback((file, iterationIndex = 0, link = "", formula = null, adType = "", staticAdName = null) => {
-    if (adType === "SPARK") {
-      return " ";
-    }
-    const formulaToUse = formula || adNameFormulaV2;
-    if (!formulaToUse?.rawInput?.trim()) {
-      const nameToUse = staticAdName !== null ? staticAdName : adName;
-      if (nameToUse && nameToUse.trim() !== "") {
-        return nameToUse;
-      }
-      // No formula and no ad name entered — never fall back to file name
-      return "Ad Generated Through Blip";
-    }
-
-    let fileName = "";
-    if (adType !== "SPARK" && file && file.name) {
-      fileName = file.name.replace(/\.[^/.]+$/, "");
-    }
-
-    let fileType = "";
-    if (file) {
-      const type = file.type || file.mimeType || "";
-      if (type.startsWith("video/") || type === "video/quicktime" || /\.(mov|mp4|avi|webm|mkv|m4v)$/i.test(file.name || "")) {
-        fileType = "Video";
-      } else {
-        fileType = "Static";
-      }
-    }
-
-    let urlSlug = "";
-    if (link) {
-      try {
-        const urlWithoutProtocol = link.replace(/^https?:\/\//, "");
-        const lastSlashIndex = urlWithoutProtocol.lastIndexOf("/");
-        if (lastSlashIndex > 0 && lastSlashIndex < urlWithoutProtocol.length - 1) {
-          urlSlug = urlWithoutProtocol.substring(lastSlashIndex + 1);
-        }
-      } catch (e) {
-        urlSlug = "";
-      }
-    }
-
-    let adTypeLabel = "Video";
-    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    const now = new Date();
-    const monthAbbrev = monthNames[now.getMonth()];
-    const date = String(now.getDate()).padStart(2, "0");
-    const year = now.getFullYear();
-
-    const formatDate = (formatStr) => {
-      const day = now.getDate();
-      const month = now.getMonth();
-      const year = now.getFullYear();
-      const fmt = formatStr === 'custom' ? 'MMDDYYYY' : formatStr.toUpperCase();
-      return fmt
-        .replace(/YYYY/g, String(year))
-        .replace(/YY/g, String(year).slice(-2))
-        .replace(/MMM/g, monthNames[month])
-        .replace(/MM/g, String(month + 1).padStart(2, '0'))
-        .replace(/M/g, String(month + 1))
-        .replace(/DD/g, String(day).padStart(2, '0'))
-        .replace(/D/g, String(day));
     };
+    window.addEventListener("message", handleMessage);
+  }, [openDropboxChooser]);
 
-    let calculatedName = formulaToUse.rawInput
-      .replace(/\{\{File Name\}\}/gi, fileName)
-      .replace(/\{\{File Type\}\}/gi, fileType)
-      .replace(/\{\{Date \(MonthYYYY\)\}\}/gi, `${monthAbbrev}${year}`)
-      .replace(/\{\{Date \(MonthDDYYYY\)\}\}/gi, `${monthAbbrev}${date}${year}`)
-      .replace(/\{\{Date\(([^)]+)\)\}\}/gi, (match, fmt) => formatDate(fmt))
-      .replace(/\{\{Iteration\}\}/gi, String(iterationIndex + 1).padStart(2, "0"))
-      .replace(/\{\{URL Slug\}\}/gi, urlSlug)
-      .replace(/\{\{Ad Type\}\}/gi, adTypeLabel);
+  const computeAdNameFromFormula = useCallback(
+    (file, iterationIndex = 0, link = "", formula = null, adType = "", staticAdName = null) => {
+      if (adType === "SPARK") {
+        return " ";
+      }
+      const formulaToUse = formula || adNameFormulaV2;
+      if (!formulaToUse?.rawInput?.trim()) {
+        const nameToUse = staticAdName !== null ? staticAdName : adName;
+        if (nameToUse && nameToUse.trim() !== "") {
+          return nameToUse;
+        }
+        // No formula and no ad name entered — never fall back to file name
+        return "Ad Generated Through Blip";
+      }
 
-    calculatedName = calculatedName.replace(/\{\{([^}]+)\}\}/g, "");
-    const finalCalculatedName = calculatedName.trim();
-    if (!finalCalculatedName) {
-      return adType === "SPARK" ? " " : "Ad Generated Through Blip";
-    }
-    if (adType === "SPARK" && finalCalculatedName === "Ad Generated Through Blip") {
-      return " ";
-    }
-    return finalCalculatedName;
-  }, [adNameFormulaV2, adName]);
+      let fileName = "";
+      if (adType !== "SPARK" && file && file.name) {
+        fileName = file.name.replace(/\.[^/.]+$/, "");
+      }
+
+      let fileType = "";
+      if (file) {
+        const type = file.type || file.mimeType || "";
+        if (type.startsWith("video/") || type === "video/quicktime" || /\.(mov|mp4|avi|webm|mkv|m4v)$/i.test(file.name || "")) {
+          fileType = "Video";
+        } else {
+          fileType = "Static";
+        }
+      }
+
+      let urlSlug = "";
+      if (link) {
+        try {
+          const urlWithoutProtocol = link.replace(/^https?:\/\//, "");
+          const lastSlashIndex = urlWithoutProtocol.lastIndexOf("/");
+          if (lastSlashIndex > 0 && lastSlashIndex < urlWithoutProtocol.length - 1) {
+            urlSlug = urlWithoutProtocol.substring(lastSlashIndex + 1);
+          }
+        } catch (e) {
+          urlSlug = "";
+        }
+      }
+
+      let adTypeLabel = "Video";
+      const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      const now = new Date();
+      const monthAbbrev = monthNames[now.getMonth()];
+      const date = String(now.getDate()).padStart(2, "0");
+      const year = now.getFullYear();
+
+      const formatDate = (formatStr) => {
+        const day = now.getDate();
+        const month = now.getMonth();
+        const year = now.getFullYear();
+        const fmt = formatStr === "custom" ? "MMDDYYYY" : formatStr.toUpperCase();
+        return fmt
+          .replace(/YYYY/g, String(year))
+          .replace(/YY/g, String(year).slice(-2))
+          .replace(/MMM/g, monthNames[month])
+          .replace(/MM/g, String(month + 1).padStart(2, "0"))
+          .replace(/M/g, String(month + 1))
+          .replace(/DD/g, String(day).padStart(2, "0"))
+          .replace(/D/g, String(day));
+      };
+
+      let calculatedName = formulaToUse.rawInput
+        .replace(/\{\{File Name\}\}/gi, fileName)
+        .replace(/\{\{File Type\}\}/gi, fileType)
+        .replace(/\{\{Date \(MonthYYYY\)\}\}/gi, `${monthAbbrev}${year}`)
+        .replace(/\{\{Date \(MonthDDYYYY\)\}\}/gi, `${monthAbbrev}${date}${year}`)
+        .replace(/\{\{Date\(([^)]+)\)\}\}/gi, (match, fmt) => formatDate(fmt))
+        .replace(/\{\{Iteration\}\}/gi, String(iterationIndex + 1).padStart(2, "0"))
+        .replace(/\{\{URL Slug\}\}/gi, urlSlug)
+        .replace(/\{\{Ad Type\}\}/gi, adTypeLabel);
+
+      calculatedName = calculatedName.replace(/\{\{([^}]+)\}\}/g, "");
+      const finalCalculatedName = calculatedName.trim();
+      if (!finalCalculatedName) {
+        return adType === "SPARK" ? " " : "Ad Generated Through Blip";
+      }
+      if (adType === "SPARK" && finalCalculatedName === "Ad Generated Through Blip") {
+        return " ";
+      }
+      return finalCalculatedName;
+    },
+    [adNameFormulaV2, adName],
+  );
 
   const hasMediaInFormData = (fd) => {
-    if (fd.adType === 'SPARK') return true;
+    if (fd.adType === "SPARK") return true;
     return fd.files.length > 0 || fd.driveFiles.length > 0 || fd.dropboxFiles.length > 0 || fd.tiktokLibraryFiles.length > 0;
-  }
+  };
 
   const clearQueuedMedia = () => {
-    setVideoFile(null)
-    setVideoPreview(null)
-    if (setFiles) setFiles([])
-    setDriveFiles([])
-    setDropboxFiles([])
-    if (setImportedPosts) setImportedPosts([])
-    setFileVariantMap({})
-    setGroupVariantMap({})
-    setPostVariantMap({})
-    if (setSelectedFiles) setSelectedFiles(new Set())
-  }
+    setVideoFile(null);
+    setVideoPreview(null);
+    if (setFiles) setFiles([]);
+    setDriveFiles([]);
+    setDropboxFiles([]);
+    if (setImportedPosts) setImportedPosts([]);
+    setFileVariantMap({});
+    setGroupVariantMap({});
+    setPostVariantMap({});
+    if (setSelectedFiles) setSelectedFiles(new Set());
+  };
 
   // Submit form handler to queue background jobs
   const handleQueueJob = async (e) => {
@@ -3811,8 +3845,8 @@ export default function TikTokAdCreationForm({
 
     try {
       const orderedVariants = [
-        variants.find((variant) => variant.id === 'default'),
-        ...variants.filter((variant) => variant.id !== 'default'),
+        variants.find((variant) => variant.id === "default"),
+        ...variants.filter((variant) => variant.id !== "default"),
       ].filter(Boolean);
 
       const newJobs = [];
@@ -3825,13 +3859,12 @@ export default function TikTokAdCreationForm({
 
         const fd = job.formData;
         const variantAdGroups = fd.adGroups || [];
-        const activeVariantAdGroupIds = fd.isDuplicatingAdGroupMode
-          ? [fd.duplicateAdGroup]
-          : (fd.selectedAdGroup || []);
-        const areAllVariantAdGroupsShopping = activeVariantAdGroupIds.length > 0 &&
-          activeVariantAdGroupIds.every((adgroupId) => (
-            variantAdGroups.find((adGroup) => adGroup.adgroup_id === adgroupId)?.product_source === 'SHOWCASE'
-          ));
+        const activeVariantAdGroupIds = fd.isDuplicatingAdGroupMode ? [fd.duplicateAdGroup] : fd.selectedAdGroup || [];
+        const areAllVariantAdGroupsShopping =
+          activeVariantAdGroupIds.length > 0 &&
+          activeVariantAdGroupIds.every(
+            (adgroupId) => variantAdGroups.find((adGroup) => adGroup.adgroup_id === adgroupId)?.product_source === "SHOWCASE",
+          );
 
         // if (!fd.selectedAdvertiser) {
         //   toast.error(`${variant.name}: please select an advertiser account`);
@@ -3844,7 +3877,7 @@ export default function TikTokAdCreationForm({
         }
 
         let fileCount = fd.files.length + fd.driveFiles.length + fd.dropboxFiles.length + fd.tiktokLibraryFiles.length;
-        if (fd.adType === 'SPARK') {
+        if (fd.adType === "SPARK") {
           fileCount = fd.importedPosts.length;
         }
 
@@ -3857,17 +3890,17 @@ export default function TikTokAdCreationForm({
 
         if (!fd.isDuplicatingAdGroupMode && fd.selectedAdGroup && fd.selectedAdGroup.length > 0) {
           for (const adgroupId of fd.selectedAdGroup) {
-            const agObj = variantAdGroups.find(ag => ag.adgroup_id === adgroupId);
+            const agObj = variantAdGroups.find((ag) => ag.adgroup_id === adgroupId);
             if (agObj) {
               const currentAdCount = agObj.ad_count || 0;
 
               // Calculate ads already queued for this ad group in the job queue
               let queuedAdsCount = 0;
-              jobQueue.forEach(qj => {
+              jobQueue.forEach((qj) => {
                 const qfd = qj.formData;
                 if (!qfd.isDuplicatingAdGroupMode && qfd.selectedAdGroup && qfd.selectedAdGroup.includes(adgroupId)) {
                   let qFileCount = qfd.files.length + qfd.driveFiles.length + qfd.dropboxFiles.length + qfd.tiktokLibraryFiles.length;
-                  if (qfd.adType === 'SPARK') {
+                  if (qfd.adType === "SPARK") {
                     qFileCount = qfd.importedPosts.length;
                   }
                   queuedAdsCount += qFileCount;
@@ -3879,7 +3912,7 @@ export default function TikTokAdCreationForm({
                 const qfd = currentJob.formData;
                 if (!qfd.isDuplicatingAdGroupMode && qfd.selectedAdGroup && qfd.selectedAdGroup.includes(adgroupId)) {
                   let qFileCount = qfd.files.length + qfd.driveFiles.length + qfd.dropboxFiles.length + qfd.tiktokLibraryFiles.length;
-                  if (qfd.adType === 'SPARK') {
+                  if (qfd.adType === "SPARK") {
                     qFileCount = qfd.importedPosts.length;
                   }
                   queuedAdsCount += qFileCount;
@@ -3888,9 +3921,13 @@ export default function TikTokAdCreationForm({
 
               if (currentAdCount + queuedAdsCount + adsToBeCreated > 50) {
                 if (queuedAdsCount > 0) {
-                  toast.error(`${variant.name}: cannot launch ads. Ad group "${agObj.adgroup_name}" currently has ${currentAdCount} ads and ${queuedAdsCount} ads pending in the job queue. Adding ${adsToBeCreated} more would exceed the limit of 50 ads per ad group.`);
+                  toast.error(
+                    `${variant.name}: cannot launch ads. Ad group "${agObj.adgroup_name}" currently has ${currentAdCount} ads and ${queuedAdsCount} ads pending in the job queue. Adding ${adsToBeCreated} more would exceed the limit of 50 ads per ad group.`,
+                  );
                 } else {
-                  toast.error(`${variant.name}: cannot launch ads. Ad group "${agObj.adgroup_name}" currently has ${currentAdCount} ads. Adding ${adsToBeCreated} more would exceed the limit of 50 ads per ad group.`);
+                  toast.error(
+                    `${variant.name}: cannot launch ads. Ad group "${agObj.adgroup_name}" currently has ${currentAdCount} ads. Adding ${adsToBeCreated} more would exceed the limit of 50 ads per ad group.`,
+                  );
                 }
                 return;
               }
@@ -3903,15 +3940,14 @@ export default function TikTokAdCreationForm({
           return;
         }
 
-        if (!fd.selectedIdentity || fd.selectedIdentity === 'CUSTOMIZED_USER') {
-          toast.error(fd.adType === 'NORMAL'
-            ? `${variant.name}: please select a TikTok identity`
-            : `${variant.name}: please select a linked TikTok account`
+        if (!fd.selectedIdentity || fd.selectedIdentity === "CUSTOMIZED_USER") {
+          toast.error(
+            fd.adType === "NORMAL" ? `${variant.name}: please select a TikTok identity` : `${variant.name}: please select a linked TikTok account`,
           );
           return;
         }
 
-        if (fd.adType === 'SPARK') {
+        if (fd.adType === "SPARK") {
           if (!fd.importedPosts || fd.importedPosts.length === 0) {
             toast.error(`${variant.name}: spark ads require at least one selected organic post.`);
             return;
@@ -3929,8 +3965,8 @@ export default function TikTokAdCreationForm({
           return;
         }
 
-        if (fd.adType !== 'SPARK') {
-          const activeTexts = fd.adTexts ? fd.adTexts.filter(t => t.trim() !== '') : [];
+        if (fd.adType !== "SPARK") {
+          const activeTexts = fd.adTexts ? fd.adTexts.filter((t) => t.trim() !== "") : [];
           if (activeTexts.length === 0) {
             toast.error(`${variant.name}: please enter ad text`);
             return;
@@ -3943,7 +3979,7 @@ export default function TikTokAdCreationForm({
           }
         }
 
-        if (fd.urlMode === 'WEBSITE' && !areAllVariantAdGroupsShopping) {
+        if (fd.urlMode === "WEBSITE" && !areAllVariantAdGroupsShopping) {
           if (!fd.landingUrl || !fd.landingUrl.trim()) {
             toast.error(`${variant.name}: link (URL) is required`);
             return;
@@ -3956,7 +3992,7 @@ export default function TikTokAdCreationForm({
           } else {
             try {
               const urlObj = new URL(urlString);
-              if (!urlObj.hostname.includes('.')) {
+              if (!urlObj.hostname.includes(".")) {
                 urlError = "must contain a valid domain with a dot (.)";
               }
             } catch (_) {
@@ -3970,7 +4006,7 @@ export default function TikTokAdCreationForm({
           }
         }
 
-        if (fd.urlMode === 'INSTANT_PAGE' && !areAllVariantAdGroupsShopping) {
+        if (fd.urlMode === "INSTANT_PAGE" && !areAllVariantAdGroupsShopping) {
           if (!fd.landingUrl || !fd.landingUrl.trim()) {
             toast.error(`${variant.name}: instant page is required`);
             return;
@@ -3998,11 +4034,11 @@ export default function TikTokAdCreationForm({
       }
 
       if (newJobs.length === 0) {
-        toast.error('No variants have files assigned. Nothing to publish.');
+        toast.error("No variants have files assigned. Nothing to publish.");
         return;
       }
 
-      const shouldShowVariantLabel = newJobs.some((job) => job.variantId !== 'default');
+      const shouldShowVariantLabel = newJobs.some((job) => job.variantId !== "default");
       const queuedJobs = newJobs.map((job) => ({
         ...job,
         showVariantLabel: shouldShowVariantLabel,
@@ -4024,13 +4060,11 @@ export default function TikTokAdCreationForm({
 
   const refreshPage = () => {
     window.location.reload();
-  }
+  };
 
   const formatQueuedJobLabel = (job, prefix) => {
-    const summary = `${job.adCount} ad${job.adCount !== 1 ? 's' : ''} to ${job.adGroupDisplayName || 'ad group'}`;
-    return job.showVariantLabel && job.variantName
-      ? `${prefix} ${job.variantName}: ${summary}`
-      : `${prefix} ${summary}`;
+    const summary = `${job.adCount} ad${job.adCount !== 1 ? "s" : ""} to ${job.adGroupDisplayName || "ad group"}`;
+    return job.showVariantLabel && job.variantName ? `${prefix} ${job.variantName}: ${summary}` : `${prefix} ${summary}`;
   };
 
   const duplicateCaptionIndices = useMemo(() => {
@@ -4053,9 +4087,12 @@ export default function TikTokAdCreationForm({
   const handleResolveAuthCodes = async () => {
     // Split any entries in sparkAuthCodes by commas/newlines/spaces if multiple are typed/pasted
     const lines = [];
-    sparkAuthCodes.forEach(code => {
+    sparkAuthCodes.forEach((code) => {
       if (!code) return;
-      const parts = code.split(/[\n\r,]+/).map(p => p.trim()).filter(Boolean);
+      const parts = code
+        .split(/[\n\r,]+/)
+        .map((p) => p.trim())
+        .filter(Boolean);
       lines.push(...parts);
     });
 
@@ -4072,13 +4109,13 @@ export default function TikTokAdCreationForm({
       let authCode = line;
       let originalPostAuthCode = "";
       if (line.includes(",")) {
-        const parts = line.split(",").map(p => p.trim());
+        const parts = line.split(",").map((p) => p.trim());
         authCode = parts[0];
         originalPostAuthCode = parts[1] || "";
       }
 
       // Skip if already in resolved/imported posts
-      const isAlreadyResolved = importedPosts.some(p => p.auth_code === authCode);
+      const isAlreadyResolved = importedPosts.some((p) => p.auth_code === authCode);
       if (isAlreadyResolved) {
         continue;
       }
@@ -4086,34 +4123,35 @@ export default function TikTokAdCreationForm({
       try {
         // Step 1: Authorize Spark Ad post
         const authRes = await tiktokFetch(`${API_BASE_URL}/api/tiktok/spark-authorize`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             advertiserId: selectedAdvertiser,
             authCode,
-            originalPostAuthCode
-          })
+            originalPostAuthCode,
+          }),
         });
         const authData = await authRes.json();
         if (!authRes.ok || !authData.success) {
-          throw new Error(authData.error || authData.message || 'Failed to authorize organic post');
+          throw new Error(authData.error || authData.message || "Failed to authorize organic post");
         }
 
         // Step 2: Fetch video info
         const infoParams = new URLSearchParams({
           advertiserId: selectedAdvertiser,
-          authCode
+          authCode,
         });
         const infoRes = await tiktokFetch(`${API_BASE_URL}/api/tiktok/spark-video-info?${infoParams}`);
         const infoData = await infoRes.json();
         if (!infoRes.ok || !infoData.success) {
-          throw new Error(infoData.error || infoData.message || 'Failed to retrieve organic video information');
+          throw new Error(infoData.error || infoData.message || "Failed to retrieve organic video information");
         }
 
         const videoObj = infoData.video || {};
-        const itemId = (typeof videoObj.item_id === 'string' ? videoObj.item_id : '') ||
-          (typeof videoObj.video_id === 'string' ? videoObj.video_id : '') ||
-          (typeof infoData.videoId === 'string' ? infoData.videoId : '') ||
+        const itemId =
+          (typeof videoObj.item_id === "string" ? videoObj.item_id : "") ||
+          (typeof videoObj.video_id === "string" ? videoObj.video_id : "") ||
+          (typeof infoData.videoId === "string" ? infoData.videoId : "") ||
           authCode;
         const caption = videoObj.text || videoObj.title || videoObj.caption || `Spark Post ${itemId}`;
         const likes = videoObj.like_count || 0;
@@ -4135,7 +4173,7 @@ export default function TikTokAdCreationForm({
           likes: likes,
           views: views,
           auth_end_time: videoObj.auth_info?.auth_end_time || null,
-          status: 'success'
+          status: "success",
         };
 
         newResolved.push(newPost);
@@ -4146,28 +4184,28 @@ export default function TikTokAdCreationForm({
           ad_name: `Error resolving: ${line}`,
           auth_code: authCode,
           original_post_auth_code: originalPostAuthCode,
-          status: 'error',
-          error: err.message || "Failed to resolve post"
+          status: "error",
+          error: err.message || "Failed to resolve post",
         });
       }
     }
 
     setIsResolvingCodes(false);
     // Append successful ones to importedPosts
-    const successfulPosts = newResolved.filter(p => p.status === 'success');
+    const successfulPosts = newResolved.filter((p) => p.status === "success");
     if (successfulPosts.length > 0) {
-      setImportedPosts(prev => {
-        const existingIds = new Set(prev.map(p => p.id));
-        const uniqueNew = successfulPosts.filter(p => !existingIds.has(p.id));
+      setImportedPosts((prev) => {
+        const existingIds = new Set(prev.map((p) => p.id));
+        const uniqueNew = successfulPosts.filter((p) => !existingIds.has(p.id));
         return [...prev, ...uniqueNew];
       });
       toast.success(`Successfully resolved ${successfulPosts.length} posts.`);
     }
 
-    setResolvedCodes(prev => {
+    setResolvedCodes((prev) => {
       const existing = [...prev];
-      newResolved.forEach(p => {
-        const idx = existing.findIndex(e => e.auth_code === p.auth_code);
+      newResolved.forEach((p) => {
+        const idx = existing.findIndex((e) => e.auth_code === p.auth_code);
         if (idx > -1) {
           existing[idx] = p;
         } else {
@@ -4177,7 +4215,7 @@ export default function TikTokAdCreationForm({
       return existing;
     });
 
-    if (newResolved.some(p => p.status === 'error')) {
+    if (newResolved.some((p) => p.status === "error")) {
       toast.error("Some auth codes could not be resolved. See details below.");
     }
   };
@@ -4186,33 +4224,34 @@ export default function TikTokAdCreationForm({
     setIsResolvingCodes(true);
     try {
       const authRes = await tiktokFetch(`${API_BASE_URL}/api/tiktok/spark-authorize`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           advertiserId: selectedAdvertiser,
           authCode: failedItem.auth_code,
-          originalPostAuthCode: failedItem.original_post_auth_code
-        })
+          originalPostAuthCode: failedItem.original_post_auth_code,
+        }),
       });
       const authData = await authRes.json();
       if (!authRes.ok || !authData.success) {
-        throw new Error(authData.error || authData.message || 'Failed to authorize organic post');
+        throw new Error(authData.error || authData.message || "Failed to authorize organic post");
       }
 
       const infoParams = new URLSearchParams({
         advertiserId: selectedAdvertiser,
-        authCode: failedItem.auth_code
+        authCode: failedItem.auth_code,
       });
       const infoRes = await tiktokFetch(`${API_BASE_URL}/api/tiktok/spark-video-info?${infoParams}`);
       const infoData = await infoRes.json();
       if (!infoRes.ok || !infoData.success) {
-        throw new Error(infoData.error || infoData.message || 'Failed to retrieve organic video information');
+        throw new Error(infoData.error || infoData.message || "Failed to retrieve organic video information");
       }
 
       const videoObj = infoData.video || {};
-      const itemId = (typeof videoObj.item_id === 'string' ? videoObj.item_id : '') ||
-        (typeof videoObj.video_id === 'string' ? videoObj.video_id : '') ||
-        (typeof infoData.videoId === 'string' ? infoData.videoId : '') ||
+      const itemId =
+        (typeof videoObj.item_id === "string" ? videoObj.item_id : "") ||
+        (typeof videoObj.video_id === "string" ? videoObj.video_id : "") ||
+        (typeof infoData.videoId === "string" ? infoData.videoId : "") ||
         failedItem.auth_code;
       const caption = videoObj.text || videoObj.title || videoObj.caption || `Spark Post ${itemId}`;
       const posterUrl = videoObj.poster_url || videoObj.cover_image_url || videoObj.preview_url || "";
@@ -4236,15 +4275,13 @@ export default function TikTokAdCreationForm({
         likes: likes,
         views: views,
         auth_end_time: videoObj.auth_info?.auth_end_time || null,
-        status: 'success'
+        status: "success",
       };
 
-      setResolvedCodes(prev =>
-        prev.map(p => p.auth_code === failedItem.auth_code ? updatedPost : p)
-      );
+      setResolvedCodes((prev) => prev.map((p) => (p.auth_code === failedItem.auth_code ? updatedPost : p)));
 
-      setImportedPosts(prev => {
-        const existingIds = new Set(prev.map(p => p.id));
+      setImportedPosts((prev) => {
+        const existingIds = new Set(prev.map((p) => p.id));
         if (existingIds.has(updatedPost.id)) return prev;
         return [...prev, updatedPost];
       });
@@ -4252,12 +4289,8 @@ export default function TikTokAdCreationForm({
       toast.success(`Successfully resolved code ${failedItem.auth_code}!`);
     } catch (err) {
       console.error("Retry failed:", err);
-      setResolvedCodes(prev =>
-        prev.map(p =>
-          p.auth_code === failedItem.auth_code
-            ? { ...p, error: err.message || "Failed to resolve post", status: 'error' }
-            : p
-        )
+      setResolvedCodes((prev) =>
+        prev.map((p) => (p.auth_code === failedItem.auth_code ? { ...p, error: err.message || "Failed to resolve post", status: "error" } : p)),
       );
       toast.error(`Retry failed: ${err.message}`);
     } finally {
@@ -4266,126 +4299,143 @@ export default function TikTokAdCreationForm({
   };
 
   const getValidationErrors = useCallback(() => {
-    const errors = []
+    const errors = [];
 
     if (!selectedAdvertiser) {
-      errors.push("Select an advertiser account")
+      errors.push("Select an advertiser account");
     }
 
     if (!selectedCampaign || selectedCampaign.length === 0) {
-      errors.push("Select a campaign")
+      errors.push("Select a campaign");
     }
 
-    const isDuplicatingAdGroup = showDuplicateAdGroupBlock && duplicateAdGroup
+    const isDuplicatingAdGroup = showDuplicateAdGroupBlock && duplicateAdGroup;
     if (!isDuplicatingAdGroup && (!selectedAdGroup || selectedAdGroup.length === 0)) {
-      errors.push("Select at least one ad group")
+      errors.push("Select at least one ad group");
     }
 
     if (isDuplicatingAdGroup && !newAdGroupName.trim()) {
-      errors.push("Enter a name for the duplicated ad group")
+      errors.push("Enter a name for the duplicated ad group");
     }
 
-    if (!selectedIdentity || selectedIdentity === 'CUSTOMIZED_USER') {
-      errors.push(adType === 'NORMAL' ? "Select an identity" : "Select an account to Promote From")
+    if (!selectedIdentity || selectedIdentity === "CUSTOMIZED_USER") {
+      errors.push(adType === "NORMAL" ? "Select an identity" : "Select an account to Promote From");
     }
 
-    if (adType === 'SPARK') {
+    if (adType === "SPARK") {
       if (!importedPosts || importedPosts.length === 0) {
-        errors.push("At least one selected organic post is required")
+        errors.push("At least one selected organic post is required");
       }
     } else {
-      const hasMedia = (files && files.length > 0) ||
+      const hasMedia =
+        (files && files.length > 0) ||
         (driveFiles && driveFiles.length > 0) ||
         (dropboxFiles && dropboxFiles.length > 0) ||
         (tiktokLibraryFiles && tiktokLibraryFiles.length > 0);
       if (!hasMedia) {
-        errors.push("At least one media item is required")
+        errors.push("At least one media item is required");
       }
-      const activeTexts = adTexts ? adTexts.filter(t => t.trim() !== '') : []
+      const activeTexts = adTexts ? adTexts.filter((t) => t.trim() !== "") : [];
       if (activeTexts.length === 0) {
-        errors.push("Enter ad text")
+        errors.push("Enter ad text");
       }
       for (const singleText of activeTexts) {
         if (singleText.length > 100) {
-          errors.push(`Text cannot exceed 100 characters ("${singleText.substring(0, 15)}...")`)
+          errors.push(`Text cannot exceed 100 characters ("${singleText.substring(0, 15)}...")`);
         }
       }
     }
 
-    const hasFormula = adNameFormulaV2?.rawInput?.trim()
+    const hasFormula = adNameFormulaV2?.rawInput?.trim();
     if (!hasFormula && !adName.trim()) {
-      errors.push("Ad name is required")
+      errors.push("Ad name is required");
     }
 
     if (!cta || cta.length === 0) {
-      errors.push("Select at least one Call to Action")
+      errors.push("Select at least one Call to Action");
     }
 
-    if (!areAllSelectedAdGroupsShopping && urlMode === 'WEBSITE') {
+    if (!areAllSelectedAdGroupsShopping && urlMode === "WEBSITE") {
       if (!landingUrl || !landingUrl.trim()) {
-        errors.push("Link (URL) is required")
+        errors.push("Link (URL) is required");
       } else {
-        let urlError = ""
-        const urlString = landingUrl.trim()
+        let urlError = "";
+        const urlString = landingUrl.trim();
         if (!/^https:\/\//i.test(urlString)) {
-          urlError = "Link (URL) must start with https://"
+          urlError = "Link (URL) must start with https://";
         } else {
           try {
-            const urlObj = new URL(urlString)
-            if (!urlObj.hostname.includes('.')) {
-              urlError = "Invalid Link (URL)"
+            const urlObj = new URL(urlString);
+            if (!urlObj.hostname.includes(".")) {
+              urlError = "Invalid Link (URL)";
             }
           } catch (_) {
-            urlError = "Invalid Link (URL)"
+            urlError = "Invalid Link (URL)";
           }
         }
         if (urlError) {
-          errors.push(urlError)
+          errors.push(urlError);
         }
       }
     }
 
-    if (!areAllSelectedAdGroupsShopping && urlMode === 'INSTANT_PAGE') {
+    if (!areAllSelectedAdGroupsShopping && urlMode === "INSTANT_PAGE") {
       if (!landingUrl || !landingUrl.trim()) {
-        errors.push("Instant Page is required")
+        errors.push("Instant Page is required");
       } else {
-        const isNumeric = /^\d+$/.test(landingUrl.trim())
+        const isNumeric = /^\d+$/.test(landingUrl.trim());
         if (!isNumeric) {
-          errors.push("Instant Page ID must be a valid integer")
+          errors.push("Instant Page ID must be a valid integer");
         }
       }
     }
 
     if (areAllSelectedAdGroupsShopping) {
       if (!formStoreId) {
-        errors.push("Store is required")
+        errors.push("Store is required");
       }
-      const productIds = Array.isArray(formStoreProductId) ? formStoreProductId : (formStoreProductId ? [formStoreProductId] : [])
+      const productIds = Array.isArray(formStoreProductId) ? formStoreProductId : formStoreProductId ? [formStoreProductId] : [];
       if (productIds.length === 0) {
-        errors.push("Showcase Product is required")
+        errors.push("Showcase Product is required");
       }
     }
 
-    return errors
+    return errors;
   }, [
-    selectedAdvertiser, selectedCampaign, showDuplicateAdGroupBlock, duplicateAdGroup,
-    selectedAdGroup, newAdGroupName, selectedIdentity, adType, importedPosts,
-    adTexts, adNameFormulaV2, adName, cta, urlMode, landingUrl,
-    files, driveFiles, dropboxFiles, tiktokLibraryFiles, areAllSelectedAdGroupsShopping,
-    formStoreId, formStoreProductId
-  ])
+    selectedAdvertiser,
+    selectedCampaign,
+    showDuplicateAdGroupBlock,
+    duplicateAdGroup,
+    selectedAdGroup,
+    newAdGroupName,
+    selectedIdentity,
+    adType,
+    importedPosts,
+    adTexts,
+    adNameFormulaV2,
+    adName,
+    cta,
+    urlMode,
+    landingUrl,
+    files,
+    driveFiles,
+    dropboxFiles,
+    tiktokLibraryFiles,
+    areAllSelectedAdGroupsShopping,
+    formStoreId,
+    formStoreProductId,
+  ]);
 
-  const validationErrors = getValidationErrors()
-  const isFormValid = validationErrors.length === 0
-  const isIdentityMissing = !selectedIdentity || selectedIdentity === 'CUSTOMIZED_USER'
-  const publishDisabled = !isFormValid || loadingAdGroups || (selectedFiles && selectedFiles.size > 0)
-  const isAdvertiserLocked = variants.length > 1 && activeVariantId !== 'default'
-  const shouldScrollVariantPicker = variants.length > 5
+  const validationErrors = getValidationErrors();
+  const isFormValid = validationErrors.length === 0;
+  const isIdentityMissing = !selectedIdentity || selectedIdentity === "CUSTOMIZED_USER";
+  const publishDisabled = !isFormValid || loadingAdGroups || (selectedFiles && selectedFiles.size > 0);
+  const isAdvertiserLocked = variants.length > 1 && activeVariantId !== "default";
+  const shouldScrollVariantPicker = variants.length > 5;
 
   return (
     <>
       <form onSubmit={handleQueueJob} className="space-y-4">
-
         <TikTokJobQueue
           hasStartedAnyJob={hasStartedAnyJob}
           isJobTrackerExpanded={isJobTrackerExpanded}
@@ -4424,7 +4474,6 @@ export default function TikTokAdCreationForm({
             <CardDescription>Select your ad account, campaign and ad group</CardDescription>
           </CardHeader>
           <CardContent className="p-6 pt-0 space-y-4">
-
             {/* 1. Advertiser Account Combobox */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
@@ -4439,7 +4488,7 @@ export default function TikTokAdCreationForm({
                       ? "text-gray-300 cursor-not-allowed"
                       : refreshingAdvertisers
                         ? "h-3.5 w-3.5 text-gray-300 animate-[spin_3s_linear_infinite]"
-                        : "text-gray-500 hover:text-gray-700"
+                        : "text-gray-500 hover:text-gray-700",
                   )}
                   onClick={isAdvertiserLocked ? undefined : handleRefreshAdvertisers}
                 />
@@ -4447,7 +4496,7 @@ export default function TikTokAdCreationForm({
               <Popover
                 open={openAdvertiser}
                 onOpenChange={(open) => {
-                  if (!isAdvertiserLocked) setOpenAdvertiser(open)
+                  if (!isAdvertiserLocked) setOpenAdvertiser(open);
                 }}
               >
                 <PopoverTrigger asChild>
@@ -4461,18 +4510,24 @@ export default function TikTokAdCreationForm({
                     <span className="truncate text-sm font-medium">
                       {selectedAdvertiser
                         ? (() => {
-                          const found = advertisers.find(a => String(a.advertiser_id || a.id) === String(selectedAdvertiser));
-                          return found ? (found.advertiser_name || found.name || selectedAdvertiser) : selectedAdvertiser;
-                        })()
+                            const found = advertisers.find((a) => String(a.advertiser_id || a.id) === String(selectedAdvertiser));
+                            return found ? found.advertiser_name || found.name || selectedAdvertiser : selectedAdvertiser;
+                          })()
                         : "Select an Ad Account"}
                     </span>
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="p-0 bg-white shadow-lg rounded-2xl" align="start" side="bottom" avoidCollisions={false} style={{ width: 'var(--radix-popover-trigger-width)' }}>
+                <PopoverContent
+                  className="p-0 bg-white shadow-lg rounded-2xl"
+                  align="start"
+                  side="bottom"
+                  avoidCollisions={false}
+                  style={{ width: "var(--radix-popover-trigger-width)" }}
+                >
                   <Command
                     filter={(value, search) => {
-                      return 1
+                      return 1;
                     }}
                     loop={false}
                     defaultValue={selectedAdvertiser}
@@ -4487,30 +4542,32 @@ export default function TikTokAdCreationForm({
                     <CommandList className="max-h-[300px] overflow-y-auto rounded-2xl custom-scrollbar">
                       <CommandGroup>
                         {(() => {
-                          const filtered = advertisers?.filter(adv =>
-                            (adv.advertiser_name || adv.name || '').toLowerCase().includes(advertiserSearch.toLowerCase()) ||
-                            (adv.advertiser_id || adv.id || '').toLowerCase().includes(advertiserSearch.toLowerCase())
-                          ) || [];
+                          const filtered =
+                            advertisers?.filter(
+                              (adv) =>
+                                (adv.advertiser_name || adv.name || "").toLowerCase().includes(advertiserSearch.toLowerCase()) ||
+                                (adv.advertiser_id || adv.id || "").toLowerCase().includes(advertiserSearch.toLowerCase()),
+                            ) || [];
 
                           if (filtered.length > 0) {
                             return filtered.map((a) => {
-                              const id = a.advertiser_id || a.id
+                              const id = a.advertiser_id || a.id;
                               return (
                                 <CommandItem
                                   key={id}
                                   value={id}
                                   onSelect={() => {
-                                    handleAdvertiserChange(id)
-                                    setOpenAdvertiser(false)
+                                    handleAdvertiserChange(id);
+                                    setOpenAdvertiser(false);
                                   }}
                                   className={cn(
                                     "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
-                                    selectedAdvertiser === id ? "bg-gray-100 font-semibold" : "hover:bg-gray-50"
+                                    selectedAdvertiser === id ? "bg-gray-100 font-semibold" : "hover:bg-gray-50",
                                   )}
                                 >
                                   <span className="text-sm font-medium">{a.advertiser_name || a.name || id}</span>
                                 </CommandItem>
-                              )
+                              );
                             });
                           } else {
                             return (
@@ -4525,11 +4582,7 @@ export default function TikTokAdCreationForm({
                   </Command>
                 </PopoverContent>
               </Popover>
-              {isAdvertiserLocked && (
-                <p className="text-xs text-gray-500">
-                  Ad account can only be changed from the Default variant.
-                </p>
-              )}
+              {isAdvertiserLocked && <p className="text-xs text-gray-500">Ad account can only be changed from the Default variant.</p>}
               {/* {!selectedAdvertiser && (
                 <p className="text-xs text-red-500 font-medium mt-1">Please select an advertiser account</p>
               )} */}
@@ -4544,9 +4597,7 @@ export default function TikTokAdCreationForm({
               {selectedAdvertiser && !loadingPrefs && !documentExists && (
                 <div className="flex items-center gap-1 p-1 pl-2 bg-orange-50 border border-orange-200 rounded-2xl">
                   <CogIcon className="w-4 h-4 text-orange-700" />
-                  <Label className="text-xs text-orange-700 flex-1">
-                    Add default settings for this account to speed up your workflow
-                  </Label>
+                  <Label className="text-xs text-orange-700 flex-1">Add default settings for this account to speed up your workflow</Label>
                   <Button
                     type="button"
                     size="sm"
@@ -4571,9 +4622,7 @@ export default function TikTokAdCreationForm({
                 <RefreshCcw
                   className={cn(
                     "h-4 w-4 cursor-pointer transition-all duration-200",
-                    loadingCampaigns
-                      ? "h-3.5 w-3.5 text-gray-300 animate-[spin_3s_linear_infinite]"
-                      : "text-gray-500 hover:text-gray-700"
+                    loadingCampaigns ? "h-3.5 w-3.5 text-gray-300 animate-[spin_3s_linear_infinite]" : "text-gray-500 hover:text-gray-700",
                   )}
                   onClick={forceRefreshCampaigns}
                 />
@@ -4600,19 +4649,25 @@ export default function TikTokAdCreationForm({
                             : selectedCampaign.length === 0
                               ? "Select campaigns"
                               : (() => {
-                                const validSelected = selectedCampaign.filter(id => campaigns.some(c => c.campaign_id === id));
-                                if (validSelected.length === 1) {
-                                  return campaigns.find(c => c.campaign_id === validSelected[0])?.campaign_name || validSelected[0];
-                                }
-                                return `${validSelected.length} campaigns selected`;
-                              })()}
+                                  const validSelected = selectedCampaign.filter((id) => campaigns.some((c) => c.campaign_id === id));
+                                  if (validSelected.length === 1) {
+                                    return campaigns.find((c) => c.campaign_id === validSelected[0])?.campaign_name || validSelected[0];
+                                  }
+                                  return `${validSelected.length} campaigns selected`;
+                                })()}
                         </span>
                       )}
                     </div>
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="p-0 bg-white shadow-lg rounded-2xl" align="start" side="bottom" avoidCollisions={false} style={{ width: 'var(--radix-popover-trigger-width)' }}>
+                <PopoverContent
+                  className="p-0 bg-white shadow-lg rounded-2xl"
+                  align="start"
+                  side="bottom"
+                  avoidCollisions={false}
+                  style={{ width: "var(--radix-popover-trigger-width)" }}
+                >
                   <Command>
                     <CommandInput
                       placeholder="Search campaigns..."
@@ -4624,27 +4679,27 @@ export default function TikTokAdCreationForm({
                     <CommandList className="max-h-[220px] overflow-y-auto rounded-2xl custom-scrollbar">
                       <CommandGroup>
                         {filteredCampaigns.map((c) => {
-                          const isSelected = selectedCampaign.includes(c.campaign_id)
+                          const isSelected = selectedCampaign.includes(c.campaign_id);
                           return (
                             <CommandItem
                               key={c.campaign_id}
                               value={c.campaign_id}
                               onSelect={() => {
                                 if (isSelected) {
-                                  setSelectedCampaign(prev => prev.filter(id => id !== c.campaign_id))
+                                  setSelectedCampaign((prev) => prev.filter((id) => id !== c.campaign_id));
                                 } else {
-                                  setSelectedCampaign(prev => [...prev, c.campaign_id])
+                                  setSelectedCampaign((prev) => [...prev, c.campaign_id]);
                                 }
-                                setShowDuplicateAdGroupBlock(false)
-                                setDuplicateAdGroup("")
-                                setNewAdGroupName("")
-                                setShowDuplicateCampaignBlock(false)
-                                setDuplicateCampaign("")
-                                setNewCampaignName("")
+                                setShowDuplicateAdGroupBlock(false);
+                                setDuplicateAdGroup("");
+                                setNewAdGroupName("");
+                                setShowDuplicateCampaignBlock(false);
+                                setDuplicateCampaign("");
+                                setNewCampaignName("");
                               }}
                               className={cn(
                                 "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
-                                isSelected ? "bg-gray-100 font-semibold" : "hover:bg-gray-50"
+                                isSelected ? "bg-gray-100 font-semibold" : "hover:bg-gray-50",
                               )}
                             >
                               <div className="flex items-center gap-2 w-full">
@@ -4654,7 +4709,18 @@ export default function TikTokAdCreationForm({
                                   className="w-4 h-4 bg-white border border-gray-300 rounded-[6px] data-[state=checked]:bg-zinc-800 data-[state=checked]:text-white pointer-events-none"
                                 />
                                 <div className="flex-1 min-w-0 flex items-center justify-between">
-                                  <span className={cn("text-sm font-medium truncate flex-1", (c.operation_status === "DISABLE" || c.operation_status === "disable" || String(c.operation_status).toUpperCase() === "DISABLE" || String(c.secondary_status).includes("DISABLE") || c.operation_status === false || c.operation_status === "false") && "text-gray-400")}>
+                                  <span
+                                    className={cn(
+                                      "text-sm font-medium truncate flex-1",
+                                      (c.operation_status === "DISABLE" ||
+                                        c.operation_status === "disable" ||
+                                        String(c.operation_status).toUpperCase() === "DISABLE" ||
+                                        String(c.secondary_status).includes("DISABLE") ||
+                                        c.operation_status === false ||
+                                        c.operation_status === "false") &&
+                                        "text-gray-400",
+                                    )}
+                                  >
                                     {c.campaign_name}
                                   </span>
                                   <div className="flex items-center gap-2">
@@ -4666,36 +4732,44 @@ export default function TikTokAdCreationForm({
                                       c?.campaign_automation_type === "SMART_PLUS" ||
                                       c?.campaign_automation_type === "SMART_PERFORMANCE_CAMPAIGN" ||
                                       c?.is_smart === true ||
-                                      c?.is_smart === "true"
+                                      c?.is_smart === "true",
                                     ) && (
-                                        <TooltipProvider delayDuration={100}>
-                                          <Tooltip>
-                                            <TooltipTrigger asChild>
-                                              <span className="inline-flex items-center" title="Smart+ Campaign" onClick={(e) => e.stopPropagation()}>
-                                                <PlusCircle
-                                                  className={cn(
-                                                    "w-4 h-4 shrink-0 cursor-help",
-                                                    (c.operation_status === "DISABLE" || c.operation_status === "disable" || String(c.operation_status).toUpperCase() === "DISABLE" || String(c.secondary_status).includes("DISABLE") || c.operation_status === false || c.operation_status === "false")
-                                                      ? "text-gray-400"
-                                                      : "text-gray-800"
-                                                  )}
-                                                />
-                                              </span>
-                                            </TooltipTrigger>
-                                            <TooltipContent side="top" className="bg-black text-white text-xs px-2.5 py-1 rounded-lg shadow-md z-50">
-                                              Smart+ Campaign
-                                            </TooltipContent>
-                                          </Tooltip>
-                                        </TooltipProvider>
-                                      )}
-                                    {(c.operation_status === "ENABLE" || c.operation_status === "enable" || String(c.operation_status).toUpperCase() === "ENABLE" || String(c.secondary_status).includes("ENABLE") || c.operation_status === true || c.operation_status === "true") && (
-                                      <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
+                                      <TooltipProvider delayDuration={100}>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <span className="inline-flex items-center" title="Smart+ Campaign" onClick={(e) => e.stopPropagation()}>
+                                              <PlusCircle
+                                                className={cn(
+                                                  "w-4 h-4 shrink-0 cursor-help",
+                                                  c.operation_status === "DISABLE" ||
+                                                    c.operation_status === "disable" ||
+                                                    String(c.operation_status).toUpperCase() === "DISABLE" ||
+                                                    String(c.secondary_status).includes("DISABLE") ||
+                                                    c.operation_status === false ||
+                                                    c.operation_status === "false"
+                                                    ? "text-gray-400"
+                                                    : "text-gray-800",
+                                                )}
+                                              />
+                                            </span>
+                                          </TooltipTrigger>
+                                          <TooltipContent side="top" className="bg-black text-white text-xs px-2.5 py-1 rounded-lg shadow-md z-50">
+                                            Smart+ Campaign
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
                                     )}
+                                    {(c.operation_status === "ENABLE" ||
+                                      c.operation_status === "enable" ||
+                                      String(c.operation_status).toUpperCase() === "ENABLE" ||
+                                      String(c.secondary_status).includes("ENABLE") ||
+                                      c.operation_status === true ||
+                                      c.operation_status === "true") && <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />}
                                   </div>
                                 </div>
                               </div>
                             </CommandItem>
-                          )
+                          );
                         })}
                       </CommandGroup>
                     </CommandList>
@@ -4707,7 +4781,7 @@ export default function TikTokAdCreationForm({
                           campaigns.length === 0 ||
                           (selectedCampaign.length === 1 &&
                             (() => {
-                              const camp = campaigns.find(c => c.campaign_id === selectedCampaign[0]);
+                              const camp = campaigns.find((c) => c.campaign_id === selectedCampaign[0]);
                               return camp?.is_smart_performance_campaign || (camp?.adgroup_count !== undefined && camp.adgroup_count >= 20);
                             })())
                         }
@@ -4715,10 +4789,10 @@ export default function TikTokAdCreationForm({
                           if (selectedCampaign.length === 1) {
                             const campId = selectedCampaign[0];
                             setDuplicateCampaign(campId);
-                            const camp = campaigns.find(c => c.campaign_id === campId);
+                            const camp = campaigns.find((c) => c.campaign_id === campId);
                             if (camp) {
-                              let generatedName = (camp.campaign_name || '') + "_Copy";
-                              while (campaigns.some(c => c.campaign_name === generatedName)) {
+                              let generatedName = (camp.campaign_name || "") + "_Copy";
+                              while (campaigns.some((c) => c.campaign_name === generatedName)) {
                                 generatedName += "_Copy";
                               }
                               setNewCampaignName(generatedName);
@@ -4740,15 +4814,14 @@ export default function TikTokAdCreationForm({
                 </PopoverContent>
               </Popover>
 
-
               {showDuplicateCampaignBlock && (
                 <div className="flex flex-col gap-2 p-3 bg-gray-50 rounded-2xl border border-gray-200 relative mt-2 shadow-sm animate-in fade-in slide-in-from-top-1 duration-200">
                   <button
                     type="button"
                     onClick={() => {
-                      setShowDuplicateCampaignBlock(false)
-                      setDuplicateCampaign("")
-                      setNewCampaignName("")
+                      setShowDuplicateCampaignBlock(false);
+                      setDuplicateCampaign("");
+                      setNewCampaignName("");
                     }}
                     className="absolute top-2 right-2 p-0.5 rounded-full !bg-white border border-gray-200 hover:bg-gray-50 text-gray-700"
                     aria-label="Close duplicate campaign selection"
@@ -4788,7 +4861,7 @@ export default function TikTokAdCreationForm({
                         side="bottom"
                         avoidCollisions={false}
                         style={{
-                          width: 'var(--radix-popover-trigger-width)'
+                          width: "var(--radix-popover-trigger-width)",
                         }}
                       >
                         <Command>
@@ -4802,10 +4875,11 @@ export default function TikTokAdCreationForm({
                           <CommandList className="max-h-[220px] overflow-y-auto rounded-2xl custom-scrollbar">
                             <CommandGroup>
                               {campaigns
-                                .filter((c) =>
-                                  !c.is_smart_performance_campaign &&
-                                  (c.adgroup_count === undefined || c.adgroup_count < 20) &&
-                                  (c.campaign_name || c.campaign_id || '').toLowerCase().includes(duplicateCampaignSearchValue.toLowerCase())
+                                .filter(
+                                  (c) =>
+                                    !c.is_smart_performance_campaign &&
+                                    (c.adgroup_count === undefined || c.adgroup_count < 20) &&
+                                    (c.campaign_name || c.campaign_id || "").toLowerCase().includes(duplicateCampaignSearchValue.toLowerCase()),
                                 )
                                 .map((c) => (
                                   <CommandItem
@@ -4813,8 +4887,8 @@ export default function TikTokAdCreationForm({
                                     value={c.campaign_id}
                                     onSelect={() => {
                                       setDuplicateCampaign(c.campaign_id);
-                                      let generatedName = (c.campaign_name || '') + "_Copy";
-                                      while (campaigns.some(camp => camp.campaign_name === generatedName)) {
+                                      let generatedName = (c.campaign_name || "") + "_Copy";
+                                      while (campaigns.some((camp) => camp.campaign_name === generatedName)) {
                                         generatedName += "_Copy";
                                       }
                                       setNewCampaignName(generatedName);
@@ -4822,15 +4896,31 @@ export default function TikTokAdCreationForm({
                                     }}
                                     className={cn(
                                       "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150 hover:bg-gray-50",
-                                      duplicateCampaign === c.campaign_id && "bg-gray-100 font-semibold"
+                                      duplicateCampaign === c.campaign_id && "bg-gray-100 font-semibold",
                                     )}
                                   >
                                     <div className="flex items-center justify-between w-full">
-                                      <span className={cn("text-sm font-medium", (c.operation_status === "DISABLE" || c.operation_status === "disable" || String(c.operation_status).toUpperCase() === "DISABLE" || String(c.secondary_status).includes("DISABLE") || c.operation_status === false || c.operation_status === "false") && "text-gray-400")}>
+                                      <span
+                                        className={cn(
+                                          "text-sm font-medium",
+                                          (c.operation_status === "DISABLE" ||
+                                            c.operation_status === "disable" ||
+                                            String(c.operation_status).toUpperCase() === "DISABLE" ||
+                                            String(c.secondary_status).includes("DISABLE") ||
+                                            c.operation_status === false ||
+                                            c.operation_status === "false") &&
+                                            "text-gray-400",
+                                        )}
+                                      >
                                         {c.campaign_name}
                                       </span>
                                       <div className="flex items-center gap-2">
-                                        {(c.operation_status === "ENABLE" || c.operation_status === "enable" || String(c.operation_status).toUpperCase() === "ENABLE" || String(c.secondary_status).includes("ENABLE") || c.operation_status === true || c.operation_status === "true") && <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />}
+                                        {(c.operation_status === "ENABLE" ||
+                                          c.operation_status === "enable" ||
+                                          String(c.operation_status).toUpperCase() === "ENABLE" ||
+                                          String(c.secondary_status).includes("ENABLE") ||
+                                          c.operation_status === true ||
+                                          c.operation_status === "true") && <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />}
                                         {duplicateCampaign === c.campaign_id && <Check className="h-4 w-4 text-black shrink-0" />}
                                       </div>
                                     </div>
@@ -4866,7 +4956,10 @@ export default function TikTokAdCreationForm({
                           className="w-full h-11 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-2 px-4 shadow transition-all active:scale-[0.98]"
                         >
                           {isDuplicating ? (
-                            <><Loader className="w-4 h-4 animate-spin" />Duplicating...</>
+                            <>
+                              <Loader className="w-4 h-4 animate-spin" />
+                              Duplicating...
+                            </>
                           ) : (
                             "Create Campaign"
                           )}
@@ -4889,14 +4982,17 @@ export default function TikTokAdCreationForm({
                 <RefreshCcw
                   className={cn(
                     "h-4 w-4 cursor-pointer transition-all duration-200",
-                    loadingAdGroups
-                      ? "h-3.5 w-3.5 text-gray-300 animate-[spin_3s_linear_infinite]"
-                      : "text-gray-500 hover:text-gray-700"
+                    loadingAdGroups ? "h-3.5 w-3.5 text-gray-300 animate-[spin_3s_linear_infinite]" : "text-gray-500 hover:text-gray-700",
                   )}
                   onClick={forceRefreshAdGroups}
                 />
               </div>
-              <Popover open={openAdGroup} onOpenChange={(v) => { if (!v || (!loadingAdGroups && selectedCampaign.length > 0)) setOpenAdGroup(v) }}>
+              <Popover
+                open={openAdGroup}
+                onOpenChange={(v) => {
+                  if (!v || (!loadingAdGroups && selectedCampaign.length > 0)) setOpenAdGroup(v);
+                }}
+              >
                 <PopoverTrigger asChild>
                   <Button
                     type="button"
@@ -4928,7 +5024,13 @@ export default function TikTokAdCreationForm({
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="p-0 bg-white shadow-lg rounded-2xl" align="start" side="bottom" avoidCollisions={false} style={{ width: 'var(--radix-popover-trigger-width)' }}>
+                <PopoverContent
+                  className="p-0 bg-white shadow-lg rounded-2xl"
+                  align="start"
+                  side="bottom"
+                  avoidCollisions={false}
+                  style={{ width: "var(--radix-popover-trigger-width)" }}
+                >
                   <Command>
                     <CommandInput
                       placeholder="Search ad groups..."
@@ -4952,28 +5054,24 @@ export default function TikTokAdCreationForm({
                           }}
                           className={`
                             h-10 w-full px-4 py-3 m-1 rounded-2xl
-                            ${selectedCampaign.length !== 1 ? '!bg-zinc-800 !text-zinc-500' : '!bg-zinc-700 !text-white'}
+                            ${selectedCampaign.length !== 1 ? "!bg-zinc-800 !text-zinc-500" : "!bg-zinc-700 !text-white"}
                             shadow-md
                             flex items-center justify-center
                             text-sm font-semibold
-                            ${selectedCampaign.length !== 1 ? 'cursor-not-allowed' : 'cursor-pointer'}
+                            ${selectedCampaign.length !== 1 ? "cursor-not-allowed" : "cursor-pointer"}
                             transition-all duration-150
-                            ${selectedCampaign.length === 1 ? 'hover:!bg-black' : ''}
+                            ${selectedCampaign.length === 1 ? "hover:!bg-black" : ""}
                           `}
                         >
                           🚀 Launch in a New Ad Group
-                          {selectedCampaign.length !== 1 && (
-                            <span className="ml-2 text-xs text-zinc-400">
-                              (Please select 1 campaign)
-                            </span>
-                          )}
+                          {selectedCampaign.length !== 1 && <span className="ml-2 text-xs text-zinc-400">(Please select 1 campaign)</span>}
                         </CommandItem>
                       </CommandGroup>
                       {filteredAdGroups.length > 0 && (
                         <CommandGroup heading="Launch in an existing ad group">
                           {(() => {
                             const groupedByCampaign = filteredAdGroups.reduce((acc, adgroup) => {
-                              const campaignId = adgroup.campaignId || 'unknown';
+                              const campaignId = adgroup.campaignId || "unknown";
                               if (!acc[campaignId]) {
                                 acc[campaignId] = [];
                               }
@@ -4995,16 +5093,18 @@ export default function TikTokAdCreationForm({
                                     const isFull = ag.ad_count !== undefined && ag.ad_count >= 50;
                                     return (
                                       <CommandItem
-                                        key={`${ag.campaignId || 'camp'}-${ag.adgroup_id}`}
+                                        key={`${ag.campaignId || "camp"}-${ag.adgroup_id}`}
                                         value={ag.adgroup_id}
                                         onSelect={() => {
                                           if (isSelected) {
-                                            setSelectedAdGroup(prev => prev.filter(id => id !== ag.adgroup_id))
+                                            setSelectedAdGroup((prev) => prev.filter((id) => id !== ag.adgroup_id));
                                           } else {
                                             if (isFull) {
-                                              return toast.error(`Cannot select ad group "${ag.adgroup_name}". It already has ${ag.ad_count} ads, which is the limit of 50.`);
+                                              return toast.error(
+                                                `Cannot select ad group "${ag.adgroup_name}". It already has ${ag.ad_count} ads, which is the limit of 50.`,
+                                              );
                                             }
-                                            setSelectedAdGroup(prev => [...prev, ag.adgroup_id])
+                                            setSelectedAdGroup((prev) => [...prev, ag.adgroup_id]);
                                             if (showDuplicateAdGroupBlock) {
                                               setShowDuplicateAdGroupBlock(false);
                                               setDuplicateAdGroup("");
@@ -5015,7 +5115,7 @@ export default function TikTokAdCreationForm({
                                         className={cn(
                                           "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
                                           isSelected ? "bg-gray-100 font-semibold" : "hover:bg-gray-50",
-                                          (!isSelected && isFull) && "opacity-50 cursor-not-allowed"
+                                          !isSelected && isFull && "opacity-50 cursor-not-allowed",
                                         )}
                                       >
                                         <div className="flex items-center gap-2 w-full">
@@ -5025,24 +5125,43 @@ export default function TikTokAdCreationForm({
                                             className="w-4 h-4 bg-white border border-gray-300 rounded-[6px] data-[state=checked]:bg-zinc-800 data-[state=checked]:text-white pointer-events-none"
                                           />
                                           <div className="flex-1 min-w-0 flex items-center justify-between">
-                                            <span className={cn("text-sm font-medium truncate flex-1", (ag.operation_status === "DISABLE" || ag.operation_status === "disable" || String(ag.operation_status).toUpperCase() === "DISABLE" || String(ag.secondary_status).includes("DISABLE") || ag.operation_status === false || ag.operation_status === "false" || (!isSelected && isFull)) && "text-gray-400")}>
+                                            <span
+                                              className={cn(
+                                                "text-sm font-medium truncate flex-1",
+                                                (ag.operation_status === "DISABLE" ||
+                                                  ag.operation_status === "disable" ||
+                                                  String(ag.operation_status).toUpperCase() === "DISABLE" ||
+                                                  String(ag.secondary_status).includes("DISABLE") ||
+                                                  ag.operation_status === false ||
+                                                  ag.operation_status === "false" ||
+                                                  (!isSelected && isFull)) &&
+                                                  "text-gray-400",
+                                              )}
+                                            >
                                               {ag.adgroup_name}
                                             </span>
                                             <span className="flex items-center">
                                               {ag.ad_count !== undefined && (
-                                                <span className="text-xs text-gray-400 mr-1.5">({ag.ad_count} {ag.ad_count === 1 ? 'Ad' : 'Ads'})</span>
+                                                <span className="text-xs text-gray-400 mr-1.5">
+                                                  ({ag.ad_count} {ag.ad_count === 1 ? "Ad" : "Ads"})
+                                                </span>
                                               )}
-                                              {(ag.operation_status === "ENABLE" || ag.operation_status === "enable" || String(ag.operation_status).toUpperCase() === "ENABLE" || String(ag.secondary_status).includes("ENABLE") || ag.operation_status === true || ag.operation_status === "true") && (
+                                              {(ag.operation_status === "ENABLE" ||
+                                                ag.operation_status === "enable" ||
+                                                String(ag.operation_status).toUpperCase() === "ENABLE" ||
+                                                String(ag.secondary_status).includes("ENABLE") ||
+                                                ag.operation_status === true ||
+                                                ag.operation_status === "true") && (
                                                 <span className="ml-0 w-2 h-2 rounded-full bg-green-500 shrink-0" />
                                               )}
                                             </span>
                                           </div>
                                         </div>
                                       </CommandItem>
-                                    )
+                                    );
                                   })}
                                 </div>
-                              )
+                              );
                             });
                           })()}
                         </CommandGroup>
@@ -5052,11 +5171,10 @@ export default function TikTokAdCreationForm({
                 </PopoverContent>
               </Popover>
 
-
               {selectedAdGroup.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-2">
                   {selectedAdGroup.map((id) => {
-                    const adgroup = adGroups.find((a) => a.adgroup_id === id)
+                    const adgroup = adGroups.find((a) => a.adgroup_id === id);
                     return (
                       <label
                         key={id}
@@ -5065,14 +5183,14 @@ export default function TikTokAdCreationForm({
                         <button
                           type="button"
                           aria-label={`Remove ${adgroup ? adgroup.adgroup_name : id}`}
-                          onClick={() => setSelectedAdGroup(prev => prev.filter((item) => item !== id))}
+                          onClick={() => setSelectedAdGroup((prev) => prev.filter((item) => item !== id))}
                           className="flex h-4 w-4 items-center justify-center"
                         >
                           <CheckBlackIcon className="w-4.5 h-4.5" />
                         </button>
                         <span className="text-gray-800 text-xs break-all">{adgroup ? adgroup.adgroup_name : id}</span>
                       </label>
-                    )
+                    );
                   })}
                 </div>
               )}
@@ -5082,9 +5200,9 @@ export default function TikTokAdCreationForm({
                   <button
                     type="button"
                     onClick={() => {
-                      setShowDuplicateAdGroupBlock(false)
-                      setDuplicateAdGroup("")
-                      setNewAdGroupName("")
+                      setShowDuplicateAdGroupBlock(false);
+                      setDuplicateAdGroup("");
+                      setNewAdGroupName("");
                     }}
                     className="absolute top-2 right-2 p-0.5 rounded-full !bg-white border border-gray-200 hover:bg-gray-50 text-gray-700"
                     aria-label="Close duplicate ad group selection"
@@ -5126,7 +5244,7 @@ export default function TikTokAdCreationForm({
                         side="bottom"
                         avoidCollisions={false}
                         style={{
-                          width: 'var(--radix-popover-trigger-width)'
+                          width: "var(--radix-popover-trigger-width)",
                         }}
                       >
                         <Command>
@@ -5141,7 +5259,7 @@ export default function TikTokAdCreationForm({
                             <CommandGroup>
                               {(() => {
                                 const filtered = adGroups.filter((ag) =>
-                                  (ag.adgroup_name || ag.adgroup_id || '').toLowerCase().includes(duplicateAdGroupSearchValue.toLowerCase())
+                                  (ag.adgroup_name || ag.adgroup_id || "").toLowerCase().includes(duplicateAdGroupSearchValue.toLowerCase()),
                                 );
                                 if (filtered.length === 0) {
                                   return (
@@ -5160,15 +5278,31 @@ export default function TikTokAdCreationForm({
                                     }}
                                     className={cn(
                                       "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150 hover:bg-gray-50",
-                                      duplicateAdGroup === ag.adgroup_id && "bg-gray-100 font-semibold"
+                                      duplicateAdGroup === ag.adgroup_id && "bg-gray-100 font-semibold",
                                     )}
                                   >
                                     <div className="flex items-center justify-between w-full">
-                                      <span className={cn("text-sm font-medium", (ag.operation_status === "DISABLE" || ag.operation_status === "disable" || String(ag.operation_status).toUpperCase() === "DISABLE" || String(ag.secondary_status).includes("DISABLE") || ag.operation_status === false || ag.operation_status === "false") && "text-gray-400")}>
+                                      <span
+                                        className={cn(
+                                          "text-sm font-medium",
+                                          (ag.operation_status === "DISABLE" ||
+                                            ag.operation_status === "disable" ||
+                                            String(ag.operation_status).toUpperCase() === "DISABLE" ||
+                                            String(ag.secondary_status).includes("DISABLE") ||
+                                            ag.operation_status === false ||
+                                            ag.operation_status === "false") &&
+                                            "text-gray-400",
+                                        )}
+                                      >
                                         {ag.adgroup_name}
                                       </span>
                                       <div className="flex items-center gap-2">
-                                        {(ag.operation_status === "ENABLE" || ag.operation_status === "enable" || String(ag.operation_status).toUpperCase() === "ENABLE" || String(ag.secondary_status).includes("ENABLE") || ag.operation_status === true || ag.operation_status === "true") && <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />}
+                                        {(ag.operation_status === "ENABLE" ||
+                                          ag.operation_status === "enable" ||
+                                          String(ag.operation_status).toUpperCase() === "ENABLE" ||
+                                          String(ag.secondary_status).includes("ENABLE") ||
+                                          ag.operation_status === true ||
+                                          ag.operation_status === "true") && <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />}
                                         {duplicateAdGroup === ag.adgroup_id && <Check className="h-4 w-4 text-black shrink-0" />}
                                       </div>
                                     </div>
@@ -5206,7 +5340,6 @@ export default function TikTokAdCreationForm({
                 </div>
               )}
             </div>
-
           </CardContent>
         </Card>
 
@@ -5225,18 +5358,18 @@ export default function TikTokAdCreationForm({
                 <TooltipProvider delayDuration={0}>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <span className={activeVariantId !== 'default' ? 'cursor-not-allowed' : ''}>
+                      <span className={activeVariantId !== "default" ? "cursor-not-allowed" : ""}>
                         <Select
                           value={adType}
                           onValueChange={(value) => {
-                            if (activeVariantId !== 'default') return;
+                            if (activeVariantId !== "default") return;
                             setAdType(value);
-                            const currentExists = identities.some(i => i.identity_id === selectedIdentity);
-                            if (!currentExists && selectedIdentity && selectedIdentity !== 'CUSTOMIZED_USER') {
-                              setSelectedIdentity('');
+                            const currentExists = identities.some((i) => i.identity_id === selectedIdentity);
+                            if (!currentExists && selectedIdentity && selectedIdentity !== "CUSTOMIZED_USER") {
+                              setSelectedIdentity("");
                             }
                           }}
-                          disabled={activeVariantId !== 'default'}
+                          disabled={activeVariantId !== "default"}
                         >
                           <SelectTrigger className={cn("w-[180px] h-10 py-2 font-medium", formFieldChrome)}>
                             <SelectValue placeholder="Select ad type" />
@@ -5258,7 +5391,7 @@ export default function TikTokAdCreationForm({
                         </Select>
                       </span>
                     </TooltipTrigger>
-                    {activeVariantId !== 'default' && (
+                    {activeVariantId !== "default" && (
                       <TooltipContent side="bottom" className="max-w-xs text-xs">
                         Ad type is only changeable in the Default variant. Changing it there will apply to all variants.
                       </TooltipContent>
@@ -5269,22 +5402,19 @@ export default function TikTokAdCreationForm({
             </CardTitle>
           </CardHeader>
           <CardContent className="p-6 pt-0 space-y-4">
-
             {/* 2. Identity / Promote From (Linked Account) */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label className="flex items-center gap-2">
                   {renderDiffMark("selectedIdentity")}
                   <Users className="w-4 h-4" />
-                  {adType === 'NORMAL' ? 'Identity' : 'Promote From'}
+                  {adType === "NORMAL" ? "Identity" : "Promote From"}
                 </Label>
                 <RefreshCcw
                   className={cn(
                     "h-4 w-4 cursor-pointer transition-all duration-200",
-                    loadingIdentities
-                      ? "h-3.5 w-3.5 text-gray-300 animate-[spin_3s_linear_infinite]"
-                      : "text-gray-500 hover:text-gray-700",
-                    (!selectedAdvertiser || loadingIdentities) && "opacity-50 cursor-not-allowed pointer-events-none"
+                    loadingIdentities ? "h-3.5 w-3.5 text-gray-300 animate-[spin_3s_linear_infinite]" : "text-gray-500 hover:text-gray-700",
+                    (!selectedAdvertiser || loadingIdentities) && "opacity-50 cursor-not-allowed pointer-events-none",
                   )}
                   onClick={forceRefreshIdentities}
                 />
@@ -5301,9 +5431,9 @@ export default function TikTokAdCreationForm({
                     <span className="truncate text-sm font-medium flex items-center gap-1.5">
                       {loadingPrefs ? (
                         <span className="text-gray-400 font-normal">Loading preferences...</span>
-                      ) : selectedIdentity && selectedIdentity !== 'CUSTOMIZED_USER'
-                        ? (() => {
-                          const found = identities.find(i => i.identity_id === selectedIdentity);
+                      ) : selectedIdentity && selectedIdentity !== "CUSTOMIZED_USER" ? (
+                        (() => {
+                          const found = identities.find((i) => i.identity_id === selectedIdentity);
                           return found ? (
                             <span className="flex items-center gap-2">
                               <img
@@ -5311,21 +5441,36 @@ export default function TikTokAdCreationForm({
                                 alt={found.display_name}
                                 className="w-6 h-6 rounded-full object-cover shrink-0 bg-gray-50 border border-gray-100 p-0.5"
                                 referrerPolicy="no-referrer"
-                                onError={(e) => { e.currentTarget.src = TikTokIconUrl; }}
+                                onError={(e) => {
+                                  e.currentTarget.src = TikTokIconUrl;
+                                }}
                               />
                               <span className="font-semibold text-gray-900">{found.display_name}</span>
                             </span>
-                          ) : <span className="text-gray-400 font-normal">Select Identity</span>;
+                          ) : (
+                            <span className="text-gray-400 font-normal">Select Identity</span>
+                          );
                         })()
-                        : <span>{adType === 'NORMAL' ? "Select Identity" : "Select account to Promote From"}</span>}
+                      ) : (
+                        <span>{adType === "NORMAL" ? "Select Identity" : "Select account to Promote From"}</span>
+                      )}
                     </span>
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="p-0 bg-white shadow-lg rounded-2xl" align="start" side="bottom" avoidCollisions={false} style={{ width: 'var(--radix-popover-trigger-width)' }}>
+                <PopoverContent
+                  className="p-0 bg-white shadow-lg rounded-2xl"
+                  align="start"
+                  side="bottom"
+                  avoidCollisions={false}
+                  style={{ width: "var(--radix-popover-trigger-width)" }}
+                >
                   <Command>
-                    <CommandInput placeholder={adType === 'NORMAL' ? "Search identities..." : "Search accounts to promote from..."} className="bg-transparent border-none focus:ring-0" />
-                    <CommandEmpty>{adType === 'NORMAL' ? "No identities found." : "No accounts found."}</CommandEmpty>
+                    <CommandInput
+                      placeholder={adType === "NORMAL" ? "Search identities..." : "Search accounts to promote from..."}
+                      className="bg-transparent border-none focus:ring-0"
+                    />
+                    <CommandEmpty>{adType === "NORMAL" ? "No identities found." : "No accounts found."}</CommandEmpty>
                     <CommandList className="max-h-[300px] overflow-y-auto rounded-2xl custom-scrollbar">
                       <CommandGroup>
                         {identities.map((i) => (
@@ -5333,12 +5478,12 @@ export default function TikTokAdCreationForm({
                             key={i.identity_id}
                             value={i.identity_id}
                             onSelect={() => {
-                              setSelectedIdentity(i.identity_id)
-                              setOpenIdentity(false)
+                              setSelectedIdentity(i.identity_id);
+                              setOpenIdentity(false);
                             }}
                             className={cn(
                               "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150 flex items-center justify-between",
-                              selectedIdentity === i.identity_id ? "bg-gray-100 font-semibold" : "hover:bg-gray-50"
+                              selectedIdentity === i.identity_id ? "bg-gray-100 font-semibold" : "hover:bg-gray-50",
                             )}
                           >
                             <div className="flex items-center gap-2 min-w-0">
@@ -5347,7 +5492,9 @@ export default function TikTokAdCreationForm({
                                 alt={i.display_name}
                                 className="w-6 h-6 rounded-full object-cover shrink-0 bg-gray-50 border border-gray-100 p-0.5"
                                 referrerPolicy="no-referrer"
-                                onError={(e) => { e.currentTarget.src = TikTokIconUrl; }}
+                                onError={(e) => {
+                                  e.currentTarget.src = TikTokIconUrl;
+                                }}
                               />
                               <div className="flex flex-col min-w-0">
                                 <span className="text-sm font-semibold text-gray-900 truncate">{i.display_name}</span>
@@ -5370,7 +5517,7 @@ export default function TikTokAdCreationForm({
             </div>
 
             {/* Organic Post to Boost for Spark Ads */}
-            {adType === 'SPARK' && (
+            {adType === "SPARK" && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between gap-3 flex-wrap">
                   <Label className="flex items-center gap-2 font-semibold">
@@ -5382,20 +5529,18 @@ export default function TikTokAdCreationForm({
                     <button
                       type="button"
                       onClick={() => setSparkSourceTab("video_list")}
-                      className={`px-4 py-2 text-xs font-semibold rounded-xl transition-all ${sparkSourceTab === "video_list"
-                        ? "bg-white text-black shadow-sm"
-                        : "text-gray-500 hover:text-black"
-                        }`}
+                      className={`px-4 py-2 text-xs font-semibold rounded-xl transition-all ${
+                        sparkSourceTab === "video_list" ? "bg-white text-black shadow-sm" : "text-gray-500 hover:text-black"
+                      }`}
                     >
                       Choose from Video List
                     </button>
                     <button
                       type="button"
                       onClick={() => setSparkSourceTab("auth_codes")}
-                      className={`px-4 py-2 text-xs font-semibold rounded-xl transition-all ${sparkSourceTab === "auth_codes"
-                        ? "bg-white text-black shadow-sm"
-                        : "text-gray-500 hover:text-black"
-                        }`}
+                      className={`px-4 py-2 text-xs font-semibold rounded-xl transition-all ${
+                        sparkSourceTab === "auth_codes" ? "bg-white text-black shadow-sm" : "text-gray-500 hover:text-black"
+                      }`}
                     >
                       Paste Auth Codes
                     </button>
@@ -5405,9 +5550,7 @@ export default function TikTokAdCreationForm({
                 {sparkSourceTab === "auth_codes" ? (
                   <div className="space-y-3">
                     <div className="space-y-2">
-                      <Label className="text-xs font-medium text-gray-400">
-                        Authorization Codes
-                      </Label>
+                      <Label className="text-xs font-medium text-gray-400">Authorization Codes</Label>
                       <div className="space-y-3">
                         {sparkAuthCodes.map((value, index) => (
                           <div key={index} className="flex items-center gap-2">
@@ -5416,7 +5559,7 @@ export default function TikTokAdCreationForm({
                                 value={value}
                                 onChange={(e) => updateField(setSparkAuthCodes, sparkAuthCodes, index, e.target.value)}
                                 onBlur={() => {
-                                  if (sparkAuthCodes.some(c => c.trim())) {
+                                  if (sparkAuthCodes.some((c) => c.trim())) {
                                     handleResolveAuthCodes();
                                   }
                                 }}
@@ -5449,7 +5592,8 @@ export default function TikTokAdCreationForm({
                         </Button>
                       </div>
                       <p className="text-[10px] text-gray-400 leading-normal pl-1 mt-1">
-                        Enter the organic post video codes generated from the creator's TikTok app. For stitch or duet videos, enter both codes separated by a comma.
+                        Enter the organic post video codes generated from the creator's TikTok app. For stitch or duet videos, enter both codes
+                        separated by a comma.
                       </p>
                     </div>
 
@@ -5463,9 +5607,9 @@ export default function TikTokAdCreationForm({
                 ) : (
                   <div
                     className="relative border border-gray-200 rounded-2xl p-4 bg-white overflow-hidden flex flex-col shadow-xs"
-                    style={{ height: 'clamp(400px, calc(100vh - 400px), 600px)', contain: 'strict' }}
+                    style={{ height: "clamp(400px, calc(100vh - 400px), 600px)", contain: "strict" }}
                   >
-                    {(!selectedIdentity || selectedIdentity === 'CUSTOMIZED_USER') ? (
+                    {!selectedIdentity || selectedIdentity === "CUSTOMIZED_USER" ? (
                       <div className="flex flex-col items-center justify-center text-center p-8 flex-1 text-gray-500">
                         <AlertTriangle className="h-8 w-8 text-amber-500 mb-2" />
                         <p className="text-sm font-semibold">Promote From Account Required</p>
@@ -5475,7 +5619,7 @@ export default function TikTokAdCreationForm({
                       <TikTokPostSelectorInline
                         advertiserId={selectedAdvertiser}
                         identityId={selectedIdentity}
-                        identityObj={identities.find(i => i.identity_id === selectedIdentity) || null}
+                        identityObj={identities.find((i) => i.identity_id === selectedIdentity) || null}
                         onImport={setImportedPosts}
                         importedPosts={importedPosts}
                       />
@@ -5490,7 +5634,7 @@ export default function TikTokAdCreationForm({
               {/* 3. Ad Name */}
               <div id="adName" className="space-y-1">
                 <Label htmlFor="adName" className="flex items-center justify-between w-full">
-                  <div className={cn("flex items-center gap-2", adType === 'SPARK' && "opacity-50")}>
+                  <div className={cn("flex items-center gap-2", adType === "SPARK" && "opacity-50")}>
                     {renderDiffMark("adNameFormulaV2")}
                     <LabelIcon className="w-4 h-4" />
                     <span className="font-semibold text-sm">Ad Name</span>
@@ -5500,11 +5644,11 @@ export default function TikTokAdCreationForm({
                       type="button"
                       size="sm"
                       variant="outline"
-                      disabled={adType === 'SPARK'}
+                      disabled={adType === "SPARK"}
                       onClick={() => navigate(`/tiktok-settings?tab=tiktok&advertiser=${selectedAdvertiser}`)}
                       className={cn(
                         "text-xs px-3 pl-2 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900 ml-auto",
-                        adType === 'SPARK' && "opacity-50 cursor-not-allowed bg-zinc-700 hover:bg-zinc-700 hover:text-white"
+                        adType === "SPARK" && "opacity-50 cursor-not-allowed bg-zinc-700 hover:bg-zinc-700 hover:text-white",
                       )}
                       title="Configure ad name formula in settings"
                     >
@@ -5521,30 +5665,22 @@ export default function TikTokAdCreationForm({
                   }}
                   variant="home"
                   customVariables={advertiserPrefs?.customVariables || []}
-                  disabled={adType === 'SPARK'}
+                  disabled={adType === "SPARK"}
                 />
                 <div className="mt-1">
-                  <Label className={cn("text-xs text-gray-500", adType === 'SPARK' && "opacity-50")}>
-                    Ad Name Preview: {
-                      adType === 'SPARK'
-                        ? "Not applicable for Spark Ads"
-                        : (files?.length > 0 || videoFile || driveFiles?.length > 0 || dropboxFiles?.length > 0)
-                          ? computeAdNameFromFormula(
-                            files[0] || videoFile || driveFiles[0] || dropboxFiles[0],
-                            0,
-                            landingUrl,
-                            null,
-                            adType
-                          )
-                          : "Upload a file to see example"
-                    }
+                  <Label className={cn("text-xs text-gray-500", adType === "SPARK" && "opacity-50")}>
+                    Ad Name Preview:{" "}
+                    {adType === "SPARK"
+                      ? "Not applicable for Spark Ads"
+                      : files?.length > 0 || videoFile || driveFiles?.length > 0 || dropboxFiles?.length > 0
+                        ? computeAdNameFromFormula(files[0] || videoFile || driveFiles[0] || dropboxFiles[0], 0, landingUrl, null, adType)
+                        : "Upload a file to see example"}
                   </Label>
                 </div>
-
               </div>
 
               {/* 4. Ad Copy / Caption with template picker */}
-              {adType !== 'SPARK' && (
+              {adType !== "SPARK" && (
                 <div className="space-y-4">
                   <div className="space-y-3">
                     <div className="space-y-2">
@@ -5633,16 +5769,19 @@ export default function TikTokAdCreationForm({
                       </div>
 
                       {/* Popover Template Dropdown - Meta styled */}
-                      <Popover open={templateDropdownOpen} onOpenChange={(open) => {
-                        setTemplateDropdownOpen(open);
-                        if (!open) {
-                          setTemplateSearch("");
-                          setShowSortMenu(false);
-                          if (bulkDeleteMode && selectedForDelete.size === 0) {
-                            setBulkDeleteMode(false);
+                      <Popover
+                        open={templateDropdownOpen}
+                        onOpenChange={(open) => {
+                          setTemplateDropdownOpen(open);
+                          if (!open) {
+                            setTemplateSearch("");
+                            setShowSortMenu(false);
+                            if (bulkDeleteMode && selectedForDelete.size === 0) {
+                              setBulkDeleteMode(false);
+                            }
                           }
-                        }
-                      }}>
+                        }}
+                      >
                         <PopoverTrigger asChild>
                           <Button
                             variant="outline"
@@ -5680,7 +5819,7 @@ export default function TikTokAdCreationForm({
                                 <div className="relative">
                                   <button
                                     type="button"
-                                    className={`p-1.5 rounded-lg transition-colors ${showSortMenu ? 'bg-gray-100' : 'hover:bg-gray-100'}`}
+                                    className={`p-1.5 rounded-lg transition-colors ${showSortMenu ? "bg-gray-100" : "hover:bg-gray-100"}`}
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       setShowSortMenu(!showSortMenu);
@@ -5708,12 +5847,8 @@ export default function TikTokAdCreationForm({
                                               setShowSortMenu(false);
                                             }}
                                           >
-                                            <span className="flex items-center gap-1.5">
-                                              {option.label}
-                                            </span>
-                                            {sortMode === option.value && (
-                                              <Check className="h-3.5 w-3.5 text-blue-500" />
-                                            )}
+                                            <span className="flex items-center gap-1.5">{option.label}</span>
+                                            {sortMode === option.value && <Check className="h-3.5 w-3.5 text-blue-500" />}
                                           </button>
                                         ))}
                                       </div>
@@ -5737,7 +5872,7 @@ export default function TikTokAdCreationForm({
                                 ) : (
                                   <button
                                     type="button"
-                                    className={`p-1.5 rounded-lg transition-colors ${bulkDeleteMode ? 'bg-red-50 text-red-500' : 'hover:bg-gray-100'}`}
+                                    className={`p-1.5 rounded-lg transition-colors ${bulkDeleteMode ? "bg-red-50 text-red-500" : "hover:bg-gray-100"}`}
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       if (bulkDeleteMode) {
@@ -5749,11 +5884,7 @@ export default function TikTokAdCreationForm({
                                     }}
                                     title={bulkDeleteMode ? "Cancel delete" : "Delete templates"}
                                   >
-                                    {bulkDeleteMode ? (
-                                      <X className="h-3.5 w-3.5" />
-                                    ) : (
-                                      <Trash2 className="h-3.5 w-3.5 text-gray-500" />
-                                    )}
+                                    {bulkDeleteMode ? <X className="h-3.5 w-3.5" /> : <Trash2 className="h-3.5 w-3.5 text-gray-500" />}
                                   </button>
                                 )}
                               </div>
@@ -5769,9 +5900,7 @@ export default function TikTokAdCreationForm({
                                     } else {
                                       setSelectedTemplate(name);
                                       // Restore all texts from template (multi-text support)
-                                      const loadedTexts = data.texts && data.texts.length > 0
-                                        ? data.texts
-                                        : [data.text || ""];
+                                      const loadedTexts = data.texts && data.texts.length > 0 ? data.texts : [data.text || ""];
                                       setAdTexts(loadedTexts);
                                       setTemplateDropdownOpen(false);
                                       setTemplateSearch("");
@@ -5788,13 +5917,9 @@ export default function TikTokAdCreationForm({
                                     )}
                                     <span className="text-sm truncate flex-1">{name}</span>
                                     {name === defaultTemplateName && (
-                                      <span className="ml-2 text-[10px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded-lg shrink-0">
-                                        Default
-                                      </span>
+                                      <span className="ml-2 text-[10px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded-lg shrink-0">Default</span>
                                     )}
-                                    {!bulkDeleteMode && name === selectedTemplate && (
-                                      <Check className="h-4 w-4 text-blue-500 shrink-0" />
-                                    )}
+                                    {!bulkDeleteMode && name === selectedTemplate && <Check className="h-4 w-4 text-blue-500 shrink-0" />}
                                   </div>
                                 </CommandItem>
                               ))}
@@ -5810,7 +5935,7 @@ export default function TikTokAdCreationForm({
                     <Label className="flex items-center gap-1.5">
                       {renderDiffMark("adTexts")}
                       <span className="font-semibold text-sm">Ad Text</span>
-                      {adType === 'SPARK' && <span className="text-gray-400 font-normal text-xs">(Optional)</span>}
+                      {adType === "SPARK" && <span className="text-gray-400 font-normal text-xs">(Optional)</span>}
                     </Label>
 
                     <div className="space-y-2 mb-0">
@@ -5822,7 +5947,7 @@ export default function TikTokAdCreationForm({
                               {isSmartCampaign && i > 0 && (
                                 <button
                                   type="button"
-                                  onClick={() => setAdTexts(prev => prev.filter((_, idx) => idx !== i))}
+                                  onClick={() => setAdTexts((prev) => prev.filter((_, idx) => idx !== i))}
                                   className="text-zinc-400 hover:text-red-500 transition-colors"
                                   title="Remove this text"
                                 >
@@ -5832,16 +5957,14 @@ export default function TikTokAdCreationForm({
                             </div>
                             <TextareaAutosize
                               value={text || ""}
-                              onChange={(e) => setAdTexts(prev => prev.map((t, idx) => idx === i ? e.target.value : t))}
+                              onChange={(e) => setAdTexts((prev) => prev.map((t, idx) => (idx === i ? e.target.value : t)))}
                               placeholder={i === 0 ? "Add text option" : `Text option ${i + 1}`}
                               minRows={2}
                               maxRows={8}
                               className={`${formTextareaChrome} ${(text || "").length > 100 ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]" : ""}`}
-                              style={{ scrollbarWidth: 'thin', scrollbarColor: '#e5e7eb transparent' }}
+                              style={{ scrollbarWidth: "thin", scrollbarColor: "#e5e7eb transparent" }}
                             />
-                            {(text || "").length > 100 && (
-                              <p className="text-xs text-red-500 font-medium mt-1">Text cannot exceed 100 characters</p>
-                            )}
+                            {(text || "").length > 100 && <p className="text-xs text-red-500 font-medium mt-1">Text cannot exceed 100 characters</p>}
                           </div>
                         </div>
                       ))}
@@ -5851,29 +5974,29 @@ export default function TikTokAdCreationForm({
                           type="button"
                           size="sm"
                           className="w-full rounded-xl shadow bg-zinc-600 hover:bg-black text-white mt-2"
-                          onClick={() => setAdTexts(prev => [...prev, ""])}
+                          onClick={() => setAdTexts((prev) => [...prev, ""])}
                         >
                           <Plus className="mr-2 h-4 w-4 text-white" />
                           Add text option
                         </Button>
                       )}
 
-                      {isSmartCampaign && selectedCampaign && selectedCampaign.some(campId => {
-                        const c = campaigns.find(x => x.campaign_id === campId);
-                        if (!c) return false;
-                        return !(
-                          c.is_smart_performance_campaign === true ||
-                          c.is_smart_performance_campaign === "true" ||
-                          c.is_smart_performance_campaign === 1 ||
-                          c.campaign_automation_type === "UPGRADED_SMART_PLUS" ||
-                          c.campaign_automation_type === "SMART_PLUS" ||
-                          c.campaign_automation_type === "SMART_PERFORMANCE_CAMPAIGN" ||
-                          c.is_smart === true ||
-                          c.is_smart === "true"
-                        );
-                      }) && (
-                          <p className="text-[10px] text-zinc-400 mt-1">For manual ads the first text will be applied</p>
-                        )}
+                      {isSmartCampaign &&
+                        selectedCampaign &&
+                        selectedCampaign.some((campId) => {
+                          const c = campaigns.find((x) => x.campaign_id === campId);
+                          if (!c) return false;
+                          return !(
+                            c.is_smart_performance_campaign === true ||
+                            c.is_smart_performance_campaign === "true" ||
+                            c.is_smart_performance_campaign === 1 ||
+                            c.campaign_automation_type === "UPGRADED_SMART_PLUS" ||
+                            c.campaign_automation_type === "SMART_PLUS" ||
+                            c.campaign_automation_type === "SMART_PERFORMANCE_CAMPAIGN" ||
+                            c.is_smart === true ||
+                            c.is_smart === "true"
+                          );
+                        }) && <p className="text-[10px] text-zinc-400 mt-1">For manual ads the first text will be applied</p>}
                     </div>
                   </div>
                 </div>
@@ -5881,7 +6004,6 @@ export default function TikTokAdCreationForm({
 
               {/* 5. Call to Action & Landing Page URL Stacked */}
               <div className="space-y-4">
-
                 {/* Landing URL Selector */}
                 {!areAllSelectedAdGroupsShopping && (
                   <div className="space-y-2">
@@ -5896,32 +6018,36 @@ export default function TikTokAdCreationForm({
                         <button
                           type="button"
                           onClick={() => {
-                            if (urlMode !== 'WEBSITE') {
-                              setUrlMode('WEBSITE');
+                            if (urlMode !== "WEBSITE") {
+                              setUrlMode("WEBSITE");
                             }
                           }}
-                          className={cn("px-2 py-1 text-[10px] font-bold rounded-lg transition-all", urlMode === 'WEBSITE' ? "bg-white shadow-sm text-zinc-900" : "text-gray-400")}
+                          className={cn(
+                            "px-2 py-1 text-[10px] font-bold rounded-lg transition-all",
+                            urlMode === "WEBSITE" ? "bg-white shadow-sm text-zinc-900" : "text-gray-400",
+                          )}
                         >
                           Website
                         </button>
                         <button
                           type="button"
                           onClick={() => {
-                            if (urlMode !== 'INSTANT_PAGE') {
-                              setUrlMode('INSTANT_PAGE');
+                            if (urlMode !== "INSTANT_PAGE") {
+                              setUrlMode("INSTANT_PAGE");
                             }
                           }}
-                          className={cn("px-2 py-1 text-[10px] font-bold rounded-lg transition-all", urlMode === 'INSTANT_PAGE' ? "bg-white shadow-sm text-zinc-900" : "text-gray-400")}
+                          className={cn(
+                            "px-2 py-1 text-[10px] font-bold rounded-lg transition-all",
+                            urlMode === "INSTANT_PAGE" ? "bg-white shadow-sm text-zinc-900" : "text-gray-400",
+                          )}
                         >
                           Instant Page
                         </button>
                       </div>
                     </div>
-                    <p className="text-gray-500 text-[12px] font-regular mt-0.5 mb-0">
-                      Your UTMs will be auto applied from Preferences
-                    </p>
+                    <p className="text-gray-500 text-[12px] font-regular mt-0.5 mb-0">Your UTMs will be auto applied from Preferences</p>
 
-                    {urlMode === 'WEBSITE' ? (
+                    {urlMode === "WEBSITE" ? (
                       <div className="space-y-3">
                         {!showCustomLink && advertiserPrefs?.links?.length > 0 && (
                           <Select
@@ -5944,9 +6070,7 @@ export default function TikTokAdCreationForm({
                                     <span className="truncate max-w-[650px]">{linkObj.url}</span>
 
                                     {linkObj.isDefault && (
-                                      <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-lg flex-shrink-0">
-                                        Default
-                                      </span>
+                                      <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-lg flex-shrink-0">Default</span>
                                     )}
                                   </div>
                                 </SelectItem>
@@ -5993,7 +6117,7 @@ export default function TikTokAdCreationForm({
                                     if (!checked) {
                                       // Going back to dropdown — clear custom input and restore the dropdown selection
                                       setCustomLink("");
-                                      const defaultLink = advertiserPrefs.links.find(l => l.isDefault) || advertiserPrefs.links[0];
+                                      const defaultLink = advertiserPrefs.links.find((l) => l.isDefault) || advertiserPrefs.links[0];
                                       setLandingUrl(defaultLink?.url || "");
                                     } else {
                                       // Entering custom mode — clear landingUrl so user starts fresh
@@ -6011,32 +6135,30 @@ export default function TikTokAdCreationForm({
                           </div>
                         </div>
 
-
-                        {!areAllSelectedAdGroupsShopping && landingUrl && landingUrl.trim() && (() => {
-                          let urlError = "Link (URL) must start with https://";
-                          const urlString = landingUrl.trim();
-                          if (/^https:\/\//i.test(urlString)) {
-                            try {
-                              const urlObj = new URL(urlString);
-                              if (urlObj.hostname.includes('.')) {
-                                return null;
-                              } else {
-                                urlError = "Invalid Link (URL)";
+                        {!areAllSelectedAdGroupsShopping &&
+                          landingUrl &&
+                          landingUrl.trim() &&
+                          (() => {
+                            let urlError = "Link (URL) must start with https://";
+                            const urlString = landingUrl.trim();
+                            if (/^https:\/\//i.test(urlString)) {
+                              try {
+                                const urlObj = new URL(urlString);
+                                if (urlObj.hostname.includes(".")) {
+                                  return null;
+                                } else {
+                                  urlError = "Invalid Link (URL)";
+                                }
+                              } catch (_) {
+                                urlError = "Link (URL) must be a complete and valid URL";
                               }
-                            } catch (_) {
-                              urlError = "Link (URL) must be a complete and valid URL";
                             }
-                          }
-                          return <p className="text-xs text-red-500 font-medium mt-1">{urlError}</p>;
-                        })()}
+                            return <p className="text-xs text-red-500 font-medium mt-1">{urlError}</p>;
+                          })()}
                       </div>
                     ) : (
                       <div className="space-y-3">
-                        <Select
-                          value={landingUrl || ""}
-                          onValueChange={(value) => setLandingUrl(value)}
-                          disabled={!advertiserId || loadingPages}
-                        >
+                        <Select value={landingUrl || ""} onValueChange={(value) => setLandingUrl(value)} disabled={!advertiserId || loadingPages}>
                           <SelectTrigger className={cn("w-full", formFieldChrome)}>
                             <SelectValue placeholder={loadingPages ? "Loading Instant Pages..." : "Select an Instant Page"} />
                           </SelectTrigger>
@@ -6060,7 +6182,6 @@ export default function TikTokAdCreationForm({
                         </Select>
                       </div>
                     )}
-
                   </div>
                 )}
 
@@ -6080,13 +6201,19 @@ export default function TikTokAdCreationForm({
                       >
                         <span className="text-sm truncate">
                           {Array.isArray(cta) && cta.length > 0
-                            ? cta.map(v => CTA_OPTIONS.find(o => o.value === v)?.label || v).join(", ")
+                            ? cta.map((v) => CTA_OPTIONS.find((o) => o.value === v)?.label || v).join(", ")
                             : "Select a CTA"}
                         </span>
                         <ChevronsUpDown className="w-4 h-4 opacity-50 shrink-0" />
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="p-0 bg-white rounded-2xl shadow-xl border border-gray-100" align="start" side="bottom" avoidCollisions={false} style={{ width: 'var(--radix-popover-trigger-width)' }}>
+                    <PopoverContent
+                      className="p-0 bg-white rounded-2xl shadow-xl border border-gray-100"
+                      align="start"
+                      side="bottom"
+                      avoidCollisions={false}
+                      style={{ width: "var(--radix-popover-trigger-width)" }}
+                    >
                       <Command>
                         <CommandList className="max-h-[220px] overflow-y-auto rounded-2xl custom-scrollbar">
                           <CommandGroup>
@@ -6098,14 +6225,14 @@ export default function TikTokAdCreationForm({
                                   value={opt.value}
                                   onSelect={() => {
                                     const prev = Array.isArray(cta) ? cta : [];
-                                    const next = prev.includes(opt.value)
-                                      ? prev.filter(v => v !== opt.value)
-                                      : [...prev, opt.value];
+                                    const next = prev.includes(opt.value) ? prev.filter((v) => v !== opt.value) : [...prev, opt.value];
                                     setCta(next);
                                   }}
                                   className="flex items-center gap-2 p-2 rounded-xl hover:bg-gray-50 cursor-pointer"
                                 >
-                                  <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${isSelected ? "bg-black border-black text-white" : "border-gray-200"}`}>
+                                  <div
+                                    className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${isSelected ? "bg-black border-black text-white" : "border-gray-200"}`}
+                                  >
                                     {isSelected && <Check className="w-3 h-3" />}
                                   </div>
                                   <span className="text-sm font-medium">{opt.label}</span>
@@ -6117,9 +6244,7 @@ export default function TikTokAdCreationForm({
                       </Command>
                     </PopoverContent>
                   </Popover>
-                  {(!cta || cta.length === 0) && (
-                    <p className="text-xs text-red-500 font-medium mt-1">Please select at least one Call to Action</p>
-                  )}
+                  {(!cta || cta.length === 0) && <p className="text-xs text-red-500 font-medium mt-1">Please select at least one Call to Action</p>}
                 </div>
               </div>
 
@@ -6132,9 +6257,7 @@ export default function TikTokAdCreationForm({
                       <BookOpen className="w-4 h-4" />
                       Product Information
                     </Label>
-                    <span className="text-xs text-gray-500 leading-relaxed">
-                      Select a product to promote from the auto-selected catalog.
-                    </span>
+                    <span className="text-xs text-gray-500 leading-relaxed">Select a product to promote from the auto-selected catalog.</span>
                   </div>
 
                   {/* Catalog Selection (Locked/Read-Only) */}
@@ -6146,9 +6269,7 @@ export default function TikTokAdCreationForm({
                       disabled={true}
                       className="w-full justify-between border border-gray-300 rounded-2xl bg-gray-50 shadow flex items-center px-3 py-4.5 cursor-not-allowed opacity-90 text-left"
                     >
-                      <span className="text-sm font-medium text-gray-700 truncate">
-                        {formCatalogName || `Catalog ${formCatalogId}`}
-                      </span>
+                      <span className="text-sm font-medium text-gray-700 truncate">{formCatalogName || `Catalog ${formCatalogId}`}</span>
                     </Button>
                   </div>
 
@@ -6156,10 +6277,13 @@ export default function TikTokAdCreationForm({
                   {formCatalogId && (
                     <div className="space-y-1">
                       <Label className="text-xs font-semibold text-gray-700">Product</Label>
-                      <Popover open={openFormProduct} onOpenChange={(open) => {
-                        setOpenFormProduct(open);
-                        if (!open) setFormProductSearch("");
-                      }}>
+                      <Popover
+                        open={openFormProduct}
+                        onOpenChange={(open) => {
+                          setOpenFormProduct(open);
+                          if (!open) setFormProductSearch("");
+                        }}
+                      >
                         <PopoverTrigger asChild>
                           <Button
                             variant="outline"
@@ -6180,9 +6304,7 @@ export default function TikTokAdCreationForm({
                                     className="w-6 h-6 rounded-full object-cover shrink-0 border border-gray-100 font-normal"
                                   />
                                 )}
-                                <span className="text-sm font-medium text-gray-900 truncate">
-                                  {selectedProductsLabel}
-                                </span>
+                                <span className="text-sm font-medium text-gray-900 truncate">{selectedProductsLabel}</span>
                               </div>
                             )}
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -6209,7 +6331,7 @@ export default function TikTokAdCreationForm({
                             </div>
                             <div className="max-h-[360px] overflow-y-auto rounded-xl p-1">
                               {(() => {
-                                const filtered = formCatalogProducts.filter(prod => {
+                                const filtered = formCatalogProducts.filter((prod) => {
                                   const name = (prod.product_name || "").toLowerCase();
                                   const id = String(prod.product_id || "").toLowerCase();
                                   const q = formProductSearch.toLowerCase();
@@ -6218,7 +6340,7 @@ export default function TikTokAdCreationForm({
                                 if (filtered.length === 0) {
                                   return (
                                     <div className="py-6 text-center text-xs text-gray-500">
-                                      {formCatalogProducts.length === 0 ? 'No products in this catalog.' : 'No results.'}
+                                      {formCatalogProducts.length === 0 ? "No products in this catalog." : "No results."}
                                     </div>
                                   );
                                 }
@@ -6229,20 +6351,26 @@ export default function TikTokAdCreationForm({
                                         type="button"
                                         key={prod.product_id}
                                         onClick={() => {
-                                          setFormProductId(prev => {
-                                            const current = Array.isArray(prev) ? prev : (prev ? [prev] : []);
+                                          setFormProductId((prev) => {
+                                            const current = Array.isArray(prev) ? prev : prev ? [prev] : [];
                                             return current.includes(prod.product_id)
-                                              ? current.filter(id => id !== prod.product_id)
+                                              ? current.filter((id) => id !== prod.product_id)
                                               : [...current, prod.product_id];
                                           });
                                         }}
                                         className={cn(
                                           "w-full text-left px-3 py-2 cursor-pointer rounded-xl transition-colors duration-150 hover:bg-gray-100 flex items-center gap-3",
-                                          (Array.isArray(formProductId) ? formProductId.includes(prod.product_id) : formProductId === prod.product_id) ? "bg-gray-50 font-medium" : ""
+                                          (Array.isArray(formProductId) ? formProductId.includes(prod.product_id) : formProductId === prod.product_id)
+                                            ? "bg-gray-50 font-medium"
+                                            : "",
                                         )}
                                       >
-                                        <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${(Array.isArray(formProductId) ? formProductId.includes(prod.product_id) : formProductId === prod.product_id) ? "bg-black border-black text-white" : "border-gray-200"}`}>
-                                          {(Array.isArray(formProductId) ? formProductId.includes(prod.product_id) : formProductId === prod.product_id) && <Check className="w-3 h-3 text-white" />}
+                                        <div
+                                          className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${(Array.isArray(formProductId) ? formProductId.includes(prod.product_id) : formProductId === prod.product_id) ? "bg-black border-black text-white" : "border-gray-200"}`}
+                                        >
+                                          {(Array.isArray(formProductId)
+                                            ? formProductId.includes(prod.product_id)
+                                            : formProductId === prod.product_id) && <Check className="w-3 h-3 text-white" />}
                                         </div>
                                         {prod.image_url && (
                                           <img
@@ -6254,7 +6382,9 @@ export default function TikTokAdCreationForm({
                                         <div className="flex-1 min-w-0">
                                           <p className="text-sm font-semibold text-gray-900 truncate">{prod.product_name}</p>
                                           {prod.price && (
-                                            <p className="text-xs text-gray-400">{prod.price} {prod.currency}</p>
+                                            <p className="text-xs text-gray-400">
+                                              {prod.price} {prod.currency}
+                                            </p>
                                           )}
                                         </div>
                                       </button>
@@ -6281,9 +6411,7 @@ export default function TikTokAdCreationForm({
                         <Store className="w-4 h-4" />
                         Showcase Product Information
                       </Label>
-                      <span className="text-xs text-gray-500 leading-relaxed">
-                        Select a showcase product to promote.
-                      </span>
+                      <span className="text-xs text-gray-500 leading-relaxed">Select a showcase product to promote.</span>
                     </div>
                     <button
                       type="button"
@@ -6298,10 +6426,13 @@ export default function TikTokAdCreationForm({
 
                   {/* Showcase Product Selection */}
                   <div className="space-y-1">
-                    <Popover open={openFormStoreProduct} onOpenChange={(open) => {
-                      setOpenFormStoreProduct(open);
-                      if (!open) setFormStoreProductSearch("");
-                    }}>
+                    <Popover
+                      open={openFormStoreProduct}
+                      onOpenChange={(open) => {
+                        setOpenFormStoreProduct(open);
+                        if (!open) setFormStoreProductSearch("");
+                      }}
+                    >
                       <PopoverTrigger asChild>
                         <Button
                           variant="outline"
@@ -6322,9 +6453,7 @@ export default function TikTokAdCreationForm({
                                   className="w-6 h-6 rounded-full object-cover shrink-0 border border-gray-100 font-normal"
                                 />
                               )}
-                              <span className="text-sm font-medium text-gray-900 truncate">
-                                {selectedStoreProductsLabel}
-                              </span>
+                              <span className="text-sm font-medium text-gray-900 truncate">{selectedStoreProductsLabel}</span>
                             </div>
                           )}
                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -6351,7 +6480,7 @@ export default function TikTokAdCreationForm({
                           </div>
                           <div className="max-h-[360px] overflow-y-auto rounded-xl p-1">
                             {(() => {
-                              const filtered = formStoreProducts.filter(prod => {
+                              const filtered = formStoreProducts.filter((prod) => {
                                 const name = (prod.title || "").toLowerCase();
                                 const id = String(prod.item_group_id || "").toLowerCase();
                                 const q = formStoreProductSearch.toLowerCase();
@@ -6360,7 +6489,7 @@ export default function TikTokAdCreationForm({
                               if (filtered.length === 0) {
                                 return (
                                   <div className="py-6 text-center text-xs text-gray-500">
-                                    {formStoreProducts.length === 0 ? 'No showcase products found.' : 'No results.'}
+                                    {formStoreProducts.length === 0 ? "No showcase products found." : "No results."}
                                   </div>
                                 );
                               }
@@ -6371,8 +6500,8 @@ export default function TikTokAdCreationForm({
                                       type="button"
                                       key={prod.item_group_id}
                                       onClick={() => {
-                                        setFormStoreProductId(prev => {
-                                          const current = Array.isArray(prev) ? prev : (prev ? [prev] : []);
+                                        setFormStoreProductId((prev) => {
+                                          const current = Array.isArray(prev) ? prev : prev ? [prev] : [];
                                           const isSelected = current.includes(prod.item_group_id);
                                           if (isSelected) {
                                             if (current.length <= 1) {
@@ -6381,9 +6510,7 @@ export default function TikTokAdCreationForm({
                                           } else {
                                             setFormStoreProductName(prod.title || null);
                                           }
-                                          return isSelected
-                                            ? current.filter(id => id !== prod.item_group_id)
-                                            : [...current, prod.item_group_id];
+                                          return isSelected ? current.filter((id) => id !== prod.item_group_id) : [...current, prod.item_group_id];
                                         });
                                         if (prod.store_id) {
                                           setFormStoreId(prod.store_id);
@@ -6391,11 +6518,21 @@ export default function TikTokAdCreationForm({
                                       }}
                                       className={cn(
                                         "w-full text-left px-3 py-2 cursor-pointer rounded-xl transition-colors duration-150 hover:bg-gray-100 flex items-center gap-3",
-                                        (Array.isArray(formStoreProductId) ? formStoreProductId.includes(prod.item_group_id) : formStoreProductId === prod.item_group_id) ? "bg-gray-50 font-medium" : ""
+                                        (
+                                          Array.isArray(formStoreProductId)
+                                            ? formStoreProductId.includes(prod.item_group_id)
+                                            : formStoreProductId === prod.item_group_id
+                                        )
+                                          ? "bg-gray-50 font-medium"
+                                          : "",
                                       )}
                                     >
-                                      <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${(Array.isArray(formStoreProductId) ? formStoreProductId.includes(prod.item_group_id) : formStoreProductId === prod.item_group_id) ? "bg-black border-black text-white" : "border-gray-200"}`}>
-                                        {(Array.isArray(formStoreProductId) ? formStoreProductId.includes(prod.item_group_id) : formStoreProductId === prod.item_group_id) && <Check className="w-3 h-3 text-white" />}
+                                      <div
+                                        className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${(Array.isArray(formStoreProductId) ? formStoreProductId.includes(prod.item_group_id) : formStoreProductId === prod.item_group_id) ? "bg-black border-black text-white" : "border-gray-200"}`}
+                                      >
+                                        {(Array.isArray(formStoreProductId)
+                                          ? formStoreProductId.includes(prod.item_group_id)
+                                          : formStoreProductId === prod.item_group_id) && <Check className="w-3 h-3 text-white" />}
                                       </div>
                                       {prod.product_image_url && (
                                         <img
@@ -6407,7 +6544,9 @@ export default function TikTokAdCreationForm({
                                       <div className="flex-1 min-w-0">
                                         <p className="text-sm font-semibold text-gray-900 truncate">{prod.title}</p>
                                         {prod.min_price && (
-                                          <p className="text-xs text-gray-400">{prod.min_price} {prod.currency}</p>
+                                          <p className="text-xs text-gray-400">
+                                            {prod.min_price} {prod.currency}
+                                          </p>
                                         )}
                                       </div>
                                     </button>
@@ -6424,9 +6563,9 @@ export default function TikTokAdCreationForm({
               )}
 
               {/* 6. Media Section or Spark Info Card */}
-              {adType !== 'SPARK' && (
+              {adType !== "SPARK" && (
                 <div>
-                  {(
+                  {
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
                         <Label className="flex items-center gap-2">
@@ -6438,47 +6577,40 @@ export default function TikTokAdCreationForm({
                             <Button
                               type="button"
                               size="sm"
-                              className={cn(
-                                "h-9 px-3 flex items-center gap-1.5 text-black hover:bg-white border !border-gray-200",
-                                formFieldChrome
-                              )}
+                              className={cn("h-9 px-3 flex items-center gap-1.5 text-black hover:bg-white border !border-gray-200", formFieldChrome)}
                             >
                               <CloudUpload className="h-4 w-4" />
                               Manage Upload Sources
                             </Button>
                           </PopoverTrigger>
-                          <PopoverContent align="end" side="bottom" avoidCollisions={false} className="bg-white rounded-xl p-2 w-64 border border-gray-200 shadow-lg">
+                          <PopoverContent
+                            align="end"
+                            side="bottom"
+                            avoidCollisions={false}
+                            className="bg-white rounded-xl p-2 w-64 border border-gray-200 shadow-lg"
+                          >
                             <div className="flex flex-col">
                               {UPLOAD_SOURCE_OPTIONS.map((src) => {
-                                const checked = uploadSources.includes(src.id)
+                                const checked = uploadSources.includes(src.id);
                                 return (
-                                  <label
-                                    key={src.id}
-                                    className="flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer hover:bg-gray-100"
-                                  >
-                                    <Checkbox
-                                      checked={checked}
-                                      onCheckedChange={() => toggleUploadSource(src.id)}
-                                    />
-                                    <img
-                                      src={src.icon}
-                                      alt=""
-                                      className={'h-4 w-4 object-contain'}
-                                    />
+                                  <label key={src.id} className="flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer hover:bg-gray-100">
+                                    <Checkbox checked={checked} onCheckedChange={() => toggleUploadSource(src.id)} />
+                                    <img src={src.icon} alt="" className={"h-4 w-4 object-contain"} />
                                     <span className="text-sm text-gray-800">{src.compactLabel}</span>
                                   </label>
-                                )
+                                );
                               })}
                             </div>
                           </PopoverContent>
                         </Popover>
                       </div>
 
-                      {uploadSources.includes('local') && (
+                      {uploadSources.includes("local") && (
                         <div
                           {...getRootProps()}
-                          className={`group cursor-pointer border-2 border-dashed rounded-2xl p-6 text-center transition-colors ${isDragActive ? "border-primary bg-primary/5" : "border-gray-300 hover:border-primary/50"
-                            }`}
+                          className={`group cursor-pointer border-2 border-dashed rounded-2xl p-6 text-center transition-colors ${
+                            isDragActive ? "border-primary bg-primary/5" : "border-gray-300 hover:border-primary/50"
+                          }`}
                         >
                           <input {...getInputProps()} />
                           <div className="flex flex-col items-center gap-2">
@@ -6486,9 +6618,7 @@ export default function TikTokAdCreationForm({
                             {isDragActive ? (
                               <p className="text-sm text-gray-500 group-hover:text-black">Drop files here ...</p>
                             ) : (
-                              <p className="text-sm text-gray-500 group-hover:text-black">
-                                Drag & drop files here, or click to select files
-                              </p>
+                              <p className="text-sm text-gray-500 group-hover:text-black">Drag & drop files here, or click to select files</p>
                             )}
                           </div>
                         </div>
@@ -6496,23 +6626,21 @@ export default function TikTokAdCreationForm({
 
                       {/* Cloud Source Buttons */}
                       {(() => {
-                        const rowSources = uploadSources.filter((s) => s !== 'local')
-                        if (rowSources.length === 0) return null
+                        const rowSources = uploadSources.filter((s) => s !== "local");
+                        if (rowSources.length === 0) return null;
 
-                        const hasFastUploadSource = rowSources.some((id) =>
-                          ['drive', 'dropbox'].includes(id)
-                        );
+                        const hasFastUploadSource = rowSources.some((id) => ["drive", "dropbox"].includes(id));
 
                         return (
                           <div className="space-y-1">
                             <div className={cn("grid gap-2", rowSources.length === 1 ? "grid-cols-1" : "grid-cols-2")}>
                               {rowSources.map((id) => {
-                                const src = UPLOAD_SOURCE_OPTIONS.find((o) => o.id === id)
-                                if (!src) return null
+                                const src = UPLOAD_SOURCE_OPTIONS.find((o) => o.id === id);
+                                if (!src) return null;
 
-                                let onClick
-                                if (id === 'drive') onClick = handleDriveClick
-                                else if (id === 'dropbox') onClick = handleDropboxClick
+                                let onClick;
+                                if (id === "drive") onClick = handleDriveClick;
+                                else if (id === "dropbox") onClick = handleDropboxClick;
 
                                 return (
                                   <Button
@@ -6522,28 +6650,25 @@ export default function TikTokAdCreationForm({
                                     className="bg-black hover:bg-zinc-800 text-white rounded-2xl h-[48px] flex items-center justify-center gap-2 px-3 transition-all active:scale-95"
                                   >
                                     <img
-                                      src={typeof src.icon === 'string' ? src.icon : undefined}
+                                      src={typeof src.icon === "string" ? src.icon : undefined}
                                       alt={src.name}
                                       className="h-4 w-4 object-contain"
-                                      style={typeof src.icon !== 'string' ? { display: 'none' } : {}}
+                                      style={typeof src.icon !== "string" ? { display: "none" } : {}}
                                     />
-                                    {typeof src.icon === 'function' && <src.icon className="h-4 w-4" />}
+                                    {typeof src.icon === "function" && <src.icon className="h-4 w-4" />}
                                     <span className="truncate text-xs font-semibold">{src.fullLabel}</span>
                                   </Button>
-                                )
+                                );
                               })}
                             </div>
                             {hasFastUploadSource && (
-                              <p className="px-1 text-[11px] leading-tight text-gray-500">
-                                Google Drive/Dropbox files upload 5X faster
-                              </p>
+                              <p className="px-1 text-[11px] leading-tight text-gray-500">Google Drive/Dropbox files upload 5X faster</p>
                             )}
                           </div>
-                        )
+                        );
                       })()}
-
                     </div>
-                  )}
+                  }
                 </div>
               )}
 
@@ -6561,21 +6686,20 @@ export default function TikTokAdCreationForm({
                         Publishing Ads...
                       </div>
                     ) : (
-                      'Publish Ads'
+                      "Publish Ads"
                     )}
                   </Button>
 
                   {!areAllSelectedAdGroupsShopping && (!landingUrl || !landingUrl.trim()) && (
-                    <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
-                      Please provide a link URL
-                    </div>
+                    <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">Please provide a link URL</div>
                   )}
 
-                  {areAllSelectedAdGroupsShopping && (!formStoreProductId || (Array.isArray(formStoreProductId) && formStoreProductId.length === 0)) && (
-                    <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
-                      Please select a showcase product
-                    </div>
-                  )}
+                  {areAllSelectedAdGroupsShopping &&
+                    (!formStoreProductId || (Array.isArray(formStoreProductId) && formStoreProductId.length === 0)) && (
+                      <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                        Please select a showcase product
+                      </div>
+                    )}
 
                   {/* {isIdentityMissing && (
                     <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
@@ -6601,9 +6725,7 @@ export default function TikTokAdCreationForm({
                         <div
                           className={cn(
                             "flex items-center space-x-2 p-2 rounded-xl transition-colors duration-150",
-                            !launchPaused
-                              ? "bg-green-50 border border-green-300"
-                              : "border border-transparent"
+                            !launchPaused ? "bg-green-50 border border-green-300" : "border border-transparent",
                           )}
                         >
                           <RadioGroupItem
@@ -6613,10 +6735,7 @@ export default function TikTokAdCreationForm({
                           />
                           <Label
                             htmlFor="statusActive"
-                            className={cn(
-                              "text-sm font-medium leading-none cursor-pointer",
-                              !launchPaused ? "text-green-600" : "text-gray-600"
-                            )}
+                            className={cn("text-sm font-medium leading-none cursor-pointer", !launchPaused ? "text-green-600" : "text-gray-600")}
                           >
                             Active
                           </Label>
@@ -6625,9 +6744,7 @@ export default function TikTokAdCreationForm({
                         <div
                           className={cn(
                             "flex items-center space-x-2 p-2 rounded-xl transition-colors duration-150",
-                            launchPaused
-                              ? "bg-red-50 border border-red-300"
-                              : "border border-transparent"
+                            launchPaused ? "bg-red-50 border border-red-300" : "border border-transparent",
                           )}
                         >
                           <RadioGroupItem
@@ -6637,10 +6754,7 @@ export default function TikTokAdCreationForm({
                           />
                           <Label
                             htmlFor="statusPaused"
-                            className={cn(
-                              "text-sm font-medium leading-none cursor-pointer",
-                              launchPaused ? "text-red-600" : "text-gray-600"
-                            )}
+                            className={cn("text-sm font-medium leading-none cursor-pointer", launchPaused ? "text-red-600" : "text-gray-600")}
                           >
                             Paused
                           </Label>
@@ -6666,7 +6780,6 @@ export default function TikTokAdCreationForm({
                 </div>
               </div>
             </div>
-
           </CardContent>
         </Card>
 
@@ -6680,205 +6793,179 @@ export default function TikTokAdCreationForm({
         />
 
         {/* FLOATING VARIANT PICKER BAR AT BOTTOM */}
-        {
-          variants.length > 1 && (
-            <TooltipProvider delayDuration={0}>
-              <div className="fixed bottom-6 left-1/2 z-40 flex max-w-[calc(100vw-1rem)] -translate-x-1/2 items-center gap-2 rounded-full border border-black bg-black px-2 py-2 text-white shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-300">
-                <ScrollArea
-                  type="always"
-                  className={cn(
-                    "rounded-full",
-                    shouldScrollVariantPicker && "w-[34rem] max-w-[calc(100vw-9rem)] pb-2"
-                  )}
-                >
-                  <div className="flex w-max items-center gap-1 pr-1">
-                    {variants.map((variant) => {
-                      const isActive = variant.id === activeVariantId
-                      const assignedCount = countFilesForVariant(variant.id)
+        {variants.length > 1 && (
+          <TooltipProvider delayDuration={0}>
+            <div className="fixed bottom-6 left-1/2 z-40 flex max-w-[calc(100vw-1rem)] -translate-x-1/2 items-center gap-2 rounded-full border border-black bg-black px-2 py-2 text-white shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-300">
+              <ScrollArea type="always" className={cn("rounded-full", shouldScrollVariantPicker && "w-[34rem] max-w-[calc(100vw-9rem)] pb-2")}>
+                <div className="flex w-max items-center gap-1 pr-1">
+                  {variants.map((variant) => {
+                    const isActive = variant.id === activeVariantId;
+                    const assignedCount = countFilesForVariant(variant.id);
 
-                      return (
-                        <div key={variant.id} className="group flex shrink-0 items-center">
+                    return (
+                      <div key={variant.id} className="group flex shrink-0 items-center">
+                        <button
+                          type="button"
+                          onClick={() => switchVariant(variant.id)}
+                          className={cn(
+                            "flex items-center gap-2 whitespace-nowrap rounded-full px-3.5 py-2.5 text-sm transition",
+                            isActive ? "bg-zinc-700 text-white" : "text-white/75 hover:bg-white/10 hover:text-white",
+                          )}
+                        >
+                          <VariantDot variantId={variant.id} variants={variants} />
+                          <span className="whitespace-nowrap">{variant.name}</span>
+                          <span className={cn("text-xs whitespace-nowrap", isActive ? "text-white/70" : "text-white/55")}>
+                            · {assignedCount} ad{assignedCount !== 1 ? "s" : ""}
+                          </span>
+                        </button>
+                        {variant.id !== "default" && (
                           <button
                             type="button"
-                            onClick={() => switchVariant(variant.id)}
-                            className={cn(
-                              "flex items-center gap-2 whitespace-nowrap rounded-full px-3.5 py-2.5 text-sm transition",
-                              isActive ? "bg-zinc-700 text-white" : "text-white/75 hover:bg-white/10 hover:text-white"
-                            )}
+                            onClick={() => handleDeleteVariant(variant.id)}
+                            className="ml-0.5 rounded-full p-1 text-white/60 opacity-0 transition group-hover:opacity-100 hover:bg-white/10 hover:text-white"
+                            title="Delete variant"
                           >
-                            <VariantDot variantId={variant.id} variants={variants} />
-                            <span className="whitespace-nowrap">{variant.name}</span>
-                            <span className={cn("text-xs whitespace-nowrap", isActive ? "text-white/70" : "text-white/55")}>
-                              · {assignedCount} ad{assignedCount !== 1 ? "s" : ""}
-                            </span>
+                            <X className="h-3 w-3" />
                           </button>
-                          {variant.id !== 'default' && (
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteVariant(variant.id)}
-                              className="ml-0.5 rounded-full p-1 text-white/60 opacity-0 transition group-hover:opacity-100 hover:bg-white/10 hover:text-white"
-                              title="Delete variant"
-                            >
-                              <X className="h-3 w-3" />
-                            </button>
-                          )}
-                        </div>
-                      )
-                    })}
-                  </div>
-                </ScrollArea>
-                <div className="flex shrink-0 items-center gap-1 border-l border-white/50 pl-2">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button
-                        type="button"
-                        onClick={handleAddVariant}
-                        className="rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white"
-                      >
-                        <Plus className="h-4 w-4" />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent>Add variant</TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button
-                        type="button"
-                        onClick={() => setShowDeleteAllVariantsDialog(true)}
-                        className="rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white"
-                      >
-                        <Trash className="h-4 w-4" />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent>Delete all variants</TooltipContent>
-                  </Tooltip>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
-              </div>
-            </TooltipProvider>
-          )
-        }
-
-      </form >
-
-      {
-        showDeleteAllVariantsDialog && (
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center">
-            <div
-              className="absolute inset-0 bg-black/30"
-              onClick={() => setShowDeleteAllVariantsDialog(false)}
-            />
-            <div
-              className="relative w-[min(26rem,calc(100vw-2rem))] rounded-[32px] border border-gray-200 bg-white p-6 shadow-xl"
-              style={{ animation: 'templateBtnIn 0.2s ease-out forwards' }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="space-y-2">
-                <h3 className="text-lg font-semibold">Delete all variants?</h3>
-                <p className="text-sm text-gray-500">
-                  This will remove every variant and move all assignments back to Default.
-                </p>
-              </div>
-              <div className="mt-4 grid grid-cols-2 gap-3">
-                <Button type="button" variant="outline" className="w-full rounded-xl" onClick={() => setShowDeleteAllVariantsDialog(false)}>
-                  Cancel
-                </Button>
-                <Button
-                  type="button"
-                  variant="destructive"
-                  className="w-full rounded-xl"
-                  onClick={() => {
-                    setShowDeleteAllVariantsDialog(false)
-                    handleDeleteAllVariants()
-                  }}
-                >
-                  Delete All Variants
-                </Button>
+              </ScrollArea>
+              <div className="flex shrink-0 items-center gap-1 border-l border-white/50 pl-2">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={handleAddVariant}
+                      className="rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>Add variant</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={() => setShowDeleteAllVariantsDialog(true)}
+                      className="rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white"
+                    >
+                      <Trash className="h-4 w-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>Delete all variants</TooltipContent>
+                </Tooltip>
               </div>
             </div>
-          </div>
-        )
-      }
+          </TooltipProvider>
+        )}
+      </form>
 
-      {
-        showSaveNewDialog && (
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center">
-            <div
-              className="absolute inset-0 bg-black/30"
-              onClick={() => {
-                setShowSaveNewDialog(false);
-                setNewTemplateNameInput("");
-              }}
-            />
-            <div
-              className="relative bg-white rounded-2xl shadow-xl border border-gray-200 w-[400px] p-6 space-y-4"
-              style={{ animation: 'templateBtnIn 0.2s ease-out forwards' }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="space-y-2">
-                <h3 className="text-lg font-semibold">Save Ad Text Template</h3>
-                <p className="text-sm text-gray-500 mt-1">
-                  Give your new copy template a name.
-                </p>
-                <Input
-                  type="text"
-                  placeholder="Template name (e.g. Summer Text)..."
-                  value={newTemplateNameInput}
-                  onChange={(e) => setNewTemplateNameInput(e.target.value)}
-                  className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 mt-2"
-                  autoFocus
-                />
-                {newTemplateNameInput.trim() && copyTemplates && copyTemplates[newTemplateNameInput.trim()] && (
-                  <p className="text-xs text-red-500 mt-1">This template name already exists</p>
-                )}
-              </div>
-              <div className="mt-6 grid grid-cols-2 gap-3">
-                <Button
-                  variant="outline"
-                  className="rounded-xl"
-                  onClick={() => {
-                    setShowSaveNewDialog(false);
-                    setNewTemplateNameInput("");
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="button"
-                  disabled={!newTemplateNameInput.trim() || isSavingNew || !!(copyTemplates && copyTemplates[newTemplateNameInput.trim()])}
-                  className="bg-blue-600 text-white rounded-xl hover:bg-blue-700 min-w-[80px] disabled:opacity-50"
-                  onClick={handleSaveAsNewTemplate}
-                >
-                  {isSavingNew ? <Loader className="h-4 w-4 animate-spin mr-1" /> : null}
-                  Save Template
-                </Button>
-              </div>
+      {showDeleteAllVariantsDialog && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/30" onClick={() => setShowDeleteAllVariantsDialog(false)} />
+          <div
+            className="relative w-[min(26rem,calc(100vw-2rem))] rounded-[32px] border border-gray-200 bg-white p-6 shadow-xl"
+            style={{ animation: "templateBtnIn 0.2s ease-out forwards" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="space-y-2">
+              <h3 className="text-lg font-semibold">Delete all variants?</h3>
+              <p className="text-sm text-gray-500">This will remove every variant and move all assignments back to Default.</p>
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              <Button type="button" variant="outline" className="w-full rounded-xl" onClick={() => setShowDeleteAllVariantsDialog(false)}>
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                className="w-full rounded-xl"
+                onClick={() => {
+                  setShowDeleteAllVariantsDialog(false);
+                  handleDeleteAllVariants();
+                }}
+              >
+                Delete All Variants
+              </Button>
             </div>
           </div>
-        )
-      }
+        </div>
+      )}
+
+      {showSaveNewDialog && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/30"
+            onClick={() => {
+              setShowSaveNewDialog(false);
+              setNewTemplateNameInput("");
+            }}
+          />
+          <div
+            className="relative bg-white rounded-2xl shadow-xl border border-gray-200 w-[400px] p-6 space-y-4"
+            style={{ animation: "templateBtnIn 0.2s ease-out forwards" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="space-y-2">
+              <h3 className="text-lg font-semibold">Save Ad Text Template</h3>
+              <p className="text-sm text-gray-500 mt-1">Give your new copy template a name.</p>
+              <Input
+                type="text"
+                placeholder="Template name (e.g. Summer Text)..."
+                value={newTemplateNameInput}
+                onChange={(e) => setNewTemplateNameInput(e.target.value)}
+                className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 mt-2"
+                autoFocus
+              />
+              {newTemplateNameInput.trim() && copyTemplates && copyTemplates[newTemplateNameInput.trim()] && (
+                <p className="text-xs text-red-500 mt-1">This template name already exists</p>
+              )}
+            </div>
+            <div className="mt-6 grid grid-cols-2 gap-3">
+              <Button
+                variant="outline"
+                className="rounded-xl"
+                onClick={() => {
+                  setShowSaveNewDialog(false);
+                  setNewTemplateNameInput("");
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                disabled={!newTemplateNameInput.trim() || isSavingNew || !!(copyTemplates && copyTemplates[newTemplateNameInput.trim()])}
+                className="bg-blue-600 text-white rounded-xl hover:bg-blue-700 min-w-[80px] disabled:opacity-50"
+                onClick={handleSaveAsNewTemplate}
+              >
+                {isSavingNew ? <Loader className="h-4 w-4 animate-spin mr-1" /> : null}
+                Save Template
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
-  )
+  );
 }
 
 function FolderPickerOverlay({ show, linkValue, setLinkValue, onImport, onCancel, isImporting }) {
-  if (!show) return null
+  if (!show) return null;
   return (
     <div
       className="fixed left-1/2 transform -translate-x-1/2 z-[2147483647] bg-white rounded-lg shadow-lg border border-gray-200 p-4 w-[500px]"
       style={{
-        top: 'max(20px, calc(50vh - 380px))' // Positions it above center where picker usually appears, capped at 20px from top
+        top: "max(20px, calc(50vh - 380px))", // Positions it above center where picker usually appears, capped at 20px from top
       }}
     >
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <h3 className="font-semibold text-sm text-gray-900">Quick Navigate to Folder</h3>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={onCancel}
-            className="h-6 w-6 p-0 rounded-full hover:bg-gray-100"
-          >
+          <Button type="button" variant="ghost" size="sm" onClick={onCancel} className="h-6 w-6 p-0 rounded-full hover:bg-gray-100">
             <X className="w-4 h-4" />
           </Button>
         </div>
@@ -6890,8 +6977,8 @@ function FolderPickerOverlay({ show, linkValue, setLinkValue, onImport, onCancel
             value={linkValue}
             onChange={(e) => setLinkValue(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                onImport()
+              if (e.key === "Enter") {
+                onImport();
               }
             }}
             className="flex-1 border border-gray-200 focus:ring-black focus:border-black rounded-lg text-sm px-3 py-2 h-9"
@@ -6914,5 +7001,5 @@ function FolderPickerOverlay({ show, linkValue, setLinkValue, onImport, onCancel
         </div>
       </div>
     </div>
-  )
+  );
 }

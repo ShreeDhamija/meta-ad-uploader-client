@@ -1,9 +1,9 @@
-// Brands = the user's linked Meta ad accounts (auto-synced via /me/adaccounts;
-// one brand per account). Select a brand to work with, or resync.
-import { useState } from "react";
-import PropTypes from "prop-types";
+// Brands come from the app-wide AppContext Meta account list and are reconciled
+// to Creative Service client UUIDs before this view renders them.
 import { Layers, RefreshCw } from "lucide-react";
-import { ViewLoading, EmptyState } from "../ui";
+import PropTypes from "prop-types";
+import { useState } from "react";
+import { EmptyState, ViewLoading } from "../ui";
 
 export default function BrandsView({ ctx }) {
   const { brands, brandsLoading, selectedBrandId, setSelectedBrandId, reloadBrands, goTo } = ctx;
@@ -11,7 +11,11 @@ export default function BrandsView({ ctx }) {
 
   const resync = async () => {
     setSyncing(true);
-    try { await reloadBrands(); } finally { setSyncing(false); }
+    try {
+      await reloadBrands();
+    } finally {
+      setSyncing(false);
+    }
   };
 
   return (
@@ -32,27 +36,35 @@ export default function BrandsView({ ctx }) {
         <EmptyState
           icon={Layers}
           title="No connected accounts"
-          hint="Refresh Accounts to reload the same Meta accounts used by Preferences."
-          action={<button onClick={resync} disabled={syncing} className="cs-primary-button mt-2">Refresh Accounts</button>}
+          hint="Connect or enable a Meta ad account in Blip, then refresh this page."
+          action={
+            <button onClick={resync} disabled={syncing} className="cs-primary-button mt-2">
+              Refresh Accounts
+            </button>
+          }
           className="min-h-[360px] rounded-[28px]"
         />
       ) : (
-        <div className="grid max-w-[1040px] grid-cols-2 gap-5 max-lg:grid-cols-1">
+        <div className="cs-brand-grid">
           {brands.map((b) => {
             const active = selectedBrandId === b.id;
             const productCount = b.productCount ?? b.productsCount ?? b.products?.length;
             return (
-              <button key={b.id} disabled={b.mappingPending} onClick={() => { setSelectedBrandId(b.id); goTo("products"); }}
-                className={`cs-brand-card text-left disabled:cursor-wait disabled:opacity-70 ${active ? "ring-2 ring-black/20 ring-offset-2" : ""}`}>
-                <div className="cs-brand-card__top flex min-h-[72px] items-center justify-between gap-4 px-6">
-                  <span className="truncate text-base font-semibold text-neutral-950">{b.name}</span>
-                  <span className="shrink-0 text-sm font-semibold text-neutral-900">
-                    {b.mappingPending
-                      ? "Preparing…"
-                      : productCount == null ? "View Products" : `${productCount} Product${productCount === 1 ? "" : "s"}`}
+              <button
+                key={b.id}
+                onClick={() => {
+                  setSelectedBrandId(b.id);
+                  goTo("products");
+                }}
+                className={`cs-brand-card text-left ${active ? "ring-2 ring-black/20 ring-offset-2" : ""}`}
+              >
+                <div className="cs-brand-card__top flex items-center justify-between gap-3 px-4">
+                  <span className="truncate text-sm font-semibold text-neutral-950">{b.name}</span>
+                  <span className="shrink-0 text-xs font-semibold text-neutral-900">
+                    {productCount == null ? "View Products" : `${productCount} Product${productCount === 1 ? "" : "s"}`}
                   </span>
                 </div>
-                <div className="px-6 py-4 text-sm font-semibold text-[#3b170b]">
+                <div className="flex min-h-0 flex-1 items-center px-4 text-xs font-medium text-[var(--cs-orange-ink)]">
                   {b.metaAdAccountId || "No ad account ID"}
                 </div>
               </button>

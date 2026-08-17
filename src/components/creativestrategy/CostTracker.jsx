@@ -2,10 +2,10 @@
 // the usage_events ledger: total spend for a time window (1d / 7d / 30d) with a
 // breakdown by provider (anthropic / gemini / …) or operation. Scoped to the
 // selected Brand when one is chosen, else across all the owner's brands.
-import { useCallback, useEffect, useRef, useState } from "react";
-import PropTypes from "prop-types";
-import { Sparkles, ChevronDown } from "lucide-react";
 import { creativeApi } from "@/lib/creativeApi";
+import { ChevronDown, Sparkles } from "lucide-react";
+import PropTypes from "prop-types";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 const WINDOWS = [
   { key: "1d", label: "24h" },
@@ -13,8 +13,7 @@ const WINDOWS = [
   { key: "30d", label: "30d" },
 ];
 
-const fmtUsd = (n) =>
-  n >= 1 ? `$${Number(n.toFixed(2))}` : n > 0 ? `$${n.toFixed(3)}` : "$0";
+const fmtUsd = (n) => (n >= 1 ? `$${Number(n.toFixed(2))}` : n > 0 ? `$${n.toFixed(3)}` : "$0");
 
 export default function CostTracker({ clientId }) {
   const [window, setWindow] = useState("7d");
@@ -33,12 +32,16 @@ export default function CostTracker({ clientId }) {
       .finally(() => setLoading(false));
   }, [window, groupBy, clientId]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   // Close the detail panel on outside click.
   useEffect(() => {
     if (!open) return;
-    const onClick = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    const onClick = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
     document.addEventListener("mousedown", onClick);
     return () => document.removeEventListener("mousedown", onClick);
   }, [open]);
@@ -49,10 +52,10 @@ export default function CostTracker({ clientId }) {
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="cs-pill-control flex min-w-[220px] items-center justify-center gap-2 px-5 text-sm hover:bg-neutral-50 max-md:min-w-0 max-md:px-3"
+        className="cs-compact-control flex min-w-[190px] items-center justify-center gap-2 px-4 text-xs hover:bg-neutral-50 max-md:min-w-0 max-md:px-3"
         title="LLM spend — click for breakdown"
       >
-        <Sparkles className="h-5 w-5 text-fuchsia-500" />
+        <Sparkles className="h-4 w-4 text-fuchsia-500" />
         <span className="font-semibold max-md:hidden">AI Cost :</span>
         <span className="font-bold tabular-nums">{loading && !data ? "…" : fmtUsd(total)}</span>
         <span className="text-xs font-semibold uppercase text-neutral-400">({WINDOWS.find((w) => w.key === window)?.label})</span>
@@ -62,9 +65,7 @@ export default function CostTracker({ clientId }) {
       {open && (
         <div className="absolute right-0 mt-2 w-80 rounded-2xl border border-neutral-200 bg-white shadow-lg p-4 z-20">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">
-              Spend {clientId ? "· this brand" : "· all brands"}
-            </span>
+            <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Spend {clientId ? "· this brand" : "· all brands"}</span>
             <div className="flex gap-1">
               {WINDOWS.map((w) => (
                 <button
@@ -100,9 +101,7 @@ export default function CostTracker({ clientId }) {
           </div>
 
           <div className="space-y-1.5 max-h-56 overflow-auto">
-            {(data?.breakdown ?? []).length === 0 && (
-              <p className="text-xs text-neutral-400 py-2">No tracked spend in this window.</p>
-            )}
+            {(data?.breakdown ?? []).length === 0 && <p className="text-xs text-neutral-400 py-2">No tracked spend in this window.</p>}
             {(data?.breakdown ?? []).map((row) => {
               const pct = total > 0 ? Math.round((row.costUsd / total) * 100) : 0;
               return (
