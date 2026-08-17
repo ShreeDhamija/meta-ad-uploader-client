@@ -2076,9 +2076,7 @@ export default function TikTokAdCreationForm({
             isShoppingAg
           )
           let creativeCTAs = Array.isArray(cta) ? cta : [cta]
-          if (isSalesCampaign && creativeCTAs.length > 0) {
-            creativeCTAs = [creativeCTAs[0]]
-          }
+
           // For Smart+ campaigns: send up to 5 texts in 1 creative object (ad_text_list).
           // For normal campaigns: only send the first text.
           const currentAgCampaignId = adGroupObj?.campaignId || adGroupObj?.campaign_id || selectedCampaign[0];
@@ -2094,6 +2092,13 @@ export default function TikTokAdCreationForm({
             targetCampaignObj?.is_smart === true ||
             targetCampaignObj?.is_smart === "true"
           );
+
+          if (isSalesCampaign && !isSmartForThisCampaign && creativeCTAs.length > 0) {
+            creativeCTAs = [creativeCTAs[0]]
+          }
+          // For Smart+ campaigns: send up to 5 texts in 1 creative object (ad_text_list).
+          // For normal campaigns: only send the first text.
+
           const activeCaptions = (adTexts || []).filter(t => t.trim() !== '')
           let finalCaptions = activeCaptions.length > 0
             ? isSmartForThisCampaign ? activeCaptions.slice(0, 5) : [activeCaptions[0]]
