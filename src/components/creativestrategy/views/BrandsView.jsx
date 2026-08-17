@@ -1,5 +1,5 @@
-// Brands = the user's linked Meta ad accounts (auto-synced via /me/adaccounts;
-// one brand per account). Select a brand to work with, or resync.
+// Brands come from the app-wide AppContext Meta account list and are reconciled
+// to Creative Service client UUIDs before this view renders them.
 import { useState } from "react";
 import PropTypes from "prop-types";
 import { Layers, RefreshCw } from "lucide-react";
@@ -22,7 +22,7 @@ export default function BrandsView({ ctx }) {
         </p>
         <button onClick={resync} disabled={syncing} className="cs-primary-button">
           <RefreshCw className={`w-4 h-4 ${syncing ? "animate-spin" : ""}`} />
-          {syncing ? "Syncing…" : "Sync Brands"}
+          {syncing ? "Refreshing…" : "Refresh Accounts"}
         </button>
       </div>
 
@@ -32,8 +32,8 @@ export default function BrandsView({ ctx }) {
         <EmptyState
           icon={Layers}
           title="No connected accounts"
-          hint="Sync Brands to pull your linked Meta ad accounts."
-          action={<button onClick={resync} disabled={syncing} className="cs-primary-button mt-2">Sync Brands</button>}
+          hint="Connect or enable a Meta ad account in Blip, then refresh this page."
+          action={<button onClick={resync} disabled={syncing} className="cs-primary-button mt-2">Refresh Accounts</button>}
           className="min-h-[360px] rounded-[28px]"
         />
       ) : (

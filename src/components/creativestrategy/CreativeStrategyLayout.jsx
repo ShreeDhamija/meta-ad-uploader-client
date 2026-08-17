@@ -1,7 +1,7 @@
 // Creative-strategy module shell. The page header and sidebar are shared;
 // brand/product context controls move into each workflow so the first screen
 // of every tab can follow its own hierarchy without losing shared state.
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   AudioLines,
@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/AuthContext";
+import { useAppData } from "@/lib/AppContext";
 import { creativeApi } from "@/lib/creativeApi";
 import { Button } from "@/components/ui/button";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
@@ -63,29 +64,77 @@ const DESCRIPTIONS = {
 
 export default function CreativeStrategyLayout() {
   const navigate = useNavigate();
-  const { userName, profilePicUrl, handleLogout } = useAuth();
+  const { isLoggedIn, userName, profilePicUrl, handleLogout } = useAuth();
+  const { adAccounts, adAccountsLoading, refetchAdAccounts } = useAppData();
 
   const [activeTab, setActiveTab] = useState("brands");
-  const [brands, setBrands] = useState([]);
-  const [brandsLoading, setBrandsLoading] = useState(true);
+  const [creativeClients, setCreativeClients] = useState([]);
+  const [creativeClientsLoading, setCreativeClientsLoading] = useState(false);
   const [selectedBrandId, setSelectedBrandId] = useState(null);
   const [products, setProducts] = useState([]);
   const [productsLoading, setProductsLoading] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState(null);
   const [error, setError] = useState(null);
 
-  // Auto-create/refresh brands from the user's linked Meta ad accounts on load.
-  // Falls back to listing existing brands if the Meta sync fails (e.g. no token).
-  const loadBrands = () => {
-    setBrandsLoading(true);
-    return creativeApi.syncBrands()
-      .then((r) => setBrands(r.clients))
-      .catch((e) => {
-        setError(`Meta sync failed (${e.message}) — showing existing brands`);
-        return creativeApi.listClients().then((r) => setBrands(r.clients)).catch(() => {});
+  const normalizeMetaAccountId = (value) => String(value || "").replace(/^act_/, "");
+  const accountFingerprint = useMemo(
+    () => adAccounts.map((account) => normalizeMetaAccountId(account.id)).sort().join(","),
+    [adAccounts],
+  );
+
+  // AppContext is authoritative for which accounts the user may see. Creative
+  // Service clients remain the persistence layer and provide the UUID used by
+  // products, analysis, research, and generation APIs.
+  const brands = useMemo(() => {
+    const clientsByMetaAccount = new Map(
+      creativeClients.map((client) => [normalizeMetaAccountId(client.metaAdAccountId), client]),
+    );
+    return adAccounts
+      .map((account) => {
+        const client = clientsByMetaAccount.get(normalizeMetaAccountId(account.id));
+        if (!client) return null;
+        return {
+          ...client,
+          name: account.name || client.name,
+          metaAdAccountId: account.id,
+          metaAdAccountName: account.name || client.metaAdAccountName,
+        };
       })
-      .finally(() => setBrandsLoading(false));
-  };
+      .filter(Boolean);
+  }, [adAccounts, creativeClients]);
+  const brandsLoading = adAccountsLoading || creativeClientsLoading;
+
+  const loadBrands = useCallback(async (accounts = adAccounts) => {
+    setCreativeClientsLoading(true);
+    setError(null);
+    try {
+      if (!accounts.length) {
+        setCreativeClients([]);
+        return [];
+      }
+      const payload = accounts.map(({ id, name }) => ({ id, name }));
+      const response = await creativeApi.syncBrands(payload);
+      setCreativeClients(response.clients || []);
+      return response.clients || [];
+    } catch (syncError) {
+      setError(`Could not reconcile Meta accounts (${syncError.message}) — showing existing Creative Strategy records`);
+      try {
+        const response = await creativeApi.listClients();
+        setCreativeClients(response.clients || []);
+        return response.clients || [];
+      } catch {
+        setCreativeClients([]);
+        return [];
+      }
+    } finally {
+      setCreativeClientsLoading(false);
+    }
+  }, [adAccounts]);
+
+  const refreshBrands = useCallback(async () => {
+    const refreshedAccounts = await refetchAdAccounts();
+    return loadBrands(refreshedAccounts || []);
+  }, [loadBrands, refetchAdAccounts]);
   const loadProducts = (brandId) => {
     setProductsLoading(true);
     return creativeApi.listProducts(brandId)
@@ -94,7 +143,21 @@ export default function CreativeStrategyLayout() {
       .finally(() => setProductsLoading(false));
   };
 
-  useEffect(() => { loadBrands(); }, []);
+  useEffect(() => {
+    if (!isLoggedIn || adAccountsLoading) return;
+    loadBrands(adAccounts);
+    // accountFingerprint intentionally represents the account list so account
+    // object identity changes do not trigger duplicate syncs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoggedIn, adAccountsLoading, accountFingerprint]);
+  useEffect(() => {
+    if (!isLoggedIn) navigate("/login", { replace: true });
+  }, [isLoggedIn, navigate]);
+  useEffect(() => {
+    if (selectedBrandId && !brands.some((brand) => brand.id === selectedBrandId)) {
+      setSelectedBrandId(null);
+    }
+  }, [brands, selectedBrandId]);
   useEffect(() => {
     if (selectedBrandId) loadProducts(selectedBrandId);
     else setProducts([]);
@@ -105,10 +168,12 @@ export default function CreativeStrategyLayout() {
   const selectedProduct = products.find((p) => p.id === selectedProductId) || null;
 
   const ctx = {
-    brands, brandsLoading, selectedBrand, selectedBrandId, setSelectedBrandId, reloadBrands: loadBrands,
+    brands, brandsLoading, selectedBrand, selectedBrandId, setSelectedBrandId, reloadBrands: refreshBrands,
     products, productsLoading, selectedProduct, selectedProductId, setSelectedProductId, reloadProducts: () => loadProducts(selectedBrandId),
     goTo: setActiveTab,
   };
+
+  if (!isLoggedIn) return null;
 
   const renderView = () => {
     switch (activeTab) {
