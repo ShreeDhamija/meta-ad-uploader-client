@@ -4668,15 +4668,26 @@ export default function TikTokAdCreationForm({
                                       c?.is_smart === true ||
                                       c?.is_smart === "true"
                                     ) && (
-                                      <PlusCircle
-                                        className={cn(
-                                          "w-4 h-4 shrink-0",
-                                          (c.operation_status === "DISABLE" || c.operation_status === "disable" || String(c.operation_status).toUpperCase() === "DISABLE" || String(c.secondary_status).includes("DISABLE") || c.operation_status === false || c.operation_status === "false")
-                                            ? "text-gray-400"
-                                            : "text-gray-800"
-                                        )}
-                                      />
-                                    )}
+                                        <TooltipProvider delayDuration={100}>
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <span className="inline-flex items-center" title="Smart+ Campaign" onClick={(e) => e.stopPropagation()}>
+                                                <PlusCircle
+                                                  className={cn(
+                                                    "w-4 h-4 shrink-0 cursor-help",
+                                                    (c.operation_status === "DISABLE" || c.operation_status === "disable" || String(c.operation_status).toUpperCase() === "DISABLE" || String(c.secondary_status).includes("DISABLE") || c.operation_status === false || c.operation_status === "false")
+                                                      ? "text-gray-400"
+                                                      : "text-gray-800"
+                                                  )}
+                                                />
+                                              </span>
+                                            </TooltipTrigger>
+                                            <TooltipContent side="top" className="bg-black text-white text-xs px-2.5 py-1 rounded-lg shadow-md z-50">
+                                              Smart+ Campaign
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        </TooltipProvider>
+                                      )}
                                     {(c.operation_status === "ENABLE" || c.operation_status === "enable" || String(c.operation_status).toUpperCase() === "ENABLE" || String(c.secondary_status).includes("ENABLE") || c.operation_status === true || c.operation_status === "true") && (
                                       <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
                                     )}
