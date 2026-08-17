@@ -24,6 +24,7 @@ import {
   Link as LinkIcon,
   Loader,
   Plus,
+  PlusCircle,
   RefreshCcw,
 
   Trash,
@@ -4656,9 +4657,23 @@ export default function TikTokAdCreationForm({
                                   <span className={cn("text-sm font-medium truncate flex-1", (c.operation_status === "DISABLE" || c.operation_status === "disable" || String(c.operation_status).toUpperCase() === "DISABLE" || String(c.secondary_status).includes("DISABLE") || c.operation_status === false || c.operation_status === "false") && "text-gray-400")}>
                                     {c.campaign_name}
                                   </span>
-                                  {(c.operation_status === "ENABLE" || c.operation_status === "enable" || String(c.operation_status).toUpperCase() === "ENABLE" || String(c.secondary_status).includes("ENABLE") || c.operation_status === true || c.operation_status === "true") && (
-                                    <span className="ml-2 w-2 h-2 rounded-full bg-green-500 shrink-0" />
-                                  )}
+                                  <div className="flex items-center gap-2">
+                                    {Boolean(
+                                      c?.is_smart_performance_campaign === true ||
+                                      c?.is_smart_performance_campaign === "true" ||
+                                      c?.is_smart_performance_campaign === 1 ||
+                                      c?.campaign_automation_type === "UPGRADED_SMART_PLUS" ||
+                                      c?.campaign_automation_type === "SMART_PLUS" ||
+                                      c?.campaign_automation_type === "SMART_PERFORMANCE_CAMPAIGN" ||
+                                      c?.is_smart === true ||
+                                      c?.is_smart === "true"
+                                    ) && (
+                                      <PlusCircle className="w-4 h-4 text-black shrink-0" />
+                                    )}
+                                    {(c.operation_status === "ENABLE" || c.operation_status === "enable" || String(c.operation_status).toUpperCase() === "ENABLE" || String(c.secondary_status).includes("ENABLE") || c.operation_status === true || c.operation_status === "true") && (
+                                      <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             </CommandItem>
