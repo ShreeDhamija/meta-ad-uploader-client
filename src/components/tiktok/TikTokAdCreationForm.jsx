@@ -4427,6 +4427,24 @@ export default function TikTokAdCreationForm({
     adNameFormulaV2?.rawInput?.trim() || advertiserPrefs?.adNameFormulaV2?.rawInput?.trim()
   );
 
+  // Mirrors Meta's hasPublishBlockingIssueBeforePage — gates identity/campaign/adgroup
+  // warnings so they only surface once all creative/form-level issues are resolved.
+  const hasPublishBlockingIssueBeforeIdentity =
+    isMediaMissing ||
+    isAdTextMissing ||
+    hasDuplicates ||
+    hasTextTooLong ||
+    hasSelectedFilesUngrouped ||
+    isAdNameMissing ||
+    isCtaMissing ||
+    isWebsiteUrlMissing ||
+    isWebsiteUrlInvalidScheme ||
+    isWebsiteUrlInvalidDomain ||
+    isInstantPageMissing ||
+    isInstantPageInvalid ||
+    isStoreMissing ||
+    isShowcaseProductMissing;
+
   const getValidationErrors = useCallback(() => {
     const errors = [];
 
@@ -6856,6 +6874,14 @@ export default function TikTokAdCreationForm({
                     </div>
                   )}
 
+                  {isMediaMissing && (
+                    <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                      {adType === "SPARK"
+                        ? "Please select at least one organic post to publish ads"
+                        : "Please upload or select at least one media file to publish ads"}
+                    </div>
+                  )}
+
                   {isAdTextMissing && (
                     <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
                       Please enter ad text
@@ -6916,7 +6942,7 @@ export default function TikTokAdCreationForm({
                     </div>
                   )}
 
-                  {isIdentityMissing && (
+                  {!hasPublishBlockingIssueBeforeIdentity && isIdentityMissing && (
                     <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
                       {adType === "NORMAL"
                         ? "Please select a TikTok Identity to publish ads"
@@ -6924,25 +6950,25 @@ export default function TikTokAdCreationForm({
                     </div>
                   )}
 
-                  {isDuplicatedAdGroupNameMissing && (
+                  {!hasPublishBlockingIssueBeforeIdentity && !isIdentityMissing && isCampaignMissing && (
+                    <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                      Please select a campaign to post to
+                    </div>
+                  )}
+
+                  {!hasPublishBlockingIssueBeforeIdentity && !isIdentityMissing && !isCampaignMissing && isDuplicatedAdGroupNameMissing && (
                     <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
                       Please enter a name for the duplicated ad group
                     </div>
                   )}
 
-                  {isAdGroupMissing && (
+                  {!hasPublishBlockingIssueBeforeIdentity && !isIdentityMissing && !isCampaignMissing && !isDuplicatedAdGroupNameMissing && isAdGroupMissing && (
                     <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
-                      Please select an ad group to publish ads
+                      Please select an ad group to post to
                     </div>
                   )}
 
-                  {isCampaignMissing && (
-                    <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
-                      Please select a campaign to publish ads
-                    </div>
-                  )}
-
-                  {isAdvertiserMissing && (
+                  {!hasPublishBlockingIssueBeforeIdentity && !isIdentityMissing && !isCampaignMissing && !isDuplicatedAdGroupNameMissing && !isAdGroupMissing && isAdvertiserMissing && (
                     <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
                       Please select an advertiser account to publish ads
                     </div>

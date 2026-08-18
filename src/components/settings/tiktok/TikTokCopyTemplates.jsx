@@ -713,8 +713,6 @@ export default function TikTokCopyTemplates({ templates = {}, defaultName = "", 
         >
           {nameAlreadyExists ? (
             "This template name already exists"
-          ) : hasDuplicates ? (
-            "Remove duplicate text options to save"
           ) : isProcessing ? (
             <>
               <Loader className="h-4 w-4 animate-spin mr-2" />
@@ -741,7 +739,9 @@ export default function TikTokCopyTemplates({ templates = {}, defaultName = "", 
           )}
         </div>
 
-        {templateChanged && !nameAlreadyExists ? (
+        {hasDuplicates ? (
+          <p className="text-xs text-white bg-rose-500 rounded-xl border text-left mt-1 p-2">Please remove duplicate values above to save the template.</p>
+        ) : templateChanged && !nameAlreadyExists ? (
           <p className="text-xs text-white bg-rose-500 rounded-xl border text-left mt-1 p-2">Your templates have unsaved changes.</p>
         ) : null}
       </div>
