@@ -671,9 +671,9 @@ export default function TikTokCopyTemplates({ templates = {}, defaultName = "", 
                   maxRows={8}
                   disabled={isProcessing}
                 />
-                {t.length > 100 && <p className="text-xs text-red-500 font-medium mt-1">Text cannot exceed 100 characters</p>}
+                {t.length > 100 && <p className="text-xs text-red-500 mt-1">Text cannot exceed 100 characters</p>}
                 {duplicateIndices.has(idx) && (
-                  <p className="text-xs text-red-500 font-medium mt-1">Duplicate values can cause errors when making ads</p>
+                  <p className="text-xs text-red-500 mt-1">Duplicate values can cause errors when making ads</p>
                 )}
               </div>
               {texts.length > 1 && (

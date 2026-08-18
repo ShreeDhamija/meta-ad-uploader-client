@@ -6107,7 +6107,7 @@ export default function TikTokAdCreationForm({
                             />
                             {(text || "").length > 100 && <p className="text-xs text-red-500 font-medium mt-1">Text cannot exceed 100 characters</p>}
                             {duplicateTextIndices.has(i) && (
-                              <p className="text-xs text-red-500 font-medium mt-1">Duplicate values can cause errors when making ads</p>
+                              <p className="text-xs text-red-500 mt-1">Duplicate values can cause errors when making ads</p>
                             )}
                           </div>
                           {isSmartCampaign && adTexts.length > 1 && (
