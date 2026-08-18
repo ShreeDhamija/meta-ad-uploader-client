@@ -2102,7 +2102,16 @@ export default function TikTokAdCreationForm({
           // For normal campaigns: only send the first text.
 
           const activeCaptions = (adTexts || []).filter((t) => t.trim() !== "");
-          let finalCaptions = activeCaptions.length > 0 ? (isSmartForThisCampaign ? activeCaptions.slice(0, 5) : [activeCaptions[0]]) : [""];
+          const seenTexts = new Set();
+          const uniqueCaptions = [];
+          for (const t of activeCaptions) {
+            const lower = t.trim().toLowerCase();
+            if (!seenTexts.has(lower)) {
+              seenTexts.add(lower);
+              uniqueCaptions.push(t.trim());
+            }
+          }
+          let finalCaptions = uniqueCaptions.length > 0 ? (isSmartForThisCampaign ? uniqueCaptions.slice(0, 5) : [uniqueCaptions[0]]) : [""];
 
           const creatives = [];
           const useMultipleTextsNative = isSmartForThisCampaign;
@@ -3977,6 +3986,17 @@ export default function TikTokAdCreationForm({
               return;
             }
           }
+          if (isSmartCampaign && activeTexts.length > 1) {
+            const seen = new Set();
+            for (const t of activeTexts) {
+              const lower = t.trim().toLowerCase();
+              if (seen.has(lower)) {
+                toast.error("Duplicate values found in your text fields — this can lead to errors when making ads. Please remove duplicates before publishing.");
+                return;
+              }
+              seen.add(lower);
+            }
+          }
         }
 
         if (fd.urlMode === "WEBSITE" && !areAllVariantAdGroupsShopping) {
@@ -4298,11 +4318,26 @@ export default function TikTokAdCreationForm({
     }
   };
 
-  const hasDuplicateTexts = useMemo(() => {
-    if (!isSmartCampaign || !adTexts || adTexts.length <= 1) return false;
-    const nonEmpty = adTexts.map((t) => t.trim()).filter(Boolean);
-    return new Set(nonEmpty).size !== nonEmpty.length;
+  const duplicateTextIndices = useMemo(() => {
+    if (!isSmartCampaign || !adTexts || adTexts.length <= 1) return new Set();
+
+    const dupes = new Set();
+    const seen = {};
+    adTexts.forEach((val, i) => {
+      const trimmed = (val || "").trim().toLowerCase();
+      if (!trimmed) return;
+      if (trimmed in seen) {
+        dupes.add(i);
+        dupes.add(seen[trimmed]);
+      } else {
+        seen[trimmed] = i;
+      }
+    });
+    return dupes;
   }, [isSmartCampaign, adTexts]);
+
+  const hasDuplicates = useMemo(() => duplicateTextIndices.size > 0, [duplicateTextIndices]);
+  const hasDuplicateTexts = hasDuplicates;
 
   const hasTextTooLong = useMemo(() => {
     if (adType === "SPARK" || !adTexts) return false;
@@ -4423,11 +4458,8 @@ export default function TikTokAdCreationForm({
           errors.push(`Text cannot exceed 100 characters ("${singleText.substring(0, 15)}...")`);
         }
       }
-      if (isSmartCampaign && adTexts && adTexts.length > 1) {
-        const nonEmpty = adTexts.map((t) => t.trim()).filter(Boolean);
-        if (new Set(nonEmpty).size !== nonEmpty.length) {
-          errors.push("Duplicate values found in ad texts");
-        }
+      if (isSmartCampaign && hasDuplicates) {
+        errors.push("Duplicate values found in ad texts");
       }
     }
 
@@ -6036,10 +6068,13 @@ export default function TikTokAdCreationForm({
                               placeholder={i === 0 ? "Add text option" : `Text option ${i + 1}`}
                               minRows={2}
                               maxRows={8}
-                              className={`${formTextareaChrome} ${(text || "").length > 100 ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]" : ""}`}
+                              className={`${formTextareaChrome} ${(text || "").length > 100 || duplicateTextIndices.has(i) ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]" : ""}`}
                               style={{ scrollbarWidth: "thin", scrollbarColor: "#e5e7eb transparent" }}
                             />
                             {(text || "").length > 100 && <p className="text-xs text-red-500 font-medium mt-1">Text cannot exceed 100 characters</p>}
+                            {duplicateTextIndices.has(i) && (
+                              <p className="text-xs text-red-500 font-medium mt-1">Duplicate values can cause errors when making ads</p>
+                            )}
                           </div>
                           {isSmartCampaign && adTexts.length > 1 && (
                             <Button

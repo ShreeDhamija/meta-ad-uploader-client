@@ -145,6 +145,24 @@ export default function TikTokCopyTemplates({ templates = {}, defaultName = "", 
     [templateName, selectedName, templates],
   );
 
+  const duplicateIndices = useMemo(() => {
+    const dupes = new Set();
+    const seen = {};
+    texts.forEach((val, i) => {
+      const normalized = (val || "").trim().toLowerCase();
+      if (!normalized) return;
+      if (normalized in seen) {
+        dupes.add(i);
+        dupes.add(seen[normalized]);
+      } else {
+        seen[normalized] = i;
+      }
+    });
+    return dupes;
+  }, [texts]);
+
+  const hasDuplicates = useMemo(() => duplicateIndices.size > 0, [duplicateIndices]);
+
   const templateChanged = useMemo(() => {
     const currentTemplate = templates[selectedName] || {};
     const originalTexts =
@@ -257,6 +275,11 @@ export default function TikTokCopyTemplates({ templates = {}, defaultName = "", 
   const handleSaveTemplate = async () => {
     if (!templateName.trim()) {
       toast.error("Template name is required");
+      return false;
+    }
+
+    if (hasDuplicates) {
+      toast.error("Duplicate values found in your text fields — please remove duplicates before saving");
       return false;
     }
 
@@ -616,30 +639,38 @@ export default function TikTokCopyTemplates({ templates = {}, defaultName = "", 
         </div>
         <div className="space-y-2">
           {texts.map((t, idx) => (
-            <div key={idx} className="flex flex-col w-full">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-[10px] text-zinc-400 font-medium">{t.length}/100</span>
-                {idx > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setTexts((prev) => prev.filter((_, i) => i !== idx))}
-                    className="text-zinc-400 hover:text-red-500 transition-colors"
-                    title="Remove this text"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
+            <div key={idx} className="flex items-start gap-2">
+              <div className="flex flex-col w-full">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] text-zinc-400 font-medium">{t.length}/100</span>
+                </div>
+                <TextareaAutosize
+                  placeholder={idx === 0 ? "Enter Caption" : `Enter Caption Option ${idx + 1}`}
+                  value={t}
+                  onChange={(e) => setTexts((prev) => prev.map((item, i) => (i === idx ? e.target.value : item)))}
+                  className={`${settingsTextareaChrome} w-full text-sm resize-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 ${t.length > 100 || duplicateIndices.has(idx) ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]" : ""}`}
+                  minRows={2}
+                  maxRows={8}
+                  disabled={isProcessing}
+                />
+                {t.length > 100 && <p className="text-xs text-red-500 font-medium mt-1">Text cannot exceed 100 characters</p>}
+                {duplicateIndices.has(idx) && (
+                  <p className="text-xs text-red-500 font-medium mt-1">Duplicate values can cause errors when making ads</p>
                 )}
               </div>
-              <TextareaAutosize
-                placeholder={idx === 0 ? "Enter Caption" : `Enter Caption Option ${idx + 1}`}
-                value={t}
-                onChange={(e) => setTexts((prev) => prev.map((item, i) => (i === idx ? e.target.value : item)))}
-                className={`${settingsTextareaChrome} w-full text-sm resize-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 ${t.length > 100 ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]" : ""}`}
-                minRows={2}
-                maxRows={8}
-                disabled={isProcessing}
-              />
-              {t.length > 100 && <p className="text-xs text-red-500 font-medium mt-1">Text cannot exceed 100 characters</p>}
+              {texts.length > 1 && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="border border-gray-400 rounded-xl bg-white shadow-xs mt-5 shrink-0"
+                  size="icon"
+                  onClick={() => setTexts((prev) => prev.filter((_, i) => i !== idx))}
+                  disabled={isProcessing}
+                >
+                  <Trash2 className="w-4 h-4 text-gray-600 cursor-pointer hover:text-red-500" />
+                  <span className="sr-only">Remove</span>
+                </Button>
+              )}
             </div>
           ))}
           {texts.length < 5 && (
@@ -661,11 +692,18 @@ export default function TikTokCopyTemplates({ templates = {}, defaultName = "", 
           className="bg-blue-500 text-white w-full rounded-xl hover:bg-blue-600 h-[45px]"
           onClick={handleSaveTemplate}
           disabled={
-            !templateName.trim() || isProcessing || nameAlreadyExists || !templateChanged || texts.map((t) => t.trim()).filter(Boolean).length === 0
+            !templateName.trim() ||
+            isProcessing ||
+            nameAlreadyExists ||
+            !templateChanged ||
+            texts.map((t) => t.trim()).filter(Boolean).length === 0 ||
+            hasDuplicates
           }
         >
           {nameAlreadyExists ? (
             "This template name already exists"
+          ) : hasDuplicates ? (
+            "Remove duplicate text options to save"
           ) : isProcessing ? (
             <>
               <Loader className="h-4 w-4 animate-spin mr-2" />
