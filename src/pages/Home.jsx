@@ -651,6 +651,11 @@ export default function Home() {
         setPixelTrackingOverride({ ...EMPTY_PIXEL_TRACKING_OVERRIDE });
         if (!hadPrevious) return;
         setVariants((prev) => prev.map((variant) => ({ ...variant, snapshot: null })));
+        setSelectedShopDestination("");
+        setSelectedShopDestinationType("");
+        setSelectedShopProductCatalogId("");
+        setProductExtensionProductSetId("");
+        setProductExtensionProductCatalogId("");
         setCustomLink("");
         setDestinationType("website");
         setInstantExperienceId("");
@@ -928,7 +933,9 @@ export default function Home() {
         setInstagramAccountId,
         setSelectedShopDestination,
         setSelectedShopDestinationType,
+        setSelectedShopProductCatalogId,
         setProductExtensionProductSetId,
+        setProductExtensionProductCatalogId,
         setSelectedForm,
         setSelectedTemplate,
         setIsPartnershipAd,

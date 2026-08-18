@@ -4730,7 +4730,7 @@ export default function AdCreationForm({
       // Shop
       selectedShopDestination,
       selectedShopDestinationType,
-      productExtensionProductSetId,
+      productExtensionProductSetId: jobProductExtensionProductSetId,
       selectedForm,
       //partnership ads
       isPartnershipAd,
@@ -6151,8 +6151,8 @@ export default function AdCreationForm({
         if (Object.keys(selectedPixelTrackingOverride).length > 0) {
           formData.append("pixelTrackingOverride", JSON.stringify(selectedPixelTrackingOverride));
         }
-        if (productExtensionProductSetId && !formData.has("productExtensionProductSetId")) {
-          formData.append("productExtensionProductSetId", productExtensionProductSetId);
+        if (jobProductExtensionProductSetId && !formData.has("productExtensionProductSetId")) {
+          formData.append("productExtensionProductSetId", jobProductExtensionProductSetId);
         }
         promises.push(createAdApiCall(formData, API_BASE_URL, signal));
         promiseMetadata.push({
@@ -8538,6 +8538,13 @@ export default function AdCreationForm({
                                       key={page.id}
                                       value={page.id}
                                       onSelect={() => {
+                                        if (page.id !== pageId) {
+                                          setSelectedShopDestination("");
+                                          setSelectedShopDestinationType("");
+                                          setSelectedShopProductCatalogId("");
+                                          setProductExtensionProductSetId("");
+                                          setProductExtensionProductCatalogId("");
+                                        }
                                         if (destinationType === "instant_experience" && page.id !== pageId) {
                                           setInstantExperienceId("");
                                           setLink([""]);
@@ -10059,7 +10066,13 @@ export default function AdCreationForm({
                     setSelectedShopDestinationType={setSelectedShopDestinationType}
                     selectedProductCatalogId={selectedShopProductCatalogId}
                     setSelectedProductCatalogId={setSelectedShopProductCatalogId}
-                    isFieldModified={() => isFormFieldModified?.(["selectedShopDestination", "selectedShopDestinationType"])}
+                    isFieldModified={() =>
+                      isFormFieldModified?.([
+                        "selectedShopDestination",
+                        "selectedShopDestinationType",
+                        "selectedShopProductCatalogId",
+                      ])
+                    }
                     isVisible={showShopDestinationSelector}
                   />
                   <ShopDestinationSelector
@@ -10070,7 +10083,9 @@ export default function AdCreationForm({
                     setSelectedShopDestinationType={NOOP}
                     selectedProductCatalogId={productExtensionProductCatalogId}
                     setSelectedProductCatalogId={setProductExtensionProductCatalogId}
-                    isFieldModified={() => isFormFieldModified?.("productExtensionProductSetId")}
+                    isFieldModified={() =>
+                      isFormFieldModified?.(["productExtensionProductCatalogId", "productExtensionProductSetId"])
+                    }
                     isVisible={showProductExtensionSelector}
                     allowedTypes={["product_set"]}
                     label="Product Set (Optional)"

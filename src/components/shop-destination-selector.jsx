@@ -60,8 +60,8 @@ export default function ShopDestinationSelector({
     const [isLoadingMore, setIsLoadingMore] = useState(false)
     const [productSetCursor, setProductSetCursor] = useState(null)
     const [productCursor, setProductCursor] = useState(null)
-    const previousContextKeyRef = useRef(`${pageId || ""}:${adAccountId || ""}`)
-
+    const catalogIndexCacheRef = useRef(new Map())
+    const catalogDataCacheRef = useRef(new Map())
     const isProductSetOnly = allowedTypes.length === 1 && allowedTypes[0] === "product_set"
     const wantsProductSets = allowedTypes.includes("product_set")
     const wantsProducts = allowedTypes.includes("product")
@@ -84,14 +84,14 @@ export default function ShopDestinationSelector({
         }
         if (!isVisible) return undefined
 
-        const contextKey = `${pageId}:${adAccountId}`
-        if (previousContextKeyRef.current && previousContextKeyRef.current !== contextKey) {
-            setInternalCatalogId("")
-            setSelectedProductCatalogId?.("")
-            setSelectedShopDestination("")
-            setSelectedShopDestinationType("")
+        const indexCacheKey = `${pageId}:${adAccountId}:${isProductSetOnly ? "product_sets" : "all"}`
+        const cachedIndex = catalogIndexCacheRef.current.get(indexCacheKey)
+        if (cachedIndex) {
+            setCatalogs(cachedIndex.catalogs)
+            setShopData((previous) => ({ ...previous, shops: cachedIndex.shops }))
+            setIsLoading(false)
+            return undefined
         }
-        previousContextKeyRef.current = contextKey
 
         const controller = new AbortController()
         setIsLoading(true)
@@ -107,8 +107,11 @@ export default function ShopDestinationSelector({
             controller.signal,
         )
             .then((data) => {
-                setCatalogs(dedupeById(data.product_catalogs || []))
-                setShopData({ shops: data.shops || [], productSets: [], products: [] })
+                const nextCatalogs = dedupeById(data.product_catalogs || [])
+                const nextShops = data.shops || []
+                catalogIndexCacheRef.current.set(indexCacheKey, { catalogs: nextCatalogs, shops: nextShops })
+                setCatalogs(nextCatalogs)
+                setShopData({ shops: nextShops, productSets: [], products: [] })
             })
             .catch((error) => {
                 if (error.name === "AbortError") return
@@ -121,15 +124,7 @@ export default function ShopDestinationSelector({
             })
 
         return () => controller.abort()
-    }, [
-        isProductSetOnly,
-        isVisible,
-        adAccountId,
-        pageId,
-        setSelectedProductCatalogId,
-        setSelectedShopDestination,
-        setSelectedShopDestinationType,
-    ])
+    }, [adAccountId, isProductSetOnly, isVisible, pageId])
 
     // Fetch only the selected catalog's first edge pages. Each edge owns its cursor.
     useEffect(() => {
@@ -137,6 +132,20 @@ export default function ShopDestinationSelector({
         setProductSetCursor(null)
         setProductCursor(null)
         if (!isVisible || !pageId || !adAccountId || !catalogId) {
+            setIsLoadingCatalogData(false)
+            return undefined
+        }
+
+        const dataCacheKey = `${pageId}:${adAccountId}:${catalogId}:${wantsProductSets ? "sets" : ""}:${wantsProducts ? "products" : ""}`
+        const cachedCatalogData = catalogDataCacheRef.current.get(dataCacheKey)
+        if (cachedCatalogData) {
+            setShopData((previous) => ({
+                ...previous,
+                productSets: cachedCatalogData.productSets,
+                products: cachedCatalogData.products,
+            }))
+            setProductSetCursor(cachedCatalogData.productSetCursor)
+            setProductCursor(cachedCatalogData.productCursor)
             setIsLoadingCatalogData(false)
             return undefined
         }
@@ -166,6 +175,10 @@ export default function ShopDestinationSelector({
         Promise.allSettled(requests)
             .then((results) => {
                 if (controller.signal.aborted) return
+                let nextProductSets = []
+                let nextProducts = []
+                let nextProductSetCursor = null
+                let nextProductCursor = null
                 for (const result of results) {
                     if (result.status === "rejected") {
                         console.error("Failed to fetch selected catalog data:", result.reason)
@@ -173,12 +186,23 @@ export default function ShopDestinationSelector({
                     }
                     const { kind, data } = result.value
                     if (kind === "product_sets") {
-                        setShopData((previous) => ({ ...previous, productSets: data.product_sets || [] }))
-                        setProductSetCursor(data.product_set_cursor || null)
+                        nextProductSets = data.product_sets || []
+                        nextProductSetCursor = data.product_set_cursor || null
                     } else {
-                        setShopData((previous) => ({ ...previous, products: data.products || [] }))
-                        setProductCursor(data.product_cursor || null)
+                        nextProducts = data.products || []
+                        nextProductCursor = data.product_cursor || null
                     }
+                }
+                setShopData((previous) => ({ ...previous, productSets: nextProductSets, products: nextProducts }))
+                setProductSetCursor(nextProductSetCursor)
+                setProductCursor(nextProductCursor)
+                if (results.every((result) => result.status === "fulfilled")) {
+                    catalogDataCacheRef.current.set(dataCacheKey, {
+                        productSets: nextProductSets,
+                        products: nextProducts,
+                        productSetCursor: nextProductSetCursor,
+                        productCursor: nextProductCursor,
+                    })
                 }
             })
             .finally(() => {
@@ -221,6 +245,10 @@ export default function ShopDestinationSelector({
 
         try {
             const results = await Promise.allSettled(requests)
+            let nextProductSets = shopData.productSets
+            let nextProducts = shopData.products
+            let nextProductSetCursor = productSetCursor
+            let nextProductCursor = productCursor
             for (const result of results) {
                 if (result.status === "rejected") {
                     console.error("Failed to load more catalog data:", result.reason)
@@ -228,19 +256,23 @@ export default function ShopDestinationSelector({
                 }
                 const { kind, data } = result.value
                 if (kind === "product_sets") {
-                    setShopData((previous) => ({
-                        ...previous,
-                        productSets: dedupeById([...previous.productSets, ...(data.product_sets || [])]),
-                    }))
-                    setProductSetCursor(data.product_set_cursor || null)
+                    nextProductSets = dedupeById([...nextProductSets, ...(data.product_sets || [])])
+                    nextProductSetCursor = data.product_set_cursor || null
                 } else {
-                    setShopData((previous) => ({
-                        ...previous,
-                        products: dedupeById([...previous.products, ...(data.products || [])]),
-                    }))
-                    setProductCursor(data.product_cursor || null)
+                    nextProducts = dedupeById([...nextProducts, ...(data.products || [])])
+                    nextProductCursor = data.product_cursor || null
                 }
             }
+            setShopData((previous) => ({ ...previous, productSets: nextProductSets, products: nextProducts }))
+            setProductSetCursor(nextProductSetCursor)
+            setProductCursor(nextProductCursor)
+            const dataCacheKey = `${pageId}:${adAccountId}:${catalogId}:${wantsProductSets ? "sets" : ""}:${wantsProducts ? "products" : ""}`
+            catalogDataCacheRef.current.set(dataCacheKey, {
+                productSets: nextProductSets,
+                products: nextProducts,
+                productSetCursor: nextProductSetCursor,
+                productCursor: nextProductCursor,
+            })
         } finally {
             setIsLoadingMore(false)
         }
