@@ -589,9 +589,13 @@ export default function TikTokLinkParameters({
                         onBlur={() => {
                             if (localImpression === "https://") {
                                 setLocalImpression("");
-                                setImpressionTrackingUrl("");
+                                if (impressionTrackingUrl !== "" && impressionTrackingUrl !== undefined) {
+                                    setImpressionTrackingUrl("");
+                                }
                             } else {
-                                setImpressionTrackingUrl(localImpression);
+                                if (localImpression !== impressionTrackingUrl) {
+                                    setImpressionTrackingUrl(localImpression);
+                                }
                             }
                         }}
                         onChange={(e) => {
@@ -610,7 +614,9 @@ export default function TikTokLinkParameters({
                             setLocalImpression(val);
                             // Only update parent if it's a potentially valid URL or empty
                             if (val !== "https://") {
-                                setImpressionTrackingUrl(val);
+                                if (val !== impressionTrackingUrl) {
+                                    setImpressionTrackingUrl(val);
+                                }
                             }
                         }}
                         onPaste={(e) => {
@@ -625,7 +631,9 @@ export default function TikTokLinkParameters({
                             }
                             setLocalImpression(cleanUrl);
                             if (cleanUrl !== "https://") {
-                                setImpressionTrackingUrl(cleanUrl);
+                                if (cleanUrl !== impressionTrackingUrl) {
+                                    setImpressionTrackingUrl(cleanUrl);
+                                }
                             }
                         }}
                         className="rounded-2xl border-gray-300 py-4.5 bg-white shadow"
@@ -663,9 +671,13 @@ export default function TikTokLinkParameters({
                         onBlur={() => {
                             if (localClick === "https://") {
                                 setLocalClick("");
-                                setClickTrackingUrl("");
+                                if (clickTrackingUrl !== "" && clickTrackingUrl !== undefined) {
+                                    setClickTrackingUrl("");
+                                }
                             } else {
-                                setClickTrackingUrl(localClick);
+                                if (localClick !== clickTrackingUrl) {
+                                    setClickTrackingUrl(localClick);
+                                }
                             }
                         }}
                         onChange={(e) => {
@@ -683,7 +695,9 @@ export default function TikTokLinkParameters({
                             }
                             setLocalClick(val);
                             if (val !== "https://") {
-                                setClickTrackingUrl(val);
+                                if (val !== clickTrackingUrl) {
+                                    setClickTrackingUrl(val);
+                                }
                             }
                         }}
                         onPaste={(e) => {
@@ -698,7 +712,9 @@ export default function TikTokLinkParameters({
                             }
                             setLocalClick(cleanUrl);
                             if (cleanUrl !== "https://") {
-                                setClickTrackingUrl(cleanUrl);
+                                if (cleanUrl !== clickTrackingUrl) {
+                                    setClickTrackingUrl(cleanUrl);
+                                }
                             }
                         }}
                         className="rounded-2xl border-gray-300 py-4.5 bg-white shadow"
