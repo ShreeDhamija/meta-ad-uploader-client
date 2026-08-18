@@ -241,14 +241,14 @@ function CommentsPanel({ open, comments, error, onClose, onJumpToComment }) {
         onMouseDown={(event) => event.stopPropagation()}
         aria-label="Review comments"
       >
-        <header className="flex items-center justify-between gap-4 px-5 py-4">
+        <header className="flex items-center justify-between gap-4 px-5 pb-2 pt-4">
           <h2 className="text-lg font-semibold text-gray-950">Comments <span className="font-normal text-gray-400">({comments.length})</span></h2>
           <button type="button" onClick={onClose} className="rounded-full p-2 text-gray-500 hover:bg-gray-100" aria-label="Close comments">
             <X className="h-5 w-5" />
           </button>
         </header>
 
-        <div className="flex-1 space-y-3 overflow-y-auto p-5">
+        <div className="flex-1 space-y-3 overflow-y-auto px-5 pb-5 pt-1">
           {error && <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}
           {comments.length === 0 ? (
             <div className="flex h-full min-h-48 items-center justify-center text-center text-sm text-gray-500">
@@ -259,7 +259,7 @@ function CommentsPanel({ open, comments, error, onClose, onJumpToComment }) {
               key={comment.id}
               type="button"
               onClick={() => onJumpToComment(comment)}
-              className="block w-full rounded-2xl border border-gray-100 bg-gray-50/70 p-4 text-left shadow-sm transition hover:bg-gray-50 hover:shadow-md"
+              className="block w-full rounded-2xl border border-gray-300 bg-gray-50/70 p-4 text-left shadow-sm transition hover:bg-gray-50 hover:shadow-md"
             >
               <span className="inline-flex max-w-full rounded-full border border-gray-200 bg-gray-100 px-2.5 py-1 text-[11px] font-medium text-gray-500">
                 <span className="truncate">{comment.anchorLabel}</span>

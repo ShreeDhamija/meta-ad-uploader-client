@@ -103,6 +103,14 @@ export async function getDraft({ draftId, adAccountId }) {
   return (await readJson(response)).draft;
 }
 
+export async function getDraftComments({ draftId, adAccountId }) {
+  const response = await fetch(
+    `${API_BASE_URL}/api/drafts/${encodeURIComponent(draftId)}/comments?adAccountId=${encodeURIComponent(adAccountId)}`,
+    { credentials: "include" }
+  );
+  return (await readJson(response)).comments || [];
+}
+
 export async function downloadDraftMedia({ draftId, adAccountId, mediaId }) {
   const response = await fetch(
     `${API_BASE_URL}/api/drafts/${encodeURIComponent(draftId)}/media/${encodeURIComponent(mediaId)}/content?adAccountId=${encodeURIComponent(adAccountId)}`,

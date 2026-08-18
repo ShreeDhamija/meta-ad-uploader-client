@@ -18,6 +18,7 @@ import {
   createDraftShareUrl,
   deleteDraft,
   getDraft,
+  getDraftComments,
   listDrafts,
 } from "@/lib/draftApi";
 import { getCreativeUnitsForForm } from "@/lib/draftCreativeLayout";
@@ -181,17 +182,20 @@ function formatCommentTime(value) {
 }
 
 function DraftComments({ comments }) {
-  if (!comments?.length) return null;
+  const items = comments || [];
   return (
     <section className="mt-5 shrink-0 border-t border-gray-200 pb-5 pt-4">
       <div className="mb-2 flex items-center gap-2">
         <MessageCircle className="h-4 w-4 text-gray-500" />
         <h3 className="text-sm font-semibold text-gray-950">Review comments</h3>
-        <span className="text-xs text-gray-400">{comments.length}</span>
+        <span className="text-xs text-gray-400">({items.length})</span>
       </div>
       <div className="max-h-44 overflow-y-auto pr-3">
-        <div className="divide-y divide-gray-100">
-          {comments.map((comment) => (
+        {items.length === 0 ? (
+          <p className="py-2 text-sm text-gray-400">No review comments yet.</p>
+        ) : (
+          <div className="divide-y divide-gray-100">
+          {items.map((comment) => (
             <article key={comment.id} className="grid gap-1 py-3 sm:grid-cols-[minmax(160px,0.32fr)_minmax(0,1fr)] sm:gap-5">
               <div className="min-w-0">
                 <p className="truncate text-xs font-semibold text-gray-600" title={comment.anchorLabel}>{comment.anchorLabel}</p>
@@ -202,7 +206,8 @@ function DraftComments({ comments }) {
               <p className="whitespace-pre-wrap break-words text-sm leading-5 text-gray-700">{comment.body}</p>
             </article>
           ))}
-        </div>
+          </div>
+        )}
       </div>
     </section>
   );
@@ -456,10 +461,13 @@ export default function DraftsModal({ open, onOpenChange, adAccountId, adAccount
     setQaUrl("");
     setActiveFormIndex(0);
     setLoadingDraft(true);
-    getDraft({ draftId: selectedId, adAccountId })
-      .then((draft) => {
+    Promise.all([
+      getDraft({ draftId: selectedId, adAccountId }),
+      getDraftComments({ draftId: selectedId, adAccountId }),
+    ])
+      .then(([draft, comments]) => {
         if (!cancelled) {
-          setSelectedDraft(draft);
+          setSelectedDraft({ ...draft, comments });
           setQaUrl(draft.qaUrl || "");
         }
       })
