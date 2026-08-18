@@ -91,6 +91,7 @@ import TextareaAutosize from "react-textarea-autosize";
 import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
 const API_BASE_URL = import.meta.env.VITE_API_URL || "https://api.withblip.com";
+const NOOP = () => {};
 const META_AD_CREATION_ACTION_REQUIRED = "META_AD_CREATION_ACTION_REQUIRED";
 const META_ACTION_REQUIRED_MESSAGE = "Meta requires you to take certain steps to continue ad creation";
 const TEMPLATE_LINK_SYNC_USER_ID = "929470643071391";
@@ -1015,8 +1016,12 @@ export default function AdCreationForm({
   setSelectedShopDestination,
   selectedShopDestinationType,
   setSelectedShopDestinationType,
+  selectedShopProductCatalogId,
+  setSelectedShopProductCatalogId,
   productExtensionProductSetId,
   setProductExtensionProductSetId,
+  productExtensionProductCatalogId,
+  setProductExtensionProductCatalogId,
   selectedForm,
   setSelectedForm,
   newAdSetName,
@@ -1602,7 +1607,9 @@ export default function AdCreationForm({
       instagramAccountId,
       selectedShopDestination,
       selectedShopDestinationType,
+      selectedShopProductCatalogId,
       productExtensionProductSetId,
+      productExtensionProductCatalogId,
       selectedForm,
       selectedTemplate,
       isPartnershipAd,
@@ -1637,7 +1644,9 @@ export default function AdCreationForm({
       instagramAccountId,
       selectedShopDestination,
       selectedShopDestinationType,
+      selectedShopProductCatalogId,
       productExtensionProductSetId,
+      productExtensionProductCatalogId,
       selectedForm,
       selectedTemplate,
       isPartnershipAd,
@@ -1912,7 +1921,9 @@ export default function AdCreationForm({
         fileGroups: variantFileGroups.map((group) => [...getGroupFileIds(group)]),
         selectedShopDestination: variantState.selectedShopDestination || "",
         selectedShopDestinationType: variantState.selectedShopDestinationType || "",
+        selectedShopProductCatalogId: variantState.selectedShopProductCatalogId || "",
         productExtensionProductSetId: variantState.productExtensionProductSetId || "",
+        productExtensionProductCatalogId: variantState.productExtensionProductCatalogId || "",
         selectedForm: variantState.selectedForm || null,
         selectedTemplate: variantState.selectedTemplate || "",
         isPartnershipAd: Boolean(variantState.isPartnershipAd),
@@ -2026,7 +2037,9 @@ export default function AdCreationForm({
 
       setSelectedShopDestination(d.selectedShopDestination || "");
       setSelectedShopDestinationType(d.selectedShopDestinationType || "");
+      setSelectedShopProductCatalogId(d.selectedShopProductCatalogId || "");
       setProductExtensionProductSetId(d.productExtensionProductSetId || "");
+      setProductExtensionProductCatalogId(d.productExtensionProductCatalogId || "");
       setSelectedForm(d.selectedForm || null);
       setSelectedTemplate(d.selectedTemplate || "");
       setIsPartnershipAd(Boolean(d.isPartnershipAd));
@@ -4270,10 +4283,11 @@ export default function AdCreationForm({
     });
   }, [duplicateAdSet, selectedAdSets, adSets]);
 
-  const showShopDestinationSelector = hasShopAutomaticAdSets && pageId;
+  const showShopDestinationSelector = hasShopAutomaticAdSets && pageId && selectedAdAccount;
   const showProductExtensionSelector =
     Boolean(adAccountSettings?.creativeEnhancements?.catalogItems) &&
     pageId &&
+    selectedAdAccount &&
     campaignObjective.length > 0 &&
     campaignObjective.every((objective) => ["OUTCOME_SALES", "OUTCOME_TRAFFIC"].includes(objective));
   const showPhoneNumberField = areAllAdSetsPhoneCall();
@@ -4397,10 +4411,17 @@ export default function AdCreationForm({
   }, [showPhoneNumberField, cta, setCta, adAccountSettings?.defaultCTA]);
 
   useEffect(() => {
-    if (!showProductExtensionSelector && productExtensionProductSetId) {
-      setProductExtensionProductSetId("");
+    if (!showProductExtensionSelector) {
+      if (productExtensionProductSetId) setProductExtensionProductSetId("");
+      if (productExtensionProductCatalogId) setProductExtensionProductCatalogId("");
     }
-  }, [productExtensionProductSetId, showProductExtensionSelector]);
+  }, [
+    productExtensionProductCatalogId,
+    productExtensionProductSetId,
+    setProductExtensionProductCatalogId,
+    setProductExtensionProductSetId,
+    showProductExtensionSelector,
+  ]);
 
   const shouldShowLeadFormSelector = useMemo(() => {
     if (destinationType === "instant_experience") return false;
@@ -10031,31 +10052,37 @@ export default function AdCreationForm({
                   {/* Shop Destination Selector - Only show when needed */}
                   <ShopDestinationSelector
                     pageId={pageId}
+                    adAccountId={selectedAdAccount}
                     selectedShopDestination={selectedShopDestination}
                     setSelectedShopDestination={setSelectedShopDestination}
                     selectedShopDestinationType={selectedShopDestinationType}
                     setSelectedShopDestinationType={setSelectedShopDestinationType}
+                    selectedProductCatalogId={selectedShopProductCatalogId}
+                    setSelectedProductCatalogId={setSelectedShopProductCatalogId}
                     isFieldModified={() => isFormFieldModified?.(["selectedShopDestination", "selectedShopDestinationType"])}
                     isVisible={showShopDestinationSelector}
                   />
                   <ShopDestinationSelector
                     pageId={pageId}
+                    adAccountId={selectedAdAccount}
                     selectedShopDestination={productExtensionProductSetId}
                     setSelectedShopDestination={setProductExtensionProductSetId}
-                    setSelectedShopDestinationType={() => {}}
+                    setSelectedShopDestinationType={NOOP}
+                    selectedProductCatalogId={productExtensionProductCatalogId}
+                    setSelectedProductCatalogId={setProductExtensionProductCatalogId}
                     isFieldModified={() => isFormFieldModified?.("productExtensionProductSetId")}
                     isVisible={showProductExtensionSelector}
                     allowedTypes={["product_set"]}
-                    label="Product Catalog (Optional)"
+                    label="Product Set (Optional)"
                     description={
                       <>
                         <span className="text-gray-400">You are seeing this because the catalog items creative enhancement is enabled.</span> Not
-                        selecting a catalog here can lead to Meta errors.
+                        selecting a product set here can lead to Meta errors.
                       </>
                     }
-                    placeholder="Select product catalog"
-                    searchPlaceholder="Search product catalogs..."
-                    emptyLabel="No product catalogs available"
+                    placeholder="Select product set"
+                    searchPlaceholder="Search product sets..."
+                    emptyLabel="No product sets available"
                     triggerClassName={formFieldChrome}
                   />
                   {showPixelTrackingOverride && selectedAdAccount && (

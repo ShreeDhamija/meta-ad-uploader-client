@@ -247,7 +247,9 @@ export default function Home() {
     const [hasAnyAdAccountSettings, setHasAnyAdAccountSettings] = useState(false);
     const [selectedShopDestination, setSelectedShopDestination] = useState("")
     const [selectedShopDestinationType, setSelectedShopDestinationType] = useState("")
+    const [selectedShopProductCatalogId, setSelectedShopProductCatalogId] = useState("")
     const [productExtensionProductSetId, setProductExtensionProductSetId] = useState("")
+    const [productExtensionProductCatalogId, setProductExtensionProductCatalogId] = useState("")
     const userHasActiveAccess = hasActiveAccess();
     const [isLoadingAdSets, setIsLoadingAdSets] = useState(false);
     const [selectedFiles, setSelectedFiles] = useState(new Set());
@@ -772,7 +774,9 @@ export default function Home() {
         instagramAccountId,
         selectedShopDestination,
         selectedShopDestinationType,
+        selectedShopProductCatalogId,
         productExtensionProductSetId,
+        productExtensionProductCatalogId,
         selectedForm,
         selectedTemplate,
         isPartnershipAd,
@@ -817,7 +821,9 @@ export default function Home() {
         instagramAccountId,
         selectedShopDestination,
         selectedShopDestinationType,
+        selectedShopProductCatalogId,
         productExtensionProductSetId,
+        productExtensionProductCatalogId,
         selectedForm,
         selectedTemplate,
         isPartnershipAd,
@@ -873,7 +879,9 @@ export default function Home() {
         setInstagramAccountId(snapshot.instagramAccountId || "");
         setSelectedShopDestination(snapshot.selectedShopDestination || "");
         setSelectedShopDestinationType(snapshot.selectedShopDestinationType || "");
+        setSelectedShopProductCatalogId(snapshot.selectedShopProductCatalogId || "");
         setProductExtensionProductSetId(snapshot.productExtensionProductSetId || "");
+        setProductExtensionProductCatalogId(snapshot.productExtensionProductCatalogId || "");
         setSelectedForm(snapshot.selectedForm || null);
         setSelectedTemplate(snapshot.selectedTemplate ?? "");
         setIsPartnershipAd(Boolean(snapshot.isPartnershipAd));
@@ -2122,8 +2130,12 @@ export default function Home() {
                             setSelectedShopDestination={setSelectedShopDestination}
                             selectedShopDestinationType={selectedShopDestinationType}
                             setSelectedShopDestinationType={setSelectedShopDestinationType}
+                            selectedShopProductCatalogId={selectedShopProductCatalogId}
+                            setSelectedShopProductCatalogId={setSelectedShopProductCatalogId}
                             productExtensionProductSetId={productExtensionProductSetId}
                             setProductExtensionProductSetId={setProductExtensionProductSetId}
+                            productExtensionProductCatalogId={productExtensionProductCatalogId}
+                            setProductExtensionProductCatalogId={setProductExtensionProductCatalogId}
                             selectedForm={selectedForm}
                             setSelectedForm={setSelectedForm}
                             newAdSetName={newAdSetName}
