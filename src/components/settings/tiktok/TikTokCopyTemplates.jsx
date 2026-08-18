@@ -654,7 +654,7 @@ export default function TikTokCopyTemplates({ templates = {}, defaultName = "", 
         </div>
         <div className="space-y-2">
           {texts.map((t, idx) => (
-            <div key={idx} className="flex items-center gap-2">
+            <div key={idx} className="flex items-start gap-2">
               <div className="flex flex-col w-full">
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-[10px] text-zinc-400 font-medium">{t.length}/100</span>
@@ -677,10 +677,15 @@ export default function TikTokCopyTemplates({ templates = {}, defaultName = "", 
                 )}
               </div>
               {texts.length > 1 && (
-                <Trash2
-                  className="w-4 h-4 text-gray-400 cursor-pointer hover:text-red-500 shrink-0"
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="border border-gray-400 rounded-xl bg-white shadow-xs shrink-0 mt-[18px]"
+                  size="icon"
                   onClick={() => setTexts((prev) => prev.filter((_, i) => i !== idx))}
-                />
+                >
+                  <Trash2 className="w-4 h-4 text-gray-600 cursor-pointer hover:text-red-500" />
+                </Button>
               )}
             </div>
           ))}

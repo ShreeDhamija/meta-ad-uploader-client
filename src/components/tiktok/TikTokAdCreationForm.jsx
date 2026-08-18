@@ -6085,7 +6085,7 @@ export default function TikTokAdCreationForm({
 
                     <div className="space-y-2 mb-0">
                       {(isSmartCampaign ? adTexts : adTexts.slice(0, 1)).map((text, i) => (
-                        <div key={i} className="flex items-center gap-2">
+                        <div key={i} className="flex items-start gap-2">
                           <div className="flex flex-col w-full">
                             <div className="flex items-center justify-between mb-1">
                               <span className="text-[10px] text-zinc-400 font-medium">{(text || "").length}/100</span>
@@ -6108,10 +6108,15 @@ export default function TikTokAdCreationForm({
                             )}
                           </div>
                           {isSmartCampaign && adTexts.length > 1 && (
-                            <Trash2
-                              className="w-4 h-4 text-gray-400 cursor-pointer hover:text-red-500 shrink-0"
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              className="border border-gray-400 rounded-xl bg-white shadow-xs shrink-0 mt-[18px]"
+                              size="icon"
                               onClick={() => setAdTexts((prev) => prev.filter((_, idx) => idx !== i))}
-                            />
+                            >
+                              <Trash2 className="w-4 h-4 text-gray-600 cursor-pointer hover:text-red-500" />
+                            </Button>
                           )}
                         </div>
                       ))}
