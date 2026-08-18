@@ -3980,7 +3980,7 @@ export default function TikTokAdCreationForm({
         }
 
         if (fd.urlMode === "WEBSITE" && !areAllVariantAdGroupsShopping) {
-          if (!fd.landingUrl || !fd.landingUrl.trim()) {
+          if (!fd.landingUrl || !fd.landingUrl.trim() || fd.landingUrl.trim() === "https://") {
             toast.error(`${variant.name}: link (URL) is required`);
             return;
           }
@@ -4298,6 +4298,85 @@ export default function TikTokAdCreationForm({
     }
   };
 
+  const hasDuplicateTexts = useMemo(() => {
+    if (!isSmartCampaign || !adTexts || adTexts.length <= 1) return false;
+    const nonEmpty = adTexts.map((t) => t.trim()).filter(Boolean);
+    return new Set(nonEmpty).size !== nonEmpty.length;
+  }, [isSmartCampaign, adTexts]);
+
+  const hasTextTooLong = useMemo(() => {
+    if (adType === "SPARK" || !adTexts) return false;
+    return adTexts.some((t) => t && t.length > 100);
+  }, [adType, adTexts]);
+
+  const isMediaMissing =
+    adType === "SPARK"
+      ? !importedPosts || importedPosts.length === 0
+      : (!files || files.length === 0) &&
+        (!driveFiles || driveFiles.length === 0) &&
+        (!dropboxFiles || dropboxFiles.length === 0) &&
+        (!tiktokLibraryFiles || tiktokLibraryFiles.length === 0);
+
+  const isAdTextMissing =
+    adType !== "SPARK" && (!adTexts || adTexts.filter((t) => t.trim() !== "").length === 0);
+
+  const hasFormula = adNameFormulaV2?.rawInput?.trim();
+  const isAdNameMissing = !hasFormula && !adName.trim();
+  const isCtaMissing = !cta || cta.length === 0;
+
+  const isWebsiteUrlMissing =
+    !areAllSelectedAdGroupsShopping &&
+    urlMode === "WEBSITE" &&
+    (!landingUrl || !landingUrl.trim() || landingUrl.trim() === "https://");
+  const isWebsiteUrlInvalidScheme =
+    !areAllSelectedAdGroupsShopping &&
+    urlMode === "WEBSITE" &&
+    landingUrl &&
+    landingUrl.trim() &&
+    landingUrl.trim() !== "https://" &&
+    !/^https:\/\//i.test(landingUrl.trim());
+  const isWebsiteUrlInvalidDomain =
+    !areAllSelectedAdGroupsShopping &&
+    urlMode === "WEBSITE" &&
+    landingUrl &&
+    landingUrl.trim() &&
+    landingUrl.trim() !== "https://" &&
+    /^https:\/\//i.test(landingUrl.trim()) &&
+    !(() => {
+      try {
+        const u = new URL(landingUrl.trim());
+        return Boolean(u.hostname && u.hostname.includes("."));
+      } catch (_) {
+        return false;
+      }
+    })();
+
+  const isInstantPageMissing =
+    !areAllSelectedAdGroupsShopping && urlMode === "INSTANT_PAGE" && (!landingUrl || !landingUrl.trim());
+  const isInstantPageInvalid =
+    !areAllSelectedAdGroupsShopping &&
+    urlMode === "INSTANT_PAGE" &&
+    landingUrl &&
+    landingUrl.trim() &&
+    !/^\d+$/.test(landingUrl.trim());
+
+  const isStoreMissing = areAllSelectedAdGroupsShopping && !formStoreId;
+  const isShowcaseProductMissing =
+    areAllSelectedAdGroupsShopping &&
+    (!formStoreProductId || (Array.isArray(formStoreProductId) && formStoreProductId.length === 0));
+
+  const isDuplicatingAdGroup = showDuplicateAdGroupBlock && duplicateAdGroup;
+  const isDuplicatedAdGroupNameMissing = isDuplicatingAdGroup && !newAdGroupName.trim();
+  const isAdGroupMissing = !isDuplicatingAdGroup && (!selectedAdGroup || selectedAdGroup.length === 0);
+  const isCampaignMissing = !selectedCampaign || selectedCampaign.length === 0;
+  const isAdvertiserMissing = !selectedAdvertiser;
+  const hasSelectedFilesUngrouped = selectedFiles && selectedFiles.size > 0;
+  const isIdentityMissing = !selectedIdentity || selectedIdentity === "CUSTOMIZED_USER";
+
+  const hasAdNameFormulaConfigured = Boolean(
+    adNameFormulaV2?.rawInput?.trim() || advertiserPrefs?.adNameFormulaV2?.rawInput?.trim()
+  );
+
   const getValidationErrors = useCallback(() => {
     const errors = [];
 
@@ -4344,6 +4423,12 @@ export default function TikTokAdCreationForm({
           errors.push(`Text cannot exceed 100 characters ("${singleText.substring(0, 15)}...")`);
         }
       }
+      if (isSmartCampaign && adTexts && adTexts.length > 1) {
+        const nonEmpty = adTexts.map((t) => t.trim()).filter(Boolean);
+        if (new Set(nonEmpty).size !== nonEmpty.length) {
+          errors.push("Duplicate values found in ad texts");
+        }
+      }
     }
 
     const hasFormula = adNameFormulaV2?.rawInput?.trim();
@@ -4356,7 +4441,7 @@ export default function TikTokAdCreationForm({
     }
 
     if (!areAllSelectedAdGroupsShopping && urlMode === "WEBSITE") {
-      if (!landingUrl || !landingUrl.trim()) {
+      if (!landingUrl || !landingUrl.trim() || landingUrl.trim() === "https://") {
         errors.push("Link (URL) is required");
       } else {
         let urlError = "";
@@ -4412,6 +4497,7 @@ export default function TikTokAdCreationForm({
     adType,
     importedPosts,
     adTexts,
+    isSmartCampaign,
     adNameFormulaV2,
     adName,
     cta,
@@ -4428,7 +4514,6 @@ export default function TikTokAdCreationForm({
 
   const validationErrors = getValidationErrors();
   const isFormValid = validationErrors.length === 0;
-  const isIdentityMissing = !selectedIdentity || selectedIdentity === "CUSTOMIZED_USER";
   const publishDisabled = !isFormValid || loadingAdGroups || (selectedFiles && selectedFiles.size > 0);
   const isAdvertiserLocked = variants.length > 1 && activeVariantId !== "default";
   const shouldScrollVariantPicker = variants.length > 5;
@@ -5944,16 +6029,6 @@ export default function TikTokAdCreationForm({
                           <div className="flex flex-col w-full">
                             <div className="flex items-center justify-between mb-1">
                               <span className="text-[10px] text-zinc-400 font-medium">{(text || "").length}/100</span>
-                              {isSmartCampaign && i > 0 && (
-                                <button
-                                  type="button"
-                                  onClick={() => setAdTexts((prev) => prev.filter((_, idx) => idx !== i))}
-                                  className="text-zinc-400 hover:text-red-500 transition-colors"
-                                  title="Remove this text"
-                                >
-                                  <X className="w-3.5 h-3.5" />
-                                </button>
-                              )}
                             </div>
                             <TextareaAutosize
                               value={text || ""}
@@ -5966,6 +6041,18 @@ export default function TikTokAdCreationForm({
                             />
                             {(text || "").length > 100 && <p className="text-xs text-red-500 font-medium mt-1">Text cannot exceed 100 characters</p>}
                           </div>
+                          {isSmartCampaign && adTexts.length > 1 && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              className="border border-gray-400 rounded-xl bg-white shadow-xs mt-5 shrink-0"
+                              size="icon"
+                              onClick={() => setAdTexts((prev) => prev.filter((_, idx) => idx !== i))}
+                            >
+                              <Trash2 className="w-4 h-4 text-gray-600 cursor-pointer hover:text-red-500" />
+                              <span className="sr-only">Remove</span>
+                            </Button>
+                          )}
                         </div>
                       ))}
 
@@ -6086,17 +6173,33 @@ export default function TikTokAdCreationForm({
                               <div className="w-full">
                                 <Input
                                   type="text"
-                                  value={customLink}
+                                  value={customLink || "https://"}
                                   onChange={(e) => {
                                     let val = e.target.value;
-                                    if (val && !val.startsWith("https://")) {
-                                      const httpsPrefix = "https://";
-                                      if (!httpsPrefix.startsWith(val)) {
-                                        val = "https://" + val;
+                                    if (!val || val.trim() === "" || val === "https://") {
+                                      val = "https://";
+                                    } else {
+                                      val = val.replace(/^https:\/\/(https?:\/\/)+/i, "https://");
+                                      val = val.replace(/^http:\/\//i, "https://");
+                                      if (!val.startsWith("https://")) {
+                                        val = "https://" + val.replace(/^https?:\/\//i, "");
                                       }
                                     }
                                     setCustomLink(val);
                                     setLandingUrl(val);
+                                  }}
+                                  onPaste={(e) => {
+                                    e.preventDefault();
+                                    const pastedText = e.clipboardData.getData("text") || "";
+                                    let cleanUrl = pastedText.trim();
+                                    if (cleanUrl) {
+                                      cleanUrl = cleanUrl.replace(/^https?:\/\//i, "");
+                                      cleanUrl = "https://" + cleanUrl;
+                                    } else {
+                                      cleanUrl = "https://";
+                                    }
+                                    setCustomLink(cleanUrl);
+                                    setLandingUrl(cleanUrl);
                                   }}
                                   className={cn("w-full", formInputChrome)}
                                   placeholder="https://example.com"
@@ -6120,9 +6223,9 @@ export default function TikTokAdCreationForm({
                                       const defaultLink = advertiserPrefs.links.find((l) => l.isDefault) || advertiserPrefs.links[0];
                                       setLandingUrl(defaultLink?.url || "");
                                     } else {
-                                      // Entering custom mode — clear landingUrl so user starts fresh
-                                      setCustomLink("");
-                                      setLandingUrl("");
+                                      // Entering custom mode — set https:// so user starts with https://
+                                      setCustomLink("https://");
+                                      setLandingUrl("https://");
                                     }
                                   }}
                                   className="border-gray-300 w-4 h-4 rounded-md"
@@ -6138,6 +6241,7 @@ export default function TikTokAdCreationForm({
                         {!areAllSelectedAdGroupsShopping &&
                           landingUrl &&
                           landingUrl.trim() &&
+                          landingUrl.trim() !== "https://" &&
                           (() => {
                             let urlError = "Link (URL) must start with https://";
                             const urlString = landingUrl.trim();
@@ -6677,7 +6781,7 @@ export default function TikTokAdCreationForm({
                 <div className="space-y-1">
                   <Button
                     type="submit"
-                    disabled={isQueueingJobs || publishDisabled || isIdentityMissing}
+                    disabled={isQueueingJobs || publishDisabled}
                     className="w-full h-12 bg-neutral-950 hover:bg-blue-700 text-white rounded-2xl font-semibold transition-all duration-150"
                   >
                     {isQueueingJobs ? (
@@ -6690,22 +6794,138 @@ export default function TikTokAdCreationForm({
                     )}
                   </Button>
 
-                  {!areAllSelectedAdGroupsShopping && (!landingUrl || !landingUrl.trim()) && (
-                    <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">Please provide a link URL</div>
+                  {hasDuplicateTexts && (
+                    <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                      Duplicate values found in your text fields — this can lead to errors when making ads. Please remove duplicates before publishing.
+                    </div>
                   )}
 
-                  {areAllSelectedAdGroupsShopping &&
-                    (!formStoreProductId || (Array.isArray(formStoreProductId) && formStoreProductId.length === 0)) && (
-                      <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
-                        Please select a showcase product
+                  {hasTextTooLong && (
+                    <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                      Ad text cannot exceed 100 characters
+                    </div>
+                  )}
+
+                  {hasSelectedFilesUngrouped && (
+                    <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                      You have selected files. Group or unselect them before publishing
+                    </div>
+                  )}
+
+                  {isMediaMissing && (
+                    <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                      {adType === "SPARK"
+                        ? "Please select at least one organic post to publish ads"
+                        : "Please upload or select at least one media file to publish ads"}
+                    </div>
+                  )}
+
+                  {isAdTextMissing && (
+                    <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                      Please enter ad text
+                    </div>
+                  )}
+
+                  {isAdNameMissing && (
+                    <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                      Please enter an ad name
+                    </div>
+                  )}
+
+                  {isCtaMissing && (
+                    <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                      Please select at least one Call to Action
+                    </div>
+                  )}
+
+                  {isWebsiteUrlMissing && (
+                    <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                      Please provide a link URL
+                    </div>
+                  )}
+
+                  {isWebsiteUrlInvalidScheme && (
+                    <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                      Link (URL) must start with https://
+                    </div>
+                  )}
+
+                  {isWebsiteUrlInvalidDomain && (
+                    <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                      Please provide a valid Link (URL)
+                    </div>
+                  )}
+
+                  {isInstantPageMissing && (
+                    <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                      Please enter an Instant Page ID
+                    </div>
+                  )}
+
+                  {isInstantPageInvalid && (
+                    <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                      Instant Page ID must be a valid integer
+                    </div>
+                  )}
+
+                  {isStoreMissing && (
+                    <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                      Please select a store
+                    </div>
+                  )}
+
+                  {isShowcaseProductMissing && (
+                    <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                      Please select a showcase product
+                    </div>
+                  )}
+
+                  {isIdentityMissing && (
+                    <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                      {adType === "NORMAL"
+                        ? "Please select a TikTok Identity to publish ads"
+                        : "Please select an account to Promote From to publish ads"}
+                    </div>
+                  )}
+
+                  {isDuplicatedAdGroupNameMissing && (
+                    <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                      Please enter a name for the duplicated ad group
+                    </div>
+                  )}
+
+                  {isAdGroupMissing && (
+                    <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                      Please select an ad group to publish ads
+                    </div>
+                  )}
+
+                  {isCampaignMissing && (
+                    <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                      Please select a campaign to publish ads
+                    </div>
+                  )}
+
+                  {isAdvertiserMissing && (
+                    <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                      Please select an advertiser account to publish ads
+                    </div>
+                  )}
+
+                  {!publishDisabled &&
+                    !hasAdNameFormulaConfigured &&
+                    adName === "Ad Generated Through Blip" && (
+                      <div className="text-xs text-orange-700 text-left p-2 bg-orange-50 border border-orange-200 rounded-xl">
+                        Your ads will be named "Ad Generated Through Blip" since no ad name formula is set.{" "}
+                        <button
+                          type="button"
+                          className="underline decoration-gray-400 text-orange-900 font-medium"
+                          onClick={() => document.getElementById("adName")?.scrollIntoView({ behavior: "smooth", block: "center" })}
+                        >
+                          Set ad name
+                        </button>
                       </div>
                     )}
-
-                  {/* {isIdentityMissing && (
-                    <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
-                      {adType === 'NORMAL' ? "Please select a TikTok Identity to publish ads" : "Please select an account to Promote From to publish ads"}
-                    </div>
-                  )} */}
                 </div>
 
                 <div className="flex flex-col gap-2">
