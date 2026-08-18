@@ -6874,14 +6874,6 @@ export default function TikTokAdCreationForm({
                     </div>
                   )}
 
-                  {isMediaMissing && (
-                    <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
-                      {adType === "SPARK"
-                        ? "Please select at least one organic post to publish ads"
-                        : "Please upload or select at least one media file to publish ads"}
-                    </div>
-                  )}
-
                   {isAdTextMissing && (
                     <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
                       Please enter ad text
