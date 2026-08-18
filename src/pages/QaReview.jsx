@@ -784,7 +784,7 @@ function AdvancedPreviewModal({ open, ads, onClose }) {
         <header className="flex shrink-0 items-start justify-between gap-4 border-b border-gray-200 bg-white px-5 py-4 sm:px-7">
           <div className="min-w-0">
             <h2 className="text-xl font-semibold text-gray-950">Advanced preview</h2>
-            <p className="mt-1 text-sm text-gray-500">Placement mockups are approximate and may vary by device, objective, and Meta enhancements.</p>
+            <p className="mt-1 text-sm text-gray-500">Placement mockups are approximate and may vary by device and objective.</p>
           </div>
           <button type="button" onClick={onClose} className="rounded-full p-2 text-gray-500 hover:bg-gray-100" aria-label="Close advanced preview">
             <X className="h-5 w-5" />
@@ -1339,7 +1339,7 @@ export default function QaReview() {
                   className="inline-flex items-center rounded-full bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-blue-700"
                 >
                   <MessageCircle className="mr-2 h-4 w-4" />
-                  {comments.length} Comment{comments.length === 1 ? "" : "s"}
+                  View {comments.length} comment{comments.length === 1 ? "" : "s"}
                 </button>
               )}
               <button
@@ -1349,7 +1349,8 @@ export default function QaReview() {
                   setCommentTarget(null);
                   setInlineCommentSelection(null);
                 }}
-                className="rounded-xl bg-neutral-900 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-neutral-800"
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-[18px] border-2 border-[#3f3e3e] px-5 text-sm font-semibold text-white shadow-sm transition hover:opacity-90"
+                style={{ background: "linear-gradient(0deg, #414141 0%, #000 77.88%)" }}
               >
                 {commentMode ? "Exit commenting mode" : "Leave a comment"}
               </button>
