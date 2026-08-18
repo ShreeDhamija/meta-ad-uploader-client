@@ -96,7 +96,8 @@ function findCommentAnchor(anchorId) {
   );
 }
 
-function InlineCommentPopover({ selection, comments, onClose }) {
+function InlineCommentPopover({ selection, comments, onClose, onOutsideClick }) {
+  const popoverRef = useRef(null);
   const [position, setPosition] = useState(null);
   const visibleComments = selection
     ? comments.filter((comment) => (
@@ -137,17 +138,28 @@ function InlineCommentPopover({ selection, comments, onClose }) {
     };
   }, [selection, comments]);
 
+  useEffect(() => {
+    if (!selection) return undefined;
+    const closeOnOutsideClick = (event) => {
+      if (popoverRef.current?.contains(event.target) || event.target.closest?.("[data-comment-pin]")) return;
+      onOutsideClick();
+    };
+    document.addEventListener("pointerdown", closeOnOutsideClick);
+    return () => document.removeEventListener("pointerdown", closeOnOutsideClick);
+  }, [selection, onOutsideClick]);
+
   if (!selection || !position || visibleComments.length === 0 || typeof document === "undefined") return null;
   return createPortal(
     <div
+      ref={popoverRef}
       data-comment-ui
-      className="fixed z-[105] flex h-48 flex-col overflow-hidden rounded-2xl border border-pink-100 bg-white shadow-2xl"
+      className="fixed z-[105] flex h-48 flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl"
       style={{ left: position.left, top: position.top, width: position.width }}
       role="dialog"
       aria-label="Comment"
     >
       <header className="flex items-center justify-between gap-2 border-b border-gray-100 px-4 py-3">
-        <p className="min-w-0 truncate text-xs font-semibold text-pink-600">{visibleComments[0].anchorLabel}</p>
+        <p className="min-w-0 truncate text-xs font-semibold text-gray-500">{visibleComments[0].anchorLabel}</p>
         <button type="button" onClick={onClose} className="shrink-0 rounded-full p-1 text-gray-400 hover:bg-gray-100" aria-label="Close comment">
           <X className="h-4 w-4" />
         </button>
@@ -165,34 +177,6 @@ function InlineCommentPopover({ selection, comments, onClose }) {
       </div>
     </div>,
     document.body,
-  );
-}
-
-function ReviewCommentsSummary({ comments, onSelectComment }) {
-  if (comments.length === 0) return null;
-  return (
-    <section data-comment-ui className="mt-6 rounded-3xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
-      <div className="flex items-center gap-2">
-        <MessageCircle className="h-5 w-5 text-pink-500" />
-        <h2 className="text-lg font-semibold text-gray-950">Review comments</h2>
-      </div>
-      <div className="mt-4 divide-y divide-gray-100">
-        {comments.map((comment) => (
-          <button
-            key={comment.id}
-            type="button"
-            onClick={() => onSelectComment(comment)}
-            className="grid w-full gap-1 py-4 text-left sm:grid-cols-[minmax(180px,0.35fr)_minmax(0,1fr)] sm:gap-5"
-          >
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-pink-600">{comment.anchorLabel}</p>
-              <p className="mt-0.5 text-xs text-gray-500">{comment.authorName}</p>
-            </div>
-            <p className="whitespace-pre-wrap break-words text-sm leading-5 text-gray-700">{comment.body}</p>
-          </button>
-        ))}
-      </div>
-    </section>
   );
 }
 
@@ -257,13 +241,8 @@ function CommentsPanel({ open, comments, error, onClose, onJumpToComment }) {
         onMouseDown={(event) => event.stopPropagation()}
         aria-label="Review comments"
       >
-        <header className="flex items-start justify-between gap-4 border-b border-gray-200 px-5 py-4">
-          <div className="min-w-0">
-            <h2 className="text-lg font-semibold text-gray-950">Comments</h2>
-            <p className="mt-0.5 truncate text-sm text-gray-500">
-              {comments.length} total
-            </p>
-          </div>
+        <header className="flex items-center justify-between gap-4 px-5 py-4">
+          <h2 className="text-lg font-semibold text-gray-950">Comments <span className="font-normal text-gray-400">({comments.length})</span></h2>
           <button type="button" onClick={onClose} className="rounded-full p-2 text-gray-500 hover:bg-gray-100" aria-label="Close comments">
             <X className="h-5 w-5" />
           </button>
@@ -280,14 +259,16 @@ function CommentsPanel({ open, comments, error, onClose, onJumpToComment }) {
               key={comment.id}
               type="button"
               onClick={() => onJumpToComment(comment)}
-              className="block w-full rounded-2xl border border-gray-200 p-4 text-left hover:border-gray-300 hover:bg-gray-50"
+              className="block w-full rounded-2xl border border-gray-100 bg-gray-50/70 p-4 text-left shadow-sm transition hover:bg-gray-50 hover:shadow-md"
             >
-              <div className="flex items-start justify-between gap-3">
-                <span className="font-semibold text-gray-950">{comment.authorName}</span>
-                <span className="shrink-0 text-[11px] text-gray-400">{formatCommentTime(comment.createdAt)}</span>
+              <span className="inline-flex max-w-full rounded-full border border-gray-200 bg-gray-100 px-2.5 py-1 text-[11px] font-medium text-gray-500">
+                <span className="truncate">{comment.anchorLabel}</span>
+              </span>
+              <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-5 text-black">{comment.body}</p>
+              <div className="mt-3 flex items-center justify-between gap-3 text-xs text-gray-400">
+                <span className="truncate">{comment.authorName}</span>
+                <span className="shrink-0 text-[10px]">{formatCommentTime(comment.createdAt)}</span>
               </div>
-              <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-5 text-gray-700">{comment.body}</p>
-              <p className="mt-3 truncate text-xs font-medium text-blue-600">{comment.anchorLabel}</p>
             </button>
           ))}
         </div>
@@ -676,6 +657,7 @@ function ReviewForm({ form, index, state, mediaById, showLaunchHeading }) {
 export default function QaReview() {
   const { token } = useParams();
   const reviewRootRef = useRef(null);
+  const suppressCommentClickRef = useRef(false);
   const [draft, setDraft] = useState(null);
   const [error, setError] = useState("");
   const [comments, setComments] = useState([]);
@@ -739,6 +721,7 @@ export default function QaReview() {
   };
 
   const handleReviewClick = (event) => {
+    if (suppressCommentClickRef.current) return;
     if (!commentMode || event.target.closest("[data-comment-ui]")) return;
     const root = reviewRootRef.current;
     if (!root) return;
@@ -839,9 +822,9 @@ export default function QaReview() {
         {commentMode && (
           <style>{`
             [data-comment-anchor] {
-              cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 24 24' fill='%23ec4899' stroke='white' stroke-width='1.5'%3E%3Cpath d='M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z'/%3E%3C/svg%3E") 6 6, pointer;
+              cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 24 24' fill='%23111827' stroke='white' stroke-width='1.5'%3E%3Cpath d='M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z'/%3E%3C/svg%3E") 6 6, pointer;
             }
-            [data-comment-anchor]:hover { outline: 2px solid #f9a8d4; outline-offset: 4px; border-radius: 12px; }
+            [data-comment-anchor]:hover { outline: 2px solid #93c5fd; outline-offset: 4px; border-radius: 12px; }
             [data-comment-anchor]:has([data-comment-anchor]:hover) { outline: none; }
           `}</style>
         )}
@@ -880,7 +863,7 @@ export default function QaReview() {
             </div>
           </header>
           {commentMode && (
-            <div data-comment-ui className="mb-4 rounded-2xl border border-pink-200 bg-pink-50 px-4 py-3 text-sm font-medium text-pink-800">
+            <div data-comment-ui className="mb-4 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-800">
               Click any field, creative, or creative group to attach your comment.
             </div>
           )}
@@ -896,7 +879,6 @@ export default function QaReview() {
               />
             ))}
           </div>
-          <ReviewCommentsSummary comments={comments} onSelectComment={handleJumpToComment} />
         </div>
       </main>
       </ScrollArea>
@@ -911,6 +893,13 @@ export default function QaReview() {
         selection={inlineCommentSelection}
         comments={comments}
         onClose={() => setInlineCommentSelection(null)}
+        onOutsideClick={() => {
+          suppressCommentClickRef.current = true;
+          window.setTimeout(() => {
+            suppressCommentClickRef.current = false;
+          }, 0);
+          setInlineCommentSelection(null);
+        }}
       />
       <CommentComposer
         target={commentTarget}
