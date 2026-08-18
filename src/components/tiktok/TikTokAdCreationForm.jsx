@@ -2129,11 +2129,11 @@ export default function TikTokAdCreationForm({
             ...(urlMode === "WEBSITE" ? { landing_page_url: finalUrl } : { page_id: landingUrl }),
             ...(adType === "SPARK"
               ? {
-                  is_spark_ad: true,
-                  spark_ad_auth_code: item.file.authCode,
-                  tiktok_item_id: videoId,
-                  adType: "SPARK",
-                }
+                is_spark_ad: true,
+                spark_ad_auth_code: item.file.authCode,
+                tiktok_item_id: videoId,
+                adType: "SPARK",
+              }
               : {}),
             ...(shoppingAdsType ? { shopping_ads_type: shoppingAdsType } : {}),
             ...(productSource ? { product_source: productSource } : {}),
@@ -2218,7 +2218,7 @@ export default function TikTokAdCreationForm({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ jobId: jobToProcess.id }),
-        }).catch(() => {});
+        }).catch(() => { });
       } else {
         updateProgress(100, `Job Failed: ${err.message}`);
 
@@ -2234,7 +2234,7 @@ export default function TikTokAdCreationForm({
             totalCount,
             errorMessages: [{ error: err.message }],
           }),
-        }).catch(() => {});
+        }).catch(() => { });
       }
       throw err;
     } finally {
@@ -2605,7 +2605,7 @@ export default function TikTokAdCreationForm({
     tiktokFetch(`${API_BASE_URL}/api/tiktok/instant-pages?advertiserId=${selectedAdvertiser}`)
       .then((r) => r.json())
       .then((d) => setInstantPages(d.pages || []))
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setLoadingPages(false));
   }, [selectedAdvertiser, tiktokFetch]);
 
@@ -3508,7 +3508,7 @@ export default function TikTokAdCreationForm({
       if (pickerInstanceRef.current) {
         try {
           pickerInstanceRef.current.setVisible(false);
-        } catch (e) {}
+        } catch (e) { }
       }
       setShowFolderInput(true);
       const mimeTypes = [
@@ -3617,7 +3617,7 @@ export default function TikTokAdCreationForm({
         openPicker(res.data.accessToken);
         return;
       }
-    } catch (err) {}
+    } catch (err) { }
 
     const authWindow = window.open(`${API_BASE_URL}/auth/google?popup=true`, "_blank", "width=1100,height=750");
     if (!authWindow) return toast.error("Popup blocked. Please allow popups and try again.");
@@ -3724,7 +3724,7 @@ export default function TikTokAdCreationForm({
         openDropboxChooser(statusData.accessToken);
         return;
       }
-    } catch (err) {}
+    } catch (err) { }
 
     const authWindow = window.open(`${API_BASE_URL}/auth/dropbox?popup=true`, "dropbox-auth", "width=600,height=700");
     const handleMessage = (event) => {
@@ -4363,9 +4363,9 @@ export default function TikTokAdCreationForm({
     adType === "SPARK"
       ? !importedPosts || importedPosts.length === 0
       : (!files || files.length === 0) &&
-        (!driveFiles || driveFiles.length === 0) &&
-        (!dropboxFiles || dropboxFiles.length === 0) &&
-        (!tiktokLibraryFiles || tiktokLibraryFiles.length === 0);
+      (!driveFiles || driveFiles.length === 0) &&
+      (!dropboxFiles || dropboxFiles.length === 0) &&
+      (!tiktokLibraryFiles || tiktokLibraryFiles.length === 0);
 
   const isAdTextMissing =
     adType !== "SPARK" && (!adTexts || adTexts.filter((t) => t.trim() !== "").length === 0);
@@ -4642,9 +4642,9 @@ export default function TikTokAdCreationForm({
                     <span className="truncate text-sm font-medium">
                       {selectedAdvertiser
                         ? (() => {
-                            const found = advertisers.find((a) => String(a.advertiser_id || a.id) === String(selectedAdvertiser));
-                            return found ? found.advertiser_name || found.name || selectedAdvertiser : selectedAdvertiser;
-                          })()
+                          const found = advertisers.find((a) => String(a.advertiser_id || a.id) === String(selectedAdvertiser));
+                          return found ? found.advertiser_name || found.name || selectedAdvertiser : selectedAdvertiser;
+                        })()
                         : "Select an Ad Account"}
                     </span>
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -4781,12 +4781,12 @@ export default function TikTokAdCreationForm({
                             : selectedCampaign.length === 0
                               ? "Select campaigns"
                               : (() => {
-                                  const validSelected = selectedCampaign.filter((id) => campaigns.some((c) => c.campaign_id === id));
-                                  if (validSelected.length === 1) {
-                                    return campaigns.find((c) => c.campaign_id === validSelected[0])?.campaign_name || validSelected[0];
-                                  }
-                                  return `${validSelected.length} campaigns selected`;
-                                })()}
+                                const validSelected = selectedCampaign.filter((id) => campaigns.some((c) => c.campaign_id === id));
+                                if (validSelected.length === 1) {
+                                  return campaigns.find((c) => c.campaign_id === validSelected[0])?.campaign_name || validSelected[0];
+                                }
+                                return `${validSelected.length} campaigns selected`;
+                              })()}
                         </span>
                       )}
                     </div>
@@ -4850,7 +4850,7 @@ export default function TikTokAdCreationForm({
                                         String(c.secondary_status).includes("DISABLE") ||
                                         c.operation_status === false ||
                                         c.operation_status === "false") &&
-                                        "text-gray-400",
+                                      "text-gray-400",
                                     )}
                                   >
                                     {c.campaign_name}
@@ -4866,31 +4866,31 @@ export default function TikTokAdCreationForm({
                                       c?.is_smart === true ||
                                       c?.is_smart === "true",
                                     ) && (
-                                      <TooltipProvider delayDuration={100}>
-                                        <Tooltip>
-                                          <TooltipTrigger asChild>
-                                            <span className="inline-flex items-center" title="Smart+ Campaign" onClick={(e) => e.stopPropagation()}>
-                                              <PlusCircle
-                                                className={cn(
-                                                  "w-4 h-4 shrink-0 cursor-help",
-                                                  c.operation_status === "DISABLE" ||
-                                                    c.operation_status === "disable" ||
-                                                    String(c.operation_status).toUpperCase() === "DISABLE" ||
-                                                    String(c.secondary_status).includes("DISABLE") ||
-                                                    c.operation_status === false ||
-                                                    c.operation_status === "false"
-                                                    ? "text-gray-400"
-                                                    : "text-gray-800",
-                                                )}
-                                              />
-                                            </span>
-                                          </TooltipTrigger>
-                                          <TooltipContent side="top" className="bg-black text-white text-xs px-2.5 py-1 rounded-lg shadow-md z-50">
-                                            Smart+ Campaign
-                                          </TooltipContent>
-                                        </Tooltip>
-                                      </TooltipProvider>
-                                    )}
+                                        <TooltipProvider delayDuration={100}>
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <span className="inline-flex items-center" title="Smart+ Campaign" onClick={(e) => e.stopPropagation()}>
+                                                <PlusCircle
+                                                  className={cn(
+                                                    "w-4 h-4 shrink-0 cursor-help",
+                                                    c.operation_status === "DISABLE" ||
+                                                      c.operation_status === "disable" ||
+                                                      String(c.operation_status).toUpperCase() === "DISABLE" ||
+                                                      String(c.secondary_status).includes("DISABLE") ||
+                                                      c.operation_status === false ||
+                                                      c.operation_status === "false"
+                                                      ? "text-gray-400"
+                                                      : "text-gray-800",
+                                                  )}
+                                                />
+                                              </span>
+                                            </TooltipTrigger>
+                                            <TooltipContent side="top" className="bg-black text-white text-xs px-2.5 py-1 rounded-lg shadow-md z-50">
+                                              Smart+ Campaign
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        </TooltipProvider>
+                                      )}
                                     {(c.operation_status === "ENABLE" ||
                                       c.operation_status === "enable" ||
                                       String(c.operation_status).toUpperCase() === "ENABLE" ||
@@ -5041,7 +5041,7 @@ export default function TikTokAdCreationForm({
                                             String(c.secondary_status).includes("DISABLE") ||
                                             c.operation_status === false ||
                                             c.operation_status === "false") &&
-                                            "text-gray-400",
+                                          "text-gray-400",
                                         )}
                                       >
                                         {c.campaign_name}
@@ -5267,7 +5267,7 @@ export default function TikTokAdCreationForm({
                                                   ag.operation_status === false ||
                                                   ag.operation_status === "false" ||
                                                   (!isSelected && isFull)) &&
-                                                  "text-gray-400",
+                                                "text-gray-400",
                                               )}
                                             >
                                               {ag.adgroup_name}
@@ -5284,8 +5284,8 @@ export default function TikTokAdCreationForm({
                                                 String(ag.secondary_status).includes("ENABLE") ||
                                                 ag.operation_status === true ||
                                                 ag.operation_status === "true") && (
-                                                <span className="ml-0 w-2 h-2 rounded-full bg-green-500 shrink-0" />
-                                              )}
+                                                  <span className="ml-0 w-2 h-2 rounded-full bg-green-500 shrink-0" />
+                                                )}
                                             </span>
                                           </div>
                                         </div>
@@ -5423,7 +5423,7 @@ export default function TikTokAdCreationForm({
                                             String(ag.secondary_status).includes("DISABLE") ||
                                             ag.operation_status === false ||
                                             ag.operation_status === "false") &&
-                                            "text-gray-400",
+                                          "text-gray-400",
                                         )}
                                       >
                                         {ag.adgroup_name}
@@ -5661,18 +5661,16 @@ export default function TikTokAdCreationForm({
                     <button
                       type="button"
                       onClick={() => setSparkSourceTab("video_list")}
-                      className={`px-4 py-2 text-xs font-semibold rounded-xl transition-all ${
-                        sparkSourceTab === "video_list" ? "bg-white text-black shadow-sm" : "text-gray-500 hover:text-black"
-                      }`}
+                      className={`px-4 py-2 text-xs font-semibold rounded-xl transition-all ${sparkSourceTab === "video_list" ? "bg-white text-black shadow-sm" : "text-gray-500 hover:text-black"
+                        }`}
                     >
                       Choose from Video List
                     </button>
                     <button
                       type="button"
                       onClick={() => setSparkSourceTab("auth_codes")}
-                      className={`px-4 py-2 text-xs font-semibold rounded-xl transition-all ${
-                        sparkSourceTab === "auth_codes" ? "bg-white text-black shadow-sm" : "text-gray-500 hover:text-black"
-                      }`}
+                      className={`px-4 py-2 text-xs font-semibold rounded-xl transition-all ${sparkSourceTab === "auth_codes" ? "bg-white text-black shadow-sm" : "text-gray-500 hover:text-black"
+                        }`}
                     >
                       Paste Auth Codes
                     </button>
@@ -6759,9 +6757,8 @@ export default function TikTokAdCreationForm({
                       {uploadSources.includes("local") && (
                         <div
                           {...getRootProps()}
-                          className={`group cursor-pointer border-2 border-dashed rounded-2xl p-6 text-center transition-colors ${
-                            isDragActive ? "border-primary bg-primary/5" : "border-gray-300 hover:border-primary/50"
-                          }`}
+                          className={`group cursor-pointer border-2 border-dashed rounded-2xl p-6 text-center transition-colors ${isDragActive ? "border-primary bg-primary/5" : "border-gray-300 hover:border-primary/50"
+                            }`}
                         >
                           <input {...getInputProps()} />
                           <div className="flex flex-col items-center gap-2">
@@ -6856,14 +6853,6 @@ export default function TikTokAdCreationForm({
                   {hasSelectedFilesUngrouped && (
                     <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
                       You have selected files. Group or unselect them before publishing
-                    </div>
-                  )}
-
-                  {isMediaMissing && (
-                    <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
-                      {adType === "SPARK"
-                        ? "Please select at least one organic post to publish ads"
-                        : "Please upload or select at least one media file to publish ads"}
                     </div>
                   )}
 
