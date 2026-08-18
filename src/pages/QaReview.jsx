@@ -23,6 +23,7 @@ import CampaignIcon from "@/assets/icons/folder.svg?react";
 import CTAIcon from "@/assets/icons/cta.svg?react";
 import FacebookIcon from "@/assets/icons/fb.svg?react";
 import InstagramIcon from "@/assets/icons/ig.svg?react";
+import InstagramColorIcon from "@/assets/icons/IGColor.webp";
 import LinkIcon from "@/assets/icons/link.svg?react";
 import TemplateIcon from "@/assets/icons/file.svg?react";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -34,6 +35,7 @@ const MEDIA_FALLBACK_URL = "https://api.withblip.com/thumbnail.jpg";
 const COPY_PREVIEW_LIMIT = 200;
 const REVIEWER_NAME_KEY = "blip-qa-reviewer-name";
 const CommentsContext = createContext({ comments: [], openInlineComment: () => {} });
+const PreviewMediaRatiosContext = createContext({});
 
 function CommentPins({ anchorId, media = false }) {
   const { comments, openInlineComment } = useContext(CommentsContext);
@@ -382,16 +384,25 @@ function getMediaAspectRatio(media) {
 const ADVANCED_PLACEMENTS = [
   { id: "facebook-feed", label: "Facebook Feed", network: "facebook", kind: "facebook-feed", targetRatio: 1 },
   { id: "instagram-feed", label: "Instagram Feed", network: "instagram", kind: "instagram-feed", targetRatio: 1 },
+  { id: "facebook-profile-feed", label: "Facebook Profile Feed", network: "facebook", kind: "facebook-feed", targetRatio: 1 },
+  { id: "instagram-profile-feed", label: "Instagram Profile Feed", network: "instagram", kind: "instagram-feed", targetRatio: 1 },
   { id: "marketplace", label: "Facebook Marketplace", network: "facebook", kind: "marketplace", targetRatio: 1 },
+  { id: "business-explore", label: "Facebook Business Explore", network: "facebook", kind: "facebook-feed", targetRatio: 1 },
+  { id: "in-stream-reels", label: "Facebook In-stream Reels", network: "facebook", kind: "facebook-feed", targetRatio: 1 },
   { id: "right-column", label: "Facebook Right Column", network: "facebook", kind: "right-column", targetRatio: 1 },
-  { id: "search", label: "Instagram Search Results", network: "instagram", kind: "search", targetRatio: 1 },
   { id: "instagram-stories", label: "Instagram Stories", network: "instagram", kind: "story", targetRatio: 9 / 16 },
   { id: "facebook-stories", label: "Facebook Stories", network: "facebook", kind: "story", targetRatio: 9 / 16 },
   { id: "instagram-reels", label: "Instagram Reels", network: "instagram", kind: "reel", targetRatio: 9 / 16 },
   { id: "facebook-reels", label: "Facebook Reels", network: "facebook", kind: "reel", targetRatio: 9 / 16 },
 ];
 
-function getMediaRatioNumber(media) {
+function mediaRatioKey(media) {
+  return String(media?.id || media?.url || media?.previewUrl || media?.name || "unknown");
+}
+
+function getMediaRatioNumber(media, detectedRatios = {}) {
+  const detected = Number(detectedRatios[mediaRatioKey(media)]);
+  if (detected > 0) return detected;
   const width = Number(media?.width ?? media?.metadata?.width ?? media?.dimensions?.width);
   const height = Number(media?.height ?? media?.metadata?.height ?? media?.dimensions?.height);
   if (width > 0 && height > 0) return width / height;
@@ -406,10 +417,10 @@ function getMediaRatioNumber(media) {
   return 1;
 }
 
-function pickPlacementMedia(mediaItems, targetRatio) {
+function pickPlacementMedia(mediaItems, targetRatio, detectedRatios) {
   if (!mediaItems?.length) return null;
   return mediaItems.reduce((best, media) => {
-    const difference = Math.abs(Math.log(getMediaRatioNumber(media) / targetRatio));
+    const difference = Math.abs(Math.log(getMediaRatioNumber(media, detectedRatios) / targetRatio));
     return !best || difference < best.difference ? { media, difference } : best;
   }, null)?.media || mediaItems[0];
 }
@@ -444,12 +455,13 @@ function previewExcerpt(value, maxCharacters) {
   return text.length > maxCharacters ? `${text.slice(0, maxCharacters).trimEnd()}…` : text;
 }
 
-function PlacementNetworkIcon({ network, inverse = false }) {
+function PlacementNetworkIcon({ network }) {
+  if (network === "instagram") {
+    return <img src={InstagramColorIcon} alt="Instagram" className="h-5 w-5 shrink-0 object-contain" />;
+  }
   return (
-    <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-bold ${
-      inverse ? "bg-white/95 text-gray-950" : network === "facebook" ? "bg-[#1877f2] text-white" : "bg-gray-950 text-white"
-    }`}>
-      {network === "facebook" ? "f" : "◎"}
+    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#1877f2] text-[11px] font-bold text-white">
+      f
     </span>
   );
 }
@@ -463,8 +475,9 @@ function AdvertiserAvatar({ name, small = false }) {
 }
 
 function PreviewMedia({ mediaItems, targetRatio, alt }) {
-  const media = pickPlacementMedia(mediaItems, targetRatio);
-  const sourceRatio = media ? getMediaRatioNumber(media) : 1;
+  const detectedRatios = useContext(PreviewMediaRatiosContext);
+  const media = pickPlacementMedia(mediaItems, targetRatio, detectedRatios);
+  const sourceRatio = media ? getMediaRatioNumber(media, detectedRatios) : 1;
   const isVideo = (media?.mimeType || "").startsWith("video/");
   const verticalPlacement = targetRatio < 0.7;
   const squareInVertical = verticalPlacement && sourceRatio >= 0.78;
@@ -503,15 +516,14 @@ function PreviewMedia({ mediaItems, targetRatio, alt }) {
   );
 }
 
-function PlacementCard({ placement, children }) {
+function PlacementCard({ placement, children, narrow = false }) {
   return (
-    <section className="min-w-0">
-      <div className="mb-2 flex items-center justify-between gap-2 px-1">
+    <section className={`min-w-0 ${narrow ? "mx-auto w-full max-w-[300px]" : ""}`}>
+      <div className="mb-2 flex items-center gap-2 px-1">
         <div className="flex min-w-0 items-center gap-2">
           <PlacementNetworkIcon network={placement.network} />
           <h3 className="truncate text-sm font-semibold text-gray-800">{placement.label}</h3>
         </div>
-        <MoreHorizontal className="h-4 w-4 shrink-0 text-gray-500" />
       </div>
       {children}
     </section>
@@ -622,30 +634,10 @@ function RightColumnPlacement({ ad, placement }) {
   );
 }
 
-function SearchPlacement({ ad, placement }) {
-  return (
-    <PlacementCard placement={placement}>
-      <div className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm">
-        <FeedIdentity ad={ad} network="instagram" />
-        <div className="flex gap-3 px-2 pb-2">
-          <div className="w-36 shrink-0 overflow-hidden rounded-lg">
-            <PreviewMedia mediaItems={ad.media} targetRatio={1} alt={ad.adName} />
-          </div>
-          <div className="min-w-0 py-1">
-            <p className="text-sm font-semibold text-gray-950 [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] overflow-hidden">{ad.headline || ad.adName}</p>
-            <p className="mt-2 text-xs leading-4 text-gray-600 [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:3] overflow-hidden">{previewExcerpt(ad.primaryText, 100)}</p>
-            <p className="mt-3 text-xs font-semibold text-gray-950">{ad.cta}</p>
-          </div>
-        </div>
-      </div>
-    </PlacementCard>
-  );
-}
-
 function VerticalPlacement({ ad, placement }) {
   const isReel = placement.kind === "reel";
   return (
-    <PlacementCard placement={placement}>
+    <PlacementCard placement={placement} narrow>
       <div className="mx-auto w-full max-w-[300px] overflow-hidden rounded-xl border border-gray-300 bg-black shadow-md">
         <div className="relative">
           <PreviewMedia mediaItems={ad.media} targetRatio={9 / 16} alt={ad.adName} />
@@ -695,7 +687,6 @@ function PlacementPreview({ ad, placement }) {
   if (placement.kind === "instagram-feed") return <InstagramFeedPlacement ad={ad} placement={placement} />;
   if (placement.kind === "marketplace") return <MarketplacePlacement ad={ad} placement={placement} />;
   if (placement.kind === "right-column") return <RightColumnPlacement ad={ad} placement={placement} />;
-  if (placement.kind === "search") return <SearchPlacement ad={ad} placement={placement} />;
   return <VerticalPlacement ad={ad} placement={placement} />;
 }
 
@@ -708,7 +699,6 @@ function buildAdvancedPreviewAds(state, forms, mediaById, accountName) {
     const instagramName = String(labels.instagramAccount?.name || advertiserName || "advertiser").replace(/^@/, "");
     return units.map((unit, unitIndex) => ({
       id: `${form.id || formIndex}:${unit.id || unitIndex}`,
-      formLabel: form.name || `Launch ${formIndex + 1}`,
       adName: unit.adName || values.adName || `Ad ${unitIndex + 1}`,
       media: unit.media || [],
       advertiserName,
@@ -724,6 +714,8 @@ function buildAdvancedPreviewAds(state, forms, mediaById, accountName) {
 
 function AdvancedPreviewModal({ open, ads, onClose }) {
   const [activeAdId, setActiveAdId] = useState("");
+  const [detectedRatios, setDetectedRatios] = useState({});
+  const activeAd = ads.find((ad) => ad.id === activeAdId) || ads[0];
 
   useEffect(() => {
     if (!open) return undefined;
@@ -740,8 +732,48 @@ function AdvancedPreviewModal({ open, ads, onClose }) {
     };
   }, [open, ads, onClose]);
 
+  useEffect(() => {
+    if (!open || !activeAd) return undefined;
+    let cancelled = false;
+    const mediaElements = [];
+
+    activeAd.media.forEach((media) => {
+      const source = media?.url || media?.previewUrl;
+      if (!source || media?.deletedAt) return;
+      const key = mediaRatioKey(media);
+      const saveRatio = (width, height) => {
+        if (cancelled || !(width > 0) || !(height > 0)) return;
+        const ratio = width / height;
+        setDetectedRatios((current) => current[key] === ratio ? current : { ...current, [key]: ratio });
+      };
+
+      if ((media.mimeType || "").startsWith("video/")) {
+        const video = document.createElement("video");
+        video.preload = "metadata";
+        video.onloadedmetadata = () => saveRatio(video.videoWidth, video.videoHeight);
+        video.src = source;
+        mediaElements.push(video);
+      } else {
+        const image = new Image();
+        image.onload = () => saveRatio(image.naturalWidth, image.naturalHeight);
+        image.src = source;
+        mediaElements.push(image);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      mediaElements.forEach((element) => {
+        element.onload = null;
+        element.onloadedmetadata = null;
+        if (element.tagName === "VIDEO") element.removeAttribute("src");
+      });
+    };
+  }, [activeAd, open]);
+
   if (!open || typeof document === "undefined") return null;
-  const activeAd = ads.find((ad) => ad.id === activeAdId) || ads[0];
+  const standardPlacements = ADVANCED_PLACEMENTS.filter((placement) => placement.targetRatio >= 0.7);
+  const verticalPlacements = ADVANCED_PLACEMENTS.filter((placement) => placement.targetRatio < 0.7);
 
   return createPortal(
     <div className="fixed inset-0 z-[120] bg-black/35 p-2 sm:p-5" onMouseDown={onClose}>
@@ -760,32 +792,45 @@ function AdvancedPreviewModal({ open, ads, onClose }) {
         </header>
 
         {ads.length > 1 && (
-          <div className="shrink-0 overflow-x-auto border-b border-gray-200 bg-white px-5 py-3 sm:px-7">
-            <div className="flex w-max gap-2">
-              {ads.map((ad, index) => (
-                <button
-                  key={ad.id}
-                  type="button"
-                  onClick={() => setActiveAdId(ad.id)}
-                  className={`max-w-64 truncate rounded-full px-4 py-2 text-xs font-semibold transition ${
-                    activeAd?.id === ad.id ? "bg-gray-950 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                  }`}
-                  title={ad.adName}
-                >
-                  {ad.formLabel} · Ad {index + 1}: {ad.adName}
-                </button>
-              ))}
+          <div className="shrink-0 border-b border-gray-200 bg-white px-5 pb-2 pt-3 sm:px-7">
+            <div className="mb-2 flex items-center justify-between gap-3 text-[11px] font-medium text-gray-400">
+              <span>Choose an ad</span>
+              {ads.length > 4 && <span>Scroll horizontally →</span>}
+            </div>
+            <div className="overflow-x-auto pb-2 [scrollbar-color:#9ca3af_transparent] [scrollbar-width:thin]">
+              <div className="flex w-max min-w-full gap-2">
+                {ads.map((ad, index) => (
+                  <button
+                    key={ad.id}
+                    type="button"
+                    onClick={() => setActiveAdId(ad.id)}
+                    className={`max-w-72 shrink-0 truncate rounded-full px-4 py-2 text-xs font-semibold transition ${
+                      activeAd?.id === ad.id ? "bg-gray-950 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    }`}
+                    title={ad.adName}
+                  >
+                    Ad {index + 1}: {ad.adName}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         )}
 
         <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-7">
           {activeAd ? (
-            <div className="grid grid-cols-1 items-start gap-x-5 gap-y-7 md:grid-cols-2 xl:grid-cols-3">
-              {ADVANCED_PLACEMENTS.map((placement) => (
-                <PlacementPreview key={placement.id} ad={activeAd} placement={placement} />
-              ))}
-            </div>
+            <PreviewMediaRatiosContext.Provider value={detectedRatios}>
+              <div className="grid grid-cols-1 items-start gap-x-5 gap-y-7 md:grid-cols-2 xl:grid-cols-3">
+                {standardPlacements.map((placement) => (
+                  <PlacementPreview key={placement.id} ad={activeAd} placement={placement} />
+                ))}
+              </div>
+              <div className="mt-10 grid grid-cols-1 items-start gap-x-5 gap-y-7 border-t border-gray-200 pt-7 md:grid-cols-2 xl:grid-cols-3">
+                {verticalPlacements.map((placement) => (
+                  <PlacementPreview key={placement.id} ad={activeAd} placement={placement} />
+                ))}
+              </div>
+            </PreviewMediaRatiosContext.Provider>
           ) : (
             <div className="flex min-h-80 items-center justify-center rounded-2xl border border-dashed border-gray-300 bg-white text-sm text-gray-500">
               No creative media is available to preview.
