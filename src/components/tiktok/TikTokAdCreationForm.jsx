@@ -6870,6 +6870,12 @@ export default function TikTokAdCreationForm({
                     </div>
                   )}
 
+                  {isCtaMissing && (
+                    <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                      Please select at least one CTA
+                    </div>
+                  )}
+
                   {isWebsiteUrlMissing && (
                     <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
                       Please provide a link URL
