@@ -52,6 +52,17 @@ export default function TikTokLinkParameters({
     const [openIndex, setOpenIndex] = useState(null)
     const [dropdownCoords, setDropdownCoords] = useState({ top: 0, left: 0, width: 0 })
 
+    const [localImpression, setLocalImpression] = useState(impressionTrackingUrl || "")
+    const [localClick, setLocalClick] = useState(clickTrackingUrl || "")
+
+    useEffect(() => {
+        setLocalImpression(impressionTrackingUrl || "")
+    }, [impressionTrackingUrl])
+
+    useEffect(() => {
+        setLocalClick(clickTrackingUrl || "")
+    }, [clickTrackingUrl])
+
     const updateDropdownCoords = useCallback(() => {
         if (openIndex === null) return
         const activeEl = document.activeElement
@@ -569,15 +580,18 @@ export default function TikTokLinkParameters({
                     <label className="text-xs font-medium text-gray-600 block">Impression tracking URL</label>
                     <Input
                         placeholder="https://example.com"
-                        value={impressionTrackingUrl}
+                        value={localImpression}
                         onFocus={() => {
-                            if (!impressionTrackingUrl || !impressionTrackingUrl.trim()) {
-                                setImpressionTrackingUrl("https://");
+                            if (!localImpression || !localImpression.trim()) {
+                                setLocalImpression("https://");
                             }
                         }}
                         onBlur={() => {
-                            if (impressionTrackingUrl === "https://") {
+                            if (localImpression === "https://") {
+                                setLocalImpression("");
                                 setImpressionTrackingUrl("");
+                            } else {
+                                setImpressionTrackingUrl(localImpression);
                             }
                         }}
                         onChange={(e) => {
@@ -593,7 +607,11 @@ export default function TikTokLinkParameters({
                                     val = "https://" + val.replace(/^https?:\/\//i, "");
                                 }
                             }
-                            setImpressionTrackingUrl(val);
+                            setLocalImpression(val);
+                            // Only update parent if it's a potentially valid URL or empty
+                            if (val !== "https://") {
+                                setImpressionTrackingUrl(val);
+                            }
                         }}
                         onPaste={(e) => {
                             e.preventDefault();
@@ -605,14 +623,17 @@ export default function TikTokLinkParameters({
                             } else {
                                 cleanUrl = "";
                             }
-                            setImpressionTrackingUrl(cleanUrl);
+                            setLocalImpression(cleanUrl);
+                            if (cleanUrl !== "https://") {
+                                setImpressionTrackingUrl(cleanUrl);
+                            }
                         }}
                         className="rounded-2xl border-gray-300 py-4.5 bg-white shadow"
                         autoComplete="off"
                     />
-                    {impressionTrackingUrl && impressionTrackingUrl.trim() && impressionTrackingUrl.trim() !== "https://" && (() => {
+                    {localImpression && localImpression.trim() && localImpression.trim() !== "https://" && (() => {
                         let urlError = "Link (URL) must start with https://";
-                        const urlString = impressionTrackingUrl.trim();
+                        const urlString = localImpression.trim();
                         if (/^https:\/\//i.test(urlString)) {
                             try {
                                 const urlObj = new URL(urlString);
@@ -633,15 +654,18 @@ export default function TikTokLinkParameters({
                     <label className="text-xs font-medium text-gray-600 block">Click tracking URL</label>
                     <Input
                         placeholder="https://example.com"
-                        value={clickTrackingUrl}
+                        value={localClick}
                         onFocus={() => {
-                            if (!clickTrackingUrl || !clickTrackingUrl.trim()) {
-                                setClickTrackingUrl("https://");
+                            if (!localClick || !localClick.trim()) {
+                                setLocalClick("https://");
                             }
                         }}
                         onBlur={() => {
-                            if (clickTrackingUrl === "https://") {
+                            if (localClick === "https://") {
+                                setLocalClick("");
                                 setClickTrackingUrl("");
+                            } else {
+                                setClickTrackingUrl(localClick);
                             }
                         }}
                         onChange={(e) => {
@@ -657,7 +681,10 @@ export default function TikTokLinkParameters({
                                     val = "https://" + val.replace(/^https?:\/\//i, "");
                                 }
                             }
-                            setClickTrackingUrl(val);
+                            setLocalClick(val);
+                            if (val !== "https://") {
+                                setClickTrackingUrl(val);
+                            }
                         }}
                         onPaste={(e) => {
                             e.preventDefault();
@@ -669,14 +696,17 @@ export default function TikTokLinkParameters({
                             } else {
                                 cleanUrl = "";
                             }
-                            setClickTrackingUrl(cleanUrl);
+                            setLocalClick(cleanUrl);
+                            if (cleanUrl !== "https://") {
+                                setClickTrackingUrl(cleanUrl);
+                            }
                         }}
                         className="rounded-2xl border-gray-300 py-4.5 bg-white shadow"
                         autoComplete="off"
                     />
-                    {clickTrackingUrl && clickTrackingUrl.trim() && clickTrackingUrl.trim() !== "https://" && (() => {
+                    {localClick && localClick.trim() && localClick.trim() !== "https://" && (() => {
                         let urlError = "Link (URL) must start with https://";
-                        const urlString = clickTrackingUrl.trim();
+                        const urlString = localClick.trim();
                         if (/^https:\/\//i.test(urlString)) {
                             try {
                                 const urlObj = new URL(urlString);
