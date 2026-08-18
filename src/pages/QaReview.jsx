@@ -100,7 +100,7 @@ function ReviewMedia({ media, priority = false }) {
 
   return (
     <div
-      className="relative overflow-hidden rounded-xl border border-gray-200 bg-gray-100"
+      className="relative w-full min-w-0 max-w-full overflow-hidden rounded-xl border border-gray-200 bg-gray-100"
       style={{ aspectRatio }}
     >
       {isVideo ? (
@@ -109,7 +109,7 @@ function ReviewMedia({ media, priority = false }) {
             controls={!media.deletedAt}
             preload="metadata"
             poster={media.deletedAt ? MEDIA_FALLBACK_URL : media.previewUrl}
-            className="h-full w-full bg-black object-contain"
+            className="block h-full w-full max-w-full bg-black object-contain"
             onLoadedMetadata={(event) => {
               detectAspectRatio(event.currentTarget.videoWidth, event.currentTarget.videoHeight);
             }}
@@ -133,7 +133,7 @@ function ReviewMedia({ media, priority = false }) {
           loading={priority ? "eager" : "lazy"}
           fetchPriority={priority ? "high" : "auto"}
           decoding="async"
-          className="h-full w-full object-cover"
+          className="block h-full w-full max-w-full object-contain"
           onLoad={(event) => {
             detectAspectRatio(event.currentTarget.naturalWidth, event.currentTarget.naturalHeight);
           }}
@@ -157,7 +157,7 @@ function CreativeReviewCard({ unit, groupIndex, priority = false }) {
     <div className={`min-w-0 ${
       grouped ? `rounded-2xl border p-2 sm:col-span-2 ${groupColor}` : ""
     }`}>
-      <div className={`grid gap-2 ${unit.media.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}>
+      <div className={`grid min-w-0 gap-2 ${unit.media.length > 1 ? "grid-cols-1 min-[420px]:grid-cols-2" : "grid-cols-1"}`}>
         {unit.media.map((media, index) => (
           <ReviewMedia
             key={media.id}
@@ -211,18 +211,18 @@ function ReviewForm({ form, index, state, mediaById, showLaunchHeading }) {
   return (
     <section className={index > 0 ? "border-t border-gray-200" : ""}>
       {showLaunchHeading && (
-        <header className="px-8 pt-8">
+        <header className="px-4 pt-6 sm:px-8 sm:pt-8">
           <h2 className="text-lg font-semibold text-gray-950">Launch {index + 1}</h2>
         </header>
       )}
 
-      <div className={`grid grid-cols-1 items-start gap-6 px-8 pb-10 lg:grid-cols-[minmax(0,1.2fr)_minmax(340px,0.8fr)] ${
+      <div className={`grid min-w-0 grid-cols-1 items-start gap-6 px-4 pb-8 sm:px-8 sm:pb-10 lg:grid-cols-[minmax(0,1.2fr)_minmax(340px,0.8fr)] ${
         showLaunchHeading ? "pt-5" : "pt-10"
       }`}>
         <div className="min-w-0 lg:sticky lg:top-6 lg:self-start">
-          <dl className="pr-4">
+          <dl className="sm:pr-4">
             <FormSection>
-              <div className="grid grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
                 <DetailField label="Campaign" icon={<CampaignIcon className="h-4 w-4" />}>
                   {labels.campaigns?.map((item) => item.name).join(", ") || labels.duplicateCampaignName || "—"}
                 </DetailField>
@@ -232,7 +232,7 @@ function ReviewForm({ form, index, state, mediaById, showLaunchHeading }) {
               </div>
             </FormSection>
             <FormSection divided className="mt-5">
-              <div className="grid grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
                 <DetailField label="Facebook Page" icon={<FacebookIcon className="h-4 w-4" />}>
                   {labels.page?.name || values.pageId || "—"}
                 </DetailField>
@@ -290,7 +290,7 @@ function ReviewForm({ form, index, state, mediaById, showLaunchHeading }) {
                 </div>
               ))}
             </FormSection>
-            <FormSection divided className="mt-5 grid grid-cols-2 gap-6 pb-2">
+            <FormSection divided className="mt-5 grid grid-cols-1 gap-4 pb-2 sm:grid-cols-2 sm:gap-6">
               <DetailField label="Link" icon={<LinkIcon className="h-4 w-4" />}>
                 {links.length > 0 ? links.map((link, linkIndex) => (
                   <a
@@ -311,7 +311,7 @@ function ReviewForm({ form, index, state, mediaById, showLaunchHeading }) {
           </dl>
         </div>
 
-        <div className="min-w-0 pr-2 lg:border-l lg:border-gray-200 lg:pl-6">
+        <div className="min-w-0 sm:pr-2 lg:border-l lg:border-gray-200 lg:pl-6">
           {creativeUnits.length > 0 ? (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {indexedCreativeUnits.map(({ unit, groupIndex }, unitIndex) => (
@@ -394,7 +394,7 @@ export default function QaReview() {
               {forms.length > 1 ? ` across ${forms.length} Launches` : ""}
             </p>
           </header>
-          <div className="!rounded-[48px] border border-gray-200 bg-white shadow-sm">
+          <div className="rounded-3xl border border-gray-200 bg-white shadow-sm sm:!rounded-[48px]">
             {forms.map((form, index) => (
               <ReviewForm
                 key={form.id || index}
