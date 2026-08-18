@@ -382,3 +382,17 @@ export async function getQaDraft(token) {
   const response = await fetch(`${API_BASE_URL}/api/qa/${encodeURIComponent(token)}`);
   return (await readJson(response)).draft;
 }
+
+export async function getQaComments(token) {
+  const response = await fetch(`${API_BASE_URL}/api/qa/${encodeURIComponent(token)}/comments`);
+  return (await readJson(response)).comments || [];
+}
+
+export async function createQaComment({ token, authorName, body, anchorId, anchorLabel, anchorType, x, y }) {
+  const response = await fetch(`${API_BASE_URL}/api/qa/${encodeURIComponent(token)}/comments`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ authorName, body, anchorId, anchorLabel, anchorType, x, y }),
+  });
+  return (await readJson(response)).comment;
+}
