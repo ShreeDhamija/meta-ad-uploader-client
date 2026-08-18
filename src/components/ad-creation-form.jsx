@@ -91,7 +91,7 @@ import TextareaAutosize from "react-textarea-autosize";
 import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
 const API_BASE_URL = import.meta.env.VITE_API_URL || "https://api.withblip.com";
-const NOOP = () => {};
+const NOOP = () => { };
 const META_AD_CREATION_ACTION_REQUIRED = "META_AD_CREATION_ACTION_REQUIRED";
 const META_ACTION_REQUIRED_MESSAGE = "Meta requires you to take certain steps to continue ad creation";
 const TEMPLATE_LINK_SYNC_USER_ID = "929470643071391";
@@ -106,7 +106,7 @@ const EMPTY_PIXEL_TRACKING_OVERRIDE = {
 // Staging gate — used to hide work-in-progress UI (currently: the
 // "View Top Creatives for Flexible Ads" trigger). Mirrors the pattern in
 // pages/Login.jsx: prefer the env var, but fall back to a URL substring
-// check so the gate still works on staging deploys with missing env vars.
+// check so the gate still works on staging deploys with missing env vars
 const IS_STAGING =
   import.meta.env.VITE_ENV === "staging" ||
   import.meta.env.VITE_ENV === "dev" ||
@@ -146,16 +146,16 @@ function withTimeout(promise, timeoutMs, timeoutMessage, signal) {
 
   const abortPromise = signal
     ? new Promise((_, reject) => {
-        if (signal.aborted) {
-          reject(new DOMException("Job cancelled. Some Ads might still have been made.", "AbortError"));
-          return;
-        }
+      if (signal.aborted) {
+        reject(new DOMException("Job cancelled. Some Ads might still have been made.", "AbortError"));
+        return;
+      }
 
-        abortHandler = () => {
-          reject(new DOMException("Job cancelled. Some Ads might still have been made.", "AbortError"));
-        };
-        signal.addEventListener("abort", abortHandler, { once: true });
-      })
+      abortHandler = () => {
+        reject(new DOMException("Job cancelled. Some Ads might still have been made.", "AbortError"));
+      };
+      signal.addEventListener("abort", abortHandler, { once: true });
+    })
     : null;
 
   return Promise.race(abortPromise ? [promise, timeoutPromise, abortPromise] : [promise, timeoutPromise]).finally(() => {
@@ -1796,12 +1796,12 @@ export default function AdCreationForm({
         const defaultOnly =
           variantId === "default"
             ? [
-                ...files,
-                ...driveFiles.map((file) => ({ ...file, isDrive: true })),
-                ...dropboxFiles.map((file) => ({ ...file, isDropbox: true })),
-                ...(frameioFiles || []).map((file) => ({ ...file, isFrameio: true })),
-                ...importedFiles.map((file) => ({ ...file, isMetaLibrary: true })),
-              ].filter((file) => !groupedFileIds.has(getFileId(file))).length
+              ...files,
+              ...driveFiles.map((file) => ({ ...file, isDrive: true })),
+              ...dropboxFiles.map((file) => ({ ...file, isDropbox: true })),
+              ...(frameioFiles || []).map((file) => ({ ...file, isFrameio: true })),
+              ...importedFiles.map((file) => ({ ...file, isMetaLibrary: true })),
+            ].filter((file) => !groupedFileIds.has(getFileId(file))).length
             : 0;
 
         return variantGroups.length + (isFlexLikeAdType && fileGroups.length === 0 ? ungroupedCount : defaultOnly) + postsForVariant;
@@ -3541,10 +3541,10 @@ export default function AdCreationForm({
     multiple: true,
     accept: isCatalogueAd
       ? {
-          "image/jpeg": [".jpg", ".jpeg"],
-          "image/png": [".png"],
-          "text/csv": [".csv"],
-        }
+        "image/jpeg": [".jpg", ".jpeg"],
+        "image/png": [".png"],
+        "text/csv": [".csv"],
+      }
       : undefined,
   });
 
@@ -4006,8 +4006,8 @@ export default function AdCreationForm({
   // For OUTCOME_SALES / OUTCOME_LEADS campaigns, BOOK_NOW must be sent to the server as BOOK_TRAVEL.
   const resolveCtaForServer = (ctaValue) =>
     ctaValue === "BOOK_NOW" &&
-    campaignObjective.length > 0 &&
-    campaignObjective.every((obj) => obj === "OUTCOME_SALES" || obj === "OUTCOME_LEADS" || obj === "OUTCOME_AWARENESS" || obj === "LINK_CLICKS")
+      campaignObjective.length > 0 &&
+      campaignObjective.every((obj) => obj === "OUTCOME_SALES" || obj === "OUTCOME_LEADS" || obj === "OUTCOME_AWARENESS" || obj === "LINK_CLICKS")
       ? "BOOK_TRAVEL"
       : ctaValue;
 
@@ -6396,16 +6396,16 @@ export default function AdCreationForm({
           // Compute ad name for this group
           const firstFile = group
             ? (() => {
-                const firstId = group[0];
-                return (
-                  files.find((f) => getFileId(f) === firstId) ||
-                  driveFiles.find((f) => f.id === firstId) ||
-                  dropboxFiles.find((f) => f.dropboxId === firstId) ||
-                  frameioFiles.find((f) => f.frameioId === firstId) ||
-                  (importedFiles || []).find((f) => (f.type === "image" && f.hash === firstId) || (f.type === "video" && f.id === firstId)) ||
-                  files[0]
-                );
-              })()
+              const firstId = group[0];
+              return (
+                files.find((f) => getFileId(f) === firstId) ||
+                driveFiles.find((f) => f.id === firstId) ||
+                dropboxFiles.find((f) => f.dropboxId === firstId) ||
+                frameioFiles.find((f) => f.frameioId === firstId) ||
+                (importedFiles || []).find((f) => (f.type === "image" && f.hash === firstId) || (f.type === "video" && f.id === firstId)) ||
+                files[0]
+              );
+            })()
             : files[0] || driveFiles[0] || dropboxFiles[0] || frameioFiles[0] || (importedFiles?.[0] ? { name: importedFiles[0].name } : null);
 
           const carouselAdName = computeAdNameFromFormula(firstFile, groupIndex, link[0], jobData.formData.adNameFormulaV2, adType);
@@ -7803,38 +7803,38 @@ export default function AdCreationForm({
   const hasPublishBlockingIssueBeforePage =
     variants.length > 1
       ? !isLoggedIn ||
-        (!isCatalogueAd &&
-          files.length === 0 &&
-          driveFiles.length === 0 &&
-          dropboxFiles.length === 0 &&
-          frameioFiles.length === 0 &&
-          importedPosts.length === 0 &&
-          importedFiles.length === 0 &&
-          selectedIgOrganicPosts.length === 0) ||
-        hasCatalogueInvalidMedia ||
-        selectedFiles.size > 0 ||
-        (!isCarouselAd && hasDuplicates)
+      (!isCatalogueAd &&
+        files.length === 0 &&
+        driveFiles.length === 0 &&
+        dropboxFiles.length === 0 &&
+        frameioFiles.length === 0 &&
+        importedPosts.length === 0 &&
+        importedFiles.length === 0 &&
+        selectedIgOrganicPosts.length === 0) ||
+      hasCatalogueInvalidMedia ||
+      selectedFiles.size > 0 ||
+      (!isCarouselAd && hasDuplicates)
       : !isLoggedIn ||
-        (!isCatalogueAd &&
-          files.length === 0 &&
-          driveFiles.length === 0 &&
-          dropboxFiles.length === 0 &&
-          frameioFiles.length === 0 &&
-          importedPosts.length === 0 &&
-          importedFiles.length === 0 &&
-          selectedIgOrganicPosts.length === 0) ||
-        (duplicateAdSet && (!newAdSetName || newAdSetName.trim() === "")) ||
-        (adType === "carousel" && files.length + driveFiles.length + importedFiles.length + dropboxFiles.length + frameioFiles.length < 2) ||
-        (isFlexLikeAdType &&
-          fileGroups.length === 0 &&
-          files.length + driveFiles.length + importedFiles.length + dropboxFiles.length + frameioFiles.length > 10) ||
-        (isCatalogueAd && !hasCatalogueEligibleAdSets) ||
-        hasCatalogueInvalidMedia ||
-        (showShopDestinationSelector && !selectedShopDestination) ||
-        isMissingDestinationValue ||
-        selectedFiles.size > 0 ||
-        (shouldShowLeadFormSelector && !selectedForm) ||
-        (!isCarouselAd && hasDuplicates);
+      (!isCatalogueAd &&
+        files.length === 0 &&
+        driveFiles.length === 0 &&
+        dropboxFiles.length === 0 &&
+        frameioFiles.length === 0 &&
+        importedPosts.length === 0 &&
+        importedFiles.length === 0 &&
+        selectedIgOrganicPosts.length === 0) ||
+      (duplicateAdSet && (!newAdSetName || newAdSetName.trim() === "")) ||
+      (adType === "carousel" && files.length + driveFiles.length + importedFiles.length + dropboxFiles.length + frameioFiles.length < 2) ||
+      (isFlexLikeAdType &&
+        fileGroups.length === 0 &&
+        files.length + driveFiles.length + importedFiles.length + dropboxFiles.length + frameioFiles.length > 10) ||
+      (isCatalogueAd && !hasCatalogueEligibleAdSets) ||
+      hasCatalogueInvalidMedia ||
+      (showShopDestinationSelector && !selectedShopDestination) ||
+      isMissingDestinationValue ||
+      selectedFiles.size > 0 ||
+      (shouldShowLeadFormSelector && !selectedForm) ||
+      (!isCarouselAd && hasDuplicates);
   const publishDisabled = hasPublishBlockingIssueBeforePage || isAdSetMissing || isPageMissing || Boolean(adSetTimingIssue);
 
   const showImportedPostMode = isDuplicationMode && importedPosts.length > 0;
@@ -7881,11 +7881,11 @@ export default function AdCreationForm({
         postSwitcher={
           showImportedPostMode
             ? {
-                currentIndex: importedSafeIndex,
-                total: importedPosts.length,
-                onPrev: () => setActiveImportedPostIndex((prev) => Math.max(0, prev - 1)),
-                onNext: () => setActiveImportedPostIndex((prev) => Math.min(importedPosts.length - 1, prev + 1)),
-              }
+              currentIndex: importedSafeIndex,
+              total: importedPosts.length,
+              onPrev: () => setActiveImportedPostIndex((prev) => Math.max(0, prev - 1)),
+              onNext: () => setActiveImportedPostIndex((prev) => Math.min(importedPosts.length - 1, prev + 1)),
+            }
             : null
         }
       />
@@ -7895,12 +7895,12 @@ export default function AdCreationForm({
           <Label className="text-xs text-gray-500">
             Ad Name Preview:{" "}
             {files.length > 0 ||
-            driveFiles.length > 0 ||
-            dropboxFiles.length > 0 ||
-            frameioFiles.length > 0 ||
-            importedFiles.length > 0 ||
-            importedPosts.length > 0 ||
-            selectedIgOrganicPosts.length > 0
+              driveFiles.length > 0 ||
+              dropboxFiles.length > 0 ||
+              frameioFiles.length > 0 ||
+              importedFiles.length > 0 ||
+              importedPosts.length > 0 ||
+              selectedIgOrganicPosts.length > 0
               ? computeAdNameFromFormula(adNamePreviewFile, 0, link[0], null, adType)
               : "Upload a file to see example"}
           </Label>
@@ -7985,8 +7985,7 @@ export default function AdCreationForm({
                         <div className="flex-1 min-w-0 overflow-hidden">
                           <p
                             style={{ overflowWrap: "anywhere" }}
-                            className={`text-sm break-words ${
-                              job.status === "cancelled"
+                            className={`text-sm break-words ${job.status === "cancelled"
                                 ? "text-orange-500"
                                 : job.status === "error"
                                   ? "text-red-600"
@@ -7995,7 +7994,7 @@ export default function AdCreationForm({
                                     : job.status === "retry"
                                       ? "text-orange-600"
                                       : "text-gray-700"
-                            }`}
+                              }`}
                           >
                             {job.message}
                           </p>
@@ -9266,9 +9265,8 @@ export default function AdCreationForm({
                                     multiline
                                     minRows={2}
                                     maxRows={10}
-                                    className={`${formTextareaChrome} ${
-                                      duplicateIndices.messages.has(index) ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]" : ""
-                                    }`}
+                                    className={`${formTextareaChrome} ${duplicateIndices.messages.has(index) ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]" : ""
+                                      }`}
                                     style={{
                                       scrollbarWidth: "thin",
                                       scrollbarColor: "#c7c7c7 transparent",
@@ -9288,9 +9286,8 @@ export default function AdCreationForm({
                                     disabled={!isLoggedIn}
                                     minRows={2}
                                     maxRows={10}
-                                    className={`${formTextareaChrome} ${
-                                      duplicateIndices.messages.has(index) ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]" : ""
-                                    }`}
+                                    className={`${formTextareaChrome} ${duplicateIndices.messages.has(index) ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]" : ""
+                                      }`}
                                     style={{
                                       scrollbarWidth: "thin",
                                       scrollbarColor: "#c7c7c7 transparent",
@@ -9381,9 +9378,8 @@ export default function AdCreationForm({
                                   }}
                                   minRows={1}
                                   maxRows={10}
-                                  className={`${formTextareaChrome} ${
-                                    duplicateIndices.headlines.has(index) ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]" : ""
-                                  }`}
+                                  className={`${formTextareaChrome} ${duplicateIndices.headlines.has(index) ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]" : ""
+                                    }`}
                                   style={{
                                     scrollbarWidth: "thin",
                                     scrollbarColor: "#c7c7c7 transparent",
@@ -9405,9 +9401,8 @@ export default function AdCreationForm({
                                   }}
                                   minRows={1}
                                   maxRows={10}
-                                  className={`${formTextareaChrome} ${
-                                    duplicateIndices.headlines.has(index) ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]" : ""
-                                  }`}
+                                  className={`${formTextareaChrome} ${duplicateIndices.headlines.has(index) ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]" : ""
+                                    }`}
                                   style={{
                                     scrollbarWidth: "thin",
                                     scrollbarColor: "#c7c7c7 transparent",
@@ -9505,9 +9500,8 @@ export default function AdCreationForm({
                                           onValueChange={(nextValue) => updateField(setDescriptions, descriptions, index, nextValue)}
                                           minRows={1}
                                           maxRows={10}
-                                          className={`${formTextareaChrome} ${
-                                            duplicateIndices.descriptions.has(index) ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]" : ""
-                                          } ${isInactivePlacementDescription ? "!bg-gray-100 text-gray-500 cursor-not-allowed" : ""}`}
+                                          className={`${formTextareaChrome} ${duplicateIndices.descriptions.has(index) ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]" : ""
+                                            } ${isInactivePlacementDescription ? "!bg-gray-100 text-gray-500 cursor-not-allowed" : ""}`}
                                           style={{
                                             scrollbarWidth: "thin",
                                             scrollbarColor: "#c7c7c7 transparent",
@@ -9522,9 +9516,8 @@ export default function AdCreationForm({
                                           onChange={(e) => updateField(setDescriptions, descriptions, index, e.target.value)}
                                           minRows={1}
                                           maxRows={10}
-                                          className={`${formTextareaChrome} ${
-                                            duplicateIndices.descriptions.has(index) ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]" : ""
-                                          } ${isInactivePlacementDescription ? "!bg-gray-100 text-gray-500 cursor-not-allowed" : ""}`}
+                                          className={`${formTextareaChrome} ${duplicateIndices.descriptions.has(index) ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]" : ""
+                                            } ${isInactivePlacementDescription ? "!bg-gray-100 text-gray-500 cursor-not-allowed" : ""}`}
                                           style={{
                                             scrollbarWidth: "thin",
                                             scrollbarColor: "#c7c7c7 transparent",
@@ -9624,9 +9617,8 @@ export default function AdCreationForm({
                             type="button"
                             disabled={activeIgCaptionIndex === 0}
                             onClick={() => setActiveIgCaptionIndex((prev) => prev - 1)}
-                            className={`p-0.5 rounded transition-colors ${
-                              activeIgCaptionIndex === 0 ? "text-gray-300 cursor-not-allowed" : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
-                            }`}
+                            className={`p-0.5 rounded transition-colors ${activeIgCaptionIndex === 0 ? "text-gray-300 cursor-not-allowed" : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                              }`}
                           >
                             <ChevronLeft className="w-3.5 h-3.5" />
                           </button>
@@ -9634,11 +9626,10 @@ export default function AdCreationForm({
                             type="button"
                             disabled={activeIgCaptionIndex === selectedIgOrganicPosts.length - 1}
                             onClick={() => setActiveIgCaptionIndex((prev) => prev + 1)}
-                            className={`p-0.5 rounded transition-colors ${
-                              activeIgCaptionIndex === selectedIgOrganicPosts.length - 1
+                            className={`p-0.5 rounded transition-colors ${activeIgCaptionIndex === selectedIgOrganicPosts.length - 1
                                 ? "text-gray-300 cursor-not-allowed"
                                 : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
-                            }`}
+                              }`}
                           >
                             <ChevronRight className="w-3.5 h-3.5" />
                           </button>
@@ -10255,9 +10246,8 @@ export default function AdCreationForm({
                   {uploadSources.includes("local") && (
                     <div
                       {...getRootProps()}
-                      className={`group cursor-pointer border-2 border-dashed rounded-2xl p-6 text-center transition-colors ${
-                        isDragActive ? "border-primary bg-primary/5" : "border-gray-300 hover:border-primary/50"
-                      }`}
+                      className={`group cursor-pointer border-2 border-dashed rounded-2xl p-6 text-center transition-colors ${isDragActive ? "border-primary bg-primary/5" : "border-gray-300 hover:border-primary/50"
+                        }`}
                     >
                       <input {...getInputProps()} disabled={!isLoggedIn || isImportingCsv} />
                       <div className="flex flex-col items-center gap-2">
@@ -10347,7 +10337,7 @@ export default function AdCreationForm({
                                       ? handleFrameioClick
                                       : id === "drafts"
                                         ? () => setDraftsModalOpen(true)
-                                        : () => {};
+                                        : () => { };
 
                             const draftDisabled = id === "drafts" && !selectedAdAccount;
                             const sourceButton = renderButton(src, clickHandler, draftDisabled);
