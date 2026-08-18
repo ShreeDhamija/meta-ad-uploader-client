@@ -6874,24 +6874,6 @@ export default function TikTokAdCreationForm({
                     </div>
                   )}
 
-                  {isAdTextMissing && (
-                    <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
-                      Please enter ad text
-                    </div>
-                  )}
-
-                  {isAdNameMissing && (
-                    <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
-                      Please enter an ad name
-                    </div>
-                  )}
-
-                  {isCtaMissing && (
-                    <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
-                      Please select at least one Call to Action
-                    </div>
-                  )}
-
                   {isWebsiteUrlMissing && (
                     <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
                       Please provide a link URL
@@ -6939,12 +6921,6 @@ export default function TikTokAdCreationForm({
                       {adType === "NORMAL"
                         ? "Please select a TikTok Identity to publish ads"
                         : "Please select an account to Promote From to publish ads"}
-                    </div>
-                  )}
-
-                  {!hasPublishBlockingIssueBeforeIdentity && !isIdentityMissing && isCampaignMissing && (
-                    <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
-                      Please select a campaign to post to
                     </div>
                   )}
 
