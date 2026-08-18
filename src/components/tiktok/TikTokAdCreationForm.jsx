@@ -4428,15 +4428,12 @@ export default function TikTokAdCreationForm({
   );
 
   // Mirrors Meta's hasPublishBlockingIssueBeforePage — gates identity/campaign/adgroup
-  // warnings so they only surface once all creative/form-level issues are resolved.
+  // warnings so they only surface once primary blocking issues (media, duplicates, ungrouped files, destination) are resolved.
   const hasPublishBlockingIssueBeforeIdentity =
     isMediaMissing ||
-    isAdTextMissing ||
     hasDuplicates ||
     hasTextTooLong ||
     hasSelectedFilesUngrouped ||
-    isAdNameMissing ||
-    isCtaMissing ||
     isWebsiteUrlMissing ||
     isWebsiteUrlInvalidScheme ||
     isWebsiteUrlInvalidDomain ||
