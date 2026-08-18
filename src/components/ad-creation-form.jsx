@@ -6154,6 +6154,13 @@ export default function AdCreationForm({
         if (jobProductExtensionProductSetId && !formData.has("productExtensionProductSetId")) {
           formData.append("productExtensionProductSetId", jobProductExtensionProductSetId);
         }
+        // One stable id per ad. Every create-ad request goes through here, so this
+        // covers all ad types. The id is fixed at queue time (not per attempt), so a
+        // retry — or a re-send of an in-flight request by the network layer — carries
+        // the same id and the server can collapse it instead of making a second ad.
+        if (!formData.has("clientRequestId")) {
+          formData.append("clientRequestId", uuidv4());
+        }
         promises.push(createAdApiCall(formData, API_BASE_URL, signal));
         promiseMetadata.push({
           adSetId: formData.get("adSetId"),
