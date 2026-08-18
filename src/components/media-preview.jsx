@@ -932,11 +932,9 @@ export default function MediaPreview({
       const img = new Image();
       img.onload = () => {
         const ratio = img.width / img.height;
-        if (Math.abs(ratio - 1) < 0.1) resolve("square");
-        else if (ratio < 0.7) resolve("vertical");
-        else resolve("other");
+        resolve(Number.isFinite(ratio) && ratio > 0 ? ratio : null);
       };
-      img.onerror = () => resolve("other"); // Fallback on error
+      img.onerror = () => resolve(null); // Fallback on error
 
       if (file.isDrive) {
         img.src = `https://drive.google.com/thumbnail?id=${file.id}&sz=w400`;
@@ -1402,7 +1400,12 @@ export default function MediaPreview({
       // Video files are intentionally represented by names only. No video bytes,
       // URLs, thumbnails, or cloud-provider identifiers are sent to the server.
       const [imageResult, videoResult] = await Promise.all([
-        processedImages.length >= 2 ? requestGroups("/api/grouping/group-images", { images: processedImages }) : Promise.resolve({ groups: [] }),
+        processedImages.length >= 2
+          ? requestGroups("/api/grouping/group-images", {
+              images: processedImages,
+              maxGroupSize: isPlacementCustomizedCarousel ? 2 : 3,
+            })
+          : Promise.resolve({ groups: [] }),
         videoFiles.length >= 2
           ? requestGroups("/api/grouping/group-videos", {
               videos: videoFiles.map((file) => ({ name: file.name || file.originalname || "" })),
@@ -1422,7 +1425,7 @@ export default function MediaPreview({
           .filter((ids) => ids.length >= minSize && ids.length <= maxSize);
 
       const matchedGroups = [
-        ...resolveGroups(imageResult.groups, imageFiles, 2, 2),
+        ...resolveGroups(imageResult.groups, imageFiles, 2, isPlacementCustomizedCarousel ? 2 : 3),
         ...resolveGroups(videoResult.groups, videoFiles, 2, isPlacementCustomizedCarousel ? 2 : 3),
       ];
 

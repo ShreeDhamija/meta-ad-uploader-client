@@ -34,6 +34,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -90,6 +91,8 @@ import TextareaAutosize from "react-textarea-autosize";
 import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
 const API_BASE_URL = import.meta.env.VITE_API_URL || "https://api.withblip.com";
+const META_AD_CREATION_ACTION_REQUIRED = "META_AD_CREATION_ACTION_REQUIRED";
+const META_ACTION_REQUIRED_MESSAGE = "Meta requires you to take certain steps to continue ad creation";
 const TEMPLATE_LINK_SYNC_USER_ID = "929470643071391";
 const PIXEL_TRACKING_FORM_ALLOWED_USER_IDS = ["10236978990363167", "10234447959963619", "10162737276661695"];
 const INSTANT_EXPERIENCE_USER_IDS = ["10236978990363167", "2901368380250453"];
@@ -848,17 +851,21 @@ const usePartnershipAdPartners = (instagramAccountId, pageId) => {
   return { partners, isLoading, error, refetch: fetchPartners };
 };
 
-const ErrorFileName = ({ name }) => {
+const ErrorFileName = ({ adName, fileName }) => {
   const [expanded, setExpanded] = useState(false);
   const LIMIT = 50;
-  const needsTruncation = name.length > LIMIT;
-  const display = !needsTruncation || expanded ? name : name.slice(0, LIMIT) + "…";
+  // Older completed jobs only stored the ad name in `fileName`. Keep those
+  // readable while showing both values for newly completed jobs.
+  const displayName = adName || fileName || "Unknown ad";
+  const fullDetails = adName && fileName ? `${displayName} (File Name: ${fileName})` : displayName;
+  const needsTruncation = fullDetails.length > LIMIT;
+  const display = !needsTruncation || expanded ? fullDetails : fullDetails.slice(0, LIMIT) + "…";
   return (
     <li className="break-words text-[#FF0000] leading-snug">
       {display}
       {needsTruncation && !expanded && (
         <button type="button" onClick={() => setExpanded(true)} className="ml-1 text-[#FF8080] hover:text-[#FF0000] underline underline-offset-2">
-          View Full Ad Name
+          View Full Details
         </button>
       )}
     </li>
@@ -1149,6 +1156,7 @@ export default function AdCreationForm({
   const { isLoggedIn, userId } = useAuth();
   const showPixelTrackingOverride = PIXEL_TRACKING_FORM_ALLOWED_USER_IDS.includes(String(userId));
   const { showMessenger } = useIntercom();
+  const [showMetaActionHelp, setShowMetaActionHelp] = useState(false);
   const [openInstagram, setOpenInstagram] = useState(false);
   const [instagramSearchValue, setInstagramSearchValue] = useState("");
   const [isLinkPagesOpen, setIsLinkPagesOpen] = useState(false);
@@ -2758,11 +2766,19 @@ export default function AdCreationForm({
         };
         addCompletedJob(cancelledJob);
       } else {
+        const requiresMetaAction = metaData.errorMessages?.some((item) => item.errorCode === META_AD_CREATION_ACTION_REQUIRED);
         const failedJob = {
           id: currentJob.id,
-          message: `Job Failed: ${trackedMessage || "An unknown error occurred."}`,
+          message: requiresMetaAction ? META_ACTION_REQUIRED_MESSAGE : `Job Failed: ${trackedMessage || "An unknown error occurred."}`,
           completedAt: Date.now(),
           status: "error",
+          successCount: metaData.successCount,
+          failureCount: metaData.failureCount,
+          totalCount: metaData.totalCount,
+          errorMessages: metaData.errorMessages,
+          successfulAdNames: metaData.successfulAdNames || [],
+          selectedAdSets: currentJob.formData.selectedAdSets,
+          selectedAdAccount: currentJob.formData.selectedAdAccount,
           formData: currentJob.formData,
         };
         addCompletedJob(failedJob);
@@ -7245,7 +7261,8 @@ export default function AdCreationForm({
                 errors: [
                   ...prev.errors,
                   {
-                    fileName: promiseMetadata[index]?.adName || promiseMetadata[index]?.fileName || null,
+                    adName: promiseMetadata[index]?.adName || null,
+                    fileName: promiseMetadata[index]?.fileName || null,
                     error: errorMsg,
                   },
                 ],
@@ -7305,10 +7322,13 @@ export default function AdCreationForm({
               errorMsg = response.reason.message;
             }
             return {
-              fileName: meta?.adName || meta?.fileName || null,
+              adName: meta?.adName || null,
+              fileName: meta?.fileName || null,
               error: errorMsg,
+              errorCode: response.reason?.response?.data?.errorCode || null,
             };
           });
+        const requiresMetaAction = errorMessages.some((item) => item.errorCode === META_AD_CREATION_ACTION_REQUIRED);
 
         let jobStatus = "complete";
         let jobMessage = "All ads created successfully!";
@@ -7334,7 +7354,9 @@ export default function AdCreationForm({
           // Normal (non-cancelled) completion
           if (failureCount > 0 && successCount > 0) {
             jobStatus = "partial-success";
-            jobMessage = `${successCount} of ${totalCount} ads created. ${failureCount} failed.`;
+            jobMessage = requiresMetaAction
+              ? META_ACTION_REQUIRED_MESSAGE
+              : `${successCount} of ${totalCount} ads created. ${failureCount} failed.`;
           } else if (failureCount === totalCount) {
             jobStatus = "error";
             const firstError = responses.find((r) => r.status === "rejected");
@@ -7919,6 +7941,7 @@ export default function AdCreationForm({
 
                 {completedJobs.map((job) => {
                   const successfulAdNames = Array.isArray(job.successfulAdNames) ? job.successfulAdNames.filter(Boolean) : [];
+                  const requiresMetaAction = job.errorMessages?.some((item) => item.errorCode === META_AD_CREATION_ACTION_REQUIRED);
 
                   return (
                     <div key={job.id} className="p-3.5 border-b border-gray-100">
@@ -8041,6 +8064,26 @@ export default function AdCreationForm({
                         </div>
                       </div>
 
+                      {requiresMetaAction && (
+                        <div className="mt-3 ml-9 space-y-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="h-10 w-full rounded-xl border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800"
+                            onClick={() => setShowMetaActionHelp(true)}
+                          >
+                            How to continue
+                          </Button>
+                          <Button
+                            type="button"
+                            className="h-10 w-full rounded-xl bg-blue-600 text-white hover:bg-blue-700"
+                            onClick={showMessenger}
+                          >
+                            Chat with Support
+                          </Button>
+                        </div>
+                      )}
+
                       {/* Error details (moved outside the flex row) */}
                       {(job.status === "partial-success" || job.status === "cancelled") && job.errorMessages?.length > 0 && (
                         <div className="mt-2 ml-9">
@@ -8050,13 +8093,15 @@ export default function AdCreationForm({
                               {(() => {
                                 const errorGroups = job.errorMessages.reduce((acc, item) => {
                                   const key = item.error;
-                                  if (!acc[key]) acc[key] = { error: item.error, fileNames: [] };
-                                  if (item.fileName) acc[key].fileNames.push(item.fileName);
+                                  if (!acc[key]) acc[key] = { error: item.error, failedAds: [] };
+                                  if (item.adName || item.fileName) {
+                                    acc[key].failedAds.push({ adName: item.adName, fileName: item.fileName });
+                                  }
                                   return acc;
                                 }, {});
 
                                 return Object.values(errorGroups).map((group, idx) => {
-                                  const count = group.fileNames.length || 1;
+                                  const count = group.failedAds.length || 1;
                                   return (
                                     <div key={idx} className="border-l-2 border-[#FF0000]/40 pl-2">
                                       <div className="text-[#FF0000] font-medium flex items-start gap-1.5">
@@ -8065,10 +8110,10 @@ export default function AdCreationForm({
                                           {count} {count === 1 ? "ad" : "ads"}
                                         </span>
                                       </div>
-                                      {group.fileNames.length > 0 && (
+                                      {group.failedAds.length > 0 && (
                                         <ul className="mt-1.5 ml-3 list-disc space-y-1">
-                                          {group.fileNames.map((name, i) => (
-                                            <ErrorFileName key={i} name={name} />
+                                          {group.failedAds.map((failedAd, i) => (
+                                            <ErrorFileName key={i} adName={failedAd.adName} fileName={failedAd.fileName} />
                                           ))}
                                         </ul>
                                       )}
@@ -8078,7 +8123,7 @@ export default function AdCreationForm({
                               })()}
                             </div>
                           </details>
-                          {(job.status === "partial-success" || job.status === "error") && renderErrorSupportLink()}
+                          {(job.status === "partial-success" || job.status === "error") && !requiresMetaAction && renderErrorSupportLink()}
                         </div>
                       )}
                     </div>
@@ -11178,6 +11223,21 @@ export default function AdCreationForm({
           </div>
         </div>
       )}
+      <Dialog open={showMetaActionHelp} onOpenChange={setShowMetaActionHelp}>
+        <DialogContent disableSlide className="w-[min(32rem,calc(100vw-2rem))] rounded-[28px] border-gray-200 p-6 sm:rounded-[28px]">
+          <DialogHeader>
+            <DialogTitle>How to continue ad creation</DialogTitle>
+            <DialogDescription>Complete these steps in Meta, then try publishing through Blip again.</DialogDescription>
+          </DialogHeader>
+          <ol className="ml-5 list-decimal space-y-4 text-sm leading-6 text-gray-700">
+            <li>Sometimes Meta’s AI system can falsely flag and stop ads from getting published when made through an app. Here’s how to fix it.</li>
+            <li>
+              Manually make a campaign → ad set → ad in Ads Manager. Then publish a new ad through Blip in this freshly made ad set. It sends a positive
+              signal to Meta to continue ad creation.
+            </li>
+          </ol>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
