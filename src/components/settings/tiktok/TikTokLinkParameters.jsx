@@ -89,7 +89,7 @@ export default function TikTokLinkParameters({
 
     // Add Link Form
     const [showAddForm, setShowAddForm] = useState(false)
-    const [newLinkUrl, setNewLinkUrl] = useState("")
+    const [newLinkUrl, setNewLinkUrl] = useState("https://")
     const [linkDropdownOpen, setLinkDropdownOpen] = useState(false)
     const [selectedLinkIndex, setSelectedLinkIndex] = useState(null)
 
@@ -99,7 +99,10 @@ export default function TikTokLinkParameters({
 
     // Show add form when no links exist
     useEffect(() => {
-        setShowAddForm(links.length === 0);
+        if (links.length === 0) {
+            setShowAddForm(true);
+            setNewLinkUrl("https://");
+        }
     }, [links.length]);
 
 
@@ -162,7 +165,7 @@ export default function TikTokLinkParameters({
     }, [linkImportPreview, links, setLinks]);
 
     const handleAddNewLink = useCallback(() => {
-        if (!newLinkUrl.trim()) {
+        if (!newLinkUrl.trim() || newLinkUrl.trim() === "https://") {
             toast.error("Please enter a link URL");
             return;
         }
@@ -197,7 +200,7 @@ export default function TikTokLinkParameters({
         };
         setLinks(prev => [...prev, newLink]);
         setSelectedLinkIndex(links.length);
-        setNewLinkUrl("");
+        setNewLinkUrl("https://");
         setShowAddForm(false);
     }, [newLinkUrl, links, setLinks]);
 
@@ -460,17 +463,32 @@ export default function TikTokLinkParameters({
                     <div className="border border-gray-200 rounded-xl p-3 bg-white space-y-3">
                         <div className="space-y-2">
                             <Input
-                                placeholder="Enter Link URL"
-                                value={newLinkUrl}
+                                placeholder="https://example.com"
+                                value={newLinkUrl || "https://"}
                                 onChange={(e) => {
                                     let val = e.target.value;
-                                    if (val && !val.startsWith("https://")) {
-                                        const httpsPrefix = "https://";
-                                        if (!httpsPrefix.startsWith(val)) {
-                                            val = "https://" + val;
+                                    if (!val || val.trim() === "" || val === "https://") {
+                                        val = "https://";
+                                    } else {
+                                        val = val.replace(/^https:\/\/(https?:\/\/)+/i, "https://");
+                                        val = val.replace(/^http:\/\//i, "https://");
+                                        if (!val.startsWith("https://")) {
+                                            val = "https://" + val.replace(/^https?:\/\//i, "");
                                         }
                                     }
                                     setNewLinkUrl(val);
+                                }}
+                                onPaste={(e) => {
+                                    e.preventDefault();
+                                    const pastedText = e.clipboardData.getData("text") || "";
+                                    let cleanUrl = pastedText.trim();
+                                    if (cleanUrl) {
+                                        cleanUrl = cleanUrl.replace(/^https?:\/\//i, "");
+                                        cleanUrl = "https://" + cleanUrl;
+                                    } else {
+                                        cleanUrl = "https://";
+                                    }
+                                    setNewLinkUrl(cleanUrl);
                                 }}
                                 className="rounded-2xl border-gray-300 py-4.5 bg-white shadow"
                             />
@@ -486,7 +504,7 @@ export default function TikTokLinkParameters({
                             <Button
                                 onClick={() => {
                                     setShowAddForm(false);
-                                    setNewLinkUrl("");
+                                    setNewLinkUrl("https://");
                                 }}
                                 variant="outline"
                                 className="rounded-xl"
@@ -498,7 +516,10 @@ export default function TikTokLinkParameters({
                     </div>
                 ) : (
                     <Button
-                        onClick={() => setShowAddForm(true)}
+                        onClick={() => {
+                            setShowAddForm(true);
+                            setNewLinkUrl("https://");
+                        }}
                         className="bg-zinc-600 text-white w-full rounded-xl hover:bg-zinc-800 mt-2 h-[40px]"
                     >
                         <Plus className="w-4 h-4 mr-2" />
@@ -547,17 +568,28 @@ export default function TikTokLinkParameters({
                 <div className="space-y-1">
                     <label className="text-xs font-medium text-gray-600 block">Impression tracking URL</label>
                     <Input
-                        placeholder="Enter URL"
+                        placeholder="https://example.com"
                         value={impressionTrackingUrl}
                         onChange={(e) => {
                             let val = e.target.value;
-                            if (val && !val.startsWith("https://")) {
-                                const httpsPrefix = "https://";
-                                if (!httpsPrefix.startsWith(val)) {
-                                    val = "https://" + val;
+                            if (val) {
+                                val = val.replace(/^https:\/\/(https?:\/\/)+/i, "https://");
+                                val = val.replace(/^http:\/\//i, "https://");
+                                if (!val.startsWith("https://") && val !== "http:" && val !== "https:") {
+                                    val = "https://" + val.replace(/^https?:\/\//i, "");
                                 }
                             }
                             setImpressionTrackingUrl(val);
+                        }}
+                        onPaste={(e) => {
+                            e.preventDefault();
+                            const pastedText = e.clipboardData.getData("text") || "";
+                            let cleanUrl = pastedText.trim();
+                            if (cleanUrl) {
+                                cleanUrl = cleanUrl.replace(/^https?:\/\//i, "");
+                                cleanUrl = "https://" + cleanUrl;
+                            }
+                            setImpressionTrackingUrl(cleanUrl);
                         }}
                         className="rounded-2xl border-gray-300 py-4.5 bg-white shadow"
                         autoComplete="off"
@@ -584,17 +616,28 @@ export default function TikTokLinkParameters({
                 <div className="space-y-1">
                     <label className="text-xs font-medium text-gray-600 block">Click tracking URL</label>
                     <Input
-                        placeholder="Enter URL"
+                        placeholder="https://example.com"
                         value={clickTrackingUrl}
                         onChange={(e) => {
                             let val = e.target.value;
-                            if (val && !val.startsWith("https://")) {
-                                const httpsPrefix = "https://";
-                                if (!httpsPrefix.startsWith(val)) {
-                                    val = "https://" + val;
+                            if (val) {
+                                val = val.replace(/^https:\/\/(https?:\/\/)+/i, "https://");
+                                val = val.replace(/^http:\/\//i, "https://");
+                                if (!val.startsWith("https://") && val !== "http:" && val !== "https:") {
+                                    val = "https://" + val.replace(/^https?:\/\//i, "");
                                 }
                             }
                             setClickTrackingUrl(val);
+                        }}
+                        onPaste={(e) => {
+                            e.preventDefault();
+                            const pastedText = e.clipboardData.getData("text") || "";
+                            let cleanUrl = pastedText.trim();
+                            if (cleanUrl) {
+                                cleanUrl = cleanUrl.replace(/^https?:\/\//i, "");
+                                cleanUrl = "https://" + cleanUrl;
+                            }
+                            setClickTrackingUrl(cleanUrl);
                         }}
                         className="rounded-2xl border-gray-300 py-4.5 bg-white shadow"
                         autoComplete="off"
