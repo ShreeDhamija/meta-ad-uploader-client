@@ -7942,9 +7942,6 @@ export default function AdCreationForm({
                 {completedJobs.map((job) => {
                   const successfulAdNames = Array.isArray(job.successfulAdNames) ? job.successfulAdNames.filter(Boolean) : [];
                   const requiresMetaAction = job.errorMessages?.some((item) => item.errorCode === META_AD_CREATION_ACTION_REQUIRED);
-                  // TEMPORARY TEST: show the Meta action UI for every partial or fully failed job.
-                  // Remove the two status checks after testing to restore the special-error-only behavior.
-                  const showMetaActionActions = requiresMetaAction || job.status === "partial-success" || job.status === "error";
 
                   return (
                     <div key={job.id} className="p-3.5 border-b border-gray-100">
@@ -7998,10 +7995,7 @@ export default function AdCreationForm({
 
                           {job.status === "retry" && <span className="block text-xs text-orange-500 mt-1">Reload page to try again.</span>}
 
-                          {(job.status === "error" || job.status === "partial-success") &&
-                            !job.errorMessages?.length &&
-                            !showMetaActionActions &&
-                            renderErrorSupportLink()}
+                          {(job.status === "error" || job.status === "partial-success") && !job.errorMessages?.length && renderErrorSupportLink()}
                         </div>
 
                         <div className="flex items-center gap-1 flex-shrink-0 ml-2">
@@ -8070,7 +8064,7 @@ export default function AdCreationForm({
                         </div>
                       </div>
 
-                      {showMetaActionActions && (
+                      {requiresMetaAction && (
                         <div className="mt-3 ml-9 space-y-2">
                           <Button
                             type="button"
@@ -8129,7 +8123,7 @@ export default function AdCreationForm({
                               })()}
                             </div>
                           </details>
-                          {(job.status === "partial-success" || job.status === "error") && !showMetaActionActions && renderErrorSupportLink()}
+                          {(job.status === "partial-success" || job.status === "error") && !requiresMetaAction && renderErrorSupportLink()}
                         </div>
                       )}
                     </div>
