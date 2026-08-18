@@ -86,7 +86,7 @@ function getMediaAspectRatio(media) {
   return null;
 }
 
-function ReviewMedia({ media, priority = false }) {
+function ReviewMedia({ media }) {
   const isVideo = (media.mimeType || "").startsWith("video/");
   const savedAspectRatio = getMediaAspectRatio(media);
   const [detectedAspectRatio, setDetectedAspectRatio] = useState(null);
@@ -130,10 +130,8 @@ function ReviewMedia({ media, priority = false }) {
         <img
           src={media.deletedAt ? MEDIA_FALLBACK_URL : media.url || media.previewUrl || MEDIA_FALLBACK_URL}
           alt={media.name || "Ad creative"}
-          loading={priority ? "eager" : "lazy"}
-          fetchPriority={priority ? "high" : "auto"}
-          decoding="async"
-          className="block h-full w-full max-w-full object-contain"
+          loading="eager"
+          className="absolute inset-0 block h-full w-full max-w-full object-contain"
           onLoad={(event) => {
             detectAspectRatio(event.currentTarget.naturalWidth, event.currentTarget.naturalHeight);
           }}
@@ -147,7 +145,7 @@ function ReviewMedia({ media, priority = false }) {
   );
 }
 
-function CreativeReviewCard({ unit, groupIndex, priority = false }) {
+function CreativeReviewCard({ unit, groupIndex }) {
   const grouped = unit.type === "group";
   const groupColor = groupIndex % 2 === 0
     ? "border-blue-300 bg-blue-100"
@@ -158,11 +156,10 @@ function CreativeReviewCard({ unit, groupIndex, priority = false }) {
       grouped ? `rounded-2xl border p-2 sm:col-span-2 ${groupColor}` : ""
     }`}>
       <div className={`grid min-w-0 gap-2 ${unit.media.length > 1 ? "grid-cols-1 min-[420px]:grid-cols-2" : "grid-cols-1"}`}>
-        {unit.media.map((media, index) => (
+        {unit.media.map((media) => (
           <ReviewMedia
             key={media.id}
             media={media}
-            priority={priority && index < 2}
           />
         ))}
       </div>
@@ -314,12 +311,11 @@ function ReviewForm({ form, index, state, mediaById, showLaunchHeading }) {
         <div className="min-w-0 sm:pr-2 lg:border-l lg:border-gray-200 lg:pl-6">
           {creativeUnits.length > 0 ? (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {indexedCreativeUnits.map(({ unit, groupIndex }, unitIndex) => (
+              {indexedCreativeUnits.map(({ unit, groupIndex }) => (
                 <CreativeReviewCard
                   key={unit.id}
                   unit={unit}
                   groupIndex={groupIndex}
-                  priority={index === 0 && unitIndex < 2}
                 />
               ))}
             </div>
