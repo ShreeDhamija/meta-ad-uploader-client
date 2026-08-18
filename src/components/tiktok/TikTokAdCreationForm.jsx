@@ -4318,21 +4318,36 @@ export default function TikTokAdCreationForm({
     }
   };
 
+  const lastEditedTextIndexRef = useRef(null);
+
   const duplicateTextIndices = useMemo(() => {
     if (!isSmartCampaign || !adTexts || adTexts.length <= 1) return new Set();
 
     const dupes = new Set();
-    const seen = {};
+    const valueMap = new Map();
+
     adTexts.forEach((val, i) => {
-      const trimmed = (val || "").trim().toLowerCase();
-      if (!trimmed) return;
-      if (trimmed in seen) {
-        dupes.add(i);
-        dupes.add(seen[trimmed]);
-      } else {
-        seen[trimmed] = i;
+      const normalized = (val || "").trim().toLowerCase();
+      if (!normalized) return;
+      if (!valueMap.has(normalized)) {
+        valueMap.set(normalized, []);
+      }
+      valueMap.get(normalized).push(i);
+    });
+
+    valueMap.forEach((indices) => {
+      if (indices.length > 1) {
+        const lastEdited = lastEditedTextIndexRef.current;
+        if (lastEdited !== null && indices.includes(lastEdited)) {
+          dupes.add(lastEdited);
+        } else {
+          for (let k = 1; k < indices.length; k++) {
+            dupes.add(indices[k]);
+          }
+        }
       }
     });
+
     return dupes;
   }, [isSmartCampaign, adTexts]);
 
@@ -6057,14 +6072,17 @@ export default function TikTokAdCreationForm({
 
                     <div className="space-y-2 mb-0">
                       {(isSmartCampaign ? adTexts : adTexts.slice(0, 1)).map((text, i) => (
-                        <div key={i} className="flex items-start gap-2">
+                        <div key={i} className="flex items-center gap-2">
                           <div className="flex flex-col w-full">
                             <div className="flex items-center justify-between mb-1">
                               <span className="text-[10px] text-zinc-400 font-medium">{(text || "").length}/100</span>
                             </div>
                             <TextareaAutosize
                               value={text || ""}
-                              onChange={(e) => setAdTexts((prev) => prev.map((t, idx) => (idx === i ? e.target.value : t)))}
+                              onChange={(e) => {
+                                lastEditedTextIndexRef.current = i;
+                                setAdTexts((prev) => prev.map((t, idx) => (idx === i ? e.target.value : t)));
+                              }}
                               placeholder={i === 0 ? "Add text option" : `Text option ${i + 1}`}
                               minRows={2}
                               maxRows={8}
@@ -6077,16 +6095,10 @@ export default function TikTokAdCreationForm({
                             )}
                           </div>
                           {isSmartCampaign && adTexts.length > 1 && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              className="border border-gray-400 rounded-xl bg-white shadow-xs mt-5 shrink-0"
-                              size="icon"
+                            <Trash2
+                              className="w-4 h-4 text-gray-400 cursor-pointer hover:text-red-500 shrink-0"
                               onClick={() => setAdTexts((prev) => prev.filter((_, idx) => idx !== i))}
-                            >
-                              <Trash2 className="w-4 h-4 text-gray-600 cursor-pointer hover:text-red-500" />
-                              <span className="sr-only">Remove</span>
-                            </Button>
+                            />
                           )}
                         </div>
                       ))}

@@ -145,19 +145,34 @@ export default function TikTokCopyTemplates({ templates = {}, defaultName = "", 
     [templateName, selectedName, templates],
   );
 
+  const lastEditedTextIndexRef = useRef(null);
+
   const duplicateIndices = useMemo(() => {
     const dupes = new Set();
-    const seen = {};
+    const valueMap = new Map();
+
     texts.forEach((val, i) => {
       const normalized = (val || "").trim().toLowerCase();
       if (!normalized) return;
-      if (normalized in seen) {
-        dupes.add(i);
-        dupes.add(seen[normalized]);
-      } else {
-        seen[normalized] = i;
+      if (!valueMap.has(normalized)) {
+        valueMap.set(normalized, []);
+      }
+      valueMap.get(normalized).push(i);
+    });
+
+    valueMap.forEach((indices) => {
+      if (indices.length > 1) {
+        const lastEdited = lastEditedTextIndexRef.current;
+        if (lastEdited !== null && indices.includes(lastEdited)) {
+          dupes.add(lastEdited);
+        } else {
+          for (let k = 1; k < indices.length; k++) {
+            dupes.add(indices[k]);
+          }
+        }
       }
     });
+
     return dupes;
   }, [texts]);
 
@@ -639,7 +654,7 @@ export default function TikTokCopyTemplates({ templates = {}, defaultName = "", 
         </div>
         <div className="space-y-2">
           {texts.map((t, idx) => (
-            <div key={idx} className="flex items-start gap-2">
+            <div key={idx} className="flex items-center gap-2">
               <div className="flex flex-col w-full">
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-[10px] text-zinc-400 font-medium">{t.length}/100</span>
@@ -647,7 +662,10 @@ export default function TikTokCopyTemplates({ templates = {}, defaultName = "", 
                 <TextareaAutosize
                   placeholder={idx === 0 ? "Enter Caption" : `Enter Caption Option ${idx + 1}`}
                   value={t}
-                  onChange={(e) => setTexts((prev) => prev.map((item, i) => (i === idx ? e.target.value : item)))}
+                  onChange={(e) => {
+                    lastEditedTextIndexRef.current = idx;
+                    setTexts((prev) => prev.map((item, i) => (i === idx ? e.target.value : item)));
+                  }}
                   className={`${settingsTextareaChrome} w-full text-sm resize-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 ${t.length > 100 || duplicateIndices.has(idx) ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]" : ""}`}
                   minRows={2}
                   maxRows={8}
@@ -659,17 +677,10 @@ export default function TikTokCopyTemplates({ templates = {}, defaultName = "", 
                 )}
               </div>
               {texts.length > 1 && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="border border-gray-400 rounded-xl bg-white shadow-xs mt-5 shrink-0"
-                  size="icon"
+                <Trash2
+                  className="w-4 h-4 text-gray-400 cursor-pointer hover:text-red-500 shrink-0"
                   onClick={() => setTexts((prev) => prev.filter((_, i) => i !== idx))}
-                  disabled={isProcessing}
-                >
-                  <Trash2 className="w-4 h-4 text-gray-600 cursor-pointer hover:text-red-500" />
-                  <span className="sr-only">Remove</span>
-                </Button>
+                />
               )}
             </div>
           ))}
@@ -853,11 +864,10 @@ export default function TikTokCopyTemplates({ templates = {}, defaultName = "", 
                             <div className="flex justify-between items-center mb-2">
                               <div className="text-xs font-medium text-gray-500">Text Option {index + 1}</div>
                               <Button
-                                className={`flex items-center text-xs rounded-xl px-2 py-1 shrink-0 ${
-                                  textExistsInTemplate(text)
-                                    ? "bg-white text-black cursor-not-allowed border border-gray-300 !shadow-none"
-                                    : "bg-blue-600 text-white hover:bg-blue-700"
-                                }`}
+                                className={`flex items-center text-xs rounded-xl px-2 py-1 shrink-0 ${textExistsInTemplate(text)
+                                  ? "bg-white text-black cursor-not-allowed border border-gray-300 !shadow-none"
+                                  : "bg-blue-600 text-white hover:bg-blue-700"
+                                  }`}
                                 onClick={textExistsInTemplate(text) ? undefined : createTextImportHandler(text)}
                                 disabled={textExistsInTemplate(text)}
                               >
