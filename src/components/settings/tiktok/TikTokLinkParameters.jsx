@@ -570,12 +570,26 @@ export default function TikTokLinkParameters({
                     <Input
                         placeholder="https://example.com"
                         value={impressionTrackingUrl}
+                        onFocus={() => {
+                            if (!impressionTrackingUrl || !impressionTrackingUrl.trim()) {
+                                setImpressionTrackingUrl("https://");
+                            }
+                        }}
+                        onBlur={() => {
+                            if (impressionTrackingUrl === "https://") {
+                                setImpressionTrackingUrl("");
+                            }
+                        }}
                         onChange={(e) => {
                             let val = e.target.value;
-                            if (val) {
+                            if (!val || val.trim() === "") {
+                                val = "";
+                            } else if (val === "https://" || val === "https:" || val === "http:" || val === "http://") {
+                                val = "https://";
+                            } else {
                                 val = val.replace(/^https:\/\/(https?:\/\/)+/i, "https://");
                                 val = val.replace(/^http:\/\//i, "https://");
-                                if (!val.startsWith("https://") && val !== "http:" && val !== "https:") {
+                                if (!val.startsWith("https://")) {
                                     val = "https://" + val.replace(/^https?:\/\//i, "");
                                 }
                             }
@@ -588,13 +602,15 @@ export default function TikTokLinkParameters({
                             if (cleanUrl) {
                                 cleanUrl = cleanUrl.replace(/^https?:\/\//i, "");
                                 cleanUrl = "https://" + cleanUrl;
+                            } else {
+                                cleanUrl = "";
                             }
                             setImpressionTrackingUrl(cleanUrl);
                         }}
                         className="rounded-2xl border-gray-300 py-4.5 bg-white shadow"
                         autoComplete="off"
                     />
-                    {impressionTrackingUrl && impressionTrackingUrl.trim() && (() => {
+                    {impressionTrackingUrl && impressionTrackingUrl.trim() && impressionTrackingUrl.trim() !== "https://" && (() => {
                         let urlError = "Link (URL) must start with https://";
                         const urlString = impressionTrackingUrl.trim();
                         if (/^https:\/\//i.test(urlString)) {
@@ -618,12 +634,26 @@ export default function TikTokLinkParameters({
                     <Input
                         placeholder="https://example.com"
                         value={clickTrackingUrl}
+                        onFocus={() => {
+                            if (!clickTrackingUrl || !clickTrackingUrl.trim()) {
+                                setClickTrackingUrl("https://");
+                            }
+                        }}
+                        onBlur={() => {
+                            if (clickTrackingUrl === "https://") {
+                                setClickTrackingUrl("");
+                            }
+                        }}
                         onChange={(e) => {
                             let val = e.target.value;
-                            if (val) {
+                            if (!val || val.trim() === "") {
+                                val = "";
+                            } else if (val === "https://" || val === "https:" || val === "http:" || val === "http://") {
+                                val = "https://";
+                            } else {
                                 val = val.replace(/^https:\/\/(https?:\/\/)+/i, "https://");
                                 val = val.replace(/^http:\/\//i, "https://");
-                                if (!val.startsWith("https://") && val !== "http:" && val !== "https:") {
+                                if (!val.startsWith("https://")) {
                                     val = "https://" + val.replace(/^https?:\/\//i, "");
                                 }
                             }
@@ -636,13 +666,15 @@ export default function TikTokLinkParameters({
                             if (cleanUrl) {
                                 cleanUrl = cleanUrl.replace(/^https?:\/\//i, "");
                                 cleanUrl = "https://" + cleanUrl;
+                            } else {
+                                cleanUrl = "";
                             }
                             setClickTrackingUrl(cleanUrl);
                         }}
                         className="rounded-2xl border-gray-300 py-4.5 bg-white shadow"
                         autoComplete="off"
                     />
-                    {clickTrackingUrl && clickTrackingUrl.trim() && (() => {
+                    {clickTrackingUrl && clickTrackingUrl.trim() && clickTrackingUrl.trim() !== "https://" && (() => {
                         let urlError = "Link (URL) must start with https://";
                         const urlString = clickTrackingUrl.trim();
                         if (/^https:\/\//i.test(urlString)) {
