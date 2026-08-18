@@ -6411,7 +6411,6 @@ export default function TikTokAdCreationForm({
                       </Command>
                     </PopoverContent>
                   </Popover>
-                  {(!cta || cta.length === 0) && <p className="text-xs text-red-500 font-medium mt-1">Please select at least one Call to Action</p>}
                 </div>
               </div>
 
@@ -6924,19 +6923,19 @@ export default function TikTokAdCreationForm({
                     </div>
                   )}
 
-                  {!hasPublishBlockingIssueBeforeIdentity && !isIdentityMissing && !isCampaignMissing && isDuplicatedAdGroupNameMissing && (
+                  {!hasPublishBlockingIssueBeforeIdentity && !isIdentityMissing && isDuplicatedAdGroupNameMissing && (
                     <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
                       Please enter a name for the duplicated ad group
                     </div>
                   )}
 
-                  {!hasPublishBlockingIssueBeforeIdentity && !isIdentityMissing && !isCampaignMissing && !isDuplicatedAdGroupNameMissing && isAdGroupMissing && (
+                  {!hasPublishBlockingIssueBeforeIdentity && !isIdentityMissing && !isDuplicatedAdGroupNameMissing && isAdGroupMissing && (
                     <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
                       Please select an ad group to post to
                     </div>
                   )}
 
-                  {!hasPublishBlockingIssueBeforeIdentity && !isIdentityMissing && !isCampaignMissing && !isDuplicatedAdGroupNameMissing && !isAdGroupMissing && isAdvertiserMissing && (
+                  {!hasPublishBlockingIssueBeforeIdentity && !isIdentityMissing && !isDuplicatedAdGroupNameMissing && !isAdGroupMissing && isAdvertiserMissing && (
                     <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
                       Please select an advertiser account to publish ads
                     </div>
