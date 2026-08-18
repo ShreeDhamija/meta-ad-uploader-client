@@ -130,10 +130,22 @@ export default function TikTokAdvertiserSettings({
     const skipSettingsResetRef = useRef(false);
     const cacheRestoredRef = useRef(false);
 
+    // Helper to normalize settings for comparison (treats undefined and "" as equivalent)
+    const cleanSettings = (obj) => {
+        if (!obj) return {};
+        const cleaned = { ...obj };
+        Object.keys(cleaned).forEach(key => {
+            if (cleaned[key] === "" || cleaned[key] === undefined || cleaned[key] === null) {
+                delete cleaned[key];
+            }
+        });
+        return cleaned;
+    };
+
     // Derived — computed every render so there's never a stale-state race
     const hasChanges = Boolean(
         settings && initialSettings &&
-        JSON.stringify(settings) !== JSON.stringify(initialSettings)
+        JSON.stringify(cleanSettings(settings)) !== JSON.stringify(cleanSettings(initialSettings))
     );
     const [editingProduct, setEditingProduct] = useState(null);
     const [newSellingPoint, setNewSellingPoint] = useState("");
