@@ -1327,7 +1327,7 @@ export default function QaReview() {
                 type="button"
                 onClick={() => setAdvancedPreviewOpen(true)}
                 disabled={previewAds.length === 0}
-                className="inline-flex items-center rounded-full border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-800 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-45"
+                className="inline-flex items-center rounded-full border border-neutral-200 bg-white px-4 py-2.5 text-sm font-medium text-neutral-700 shadow-xs hover:bg-white hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-45"
               >
                 <Eye className="mr-2 h-4 w-4" />
                 Advanced preview
@@ -1336,7 +1336,7 @@ export default function QaReview() {
                 <button
                   type="button"
                   onClick={() => setCommentsOpen(true)}
-                  className="inline-flex items-center rounded-full border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-800 hover:bg-gray-50"
+                  className="inline-flex items-center rounded-full bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-blue-700"
                 >
                   <MessageCircle className="mr-2 h-4 w-4" />
                   {comments.length} Comment{comments.length === 1 ? "" : "s"}
@@ -1349,7 +1349,7 @@ export default function QaReview() {
                   setCommentTarget(null);
                   setInlineCommentSelection(null);
                 }}
-                className="rounded-full bg-black px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-gray-800"
+                className="rounded-xl bg-neutral-900 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-neutral-800"
               >
                 {commentMode ? "Exit commenting mode" : "Leave a comment"}
               </button>
