@@ -18,10 +18,10 @@ import { getCreativeUnitsForForm } from "@/lib/draftCreativeLayout";
 const MEDIA_FALLBACK_URL = "https://api.withblip.com/thumbnail.jpg";
 const COPY_PREVIEW_LIMIT = 200;
 const REVIEWER_NAME_KEY = "blip-qa-reviewer-name";
-const CommentsContext = createContext({ comments: [], openComments: () => {} });
+const CommentsContext = createContext({ comments: [], openInlineComment: () => {} });
 
 function CommentPins({ anchorId, media = false }) {
-  const { comments, openComments } = useContext(CommentsContext);
+  const { comments, openInlineComment } = useContext(CommentsContext);
   const anchoredComments = comments.filter((comment) => comment.anchorId === anchorId);
   if (anchoredComments.length === 0) return null;
 
@@ -30,11 +30,12 @@ function CommentPins({ anchorId, media = false }) {
       <button
         type="button"
         data-comment-ui
+        data-comment-pin
         onClick={(event) => {
           event.stopPropagation();
-          openComments(anchorId);
+          openInlineComment(anchorId);
         }}
-        className="absolute -right-2 -top-2 z-20 flex h-6 min-w-6 items-center justify-center rounded-full bg-black px-1.5 text-[11px] font-bold text-white shadow-md ring-2 ring-white"
+        className="absolute -right-2 -top-2 z-20 flex h-6 min-w-6 items-center justify-center rounded-full bg-pink-500 px-1.5 text-[11px] font-bold text-white shadow-md ring-2 ring-white hover:bg-pink-600"
         aria-label={`View ${anchoredComments.length} comment${anchoredComments.length === 1 ? "" : "s"}`}
       >
         {anchoredComments.length}
@@ -49,11 +50,13 @@ function CommentPins({ anchorId, media = false }) {
         key={comment.id}
         type="button"
         data-comment-ui
+        data-comment-pin
+        data-comment-id={comment.id}
         onClick={(event) => {
           event.stopPropagation();
-          openComments(anchorId);
+          openInlineComment(anchorId, comment.id);
         }}
-        className="absolute z-20 flex h-7 min-w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-black px-1.5 text-[11px] font-bold text-white shadow-lg ring-2 ring-white"
+        className="absolute z-20 flex h-7 min-w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-pink-500 px-1.5 text-[11px] font-bold text-white shadow-lg ring-2 ring-white hover:bg-pink-600"
         style={{
           left: `${Math.max(0.04, Math.min(0.96, comment.x ?? 0.5)) * 100}%`,
           top: `${Math.max(0.04, Math.min(0.96, comment.y ?? 0.5)) * 100}%`,
@@ -85,6 +88,112 @@ function formatCommentTime(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
   return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(date);
+}
+
+function findCommentAnchor(anchorId) {
+  return Array.from(document.querySelectorAll("[data-comment-anchor]")).find(
+    (element) => element.dataset.commentAnchor === anchorId,
+  );
+}
+
+function InlineCommentPopover({ selection, comments, onClose }) {
+  const [position, setPosition] = useState(null);
+  const visibleComments = selection
+    ? comments.filter((comment) => (
+      comment.anchorId === selection.anchorId && (!selection.commentId || comment.id === selection.commentId)
+    ))
+    : [];
+
+  useEffect(() => {
+    if (!selection) {
+      setPosition(null);
+      return undefined;
+    }
+
+    const updatePosition = () => {
+      const anchor = findCommentAnchor(selection.anchorId);
+      if (!anchor) return;
+      const pin = selection.commentId
+        ? Array.from(anchor.querySelectorAll("[data-comment-id]")).find((element) => element.dataset.commentId === selection.commentId)
+        : anchor.querySelector("[data-comment-pin]");
+      const rect = (pin || anchor).getBoundingClientRect();
+      const width = Math.min(320, window.innerWidth - 24);
+      const height = 192;
+      const preferredLeft = rect.right + 12;
+      const left = preferredLeft + width <= window.innerWidth - 12
+        ? preferredLeft
+        : Math.max(12, Math.min(window.innerWidth - width - 12, rect.left - width - 12));
+      const top = Math.max(12, Math.min(window.innerHeight - height - 12, rect.top - 12));
+      setPosition({ left, top, width });
+    };
+
+    const frame = window.requestAnimationFrame(updatePosition);
+    window.addEventListener("resize", updatePosition);
+    document.addEventListener("scroll", updatePosition, true);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener("resize", updatePosition);
+      document.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [selection, comments]);
+
+  if (!selection || !position || visibleComments.length === 0 || typeof document === "undefined") return null;
+  return createPortal(
+    <div
+      data-comment-ui
+      className="fixed z-[105] flex h-48 flex-col overflow-hidden rounded-2xl border border-pink-100 bg-white shadow-2xl"
+      style={{ left: position.left, top: position.top, width: position.width }}
+      role="dialog"
+      aria-label="Comment"
+    >
+      <header className="flex items-center justify-between gap-2 border-b border-gray-100 px-4 py-3">
+        <p className="min-w-0 truncate text-xs font-semibold text-pink-600">{visibleComments[0].anchorLabel}</p>
+        <button type="button" onClick={onClose} className="shrink-0 rounded-full p-1 text-gray-400 hover:bg-gray-100" aria-label="Close comment">
+          <X className="h-4 w-4" />
+        </button>
+      </header>
+      <div className="flex-1 space-y-3 overflow-y-auto px-4 py-3">
+        {visibleComments.map((comment) => (
+          <article key={comment.id}>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-sm font-semibold text-gray-950">{comment.authorName}</span>
+              <span className="text-[10px] text-gray-400">{formatCommentTime(comment.createdAt)}</span>
+            </div>
+            <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-5 text-gray-700">{comment.body}</p>
+          </article>
+        ))}
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+function ReviewCommentsSummary({ comments, onSelectComment }) {
+  if (comments.length === 0) return null;
+  return (
+    <section data-comment-ui className="mt-6 rounded-3xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
+      <div className="flex items-center gap-2">
+        <MessageCircle className="h-5 w-5 text-pink-500" />
+        <h2 className="text-lg font-semibold text-gray-950">Review comments</h2>
+      </div>
+      <div className="mt-4 divide-y divide-gray-100">
+        {comments.map((comment) => (
+          <button
+            key={comment.id}
+            type="button"
+            onClick={() => onSelectComment(comment)}
+            className="grid w-full gap-1 py-4 text-left sm:grid-cols-[minmax(180px,0.35fr)_minmax(0,1fr)] sm:gap-5"
+          >
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-pink-600">{comment.anchorLabel}</p>
+              <p className="mt-0.5 text-xs text-gray-500">{comment.authorName}</p>
+            </div>
+            <p className="whitespace-pre-wrap break-words text-sm leading-5 text-gray-700">{comment.body}</p>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
 }
 
 function FieldLabel({ icon, children }) {
@@ -136,17 +245,15 @@ function ExpandableText({ text }) {
   );
 }
 
-function CommentsPanel({ open, comments, selectedAnchorId, error, onClose, onShowAll, onJumpToComment }) {
+function CommentsPanel({ open, comments, error, onClose, onJumpToComment }) {
   if (!open || typeof document === "undefined") return null;
-  const visibleComments = selectedAnchorId
-    ? comments.filter((comment) => comment.anchorId === selectedAnchorId)
-    : comments;
-  const selectedLabel = visibleComments[0]?.anchorLabel;
 
   return createPortal(
-    <div data-comment-ui className="fixed inset-0 z-[100] bg-black/25" onMouseDown={onClose}>
+    <div data-comment-ui className="fixed inset-0 z-[100] flex justify-end bg-black/20 p-3 sm:p-5" onMouseDown={onClose}>
+      <style>{`@keyframes qaCommentDrawerIn { from { opacity: 0; transform: translateX(18px); } to { opacity: 1; transform: translateX(0); } }`}</style>
       <aside
-        className="ml-auto flex h-[100dvh] w-full max-w-md flex-col bg-white shadow-2xl"
+        className="flex h-full w-full max-w-md flex-col overflow-hidden rounded-3xl bg-white shadow-2xl"
+        style={{ animation: "qaCommentDrawerIn 180ms ease-out" }}
         onMouseDown={(event) => event.stopPropagation()}
         aria-label="Review comments"
       >
@@ -154,7 +261,7 @@ function CommentsPanel({ open, comments, selectedAnchorId, error, onClose, onSho
           <div className="min-w-0">
             <h2 className="text-lg font-semibold text-gray-950">Comments</h2>
             <p className="mt-0.5 truncate text-sm text-gray-500">
-              {selectedLabel || `${comments.length} total`}
+              {comments.length} total
             </p>
           </div>
           <button type="button" onClick={onClose} className="rounded-full p-2 text-gray-500 hover:bg-gray-100" aria-label="Close comments">
@@ -162,19 +269,13 @@ function CommentsPanel({ open, comments, selectedAnchorId, error, onClose, onSho
           </button>
         </header>
 
-        {selectedAnchorId && (
-          <button type="button" onClick={onShowAll} className="border-b border-gray-100 px-5 py-3 text-left text-sm font-semibold text-blue-600 hover:bg-gray-50">
-            View all comments
-          </button>
-        )}
-
         <div className="flex-1 space-y-3 overflow-y-auto p-5">
           {error && <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}
-          {visibleComments.length === 0 ? (
+          {comments.length === 0 ? (
             <div className="flex h-full min-h-48 items-center justify-center text-center text-sm text-gray-500">
               No comments yet.
             </div>
-          ) : visibleComments.map((comment) => (
+          ) : comments.map((comment) => (
             <button
               key={comment.id}
               type="button"
@@ -581,7 +682,7 @@ export default function QaReview() {
   const [commentsError, setCommentsError] = useState("");
   const [commentMode, setCommentMode] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
-  const [selectedAnchorId, setSelectedAnchorId] = useState(null);
+  const [inlineCommentSelection, setInlineCommentSelection] = useState(null);
   const [commentTarget, setCommentTarget] = useState(null);
   const [commentBody, setCommentBody] = useState("");
   const [commentSubmitError, setCommentSubmitError] = useState("");
@@ -633,9 +734,8 @@ export default function QaReview() {
     };
   }, [accountName]);
 
-  const openComments = (anchorId = null) => {
-    setSelectedAnchorId(anchorId);
-    setCommentsOpen(true);
+  const openInlineComment = (anchorId, commentId = null) => {
+    setInlineCommentSelection({ anchorId, commentId });
   };
 
   const handleReviewClick = (event) => {
@@ -692,11 +792,9 @@ export default function QaReview() {
       });
       window.localStorage.setItem(REVIEWER_NAME_KEY, reviewerName.trim());
       setComments((current) => [...current, comment]);
-      setSelectedAnchorId(commentTarget.id);
+      setInlineCommentSelection({ anchorId: commentTarget.id, commentId: comment.id });
       setCommentTarget(null);
       setCommentBody("");
-      setCommentMode(false);
-      setCommentsOpen(true);
     } catch (requestError) {
       setCommentSubmitError(requestError.message || "Comment could not be posted");
     } finally {
@@ -705,16 +803,15 @@ export default function QaReview() {
   };
 
   const handleJumpToComment = (comment) => {
-    const anchor = Array.from(document.querySelectorAll("[data-comment-anchor]")).find(
-      (element) => element.dataset.commentAnchor === comment.anchorId,
-    );
+    const anchor = findCommentAnchor(comment.anchorId);
     setCommentsOpen(false);
+    setInlineCommentSelection({ anchorId: comment.anchorId, commentId: comment.id });
     if (anchor) {
       window.setTimeout(() => anchor.scrollIntoView({ behavior: "smooth", block: "center" }), 50);
     }
   };
 
-  const commentsContextValue = { comments, openComments };
+  const commentsContextValue = { comments, openInlineComment };
 
   if (error) {
     return (
@@ -741,8 +838,11 @@ export default function QaReview() {
       >
         {commentMode && (
           <style>{`
-            [data-comment-anchor] { cursor: crosshair; }
-            [data-comment-anchor]:hover { outline: 2px solid #2563eb; outline-offset: 4px; }
+            [data-comment-anchor] {
+              cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 24 24' fill='%23ec4899' stroke='white' stroke-width='1.5'%3E%3Cpath d='M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z'/%3E%3C/svg%3E") 6 6, pointer;
+            }
+            [data-comment-anchor]:hover { outline: 2px solid #f9a8d4; outline-offset: 4px; border-radius: 12px; }
+            [data-comment-anchor]:has([data-comment-anchor]:hover) { outline: none; }
           `}</style>
         )}
         <div className="mx-auto max-w-7xl">
@@ -759,7 +859,7 @@ export default function QaReview() {
               {comments.length > 0 && (
                 <button
                   type="button"
-                  onClick={() => openComments(null)}
+                  onClick={() => setCommentsOpen(true)}
                   className="inline-flex items-center rounded-full border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-800 hover:bg-gray-50"
                 >
                   <MessageCircle className="mr-2 h-4 w-4" />
@@ -771,15 +871,16 @@ export default function QaReview() {
                 onClick={() => {
                   setCommentMode((current) => !current);
                   setCommentTarget(null);
+                  setInlineCommentSelection(null);
                 }}
                 className="rounded-full bg-black px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-gray-800"
               >
-                {commentMode ? "Cancel commenting" : "Leave a comment"}
+                {commentMode ? "Exit commenting mode" : "Leave a comment"}
               </button>
             </div>
           </header>
           {commentMode && (
-            <div data-comment-ui className="mb-4 rounded-2xl bg-blue-50 px-4 py-3 text-sm font-medium text-blue-800">
+            <div data-comment-ui className="mb-4 rounded-2xl border border-pink-200 bg-pink-50 px-4 py-3 text-sm font-medium text-pink-800">
               Click any field, creative, or creative group to attach your comment.
             </div>
           )}
@@ -795,17 +896,21 @@ export default function QaReview() {
               />
             ))}
           </div>
+          <ReviewCommentsSummary comments={comments} onSelectComment={handleJumpToComment} />
         </div>
       </main>
       </ScrollArea>
       <CommentsPanel
         open={commentsOpen}
         comments={comments}
-        selectedAnchorId={selectedAnchorId}
         error={commentsError}
         onClose={() => setCommentsOpen(false)}
-        onShowAll={() => setSelectedAnchorId(null)}
         onJumpToComment={handleJumpToComment}
+      />
+      <InlineCommentPopover
+        selection={inlineCommentSelection}
+        comments={comments}
+        onClose={() => setInlineCommentSelection(null)}
       />
       <CommentComposer
         target={commentTarget}
