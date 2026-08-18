@@ -194,7 +194,7 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
           name: item.name,
           mimeType,
           size: item.file_size || item.filesize || item.size || 0,
-          thumbnailUrl: buildFrameioThumbnailProxyUrl(accountId, id),
+          thumbnailUrl: getFrameioItemThumbnailUrl(item) || buildFrameioThumbnailProxyUrl(accountId, id),
           width: meta.width || item.width || null,
           height: meta.height || item.height || null,
         };
@@ -344,7 +344,7 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
                       ) : folder ? (
                         <BlueFolderIcon className="h-5 w-5" />
                       ) : itemThumbnail ? (
-                        <img src={itemThumbnail} alt="" className="h-full w-full object-cover" />
+                        <img src={itemThumbnail} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
                       ) : (item.media_type || "").startsWith("video") ? (
                         <Film className="h-5 w-5 text-[#6B7280]" />
                       ) : (
