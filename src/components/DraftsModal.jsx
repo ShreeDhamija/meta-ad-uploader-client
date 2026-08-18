@@ -1,6 +1,6 @@
 /* eslint-disable react/prop-types */
 import { useCallback, useEffect, useState } from "react";
-import { FileText, Link2, Loader2, MessageCircle, Play, RotateCcw, Trash2, Users } from "lucide-react";
+import { FileText, Link2, Loader2, Play, RotateCcw, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -18,7 +18,6 @@ import {
   createDraftShareUrl,
   deleteDraft,
   getDraft,
-  getDraftComments,
   listDrafts,
 } from "@/lib/draftApi";
 import { getCreativeUnitsForForm } from "@/lib/draftCreativeLayout";
@@ -174,45 +173,6 @@ function getDraftTimestamp(draft) {
   return Number.isNaN(parsed) ? 0 : parsed;
 }
 
-function formatCommentTime(value) {
-  if (!value) return "Just now";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(date);
-}
-
-function DraftComments({ comments }) {
-  const items = comments || [];
-  return (
-    <section className="mt-5 shrink-0 border-t border-gray-200 pb-5 pt-4">
-      <div className="mb-2 flex items-center gap-2">
-        <MessageCircle className="h-4 w-4 text-gray-500" />
-        <h3 className="text-sm font-semibold text-gray-950">Review comments</h3>
-        <span className="text-xs text-gray-400">({items.length})</span>
-      </div>
-      <div className="max-h-44 overflow-y-auto pr-3">
-        {items.length === 0 ? (
-          <p className="py-2 text-sm text-gray-400">No review comments yet.</p>
-        ) : (
-          <div className="divide-y divide-gray-100">
-          {items.map((comment) => (
-            <article key={comment.id} className="grid gap-1 py-3 sm:grid-cols-[minmax(160px,0.32fr)_minmax(0,1fr)] sm:gap-5">
-              <div className="min-w-0">
-                <p className="truncate text-xs font-semibold text-gray-600" title={comment.anchorLabel}>{comment.anchorLabel}</p>
-                <p className="mt-0.5 truncate text-xs text-gray-500">
-                  {comment.authorName} · {formatCommentTime(comment.createdAt)}
-                </p>
-              </div>
-              <p className="whitespace-pre-wrap break-words text-sm leading-5 text-gray-700">{comment.body}</p>
-            </article>
-          ))}
-          </div>
-        )}
-      </div>
-    </section>
-  );
-}
-
 function CreativeUnit({ unit, groupIndex }) {
   const grouped = unit.type === "group";
   const groupColor = groupIndex % 2 === 0
@@ -240,7 +200,6 @@ function FormPreview({
   onActiveFormChange,
   mediaById,
   state,
-  comments,
   actions,
 }) {
   const values = form?.values || {};
@@ -407,7 +366,6 @@ function FormPreview({
           </ScrollArea>
         </div>
       </div>
-      <DraftComments comments={comments} />
     </section>
   );
 }
@@ -461,13 +419,10 @@ export default function DraftsModal({ open, onOpenChange, adAccountId, adAccount
     setQaUrl("");
     setActiveFormIndex(0);
     setLoadingDraft(true);
-    Promise.all([
-      getDraft({ draftId: selectedId, adAccountId }),
-      getDraftComments({ draftId: selectedId, adAccountId }),
-    ])
-      .then(([draft, comments]) => {
+    getDraft({ draftId: selectedId, adAccountId })
+      .then((draft) => {
         if (!cancelled) {
-          setSelectedDraft({ ...draft, comments });
+          setSelectedDraft(draft);
           setQaUrl(draft.qaUrl || "");
         }
       })
@@ -704,7 +659,6 @@ export default function DraftsModal({ open, onOpenChange, adAccountId, adAccount
               onActiveFormChange={setActiveFormIndex}
               mediaById={mediaById}
               state={selectedDraft.state}
-              comments={selectedDraft.comments || []}
               actions={(
                 <>
                   <Button
