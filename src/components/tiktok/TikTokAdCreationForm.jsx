@@ -3897,53 +3897,6 @@ export default function TikTokAdCreationForm({
           return;
         }
 
-        if (!fd.isDuplicatingAdGroupMode && fd.selectedAdGroup && fd.selectedAdGroup.length > 0) {
-          for (const adgroupId of fd.selectedAdGroup) {
-            const agObj = variantAdGroups.find((ag) => ag.adgroup_id === adgroupId);
-            if (agObj) {
-              const currentAdCount = agObj.ad_count || 0;
-
-              // Calculate ads already queued for this ad group in the job queue
-              let queuedAdsCount = 0;
-              jobQueue.forEach((qj) => {
-                const qfd = qj.formData;
-                if (!qfd.isDuplicatingAdGroupMode && qfd.selectedAdGroup && qfd.selectedAdGroup.includes(adgroupId)) {
-                  let qFileCount = qfd.files.length + qfd.driveFiles.length + qfd.dropboxFiles.length + qfd.tiktokLibraryFiles.length;
-                  if (qfd.adType === "SPARK") {
-                    qFileCount = qfd.importedPosts.length;
-                  }
-                  queuedAdsCount += qFileCount;
-                }
-              });
-
-              // Also account for the currently running job if it is targeting this ad group
-              if (currentJob) {
-                const qfd = currentJob.formData;
-                if (!qfd.isDuplicatingAdGroupMode && qfd.selectedAdGroup && qfd.selectedAdGroup.includes(adgroupId)) {
-                  let qFileCount = qfd.files.length + qfd.driveFiles.length + qfd.dropboxFiles.length + qfd.tiktokLibraryFiles.length;
-                  if (qfd.adType === "SPARK") {
-                    qFileCount = qfd.importedPosts.length;
-                  }
-                  queuedAdsCount += qFileCount;
-                }
-              }
-
-              if (currentAdCount + queuedAdsCount + adsToBeCreated > 50) {
-                if (queuedAdsCount > 0) {
-                  toast.error(
-                    `${variant.name}: cannot launch ads. Ad group "${agObj.adgroup_name}" currently has ${currentAdCount} ads and ${queuedAdsCount} ads pending in the job queue. Adding ${adsToBeCreated} more would exceed the limit of 50 ads per ad group.`,
-                  );
-                } else {
-                  toast.error(
-                    `${variant.name}: cannot launch ads. Ad group "${agObj.adgroup_name}" currently has ${currentAdCount} ads. Adding ${adsToBeCreated} more would exceed the limit of 50 ads per ad group.`,
-                  );
-                }
-                return;
-              }
-            }
-          }
-        }
-
         if (fd.isDuplicatingAdGroupMode && !fd.newAdGroupName.trim()) {
           toast.error(`${variant.name}: please enter a name for the new duplicated ad group`);
           return;
@@ -5237,7 +5190,6 @@ export default function TikTokAdCreationForm({
                                   )}
                                   {campaignAdGroups.map((ag) => {
                                     const isSelected = selectedAdGroup.includes(ag.adgroup_id);
-                                    const isFull = ag.ad_count !== undefined && ag.ad_count >= 50;
                                     return (
                                       <CommandItem
                                         key={`${ag.campaignId || "camp"}-${ag.adgroup_id}`}
@@ -5246,11 +5198,6 @@ export default function TikTokAdCreationForm({
                                           if (isSelected) {
                                             setSelectedAdGroup((prev) => prev.filter((id) => id !== ag.adgroup_id));
                                           } else {
-                                            if (isFull) {
-                                              return toast.error(
-                                                `Cannot select ad group "${ag.adgroup_name}". It already has ${ag.ad_count} ads, which is the limit of 50.`,
-                                              );
-                                            }
                                             setSelectedAdGroup((prev) => [...prev, ag.adgroup_id]);
                                             if (showDuplicateAdGroupBlock) {
                                               setShowDuplicateAdGroupBlock(false);
@@ -5262,7 +5209,6 @@ export default function TikTokAdCreationForm({
                                         className={cn(
                                           "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
                                           isSelected ? "bg-gray-100 font-semibold" : "hover:bg-gray-50",
-                                          !isSelected && isFull && "opacity-50 cursor-not-allowed",
                                         )}
                                       >
                                         <div className="flex items-center gap-2 w-full">
@@ -5280,8 +5226,7 @@ export default function TikTokAdCreationForm({
                                                   String(ag.operation_status).toUpperCase() === "DISABLE" ||
                                                   String(ag.secondary_status).includes("DISABLE") ||
                                                   ag.operation_status === false ||
-                                                  ag.operation_status === "false" ||
-                                                  (!isSelected && isFull)) &&
+                                                  ag.operation_status === "false") &&
                                                 "text-gray-400",
                                               )}
                                             >
