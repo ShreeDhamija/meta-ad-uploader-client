@@ -48,6 +48,7 @@ const DEFAULT_ENHANCEMENTS = {
   dynamicDescriptions: false,
   siteExtensions: false,
   siteLinks: [],
+  storeLocator: false,
   dynamicOverlays: false,
   highlightCard: false,
   profileEndCard: false,
