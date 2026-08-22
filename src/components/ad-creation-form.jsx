@@ -1838,6 +1838,9 @@ export default function AdCreationForm({
       if (!variantState) return null;
 
       const variantAdSets = Array.isArray(variantState.adSets) ? variantState.adSets : adSets;
+      const variantAdSetName = variantState.duplicateAdSet
+        ? (variantState.newAdSetName || "").trim()
+        : variantAdSets.find((entry) => String(entry.id) === String((variantState.selectedAdSets || [])[0]))?.name || "";
 
       const totalMediaCount =
         files.length +
@@ -1936,7 +1939,11 @@ export default function AdCreationForm({
         partnershipIdentityMode: variantState.partnershipIdentityMode || "dynamic",
         partnershipPrimaryIdentity: variantState.partnershipPrimaryIdentity || "brand",
         adNameFormulaV2: variantState.adNameFormulaV2
-          ? { ...variantState.adNameFormulaV2, selectedTemplate: variantState.selectedTemplate || "" }
+          ? {
+              ...variantState.adNameFormulaV2,
+              selectedTemplate: variantState.selectedTemplate || "",
+              adSetNameContext: variantAdSetName,
+            }
           : null,
         adValues: variantState.adValues ? JSON.parse(JSON.stringify(variantState.adValues)) : {},
         adScheduleStartTime: variantState.adScheduleStartTime || null,
@@ -1945,7 +1952,7 @@ export default function AdCreationForm({
         adSetDisplayName: variantState.duplicateAdSet
           ? variantState.newAdSetName || "New Ad Set"
           : (variantState.selectedAdSets || []).length === 1
-            ? variantAdSets.find((entry) => entry.id === variantState.selectedAdSets[0])?.name || "selected ad set"
+            ? variantAdSetName || "selected ad set"
             : `${(variantState.selectedAdSets || []).length} adsets`,
       };
 
@@ -4170,6 +4177,9 @@ export default function AdCreationForm({
         .replace(/\{\{Ad Type\}\}/gi, adTypeLabel)
         .replace(/\{\{Ad Set Name\}\}/gi, () => {
           if (!showAdSetNameVariable) return "";
+          if (Object.prototype.hasOwnProperty.call(formulaToUse, "adSetNameContext")) {
+            return formulaToUse.adSetNameContext || "";
+          }
           if (duplicateAdSet) return newAdSetName?.trim() || "";
           const selectedAdSet = adSets.find((entry) => String(entry.id) === String(selectedAdSets[0]));
           return selectedAdSet?.name || "";
@@ -6288,7 +6298,13 @@ export default function AdCreationForm({
           const template = jobImportedPostAdNames[key] !== undefined ? jobImportedPostAdNames[key] : post?.ad_name || "";
 
           if (template && /\{\{[^}]+\}\}/.test(template)) {
-            return computeAdNameFromFormula({ name: post.ad_name }, postIndex, link[0], { rawInput: template }, null);
+            return computeAdNameFromFormula(
+              { name: post.ad_name },
+              postIndex,
+              link[0],
+              { ...(jobData.formData.adNameFormulaV2 || {}), rawInput: template },
+              null,
+            );
           }
           return template;
         };
@@ -7598,6 +7614,11 @@ export default function AdCreationForm({
           const formula = {
             ...(snapshot.adNameFormulaV2 || {}),
             selectedTemplate: snapshot.selectedTemplate || "",
+            adSetNameContext: snapshot.duplicateAdSet
+              ? (snapshot.newAdSetName || "").trim()
+              : (snapshot.adSets || adSets).find(
+                  (entry) => String(entry.id) === String((snapshot.selectedAdSets || [])[0]),
+                )?.name || "",
           };
           const destination = snapshot.link?.[0] || "";
 
