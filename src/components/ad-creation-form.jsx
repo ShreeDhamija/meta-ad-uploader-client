@@ -869,8 +869,13 @@ function OverviewInlineEditor({ value, onSave, label, multiline = false }) {
   );
 }
 
-function VariantOverviewThumbnail({ file, videoThumbs }) {
+function VariantOverviewThumbnail({ file, videoThumbs, fitToWidth = false }) {
   const [localUrl, setLocalUrl] = useState("");
+  const [aspectRatio, setAspectRatio] = useState(() => {
+    const width = Number(file?.width || file?.videoWidth);
+    const height = Number(file?.height || file?.videoHeight);
+    return width > 0 && height > 0 ? width / height : 1;
+  });
   const fileId = file ? getFileId(file) : "";
   const isVideo = isVideoFile(file) || file?.media_type === "VIDEO" || Boolean(file?.video_id);
 
@@ -903,11 +908,22 @@ function VariantOverviewThumbnail({ file, videoThumbs }) {
   const name = getDisplayFileName(file);
 
   return (
-    <div className="relative aspect-square h-full min-h-[72px] min-w-[72px] max-w-full shrink-0 overflow-hidden rounded-xl border border-gray-200 bg-gray-100">
+    <div
+      className={cn(
+        "relative min-h-[72px] min-w-0 overflow-hidden rounded-xl border border-gray-200 bg-gray-100",
+        fitToWidth ? "w-full" : "h-full w-auto max-w-full",
+      )}
+      style={{ aspectRatio }}
+    >
       <img
         src={src}
         alt={name}
-        className="h-full w-full object-cover"
+        className="h-full w-full object-contain"
+        onLoad={(event) => {
+          const nextWidth = event.currentTarget.naturalWidth;
+          const nextHeight = event.currentTarget.naturalHeight;
+          if (nextWidth > 0 && nextHeight > 0) setAspectRatio(nextWidth / nextHeight);
+        }}
         onError={(event) => {
           event.currentTarget.onerror = null;
           event.currentTarget.src = "https://api.withblip.com/thumbnail.jpg";
@@ -11758,7 +11774,7 @@ export default function AdCreationForm({
                     </td>
                     <td className="h-1 border-b border-gray-200 bg-white px-4 py-4">
                       {row.mediaItems.length > 0 ? (
-                        <div className="grid h-full grid-cols-2 items-stretch gap-x-4 gap-y-3">
+                        <div className="grid h-full grid-cols-1 items-stretch gap-y-4">
                           {row.mediaItems.map((item, itemIndex) => (
                             <div
                               key={`${row.id}-media-${itemIndex}`}
@@ -11771,16 +11787,15 @@ export default function AdCreationForm({
                                 <span className="text-[9px] font-semibold uppercase tracking-wide text-gray-500">{item.label}</span>
                               </div>
                               <div
-                                className={cn(
-                                  "flex min-h-[72px] flex-1 items-stretch gap-2",
-                                  item.isGroup ? "flex-nowrap overflow-x-auto pb-1" : "flex-wrap",
-                                )}
+                                className={cn("grid min-h-[72px] flex-1 items-start gap-2", item.files.length === 1 && "h-full")}
+                                style={{ gridTemplateColumns: `repeat(${Math.max(item.files.length, 1)}, minmax(0, 1fr))` }}
                               >
                                 {item.files.map((file, fileIndex) => (
                                   <VariantOverviewThumbnail
                                     key={`${getFileId(file)}-${fileIndex}`}
                                     file={file}
                                     videoThumbs={videoThumbs}
+                                    fitToWidth={item.files.length > 1 || item.isGroup}
                                   />
                                 ))}
                               </div>
