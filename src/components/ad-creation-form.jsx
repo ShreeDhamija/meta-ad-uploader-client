@@ -74,6 +74,7 @@ import {
   Link2,
   LayoutGrid,
   Loader,
+  Pencil,
   Phone,
   Plus,
   RefreshCcw,
@@ -807,6 +808,68 @@ const truncateOverviewText = (value, limit = 72) => {
   return text.length > limit ? `${text.slice(0, limit).trimEnd()}…` : text;
 };
 
+function OverviewInlineEditor({ value, onSave, label, multiline = false }) {
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState(value || "");
+
+  useEffect(() => {
+    if (open) setDraft(value || "");
+  }, [open, value]);
+
+  const save = () => {
+    onSave(draft);
+    setOpen(false);
+  };
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-label={`Edit ${label}`}
+          className="shrink-0 rounded-md p-1 text-gray-400 opacity-0 transition hover:bg-gray-100 hover:text-blue-600 group-hover/overview-value:opacity-100 focus-visible:opacity-100"
+        >
+          <Pencil className="h-3 w-3" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="start" side="bottom" sideOffset={6} className="w-80 rounded-2xl border-gray-200 bg-white p-3 shadow-xl">
+        <Label className="text-xs font-medium text-gray-700">Edit {label}</Label>
+        {multiline ? (
+          <TextareaAutosize
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            minRows={4}
+            maxRows={10}
+            autoFocus
+            className="mt-2 w-full resize-none rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm leading-5 shadow-sm focus:border-blue-400 focus:outline-none"
+          />
+        ) : (
+          <Input
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                save();
+              }
+            }}
+            autoFocus
+            className="mt-2 h-10 rounded-xl border-gray-300 text-sm"
+          />
+        )}
+        <div className="mt-3 flex justify-end gap-3">
+          <button type="button" onClick={() => setOpen(false)} className="bg-transparent p-0 text-xs font-medium text-gray-500 hover:text-gray-800">
+            Cancel
+          </button>
+          <button type="button" onClick={save} className="bg-transparent p-0 text-xs font-medium text-blue-600 hover:text-blue-700 hover:underline">
+            Save
+          </button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function VariantOverviewThumbnail({ file, videoThumbs }) {
   const [localUrl, setLocalUrl] = useState("");
   const fileId = file ? getFileId(file) : "";
@@ -844,7 +907,7 @@ function VariantOverviewThumbnail({ file, videoThumbs }) {
     <TooltipProvider delayDuration={0}>
       <Tooltip>
         <TooltipTrigger asChild>
-          <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg border border-gray-200 bg-gray-100">
+          <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-gray-200 bg-gray-100">
             <img
               src={src}
               alt={name}
@@ -854,7 +917,6 @@ function VariantOverviewThumbnail({ file, videoThumbs }) {
                 event.currentTarget.src = "https://api.withblip.com/thumbnail.jpg";
               }}
             />
-            {isVideo && <span className="absolute bottom-0.5 right-0.5 rounded bg-black/70 px-1 text-[8px] font-medium text-white">VID</span>}
           </div>
         </TooltipTrigger>
         <TooltipContent className="max-w-64 break-words text-xs">{name}</TooltipContent>
@@ -863,20 +925,67 @@ function VariantOverviewThumbnail({ file, videoThumbs }) {
   );
 }
 
-function OverviewCopyList({ label, values }) {
+function OverviewCopyList({ label, values, onEdit }) {
+  const [expandedItems, setExpandedItems] = useState(new Set());
   const populated = (values || [])
-    .map((value) => ({ raw: String(value || ""), display: truncateOverviewText(value) }))
+    .map((value, sourceIndex) => ({ raw: String(value || ""), display: truncateOverviewText(value), sourceIndex }))
     .filter((value) => Boolean(value.display));
   if (populated.length === 0) return null;
+
+  const toggleExpanded = (index) => {
+    setExpandedItems((current) => {
+      const next = new Set(current);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      return next;
+    });
+  };
 
   return (
     <div className="space-y-1">
       <span className="text-[9px] font-semibold uppercase tracking-wide text-gray-400">{label}</span>
-      {populated.map((value, index) => (
-        <p key={`${label}-${index}`} className="max-w-[18rem] text-[11px] leading-4 text-gray-700" title={value.raw}>
-          {value.display}
-        </p>
-      ))}
+      <TooltipProvider delayDuration={150}>
+        <div className="space-y-2">
+          {populated.map((value) => {
+            const isExpanded = expandedItems.has(value.sourceIndex);
+            const canExpand = value.raw.trim().length > 72;
+
+            return (
+              <div key={`${label}-${value.sourceIndex}`}>
+                <div className="group/overview-value flex items-start gap-1">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <p className="max-w-[18rem] flex-1 whitespace-pre-wrap break-words text-[11px] leading-4 text-gray-700">
+                        {isExpanded ? value.raw.trim() : value.display}
+                      </p>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" align="start" className="max-w-sm whitespace-pre-wrap break-words text-xs leading-5">
+                      {value.raw.trim()}
+                    </TooltipContent>
+                  </Tooltip>
+                  {onEdit && (
+                    <OverviewInlineEditor
+                      value={value.raw}
+                      onSave={(nextValue) => onEdit(value.sourceIndex, nextValue)}
+                      label={label}
+                      multiline
+                    />
+                  )}
+                </div>
+                {canExpand && (
+                  <button
+                    type="button"
+                    onClick={() => toggleExpanded(value.sourceIndex)}
+                    className="mt-0.5 bg-transparent p-0 text-[10px] font-medium text-blue-600 shadow-none hover:text-blue-700 hover:underline"
+                  >
+                    {isExpanded ? "View less" : "View more"}
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </TooltipProvider>
     </div>
   );
 }
@@ -1680,6 +1789,8 @@ export default function AdCreationForm({
       descriptions,
       messages,
       link,
+      customLink,
+      showCustomLink,
       destinationType,
       instantExperienceId,
       cta,
@@ -1718,6 +1829,8 @@ export default function AdCreationForm({
       descriptions,
       messages,
       link,
+      customLink,
+      showCustomLink,
       destinationType,
       instantExperienceId,
       cta,
@@ -1940,7 +2053,7 @@ export default function AdCreationForm({
 
       if (totalOverviewMedia === 1) {
         const onlyFile = overviewFiles[0] || importedPosts[0] || selectedIgOrganicPosts[0];
-        if (onlyFile) mediaItems.push({ label: "Ad 1", files: [onlyFile] });
+        if (onlyFile) mediaItems.push({ label: "Ad 1", files: [onlyFile], isGroup: false });
       } else {
         overviewGroups
           .filter((group) => (groupVariantMap[group.id] || "default") === variant.id)
@@ -1948,6 +2061,7 @@ export default function AdCreationForm({
             mediaItems.push({
               label: `Group ${group.index + 1}`,
               files: group.fileIds.map((fileId) => fileById.get(fileId)).filter(Boolean),
+              isGroup: true,
             });
           });
 
@@ -1956,17 +2070,17 @@ export default function AdCreationForm({
           return !groupedIds.has(fileId) && (fileVariantMap[fileId] || "default") === variant.id;
         });
         if ((isCarouselAd || isFlexLikeAdType) && assignedUngrouped.length > 0) {
-          mediaItems.push({ label: "Ad", files: assignedUngrouped });
+          mediaItems.push({ label: "Ad", files: assignedUngrouped, isGroup: false });
         } else {
-          assignedUngrouped.forEach((file) => mediaItems.push({ label: `Ad ${mediaItems.length + 1}`, files: [file] }));
+          assignedUngrouped.forEach((file) => mediaItems.push({ label: `Ad ${mediaItems.length + 1}`, files: [file], isGroup: false }));
         }
 
         importedPosts
           .filter((post) => (postVariantMap[`post:${post.id}`] || "default") === variant.id)
-          .forEach((post) => mediaItems.push({ label: `Ad ${mediaItems.length + 1}`, files: [post] }));
+          .forEach((post) => mediaItems.push({ label: `Ad ${mediaItems.length + 1}`, files: [post], isGroup: false }));
         selectedIgOrganicPosts
           .filter((post) => (postVariantMap[`igpost:${post.source_instagram_media_id}`] || "default") === variant.id)
-          .forEach((post) => mediaItems.push({ label: `Ad ${mediaItems.length + 1}`, files: [post] }));
+          .forEach((post) => mediaItems.push({ label: `Ad ${mediaItems.length + 1}`, files: [post], isGroup: false }));
       }
 
       const selectedCampaignIds = Array.isArray(snapshot.selectedCampaign)
@@ -2010,7 +2124,9 @@ export default function AdCreationForm({
         messages: snapshot.messages || [],
         headlines: snapshot.headlines || [],
         descriptions: snapshot.descriptions || [],
-        links: (snapshot.link || []).filter(Boolean),
+        links: (snapshot.link || [])
+          .map((value, index) => ({ value, index }))
+          .filter((entry) => Boolean(entry.value)),
         cta: snapshot.cta || "LEARN_MORE",
         mediaItems,
       };
@@ -2036,6 +2152,59 @@ export default function AdCreationForm({
     selectedIgOrganicPosts,
     variants,
   ]);
+  const hasPartnershipVariants = variantOverviewRows.some((row) => row.isPartnershipAd);
+
+  const updateVariantOverviewValue = useCallback(
+    (variantId, field, index, value) => {
+      const updateIndexedValue = (currentValues = []) => {
+        const nextValues = [...currentValues];
+        while (nextValues.length <= index) nextValues.push("");
+        nextValues[index] = value;
+        return nextValues;
+      };
+
+      if (variantId === activeVariantId) {
+        if (field === "messages") setMessages((current) => updateIndexedValue(current));
+        if (field === "headlines") setHeadlines((current) => updateIndexedValue(current));
+        if (field === "descriptions") setDescriptions((current) => updateIndexedValue(current));
+        if (field === "link") {
+          setLink((current) => updateIndexedValue(current));
+          setShowCustomLink(true);
+          if (index === 0) setCustomLink(value);
+        }
+        return;
+      }
+
+      const currentSnapshot = getVariantState(variantId) || {};
+      setVariants((currentVariants) =>
+        currentVariants.map((variant) => {
+          if (variant.id !== variantId) return variant;
+
+          const nextSnapshot = {
+            ...currentSnapshot,
+            [field]: updateIndexedValue(currentSnapshot[field]),
+          };
+          if (field === "link") {
+            nextSnapshot.showCustomLink = true;
+            if (index === 0) nextSnapshot.customLink = value;
+          }
+
+          return { ...variant, snapshot: nextSnapshot };
+        }),
+      );
+    },
+    [
+      activeVariantId,
+      getVariantState,
+      setCustomLink,
+      setDescriptions,
+      setHeadlines,
+      setLink,
+      setMessages,
+      setShowCustomLink,
+      setVariants,
+    ],
+  );
 
   const captureFormDataAsJob = useCallback(
     (variantId = "default") => {
@@ -11497,21 +11666,21 @@ export default function AdCreationForm({
       <Dialog open={showVariantOverview} onOpenChange={setShowVariantOverview}>
         <DialogContent
           disableSlide
-          overlayClassName="bg-black/35 backdrop-blur-[1px]"
-          className="flex h-[min(86vh,900px)] w-[min(96vw,1500px)] max-w-none flex-col gap-0 overflow-hidden rounded-[28px] border-gray-200 bg-white p-0"
+          overlayClassName="bg-black/35"
+          className="flex h-[min(86vh,900px)] w-[min(96vw,1500px)] max-w-none flex-col gap-0 overflow-hidden rounded-[40px] border-gray-200 bg-white p-0 sm:rounded-[40px]"
         >
           <DialogHeader className="shrink-0 border-b border-gray-200 px-6 py-5 pr-14">
             <DialogTitle>Variant overview</DialogTitle>
             <DialogDescription>Quickly compare targeting, copy, destinations, and assigned creative across every variant.</DialogDescription>
           </DialogHeader>
           <div className="min-h-0 flex-1 overflow-auto bg-gray-50/50">
-            <table className="min-w-[1280px] w-full border-separate border-spacing-0 text-left">
+            <table className={cn("w-full border-separate border-spacing-0 text-left", hasPartnershipVariants ? "min-w-[1280px]" : "min-w-[1120px]")}>
               <thead className="sticky top-0 z-20 bg-gray-100/95 text-[10px] uppercase tracking-wide text-gray-500 backdrop-blur">
                 <tr>
                   <th className="sticky left-0 z-30 w-44 border-b border-r border-gray-200 bg-gray-100 px-4 py-3 font-semibold">Variant</th>
                   <th className="w-60 border-b border-gray-200 px-4 py-3 font-semibold">Campaign / Ad set</th>
                   <th className="w-48 border-b border-gray-200 px-4 py-3 font-semibold">Page / Instagram</th>
-                  <th className="w-40 border-b border-gray-200 px-4 py-3 font-semibold">Partnership</th>
+                  {hasPartnershipVariants && <th className="w-40 border-b border-gray-200 px-4 py-3 font-semibold">Partnership</th>}
                   <th className="w-80 border-b border-gray-200 px-4 py-3 font-semibold">Copy</th>
                   <th className="w-64 border-b border-gray-200 px-4 py-3 font-semibold">Link / CTA</th>
                   <th className="min-w-[320px] border-b border-gray-200 px-4 py-3 font-semibold">Ads / Groups</th>
@@ -11550,21 +11719,35 @@ export default function AdCreationForm({
                       <p className="text-xs font-medium text-gray-800">{row.pageName}</p>
                       {row.instagramName && <p className="mt-1 text-[11px] text-gray-500">@{String(row.instagramName).replace(/^@/, "")}</p>}
                     </td>
-                    <td className="border-b border-gray-200 bg-white px-4 py-4">
-                      {row.isPartnershipAd ? (
-                        <div className="space-y-1">
-                          <span className="inline-flex rounded-full bg-violet-50 px-2 py-1 text-[10px] font-medium text-violet-700">Enabled</span>
-                          <p className="break-all text-[11px] leading-4 text-gray-600">{row.partnerName || "Partner selected"}</p>
-                        </div>
-                      ) : (
-                        <span className="text-xs text-gray-400">None</span>
-                      )}
-                    </td>
+                    {hasPartnershipVariants && (
+                      <td className="border-b border-gray-200 bg-white px-4 py-4">
+                        {row.isPartnershipAd ? (
+                          <div className="space-y-1">
+                            <span className="inline-flex rounded-full bg-violet-50 px-2 py-1 text-[10px] font-medium text-violet-700">Enabled</span>
+                            <p className="break-all text-[11px] leading-4 text-gray-600">{row.partnerName || "Partner selected"}</p>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-400">None</span>
+                        )}
+                      </td>
+                    )}
                     <td className="border-b border-gray-200 bg-white px-4 py-4">
                       <div className="space-y-3">
-                        <OverviewCopyList label="Primary text" values={row.messages} />
-                        <OverviewCopyList label="Headlines" values={row.headlines} />
-                        <OverviewCopyList label="Descriptions" values={row.descriptions} />
+                        <OverviewCopyList
+                          label="Primary text"
+                          values={row.messages}
+                          onEdit={(index, value) => updateVariantOverviewValue(row.id, "messages", index, value)}
+                        />
+                        <OverviewCopyList
+                          label="Headlines"
+                          values={row.headlines}
+                          onEdit={(index, value) => updateVariantOverviewValue(row.id, "headlines", index, value)}
+                        />
+                        <OverviewCopyList
+                          label="Descriptions"
+                          values={row.descriptions}
+                          onEdit={(index, value) => updateVariantOverviewValue(row.id, "descriptions", index, value)}
+                        />
                         {row.messages.every((value) => !String(value || "").trim()) &&
                           row.headlines.every((value) => !String(value || "").trim()) &&
                           row.descriptions.every((value) => !String(value || "").trim()) && <span className="text-xs text-gray-400">No copy</span>}
@@ -11580,26 +11763,45 @@ export default function AdCreationForm({
                       </span>
                       <div className="mt-2 space-y-1">
                         {row.links.length > 0 ? (
-                          row.links.map((url, index) => (
-                            <p key={`${row.id}-link-${index}`} className="max-w-60 truncate text-[11px] text-blue-600" title={url}>
-                              {url}
-                            </p>
+                          row.links.map((linkEntry) => (
+                            <div key={`${row.id}-link-${linkEntry.index}`} className="group/overview-value flex items-center gap-1">
+                              <p className="max-w-56 flex-1 truncate text-[11px] text-blue-600" title={linkEntry.value}>
+                                {linkEntry.value}
+                              </p>
+                              <OverviewInlineEditor
+                                value={linkEntry.value}
+                                onSave={(value) => updateVariantOverviewValue(row.id, "link", linkEntry.index, value)}
+                                label="link"
+                              />
+                            </div>
                           ))
                         ) : (
-                          <p className="text-xs text-gray-400">No link</p>
+                          <div className="group/overview-value flex items-center gap-1">
+                            <p className="flex-1 text-xs text-gray-400">No link</p>
+                            <OverviewInlineEditor
+                              value=""
+                              onSave={(value) => updateVariantOverviewValue(row.id, "link", 0, value)}
+                              label="link"
+                            />
+                          </div>
                         )}
                       </div>
                     </td>
                     <td className="border-b border-gray-200 bg-white px-4 py-4">
                       {row.mediaItems.length > 0 ? (
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-3">
                           {row.mediaItems.map((item, itemIndex) => (
-                            <div key={`${row.id}-media-${itemIndex}`} className="min-w-0 rounded-xl border border-gray-200 bg-gray-50 p-2">
-                              <div className="mb-2 flex items-center justify-between gap-2">
+                            <div
+                              key={`${row.id}-media-${itemIndex}`}
+                              className={cn("min-w-0", item.isGroup && "rounded-2xl border border-gray-200 bg-gray-50 p-3")}
+                            >
+                              <div className={cn("flex items-center justify-between gap-2", item.isGroup ? "mb-2" : "mb-1.5")}>
                                 <span className="text-[9px] font-semibold uppercase tracking-wide text-gray-500">{item.label}</span>
-                                <span className="text-[9px] text-gray-400">{item.files.length} asset{item.files.length !== 1 ? "s" : ""}</span>
+                                {item.isGroup && (
+                                  <span className="text-[9px] text-gray-400">{item.files.length} asset{item.files.length !== 1 ? "s" : ""}</span>
+                                )}
                               </div>
-                              <div className="flex flex-wrap gap-1.5">
+                              <div className="flex flex-wrap gap-2">
                                 {item.files.map((file, fileIndex) => (
                                   <VariantOverviewThumbnail
                                     key={`${getFileId(file)}-${fileIndex}`}
