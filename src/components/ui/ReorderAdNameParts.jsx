@@ -41,6 +41,7 @@ const AVAILABLE_VARIABLES = [
   { id: 'iteration', label: 'Iteration', note: '(1/2/3..)' },
   { id: 'slug', label: 'URL Slug', note: '(Text after last / )' },
   { id: 'adType', label: 'Ad Type', note: 'CAR/FLEX' },
+  { id: 'adSetName', label: 'Ad Set Name' },
 ]
 
 // ─── Custom Variables Setup Dialog ───────────────────────────────────────────
@@ -269,13 +270,15 @@ export default function ReorderAdNameParts({
   hideInfoTooltip = false,   // ← add this
   postSwitcher = null,
   allowedVariableIds = null,
+  showAdSetNameVariable = false,
 
 }) {
   const visibleVariables = useMemo(() => (
-    allowedVariableIds
+    (allowedVariableIds
       ? AVAILABLE_VARIABLES.filter((v) => allowedVariableIds.includes(v.id))
       : AVAILABLE_VARIABLES
-  ), [allowedVariableIds])
+    ).filter((v) => v.id !== "adSetName" || showAdSetNameVariable)
+  ), [allowedVariableIds, showAdSetNameVariable])
   const [inputValue, setInputValue] = useState(formulaInput)
 
   // Slash (/) dropdown — built-in variables

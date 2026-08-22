@@ -98,6 +98,7 @@ const TEMPLATE_LINK_SYNC_USER_ID = "929470643071391";
 const PIXEL_TRACKING_FORM_ALLOWED_USER_IDS = ["10236978990363167", "10234447959963619", "10162737276661695", "10165258246808665"];
 const INSTANT_EXPERIENCE_USER_IDS = ["10236978990363167", "2901368380250453"];
 const LOWERCASE_FILE_NAME_FORMULA_USER_IDS = ["27431350269900471"];
+const AD_SET_NAME_VARIABLE_TEAM_IDS = ["team_1777190523537_hmh1srk8j", "team_1787061148847_j1tmrxprb"];
 const EMPTY_PIXEL_TRACKING_OVERRIDE = {
   websitePixelId: null,
   offlineDatasetId: null,
@@ -1043,6 +1044,7 @@ export default function AdCreationForm({
   adAccountSettings,
   adNameFormulaV2,
   setAdNameFormulaV2,
+  teamId: teamIdProp,
   campaignObjective,
   selectedFiles,
   setSelectedFiles,
@@ -1158,7 +1160,9 @@ export default function AdCreationForm({
   const [uploadingToS3, setUploadingToS3] = useState(false);
 
   const [pageSearchValue, setPageSearchValue] = useState("");
-  const { isLoggedIn, userId } = useAuth();
+  const { isLoggedIn, userId, teamId: authTeamId } = useAuth();
+  const teamId = teamIdProp || authTeamId || "";
+  const showAdSetNameVariable = AD_SET_NAME_VARIABLE_TEAM_IDS.includes(String(teamId));
   const showPixelTrackingOverride = PIXEL_TRACKING_FORM_ALLOWED_USER_IDS.includes(String(userId));
   const { showMessenger } = useIntercom();
   const [showMetaActionHelp, setShowMetaActionHelp] = useState(false);
@@ -4163,7 +4167,13 @@ export default function AdCreationForm({
         .replace(/\{\{Date\(([^)]+)\)\}\}/gi, (match, fmt) => formatDate(fmt))
         .replace(/\{\{Iteration\}\}/gi, String(iterationIndex + 1).padStart(2, "0"))
         .replace(/\{\{URL Slug\}\}/gi, urlSlug)
-        .replace(/\{\{Ad Type\}\}/gi, adTypeLabel);
+        .replace(/\{\{Ad Type\}\}/gi, adTypeLabel)
+        .replace(/\{\{Ad Set Name\}\}/gi, () => {
+          if (!showAdSetNameVariable) return "";
+          if (duplicateAdSet) return newAdSetName?.trim() || "";
+          const selectedAdSet = adSets.find((entry) => String(entry.id) === String(selectedAdSets[0]));
+          return selectedAdSet?.name || "";
+        });
       const templateNameForFormula = formulaToUse.selectedTemplate || selectedTemplate;
       const templateHashReplacement =
         isTemplateLinkSyncUser && templateNameForFormula && defaultTemplateName
@@ -4183,7 +4193,20 @@ export default function AdCreationForm({
 
       return adName.trim() || "Ad Generated Through Blip";
     },
-    [adNameFormulaV2, adValues.dateType, computeAdName, defaultTemplateName, isTemplateLinkSyncUser, selectedTemplate, userId],
+    [
+      adNameFormulaV2,
+      adSets,
+      adValues.dateType,
+      computeAdName,
+      defaultTemplateName,
+      duplicateAdSet,
+      isTemplateLinkSyncUser,
+      newAdSetName,
+      selectedAdSets,
+      selectedTemplate,
+      showAdSetNameVariable,
+      userId,
+    ],
   );
 
   const adNamePreviewFile = useMemo(() => {
@@ -7885,6 +7908,7 @@ export default function AdCreationForm({
         variant="home"
         customVariables={showImportedPostMode ? [] : adAccountSettings.customVariables || []}
         allowedVariableIds={showImportedPostMode ? ["dateDefault", "dateMonthName", "dateCustom", "iteration"] : null}
+        showAdSetNameVariable={!showImportedPostMode && showAdSetNameVariable}
         postSwitcher={
           showImportedPostMode
             ? {
