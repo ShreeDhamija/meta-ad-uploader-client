@@ -72,7 +72,6 @@ import {
   FileText,
   Info,
   Link2,
-  LayoutGrid,
   Loader,
   Pencil,
   Phone,
@@ -904,24 +903,17 @@ function VariantOverviewThumbnail({ file, videoThumbs }) {
   const name = getDisplayFileName(file);
 
   return (
-    <TooltipProvider delayDuration={0}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-gray-200 bg-gray-100">
-            <img
-              src={src}
-              alt={name}
-              className="h-full w-full object-cover"
-              onError={(event) => {
-                event.currentTarget.onerror = null;
-                event.currentTarget.src = "https://api.withblip.com/thumbnail.jpg";
-              }}
-            />
-          </div>
-        </TooltipTrigger>
-        <TooltipContent className="max-w-64 break-words text-xs">{name}</TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <div className="relative aspect-square h-full min-h-[72px] min-w-[72px] max-w-full shrink-0 overflow-hidden rounded-xl border border-gray-200 bg-gray-100">
+      <img
+        src={src}
+        alt={name}
+        className="h-full w-full object-cover"
+        onError={(event) => {
+          event.currentTarget.onerror = null;
+          event.currentTarget.src = "https://api.withblip.com/thumbnail.jpg";
+        }}
+      />
+    </div>
   );
 }
 
@@ -944,48 +936,39 @@ function OverviewCopyList({ label, values, onEdit }) {
   return (
     <div className="space-y-1">
       <span className="text-[9px] font-semibold uppercase tracking-wide text-gray-400">{label}</span>
-      <TooltipProvider delayDuration={150}>
-        <div className="space-y-2">
-          {populated.map((value) => {
-            const isExpanded = expandedItems.has(value.sourceIndex);
-            const canExpand = value.raw.trim().length > 72;
+      <div className="space-y-2">
+        {populated.map((value) => {
+          const isExpanded = expandedItems.has(value.sourceIndex);
+          const canExpand = value.raw.trim().length > 72;
 
-            return (
-              <div key={`${label}-${value.sourceIndex}`}>
-                <div className="group/overview-value flex items-start gap-1">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <p className="max-w-[18rem] flex-1 whitespace-pre-wrap break-words text-[11px] leading-4 text-gray-700">
-                        {isExpanded ? value.raw.trim() : value.display}
-                      </p>
-                    </TooltipTrigger>
-                    <TooltipContent side="top" align="start" className="max-w-sm whitespace-pre-wrap break-words text-xs leading-5">
-                      {value.raw.trim()}
-                    </TooltipContent>
-                  </Tooltip>
-                  {onEdit && (
-                    <OverviewInlineEditor
-                      value={value.raw}
-                      onSave={(nextValue) => onEdit(value.sourceIndex, nextValue)}
-                      label={label}
-                      multiline
-                    />
-                  )}
-                </div>
-                {canExpand && (
-                  <button
-                    type="button"
-                    onClick={() => toggleExpanded(value.sourceIndex)}
-                    className="mt-0.5 bg-transparent p-0 text-[10px] font-medium text-blue-600 shadow-none hover:text-blue-700 hover:underline"
-                  >
-                    {isExpanded ? "View less" : "View more"}
-                  </button>
+          return (
+            <div key={`${label}-${value.sourceIndex}`}>
+              <div className="group/overview-value flex items-start gap-1">
+                <p className="max-w-[18rem] flex-1 whitespace-pre-wrap break-words text-[11px] leading-4 text-gray-700">
+                  {isExpanded ? value.raw.trim() : value.display}
+                </p>
+                {onEdit && (
+                  <OverviewInlineEditor
+                    value={value.raw}
+                    onSave={(nextValue) => onEdit(value.sourceIndex, nextValue)}
+                    label={label}
+                    multiline
+                  />
                 )}
               </div>
-            );
-          })}
-        </div>
-      </TooltipProvider>
+              {canExpand && (
+                <button
+                  type="button"
+                  onClick={() => toggleExpanded(value.sourceIndex)}
+                  className="mt-0.5 bg-transparent p-0 text-[10px] font-medium text-blue-600 shadow-none hover:text-blue-700 hover:underline"
+                >
+                  {isExpanded ? "View less" : "View more"}
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -11583,8 +11566,7 @@ export default function AdCreationForm({
         </div>
       )}
       {variants.length > 1 && (
-        <TooltipProvider delayDuration={0}>
-          <div className="fixed bottom-6 left-1/2 z-40 flex max-w-[calc(100vw-1rem)] -translate-x-1/2 items-center gap-2 rounded-full border border-black bg-black px-2 py-2 text-white shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-300">
+        <div className="fixed bottom-6 left-1/2 z-40 flex max-w-[calc(100vw-1rem)] -translate-x-1/2 items-center gap-2 rounded-full border border-black bg-black px-2 py-2 text-white shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-300">
             <ScrollArea type="always" className={cn("rounded-full", shouldScrollVariantPicker && "w-[34rem] max-w-[calc(100vw-9rem)] pb-2")}>
               <div className="flex w-max items-center gap-1 pr-1">
                 {variants.map((variant) => {
@@ -11611,8 +11593,8 @@ export default function AdCreationForm({
                         <button
                           type="button"
                           onClick={() => handleDeleteVariant(variant.id)}
+                          aria-label={`Delete ${variant.name}`}
                           className="ml-0.5 rounded-full p-1 text-white/60 opacity-0 transition group-hover:opacity-100 hover:bg-white/10 hover:text-white"
-                          title="Delete variant"
                         >
                           <X className="h-3 w-3" />
                         </button>
@@ -11623,51 +11605,38 @@ export default function AdCreationForm({
               </div>
             </ScrollArea>
             <div className="flex shrink-0 items-center gap-1 border-l border-white/50 pl-2">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    onClick={handleAddVariant}
-                    className="rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white"
-                  >
-                    <Plus className="h-4 w-4" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>Add variant</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    onClick={() => setShowVariantOverview(true)}
-                    className="rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white"
-                  >
-                    <LayoutGrid className="h-4 w-4" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>View variant overview</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    onClick={() => setShowDeleteAllVariantsDialog(true)}
-                    className="rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>Delete all variants</TooltipContent>
-              </Tooltip>
+              <button
+                type="button"
+                onClick={handleAddVariant}
+                aria-label="Add variant"
+                className="rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white"
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowVariantOverview(true)}
+                aria-label="View variant overview"
+                className="rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white"
+              >
+                <Eye className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowDeleteAllVariantsDialog(true)}
+                aria-label="Delete all variants"
+                className="rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
             </div>
-          </div>
-        </TooltipProvider>
+        </div>
       )}
       <Dialog open={showVariantOverview} onOpenChange={setShowVariantOverview}>
         <DialogContent
           disableSlide
           overlayClassName="bg-black/35"
-          className="flex h-[min(86vh,900px)] w-[min(96vw,1500px)] max-w-none flex-col gap-0 overflow-hidden rounded-[40px] border-gray-200 bg-white p-0 sm:rounded-[40px]"
+          className="flex h-[min(86vh,900px)] w-[min(96vw,1500px)] max-w-none flex-col gap-0 overflow-hidden rounded-[32px] border-gray-200 bg-white p-0 sm:rounded-[32px]"
         >
           <DialogHeader className="shrink-0 border-b border-gray-200 px-6 py-5 pr-14">
             <DialogTitle>Variant overview</DialogTitle>
@@ -11765,7 +11734,7 @@ export default function AdCreationForm({
                         {row.links.length > 0 ? (
                           row.links.map((linkEntry) => (
                             <div key={`${row.id}-link-${linkEntry.index}`} className="group/overview-value flex items-center gap-1">
-                              <p className="max-w-56 flex-1 truncate text-[11px] text-blue-600" title={linkEntry.value}>
+                              <p className="max-w-56 flex-1 truncate text-[11px] text-blue-600">
                                 {linkEntry.value}
                               </p>
                               <OverviewInlineEditor
@@ -11787,21 +11756,26 @@ export default function AdCreationForm({
                         )}
                       </div>
                     </td>
-                    <td className="border-b border-gray-200 bg-white px-4 py-4">
+                    <td className="h-1 border-b border-gray-200 bg-white px-4 py-4">
                       {row.mediaItems.length > 0 ? (
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                        <div className="grid h-full grid-cols-2 items-stretch gap-x-4 gap-y-3">
                           {row.mediaItems.map((item, itemIndex) => (
                             <div
                               key={`${row.id}-media-${itemIndex}`}
-                              className={cn("min-w-0", item.isGroup && "rounded-2xl border border-gray-200 bg-gray-50 p-3")}
+                              className={cn(
+                                "flex h-full min-h-[96px] min-w-0 flex-col",
+                                item.isGroup && "rounded-2xl border border-gray-200 bg-gray-50 p-3",
+                              )}
                             >
-                              <div className={cn("flex items-center justify-between gap-2", item.isGroup ? "mb-2" : "mb-1.5")}>
+                              <div className={item.isGroup ? "mb-2" : "mb-1.5"}>
                                 <span className="text-[9px] font-semibold uppercase tracking-wide text-gray-500">{item.label}</span>
-                                {item.isGroup && (
-                                  <span className="text-[9px] text-gray-400">{item.files.length} asset{item.files.length !== 1 ? "s" : ""}</span>
-                                )}
                               </div>
-                              <div className="flex flex-wrap gap-2">
+                              <div
+                                className={cn(
+                                  "flex min-h-[72px] flex-1 items-stretch gap-2",
+                                  item.isGroup ? "flex-nowrap overflow-x-auto pb-1" : "flex-wrap",
+                                )}
+                              >
                                 {item.files.map((file, fileIndex) => (
                                   <VariantOverviewThumbnail
                                     key={`${getFileId(file)}-${fileIndex}`}
