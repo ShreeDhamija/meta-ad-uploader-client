@@ -72,6 +72,7 @@ import {
   FileText,
   Info,
   Link2,
+  LayoutGrid,
   Loader,
   Phone,
   Plus,
@@ -800,6 +801,86 @@ function VariantDot({ variantId, variants }) {
   return <span className="inline-block h-2 w-2 rounded-full shrink-0" style={{ background: color }} />;
 }
 
+const truncateOverviewText = (value, limit = 72) => {
+  const text = String(value || "").trim();
+  if (!text) return "";
+  return text.length > limit ? `${text.slice(0, limit).trimEnd()}…` : text;
+};
+
+function VariantOverviewThumbnail({ file, videoThumbs }) {
+  const [localUrl, setLocalUrl] = useState("");
+  const fileId = file ? getFileId(file) : "";
+  const isVideo = isVideoFile(file) || file?.media_type === "VIDEO" || Boolean(file?.video_id);
+
+  useEffect(() => {
+    if (!file || isVideo || typeof File === "undefined" || !(file instanceof File)) {
+      setLocalUrl("");
+      return undefined;
+    }
+
+    const nextUrl = URL.createObjectURL(file);
+    setLocalUrl(nextUrl);
+    return () => URL.revokeObjectURL(nextUrl);
+  }, [file, isVideo]);
+
+  const src =
+    videoThumbs?.[fileId] ||
+    file?.pickerThumbnail ||
+    file?.thumbnail_url ||
+    file?.thumbnailUrl ||
+    file?.image_url ||
+    file?.previewUrl ||
+    file?.preview ||
+    file?.media_url ||
+    (file?.isMetaLibrary ? file?.url : "") ||
+    (file?.isDrive ? `https://drive.google.com/thumbnail?id=${file.id}&sz=w160-h120` : "") ||
+    file?.directLink ||
+    file?.icon ||
+    localUrl ||
+    "https://api.withblip.com/thumbnail.jpg";
+  const name = getDisplayFileName(file);
+
+  return (
+    <TooltipProvider delayDuration={0}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg border border-gray-200 bg-gray-100">
+            <img
+              src={src}
+              alt={name}
+              className="h-full w-full object-cover"
+              onError={(event) => {
+                event.currentTarget.onerror = null;
+                event.currentTarget.src = "https://api.withblip.com/thumbnail.jpg";
+              }}
+            />
+            {isVideo && <span className="absolute bottom-0.5 right-0.5 rounded bg-black/70 px-1 text-[8px] font-medium text-white">VID</span>}
+          </div>
+        </TooltipTrigger>
+        <TooltipContent className="max-w-64 break-words text-xs">{name}</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+
+function OverviewCopyList({ label, values }) {
+  const populated = (values || [])
+    .map((value) => ({ raw: String(value || ""), display: truncateOverviewText(value) }))
+    .filter((value) => Boolean(value.display));
+  if (populated.length === 0) return null;
+
+  return (
+    <div className="space-y-1">
+      <span className="text-[9px] font-semibold uppercase tracking-wide text-gray-400">{label}</span>
+      {populated.map((value, index) => (
+        <p key={`${label}-${index}`} className="max-w-[18rem] text-[11px] leading-4 text-gray-700" title={value.raw}>
+          {value.display}
+        </p>
+      ))}
+    </div>
+  );
+}
+
 const extractFolderId = (url) => {
   const idMatch = url.match(/[-\w]{25,}/);
   return idMatch ? idMatch[0] : null;
@@ -1062,6 +1143,7 @@ export default function AdCreationForm({
   setPartnerIgAccountId,
   partnerFbPageId,
   setPartnerFbPageId,
+  partnerName,
   setPartnerName,
   partnershipIdentityMode,
   setPartnershipIdentityMode,
@@ -1466,6 +1548,7 @@ export default function AdCreationForm({
   const [selectedForDelete, setSelectedForDelete] = useState(new Set());
   const [isDeletingTemplates, setIsDeletingTemplates] = useState(false);
   const [showDeleteAllVariantsDialog, setShowDeleteAllVariantsDialog] = useState(false);
+  const [showVariantOverview, setShowVariantOverview] = useState(false);
   const wasPhoneCallCtaAutoAppliedRef = useRef(false);
 
   const [activeIgCaptionIndex, setActiveIgCaptionIndex] = useState(0);
@@ -1619,6 +1702,7 @@ export default function AdCreationForm({
       isPartnershipAd,
       partnerIgAccountId,
       partnerFbPageId,
+      partnerName,
       partnershipIdentityMode,
       partnershipPrimaryIdentity,
       adNameFormulaV2,
@@ -1656,6 +1740,7 @@ export default function AdCreationForm({
       isPartnershipAd,
       partnerIgAccountId,
       partnerFbPageId,
+      partnerName,
       partnershipIdentityMode,
       partnershipPrimaryIdentity,
       adNameFormulaV2,
@@ -1831,6 +1916,126 @@ export default function AdCreationForm({
       selectedIgOrganicPosts,
     ],
   );
+
+  const variantOverviewRows = useMemo(() => {
+    const overviewFiles = [
+      ...files,
+      ...driveFiles.map((file) => ({ ...file, isDrive: true })),
+      ...dropboxFiles.map((file) => ({ ...file, isDropbox: true })),
+      ...(frameioFiles || []).map((file) => ({ ...file, isFrameio: true })),
+      ...importedFiles.map((file) => ({ ...file, isMetaLibrary: true })),
+    ];
+    const fileById = new Map(overviewFiles.map((file) => [String(getFileId(file)), file]));
+    const overviewGroups = fileGroups.map((group, index) => ({
+      id: Array.isArray(group) ? `group-${index}` : String(group.id),
+      index,
+      fileIds: getGroupFileIds(group).map(String),
+    }));
+    const groupedIds = new Set(overviewGroups.flatMap((group) => group.fileIds));
+    const totalOverviewMedia = overviewFiles.length + importedPosts.length + selectedIgOrganicPosts.length;
+
+    return variants.map((variant) => {
+      const snapshot = getVariantState(variant.id) || {};
+      const mediaItems = [];
+
+      if (totalOverviewMedia === 1) {
+        const onlyFile = overviewFiles[0] || importedPosts[0] || selectedIgOrganicPosts[0];
+        if (onlyFile) mediaItems.push({ label: "Ad 1", files: [onlyFile] });
+      } else {
+        overviewGroups
+          .filter((group) => (groupVariantMap[group.id] || "default") === variant.id)
+          .forEach((group) => {
+            mediaItems.push({
+              label: `Group ${group.index + 1}`,
+              files: group.fileIds.map((fileId) => fileById.get(fileId)).filter(Boolean),
+            });
+          });
+
+        const assignedUngrouped = overviewFiles.filter((file) => {
+          const fileId = String(getFileId(file));
+          return !groupedIds.has(fileId) && (fileVariantMap[fileId] || "default") === variant.id;
+        });
+        if ((isCarouselAd || isFlexLikeAdType) && assignedUngrouped.length > 0) {
+          mediaItems.push({ label: "Ad", files: assignedUngrouped });
+        } else {
+          assignedUngrouped.forEach((file) => mediaItems.push({ label: `Ad ${mediaItems.length + 1}`, files: [file] }));
+        }
+
+        importedPosts
+          .filter((post) => (postVariantMap[`post:${post.id}`] || "default") === variant.id)
+          .forEach((post) => mediaItems.push({ label: `Ad ${mediaItems.length + 1}`, files: [post] }));
+        selectedIgOrganicPosts
+          .filter((post) => (postVariantMap[`igpost:${post.source_instagram_media_id}`] || "default") === variant.id)
+          .forEach((post) => mediaItems.push({ label: `Ad ${mediaItems.length + 1}`, files: [post] }));
+      }
+
+      const selectedCampaignIds = Array.isArray(snapshot.selectedCampaign)
+        ? snapshot.selectedCampaign
+        : snapshot.selectedCampaign
+          ? [snapshot.selectedCampaign]
+          : [];
+      const snapshotAdSets = Array.isArray(snapshot.adSets) ? snapshot.adSets : adSets;
+      const campaignNames = selectedCampaignIds.map(
+        (campaignId) =>
+          campaigns.find((campaign) => String(campaign.id) === String(campaignId))?.name ||
+          snapshotAdSets.find((entry) => String(entry.campaignId) === String(campaignId))?.campaignName ||
+          campaignId,
+      );
+      const adSetNames = snapshot.duplicateAdSet
+        ? [(snapshot.newAdSetName || "New ad set").trim()]
+        : (snapshot.selectedAdSets || []).map(
+            (adSetId) => snapshotAdSets.find((entry) => String(entry.id) === String(adSetId))?.name || adSetId,
+          );
+      const selectedPage = pages.find((page) => String(page.id) === String(snapshot.pageId));
+      const selectedInstagram = pages
+        .map((page) => page.instagramAccount)
+        .find((account) => String(account?.id) === String(snapshot.instagramAccountId));
+      const selectedOverviewPartner = availablePartners.find(
+        (partner) => String(partner.creatorIgId) === String(snapshot.partnerIgAccountId),
+      );
+
+      return {
+        id: variant.id,
+        name: variant.name,
+        campaignNames,
+        adSetNames,
+        pageName: selectedPage?.name || snapshot.pageId || "—",
+        instagramName: selectedInstagram?.username || snapshot.instagramAccountId || "",
+        isPartnershipAd: Boolean(snapshot.isPartnershipAd),
+        partnerName: snapshot.partnerName
+          ? `@${String(snapshot.partnerName).replace(/^@/, "")}`
+          : selectedOverviewPartner?.creatorUsername
+            ? `@${selectedOverviewPartner.creatorUsername}`
+            : snapshot.partnerIgAccountId || "",
+        messages: snapshot.messages || [],
+        headlines: snapshot.headlines || [],
+        descriptions: snapshot.descriptions || [],
+        links: (snapshot.link || []).filter(Boolean),
+        cta: snapshot.cta || "LEARN_MORE",
+        mediaItems,
+      };
+    });
+  }, [
+    adSets,
+    availablePartners,
+    campaigns,
+    driveFiles,
+    dropboxFiles,
+    fileGroups,
+    fileVariantMap,
+    files,
+    frameioFiles,
+    getVariantState,
+    groupVariantMap,
+    importedFiles,
+    importedPosts,
+    isCarouselAd,
+    isFlexLikeAdType,
+    pages,
+    postVariantMap,
+    selectedIgOrganicPosts,
+    variants,
+  ]);
 
   const captureFormDataAsJob = useCallback(
     (variantId = "default") => {
@@ -11265,6 +11470,18 @@ export default function AdCreationForm({
                 <TooltipTrigger asChild>
                   <button
                     type="button"
+                    onClick={() => setShowVariantOverview(true)}
+                    className="rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white"
+                  >
+                    <LayoutGrid className="h-4 w-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>View variant overview</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
                     onClick={() => setShowDeleteAllVariantsDialog(true)}
                     className="rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white"
                   >
@@ -11277,6 +11494,134 @@ export default function AdCreationForm({
           </div>
         </TooltipProvider>
       )}
+      <Dialog open={showVariantOverview} onOpenChange={setShowVariantOverview}>
+        <DialogContent
+          disableSlide
+          overlayClassName="bg-black/35 backdrop-blur-[1px]"
+          className="flex h-[min(86vh,900px)] w-[min(96vw,1500px)] max-w-none flex-col gap-0 overflow-hidden rounded-[28px] border-gray-200 bg-white p-0"
+        >
+          <DialogHeader className="shrink-0 border-b border-gray-200 px-6 py-5 pr-14">
+            <DialogTitle>Variant overview</DialogTitle>
+            <DialogDescription>Quickly compare targeting, copy, destinations, and assigned creative across every variant.</DialogDescription>
+          </DialogHeader>
+          <div className="min-h-0 flex-1 overflow-auto bg-gray-50/50">
+            <table className="min-w-[1280px] w-full border-separate border-spacing-0 text-left">
+              <thead className="sticky top-0 z-20 bg-gray-100/95 text-[10px] uppercase tracking-wide text-gray-500 backdrop-blur">
+                <tr>
+                  <th className="sticky left-0 z-30 w-44 border-b border-r border-gray-200 bg-gray-100 px-4 py-3 font-semibold">Variant</th>
+                  <th className="w-60 border-b border-gray-200 px-4 py-3 font-semibold">Campaign / Ad set</th>
+                  <th className="w-48 border-b border-gray-200 px-4 py-3 font-semibold">Page / Instagram</th>
+                  <th className="w-40 border-b border-gray-200 px-4 py-3 font-semibold">Partnership</th>
+                  <th className="w-80 border-b border-gray-200 px-4 py-3 font-semibold">Copy</th>
+                  <th className="w-64 border-b border-gray-200 px-4 py-3 font-semibold">Link / CTA</th>
+                  <th className="min-w-[320px] border-b border-gray-200 px-4 py-3 font-semibold">Ads / Groups</th>
+                </tr>
+              </thead>
+              <tbody>
+                {variantOverviewRows.map((row, rowIndex) => (
+                  <tr key={row.id} className="align-top">
+                    <td
+                      className={cn(
+                        "sticky left-0 z-10 border-b border-r border-gray-200 px-4 py-4",
+                        rowIndex % 2 === 0 ? "bg-white" : "bg-gray-50",
+                      )}
+                    >
+                      <div className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+                        <VariantDot variantId={row.id} variants={variants} />
+                        <span>{row.name}</span>
+                      </div>
+                      <p className="mt-1 text-[10px] text-gray-400">
+                        {row.mediaItems.length} ad{row.mediaItems.length !== 1 ? "s" : ""}
+                      </p>
+                    </td>
+                    <td className="border-b border-gray-200 bg-white px-4 py-4">
+                      <div className="space-y-3">
+                        <div>
+                          <p className="text-[9px] font-semibold uppercase tracking-wide text-gray-400">Campaign</p>
+                          <p className="mt-1 text-xs leading-4 text-gray-800">{row.campaignNames.join(", ") || "—"}</p>
+                        </div>
+                        <div>
+                          <p className="text-[9px] font-semibold uppercase tracking-wide text-gray-400">Ad set</p>
+                          <p className="mt-1 text-xs leading-4 text-gray-800">{row.adSetNames.join(", ") || "—"}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="border-b border-gray-200 bg-white px-4 py-4">
+                      <p className="text-xs font-medium text-gray-800">{row.pageName}</p>
+                      {row.instagramName && <p className="mt-1 text-[11px] text-gray-500">@{String(row.instagramName).replace(/^@/, "")}</p>}
+                    </td>
+                    <td className="border-b border-gray-200 bg-white px-4 py-4">
+                      {row.isPartnershipAd ? (
+                        <div className="space-y-1">
+                          <span className="inline-flex rounded-full bg-violet-50 px-2 py-1 text-[10px] font-medium text-violet-700">Enabled</span>
+                          <p className="break-all text-[11px] leading-4 text-gray-600">{row.partnerName || "Partner selected"}</p>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-gray-400">None</span>
+                      )}
+                    </td>
+                    <td className="border-b border-gray-200 bg-white px-4 py-4">
+                      <div className="space-y-3">
+                        <OverviewCopyList label="Primary text" values={row.messages} />
+                        <OverviewCopyList label="Headlines" values={row.headlines} />
+                        <OverviewCopyList label="Descriptions" values={row.descriptions} />
+                        {row.messages.every((value) => !String(value || "").trim()) &&
+                          row.headlines.every((value) => !String(value || "").trim()) &&
+                          row.descriptions.every((value) => !String(value || "").trim()) && <span className="text-xs text-gray-400">No copy</span>}
+                      </div>
+                    </td>
+                    <td className="border-b border-gray-200 bg-white px-4 py-4">
+                      <span className="inline-flex rounded-full bg-gray-100 px-2 py-1 text-[10px] font-semibold text-gray-700">
+                        {String(row.cta)
+                          .toLowerCase()
+                          .split("_")
+                          .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+                          .join(" ")}
+                      </span>
+                      <div className="mt-2 space-y-1">
+                        {row.links.length > 0 ? (
+                          row.links.map((url, index) => (
+                            <p key={`${row.id}-link-${index}`} className="max-w-60 truncate text-[11px] text-blue-600" title={url}>
+                              {url}
+                            </p>
+                          ))
+                        ) : (
+                          <p className="text-xs text-gray-400">No link</p>
+                        )}
+                      </div>
+                    </td>
+                    <td className="border-b border-gray-200 bg-white px-4 py-4">
+                      {row.mediaItems.length > 0 ? (
+                        <div className="grid grid-cols-2 gap-2">
+                          {row.mediaItems.map((item, itemIndex) => (
+                            <div key={`${row.id}-media-${itemIndex}`} className="min-w-0 rounded-xl border border-gray-200 bg-gray-50 p-2">
+                              <div className="mb-2 flex items-center justify-between gap-2">
+                                <span className="text-[9px] font-semibold uppercase tracking-wide text-gray-500">{item.label}</span>
+                                <span className="text-[9px] text-gray-400">{item.files.length} asset{item.files.length !== 1 ? "s" : ""}</span>
+                              </div>
+                              <div className="flex flex-wrap gap-1.5">
+                                {item.files.map((file, fileIndex) => (
+                                  <VariantOverviewThumbnail
+                                    key={`${getFileId(file)}-${fileIndex}`}
+                                    file={file}
+                                    videoThumbs={videoThumbs}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-gray-400">No media assigned</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </DialogContent>
+      </Dialog>
       {showDeleteAllVariantsDialog && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center">
           <div className="absolute inset-0 bg-black/30" onClick={() => setShowDeleteAllVariantsDialog(false)} />
