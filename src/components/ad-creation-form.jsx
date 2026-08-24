@@ -801,7 +801,9 @@ function VariantDot({ variantId, variants }) {
   return <span className="inline-block h-2 w-2 rounded-full shrink-0" style={{ background: color }} />;
 }
 
-const truncateOverviewText = (value, limit = 72) => {
+const OVERVIEW_COPY_PREVIEW_LIMIT = 120;
+
+const truncateOverviewText = (value, limit = OVERVIEW_COPY_PREVIEW_LIMIT) => {
   const text = String(value || "").trim();
   if (!text) return "";
   return text.length > limit ? `${text.slice(0, limit).trimEnd()}…` : text;
@@ -910,7 +912,7 @@ function VariantOverviewThumbnail({ file, videoThumbs, fitToWidth = false }) {
   return (
     <div
       className={cn(
-        "relative min-h-[72px] min-w-0 overflow-hidden rounded-xl border border-gray-200 bg-gray-100",
+        "relative max-h-[180px] min-h-[72px] min-w-0 justify-self-start overflow-hidden rounded-xl border border-gray-200 bg-gray-100",
         fitToWidth ? "w-full" : "h-full w-auto max-w-full",
       )}
       style={{ aspectRatio }}
@@ -955,7 +957,7 @@ function OverviewCopyList({ label, values, onEdit }) {
       <div className="space-y-2">
         {populated.map((value) => {
           const isExpanded = expandedItems.has(value.sourceIndex);
-          const canExpand = value.raw.trim().length > 72;
+          const canExpand = value.raw.trim().length > OVERVIEW_COPY_PREVIEW_LIMIT;
 
           return (
             <div key={`${label}-${value.sourceIndex}`}>
@@ -11662,13 +11664,13 @@ export default function AdCreationForm({
             <table className={cn("w-full border-separate border-spacing-0 text-left", hasPartnershipVariants ? "min-w-[1280px]" : "min-w-[1120px]")}>
               <thead className="sticky top-0 z-20 bg-gray-100/95 text-[10px] uppercase tracking-wide text-gray-500 backdrop-blur">
                 <tr>
-                  <th className="sticky left-0 z-30 w-44 border-b border-r border-gray-200 bg-gray-100 px-4 py-3 font-semibold">Variant</th>
-                  <th className="w-60 border-b border-gray-200 px-4 py-3 font-semibold">Campaign / Ad set</th>
-                  <th className="w-48 border-b border-gray-200 px-4 py-3 font-semibold">Page / Instagram</th>
-                  {hasPartnershipVariants && <th className="w-40 border-b border-gray-200 px-4 py-3 font-semibold">Partnership</th>}
-                  <th className="w-80 border-b border-gray-200 px-4 py-3 font-semibold">Copy</th>
-                  <th className="w-64 border-b border-gray-200 px-4 py-3 font-semibold">Link / CTA</th>
-                  <th className="min-w-[320px] border-b border-gray-200 px-4 py-3 font-semibold">Ads / Groups</th>
+                  <th className="sticky left-0 z-30 w-44 border-b border-r border-gray-200 bg-gray-100 px-[0.9rem] py-3 font-semibold">Variant</th>
+                  <th className="w-60 border-b border-gray-200 px-[0.9rem] py-3 font-semibold">Campaign / Ad set</th>
+                  <th className="w-48 border-b border-gray-200 px-[0.9rem] py-3 font-semibold">Page / Instagram</th>
+                  {hasPartnershipVariants && <th className="w-40 border-b border-gray-200 px-[0.9rem] py-3 font-semibold">Partnership</th>}
+                  <th className="w-80 border-b border-gray-200 px-[0.9rem] py-3 font-semibold">Copy</th>
+                  <th className="w-64 border-b border-gray-200 px-[0.9rem] py-3 font-semibold">Link / CTA</th>
+                  <th className="min-w-[320px] border-b border-gray-200 px-[0.9rem] py-3 font-semibold">Ads / Groups</th>
                 </tr>
               </thead>
               <tbody>
@@ -11676,7 +11678,7 @@ export default function AdCreationForm({
                   <tr key={row.id} className="align-top">
                     <td
                       className={cn(
-                        "sticky left-0 z-10 border-b border-r border-gray-200 px-4 py-4",
+                        "sticky left-0 z-10 border-b border-r border-gray-200 px-[0.9rem] py-4",
                         rowIndex % 2 === 0 ? "bg-white" : "bg-gray-50",
                       )}
                     >
@@ -11688,7 +11690,7 @@ export default function AdCreationForm({
                         {row.mediaItems.length} ad{row.mediaItems.length !== 1 ? "s" : ""}
                       </p>
                     </td>
-                    <td className="border-b border-gray-200 bg-white px-4 py-4">
+                    <td className="border-b border-gray-200 bg-white px-[0.9rem] py-4">
                       <div className="space-y-3">
                         <div>
                           <p className="text-[9px] font-semibold uppercase tracking-wide text-gray-400">Campaign</p>
@@ -11700,12 +11702,12 @@ export default function AdCreationForm({
                         </div>
                       </div>
                     </td>
-                    <td className="border-b border-gray-200 bg-white px-4 py-4">
+                    <td className="border-b border-gray-200 bg-white px-[0.9rem] py-4">
                       <p className="text-xs font-medium text-gray-800">{row.pageName}</p>
                       {row.instagramName && <p className="mt-1 text-[11px] text-gray-500">@{String(row.instagramName).replace(/^@/, "")}</p>}
                     </td>
                     {hasPartnershipVariants && (
-                      <td className="border-b border-gray-200 bg-white px-4 py-4">
+                      <td className="border-b border-gray-200 bg-white px-[0.9rem] py-4">
                         {row.isPartnershipAd ? (
                           <div className="space-y-1">
                             <span className="inline-flex rounded-full bg-violet-50 px-2 py-1 text-[10px] font-medium text-violet-700">Enabled</span>
@@ -11716,7 +11718,7 @@ export default function AdCreationForm({
                         )}
                       </td>
                     )}
-                    <td className="border-b border-gray-200 bg-white px-4 py-4">
+                    <td className="border-b border-gray-200 bg-white px-[0.9rem] py-4">
                       <div className="space-y-3">
                         <OverviewCopyList
                           label="Primary text"
@@ -11738,7 +11740,7 @@ export default function AdCreationForm({
                           row.descriptions.every((value) => !String(value || "").trim()) && <span className="text-xs text-gray-400">No copy</span>}
                       </div>
                     </td>
-                    <td className="border-b border-gray-200 bg-white px-4 py-4">
+                    <td className="border-b border-gray-200 bg-white px-[0.9rem] py-4">
                       <span className="inline-flex rounded-full bg-gray-100 px-2 py-1 text-[10px] font-semibold text-gray-700">
                         {String(row.cta)
                           .toLowerCase()
@@ -11772,7 +11774,7 @@ export default function AdCreationForm({
                         )}
                       </div>
                     </td>
-                    <td className="h-1 border-b border-gray-200 bg-white px-4 py-4">
+                    <td className="h-1 border-b border-gray-200 bg-white px-[0.9rem] py-4">
                       {row.mediaItems.length > 0 ? (
                         <div className="grid h-full grid-cols-1 items-stretch gap-y-4">
                           {row.mediaItems.map((item, itemIndex) => (
