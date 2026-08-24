@@ -73,6 +73,7 @@ import {
   Info,
   Link2,
   Loader,
+  Pencil,
   Phone,
   Plus,
   RefreshCcw,
@@ -91,13 +92,14 @@ import TextareaAutosize from "react-textarea-autosize";
 import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
 const API_BASE_URL = import.meta.env.VITE_API_URL || "https://api.withblip.com";
-const NOOP = () => {};
+const NOOP = () => { };
 const META_AD_CREATION_ACTION_REQUIRED = "META_AD_CREATION_ACTION_REQUIRED";
 const META_ACTION_REQUIRED_MESSAGE = "Meta requires you to take certain steps to continue ad creation";
 const TEMPLATE_LINK_SYNC_USER_ID = "929470643071391";
-const PIXEL_TRACKING_FORM_ALLOWED_USER_IDS = ["10236978990363167", "10234447959963619", "10162737276661695"];
+const PIXEL_TRACKING_FORM_ALLOWED_USER_IDS = ["10236978990363167", "10234447959963619", "10162737276661695", "10165258246808665"];
 const INSTANT_EXPERIENCE_USER_IDS = ["10236978990363167", "2901368380250453"];
 const LOWERCASE_FILE_NAME_FORMULA_USER_IDS = ["27431350269900471"];
+const AD_SET_NAME_VARIABLE_TEAM_IDS = ["team_1777190523537_hmh1srk8j", "team_1787061148847_j1tmrxprb"];
 const EMPTY_PIXEL_TRACKING_OVERRIDE = {
   websitePixelId: null,
   offlineDatasetId: null,
@@ -106,7 +108,7 @@ const EMPTY_PIXEL_TRACKING_OVERRIDE = {
 // Staging gate — used to hide work-in-progress UI (currently: the
 // "View Top Creatives for Flexible Ads" trigger). Mirrors the pattern in
 // pages/Login.jsx: prefer the env var, but fall back to a URL substring
-// check so the gate still works on staging deploys with missing env vars.
+// check so the gate still works on staging deploys with missing env vars
 const IS_STAGING =
   import.meta.env.VITE_ENV === "staging" ||
   import.meta.env.VITE_ENV === "dev" ||
@@ -146,16 +148,16 @@ function withTimeout(promise, timeoutMs, timeoutMessage, signal) {
 
   const abortPromise = signal
     ? new Promise((_, reject) => {
-        if (signal.aborted) {
-          reject(new DOMException("Job cancelled. Some Ads might still have been made.", "AbortError"));
-          return;
-        }
+      if (signal.aborted) {
+        reject(new DOMException("Job cancelled. Some Ads might still have been made.", "AbortError"));
+        return;
+      }
 
-        abortHandler = () => {
-          reject(new DOMException("Job cancelled. Some Ads might still have been made.", "AbortError"));
-        };
-        signal.addEventListener("abort", abortHandler, { once: true });
-      })
+      abortHandler = () => {
+        reject(new DOMException("Job cancelled. Some Ads might still have been made.", "AbortError"));
+      };
+      signal.addEventListener("abort", abortHandler, { once: true });
+    })
     : null;
 
   return Promise.race(abortPromise ? [promise, timeoutPromise, abortPromise] : [promise, timeoutPromise]).finally(() => {
@@ -799,6 +801,199 @@ function VariantDot({ variantId, variants }) {
   return <span className="inline-block h-2 w-2 rounded-full shrink-0" style={{ background: color }} />;
 }
 
+const OVERVIEW_COPY_PREVIEW_LIMIT = 120;
+
+const truncateOverviewText = (value, limit = OVERVIEW_COPY_PREVIEW_LIMIT) => {
+  const text = String(value || "").trim();
+  if (!text) return "";
+  return text.length > limit ? `${text.slice(0, limit).trimEnd()}…` : text;
+};
+
+function OverviewInlineEditor({ value, onSave, label, multiline = false }) {
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState(value || "");
+
+  useEffect(() => {
+    if (open) setDraft(value || "");
+  }, [open, value]);
+
+  const save = () => {
+    onSave(draft);
+    setOpen(false);
+  };
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-label={`Edit ${label}`}
+          className="shrink-0 rounded-md p-1 text-gray-400 opacity-0 transition hover:bg-gray-100 hover:text-blue-600 group-hover/overview-value:opacity-100 focus-visible:opacity-100"
+        >
+          <Pencil className="h-3 w-3" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="start" side="bottom" sideOffset={6} className="w-80 rounded-2xl border-gray-200 bg-white p-3 shadow-xl">
+        <Label className="text-xs font-medium text-gray-700">Edit {label}</Label>
+        {multiline ? (
+          <TextareaAutosize
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            minRows={4}
+            maxRows={10}
+            autoFocus
+            className="mt-2 w-full resize-none rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm leading-5 shadow-sm focus:border-blue-400 focus:outline-none"
+          />
+        ) : (
+          <Input
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                save();
+              }
+            }}
+            autoFocus
+            className="mt-2 h-10 rounded-xl border-gray-300 text-sm"
+          />
+        )}
+        <div className="mt-3 flex justify-end gap-3">
+          <button type="button" onClick={() => setOpen(false)} className="bg-transparent p-0 text-xs font-medium text-gray-500 hover:text-gray-800">
+            Cancel
+          </button>
+          <button type="button" onClick={save} className="bg-transparent p-0 text-xs font-medium text-blue-600 hover:text-blue-700 hover:underline">
+            Save
+          </button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function VariantOverviewThumbnail({ file, videoThumbs, fitToWidth = false }) {
+  const [localUrl, setLocalUrl] = useState("");
+  const [aspectRatio, setAspectRatio] = useState(() => {
+    const width = Number(file?.width || file?.videoWidth);
+    const height = Number(file?.height || file?.videoHeight);
+    return width > 0 && height > 0 ? width / height : 1;
+  });
+  const fileId = file ? getFileId(file) : "";
+  const isVideo = isVideoFile(file) || file?.media_type === "VIDEO" || Boolean(file?.video_id);
+
+  useEffect(() => {
+    if (!file || isVideo || typeof File === "undefined" || !(file instanceof File)) {
+      setLocalUrl("");
+      return undefined;
+    }
+
+    const nextUrl = URL.createObjectURL(file);
+    setLocalUrl(nextUrl);
+    return () => URL.revokeObjectURL(nextUrl);
+  }, [file, isVideo]);
+
+  const src =
+    videoThumbs?.[fileId] ||
+    file?.pickerThumbnail ||
+    file?.thumbnail_url ||
+    file?.thumbnailUrl ||
+    file?.image_url ||
+    file?.previewUrl ||
+    file?.preview ||
+    file?.media_url ||
+    (file?.isMetaLibrary ? file?.url : "") ||
+    (file?.isDrive ? `https://drive.google.com/thumbnail?id=${file.id}&sz=w160-h120` : "") ||
+    file?.directLink ||
+    file?.icon ||
+    localUrl ||
+    "https://api.withblip.com/thumbnail.jpg";
+  const name = getDisplayFileName(file);
+
+  return (
+    <div
+      className={cn(
+        "relative max-h-[180px] min-h-[72px] min-w-0 justify-self-start overflow-hidden rounded-xl border border-gray-200 bg-gray-100",
+        fitToWidth ? "w-full" : "h-full w-auto max-w-full",
+      )}
+      style={{ aspectRatio }}
+    >
+      <img
+        src={src}
+        alt={name}
+        className="h-full w-full object-contain"
+        onLoad={(event) => {
+          const nextWidth = event.currentTarget.naturalWidth;
+          const nextHeight = event.currentTarget.naturalHeight;
+          if (nextWidth > 0 && nextHeight > 0) setAspectRatio(nextWidth / nextHeight);
+        }}
+        onError={(event) => {
+          event.currentTarget.onerror = null;
+          event.currentTarget.src = "https://api.withblip.com/thumbnail.jpg";
+        }}
+      />
+    </div>
+  );
+}
+
+function OverviewCopyList({ label, values, onEdit, showDividers = false }) {
+  const [expandedItems, setExpandedItems] = useState(new Set());
+  const populated = (values || [])
+    .map((value, sourceIndex) => ({ raw: String(value || ""), display: truncateOverviewText(value), sourceIndex }))
+    .filter((value) => Boolean(value.display));
+  if (populated.length === 0) return null;
+
+  const toggleExpanded = (index) => {
+    setExpandedItems((current) => {
+      const next = new Set(current);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      return next;
+    });
+  };
+
+  return (
+    <div className="space-y-1">
+      <span className="text-[9px] font-semibold uppercase tracking-wide text-gray-400">{label}</span>
+      <div className="space-y-2">
+        {populated.map((value, displayIndex) => {
+          const isExpanded = expandedItems.has(value.sourceIndex);
+          const canExpand = value.raw.trim().length > OVERVIEW_COPY_PREVIEW_LIMIT;
+
+          return (
+            <div
+              key={`${label}-${value.sourceIndex}`}
+              className={cn(showDividers && displayIndex > 0 && "border-t border-gray-200 pt-2")}
+            >
+              <div className="group/overview-value flex items-start gap-1">
+                <p className="max-w-[18rem] flex-1 whitespace-pre-wrap break-words text-[11px] leading-4 text-gray-700">
+                  {isExpanded ? value.raw.trim() : value.display}
+                </p>
+                {onEdit && (
+                  <OverviewInlineEditor
+                    value={value.raw}
+                    onSave={(nextValue) => onEdit(value.sourceIndex, nextValue)}
+                    label={label}
+                    multiline
+                  />
+                )}
+              </div>
+              {canExpand && (
+                <button
+                  type="button"
+                  onClick={() => toggleExpanded(value.sourceIndex)}
+                  className="mt-0.5 bg-transparent p-0 text-[10px] font-medium text-blue-600 shadow-none hover:text-blue-700 hover:underline"
+                >
+                  {isExpanded ? "View less" : "View more"}
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 const extractFolderId = (url) => {
   const idMatch = url.match(/[-\w]{25,}/);
   return idMatch ? idMatch[0] : null;
@@ -1043,6 +1238,7 @@ export default function AdCreationForm({
   adAccountSettings,
   adNameFormulaV2,
   setAdNameFormulaV2,
+  teamId: teamIdProp,
   campaignObjective,
   selectedFiles,
   setSelectedFiles,
@@ -1060,6 +1256,7 @@ export default function AdCreationForm({
   setPartnerIgAccountId,
   partnerFbPageId,
   setPartnerFbPageId,
+  partnerName,
   setPartnerName,
   partnershipIdentityMode,
   setPartnershipIdentityMode,
@@ -1158,7 +1355,9 @@ export default function AdCreationForm({
   const [uploadingToS3, setUploadingToS3] = useState(false);
 
   const [pageSearchValue, setPageSearchValue] = useState("");
-  const { isLoggedIn, userId } = useAuth();
+  const { isLoggedIn, userId, teamId: authTeamId } = useAuth();
+  const teamId = teamIdProp || authTeamId || "";
+  const showAdSetNameVariable = AD_SET_NAME_VARIABLE_TEAM_IDS.includes(String(teamId));
   const showPixelTrackingOverride = PIXEL_TRACKING_FORM_ALLOWED_USER_IDS.includes(String(userId));
   const { showMessenger } = useIntercom();
   const [showMetaActionHelp, setShowMetaActionHelp] = useState(false);
@@ -1462,6 +1661,7 @@ export default function AdCreationForm({
   const [selectedForDelete, setSelectedForDelete] = useState(new Set());
   const [isDeletingTemplates, setIsDeletingTemplates] = useState(false);
   const [showDeleteAllVariantsDialog, setShowDeleteAllVariantsDialog] = useState(false);
+  const [showVariantOverview, setShowVariantOverview] = useState(false);
   const wasPhoneCallCtaAutoAppliedRef = useRef(false);
 
   const [activeIgCaptionIndex, setActiveIgCaptionIndex] = useState(0);
@@ -1593,6 +1793,8 @@ export default function AdCreationForm({
       descriptions,
       messages,
       link,
+      customLink,
+      showCustomLink,
       destinationType,
       instantExperienceId,
       cta,
@@ -1615,6 +1817,7 @@ export default function AdCreationForm({
       isPartnershipAd,
       partnerIgAccountId,
       partnerFbPageId,
+      partnerName,
       partnershipIdentityMode,
       partnershipPrimaryIdentity,
       adNameFormulaV2,
@@ -1630,6 +1833,8 @@ export default function AdCreationForm({
       descriptions,
       messages,
       link,
+      customLink,
+      showCustomLink,
       destinationType,
       instantExperienceId,
       cta,
@@ -1652,6 +1857,7 @@ export default function AdCreationForm({
       isPartnershipAd,
       partnerIgAccountId,
       partnerFbPageId,
+      partnerName,
       partnershipIdentityMode,
       partnershipPrimaryIdentity,
       adNameFormulaV2,
@@ -1796,12 +2002,12 @@ export default function AdCreationForm({
         const defaultOnly =
           variantId === "default"
             ? [
-                ...files,
-                ...driveFiles.map((file) => ({ ...file, isDrive: true })),
-                ...dropboxFiles.map((file) => ({ ...file, isDropbox: true })),
-                ...(frameioFiles || []).map((file) => ({ ...file, isFrameio: true })),
-                ...importedFiles.map((file) => ({ ...file, isMetaLibrary: true })),
-              ].filter((file) => !groupedFileIds.has(getFileId(file))).length
+              ...files,
+              ...driveFiles.map((file) => ({ ...file, isDrive: true })),
+              ...dropboxFiles.map((file) => ({ ...file, isDropbox: true })),
+              ...(frameioFiles || []).map((file) => ({ ...file, isFrameio: true })),
+              ...importedFiles.map((file) => ({ ...file, isMetaLibrary: true })),
+            ].filter((file) => !groupedFileIds.has(getFileId(file))).length
             : 0;
 
         return variantGroups.length + (isFlexLikeAdType && fileGroups.length === 0 ? ungroupedCount : defaultOnly) + postsForVariant;
@@ -1828,12 +2034,191 @@ export default function AdCreationForm({
     ],
   );
 
+  const variantOverviewRows = useMemo(() => {
+    const overviewFiles = [
+      ...files,
+      ...driveFiles.map((file) => ({ ...file, isDrive: true })),
+      ...dropboxFiles.map((file) => ({ ...file, isDropbox: true })),
+      ...(frameioFiles || []).map((file) => ({ ...file, isFrameio: true })),
+      ...importedFiles.map((file) => ({ ...file, isMetaLibrary: true })),
+    ];
+    const fileById = new Map(overviewFiles.map((file) => [String(getFileId(file)), file]));
+    const overviewGroups = fileGroups.map((group, index) => ({
+      id: Array.isArray(group) ? `group-${index}` : String(group.id),
+      index,
+      fileIds: getGroupFileIds(group).map(String),
+    }));
+    const groupedIds = new Set(overviewGroups.flatMap((group) => group.fileIds));
+    const totalOverviewMedia = overviewFiles.length + importedPosts.length + selectedIgOrganicPosts.length;
+
+    return variants.map((variant) => {
+      const snapshot = getVariantState(variant.id) || {};
+      const mediaItems = [];
+
+      if (totalOverviewMedia === 1) {
+        const onlyFile = overviewFiles[0] || importedPosts[0] || selectedIgOrganicPosts[0];
+        if (onlyFile) mediaItems.push({ label: "Ad 1", files: [onlyFile], isGroup: false });
+      } else {
+        overviewGroups
+          .filter((group) => (groupVariantMap[group.id] || "default") === variant.id)
+          .forEach((group) => {
+            mediaItems.push({
+              label: `Group ${group.index + 1}`,
+              files: group.fileIds.map((fileId) => fileById.get(fileId)).filter(Boolean),
+              isGroup: true,
+            });
+          });
+
+        const assignedUngrouped = overviewFiles.filter((file) => {
+          const fileId = String(getFileId(file));
+          return !groupedIds.has(fileId) && (fileVariantMap[fileId] || "default") === variant.id;
+        });
+        if ((isCarouselAd || isFlexLikeAdType) && assignedUngrouped.length > 0) {
+          mediaItems.push({ label: "Ad", files: assignedUngrouped, isGroup: false });
+        } else {
+          assignedUngrouped.forEach((file) => mediaItems.push({ label: `Ad ${mediaItems.length + 1}`, files: [file], isGroup: false }));
+        }
+
+        importedPosts
+          .filter((post) => (postVariantMap[`post:${post.id}`] || "default") === variant.id)
+          .forEach((post) => mediaItems.push({ label: `Ad ${mediaItems.length + 1}`, files: [post], isGroup: false }));
+        selectedIgOrganicPosts
+          .filter((post) => (postVariantMap[`igpost:${post.source_instagram_media_id}`] || "default") === variant.id)
+          .forEach((post) => mediaItems.push({ label: `Ad ${mediaItems.length + 1}`, files: [post], isGroup: false }));
+      }
+
+      const selectedCampaignIds = Array.isArray(snapshot.selectedCampaign)
+        ? snapshot.selectedCampaign
+        : snapshot.selectedCampaign
+          ? [snapshot.selectedCampaign]
+          : [];
+      const snapshotAdSets = Array.isArray(snapshot.adSets) ? snapshot.adSets : adSets;
+      const campaignNames = selectedCampaignIds.map(
+        (campaignId) =>
+          campaigns.find((campaign) => String(campaign.id) === String(campaignId))?.name ||
+          snapshotAdSets.find((entry) => String(entry.campaignId) === String(campaignId))?.campaignName ||
+          campaignId,
+      );
+      const adSetNames = snapshot.duplicateAdSet
+        ? [(snapshot.newAdSetName || "New ad set").trim()]
+        : (snapshot.selectedAdSets || []).map(
+            (adSetId) => snapshotAdSets.find((entry) => String(entry.id) === String(adSetId))?.name || adSetId,
+          );
+      const selectedPage = pages.find((page) => String(page.id) === String(snapshot.pageId));
+      const selectedInstagram = pages
+        .map((page) => page.instagramAccount)
+        .find((account) => String(account?.id) === String(snapshot.instagramAccountId));
+      const selectedOverviewPartner = availablePartners.find(
+        (partner) => String(partner.creatorIgId) === String(snapshot.partnerIgAccountId),
+      );
+
+      return {
+        id: variant.id,
+        name: variant.name,
+        campaignNames,
+        adSetNames,
+        pageName: selectedPage?.name || snapshot.pageId || "—",
+        instagramName: selectedInstagram?.username || snapshot.instagramAccountId || "",
+        isPartnershipAd: Boolean(snapshot.isPartnershipAd),
+        partnerName: snapshot.partnerName
+          ? `@${String(snapshot.partnerName).replace(/^@/, "")}`
+          : selectedOverviewPartner?.creatorUsername
+            ? `@${selectedOverviewPartner.creatorUsername}`
+            : snapshot.partnerIgAccountId || "",
+        messages: snapshot.messages || [],
+        headlines: snapshot.headlines || [],
+        descriptions: snapshot.descriptions || [],
+        links: (snapshot.link || [])
+          .map((value, index) => ({ value, index }))
+          .filter((entry) => Boolean(entry.value)),
+        cta: snapshot.cta || "LEARN_MORE",
+        mediaItems,
+      };
+    });
+  }, [
+    adSets,
+    availablePartners,
+    campaigns,
+    driveFiles,
+    dropboxFiles,
+    fileGroups,
+    fileVariantMap,
+    files,
+    frameioFiles,
+    getVariantState,
+    groupVariantMap,
+    importedFiles,
+    importedPosts,
+    isCarouselAd,
+    isFlexLikeAdType,
+    pages,
+    postVariantMap,
+    selectedIgOrganicPosts,
+    variants,
+  ]);
+  const hasPartnershipVariants = variantOverviewRows.some((row) => row.isPartnershipAd);
+
+  const updateVariantOverviewValue = useCallback(
+    (variantId, field, index, value) => {
+      const updateIndexedValue = (currentValues = []) => {
+        const nextValues = [...currentValues];
+        while (nextValues.length <= index) nextValues.push("");
+        nextValues[index] = value;
+        return nextValues;
+      };
+
+      if (variantId === activeVariantId) {
+        if (field === "messages") setMessages((current) => updateIndexedValue(current));
+        if (field === "headlines") setHeadlines((current) => updateIndexedValue(current));
+        if (field === "descriptions") setDescriptions((current) => updateIndexedValue(current));
+        if (field === "link") {
+          setLink((current) => updateIndexedValue(current));
+          setShowCustomLink(true);
+          if (index === 0) setCustomLink(value);
+        }
+        return;
+      }
+
+      const currentSnapshot = getVariantState(variantId) || {};
+      setVariants((currentVariants) =>
+        currentVariants.map((variant) => {
+          if (variant.id !== variantId) return variant;
+
+          const nextSnapshot = {
+            ...currentSnapshot,
+            [field]: updateIndexedValue(currentSnapshot[field]),
+          };
+          if (field === "link") {
+            nextSnapshot.showCustomLink = true;
+            if (index === 0) nextSnapshot.customLink = value;
+          }
+
+          return { ...variant, snapshot: nextSnapshot };
+        }),
+      );
+    },
+    [
+      activeVariantId,
+      getVariantState,
+      setCustomLink,
+      setDescriptions,
+      setHeadlines,
+      setLink,
+      setMessages,
+      setShowCustomLink,
+      setVariants,
+    ],
+  );
+
   const captureFormDataAsJob = useCallback(
     (variantId = "default") => {
       const variantState = getVariantState(variantId);
       if (!variantState) return null;
 
       const variantAdSets = Array.isArray(variantState.adSets) ? variantState.adSets : adSets;
+      const variantAdSetName = variantState.duplicateAdSet
+        ? (variantState.newAdSetName || "").trim()
+        : variantAdSets.find((entry) => String(entry.id) === String((variantState.selectedAdSets || [])[0]))?.name || "";
 
       const totalMediaCount =
         files.length +
@@ -1932,7 +2317,11 @@ export default function AdCreationForm({
         partnershipIdentityMode: variantState.partnershipIdentityMode || "dynamic",
         partnershipPrimaryIdentity: variantState.partnershipPrimaryIdentity || "brand",
         adNameFormulaV2: variantState.adNameFormulaV2
-          ? { ...variantState.adNameFormulaV2, selectedTemplate: variantState.selectedTemplate || "" }
+          ? {
+              ...variantState.adNameFormulaV2,
+              selectedTemplate: variantState.selectedTemplate || "",
+              adSetNameContext: variantAdSetName,
+            }
           : null,
         adValues: variantState.adValues ? JSON.parse(JSON.stringify(variantState.adValues)) : {},
         adScheduleStartTime: variantState.adScheduleStartTime || null,
@@ -1941,7 +2330,7 @@ export default function AdCreationForm({
         adSetDisplayName: variantState.duplicateAdSet
           ? variantState.newAdSetName || "New Ad Set"
           : (variantState.selectedAdSets || []).length === 1
-            ? variantAdSets.find((entry) => entry.id === variantState.selectedAdSets[0])?.name || "selected ad set"
+            ? variantAdSetName || "selected ad set"
             : `${(variantState.selectedAdSets || []).length} adsets`,
       };
 
@@ -3541,10 +3930,10 @@ export default function AdCreationForm({
     multiple: true,
     accept: isCatalogueAd
       ? {
-          "image/jpeg": [".jpg", ".jpeg"],
-          "image/png": [".png"],
-          "text/csv": [".csv"],
-        }
+        "image/jpeg": [".jpg", ".jpeg"],
+        "image/png": [".png"],
+        "text/csv": [".csv"],
+      }
       : undefined,
   });
 
@@ -4006,8 +4395,8 @@ export default function AdCreationForm({
   // For OUTCOME_SALES / OUTCOME_LEADS campaigns, BOOK_NOW must be sent to the server as BOOK_TRAVEL.
   const resolveCtaForServer = (ctaValue) =>
     ctaValue === "BOOK_NOW" &&
-    campaignObjective.length > 0 &&
-    campaignObjective.every((obj) => obj === "OUTCOME_SALES" || obj === "OUTCOME_LEADS" || obj === "OUTCOME_AWARENESS" || obj === "LINK_CLICKS")
+      campaignObjective.length > 0 &&
+      campaignObjective.every((obj) => obj === "OUTCOME_SALES" || obj === "OUTCOME_LEADS" || obj === "OUTCOME_AWARENESS" || obj === "LINK_CLICKS")
       ? "BOOK_TRAVEL"
       : ctaValue;
 
@@ -4163,7 +4552,16 @@ export default function AdCreationForm({
         .replace(/\{\{Date\(([^)]+)\)\}\}/gi, (match, fmt) => formatDate(fmt))
         .replace(/\{\{Iteration\}\}/gi, String(iterationIndex + 1).padStart(2, "0"))
         .replace(/\{\{URL Slug\}\}/gi, urlSlug)
-        .replace(/\{\{Ad Type\}\}/gi, adTypeLabel);
+        .replace(/\{\{Ad Type\}\}/gi, adTypeLabel)
+        .replace(/\{\{Ad Set Name\}\}/gi, () => {
+          if (!showAdSetNameVariable) return "";
+          if (Object.prototype.hasOwnProperty.call(formulaToUse, "adSetNameContext")) {
+            return formulaToUse.adSetNameContext || "";
+          }
+          if (duplicateAdSet) return newAdSetName?.trim() || "";
+          const selectedAdSet = adSets.find((entry) => String(entry.id) === String(selectedAdSets[0]));
+          return selectedAdSet?.name || "";
+        });
       const templateNameForFormula = formulaToUse.selectedTemplate || selectedTemplate;
       const templateHashReplacement =
         isTemplateLinkSyncUser && templateNameForFormula && defaultTemplateName
@@ -4183,7 +4581,20 @@ export default function AdCreationForm({
 
       return adName.trim() || "Ad Generated Through Blip";
     },
-    [adNameFormulaV2, adValues.dateType, computeAdName, defaultTemplateName, isTemplateLinkSyncUser, selectedTemplate, userId],
+    [
+      adNameFormulaV2,
+      adSets,
+      adValues.dateType,
+      computeAdName,
+      defaultTemplateName,
+      duplicateAdSet,
+      isTemplateLinkSyncUser,
+      newAdSetName,
+      selectedAdSets,
+      selectedTemplate,
+      showAdSetNameVariable,
+      userId,
+    ],
   );
 
   const adNamePreviewFile = useMemo(() => {
@@ -6154,6 +6565,13 @@ export default function AdCreationForm({
         if (jobProductExtensionProductSetId && !formData.has("productExtensionProductSetId")) {
           formData.append("productExtensionProductSetId", jobProductExtensionProductSetId);
         }
+        // One stable id per ad. Every create-ad request goes through here, so this
+        // covers all ad types. The id is fixed at queue time (not per attempt), so a
+        // retry — or a re-send of an in-flight request by the network layer — carries
+        // the same id and the server can collapse it instead of making a second ad.
+        if (!formData.has("clientRequestId")) {
+          formData.append("clientRequestId", uuidv4());
+        }
         promises.push(createAdApiCall(formData, API_BASE_URL, signal));
         promiseMetadata.push({
           adSetId: formData.get("adSetId"),
@@ -6258,7 +6676,13 @@ export default function AdCreationForm({
           const template = jobImportedPostAdNames[key] !== undefined ? jobImportedPostAdNames[key] : post?.ad_name || "";
 
           if (template && /\{\{[^}]+\}\}/.test(template)) {
-            return computeAdNameFromFormula({ name: post.ad_name }, postIndex, link[0], { rawInput: template }, null);
+            return computeAdNameFromFormula(
+              { name: post.ad_name },
+              postIndex,
+              link[0],
+              { ...(jobData.formData.adNameFormulaV2 || {}), rawInput: template },
+              null,
+            );
           }
           return template;
         };
@@ -6396,16 +6820,16 @@ export default function AdCreationForm({
           // Compute ad name for this group
           const firstFile = group
             ? (() => {
-                const firstId = group[0];
-                return (
-                  files.find((f) => getFileId(f) === firstId) ||
-                  driveFiles.find((f) => f.id === firstId) ||
-                  dropboxFiles.find((f) => f.dropboxId === firstId) ||
-                  frameioFiles.find((f) => f.frameioId === firstId) ||
-                  (importedFiles || []).find((f) => (f.type === "image" && f.hash === firstId) || (f.type === "video" && f.id === firstId)) ||
-                  files[0]
-                );
-              })()
+              const firstId = group[0];
+              return (
+                files.find((f) => getFileId(f) === firstId) ||
+                driveFiles.find((f) => f.id === firstId) ||
+                dropboxFiles.find((f) => f.dropboxId === firstId) ||
+                frameioFiles.find((f) => f.frameioId === firstId) ||
+                (importedFiles || []).find((f) => (f.type === "image" && f.hash === firstId) || (f.type === "video" && f.id === firstId)) ||
+                files[0]
+              );
+            })()
             : files[0] || driveFiles[0] || dropboxFiles[0] || frameioFiles[0] || (importedFiles?.[0] ? { name: importedFiles[0].name } : null);
 
           const carouselAdName = computeAdNameFromFormula(firstFile, groupIndex, link[0], jobData.formData.adNameFormulaV2, adType);
@@ -7568,6 +7992,11 @@ export default function AdCreationForm({
           const formula = {
             ...(snapshot.adNameFormulaV2 || {}),
             selectedTemplate: snapshot.selectedTemplate || "",
+            adSetNameContext: snapshot.duplicateAdSet
+              ? (snapshot.newAdSetName || "").trim()
+              : (snapshot.adSets || adSets).find(
+                  (entry) => String(entry.id) === String((snapshot.selectedAdSets || [])[0]),
+                )?.name || "",
           };
           const destination = snapshot.link?.[0] || "";
 
@@ -7803,38 +8232,38 @@ export default function AdCreationForm({
   const hasPublishBlockingIssueBeforePage =
     variants.length > 1
       ? !isLoggedIn ||
-        (!isCatalogueAd &&
-          files.length === 0 &&
-          driveFiles.length === 0 &&
-          dropboxFiles.length === 0 &&
-          frameioFiles.length === 0 &&
-          importedPosts.length === 0 &&
-          importedFiles.length === 0 &&
-          selectedIgOrganicPosts.length === 0) ||
-        hasCatalogueInvalidMedia ||
-        selectedFiles.size > 0 ||
-        (!isCarouselAd && hasDuplicates)
+      (!isCatalogueAd &&
+        files.length === 0 &&
+        driveFiles.length === 0 &&
+        dropboxFiles.length === 0 &&
+        frameioFiles.length === 0 &&
+        importedPosts.length === 0 &&
+        importedFiles.length === 0 &&
+        selectedIgOrganicPosts.length === 0) ||
+      hasCatalogueInvalidMedia ||
+      selectedFiles.size > 0 ||
+      (!isCarouselAd && hasDuplicates)
       : !isLoggedIn ||
-        (!isCatalogueAd &&
-          files.length === 0 &&
-          driveFiles.length === 0 &&
-          dropboxFiles.length === 0 &&
-          frameioFiles.length === 0 &&
-          importedPosts.length === 0 &&
-          importedFiles.length === 0 &&
-          selectedIgOrganicPosts.length === 0) ||
-        (duplicateAdSet && (!newAdSetName || newAdSetName.trim() === "")) ||
-        (adType === "carousel" && files.length + driveFiles.length + importedFiles.length + dropboxFiles.length + frameioFiles.length < 2) ||
-        (isFlexLikeAdType &&
-          fileGroups.length === 0 &&
-          files.length + driveFiles.length + importedFiles.length + dropboxFiles.length + frameioFiles.length > 10) ||
-        (isCatalogueAd && !hasCatalogueEligibleAdSets) ||
-        hasCatalogueInvalidMedia ||
-        (showShopDestinationSelector && !selectedShopDestination) ||
-        isMissingDestinationValue ||
-        selectedFiles.size > 0 ||
-        (shouldShowLeadFormSelector && !selectedForm) ||
-        (!isCarouselAd && hasDuplicates);
+      (!isCatalogueAd &&
+        files.length === 0 &&
+        driveFiles.length === 0 &&
+        dropboxFiles.length === 0 &&
+        frameioFiles.length === 0 &&
+        importedPosts.length === 0 &&
+        importedFiles.length === 0 &&
+        selectedIgOrganicPosts.length === 0) ||
+      (duplicateAdSet && (!newAdSetName || newAdSetName.trim() === "")) ||
+      (adType === "carousel" && files.length + driveFiles.length + importedFiles.length + dropboxFiles.length + frameioFiles.length < 2) ||
+      (isFlexLikeAdType &&
+        fileGroups.length === 0 &&
+        files.length + driveFiles.length + importedFiles.length + dropboxFiles.length + frameioFiles.length > 10) ||
+      (isCatalogueAd && !hasCatalogueEligibleAdSets) ||
+      hasCatalogueInvalidMedia ||
+      (showShopDestinationSelector && !selectedShopDestination) ||
+      isMissingDestinationValue ||
+      selectedFiles.size > 0 ||
+      (shouldShowLeadFormSelector && !selectedForm) ||
+      (!isCarouselAd && hasDuplicates);
   const publishDisabled = hasPublishBlockingIssueBeforePage || isAdSetMissing || isPageMissing || Boolean(adSetTimingIssue);
 
   const showImportedPostMode = isDuplicationMode && importedPosts.length > 0;
@@ -7878,14 +8307,15 @@ export default function AdCreationForm({
         variant="home"
         customVariables={showImportedPostMode ? [] : adAccountSettings.customVariables || []}
         allowedVariableIds={showImportedPostMode ? ["dateDefault", "dateMonthName", "dateCustom", "iteration"] : null}
+        showAdSetNameVariable={!showImportedPostMode && showAdSetNameVariable}
         postSwitcher={
           showImportedPostMode
             ? {
-                currentIndex: importedSafeIndex,
-                total: importedPosts.length,
-                onPrev: () => setActiveImportedPostIndex((prev) => Math.max(0, prev - 1)),
-                onNext: () => setActiveImportedPostIndex((prev) => Math.min(importedPosts.length - 1, prev + 1)),
-              }
+              currentIndex: importedSafeIndex,
+              total: importedPosts.length,
+              onPrev: () => setActiveImportedPostIndex((prev) => Math.max(0, prev - 1)),
+              onNext: () => setActiveImportedPostIndex((prev) => Math.min(importedPosts.length - 1, prev + 1)),
+            }
             : null
         }
       />
@@ -7895,12 +8325,12 @@ export default function AdCreationForm({
           <Label className="text-xs text-gray-500">
             Ad Name Preview:{" "}
             {files.length > 0 ||
-            driveFiles.length > 0 ||
-            dropboxFiles.length > 0 ||
-            frameioFiles.length > 0 ||
-            importedFiles.length > 0 ||
-            importedPosts.length > 0 ||
-            selectedIgOrganicPosts.length > 0
+              driveFiles.length > 0 ||
+              dropboxFiles.length > 0 ||
+              frameioFiles.length > 0 ||
+              importedFiles.length > 0 ||
+              importedPosts.length > 0 ||
+              selectedIgOrganicPosts.length > 0
               ? computeAdNameFromFormula(adNamePreviewFile, 0, link[0], null, adType)
               : "Upload a file to see example"}
           </Label>
@@ -7985,8 +8415,7 @@ export default function AdCreationForm({
                         <div className="flex-1 min-w-0 overflow-hidden">
                           <p
                             style={{ overflowWrap: "anywhere" }}
-                            className={`text-sm break-words ${
-                              job.status === "cancelled"
+                            className={`text-sm break-words ${job.status === "cancelled"
                                 ? "text-orange-500"
                                 : job.status === "error"
                                   ? "text-red-600"
@@ -7995,7 +8424,7 @@ export default function AdCreationForm({
                                     : job.status === "retry"
                                       ? "text-orange-600"
                                       : "text-gray-700"
-                            }`}
+                              }`}
                           >
                             {job.message}
                           </p>
@@ -9266,9 +9695,8 @@ export default function AdCreationForm({
                                     multiline
                                     minRows={2}
                                     maxRows={10}
-                                    className={`${formTextareaChrome} ${
-                                      duplicateIndices.messages.has(index) ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]" : ""
-                                    }`}
+                                    className={`${formTextareaChrome} ${duplicateIndices.messages.has(index) ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]" : ""
+                                      }`}
                                     style={{
                                       scrollbarWidth: "thin",
                                       scrollbarColor: "#c7c7c7 transparent",
@@ -9288,9 +9716,8 @@ export default function AdCreationForm({
                                     disabled={!isLoggedIn}
                                     minRows={2}
                                     maxRows={10}
-                                    className={`${formTextareaChrome} ${
-                                      duplicateIndices.messages.has(index) ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]" : ""
-                                    }`}
+                                    className={`${formTextareaChrome} ${duplicateIndices.messages.has(index) ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]" : ""
+                                      }`}
                                     style={{
                                       scrollbarWidth: "thin",
                                       scrollbarColor: "#c7c7c7 transparent",
@@ -9381,9 +9808,8 @@ export default function AdCreationForm({
                                   }}
                                   minRows={1}
                                   maxRows={10}
-                                  className={`${formTextareaChrome} ${
-                                    duplicateIndices.headlines.has(index) ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]" : ""
-                                  }`}
+                                  className={`${formTextareaChrome} ${duplicateIndices.headlines.has(index) ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]" : ""
+                                    }`}
                                   style={{
                                     scrollbarWidth: "thin",
                                     scrollbarColor: "#c7c7c7 transparent",
@@ -9405,9 +9831,8 @@ export default function AdCreationForm({
                                   }}
                                   minRows={1}
                                   maxRows={10}
-                                  className={`${formTextareaChrome} ${
-                                    duplicateIndices.headlines.has(index) ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]" : ""
-                                  }`}
+                                  className={`${formTextareaChrome} ${duplicateIndices.headlines.has(index) ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]" : ""
+                                    }`}
                                   style={{
                                     scrollbarWidth: "thin",
                                     scrollbarColor: "#c7c7c7 transparent",
@@ -9505,9 +9930,8 @@ export default function AdCreationForm({
                                           onValueChange={(nextValue) => updateField(setDescriptions, descriptions, index, nextValue)}
                                           minRows={1}
                                           maxRows={10}
-                                          className={`${formTextareaChrome} ${
-                                            duplicateIndices.descriptions.has(index) ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]" : ""
-                                          } ${isInactivePlacementDescription ? "!bg-gray-100 text-gray-500 cursor-not-allowed" : ""}`}
+                                          className={`${formTextareaChrome} ${duplicateIndices.descriptions.has(index) ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]" : ""
+                                            } ${isInactivePlacementDescription ? "!bg-gray-100 text-gray-500 cursor-not-allowed" : ""}`}
                                           style={{
                                             scrollbarWidth: "thin",
                                             scrollbarColor: "#c7c7c7 transparent",
@@ -9522,9 +9946,8 @@ export default function AdCreationForm({
                                           onChange={(e) => updateField(setDescriptions, descriptions, index, e.target.value)}
                                           minRows={1}
                                           maxRows={10}
-                                          className={`${formTextareaChrome} ${
-                                            duplicateIndices.descriptions.has(index) ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]" : ""
-                                          } ${isInactivePlacementDescription ? "!bg-gray-100 text-gray-500 cursor-not-allowed" : ""}`}
+                                          className={`${formTextareaChrome} ${duplicateIndices.descriptions.has(index) ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]" : ""
+                                            } ${isInactivePlacementDescription ? "!bg-gray-100 text-gray-500 cursor-not-allowed" : ""}`}
                                           style={{
                                             scrollbarWidth: "thin",
                                             scrollbarColor: "#c7c7c7 transparent",
@@ -9624,9 +10047,8 @@ export default function AdCreationForm({
                             type="button"
                             disabled={activeIgCaptionIndex === 0}
                             onClick={() => setActiveIgCaptionIndex((prev) => prev - 1)}
-                            className={`p-0.5 rounded transition-colors ${
-                              activeIgCaptionIndex === 0 ? "text-gray-300 cursor-not-allowed" : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
-                            }`}
+                            className={`p-0.5 rounded transition-colors ${activeIgCaptionIndex === 0 ? "text-gray-300 cursor-not-allowed" : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                              }`}
                           >
                             <ChevronLeft className="w-3.5 h-3.5" />
                           </button>
@@ -9634,11 +10056,10 @@ export default function AdCreationForm({
                             type="button"
                             disabled={activeIgCaptionIndex === selectedIgOrganicPosts.length - 1}
                             onClick={() => setActiveIgCaptionIndex((prev) => prev + 1)}
-                            className={`p-0.5 rounded transition-colors ${
-                              activeIgCaptionIndex === selectedIgOrganicPosts.length - 1
+                            className={`p-0.5 rounded transition-colors ${activeIgCaptionIndex === selectedIgOrganicPosts.length - 1
                                 ? "text-gray-300 cursor-not-allowed"
                                 : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
-                            }`}
+                              }`}
                           >
                             <ChevronRight className="w-3.5 h-3.5" />
                           </button>
@@ -10255,9 +10676,8 @@ export default function AdCreationForm({
                   {uploadSources.includes("local") && (
                     <div
                       {...getRootProps()}
-                      className={`group cursor-pointer border-2 border-dashed rounded-2xl p-6 text-center transition-colors ${
-                        isDragActive ? "border-primary bg-primary/5" : "border-gray-300 hover:border-primary/50"
-                      }`}
+                      className={`group cursor-pointer border-2 border-dashed rounded-2xl p-6 text-center transition-colors ${isDragActive ? "border-primary bg-primary/5" : "border-gray-300 hover:border-primary/50"
+                        }`}
                     >
                       <input {...getInputProps()} disabled={!isLoggedIn || isImportingCsv} />
                       <div className="flex flex-col items-center gap-2">
@@ -10347,7 +10767,7 @@ export default function AdCreationForm({
                                       ? handleFrameioClick
                                       : id === "drafts"
                                         ? () => setDraftsModalOpen(true)
-                                        : () => {};
+                                        : () => { };
 
                             const draftDisabled = id === "drafts" && !selectedAdAccount;
                             const sourceButton = renderButton(src, clickHandler, draftDisabled);
@@ -11167,8 +11587,7 @@ export default function AdCreationForm({
         </div>
       )}
       {variants.length > 1 && (
-        <TooltipProvider delayDuration={0}>
-          <div className="fixed bottom-6 left-1/2 z-40 flex max-w-[calc(100vw-1rem)] -translate-x-1/2 items-center gap-2 rounded-full border border-black bg-black px-2 py-2 text-white shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-300">
+        <div className="fixed bottom-6 left-1/2 z-40 flex max-w-[calc(100vw-1rem)] -translate-x-1/2 items-center gap-2 rounded-full border border-black bg-black px-2 py-2 text-white shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-300">
             <ScrollArea type="always" className={cn("rounded-full", shouldScrollVariantPicker && "w-[34rem] max-w-[calc(100vw-9rem)] pb-2")}>
               <div className="flex w-max items-center gap-1 pr-1">
                 {variants.map((variant) => {
@@ -11195,8 +11614,8 @@ export default function AdCreationForm({
                         <button
                           type="button"
                           onClick={() => handleDeleteVariant(variant.id)}
+                          aria-label={`Delete ${variant.name}`}
                           className="ml-0.5 rounded-full p-1 text-white/60 opacity-0 transition group-hover:opacity-100 hover:bg-white/10 hover:text-white"
-                          title="Delete variant"
                         >
                           <X className="h-3 w-3" />
                         </button>
@@ -11207,34 +11626,201 @@ export default function AdCreationForm({
               </div>
             </ScrollArea>
             <div className="flex shrink-0 items-center gap-1 border-l border-white/50 pl-2">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    onClick={handleAddVariant}
-                    className="rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white"
-                  >
-                    <Plus className="h-4 w-4" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>Add variant</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    onClick={() => setShowDeleteAllVariantsDialog(true)}
-                    className="rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>Delete all variants</TooltipContent>
-              </Tooltip>
+              <button
+                type="button"
+                onClick={handleAddVariant}
+                aria-label="Add variant"
+                className="rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white"
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowVariantOverview(true)}
+                aria-label="View variant overview"
+                className="rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white"
+              >
+                <Eye className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowDeleteAllVariantsDialog(true)}
+                aria-label="Delete all variants"
+                className="rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
             </div>
-          </div>
-        </TooltipProvider>
+        </div>
       )}
+      <Dialog open={showVariantOverview} onOpenChange={setShowVariantOverview}>
+        <DialogContent
+          disableSlide
+          overlayClassName="bg-black/35"
+          className="flex h-[min(86vh,900px)] w-[min(96vw,1500px)] max-w-none flex-col gap-0 overflow-hidden rounded-[32px] border-gray-200 bg-white p-0 sm:rounded-[32px]"
+        >
+          <DialogHeader className="shrink-0 border-b border-gray-200 px-6 py-5 pr-14">
+            <DialogTitle>Variant overview</DialogTitle>
+            <DialogDescription>Quickly compare targeting, copy, destinations, and assigned creative across every variant.</DialogDescription>
+          </DialogHeader>
+          <div className="min-h-0 flex-1 overflow-auto bg-gray-50/50">
+            <table className={cn("w-full border-separate border-spacing-0 text-left", hasPartnershipVariants ? "min-w-[1280px]" : "min-w-[1120px]")}>
+              <thead className="sticky top-0 z-20 bg-gray-100/95 text-[10px] uppercase tracking-wide text-gray-500 backdrop-blur">
+                <tr>
+                  <th className="sticky left-0 z-30 w-44 border-b border-r border-gray-200 bg-gray-100 px-[0.9rem] py-3 font-semibold">Variant</th>
+                  <th className="w-60 border-b border-gray-200 px-[0.9rem] py-3 font-semibold">Campaign / Ad set</th>
+                  <th className="w-48 border-b border-gray-200 px-[0.9rem] py-3 font-semibold">Page / Instagram</th>
+                  {hasPartnershipVariants && <th className="w-40 border-b border-gray-200 px-[0.9rem] py-3 font-semibold">Partnership</th>}
+                  <th className="w-80 border-b border-gray-200 px-[0.9rem] py-3 font-semibold">Copy</th>
+                  <th className="w-64 border-b border-gray-200 px-[0.9rem] py-3 font-semibold">Link / CTA</th>
+                  <th className="min-w-[320px] border-b border-gray-200 px-[0.9rem] py-3 font-semibold">Ads / Groups</th>
+                </tr>
+              </thead>
+              <tbody>
+                {variantOverviewRows.map((row, rowIndex) => (
+                  <tr key={row.id} className="align-top">
+                    <td
+                      className={cn(
+                        "sticky left-0 z-10 border-b border-r border-gray-200 px-[0.9rem] py-4",
+                        rowIndex % 2 === 0 ? "bg-white" : "bg-gray-50",
+                      )}
+                    >
+                      <div className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+                        <VariantDot variantId={row.id} variants={variants} />
+                        <span>{row.name}</span>
+                      </div>
+                      <p className="mt-1 text-[10px] text-gray-400">
+                        {row.mediaItems.length} ad{row.mediaItems.length !== 1 ? "s" : ""}
+                      </p>
+                    </td>
+                    <td className="border-b border-gray-200 bg-white px-[0.9rem] py-4">
+                      <div className="space-y-3">
+                        <div>
+                          <p className="text-[9px] font-semibold uppercase tracking-wide text-gray-400">Campaign</p>
+                          <p className="mt-1 text-xs leading-4 text-gray-800">{row.campaignNames.join(", ") || "—"}</p>
+                        </div>
+                        <div>
+                          <p className="text-[9px] font-semibold uppercase tracking-wide text-gray-400">Ad set</p>
+                          <p className="mt-1 text-xs leading-4 text-gray-800">{row.adSetNames.join(", ") || "—"}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="border-b border-gray-200 bg-white px-[0.9rem] py-4">
+                      <p className="text-xs font-medium text-gray-800">{row.pageName}</p>
+                      {row.instagramName && <p className="mt-1 text-[11px] text-gray-500">@{String(row.instagramName).replace(/^@/, "")}</p>}
+                    </td>
+                    {hasPartnershipVariants && (
+                      <td className="border-b border-gray-200 bg-white px-[0.9rem] py-4">
+                        {row.isPartnershipAd ? (
+                          <div className="space-y-1">
+                            <span className="inline-flex rounded-full bg-violet-50 px-2 py-1 text-[10px] font-medium text-violet-700">Enabled</span>
+                            <p className="break-all text-[11px] leading-4 text-gray-600">{row.partnerName || "Partner selected"}</p>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-400">None</span>
+                        )}
+                      </td>
+                    )}
+                    <td className="border-b border-gray-200 bg-white px-[0.9rem] py-4">
+                      <div className="space-y-3">
+                        <OverviewCopyList
+                          label="Primary text"
+                          values={row.messages}
+                          onEdit={(index, value) => updateVariantOverviewValue(row.id, "messages", index, value)}
+                          showDividers
+                        />
+                        <OverviewCopyList
+                          label="Headlines"
+                          values={row.headlines}
+                          onEdit={(index, value) => updateVariantOverviewValue(row.id, "headlines", index, value)}
+                          showDividers
+                        />
+                        <OverviewCopyList
+                          label="Descriptions"
+                          values={row.descriptions}
+                          onEdit={(index, value) => updateVariantOverviewValue(row.id, "descriptions", index, value)}
+                        />
+                        {row.messages.every((value) => !String(value || "").trim()) &&
+                          row.headlines.every((value) => !String(value || "").trim()) &&
+                          row.descriptions.every((value) => !String(value || "").trim()) && <span className="text-xs text-gray-400">No copy</span>}
+                      </div>
+                    </td>
+                    <td className="border-b border-gray-200 bg-white px-[0.9rem] py-4">
+                      <span className="inline-flex rounded-full bg-gray-100 px-2 py-1 text-[10px] font-semibold text-gray-700">
+                        {String(row.cta)
+                          .toLowerCase()
+                          .split("_")
+                          .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+                          .join(" ")}
+                      </span>
+                      <div className="mt-2 space-y-1">
+                        {row.links.length > 0 ? (
+                          row.links.map((linkEntry) => (
+                            <div key={`${row.id}-link-${linkEntry.index}`} className="group/overview-value flex items-center gap-1">
+                              <p className="max-w-56 flex-1 truncate text-[11px] text-blue-600">
+                                {linkEntry.value}
+                              </p>
+                              <OverviewInlineEditor
+                                value={linkEntry.value}
+                                onSave={(value) => updateVariantOverviewValue(row.id, "link", linkEntry.index, value)}
+                                label="link"
+                              />
+                            </div>
+                          ))
+                        ) : (
+                          <div className="group/overview-value flex items-center gap-1">
+                            <p className="flex-1 text-xs text-gray-400">No link</p>
+                            <OverviewInlineEditor
+                              value=""
+                              onSave={(value) => updateVariantOverviewValue(row.id, "link", 0, value)}
+                              label="link"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="h-1 border-b border-gray-200 bg-white px-[0.9rem] py-4">
+                      {row.mediaItems.length > 0 ? (
+                        <div className="grid h-full grid-cols-2 items-stretch gap-4">
+                          {row.mediaItems.map((item, itemIndex) => (
+                            <div
+                              key={`${row.id}-media-${itemIndex}`}
+                              className={cn(
+                                "flex h-full min-h-[96px] min-w-0 flex-col",
+                                item.isGroup && "col-span-2",
+                                item.isGroup && "rounded-2xl border border-gray-200 bg-gray-50 p-3",
+                              )}
+                            >
+                              <div className={item.isGroup ? "mb-2" : "mb-1.5"}>
+                                <span className="text-[9px] font-semibold uppercase tracking-wide text-gray-500">{item.label}</span>
+                              </div>
+                              <div
+                                className={cn("grid min-h-[72px] flex-1 items-start gap-2", item.files.length === 1 && "h-full")}
+                                style={{ gridTemplateColumns: `repeat(${Math.max(item.files.length, 1)}, minmax(0, 1fr))` }}
+                              >
+                                {item.files.map((file, fileIndex) => (
+                                  <VariantOverviewThumbnail
+                                    key={`${getFileId(file)}-${fileIndex}`}
+                                    file={file}
+                                    videoThumbs={videoThumbs}
+                                    fitToWidth={item.files.length > 1 || item.isGroup}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-gray-400">No media assigned</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </DialogContent>
+      </Dialog>
       {showDeleteAllVariantsDialog && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center">
           <div className="absolute inset-0 bg-black/30" onClick={() => setShowDeleteAllVariantsDialog(false)} />

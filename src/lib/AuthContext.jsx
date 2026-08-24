@@ -16,6 +16,7 @@ export const AuthProvider = ({ children }) => {
   const [profilePicUrl, setProfilePicUrl] = useState("")
   const [authLoading, setAuthLoading] = useState(true);
   const [userId, setUserId] = useState("") // Add this
+  const [teamId, setTeamId] = useState("")
   const [userEmail, setUserEmail] = useState("") // Add this
   const [userCreatedAt, setUserCreatedAt] = useState(null) // Add this
   const [connections, setConnections] = useState(disconnectedProviders)
@@ -27,6 +28,7 @@ export const AuthProvider = ({ children }) => {
     setUserName("")
     setProfilePicUrl("")
     setUserId("")
+    setTeamId("")
     setUserEmail("")
     setUserCreatedAt(null)
     setConnections(disconnectedProviders)
@@ -64,6 +66,7 @@ export const AuthProvider = ({ children }) => {
       setUserName(data.user.name)
       setProfilePicUrl(data.user.profilePicUrl || "")
       setUserId(nextUid)
+      setTeamId(data.user.teamId || data.user.team_id || "")
       setUserEmail(data.user.email)
       setUserCreatedAt(data.user.createdAt)
       setConnections({
@@ -120,6 +123,7 @@ export const AuthProvider = ({ children }) => {
         profilePicUrl,
         handleLogout,
         userId,
+        teamId,
         userEmail,
         userCreatedAt,
         authLoading,

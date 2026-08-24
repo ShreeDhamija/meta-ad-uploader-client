@@ -2165,6 +2165,7 @@ export default function Home() {
                             refreshAdSets={refreshAdSets}
                             adNameFormulaV2={adNameFormulaV2}
                             setAdNameFormulaV2={setAdNameFormulaV2}
+                            teamId={subscriptionData.teamId}
                             campaignObjective={campaignObjective}
                             selectedFiles={selectedFiles}
                             setSelectedFiles={setSelectedFiles}

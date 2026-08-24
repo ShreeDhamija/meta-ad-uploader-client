@@ -48,6 +48,7 @@ const DEFAULT_ENHANCEMENTS = {
   dynamicDescriptions: false,
   siteExtensions: false,
   siteLinks: [],
+  storeLocator: false,
   dynamicOverlays: false,
   highlightCard: false,
   profileEndCard: false,
@@ -59,7 +60,8 @@ const DEFAULT_PIXEL_TRACKING = {
 };
 
 // Pixel Tracking settings are currently limited to these user IDs.
-const PIXEL_TRACKING_ALLOWED_USER_IDS = ["10236978990363167", "10234447959963619", "10163794086700369", "122113601127356755", "10162737276661695"];
+const PIXEL_TRACKING_ALLOWED_USER_IDS = ["10236978990363167", "10234447959963619", "10163794086700369", "122113601127356755", "10162737276661695", "10165258246808665"];
+const AD_SET_NAME_VARIABLE_TEAM_IDS = ["team_1777190523537_hmh1srk8j", "team_1787061148847_j1tmrxprb"];
 
 // Single cache key for draft settings
 const DRAFT_CACHE_KEY = 'adAccountSettings_draft';
@@ -67,8 +69,9 @@ const DRAFT_CACHE_KEY = 'adAccountSettings_draft';
 
 export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAccountPopup, subscriptionData }) {
   const { adAccounts, pages, adAccountsLoading, refetchAdAccounts } = useAppData()
-  const { userId } = useAuth()
+  const { userId, teamId: authTeamId } = useAuth()
   const showPixelTracking = PIXEL_TRACKING_ALLOWED_USER_IDS.includes(String(userId))
+  const showAdSetNameVariable = AD_SET_NAME_VARIABLE_TEAM_IDS.includes(String(subscriptionData?.teamId || authTeamId || ""))
   const [selectedAdAccount, setSelectedAdAccount] = useState(() => {
     // If there's a preselected account, use that
     if (preselectedAdAccount) return preselectedAdAccount;
@@ -846,6 +849,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
               customVariables={customVariables}
               onCustomVariablesChange={handleCustomVariablesSave}
               hideInfoTooltip
+              showAdSetNameVariable={showAdSetNameVariable}
             />
           </div>
 

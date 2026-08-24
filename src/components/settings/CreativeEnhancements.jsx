@@ -33,6 +33,7 @@ const ENHANCEMENT_SECTIONS = [
             { key: "flexMedia", label: "Flex Media", description: "Adds media you chose for a specific aspect ratio across all placements" },
             { key: "dynamicDescriptions", label: "Dynamic Descriptions", description: "Uses in item information for catalog ads and dynamically chosen descriptions for carousel" },
             { key: "siteExtensions", label: "Add Site Links", description: "Show additional destination links below eligible single image or video ads" },
+            { key: "storeLocator", label: "Store Locator", description: "Show nearby store locations below your ads so people can find your closest shop" },
         ],
     },
     {
