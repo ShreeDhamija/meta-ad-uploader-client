@@ -935,7 +935,7 @@ function VariantOverviewThumbnail({ file, videoThumbs, fitToWidth = false }) {
   );
 }
 
-function OverviewCopyList({ label, values, onEdit }) {
+function OverviewCopyList({ label, values, onEdit, showDividers = false }) {
   const [expandedItems, setExpandedItems] = useState(new Set());
   const populated = (values || [])
     .map((value, sourceIndex) => ({ raw: String(value || ""), display: truncateOverviewText(value), sourceIndex }))
@@ -955,12 +955,15 @@ function OverviewCopyList({ label, values, onEdit }) {
     <div className="space-y-1">
       <span className="text-[9px] font-semibold uppercase tracking-wide text-gray-400">{label}</span>
       <div className="space-y-2">
-        {populated.map((value) => {
+        {populated.map((value, displayIndex) => {
           const isExpanded = expandedItems.has(value.sourceIndex);
           const canExpand = value.raw.trim().length > OVERVIEW_COPY_PREVIEW_LIMIT;
 
           return (
-            <div key={`${label}-${value.sourceIndex}`}>
+            <div
+              key={`${label}-${value.sourceIndex}`}
+              className={cn(showDividers && displayIndex > 0 && "border-t border-gray-200 pt-2")}
+            >
               <div className="group/overview-value flex items-start gap-1">
                 <p className="max-w-[18rem] flex-1 whitespace-pre-wrap break-words text-[11px] leading-4 text-gray-700">
                   {isExpanded ? value.raw.trim() : value.display}
@@ -11724,11 +11727,13 @@ export default function AdCreationForm({
                           label="Primary text"
                           values={row.messages}
                           onEdit={(index, value) => updateVariantOverviewValue(row.id, "messages", index, value)}
+                          showDividers
                         />
                         <OverviewCopyList
                           label="Headlines"
                           values={row.headlines}
                           onEdit={(index, value) => updateVariantOverviewValue(row.id, "headlines", index, value)}
+                          showDividers
                         />
                         <OverviewCopyList
                           label="Descriptions"
@@ -11776,12 +11781,13 @@ export default function AdCreationForm({
                     </td>
                     <td className="h-1 border-b border-gray-200 bg-white px-[0.9rem] py-4">
                       {row.mediaItems.length > 0 ? (
-                        <div className="grid h-full grid-cols-1 items-stretch gap-y-4">
+                        <div className="grid h-full grid-cols-2 items-stretch gap-4">
                           {row.mediaItems.map((item, itemIndex) => (
                             <div
                               key={`${row.id}-media-${itemIndex}`}
                               className={cn(
                                 "flex h-full min-h-[96px] min-w-0 flex-col",
+                                item.isGroup && "col-span-2",
                                 item.isGroup && "rounded-2xl border border-gray-200 bg-gray-50 p-3",
                               )}
                             >
