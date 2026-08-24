@@ -37,6 +37,47 @@ const DEFAULT_PREFILL_PAIRS = [
     { key: "utm_term", value: "__AID_NAME__" }
 ];
 
+// Meta uses {{...}} macros (e.g. {{adset.name}}) — TikTok has no "ad set" concept
+// (its hierarchy is Campaign > Ad Group > Ad) and rejects curly-brace macros outright
+// with "invalid characters". Users managing both platforms often paste/type Meta-style
+// values here by habit, so translate the ones with a clear TikTok equivalent.
+const META_TO_TIKTOK_MACROS = {
+    "{{campaign.name}}": "__CAMPAIGN_NAME__",
+    "{{campaign.id}}": "__CAMPAIGN_ID__",
+    "{{adgroup.name}}": "__AID_NAME__",
+    "{{adgroup.id}}": "__AID__",
+    "{{adset.name}}": "__AID_NAME__",
+    "{{adset.id}}": "__AID__",
+    "{{ad.name}}": "__CID_NAME__",
+    "{{ad.id}}": "__CID__",
+    "{{placement}}": "__PLACEMENT__",
+};
+
+// Converts a single UTM value from Meta-style macros to TikTok macros, stripping any
+// leftover {{...}} that has no TikTok equivalent (e.g. {{site_source_name}}) since
+// TikTok would otherwise reject the whole request for "invalid characters".
+function normalizeUtmValue(value) {
+    if (typeof value !== "string" || !value.includes("{{")) {
+        return { value, changed: false };
+    }
+    let result = value;
+    for (const [metaMacro, tiktokMacro] of Object.entries(META_TO_TIKTOK_MACROS)) {
+        result = result.split(metaMacro).join(tiktokMacro);
+    }
+    result = result.replace(/\{\{[^}]*\}\}/g, "");
+    return { value: result, changed: result !== value };
+}
+
+function normalizeUtmPairs(pairs) {
+    let changed = false;
+    const normalized = pairs.map((pair) => {
+        const normalizedValue = normalizeUtmValue(pair.value);
+        if (normalizedValue.changed) changed = true;
+        return normalizedValue.changed ? { ...pair, value: normalizedValue.value } : pair;
+    });
+    return { pairs: normalized, changed };
+}
+
 export default function TikTokLinkParameters({
     links = [],
     setLinks,
@@ -275,8 +316,8 @@ export default function TikTokLinkParameters({
         setIsFetchingUtms(true);
         setUtmFetchError(false); // Reset error state on open
 
-        // Copy current real settings to draft
-        let currentPairs = utmPairs.length > 0 ? [...utmPairs] : [];
+        // Copy current real settings to draft, normalizing any stale Meta-style macros
+        let currentPairs = utmPairs.length > 0 ? normalizeUtmPairs(utmPairs).pairs : [];
         setTempUtmPairs(currentPairs);
 
         if (!advertiserId) {
@@ -294,7 +335,7 @@ export default function TikTokLinkParameters({
             const data = await res.json();
 
             if (data.pairs && data.pairs.length > 0) {
-                setTempUtmPairs(data.pairs); // Update Draft
+                setTempUtmPairs(normalizeUtmPairs(data.pairs).pairs); // Update Draft
             } else if (currentPairs.length === 0) {
                 setTempUtmPairs(DEFAULT_PREFILL_PAIRS); // Suggest Defaults in Draft
                 setUtmFetchError(true);
@@ -324,17 +365,22 @@ export default function TikTokLinkParameters({
             });
 
         if (newPairs.length > 0) {
-            setTempUtmPairs(newPairs);
+            const { pairs: normalizedPairs, changed } = normalizeUtmPairs(newPairs);
+            setTempUtmPairs(normalizedPairs);
             setRawUtmString("");
-            toast.success("UTMs extracted successfully");
+            toast.success(changed ? "UTMs extracted — Meta-style macros converted to TikTok format" : "UTMs extracted successfully");
         } else {
             toast.error("No valid UTM parameters found");
         }
     }, [rawUtmString]);
 
     const handleSaveUtms = useCallback(() => {
-        setUtmPairs(tempUtmPairs);
+        const { pairs: normalizedPairs, changed } = normalizeUtmPairs(tempUtmPairs);
+        setUtmPairs(normalizedPairs);
         setShowUtmSetupModal(false);
+        if (changed) {
+            toast.info("Some values were auto-converted to TikTok's macro format");
+        }
     }, [tempUtmPairs, setUtmPairs]);
 
     const handleTempPairChange = useCallback((index, field, value) => {
@@ -910,6 +956,11 @@ export default function TikTokLinkParameters({
                                                             })
                                                         }}
                                                         onBlur={() => {
+                                                            const normalizedValue = normalizeUtmValue(pair.value)
+                                                            if (normalizedValue.changed) {
+                                                                handleTempPairChange(i, "value", normalizedValue.value)
+                                                                toast.info("Converted to TikTok's macro format")
+                                                            }
                                                             setTimeout(() => {
                                                                 setOpenIndex(prev => prev === i ? null : prev)
                                                             }, 150)
