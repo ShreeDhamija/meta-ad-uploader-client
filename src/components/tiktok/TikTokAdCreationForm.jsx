@@ -1991,6 +1991,12 @@ export default function TikTokAdCreationForm({
           let catalogIdToUse = null;
           let skuIdToUse = null;
           let itemGroupIdToUse = null;
+          // TikTok's Smart+ ad_configuration.product_ids field requires the catalog's
+          // internal numeric product_id (int64) — NOT the merchant's sku_id string
+          // (e.g. "SKU 234"), which is what skuIdToUse below resolves to for the
+          // regular /ad/create/ API. Keep the raw numeric selection separately so
+          // Smart+ ads get the ID TikTok actually accepts.
+          let catalogProductIdsToUse = null;
 
           if (isShoppingAg) {
             if (productSource === "SHOWCASE") {
@@ -2002,6 +2008,9 @@ export default function TikTokAdCreationForm({
             } else if (showProductCatalogForAdGroup && jobFormCatalogId) {
               catalogIdToUse = jobFormCatalogId;
               const productIds = Array.isArray(jobFormProductId) ? jobFormProductId : jobFormProductId ? [jobFormProductId] : [];
+              if (productIds.length > 0) {
+                catalogProductIdsToUse = productIds;
+              }
               const skuIds = [];
               const itemGroupIds = [];
 
@@ -2145,6 +2154,7 @@ export default function TikTokAdCreationForm({
             if (catalogIdToUse) creative.catalog_id = catalogIdToUse;
             if (skuIdToUse) creative.sku_id = skuIdToUse;
             if (itemGroupIdToUse) creative.item_group_id = itemGroupIdToUse;
+            if (catalogProductIdsToUse) creative.product_ids = catalogProductIdsToUse;
             if (productSource === "SHOWCASE") {
               creative.store_id = jobFormStoreId || adGroupObj?.store_id || null;
             }
