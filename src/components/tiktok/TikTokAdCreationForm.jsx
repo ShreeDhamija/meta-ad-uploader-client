@@ -795,8 +795,6 @@ export default function TikTokAdCreationForm({
   const [formCatalogSearch, setFormCatalogSearch] = useState("");
   const [formProductSearch, setFormProductSearch] = useState("");
   const [loadingFormProductSets, setLoadingFormProductSets] = useState(false);
-  const [openFormProductSet, setOpenFormProductSet] = useState(false);
-  const [formProductSetSearch, setFormProductSetSearch] = useState("");
 
   const [formStores, setFormStores] = useState([]);
   const [formStoreProducts, setFormStoreProducts] = useState([]);
@@ -1089,44 +1087,34 @@ export default function TikTokAdCreationForm({
       .finally(() => setLoadingFormCatalogs(false));
   }, [selectedAdvertiser]);
 
-  // Fetch products for selected form catalog
+  // Fetch products + product sets for the selected form catalog in one combined
+  // tree fetch. Mirrors Meta's picker: product sets come back alongside a flat
+  // product list where every product is tagged with the set it belongs to (or
+  // left ungrouped), so the dropdown can show "Product Sets" then "Products"
+  // subdivided per set with a small subheader — same structure as Meta's.
   useEffect(() => {
     if (!selectedAdvertiser || !formCatalogId) {
       setFormCatalogProducts([]);
+      setFormCatalogProductSets([]);
       return;
     }
     setLoadingFormProducts(true);
-    fetch(`${API_BASE_URL}/api/tiktok/catalog/products?advertiserId=${selectedAdvertiser}&catalog_id=${formCatalogId}`, {
+    setLoadingFormProductSets(true);
+    fetch(`${API_BASE_URL}/api/tiktok/catalog/product-tree?advertiserId=${selectedAdvertiser}&catalog_id=${formCatalogId}`, {
       credentials: "include",
     })
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {
           setFormCatalogProducts(data.products || []);
-        }
-      })
-      .catch((err) => console.warn("[CreationForm] Failed to load products:", err.message))
-      .finally(() => setLoadingFormProducts(false));
-  }, [selectedAdvertiser, formCatalogId]);
-
-  // Fetch product sets for selected form catalog
-  useEffect(() => {
-    if (!selectedAdvertiser || !formCatalogId) {
-      setFormCatalogProductSets([]);
-      return;
-    }
-    setLoadingFormProductSets(true);
-    fetch(`${API_BASE_URL}/api/tiktok/catalog/product-sets?advertiserId=${selectedAdvertiser}&catalog_id=${formCatalogId}`, {
-      credentials: "include",
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success) {
           setFormCatalogProductSets(data.product_sets || []);
         }
       })
-      .catch((err) => console.warn("[CreationForm] Failed to load product sets:", err.message))
-      .finally(() => setLoadingFormProductSets(false));
+      .catch((err) => console.warn("[CreationForm] Failed to load product/product-set tree:", err.message))
+      .finally(() => {
+        setLoadingFormProducts(false);
+        setLoadingFormProductSets(false);
+      });
   }, [selectedAdvertiser, formCatalogId]);
 
   // Clear the selected product set when the catalog it belonged to changes
@@ -1138,6 +1126,33 @@ export default function TikTokAdCreationForm({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formCatalogProductSets]);
+
+  // Group the tagged product list by the product set it belongs to, in the same
+  // order as formCatalogProductSets, with an "Other products" bucket last for
+  // products that aren't in any set.
+  const formProductGroups = useMemo(() => {
+    const bySet = new Map();
+    const ungrouped = [];
+    for (const product of formCatalogProducts) {
+      if (product.product_set_id) {
+        if (!bySet.has(product.product_set_id)) bySet.set(product.product_set_id, []);
+        bySet.get(product.product_set_id).push(product);
+      } else {
+        ungrouped.push(product);
+      }
+    }
+    const groups = formCatalogProductSets
+      .map((set) => ({
+        key: set.product_set_id,
+        title: set.product_set_name,
+        products: bySet.get(set.product_set_id) || [],
+      }))
+      .filter((group) => group.products.length > 0);
+    if (ungrouped.length > 0) {
+      groups.push({ key: "__ungrouped__", title: "Other Products", products: ungrouped });
+    }
+    return groups;
+  }, [formCatalogProducts, formCatalogProductSets]);
 
   // ── Showcase Store & Store Products computation and fetches ──
 
@@ -6450,10 +6465,18 @@ export default function TikTokAdCreationForm({
                     </Button>
                   </div>
 
-                  {/* Product Selection */}
+                  {/* Product / Product Set Selection — one dropdown, same structure as Meta's:
+                      Product Sets are listed together first, then Products, subdivided by the
+                      set each one belongs to with a small subheader per set. */}
                   {formCatalogId && (
                     <div className="space-y-1">
-                      <Label className="text-xs font-semibold text-gray-700">Product</Label>
+                      <Label className="text-xs font-semibold text-gray-700 flex items-center gap-2">
+                        {renderDiffMark(["formCatalogId", "formProductId", "formProductSetId"])}
+                        Product / Product Set
+                      </Label>
+                      <span className="text-xs text-gray-500 leading-relaxed block">
+                        Pick individual products, or target a whole product set from this catalog instead.
+                      </span>
                       <Popover
                         open={openFormProduct}
                         onOpenChange={(open) => {
@@ -6464,14 +6487,18 @@ export default function TikTokAdCreationForm({
                         <PopoverTrigger asChild>
                           <Button
                             variant="outline"
-                            disabled={loadingFormProducts}
+                            disabled={loadingFormProducts || loadingFormProductSets}
                             className="w-full justify-between border border-gray-300 rounded-2xl bg-white shadow flex items-center hover:bg-white px-3 py-4.5"
                           >
-                            {loadingFormProducts ? (
+                            {loadingFormProducts || loadingFormProductSets ? (
                               <div className="flex items-center gap-2">
                                 <Loader className="h-4 w-4 animate-spin text-gray-400" />
                                 <span className="text-sm text-gray-400">Loading products...</span>
                               </div>
+                            ) : formProductSetId ? (
+                              <span className="text-sm font-medium text-gray-900 truncate">
+                                Product Set: {formProductSetName || formProductSetId}
+                              </span>
                             ) : (
                               <div className="flex items-center gap-2 min-w-0 font-normal">
                                 {activeFormProductImage && (
@@ -6500,185 +6527,148 @@ export default function TikTokAdCreationForm({
                               <Search className="mr-2 h-4 w-4 shrink-0 opacity-50 text-gray-500" />
                               <input
                                 type="text"
-                                placeholder="Search products..."
+                                placeholder="Search products or product sets..."
                                 value={formProductSearch}
                                 onChange={(e) => setFormProductSearch(e.target.value)}
                                 className="flex h-11 w-full bg-transparent py-3 text-sm outline-none placeholder:text-gray-400 text-gray-900 border-none focus:ring-0"
                               />
                             </div>
-                            <div className="max-h-[360px] overflow-y-auto rounded-xl p-1">
+                            <div className="max-h-[420px] overflow-y-auto rounded-xl p-1">
                               {(() => {
-                                const filtered = formCatalogProducts.filter((prod) => {
-                                  const name = (prod.product_name || "").toLowerCase();
-                                  const id = String(prod.product_id || "").toLowerCase();
-                                  const q = formProductSearch.toLowerCase();
-                                  return name.includes(q) || id.includes(q);
-                                });
-                                if (filtered.length === 0) {
-                                  return (
-                                    <div className="py-6 text-center text-xs text-gray-500">
-                                      {formCatalogProducts.length === 0 ? "No products in this catalog." : "No results."}
-                                    </div>
-                                  );
-                                }
-                                return (
-                                  <div className="space-y-0.5">
-                                    {filtered.map((prod) => (
-                                      <button
-                                        type="button"
-                                        key={prod.product_id}
-                                        onClick={() => {
-                                          setFormProductId((prev) => {
-                                            const current = Array.isArray(prev) ? prev : prev ? [prev] : [];
-                                            return current.includes(prod.product_id)
-                                              ? current.filter((id) => id !== prod.product_id)
-                                              : [...current, prod.product_id];
-                                          });
-                                        }}
-                                        className={cn(
-                                          "w-full text-left px-3 py-2 cursor-pointer rounded-xl transition-colors duration-150 hover:bg-gray-100 flex items-center gap-3",
-                                          (Array.isArray(formProductId) ? formProductId.includes(prod.product_id) : formProductId === prod.product_id)
-                                            ? "bg-gray-50 font-medium"
-                                            : "",
-                                        )}
-                                      >
-                                        <div
-                                          className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${(Array.isArray(formProductId) ? formProductId.includes(prod.product_id) : formProductId === prod.product_id) ? "bg-black border-black text-white" : "border-gray-200"}`}
-                                        >
-                                          {(Array.isArray(formProductId)
-                                            ? formProductId.includes(prod.product_id)
-                                            : formProductId === prod.product_id) && <Check className="w-3 h-3 text-white" />}
-                                        </div>
-                                        {prod.image_url && (
-                                          <img
-                                            src={prod.image_url}
-                                            alt=""
-                                            className="w-6 h-6 rounded-full object-cover shrink-0 border border-gray-100"
-                                          />
-                                        )}
-                                        <div className="flex-1 min-w-0">
-                                          <p className="text-sm font-semibold text-gray-900 truncate">{prod.product_name}</p>
-                                          {prod.price && (
-                                            <p className="text-xs text-gray-400">
-                                              {prod.price} {prod.currency}
-                                            </p>
-                                          )}
-                                        </div>
-                                      </button>
-                                    ))}
-                                  </div>
-                                );
-                              })()}
-                            </div>
-                          </div>
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                  )}
+                                const q = formProductSearch.trim().toLowerCase();
+                                const matchesQuery = (name, id) => !q || (name || "").toLowerCase().includes(q) || String(id || "").toLowerCase().includes(q);
 
-                  {/* Product Set Selection (Optional, alternative to individual Products) */}
-                  {formCatalogId && (
-                    <div className="space-y-1">
-                      <Label className="text-xs font-semibold text-gray-700 flex items-center gap-2">
-                        {renderDiffMark(["formCatalogId", "formProductSetId"])}
-                        Product Set (Optional)
-                      </Label>
-                      <span className="text-xs text-gray-500 leading-relaxed block">
-                        Alternatively, target an entire product set from this catalog instead of individual products.
-                      </span>
-                      <Popover
-                        open={openFormProductSet}
-                        onOpenChange={(open) => {
-                          setOpenFormProductSet(open);
-                          if (!open) setFormProductSetSearch("");
-                        }}
-                      >
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            disabled={loadingFormProductSets}
-                            className="w-full justify-between border border-gray-300 rounded-2xl bg-white shadow flex items-center hover:bg-white px-3 py-4.5"
-                          >
-                            {loadingFormProductSets ? (
-                              <div className="flex items-center gap-2">
-                                <Loader className="h-4 w-4 animate-spin text-gray-400" />
-                                <span className="text-sm text-gray-400">Loading product sets...</span>
-                              </div>
-                            ) : (
-                              <span className="text-sm font-medium text-gray-900 truncate">
-                                {formProductSetName || formProductSetId || "Select a product set"}
-                              </span>
-                            )}
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent
-                          className="min-w-[--radix-popover-trigger-width] w-auto !max-w-none p-0 rounded-xl bg-white border-gray-200 shadow-2xl animate-none"
-                          align="start"
-                          sideOffset={4}
-                          side="bottom"
-                          avoidCollisions={false}
-                          style={{ minWidth: "var(--radix-popover-trigger-width)", width: "auto" }}
-                        >
-                          <div className="flex flex-col overflow-hidden rounded-xl bg-white text-gray-900">
-                            <div className="mx-2 mt-2 mb-1 flex items-center rounded-2xl border border-gray-300 bg-white px-3 shadow">
-                              <Search className="mr-2 h-4 w-4 shrink-0 opacity-50 text-gray-500" />
-                              <input
-                                type="text"
-                                placeholder="Search product sets..."
-                                value={formProductSetSearch}
-                                onChange={(e) => setFormProductSetSearch(e.target.value)}
-                                className="flex h-11 w-full bg-transparent py-3 text-sm outline-none placeholder:text-gray-400 text-gray-900 border-none focus:ring-0"
-                              />
-                            </div>
-                            <div className="max-h-[360px] overflow-y-auto rounded-xl p-1">
-                              {(() => {
-                                const filtered = formCatalogProductSets.filter((set) => {
-                                  const name = (set.product_set_name || "").toLowerCase();
-                                  const id = String(set.product_set_id || "").toLowerCase();
-                                  const q = formProductSetSearch.toLowerCase();
-                                  return name.includes(q) || id.includes(q);
-                                });
-                                if (filtered.length === 0) {
+                                const filteredSets = formCatalogProductSets.filter((set) => matchesQuery(set.product_set_name, set.product_set_id));
+                                const filteredGroups = formProductGroups
+                                  .map((group) => ({
+                                    ...group,
+                                    products: group.products.filter((prod) => matchesQuery(prod.product_name, prod.product_id)),
+                                  }))
+                                  .filter((group) => group.products.length > 0);
+
+                                if (filteredSets.length === 0 && filteredGroups.length === 0) {
                                   return (
                                     <div className="py-6 text-center text-xs text-gray-500">
-                                      {formCatalogProductSets.length === 0 ? "No product sets in this catalog." : "No results."}
+                                      {formCatalogProductSets.length === 0 && formCatalogProducts.length === 0
+                                        ? "No products or product sets in this catalog."
+                                        : "No results."}
                                     </div>
                                   );
                                 }
+
                                 return (
-                                  <div className="space-y-0.5">
-                                    {filtered.map((set) => {
-                                      const isSelected = formProductSetId === set.product_set_id;
-                                      return (
-                                        <button
-                                          type="button"
-                                          key={set.product_set_id}
-                                          onClick={() => {
-                                            if (isSelected) {
-                                              setFormProductSetId(null);
-                                              setFormProductSetName(null);
-                                            } else {
-                                              setFormProductSetId(set.product_set_id);
-                                              setFormProductSetName(set.product_set_name || `Product Set ${set.product_set_id}`);
-                                            }
-                                            setOpenFormProductSet(false);
-                                          }}
-                                          className={cn(
-                                            "w-full text-left px-3 py-2 cursor-pointer rounded-xl transition-colors duration-150 hover:bg-gray-100 flex items-center gap-3",
-                                            isSelected ? "bg-gray-50 font-medium" : "",
-                                          )}
-                                        >
-                                          <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-semibold text-gray-900 truncate">{set.product_set_name}</p>
-                                            {typeof set.product_count === "number" && (
-                                              <p className="text-xs text-gray-400">{set.product_count} products</p>
-                                            )}
+                                  <div className="space-y-2">
+                                    {filteredSets.length > 0 && (
+                                      <div>
+                                        <div className="sticky top-0 z-10 flex items-center justify-between rounded-lg bg-gray-200 px-2 py-1.5 text-xs font-semibold text-gray-600">
+                                          <span>Product Sets</span>
+                                          <span className="font-normal text-gray-500">{filteredSets.length}</span>
+                                        </div>
+                                        <div className="space-y-0.5 mt-1">
+                                          {filteredSets.map((set) => {
+                                            const isSelected = formProductSetId === set.product_set_id;
+                                            return (
+                                              <button
+                                                type="button"
+                                                key={set.product_set_id}
+                                                onClick={() => {
+                                                  if (isSelected) {
+                                                    setFormProductSetId(null);
+                                                    setFormProductSetName(null);
+                                                  } else {
+                                                    setFormProductSetId(set.product_set_id);
+                                                    setFormProductSetName(set.product_set_name || `Product Set ${set.product_set_id}`);
+                                                    setFormProductId([]);
+                                                    setOpenFormProduct(false);
+                                                  }
+                                                }}
+                                                className={cn(
+                                                  "w-full text-left px-3 py-2 cursor-pointer rounded-xl transition-colors duration-150 hover:bg-gray-100 flex items-center gap-3",
+                                                  isSelected ? "bg-gray-50 font-medium" : "",
+                                                )}
+                                              >
+                                                <div className="flex-1 min-w-0">
+                                                  <p className="text-sm font-semibold text-gray-900 truncate">{set.product_set_name}</p>
+                                                  {typeof set.product_count === "number" && (
+                                                    <p className="text-xs text-gray-400">{set.product_count} products</p>
+                                                  )}
+                                                </div>
+                                                {isSelected && <Check className="w-4 h-4 shrink-0 text-black" />}
+                                              </button>
+                                            );
+                                          })}
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {filteredGroups.length > 0 && (
+                                      <div>
+                                        <div className="sticky top-0 z-10 flex items-center justify-between rounded-lg bg-gray-200 px-2 py-1.5 text-xs font-semibold text-gray-600">
+                                          <span>Products</span>
+                                        </div>
+                                        {filteredGroups.map((group) => (
+                                          <div key={group.key} className="mt-1">
+                                            {/* Small dividing row identifying which product set these products belong to */}
+                                            <div className="flex items-center gap-2 px-2 py-1 mt-1">
+                                              <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 truncate">
+                                                {group.title}
+                                              </span>
+                                              <div className="flex-1 h-px bg-gray-100" />
+                                            </div>
+                                            <div className="space-y-0.5">
+                                              {group.products.map((prod) => {
+                                                const isSelected = Array.isArray(formProductId)
+                                                  ? formProductId.includes(prod.product_id)
+                                                  : formProductId === prod.product_id;
+                                                return (
+                                                  <button
+                                                    type="button"
+                                                    key={`${group.key}:${prod.product_id}`}
+                                                    onClick={() => {
+                                                      if (formProductSetId) {
+                                                        setFormProductSetId(null);
+                                                        setFormProductSetName(null);
+                                                      }
+                                                      setFormProductId((prev) => {
+                                                        const current = Array.isArray(prev) ? prev : prev ? [prev] : [];
+                                                        return current.includes(prod.product_id)
+                                                          ? current.filter((id) => id !== prod.product_id)
+                                                          : [...current, prod.product_id];
+                                                      });
+                                                    }}
+                                                    className={cn(
+                                                      "w-full text-left px-3 py-2 cursor-pointer rounded-xl transition-colors duration-150 hover:bg-gray-100 flex items-center gap-3",
+                                                      isSelected ? "bg-gray-50 font-medium" : "",
+                                                    )}
+                                                  >
+                                                    <div
+                                                      className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${isSelected ? "bg-black border-black text-white" : "border-gray-200"}`}
+                                                    >
+                                                      {isSelected && <Check className="w-3 h-3 text-white" />}
+                                                    </div>
+                                                    {prod.image_url && (
+                                                      <img
+                                                        src={prod.image_url}
+                                                        alt=""
+                                                        className="w-6 h-6 rounded-full object-cover shrink-0 border border-gray-100"
+                                                      />
+                                                    )}
+                                                    <div className="flex-1 min-w-0">
+                                                      <p className="text-sm font-semibold text-gray-900 truncate">{prod.product_name}</p>
+                                                      {prod.price && (
+                                                        <p className="text-xs text-gray-400">
+                                                          {prod.price} {prod.currency}
+                                                        </p>
+                                                      )}
+                                                    </div>
+                                                  </button>
+                                                );
+                                              })}
+                                            </div>
                                           </div>
-                                          {isSelected && <Check className="w-4 h-4 shrink-0 text-black" />}
-                                        </button>
-                                      );
-                                    })}
+                                        ))}
+                                      </div>
+                                    )}
                                   </div>
                                 );
                               })()}
