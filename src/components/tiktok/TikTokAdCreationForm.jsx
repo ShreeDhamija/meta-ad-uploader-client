@@ -609,6 +609,12 @@ export default function TikTokAdCreationForm({
   setFormProductName,
   formCatalogProducts,
   setFormCatalogProducts,
+  formProductSetId,
+  setFormProductSetId,
+  formProductSetName,
+  setFormProductSetName,
+  formCatalogProductSets,
+  setFormCatalogProductSets,
   selectedFiles,
   setSelectedFiles,
   onBeforeMediaClear,
@@ -788,6 +794,9 @@ export default function TikTokAdCreationForm({
   const [openFormProduct, setOpenFormProduct] = useState(false);
   const [formCatalogSearch, setFormCatalogSearch] = useState("");
   const [formProductSearch, setFormProductSearch] = useState("");
+  const [loadingFormProductSets, setLoadingFormProductSets] = useState(false);
+  const [openFormProductSet, setOpenFormProductSet] = useState(false);
+  const [formProductSetSearch, setFormProductSetSearch] = useState("");
 
   const [formStores, setFormStores] = useState([]);
   const [formStoreProducts, setFormStoreProducts] = useState([]);
@@ -1100,6 +1109,36 @@ export default function TikTokAdCreationForm({
       .finally(() => setLoadingFormProducts(false));
   }, [selectedAdvertiser, formCatalogId]);
 
+  // Fetch product sets for selected form catalog
+  useEffect(() => {
+    if (!selectedAdvertiser || !formCatalogId) {
+      setFormCatalogProductSets([]);
+      return;
+    }
+    setLoadingFormProductSets(true);
+    fetch(`${API_BASE_URL}/api/tiktok/catalog/product-sets?advertiserId=${selectedAdvertiser}&catalog_id=${formCatalogId}`, {
+      credentials: "include",
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) {
+          setFormCatalogProductSets(data.product_sets || []);
+        }
+      })
+      .catch((err) => console.warn("[CreationForm] Failed to load product sets:", err.message))
+      .finally(() => setLoadingFormProductSets(false));
+  }, [selectedAdvertiser, formCatalogId]);
+
+  // Clear the selected product set when the catalog it belonged to changes
+  useEffect(() => {
+    if (!formProductSetId) return;
+    if (!formCatalogProductSets.some((set) => set.product_set_id === formProductSetId)) {
+      setFormProductSetId(null);
+      setFormProductSetName(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formCatalogProductSets]);
+
   // ── Showcase Store & Store Products computation and fetches ──
 
   const activeFormStoreProductImage = useMemo(() => {
@@ -1395,6 +1434,9 @@ export default function TikTokAdCreationForm({
     formProductId,
     formProductName,
     formCatalogProducts,
+    formProductSetId,
+    formProductSetName,
+    formCatalogProductSets,
     formStoreId,
     formStoreName,
     formStoreProductId,
@@ -1431,6 +1473,9 @@ export default function TikTokAdCreationForm({
       formProductId,
       formProductName,
       formCatalogProducts,
+      formProductSetId,
+      formProductSetName,
+      formCatalogProductSets,
       formStoreId,
       formStoreName,
       formStoreProductId,
@@ -1527,6 +1572,9 @@ export default function TikTokAdCreationForm({
       formProductId: [...(variantState.formProductId || [])],
       formProductName: variantState.formProductName ?? null,
       formCatalogProducts: [...(variantState.formCatalogProducts || [])],
+      formProductSetId: variantState.formProductSetId ?? null,
+      formProductSetName: variantState.formProductSetName ?? null,
+      formCatalogProductSets: [...(variantState.formCatalogProductSets || [])],
       formStoreId: variantState.formStoreId ?? null,
       formStoreName: variantState.formStoreName ?? null,
       formStoreProductId: [...(variantState.formStoreProductId || [])],
@@ -1596,6 +1644,9 @@ export default function TikTokAdCreationForm({
       setFormProductId(d.formProductId || []);
       setFormProductName(d.formProductName ?? null);
       setFormCatalogProducts(d.formCatalogProducts || []);
+      setFormProductSetId(d.formProductSetId ?? null);
+      setFormProductSetName(d.formProductSetName ?? null);
+      setFormCatalogProductSets(d.formCatalogProductSets || []);
       setFormStoreId(d.formStoreId ?? null);
       setFormStoreName(d.formStoreName ?? null);
       setFormStoreProductId(d.formStoreProductId || []);
@@ -1634,6 +1685,9 @@ export default function TikTokAdCreationForm({
       setFormProductId,
       setFormProductName,
       setFormCatalogProducts,
+      setFormProductSetId,
+      setFormProductSetName,
+      setFormCatalogProductSets,
       setFormStoreId,
       setFormStoreName,
       setFormStoreProductId,
@@ -6512,6 +6566,119 @@ export default function TikTokAdCreationForm({
                                         </div>
                                       </button>
                                     ))}
+                                  </div>
+                                );
+                              })()}
+                            </div>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  )}
+
+                  {/* Product Set Selection (Optional, alternative to individual Products) */}
+                  {formCatalogId && (
+                    <div className="space-y-1">
+                      <Label className="text-xs font-semibold text-gray-700 flex items-center gap-2">
+                        {renderDiffMark(["formCatalogId", "formProductSetId"])}
+                        Product Set (Optional)
+                      </Label>
+                      <span className="text-xs text-gray-500 leading-relaxed block">
+                        Alternatively, target an entire product set from this catalog instead of individual products.
+                      </span>
+                      <Popover
+                        open={openFormProductSet}
+                        onOpenChange={(open) => {
+                          setOpenFormProductSet(open);
+                          if (!open) setFormProductSetSearch("");
+                        }}
+                      >
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            disabled={loadingFormProductSets}
+                            className="w-full justify-between border border-gray-300 rounded-2xl bg-white shadow flex items-center hover:bg-white px-3 py-4.5"
+                          >
+                            {loadingFormProductSets ? (
+                              <div className="flex items-center gap-2">
+                                <Loader className="h-4 w-4 animate-spin text-gray-400" />
+                                <span className="text-sm text-gray-400">Loading product sets...</span>
+                              </div>
+                            ) : (
+                              <span className="text-sm font-medium text-gray-900 truncate">
+                                {formProductSetName || formProductSetId || "Select a product set"}
+                              </span>
+                            )}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent
+                          className="min-w-[--radix-popover-trigger-width] w-auto !max-w-none p-0 rounded-xl bg-white border-gray-200 shadow-2xl animate-none"
+                          align="start"
+                          sideOffset={4}
+                          side="bottom"
+                          avoidCollisions={false}
+                          style={{ minWidth: "var(--radix-popover-trigger-width)", width: "auto" }}
+                        >
+                          <div className="flex flex-col overflow-hidden rounded-xl bg-white text-gray-900">
+                            <div className="mx-2 mt-2 mb-1 flex items-center rounded-2xl border border-gray-300 bg-white px-3 shadow">
+                              <Search className="mr-2 h-4 w-4 shrink-0 opacity-50 text-gray-500" />
+                              <input
+                                type="text"
+                                placeholder="Search product sets..."
+                                value={formProductSetSearch}
+                                onChange={(e) => setFormProductSetSearch(e.target.value)}
+                                className="flex h-11 w-full bg-transparent py-3 text-sm outline-none placeholder:text-gray-400 text-gray-900 border-none focus:ring-0"
+                              />
+                            </div>
+                            <div className="max-h-[360px] overflow-y-auto rounded-xl p-1">
+                              {(() => {
+                                const filtered = formCatalogProductSets.filter((set) => {
+                                  const name = (set.product_set_name || "").toLowerCase();
+                                  const id = String(set.product_set_id || "").toLowerCase();
+                                  const q = formProductSetSearch.toLowerCase();
+                                  return name.includes(q) || id.includes(q);
+                                });
+                                if (filtered.length === 0) {
+                                  return (
+                                    <div className="py-6 text-center text-xs text-gray-500">
+                                      {formCatalogProductSets.length === 0 ? "No product sets in this catalog." : "No results."}
+                                    </div>
+                                  );
+                                }
+                                return (
+                                  <div className="space-y-0.5">
+                                    {filtered.map((set) => {
+                                      const isSelected = formProductSetId === set.product_set_id;
+                                      return (
+                                        <button
+                                          type="button"
+                                          key={set.product_set_id}
+                                          onClick={() => {
+                                            if (isSelected) {
+                                              setFormProductSetId(null);
+                                              setFormProductSetName(null);
+                                            } else {
+                                              setFormProductSetId(set.product_set_id);
+                                              setFormProductSetName(set.product_set_name || `Product Set ${set.product_set_id}`);
+                                            }
+                                            setOpenFormProductSet(false);
+                                          }}
+                                          className={cn(
+                                            "w-full text-left px-3 py-2 cursor-pointer rounded-xl transition-colors duration-150 hover:bg-gray-100 flex items-center gap-3",
+                                            isSelected ? "bg-gray-50 font-medium" : "",
+                                          )}
+                                        >
+                                          <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-semibold text-gray-900 truncate">{set.product_set_name}</p>
+                                            {typeof set.product_count === "number" && (
+                                              <p className="text-xs text-gray-400">{set.product_count} products</p>
+                                            )}
+                                          </div>
+                                          {isSelected && <Check className="w-4 h-4 shrink-0 text-black" />}
+                                        </button>
+                                      );
+                                    })}
                                   </div>
                                 );
                               })()}

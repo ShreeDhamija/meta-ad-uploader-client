@@ -172,6 +172,9 @@ export default function TikTokAds() {
   const [formProductId, setFormProductId] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.formProductId : null) || [])
   const [formProductName, setFormProductName] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.formProductName : null) || null)
   const [formCatalogProducts, setFormCatalogProducts] = useState([])
+  const [formProductSetId, setFormProductSetId] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.formProductSetId : null) || null)
+  const [formProductSetName, setFormProductSetName] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.formProductSetName : null) || null)
+  const [formCatalogProductSets, setFormCatalogProductSets] = useState([])
   const [sparkAuthCodes, setSparkAuthCodes] = useState([''])
   const [urlMode, setUrlMode] = useState('WEBSITE')
   const [adType, setAdType] = useState('NORMAL')
@@ -656,6 +659,8 @@ export default function TikTokAds() {
       formCatalogName,
       formProductId,
       formProductName,
+      formProductSetId,
+      formProductSetName,
       duplicateAdGroup,
       newAdGroupName,
       showDuplicateAdGroupBlock,
@@ -683,6 +688,8 @@ export default function TikTokAds() {
     formCatalogName,
     formProductId,
     formProductName,
+    formProductSetId,
+    formProductSetName,
     duplicateAdGroup,
     newAdGroupName,
     showDuplicateAdGroupBlock,
@@ -771,6 +778,8 @@ export default function TikTokAds() {
     setFormCatalogName(null);
     setFormProductId([]);
     setFormProductName(null);
+    setFormProductSetId(null);
+    setFormProductSetName(null);
     setDuplicateAdGroup("");
     setNewAdGroupName("");
     setShowDuplicateAdGroupBlock(false);
@@ -843,6 +852,9 @@ export default function TikTokAds() {
     formProductId: cloneSnapshotValue(formProductId),
     formProductName,
     formCatalogProducts: cloneSnapshotValue(formCatalogProducts),
+    formProductSetId,
+    formProductSetName,
+    formCatalogProductSets: cloneSnapshotValue(formCatalogProductSets),
     formStoreId,
     formStoreName,
     formStoreProductId: cloneSnapshotValue(formStoreProductId),
@@ -881,6 +893,9 @@ export default function TikTokAds() {
     formProductId,
     formProductName,
     formCatalogProducts,
+    formProductSetId,
+    formProductSetName,
+    formCatalogProductSets,
     formStoreId,
     formStoreName,
     formStoreProductId,
@@ -928,6 +943,9 @@ export default function TikTokAds() {
     setFormProductId(Array.isArray(rawProductId) ? cloneSnapshotValue(rawProductId) : (rawProductId ? [rawProductId] : []));
     setFormProductName(snapshot.formProductName ?? null);
     setFormCatalogProducts(cloneSnapshotValue(snapshot.formCatalogProducts) || []);
+    setFormProductSetId(snapshot.formProductSetId ?? null);
+    setFormProductSetName(snapshot.formProductSetName ?? null);
+    setFormCatalogProductSets(cloneSnapshotValue(snapshot.formCatalogProductSets) || []);
     setFormStoreId(snapshot.formStoreId ?? null);
     setFormStoreName(snapshot.formStoreName ?? null);
     const rawStoreProductId = snapshot.formStoreProductId;
@@ -1267,6 +1285,9 @@ export default function TikTokAds() {
               formProductId={formProductId} setFormProductId={setFormProductId}
               formProductName={formProductName} setFormProductName={setFormProductName}
               formCatalogProducts={formCatalogProducts} setFormCatalogProducts={setFormCatalogProducts}
+              formProductSetId={formProductSetId} setFormProductSetId={setFormProductSetId}
+              formProductSetName={formProductSetName} setFormProductSetName={setFormProductSetName}
+              formCatalogProductSets={formCatalogProductSets} setFormCatalogProductSets={setFormCatalogProductSets}
               sparkAuthCodes={sparkAuthCodes} setSparkAuthCodes={setSparkAuthCodes}
               urlMode={urlMode} setUrlMode={setUrlMode}
               adType={adType} setAdType={setAdType}
