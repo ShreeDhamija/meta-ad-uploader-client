@@ -1752,6 +1752,7 @@ export default function TikTokAdCreationForm({
       formProductId: jobFormProductId,
       formProductName: jobFormProductName,
       formCatalogProducts: jobFormCatalogProducts,
+      formProductSetId: jobFormProductSetId,
       formStoreId: jobFormStoreId,
       formStoreName: jobFormStoreName,
       formStoreProductId: jobFormStoreProductId,
@@ -2060,6 +2061,7 @@ export default function TikTokAdCreationForm({
           let catalogIdToUse = null;
           let skuIdToUse = null;
           let itemGroupIdToUse = null;
+          let productSetIdToUse = null;
           // TikTok's Smart+ ad_configuration.product_ids field requires the catalog's
           // internal numeric product_id (int64) — NOT the merchant's sku_id string
           // (e.g. "SKU 234"), which is what skuIdToUse below resolves to for the
@@ -2076,7 +2078,20 @@ export default function TikTokAdCreationForm({
               }
             } else if (showProductCatalogForAdGroup && jobFormCatalogId) {
               catalogIdToUse = jobFormCatalogId;
-              const productIds = Array.isArray(jobFormProductId) ? jobFormProductId : jobFormProductId ? [jobFormProductId] : [];
+
+              if (jobFormProductSetId) {
+                // A product set was picked instead of individual products — TikTok's
+                // product_specific_type=PRODUCT_SET takes this ID directly, no per-product lookup needed.
+                productSetIdToUse = jobFormProductSetId;
+              }
+
+              const productIds = jobFormProductSetId
+                ? []
+                : Array.isArray(jobFormProductId)
+                  ? jobFormProductId
+                  : jobFormProductId
+                    ? [jobFormProductId]
+                    : [];
               if (productIds.length > 0) {
                 catalogProductIdsToUse = productIds;
               }
@@ -2221,6 +2236,7 @@ export default function TikTokAdCreationForm({
 
           if (isShoppingAg) {
             if (catalogIdToUse) creative.catalog_id = catalogIdToUse;
+            if (productSetIdToUse) creative.product_set_id = productSetIdToUse;
             if (skuIdToUse) creative.sku_id = skuIdToUse;
             if (itemGroupIdToUse) creative.item_group_id = itemGroupIdToUse;
             if (catalogProductIdsToUse) creative.product_ids = catalogProductIdsToUse;
