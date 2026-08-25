@@ -1063,6 +1063,8 @@ export default function TikTokAdCreationForm({
       const initialProductIds = Array.isArray(sel.product_id) ? sel.product_id : sel.product_id ? [sel.product_id] : [];
       setFormProductId(initialProductIds);
       setFormProductName(sel.product_name || null);
+      setFormProductSetId(sel.product_set_id || null);
+      setFormProductSetName(sel.product_set_name || null);
       formCatalogInitRef.current[selectedAdvertiser] = true;
     }
   }, [advertiserPrefs, selectedAdvertiser]);

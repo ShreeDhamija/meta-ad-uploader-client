@@ -9,7 +9,7 @@ import useTeamSync from "@/lib/useTeamSync"
 import { useAppData } from "@/lib/AppContext"
 import { cn } from "@/lib/utils"
 import { Check, ChevronsUpDown, HelpCircle, Layout, Loader, Loader2, RefreshCcw, Info, Trash, Plus, X, Upload, Pencil, Folder, Search, CloudSync, CircleX } from "lucide-react"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import { toast } from "sonner"
 import TikTokCopyTemplates from "./TikTokCopyTemplates"
@@ -157,6 +157,7 @@ export default function TikTokAdvertiserSettings({
     const [openCatalog, setOpenCatalog] = useState(false);
 
     const [catalogProducts, setCatalogProducts] = useState([]);
+    const [catalogProductSets, setCatalogProductSets] = useState([]);
     const [loadingProducts, setLoadingProducts] = useState(false);
     const [productError, setProductError] = useState(null);
     const [openProduct, setOpenProduct] = useState(false);
@@ -168,6 +169,35 @@ export default function TikTokAdvertiserSettings({
         ? selectedProductId
         : selectedProductId ? [selectedProductId] : [];
     const selectedProductsList = settings?.catalogSelection?.products || [];
+    const selectedProductSetId = settings?.catalogSelection?.product_set_id || null;
+    const selectedProductSetName = settings?.catalogSelection?.product_set_name || null;
+
+    // Group the tagged product list by the product set it belongs to, in the same
+    // order as catalogProductSets, with an "Other Products" bucket last — same
+    // structure as the Product/Product Set dropdown in the Ad Creation form.
+    const productGroups = useMemo(() => {
+        const bySet = new Map();
+        const ungrouped = [];
+        for (const product of catalogProducts) {
+            if (product.product_set_id) {
+                if (!bySet.has(product.product_set_id)) bySet.set(product.product_set_id, []);
+                bySet.get(product.product_set_id).push(product);
+            } else {
+                ungrouped.push(product);
+            }
+        }
+        const groups = catalogProductSets
+            .map((set) => ({
+                key: set.product_set_id,
+                title: set.product_set_name,
+                products: bySet.get(set.product_set_id) || [],
+            }))
+            .filter((group) => group.products.length > 0);
+        if (ungrouped.length > 0) {
+            groups.push({ key: "__ungrouped__", title: "Other Products", products: ungrouped });
+        }
+        return groups;
+    }, [catalogProducts, catalogProductSets]);
 
     const displayProductName = (() => {
         if (selectedProductIds.length === 0) return null;
@@ -224,13 +254,19 @@ export default function TikTokAdvertiserSettings({
     }, []);
 
     // ── Fetch products for a selected catalog ──
+    // Fetches products + product sets for a catalog in one combined tree fetch —
+    // same endpoint and grouping as the Product/Product Set dropdown in the Ad
+    // Creation form. Each product comes back tagged with the set it belongs to
+    // (or ungrouped) so the dropdown can list Product Sets, then Products
+    // subdivided per set with a small subheader.
     const fetchCatalogProducts = useCallback(async (advId, catalogId) => {
         if (!advId || !catalogId) return;
         setLoadingProducts(true);
         setProductError(null);
         setCatalogProducts([]);
+        setCatalogProductSets([]);
         try {
-            const url = `${API_BASE_URL}/api/tiktok/catalog/products?advertiserId=${advId}&catalog_id=${catalogId}`;
+            const url = `${API_BASE_URL}/api/tiktok/catalog/product-tree?advertiserId=${advId}&catalog_id=${catalogId}`;
 
             const res = await fetch(
                 url,
@@ -243,6 +279,7 @@ export default function TikTokAdvertiserSettings({
 
             if (data.success) {
                 setCatalogProducts(data.products || []);
+                setCatalogProductSets(data.product_sets || []);
             } else {
                 setProductError(data.error || 'Failed to load products');
             }
@@ -1099,7 +1136,7 @@ export default function TikTokAdvertiserSettings({
                         </div>
 
                         <p className="text-xs text-gray-500">
-                            Choose a catalog and product. Your selection will auto-populate in the TikTok Ad Creation form.
+                            Choose a catalog, then a product or product set. Your selection will auto-populate in the TikTok Ad Creation form.
                         </p>
 
                         {/* Catalog Error */}
@@ -1188,9 +1225,12 @@ export default function TikTokAdvertiserSettings({
                                                                             sku_id: null,
                                                                             item_group_id: null,
                                                                             products: [],
+                                                                            product_set_id: null,
+                                                                            product_set_name: null,
                                                                         }
                                                                     }));
                                                                     setCatalogProducts([]);
+                                                                    setCatalogProductSets([]);
                                                                     setOpenCatalog(false);
                                                                     setCatalogSearch("");
                                                                 }}
@@ -1215,10 +1255,13 @@ export default function TikTokAdvertiserSettings({
                             </Popover>
                         </div>
 
-                        {/* Products Dropdown — shown only when a catalog is selected */}
+                        {/* Product / Product Set Dropdown — shown only when a catalog is selected.
+                            Same structure as the Ad Creation form: Product Sets listed together
+                            first, then Products subdivided by the set each one belongs to with a
+                            small subheader per set. */}
                         {selectedCatalogId && (
                             <div className="space-y-1">
-                                <label className="text-xs font-semibold text-gray-700">Product</label>
+                                <label className="text-xs font-semibold text-gray-700">Product / Product Set</label>
                                 {productError && (
                                     <p className="text-xs text-red-500 mb-1">{productError}</p>
                                 )}
@@ -1237,6 +1280,10 @@ export default function TikTokAdvertiserSettings({
                                                     <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
                                                     <span className="text-sm text-gray-400">Loading products...</span>
                                                 </div>
+                                            ) : selectedProductSetId ? (
+                                                <span className="text-sm font-medium text-gray-900 truncate">
+                                                    Product Set: {selectedProductSetName || selectedProductSetId}
+                                                </span>
                                             ) : (
                                                 <div className="flex items-center gap-2 min-w-0">
                                                     {displayProductImage && (
@@ -1267,89 +1314,176 @@ export default function TikTokAdvertiserSettings({
                                                 <Search className="mr-2 h-4 w-4 shrink-0 opacity-50 text-gray-500" />
                                                 <input
                                                     type="text"
-                                                    placeholder="Search products..."
+                                                    placeholder="Search products or product sets..."
                                                     value={productSearch}
                                                     onChange={(e) => setProductSearch(e.target.value)}
                                                     className="flex h-11 w-full bg-transparent py-3 text-sm outline-none placeholder:text-gray-400 text-gray-900 border-none focus:ring-0"
                                                 />
                                             </div>
-                                            <div className="max-h-[360px] overflow-y-auto rounded-xl p-1">
+                                            <div className="max-h-[420px] overflow-y-auto rounded-xl p-1">
                                                 {(() => {
-                                                    const filtered = catalogProducts.filter(prod => {
-                                                        const name = (prod.product_name || "").toLowerCase();
-                                                        const id = String(prod.product_id || "").toLowerCase();
-                                                        const q = productSearch.toLowerCase();
-                                                        return name.includes(q) || id.includes(q);
-                                                    });
-                                                    if (filtered.length === 0) {
+                                                    const q = productSearch.trim().toLowerCase();
+                                                    const matchesQuery = (name, id) => !q || (name || "").toLowerCase().includes(q) || String(id || "").toLowerCase().includes(q);
+
+                                                    const filteredSets = catalogProductSets.filter((set) => matchesQuery(set.product_set_name, set.product_set_id));
+                                                    const filteredGroups = productGroups
+                                                        .map((group) => ({
+                                                            ...group,
+                                                            products: group.products.filter((prod) => matchesQuery(prod.product_name, prod.product_id)),
+                                                        }))
+                                                        .filter((group) => group.products.length > 0);
+
+                                                    if (filteredSets.length === 0 && filteredGroups.length === 0) {
                                                         return (
                                                             <div className="py-6 text-center text-xs text-gray-500">
-                                                                {catalogProducts.length === 0 ? 'No products in this catalog.' : 'No results.'}
+                                                                {catalogProductSets.length === 0 && catalogProducts.length === 0
+                                                                    ? 'No products or product sets in this catalog.'
+                                                                    : 'No results.'}
                                                             </div>
                                                         );
                                                     }
+
                                                     return (
-                                                        <div className="space-y-0.5">
-                                                            {filtered.map((prod) => (
-                                                                <button
-                                                                    type="button"
-                                                                    key={prod.product_id}
-                                                                    onClick={() => {
-                                                                        const isSelected = selectedProductIds.includes(prod.product_id);
-                                                                        let nextProductIds = [];
-                                                                        let nextProductsList = [];
-                                                                        if (isSelected) {
-                                                                            nextProductIds = selectedProductIds.filter(id => id !== prod.product_id);
-                                                                            nextProductsList = selectedProductsList.filter(p => p.product_id !== prod.product_id);
-                                                                        } else {
-                                                                            nextProductIds = [...selectedProductIds, prod.product_id];
-                                                                            nextProductsList = [
-                                                                                ...selectedProductsList.filter(p => p.product_id !== prod.product_id),
-                                                                                {
-                                                                                    product_id: prod.product_id,
-                                                                                    product_name: prod.product_name,
-                                                                                    product_image_url: prod.image_url || null,
-                                                                                    sku_id: prod.sku_id || null,
-                                                                                    item_group_id: prod.item_group_id || null,
-                                                                                }
-                                                                            ];
-                                                                        }
-                                                                        setSettings(prev => ({
-                                                                            ...prev,
-                                                                            catalogSelection: {
-                                                                                ...(prev?.catalogSelection || {}),
-                                                                                product_id: nextProductIds,
-                                                                                product_name: nextProductsList.map(p => p.product_name).join(", "),
-                                                                                product_image_url: nextProductsList[0]?.product_image_url || null,
-                                                                                sku_id: nextProductsList[0]?.sku_id || null,
-                                                                                item_group_id: nextProductsList[0]?.item_group_id || null,
-                                                                                products: nextProductsList,
-                                                                            }
-                                                                        }));
-                                                                    }}
-                                                                    className={cn(
-                                                                        "w-full text-left px-3 py-2 cursor-pointer rounded-xl transition-colors duration-150 hover:bg-gray-100 flex items-center gap-3",
-                                                                        selectedProductIds.includes(prod.product_id) ? "bg-gray-50 font-medium" : ""
-                                                                    )}
-                                                                >
-                                                                    <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors shrink-0 ${selectedProductIds.includes(prod.product_id) ? "bg-black border-black text-white" : "border-gray-200"}`}>
-                                                                        {selectedProductIds.includes(prod.product_id) && <Check className="w-3 h-3" />}
+                                                        <div className="space-y-2">
+                                                            {filteredSets.length > 0 && (
+                                                                <div>
+                                                                    <div className="sticky top-0 z-10 flex items-center justify-between rounded-lg bg-gray-200 px-2 py-1.5 text-xs font-semibold text-gray-600">
+                                                                        <span>Product Sets</span>
+                                                                        <span className="font-normal text-gray-500">{filteredSets.length}</span>
                                                                     </div>
-                                                                    {prod.image_url && (
-                                                                        <img
-                                                                            src={prod.image_url}
-                                                                            alt=""
-                                                                            className="w-6 h-6 rounded-full object-cover shrink-0 border border-gray-100"
-                                                                        />
-                                                                    )}
-                                                                    <div className="flex-1 min-w-0">
-                                                                        <p className="text-sm font-semibold text-gray-900 truncate">{prod.product_name}</p>
-                                                                        {prod.price && (
-                                                                            <p className="text-xs text-gray-400">{prod.price} {prod.currency}</p>
-                                                                        )}
+                                                                    <div className="space-y-0.5 mt-1">
+                                                                        {filteredSets.map((set) => {
+                                                                            const isSelected = selectedProductSetId === set.product_set_id;
+                                                                            return (
+                                                                                <button
+                                                                                    type="button"
+                                                                                    key={set.product_set_id}
+                                                                                    onClick={() => {
+                                                                                        setSettings(prev => ({
+                                                                                            ...prev,
+                                                                                            catalogSelection: {
+                                                                                                ...(prev?.catalogSelection || {}),
+                                                                                                ...(isSelected
+                                                                                                    ? { product_set_id: null, product_set_name: null }
+                                                                                                    : {
+                                                                                                        product_set_id: set.product_set_id,
+                                                                                                        product_set_name: set.product_set_name || `Product Set ${set.product_set_id}`,
+                                                                                                        product_id: [],
+                                                                                                        product_name: null,
+                                                                                                        product_image_url: null,
+                                                                                                        sku_id: null,
+                                                                                                        item_group_id: null,
+                                                                                                        products: [],
+                                                                                                    }),
+                                                                                            }
+                                                                                        }));
+                                                                                        if (!isSelected) {
+                                                                                            setOpenProduct(false);
+                                                                                        }
+                                                                                    }}
+                                                                                    className={cn(
+                                                                                        "w-full text-left px-3 py-2 cursor-pointer rounded-xl transition-colors duration-150 hover:bg-gray-100 flex items-center gap-3",
+                                                                                        isSelected ? "bg-gray-50 font-medium" : ""
+                                                                                    )}
+                                                                                >
+                                                                                    <div className="flex-1 min-w-0">
+                                                                                        <p className="text-sm font-semibold text-gray-900 truncate">{set.product_set_name}</p>
+                                                                                        {typeof set.product_count === "number" && (
+                                                                                            <p className="text-xs text-gray-400">{set.product_count} products</p>
+                                                                                        )}
+                                                                                    </div>
+                                                                                    {isSelected && <Check className="w-4 h-4 text-black shrink-0" />}
+                                                                                </button>
+                                                                            );
+                                                                        })}
                                                                     </div>
-                                                                </button>
-                                                            ))}
+                                                                </div>
+                                                            )}
+
+                                                            {filteredGroups.length > 0 && (
+                                                                <div>
+                                                                    <div className="sticky top-0 z-10 flex items-center justify-between rounded-lg bg-gray-200 px-2 py-1.5 text-xs font-semibold text-gray-600">
+                                                                        <span>Products</span>
+                                                                    </div>
+                                                                    {filteredGroups.map((group) => (
+                                                                        <div key={group.key} className="mt-1">
+                                                                            {/* Small dividing row identifying which product set these products belong to */}
+                                                                            <div className="flex items-center gap-2 px-2 py-1 mt-1">
+                                                                                <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 truncate">
+                                                                                    {group.title}
+                                                                                </span>
+                                                                                <div className="flex-1 h-px bg-gray-100" />
+                                                                            </div>
+                                                                            <div className="space-y-0.5">
+                                                                                {group.products.map((prod) => {
+                                                                                    const isSelected = selectedProductIds.includes(prod.product_id);
+                                                                                    return (
+                                                                                        <button
+                                                                                            type="button"
+                                                                                            key={`${group.key}:${prod.product_id}`}
+                                                                                            onClick={() => {
+                                                                                                let nextProductIds = [];
+                                                                                                let nextProductsList = [];
+                                                                                                if (isSelected) {
+                                                                                                    nextProductIds = selectedProductIds.filter(id => id !== prod.product_id);
+                                                                                                    nextProductsList = selectedProductsList.filter(p => p.product_id !== prod.product_id);
+                                                                                                } else {
+                                                                                                    nextProductIds = [...selectedProductIds, prod.product_id];
+                                                                                                    nextProductsList = [
+                                                                                                        ...selectedProductsList.filter(p => p.product_id !== prod.product_id),
+                                                                                                        {
+                                                                                                            product_id: prod.product_id,
+                                                                                                            product_name: prod.product_name,
+                                                                                                            product_image_url: prod.image_url || null,
+                                                                                                            sku_id: prod.sku_id || null,
+                                                                                                            item_group_id: prod.item_group_id || null,
+                                                                                                        }
+                                                                                                    ];
+                                                                                                }
+                                                                                                setSettings(prev => ({
+                                                                                                    ...prev,
+                                                                                                    catalogSelection: {
+                                                                                                        ...(prev?.catalogSelection || {}),
+                                                                                                        product_set_id: null,
+                                                                                                        product_set_name: null,
+                                                                                                        product_id: nextProductIds,
+                                                                                                        product_name: nextProductsList.map(p => p.product_name).join(", "),
+                                                                                                        product_image_url: nextProductsList[0]?.product_image_url || null,
+                                                                                                        sku_id: nextProductsList[0]?.sku_id || null,
+                                                                                                        item_group_id: nextProductsList[0]?.item_group_id || null,
+                                                                                                        products: nextProductsList,
+                                                                                                    }
+                                                                                                }));
+                                                                                            }}
+                                                                                            className={cn(
+                                                                                                "w-full text-left px-3 py-2 cursor-pointer rounded-xl transition-colors duration-150 hover:bg-gray-100 flex items-center gap-3",
+                                                                                                isSelected ? "bg-gray-50 font-medium" : ""
+                                                                                            )}
+                                                                                        >
+                                                                                            <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors shrink-0 ${isSelected ? "bg-black border-black text-white" : "border-gray-200"}`}>
+                                                                                                {isSelected && <Check className="w-3 h-3" />}
+                                                                                            </div>
+                                                                                            {prod.image_url && (
+                                                                                                <img
+                                                                                                    src={prod.image_url}
+                                                                                                    alt=""
+                                                                                                    className="w-6 h-6 rounded-full object-cover shrink-0 border border-gray-100"
+                                                                                                />
+                                                                                            )}
+                                                                                            <div className="flex-1 min-w-0">
+                                                                                                <p className="text-sm font-semibold text-gray-900 truncate">{prod.product_name}</p>
+                                                                                                {prod.price && (
+                                                                                                    <p className="text-xs text-gray-400">{prod.price} {prod.currency}</p>
+                                                                                                )}
+                                                                                            </div>
+                                                                                        </button>
+                                                                                    );
+                                                                                })}
+                                                                            </div>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     );
                                                 })()}
