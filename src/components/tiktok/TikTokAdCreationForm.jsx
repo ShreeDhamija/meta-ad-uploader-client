@@ -2058,8 +2058,6 @@ export default function TikTokAdCreationForm({
           const productSource = adGroupObj?.product_source || null;
           const isShoppingAg = !!((shoppingAdsType && shoppingAdsType !== "UNSET") || (productSource && productSource !== "UNSET"));
 
-          const showProductCatalogForAdGroup = campaignObj && isSalesObjective(campaignObj);
-
           let catalogIdToUse = null;
           let skuIdToUse = null;
           let itemGroupIdToUse = null;
@@ -2078,7 +2076,7 @@ export default function TikTokAdCreationForm({
               if (productIds.length > 0) {
                 skuIdToUse = productIds.join(",");
               }
-            } else if (showProductCatalogForAdGroup && jobFormCatalogId) {
+            } else if (jobFormCatalogId) {
               catalogIdToUse = jobFormCatalogId;
 
               if (jobFormProductSetId) {
