@@ -1295,6 +1295,7 @@ export default function AdCreationForm({
     "w-full border border-gray-300 rounded-2xl bg-white px-3 pt-2.5 pb-2.5 text-sm leading-5 resize-none shadow focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0";
   const [ctaOpen, setCtaOpen] = useState(false);
   const [ctaSearch, setCtaSearch] = useState("");
+  const profileCtaAutoAppliedRef = useRef(false);
   const isFlexLikeAdType = adType === "flexible" || adType === "multi_media";
   const isCatalogueAd = adType === "catalogue";
   const isPlacementCustomizedSingleDescription = enablePlacementCustomization && !isCarouselAd;
@@ -4698,6 +4699,56 @@ export default function AdCreationForm({
     });
   }, [duplicateAdSet, selectedAdSets, adSets]);
 
+  const profileDestinationType = useMemo(() => {
+    if (!campaignObjective?.length || !campaignObjective.every((objective) => objective === "OUTCOME_ENGAGEMENT")) return null;
+
+    const targetAdSetIds = duplicateAdSet ? [duplicateAdSet] : selectedAdSets;
+    if (targetAdSetIds.length === 0) return null;
+
+    const destinations = targetAdSetIds
+      .map((adSetId) => adSets.find((adSet) => String(adSet.id) === String(adSetId))?.destination_type)
+      .filter(Boolean);
+    const supportedDestinations = new Set(["FACEBOOK_PAGE", "INSTAGRAM_PROFILE", "INSTAGRAM_PROFILE_AND_FACEBOOK_PAGE"]);
+    if (destinations.length !== targetAdSetIds.length || !destinations.every((destination) => supportedDestinations.has(destination))) return null;
+
+    const uniqueDestinations = [...new Set(destinations)];
+    return uniqueDestinations.length === 1 ? uniqueDestinations[0] : null;
+  }, [adSets, campaignObjective, duplicateAdSet, selectedAdSets]);
+
+  const isProfileDestinationEngagement = Boolean(profileDestinationType);
+  const isUnifiedProfileDestination = profileDestinationType === "INSTAGRAM_PROFILE_AND_FACEBOOK_PAGE";
+  const profileHasVideo = useMemo(
+    () =>
+      [...files, ...driveFiles, ...dropboxFiles, ...(frameioFiles || []), ...importedFiles].some(isVideoFile) ||
+      importedPosts.some((post) => Boolean(post.video_id)) ||
+      selectedIgOrganicPosts.some((post) => String(post.media_type || "").toUpperCase() === "VIDEO"),
+    [driveFiles, dropboxFiles, files, frameioFiles, importedFiles, importedPosts, selectedIgOrganicPosts],
+  );
+  const profileSupportsHeadlines = !isUnifiedProfileDestination;
+  const profileSupportsDescriptions = isProfileDestinationEngagement && !isUnifiedProfileDestination && !profileHasVideo;
+  const profileHeadlineLimit = profileDestinationType === "FACEBOOK_PAGE" ? 1 : 5;
+  const profilePrimaryTextLimit = isUnifiedProfileDestination || (profileDestinationType === "INSTAGRAM_PROFILE" && profileHasVideo) ? 1 : 5;
+  const fixedProfileCta = profileDestinationType === "FACEBOOK_PAGE" ? "VISIT_PROFILE" : "VIEW_INSTAGRAM_PROFILE";
+  const fixedProfileCtaLabel = isUnifiedProfileDestination
+    ? "Instagram & Facebook profile visits"
+    : profileDestinationType === "FACEBOOK_PAGE"
+      ? "Visit Facebook Page"
+      : "View Instagram Profile";
+
+  useEffect(() => {
+    if (isProfileDestinationEngagement) {
+      profileCtaAutoAppliedRef.current = true;
+      if (cta !== fixedProfileCta) setCta(fixedProfileCta);
+      if (isUnifiedProfileDestination && enablePlacementCustomization) setEnablePlacementCustomization(false);
+      return;
+    }
+
+    if (profileCtaAutoAppliedRef.current && ["VIEW_INSTAGRAM_PROFILE", "VISIT_PROFILE"].includes(cta)) {
+      profileCtaAutoAppliedRef.current = false;
+      setCta(adAccountSettings?.defaultCTA || "LEARN_MORE");
+    }
+  }, [adAccountSettings?.defaultCTA, cta, enablePlacementCustomization, fixedProfileCta, isProfileDestinationEngagement, isUnifiedProfileDestination, setCta, setEnablePlacementCustomization]);
+
   const showShopDestinationSelector = hasShopAutomaticAdSets && pageId && selectedAdAccount;
   const showProductExtensionSelector =
     Boolean(adAccountSettings?.creativeEnhancements?.catalogItems) &&
@@ -4709,6 +4760,7 @@ export default function AdCreationForm({
   const supportsInstantExperience =
     INSTANT_EXPERIENCE_USER_IDS.includes(String(userId || "")) &&
     !isCatalogueAd &&
+    !isProfileDestinationEngagement &&
     !showPhoneNumberField &&
     !showShopDestinationSelector &&
     !isDuplicationMode &&
@@ -4721,7 +4773,7 @@ export default function AdCreationForm({
     );
   const hasCatalogueStaticCardVariableWarning =
     isCatalogueAd && getCatalogueMediaCount() > 0 && [...headlines, ...descriptions].some((value) => /\{\{[^}]+\}\}/.test(value || ""));
-  const requiresDestinationValue = importedPosts.length === 0 && !isDuplicationMode && !isCatalogueAd;
+  const requiresDestinationValue = importedPosts.length === 0 && !isDuplicationMode && !isCatalogueAd && !isProfileDestinationEngagement;
   const isMissingDestinationValue =
     requiresDestinationValue &&
     (showPhoneNumberField
@@ -5062,12 +5114,24 @@ export default function AdCreationForm({
       return dupes;
     };
 
+    const activeMessages = isProfileDestinationEngagement ? messages.slice(0, profilePrimaryTextLimit) : messages;
+    const activeHeadlines = isUnifiedProfileDestination
+      ? []
+      : isProfileDestinationEngagement
+        ? headlines.slice(0, profileHeadlineLimit)
+        : headlines;
+    const activeDescriptions = isProfileDestinationEngagement && !profileSupportsDescriptions
+      ? []
+      : enablePlacementCustomization
+        ? descriptions.slice(0, 1)
+        : descriptions;
+
     return {
-      messages: findDupes(messages),
-      headlines: findDupes(headlines),
-      descriptions: findDupes(enablePlacementCustomization ? descriptions.slice(0, 1) : descriptions),
+      messages: findDupes(activeMessages),
+      headlines: findDupes(activeHeadlines),
+      descriptions: findDupes(activeDescriptions),
     };
-  }, [messages, headlines, descriptions, isCarouselAd, enablePlacementCustomization]);
+  }, [descriptions, enablePlacementCustomization, headlines, isCarouselAd, isProfileDestinationEngagement, isUnifiedProfileDestination, messages, profileHeadlineLimit, profilePrimaryTextLimit, profileSupportsDescriptions]);
 
   const hasDuplicates = useMemo(
     () => duplicateIndices.messages.size > 0 || duplicateIndices.headlines.size > 0 || duplicateIndices.descriptions.size > 0,
@@ -5699,6 +5763,11 @@ export default function AdCreationForm({
       formData.append("adSetId", adSetId);
       formData.append("pageId", pageId);
       formData.append("instagramAccountId", instagramAccountId);
+      const selectedPage = pages.find((page) => String(page.id) === String(pageId));
+      const selectedInstagramAccount = [selectedPage?.instagramAccount, ...(selectedPage?.additionalInstagramAccounts || [])].find(
+        (account) => String(account?.id) === String(instagramAccountId),
+      );
+      if (selectedInstagramAccount?.username) formData.append("instagramUsername", selectedInstagramAccount.username);
       if (usePhoneNumberField) {
         formData.append("phoneNumber", phoneNumber);
       } else {
@@ -6706,6 +6775,11 @@ export default function AdCreationForm({
             formData.append("adSetId", adSetId);
             formData.append("pageId", pageId);
             formData.append("instagramAccountId", instagramAccountId || "");
+            const selectedPage = pages.find((page) => String(page.id) === String(pageId));
+            const selectedInstagramAccount = [selectedPage?.instagramAccount, ...(selectedPage?.additionalInstagramAccounts || [])].find(
+              (account) => String(account?.id) === String(instagramAccountId),
+            );
+            if (selectedInstagramAccount?.username) formData.append("instagramUsername", selectedInstagramAccount.username);
             formData.append("launchPaused", launchPaused);
             formData.append("discloseAiMedia", String(Boolean(discloseAiMedia)));
             formData.append("jobId", frontendJobId);
@@ -6756,6 +6830,11 @@ export default function AdCreationForm({
             formData.append("adSetId", adSetId);
             formData.append("pageId", pageId);
             formData.append("instagramAccountId", instagramAccountId || "");
+            const selectedPage = pages.find((page) => String(page.id) === String(pageId));
+            const selectedInstagramAccount = [selectedPage?.instagramAccount, ...(selectedPage?.additionalInstagramAccounts || [])].find(
+              (account) => String(account?.id) === String(instagramAccountId),
+            );
+            if (selectedInstagramAccount?.username) formData.append("instagramUsername", selectedInstagramAccount.username);
             formData.append("launchPaused", launchPaused);
             formData.append("discloseAiMedia", String(Boolean(discloseAiMedia)));
             formData.append("jobId", frontendJobId);
@@ -9691,7 +9770,7 @@ export default function AdCreationForm({
                           )}
                         </Label>
                         <div className="space-y-3">
-                          {messages.map((value, index) => (
+                          {messages.slice(0, !isCarouselAd && isProfileDestinationEngagement ? profilePrimaryTextLimit : messages.length).map((value, index) => (
                             <div key={index} className={`flex items-start gap-2 ${isCarouselAd && applyTextToAllCards && index > 0 ? "hidden" : ""}`}>
                               <div className="flex flex-col w-full">
                                 {isCatalogueAd ? (
@@ -9738,7 +9817,7 @@ export default function AdCreationForm({
                                   <p className="text-xs text-red-500 mt-1">Duplicate values can cause errors when making ads</p>
                                 )}
                               </div>
-                              {!isCatalogueAd && messages.length > 1 && !(isCarouselAd && applyTextToAllCards) && (
+                              {!isCatalogueAd && messages.length > 1 && !(isCarouselAd && applyTextToAllCards) && !(!isCarouselAd && isUnifiedProfileDestination) && (
                                 <Button
                                   type="button"
                                   variant="ghost"
@@ -9752,7 +9831,9 @@ export default function AdCreationForm({
                               )}
                             </div>
                           ))}
-                          {!isCatalogueAd && messages.length < (isCarouselAd ? 10 : 5) && !(isCarouselAd && applyTextToAllCards) && (
+                          {!isCatalogueAd &&
+                            messages.length < (isCarouselAd ? 10 : isProfileDestinationEngagement ? profilePrimaryTextLimit : 5) &&
+                            !(isCarouselAd && applyTextToAllCards) && (
                             <Button
                               type="button"
                               size="sm"
@@ -9768,7 +9849,7 @@ export default function AdCreationForm({
                     </div>
 
                     {/* Headlines Section */}
-                    <div className="space-y-2">
+                    {(isCarouselAd || !isProfileDestinationEngagement || profileSupportsHeadlines) && <div className="space-y-2">
                       <Label className="flex items-center justify-between">
                         <span className="inline-flex items-center gap-1">
                           {renderDiffMark("headlines")}
@@ -9804,7 +9885,7 @@ export default function AdCreationForm({
                         )}
                       </Label>
                       <div className="space-y-3">
-                        {headlines.map((value, index) => (
+                        {headlines.slice(0, !isCarouselAd && isProfileDestinationEngagement ? profileHeadlineLimit : headlines.length).map((value, index) => (
                           <div
                             key={index}
                             className={`flex items-center gap-2 ${isCarouselAd && applyHeadlinesToAllCards && index > 0 ? "hidden" : ""}`}
@@ -9855,7 +9936,10 @@ export default function AdCreationForm({
                                 <p className="text-xs text-red-500 mt-1">Duplicate values can cause errors when making ads</p>
                               )}
                             </div>
-                            {!isCatalogueAd && headlines.length > 1 && !(isCarouselAd && applyHeadlinesToAllCards) && (
+                            {!isCatalogueAd &&
+                              headlines.length > 1 &&
+                              !(isCarouselAd && applyHeadlinesToAllCards) &&
+                              !(!isCarouselAd && profileDestinationType === "FACEBOOK_PAGE") && (
                               <Button
                                 type="button"
                                 variant="ghost"
@@ -9869,7 +9953,9 @@ export default function AdCreationForm({
                             )}
                           </div>
                         ))}
-                        {!isCatalogueAd && headlines.length < (isCarouselAd ? 10 : 5) && !(isCarouselAd && applyHeadlinesToAllCards) && (
+                        {!isCatalogueAd &&
+                          headlines.length < (isCarouselAd ? 10 : isProfileDestinationEngagement ? profileHeadlineLimit : 5) &&
+                          !(isCarouselAd && applyHeadlinesToAllCards) && (
                           <Button
                             type="button"
                             size="sm"
@@ -9881,9 +9967,9 @@ export default function AdCreationForm({
                           </Button>
                         )}
                       </div>
-                    </div>
+                    </div>}
 
-                    {!isCarouselAd && (
+                    {!isCarouselAd && (!isProfileDestinationEngagement || profileSupportsDescriptions) && (
                       <div className="flex items-center space-x-2 pt-1">
                         <Checkbox
                           id="addDescriptions"
@@ -9900,7 +9986,7 @@ export default function AdCreationForm({
 
                     {/* Descriptions Section */}
 
-                    {showDescriptions && (
+                    {(isCarouselAd || (!isProfileDestinationEngagement && showDescriptions) || (profileSupportsDescriptions && addDescriptions)) && (
                       <div className="space-y-2">
                         <Label className="inline-flex items-center gap-1">
                           {renderDiffMark("descriptions")}
@@ -10095,7 +10181,7 @@ export default function AdCreationForm({
                 )}
 
                 <div className="space-y-3">
-                  <div className="space-y-2">
+                  {!isProfileDestinationEngagement && <div className="space-y-2">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <Label className="flex items-center gap-2">
                         {renderDiffMark(isCatalogueAd ? "link" : showPhoneNumberField ? "phoneNumber" : "link")}
@@ -10422,7 +10508,15 @@ export default function AdCreationForm({
                         )}
                       </div>
                     )}
-                  </div>
+                  </div>}
+
+                  {isProfileDestinationEngagement && (
+                    <div className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2">
+                      <p className="text-xs font-medium text-blue-800">
+                        Destination is fixed by the selected ad set: {fixedProfileCtaLabel}.
+                      </p>
+                    </div>
+                  )}
 
                   <div className="space-y-2">
                     <Label htmlFor="cta" className="flex items-center gap-2">
@@ -10430,16 +10524,18 @@ export default function AdCreationForm({
                       <CTAIcon className="w-4 h-4" />
                       Call-to-Action (CTA)
                     </Label>
-                    <Popover open={ctaOpen} onOpenChange={setCtaOpen}>
+                    <Popover open={isProfileDestinationEngagement ? false : ctaOpen} onOpenChange={setCtaOpen}>
                       <PopoverTrigger asChild>
                         <Button
                           id="cta"
-                          disabled={!isLoggedIn}
+                          disabled={!isLoggedIn || isProfileDestinationEngagement}
                           variant="outline"
                           role="combobox"
                           className={cn(formDropdownTriggerChrome, "w-full justify-between px-3 text-sm font-normal")}
                         >
-                          <span className={cn("truncate", !selectedCtaLabel && "text-muted-foreground")}>{selectedCtaLabel || "Select a CTA"}</span>
+                          <span className={cn("truncate", !isProfileDestinationEngagement && !selectedCtaLabel && "text-muted-foreground") }>
+                            {isProfileDestinationEngagement ? fixedProfileCtaLabel : selectedCtaLabel || "Select a CTA"}
+                          </span>
                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
                       </PopoverTrigger>
