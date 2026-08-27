@@ -100,6 +100,7 @@ const PIXEL_TRACKING_FORM_ALLOWED_USER_IDS = ["10236978990363167", "102344479599
 const INSTANT_EXPERIENCE_USER_IDS = ["10236978990363167", "2901368380250453"];
 const LOWERCASE_FILE_NAME_FORMULA_USER_IDS = ["27431350269900471"];
 const AD_SET_NAME_VARIABLE_TEAM_IDS = ["team_1777190523537_hmh1srk8j", "team_1787061148847_j1tmrxprb"];
+const PER_AD_SET_NAME_PLACEHOLDER = "__BLIP_PER_AD_SET_NAME__";
 const EMPTY_PIXEL_TRACKING_OVERRIDE = {
   websitePixelId: null,
   offlineDatasetId: null,
@@ -2320,7 +2321,10 @@ export default function AdCreationForm({
           ? {
               ...variantState.adNameFormulaV2,
               selectedTemplate: variantState.selectedTemplate || "",
-              adSetNameContext: variantAdSetName,
+              adSetNameContext:
+                !variantState.duplicateAdSet && (variantState.selectedAdSets || []).length > 1
+                  ? PER_AD_SET_NAME_PLACEHOLDER
+                  : variantAdSetName,
             }
           : null,
         adValues: variantState.adValues ? JSON.parse(JSON.stringify(variantState.adValues)) : {},
@@ -6558,6 +6562,12 @@ export default function AdCreationForm({
         );
       };
       const queueCreateAdPromise = (formData, metadata = {}) => {
+        const queuedAdName = formData.get("adName");
+        if (typeof queuedAdName === "string" && queuedAdName.includes(PER_AD_SET_NAME_PLACEHOLDER)) {
+          const queuedAdSetId = formData.get("adSetId");
+          const queuedAdSetName = (adSets || []).find((entry) => String(entry.id) === String(queuedAdSetId))?.name || "";
+          formData.set("adName", queuedAdName.replaceAll(PER_AD_SET_NAME_PLACEHOLDER, queuedAdSetName));
+        }
         const selectedPixelTrackingOverride = Object.fromEntries(Object.entries(pixelTrackingOverride || {}).filter(([, value]) => Boolean(value)));
         if (Object.keys(selectedPixelTrackingOverride).length > 0) {
           formData.append("pixelTrackingOverride", JSON.stringify(selectedPixelTrackingOverride));
