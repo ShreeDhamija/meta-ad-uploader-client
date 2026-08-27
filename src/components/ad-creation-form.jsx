@@ -2104,8 +2104,8 @@ export default function AdCreationForm({
       const adSetNames = snapshot.duplicateAdSet
         ? [(snapshot.newAdSetName || "New ad set").trim()]
         : (snapshot.selectedAdSets || []).map(
-            (adSetId) => snapshotAdSets.find((entry) => String(entry.id) === String(adSetId))?.name || adSetId,
-          );
+          (adSetId) => snapshotAdSets.find((entry) => String(entry.id) === String(adSetId))?.name || adSetId,
+        );
       const selectedPage = pages.find((page) => String(page.id) === String(snapshot.pageId));
       const selectedInstagram = pages
         .map((page) => page.instagramAccount)
@@ -2320,13 +2320,13 @@ export default function AdCreationForm({
         partnershipPrimaryIdentity: variantState.partnershipPrimaryIdentity || "brand",
         adNameFormulaV2: variantState.adNameFormulaV2
           ? {
-              ...variantState.adNameFormulaV2,
-              selectedTemplate: variantState.selectedTemplate || "",
-              adSetNameContext:
-                !variantState.duplicateAdSet && (variantState.selectedAdSets || []).length > 1
-                  ? PER_AD_SET_NAME_PLACEHOLDER
-                  : variantAdSetName,
-            }
+            ...variantState.adNameFormulaV2,
+            selectedTemplate: variantState.selectedTemplate || "",
+            adSetNameContext:
+              !variantState.duplicateAdSet && (variantState.selectedAdSets || []).length > 1
+                ? PER_AD_SET_NAME_PLACEHOLDER
+                : variantAdSetName,
+          }
           : null,
         adValues: variantState.adValues ? JSON.parse(JSON.stringify(variantState.adValues)) : {},
         adScheduleStartTime: variantState.adScheduleStartTime || null,
@@ -8080,8 +8080,8 @@ export default function AdCreationForm({
             adSetNameContext: snapshot.duplicateAdSet
               ? (snapshot.newAdSetName || "").trim()
               : (snapshot.adSets || adSets).find(
-                  (entry) => String(entry.id) === String((snapshot.selectedAdSets || [])[0]),
-                )?.name || "",
+                (entry) => String(entry.id) === String((snapshot.selectedAdSets || [])[0]),
+              )?.name || "",
           };
           const destination = snapshot.link?.[0] || "";
 
@@ -8501,14 +8501,14 @@ export default function AdCreationForm({
                           <p
                             style={{ overflowWrap: "anywhere" }}
                             className={`text-sm break-words ${job.status === "cancelled"
-                                ? "text-orange-500"
-                                : job.status === "error"
-                                  ? "text-red-600"
-                                  : job.status === "partial-success"
-                                    ? "text-[#F0A000]"
-                                    : job.status === "retry"
-                                      ? "text-orange-600"
-                                      : "text-gray-700"
+                              ? "text-orange-500"
+                              : job.status === "error"
+                                ? "text-red-600"
+                                : job.status === "partial-success"
+                                  ? "text-[#F0A000]"
+                                  : job.status === "retry"
+                                    ? "text-orange-600"
+                                    : "text-gray-700"
                               }`}
                           >
                             {job.message}
@@ -9830,16 +9830,16 @@ export default function AdCreationForm({
                           {!isCatalogueAd &&
                             messages.length < (isCarouselAd ? 10 : isProfileDestinationEngagement ? profilePrimaryTextLimit : 5) &&
                             !(isCarouselAd && applyTextToAllCards) && (
-                            <Button
-                              type="button"
-                              size="sm"
-                              className=" w-full rounded-xl shadow bg-zinc-600 hover:bg-black text-white"
-                              onClick={() => addField(setMessages, messages)}
-                            >
-                              <Plus className="mr-2 h-4 w-4 text-white" />
-                              {isCarouselAd ? "Add card headline" : "Add text option"}
-                            </Button>
-                          )}
+                              <Button
+                                type="button"
+                                size="sm"
+                                className=" w-full rounded-xl shadow bg-zinc-600 hover:bg-black text-white"
+                                onClick={() => addField(setMessages, messages)}
+                              >
+                                <Plus className="mr-2 h-4 w-4 text-white" />
+                                {isCarouselAd ? "Add card headline" : "Add text option"}
+                              </Button>
+                            )}
                         </div>
                       </div>
                     </div>
@@ -9949,16 +9949,16 @@ export default function AdCreationForm({
                         {!isCatalogueAd &&
                           headlines.length < (isCarouselAd ? 10 : isProfileDestinationEngagement ? profileHeadlineLimit : 5) &&
                           !(isCarouselAd && applyHeadlinesToAllCards) && (
-                          <Button
-                            type="button"
-                            size="sm"
-                            className=" w-full rounded-xl shadow bg-zinc-600 hover:bg-black text-white"
-                            onClick={() => addField(setHeadlines, headlines)}
-                          >
-                            <Plus className="mr-2 h-4 w-4 text-white" />
-                            {isCarouselAd ? "Add card description" : "Add headline option"}
-                          </Button>
-                        )}
+                            <Button
+                              type="button"
+                              size="sm"
+                              className=" w-full rounded-xl shadow bg-zinc-600 hover:bg-black text-white"
+                              onClick={() => addField(setHeadlines, headlines)}
+                            >
+                              <Plus className="mr-2 h-4 w-4 text-white" />
+                              {isCarouselAd ? "Add card description" : "Add headline option"}
+                            </Button>
+                          )}
                       </div>
                     </div>}
 
@@ -10146,8 +10146,8 @@ export default function AdCreationForm({
                             disabled={activeIgCaptionIndex === selectedIgOrganicPosts.length - 1}
                             onClick={() => setActiveIgCaptionIndex((prev) => prev + 1)}
                             className={`p-0.5 rounded transition-colors ${activeIgCaptionIndex === selectedIgOrganicPosts.length - 1
-                                ? "text-gray-300 cursor-not-allowed"
-                                : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                              ? "text-gray-300 cursor-not-allowed"
+                              : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
                               }`}
                           >
                             <ChevronRight className="w-3.5 h-3.5" />
@@ -10511,7 +10511,7 @@ export default function AdCreationForm({
                       </Label>
                       <div className={cn("grid gap-2", isUnifiedProfileDestination && "sm:grid-cols-2")}>
                         {profileDestinationType !== "INSTAGRAM_PROFILE" && (
-                          <div className="flex min-w-0 items-center gap-2 rounded-2xl border border-gray-400 bg-white px-3 py-2 shadow">
+                          <div className="flex min-w-0 items-center gap-2 rounded-2xl border border-gray-200 bg-white px-3 py-2 shadow">
                             <img
                               src={selectedProfilePage?.profilePicture || "https://api.withblip.com/backup_page_image.png"}
                               alt={selectedProfilePage?.name || "Facebook Page"}
@@ -10524,7 +10524,7 @@ export default function AdCreationForm({
                           </div>
                         )}
                         {profileDestinationType !== "FACEBOOK_PAGE" && (
-                          <div className="flex min-w-0 items-center gap-2 rounded-2xl border border-gray-400 bg-white px-3 py-2 shadow">
+                          <div className="flex min-w-0 items-center gap-2 rounded-2xl border border-gray-200 bg-white px-3 py-2 shadow">
                             <img
                               src={selectedProfileInstagram?.profilePictureUrl || "https://api.withblip.com/backup_page_image.png"}
                               alt={selectedProfileInstagram?.username || "Instagram Profile"}
@@ -10557,7 +10557,7 @@ export default function AdCreationForm({
                           role="combobox"
                           className={cn(formDropdownTriggerChrome, "w-full justify-between px-3 text-sm font-normal")}
                         >
-                          <span className={cn("truncate", !isProfileDestinationEngagement && !selectedCtaLabel && "text-muted-foreground") }>
+                          <span className={cn("truncate", !isProfileDestinationEngagement && !selectedCtaLabel && "text-muted-foreground")}>
                             {isProfileDestinationEngagement ? fixedProfileCtaLabel : selectedCtaLabel || "Select a CTA"}
                           </span>
                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -11718,69 +11718,69 @@ export default function AdCreationForm({
       )}
       {variants.length > 1 && (
         <div className="fixed bottom-6 left-1/2 z-40 flex max-w-[calc(100vw-1rem)] -translate-x-1/2 items-center gap-2 rounded-full border border-black bg-black px-2 py-2 text-white shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-300">
-            <ScrollArea type="always" className={cn("rounded-full", shouldScrollVariantPicker && "w-[34rem] max-w-[calc(100vw-9rem)] pb-2")}>
-              <div className="flex w-max items-center gap-1 pr-1">
-                {variants.map((variant) => {
-                  const isActive = variant.id === activeVariantId;
-                  const assignedCount = countFilesForVariant(variant.id);
+          <ScrollArea type="always" className={cn("rounded-full", shouldScrollVariantPicker && "w-[34rem] max-w-[calc(100vw-9rem)] pb-2")}>
+            <div className="flex w-max items-center gap-1 pr-1">
+              {variants.map((variant) => {
+                const isActive = variant.id === activeVariantId;
+                const assignedCount = countFilesForVariant(variant.id);
 
-                  return (
-                    <div key={variant.id} className="group flex shrink-0 items-center">
+                return (
+                  <div key={variant.id} className="group flex shrink-0 items-center">
+                    <button
+                      type="button"
+                      onClick={() => switchVariant(variant.id)}
+                      className={cn(
+                        "flex items-center gap-2 whitespace-nowrap rounded-full px-3.5 py-2.5 text-sm transition",
+                        isActive ? "bg-zinc-700 text-white" : "text-white/75 hover:bg-white/10 hover:text-white",
+                      )}
+                    >
+                      <VariantDot variantId={variant.id} variants={variants} />
+                      <span className="whitespace-nowrap">{variant.name}</span>
+                      <span className={cn("text-xs whitespace-nowrap", isActive ? "text-white/70" : "text-white/55")}>
+                        · {assignedCount} ad{assignedCount !== 1 ? "s" : ""}
+                      </span>
+                    </button>
+                    {variant.id !== "default" && (
                       <button
                         type="button"
-                        onClick={() => switchVariant(variant.id)}
-                        className={cn(
-                          "flex items-center gap-2 whitespace-nowrap rounded-full px-3.5 py-2.5 text-sm transition",
-                          isActive ? "bg-zinc-700 text-white" : "text-white/75 hover:bg-white/10 hover:text-white",
-                        )}
+                        onClick={() => handleDeleteVariant(variant.id)}
+                        aria-label={`Delete ${variant.name}`}
+                        className="ml-0.5 rounded-full p-1 text-white/60 opacity-0 transition group-hover:opacity-100 hover:bg-white/10 hover:text-white"
                       >
-                        <VariantDot variantId={variant.id} variants={variants} />
-                        <span className="whitespace-nowrap">{variant.name}</span>
-                        <span className={cn("text-xs whitespace-nowrap", isActive ? "text-white/70" : "text-white/55")}>
-                          · {assignedCount} ad{assignedCount !== 1 ? "s" : ""}
-                        </span>
+                        <X className="h-3 w-3" />
                       </button>
-                      {variant.id !== "default" && (
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteVariant(variant.id)}
-                          aria-label={`Delete ${variant.name}`}
-                          className="ml-0.5 rounded-full p-1 text-white/60 opacity-0 transition group-hover:opacity-100 hover:bg-white/10 hover:text-white"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </ScrollArea>
-            <div className="flex shrink-0 items-center gap-1 border-l border-white/50 pl-2">
-              <button
-                type="button"
-                onClick={handleAddVariant}
-                aria-label="Add variant"
-                className="rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white"
-              >
-                <Plus className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowVariantOverview(true)}
-                aria-label="View variant overview"
-                className="rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white"
-              >
-                <Eye className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowDeleteAllVariantsDialog(true)}
-                aria-label="Delete all variants"
-                className="rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
+          </ScrollArea>
+          <div className="flex shrink-0 items-center gap-1 border-l border-white/50 pl-2">
+            <button
+              type="button"
+              onClick={handleAddVariant}
+              aria-label="Add variant"
+              className="rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white"
+            >
+              <Plus className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowVariantOverview(true)}
+              aria-label="View variant overview"
+              className="rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white"
+            >
+              <Eye className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowDeleteAllVariantsDialog(true)}
+              aria-label="Delete all variants"
+              className="rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       )}
       <Dialog open={showVariantOverview} onOpenChange={setShowVariantOverview}>
