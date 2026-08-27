@@ -4754,11 +4754,21 @@ export default function AdCreationForm({
     campaignObjective.length > 0 &&
     campaignObjective.every((objective) => ["OUTCOME_SALES", "OUTCOME_TRAFFIC"].includes(objective));
   const showPhoneNumberField = areAllAdSetsPhoneCall();
+  const areAllAdSetsOnAd = useMemo(() => {
+    const targetAdSetIds = duplicateAdSet ? [duplicateAdSet] : selectedAdSets;
+    if (targetAdSetIds.length === 0) return false;
+
+    return targetAdSetIds.every((adSetId) => {
+      const adSet = adSets.find((entry) => String(entry.id) === String(adSetId));
+      return adSet?.destination_type === "ON_AD";
+    });
+  }, [adSets, duplicateAdSet, selectedAdSets]);
   const supportsInstantExperience =
     INSTANT_EXPERIENCE_USER_IDS.includes(String(userId || "")) &&
     !isCatalogueAd &&
     !isProfileDestinationEngagement &&
     !showPhoneNumberField &&
+    !areAllAdSetsOnAd &&
     !showShopDestinationSelector &&
     !isDuplicationMode &&
     importedPosts.length === 0 &&
@@ -4770,7 +4780,8 @@ export default function AdCreationForm({
     );
   const hasCatalogueStaticCardVariableWarning =
     isCatalogueAd && getCatalogueMediaCount() > 0 && [...headlines, ...descriptions].some((value) => /\{\{[^}]+\}\}/.test(value || ""));
-  const requiresDestinationValue = importedPosts.length === 0 && !isDuplicationMode && !isCatalogueAd && !isProfileDestinationEngagement;
+  const requiresDestinationValue =
+    importedPosts.length === 0 && !isDuplicationMode && !isCatalogueAd && !isProfileDestinationEngagement && !areAllAdSetsOnAd;
   const isMissingDestinationValue =
     requiresDestinationValue &&
     (showPhoneNumberField
@@ -5762,9 +5773,11 @@ export default function AdCreationForm({
       );
       if (selectedInstagramAccount?.username) formData.append("instagramUsername", selectedInstagramAccount.username);
       if (selectedInstagramAccount?.igId) formData.append("instagramAppUserId", selectedInstagramAccount.igId);
+      const requestAdSet = adSets.find((entry) => String(entry.id) === String(adSetId));
+      const usesOnAdLeadFormDestination = requestAdSet?.destination_type === "ON_AD";
       if (usePhoneNumberField) {
         formData.append("phoneNumber", phoneNumber);
-      } else {
+      } else if (!usesOnAdLeadFormDestination) {
         formData.append("link", linkJSON);
         formData.append("destinationType", destinationType === "instant_experience" ? "instant_experience" : "website");
         if (destinationType === "instant_experience" && instantExperienceId) {
@@ -6669,6 +6682,10 @@ export default function AdCreationForm({
           return adset?.destination_type === "PHONE_CALL";
         });
       })();
+      const usesOnAdLeadFormDestination = (adSetId) => {
+        const adSet = adSets.find((entry) => String(entry.id) === String(adSetId));
+        return adSet?.destination_type === "ON_AD";
+      };
       const commonPrecomputed = preComputeCommonValues(headlines, descriptions, messages, link);
 
       // ============================================================================
@@ -6797,9 +6814,10 @@ export default function AdCreationForm({
             }
             if (usePhoneNumberField) {
               formData.append("phoneNumber", phoneNumber);
-            } else {
+            } else if (!usesOnAdLeadFormDestination(adSetId)) {
               formData.append("link", JSON.stringify(link));
             }
+            if (usesOnAdLeadFormDestination(adSetId) && selectedForm) formData.append("leadgenFormId", selectedForm);
 
             if (adScheduleStartTime) formData.append("adScheduleStartTime", adScheduleStartTime);
             if (adScheduleEndTime) formData.append("adScheduleEndTime", adScheduleEndTime);
@@ -6837,9 +6855,10 @@ export default function AdCreationForm({
             formData.append("cta", resolveCtaForServer(cta || "LEARN_MORE")); // placeholder CTA
             if (usePhoneNumberField) {
               formData.append("phoneNumber", phoneNumber);
-            } else {
+            } else if (!usesOnAdLeadFormDestination(adSetId)) {
               formData.append("link", JSON.stringify(link));
             }
+            if (usesOnAdLeadFormDestination(adSetId) && selectedForm) formData.append("leadgenFormId", selectedForm);
 
             // IG post specific
             formData.append("sourceInstagramMediaId", igPost.source_instagram_media_id);
@@ -10174,7 +10193,7 @@ export default function AdCreationForm({
                 )}
 
                 <div className="space-y-3">
-                  {!isProfileDestinationEngagement && <div className="space-y-2">
+                  {!isProfileDestinationEngagement && !areAllAdSetsOnAd && <div className="space-y-2">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <Label className="flex items-center gap-2">
                         {renderDiffMark(isCatalogueAd ? "link" : showPhoneNumberField ? "phoneNumber" : "link")}
