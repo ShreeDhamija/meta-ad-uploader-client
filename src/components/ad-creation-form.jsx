@@ -10509,9 +10509,9 @@ export default function AdCreationForm({
                         <LinkIcon className="h-4 w-4" />
                         Destination
                       </Label>
-                      <div className={cn(formDropdownTriggerChrome, "flex w-full items-center gap-4 px-3 text-sm font-normal")}>
+                      <div className={cn("grid gap-2", isUnifiedProfileDestination && "sm:grid-cols-2")}>
                         {profileDestinationType !== "INSTAGRAM_PROFILE" && (
-                          <div className="flex min-w-0 flex-1 items-center gap-2">
+                          <div className="flex min-w-0 items-center gap-2 rounded-2xl border border-gray-400 bg-white px-3 py-2 shadow">
                             <img
                               src={selectedProfilePage?.profilePicture || "https://api.withblip.com/backup_page_image.png"}
                               alt={selectedProfilePage?.name || "Facebook Page"}
@@ -10523,9 +10523,8 @@ export default function AdCreationForm({
                             </div>
                           </div>
                         )}
-                        {isUnifiedProfileDestination && <div className="h-7 w-px shrink-0 bg-gray-200" />}
                         {profileDestinationType !== "FACEBOOK_PAGE" && (
-                          <div className="flex min-w-0 flex-1 items-center gap-2">
+                          <div className="flex min-w-0 items-center gap-2 rounded-2xl border border-gray-400 bg-white px-3 py-2 shadow">
                             <img
                               src={selectedProfileInstagram?.profilePictureUrl || "https://api.withblip.com/backup_page_image.png"}
                               alt={selectedProfileInstagram?.username || "Instagram Profile"}
