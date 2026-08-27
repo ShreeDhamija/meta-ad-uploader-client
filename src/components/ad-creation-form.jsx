@@ -4721,17 +4721,10 @@ export default function AdCreationForm({
   const selectedProfileInstagram = [selectedProfilePage?.instagramAccount, ...(selectedProfilePage?.additionalInstagramAccounts || [])].find(
     (account) => String(account?.id) === String(instagramAccountId),
   );
-  const profileHasVideo = useMemo(
-    () =>
-      [...files, ...driveFiles, ...dropboxFiles, ...(frameioFiles || []), ...importedFiles].some(isVideoFile) ||
-      importedPosts.some((post) => Boolean(post.video_id)) ||
-      selectedIgOrganicPosts.some((post) => String(post.media_type || "").toUpperCase() === "VIDEO"),
-    [driveFiles, dropboxFiles, files, frameioFiles, importedFiles, importedPosts, selectedIgOrganicPosts],
-  );
-  const profileSupportsHeadlines = !isUnifiedProfileDestination;
-  const profileSupportsDescriptions = isProfileDestinationEngagement && !isUnifiedProfileDestination && !profileHasVideo;
-  const profileHeadlineLimit = profileDestinationType === "FACEBOOK_PAGE" ? 1 : 5;
-  const profilePrimaryTextLimit = isUnifiedProfileDestination || (profileDestinationType === "INSTAGRAM_PROFILE" && profileHasVideo) ? 1 : 5;
+  const profileSupportsHeadlines = true;
+  const profileSupportsDescriptions = isProfileDestinationEngagement;
+  const profileHeadlineLimit = 5;
+  const profilePrimaryTextLimit = 5;
   const fixedProfileCta = profileDestinationType === "FACEBOOK_PAGE" ? "VISIT_PROFILE" : "VIEW_INSTAGRAM_PROFILE";
   const fixedProfileCtaLabel = isUnifiedProfileDestination
     ? "Visit Page"
@@ -4743,7 +4736,7 @@ export default function AdCreationForm({
     if (isProfileDestinationEngagement) {
       profileCtaAutoAppliedRef.current = true;
       if (cta !== fixedProfileCta) setCta(fixedProfileCta);
-      if (isUnifiedProfileDestination && enablePlacementCustomization) setEnablePlacementCustomization(false);
+      if (enablePlacementCustomization) setEnablePlacementCustomization(false);
       return;
     }
 
@@ -4751,7 +4744,7 @@ export default function AdCreationForm({
       profileCtaAutoAppliedRef.current = false;
       setCta(adAccountSettings?.defaultCTA || "LEARN_MORE");
     }
-  }, [adAccountSettings?.defaultCTA, cta, enablePlacementCustomization, fixedProfileCta, isProfileDestinationEngagement, isUnifiedProfileDestination, setCta, setEnablePlacementCustomization]);
+  }, [adAccountSettings?.defaultCTA, cta, enablePlacementCustomization, fixedProfileCta, isProfileDestinationEngagement, setCta, setEnablePlacementCustomization]);
 
   const showShopDestinationSelector = hasShopAutomaticAdSets && pageId && selectedAdAccount;
   const showProductExtensionSelector =
@@ -5119,11 +5112,7 @@ export default function AdCreationForm({
     };
 
     const activeMessages = isProfileDestinationEngagement ? messages.slice(0, profilePrimaryTextLimit) : messages;
-    const activeHeadlines = isUnifiedProfileDestination
-      ? []
-      : isProfileDestinationEngagement
-        ? headlines.slice(0, profileHeadlineLimit)
-        : headlines;
+    const activeHeadlines = isProfileDestinationEngagement ? headlines.slice(0, profileHeadlineLimit) : headlines;
     const activeDescriptions = isProfileDestinationEngagement && !profileSupportsDescriptions
       ? []
       : enablePlacementCustomization
@@ -5135,7 +5124,7 @@ export default function AdCreationForm({
       headlines: findDupes(activeHeadlines),
       descriptions: findDupes(activeDescriptions),
     };
-  }, [descriptions, enablePlacementCustomization, headlines, isCarouselAd, isProfileDestinationEngagement, isUnifiedProfileDestination, messages, profileHeadlineLimit, profilePrimaryTextLimit, profileSupportsDescriptions]);
+  }, [descriptions, enablePlacementCustomization, headlines, isCarouselAd, isProfileDestinationEngagement, messages, profileHeadlineLimit, profilePrimaryTextLimit, profileSupportsDescriptions]);
 
   const hasDuplicates = useMemo(
     () => duplicateIndices.messages.size > 0 || duplicateIndices.headlines.size > 0 || duplicateIndices.descriptions.size > 0,
@@ -9824,7 +9813,7 @@ export default function AdCreationForm({
                                   <p className="text-xs text-red-500 mt-1">Duplicate values can cause errors when making ads</p>
                                 )}
                               </div>
-                              {!isCatalogueAd && messages.length > 1 && !(isCarouselAd && applyTextToAllCards) && !(!isCarouselAd && isUnifiedProfileDestination) && (
+                              {!isCatalogueAd && messages.length > 1 && !(isCarouselAd && applyTextToAllCards) && (
                                 <Button
                                   type="button"
                                   variant="ghost"
@@ -9943,10 +9932,7 @@ export default function AdCreationForm({
                                 <p className="text-xs text-red-500 mt-1">Duplicate values can cause errors when making ads</p>
                               )}
                             </div>
-                            {!isCatalogueAd &&
-                              headlines.length > 1 &&
-                              !(isCarouselAd && applyHeadlinesToAllCards) &&
-                              !(!isCarouselAd && profileDestinationType === "FACEBOOK_PAGE") && (
+                            {!isCatalogueAd && headlines.length > 1 && !(isCarouselAd && applyHeadlinesToAllCards) && (
                               <Button
                                 type="button"
                                 variant="ghost"
@@ -10523,9 +10509,9 @@ export default function AdCreationForm({
                         <LinkIcon className="h-4 w-4" />
                         Destination
                       </Label>
-                      <div className={cn("grid gap-2", isUnifiedProfileDestination && "sm:grid-cols-2")}>
+                      <div className={cn(formDropdownTriggerChrome, "flex w-full items-center gap-4 px-3 text-sm font-normal")}>
                         {profileDestinationType !== "INSTAGRAM_PROFILE" && (
-                          <div className={cn(formFieldChrome, "flex items-center gap-2 px-3 py-2.5")}>
+                          <div className="flex min-w-0 flex-1 items-center gap-2">
                             <img
                               src={selectedProfilePage?.profilePicture || "https://api.withblip.com/backup_page_image.png"}
                               alt={selectedProfilePage?.name || "Facebook Page"}
@@ -10537,8 +10523,9 @@ export default function AdCreationForm({
                             </div>
                           </div>
                         )}
+                        {isUnifiedProfileDestination && <div className="h-7 w-px shrink-0 bg-gray-200" />}
                         {profileDestinationType !== "FACEBOOK_PAGE" && (
-                          <div className={cn(formFieldChrome, "flex items-center gap-2 px-3 py-2.5")}>
+                          <div className="flex min-w-0 flex-1 items-center gap-2">
                             <img
                               src={selectedProfileInstagram?.profilePictureUrl || "https://api.withblip.com/backup_page_image.png"}
                               alt={selectedProfileInstagram?.username || "Instagram Profile"}

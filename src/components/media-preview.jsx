@@ -959,7 +959,17 @@ export default function MediaPreview({
     return false;
   }, [selectedAdSets, adSets, duplicateAdSet]);
 
-  const showPlacementCustomizationRow = !isFlexLikeAdType && importedPosts.length === 0 && selectedIgOrganicPosts.length === 0;
+  const hasProfileVisitDestinationAdSets = useMemo(() => {
+    const profileDestinations = new Set(["FACEBOOK_PAGE", "INSTAGRAM_PROFILE", "INSTAGRAM_PROFILE_AND_FACEBOOK_PAGE"]);
+    const targetAdSetIds = duplicateAdSet ? [duplicateAdSet] : selectedAdSets;
+    return targetAdSetIds.some((id) => {
+      const adSet = adSets.find((entry) => String(entry.id) === String(id));
+      return profileDestinations.has(adSet?.destination_type);
+    });
+  }, [adSets, duplicateAdSet, selectedAdSets]);
+
+  const showPlacementCustomizationRow =
+    !hasProfileVisitDestinationAdSets && !isFlexLikeAdType && importedPosts.length === 0 && selectedIgOrganicPosts.length === 0;
   const showVariantSetupButton = variants.length > 1 || totalFileCount >= 1;
   const isSingleMediaSplit = totalFileCount === 1;
   const showVariantButtonInPlacementRow = showVariantSetupButton && showPlacementCustomizationRow;
@@ -1088,14 +1098,14 @@ export default function MediaPreview({
     ],
   );
 
-  // Auto-disable placement customization when a dynamic ad set is selected
+  // Auto-disable placement customization when the selected ad set cannot use it.
   useEffect(() => {
-    if (hasAnyDynamicCreativeAdSets && enablePlacementCustomization) {
+    if ((hasAnyDynamicCreativeAdSets || hasProfileVisitDestinationAdSets) && enablePlacementCustomization) {
       setEnablePlacementCustomization(false);
       setFileGroups([]);
       setSelectedFiles(new Set());
     }
-  }, [hasAnyDynamicCreativeAdSets]);
+  }, [enablePlacementCustomization, hasAnyDynamicCreativeAdSets, hasProfileVisitDestinationAdSets, setEnablePlacementCustomization, setFileGroups, setSelectedFiles]);
 
   const handleFileSelect = useCallback(
     (fileId) => {
