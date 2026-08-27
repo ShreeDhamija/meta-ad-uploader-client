@@ -4717,6 +4717,10 @@ export default function AdCreationForm({
 
   const isProfileDestinationEngagement = Boolean(profileDestinationType);
   const isUnifiedProfileDestination = profileDestinationType === "INSTAGRAM_PROFILE_AND_FACEBOOK_PAGE";
+  const selectedProfilePage = pages.find((page) => String(page.id) === String(pageId));
+  const selectedProfileInstagram = [selectedProfilePage?.instagramAccount, ...(selectedProfilePage?.additionalInstagramAccounts || [])].find(
+    (account) => String(account?.id) === String(instagramAccountId),
+  );
   const profileHasVideo = useMemo(
     () =>
       [...files, ...driveFiles, ...dropboxFiles, ...(frameioFiles || []), ...importedFiles].some(isVideoFile) ||
@@ -4730,7 +4734,7 @@ export default function AdCreationForm({
   const profilePrimaryTextLimit = isUnifiedProfileDestination || (profileDestinationType === "INSTAGRAM_PROFILE" && profileHasVideo) ? 1 : 5;
   const fixedProfileCta = profileDestinationType === "FACEBOOK_PAGE" ? "VISIT_PROFILE" : "VIEW_INSTAGRAM_PROFILE";
   const fixedProfileCtaLabel = isUnifiedProfileDestination
-    ? "Instagram & Facebook profile visits"
+    ? "Visit Page"
     : profileDestinationType === "FACEBOOK_PAGE"
       ? "Visit Facebook Page"
       : "View Instagram Profile";
@@ -5768,6 +5772,7 @@ export default function AdCreationForm({
         (account) => String(account?.id) === String(instagramAccountId),
       );
       if (selectedInstagramAccount?.username) formData.append("instagramUsername", selectedInstagramAccount.username);
+      if (selectedInstagramAccount?.igId) formData.append("instagramAppUserId", selectedInstagramAccount.igId);
       if (usePhoneNumberField) {
         formData.append("phoneNumber", phoneNumber);
       } else {
@@ -6780,6 +6785,7 @@ export default function AdCreationForm({
               (account) => String(account?.id) === String(instagramAccountId),
             );
             if (selectedInstagramAccount?.username) formData.append("instagramUsername", selectedInstagramAccount.username);
+            if (selectedInstagramAccount?.igId) formData.append("instagramAppUserId", selectedInstagramAccount.igId);
             formData.append("launchPaused", launchPaused);
             formData.append("discloseAiMedia", String(Boolean(discloseAiMedia)));
             formData.append("jobId", frontendJobId);
@@ -6835,6 +6841,7 @@ export default function AdCreationForm({
               (account) => String(account?.id) === String(instagramAccountId),
             );
             if (selectedInstagramAccount?.username) formData.append("instagramUsername", selectedInstagramAccount.username);
+            if (selectedInstagramAccount?.igId) formData.append("instagramAppUserId", selectedInstagramAccount.igId);
             formData.append("launchPaused", launchPaused);
             formData.append("discloseAiMedia", String(Boolean(discloseAiMedia)));
             formData.append("jobId", frontendJobId);
@@ -10511,10 +10518,41 @@ export default function AdCreationForm({
                   </div>}
 
                   {isProfileDestinationEngagement && (
-                    <div className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2">
-                      <p className="text-xs font-medium text-blue-800">
-                        Destination is fixed by the selected ad set: {fixedProfileCtaLabel}.
-                      </p>
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-2">
+                        <LinkIcon className="h-4 w-4" />
+                        Destination
+                      </Label>
+                      <div className={cn("grid gap-2", isUnifiedProfileDestination && "sm:grid-cols-2")}>
+                        {profileDestinationType !== "INSTAGRAM_PROFILE" && (
+                          <div className={cn(formFieldChrome, "flex items-center gap-2 px-3 py-2.5")}>
+                            <img
+                              src={selectedProfilePage?.profilePicture || "https://api.withblip.com/backup_page_image.png"}
+                              alt={selectedProfilePage?.name || "Facebook Page"}
+                              className="h-6 w-6 rounded-full border border-gray-300 object-cover"
+                            />
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-medium">{selectedProfilePage?.name || pageId}</p>
+                              <p className="text-xs text-gray-500">Facebook Page</p>
+                            </div>
+                          </div>
+                        )}
+                        {profileDestinationType !== "FACEBOOK_PAGE" && (
+                          <div className={cn(formFieldChrome, "flex items-center gap-2 px-3 py-2.5")}>
+                            <img
+                              src={selectedProfileInstagram?.profilePictureUrl || "https://api.withblip.com/backup_page_image.png"}
+                              alt={selectedProfileInstagram?.username || "Instagram Profile"}
+                              className="h-6 w-6 rounded-full border border-gray-300 object-cover"
+                            />
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-medium">
+                                {selectedProfileInstagram?.username ? `@${selectedProfileInstagram.username}` : instagramAccountId}
+                              </p>
+                              <p className="text-xs text-gray-500">Instagram Profile</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
 
