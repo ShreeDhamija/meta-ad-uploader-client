@@ -6162,6 +6162,11 @@ export default function AdCreationForm({
      * Append single Meta library image file fields
      */
     const appendMetaImageFile = (formData, metaFile) => {
+      if (metaFile.sourcePlacementCreativeId) {
+        formData.append("sourcePlacementCreativeId", metaFile.sourcePlacementCreativeId);
+        formData.append("enablePlacementCustomization", false);
+        return;
+      }
       formData.append("metaImageHash", metaFile.hash);
       formData.append("metaImageName", metaFile.name);
       formData.append("enablePlacementCustomization", false);
@@ -6171,6 +6176,11 @@ export default function AdCreationForm({
      * Append single Meta library video file fields
      */
     const appendMetaVideoFile = (formData, metaFile) => {
+      if (metaFile.sourcePlacementCreativeId) {
+        formData.append("sourcePlacementCreativeId", metaFile.sourcePlacementCreativeId);
+        formData.append("enablePlacementCustomization", false);
+        return;
+      }
       formData.append("metaVideoId", metaFile.id);
       formData.append("metaVideoName", metaFile.name);
       formData.append("enablePlacementCustomization", false);

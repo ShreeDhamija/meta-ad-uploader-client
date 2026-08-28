@@ -299,7 +299,18 @@ export default function Home() {
         const derived = [];
         let skippedCount = 0;
         importedPosts.forEach((post) => {
-            if (post.video_id) {
+            if (post.placement_customized_creative_id && post.placement_media_type) {
+                const templateKey = `placement:${post.placement_customized_creative_id}:${post.ad_id || post.id}`;
+                const previewUrl = post.placement_preview_url || post.image_url;
+                derived.push({
+                    type: post.placement_media_type,
+                    ...(post.placement_media_type === 'video' ? { id: templateKey, thumbnail_url: previewUrl } : { hash: templateKey, url: previewUrl }),
+                    name: post.ad_name,
+                    previewUrl,
+                    isPlacementCustomizedTemplate: true,
+                    sourcePlacementCreativeId: post.placement_customized_creative_id,
+                });
+            } else if (post.video_id) {
                 derived.push({ type: 'video', id: post.video_id, name: post.ad_name, previewUrl: post.image_url, thumbnail_url: post.image_url });
             } else if (post.image_hash) {
                 derived.push({ type: 'image', hash: post.image_hash, name: post.ad_name, previewUrl: post.image_url, url: post.image_url });
@@ -317,6 +328,9 @@ export default function Home() {
         if (derived.length === 0) return;
 
         setEditCreativeBackupPosts(importedPosts);
+        setEnablePlacementCustomization(false);
+        setFileGroups([]);
+        setSelectedFiles(new Set());
         setImportedFiles(derived);
         setImportedPosts([]);
         setEditAdCreativeMode(true);
