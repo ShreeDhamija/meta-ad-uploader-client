@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { creativeApi } from "@/lib/creativeApi";
 import { ArrowLeft, Box, BrainCircuit, Image as ImageIcon, Pencil, Plus, Route, Star } from "lucide-react";
 import PropTypes from "prop-types";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { JobBadge, useJobRunner } from "../JobsContext";
 import { EmptyState, ErrorBanner, ViewLoading } from "../ui";
 import BrandingEditor from "./BrandingEditor";
@@ -22,9 +22,8 @@ const CONTEXT_LABELS = {
   testimonials: "Testimonials",
   pricing: "Pricing",
   customer_avatars: "Customer avatars",
-  branding: "Branding",
 };
-const CONTEXT_ORDER = ["features", "benefits", "pain_points", "testimonials", "pricing", "customer_avatars", "branding"];
+const CONTEXT_ORDER = ["features", "benefits", "pain_points", "testimonials", "pricing", "customer_avatars"];
 
 export default function ProductsView({ ctx }) {
   const {
@@ -51,7 +50,8 @@ export default function ProductsView({ ctx }) {
     setErr(null);
     setCreating(true);
     try {
-      await creativeApi.createProduct({ ...form, clientId: selectedBrandId });
+      const response = await creativeApi.createProduct({ ...form, clientId: selectedBrandId });
+      if (response.product?.id) setSelectedProductId(response.product.id);
       setForm({ name: "", url: "", productType: "physical" });
       setAdding(false);
       await reloadProducts();
@@ -116,7 +116,12 @@ export default function ProductsView({ ctx }) {
                   className="cs-modal-input"
                   autoFocus
                 />
-                <Input aria-label="Product URL" placeholder="Product URL" value={form.url} onChange={set("url")} className="cs-modal-input" />
+                <div className="space-y-1.5">
+                  <Input aria-label="Product URL" type="url" placeholder="https://your-product-page.com" value={form.url} onChange={set("url")} className="cs-modal-input" />
+                  <p className="px-1 text-xs leading-5 text-neutral-500">
+                    Used to automatically build product context, brand guidelines, research, insights, copy, and the first strategy.
+                  </p>
+                </div>
                 <Select value={form.productType} onValueChange={(v) => setForm((f) => ({ ...f, productType: v }))}>
                   <SelectTrigger className="cs-modal-input w-full capitalize">
                     <SelectValue />
@@ -131,8 +136,8 @@ export default function ProductsView({ ctx }) {
                 </Select>
                 <ErrorBanner message={err} />
                 <DialogFooter>
-                  <button type="submit" disabled={!form.name.trim() || creating} className="cs-primary-button cs-modal-submit w-full">
-                    {creating ? "Creating…" : "Create Product"}
+                  <button type="submit" disabled={!form.name.trim() || !form.url.trim() || creating} className="cs-primary-button cs-modal-submit w-full">
+                    {creating ? "Creating & starting setup…" : "Create Product & Start Setup"}
                   </button>
                 </DialogFooter>
               </form>
@@ -214,13 +219,7 @@ export default function ProductsView({ ctx }) {
       </TabsContent>
 
       <TabsContent value="context" className="mt-0">
-        <button
-          type="button"
-          onClick={() => setTab("products")}
-          className="mb-4 inline-flex h-9 items-center gap-1.5 rounded-xl border border-transparent px-2.5 text-sm font-medium text-neutral-600 transition-colors hover:border-neutral-200"
-        >
-          <ArrowLeft className="h-4 w-4" /> Back to all products
-        </button>
+        <ProductEditorNav active="context" onBack={() => setTab("products")} onChange={setTab} />
         <ContextEditor
           productId={selectedProductId}
           productName={selectedProduct?.name}
@@ -256,7 +255,26 @@ export default function ProductsView({ ctx }) {
         />
       </TabsContent>
 
-      <TabsContent value="branding">
+      <TabsContent value="branding" className="mt-0">
+        <ProductEditorNav active="branding" onBack={() => setTab("products")} onChange={setTab} />
+        <div className="mb-6 flex flex-wrap items-center gap-5">
+          <Select value={selectedBrandId || ""} onValueChange={(v) => setSelectedBrandId(v || null)}>
+            <SelectTrigger className="cs-pill-control w-[230px] px-4">
+              <SelectValue placeholder="Select Account" />
+            </SelectTrigger>
+            <SelectContent className="cs-select-content bg-white">
+              {brands.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={selectedProductId || ""} onValueChange={(v) => setSelectedProductId(v || null)} disabled={!selectedBrandId}>
+            <SelectTrigger className="cs-pill-control w-[230px] px-4">
+              <SelectValue placeholder="Select Product" />
+            </SelectTrigger>
+            <SelectContent className="cs-select-content bg-white">
+              {products.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
         <BrandingEditor clientId={selectedBrandId} productId={selectedProductId} productName={selectedProduct?.name} />
       </TabsContent>
     </Tabs>
@@ -264,6 +282,29 @@ export default function ProductsView({ ctx }) {
 }
 
 ProductsView.propTypes = { ctx: PropTypes.object.isRequired };
+
+function ProductEditorNav({ active, onBack, onChange }) {
+  return (
+    <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+      <button
+        type="button"
+        onClick={onBack}
+        className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-transparent px-2.5 text-sm font-medium text-neutral-600 transition-colors hover:border-neutral-200"
+      >
+        <ArrowLeft className="h-4 w-4" /> Back to all products
+      </button>
+      <div className="inline-flex rounded-2xl border border-[#6c3403]/15 bg-white/70 p-1 shadow-sm">
+        <button type="button" onClick={() => onChange("context")} className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${active === "context" ? "bg-[#3b170b] text-white shadow-sm" : "text-[#6c3403]/70 hover:text-[#3b170b]"}`}>
+          Product context
+        </button>
+        <button type="button" onClick={() => onChange("branding")} className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${active === "branding" ? "bg-[#3b170b] text-white shadow-sm" : "text-[#6c3403]/70 hover:text-[#3b170b]"}`}>
+          Brand guidelines
+        </button>
+      </div>
+    </div>
+  );
+}
+ProductEditorNav.propTypes = { active: PropTypes.string.isRequired, onBack: PropTypes.func.isRequired, onChange: PropTypes.func.isRequired };
 
 // Context editor — per-category manual intel + "Run ingestion" (scrape the
 // product URL to auto-fill).
@@ -274,7 +315,7 @@ function ContextEditor({ productId, productName, hasUrl, toolbar }) {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState(null);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     if (!productId) return;
     setLoading(true);
     try {
@@ -288,12 +329,11 @@ function ContextEditor({ productId, productName, hasUrl, toolbar }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [productId]);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     load();
-  }, [productId]);
+  }, [load]);
 
   const { job: ingestJob, start: startIngest } = useJobRunner({ kind: "ingest_context", productId, onComplete: load });
 
