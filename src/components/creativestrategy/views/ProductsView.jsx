@@ -36,6 +36,7 @@ export default function ProductsView({ ctx }) {
     productsLoading,
     selectedProductId,
     setSelectedProductId,
+    reloadBrands,
     reloadProducts,
     goTo,
   } = ctx;
@@ -54,6 +55,7 @@ export default function ProductsView({ ctx }) {
       setForm({ name: "", url: "", productType: "physical" });
       setAdding(false);
       await reloadProducts();
+      await reloadBrands();
     } catch (e) {
       setErr(e.message);
     } finally {
@@ -77,7 +79,7 @@ export default function ProductsView({ ctx }) {
         <div className="flex flex-wrap items-center justify-between gap-5">
           <Select value={selectedBrandId || ""} onValueChange={(v) => setSelectedBrandId(v || null)}>
             <SelectTrigger className="cs-pill-control w-[230px] px-4">
-              <SelectValue placeholder="Select Brand" />
+              <SelectValue placeholder="Select Account" />
             </SelectTrigger>
             <SelectContent className="cs-select-content bg-white">
               {brands.map((b) => (
@@ -151,8 +153,8 @@ export default function ProductsView({ ctx }) {
         {!selectedBrandId ? (
           <EmptyState
             icon={Box}
-            title="Select a brand to view its products"
-            hint="Choose a brand above, or create one from the Brands tab."
+            title="Select an account to view its products"
+            hint="Choose an account above, or connect one from the Accounts tab."
             className="min-h-[390px] rounded-[28px]"
           />
         ) : productsLoading ? (
@@ -227,7 +229,7 @@ export default function ProductsView({ ctx }) {
             <div className="flex flex-wrap items-center gap-5">
               <Select value={selectedBrandId || ""} onValueChange={(v) => setSelectedBrandId(v || null)}>
                 <SelectTrigger className="cs-pill-control w-[230px] px-4">
-                  <SelectValue placeholder="Select Brand" />
+                  <SelectValue placeholder="Select Account" />
                 </SelectTrigger>
                 <SelectContent className="cs-select-content bg-white">
                   {brands.map((b) => (

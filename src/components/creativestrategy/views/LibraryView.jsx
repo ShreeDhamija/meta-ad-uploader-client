@@ -92,7 +92,7 @@ export default function LibraryView({ ctx }) {
           <div className="flex flex-wrap items-center gap-4">
             <Select value={selectedBrandId || ""} onValueChange={(value) => setSelectedBrandId(value || null)}>
               <SelectTrigger className="cs-pill-control w-[230px] px-4">
-                <SelectValue placeholder={brandsLoading ? "Loading Brands…" : "Select Brand"} />
+                <SelectValue placeholder={brandsLoading ? "Loading Accounts…" : "Select Account"} />
               </SelectTrigger>
               <SelectContent className="cs-select-content bg-white">
                 {brands.map((brand) => <SelectItem key={brand.id} value={brand.id}>{brand.name}</SelectItem>)}

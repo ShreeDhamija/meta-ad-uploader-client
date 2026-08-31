@@ -169,14 +169,12 @@ const PHASE_LABELS = {
   // others
   running_strategist: "Running the strategist", mining_reddit: "Mining Reddit threads",
   scraping_and_extracting: "Scraping + extracting", analyzing: "Analyzing reference",
-  analyzing_batch: "Analyzing", classifying: "Classifying ads",
-  curating_hooks: "Curating proven hooks", normalizing_angles: "Normalizing angles",
+  analyzing_batch: "Analyzing",
 };
 const KIND_LABEL = {
-  research: "Research", reddit_sentiment: "Reddit sentiment", analyze_ads: "Analysis",
+  research: "Research", analyze_ads: "Analysis",
   generate_ad: "Generating ads", generate_library: "Generating library", weekly_strategy: "Weekly strategy",
   ingest_context: "Ingestion", inspo_analyze: "Reference analysis", trending_creative: "Trending creative",
-  backfill: "Maintenance",
 };
 
 // Returns { title, detail, pct } for a job record. pct is best-effort (null when unknown).

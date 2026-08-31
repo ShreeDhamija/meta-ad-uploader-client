@@ -1,4 +1,4 @@
-// Brands come from the app-wide AppContext Meta account list and are reconciled
+// Accounts come from the app-wide AppContext Meta account list and are reconciled
 // to Creative Service client UUIDs before this view renders them.
 import { Layers, RefreshCw } from "lucide-react";
 import PropTypes from "prop-types";
@@ -31,7 +31,7 @@ export default function BrandsView({ ctx }) {
       </div>
 
       {brandsLoading && brands.length === 0 ? (
-        <ViewLoading label="Loading brands from Meta…" />
+        <ViewLoading label="Loading accounts from Meta…" />
       ) : brands.length === 0 ? (
         <EmptyState
           icon={Layers}

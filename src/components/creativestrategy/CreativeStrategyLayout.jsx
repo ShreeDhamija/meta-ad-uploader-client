@@ -29,7 +29,7 @@ import WeeklyView from "./views/WeeklyView";
 
 const NAV = [
   { key: "overview", label: "Overview", icon: AudioLines, phase: "later" },
-  { key: "brands", label: "Brands", icon: Layers },
+  { key: "brands", label: "Accounts", icon: Layers },
   { key: "products", label: "Products", icon: Box },
   { key: "intelligence", label: "Intelligence", icon: Zap },
   { key: "library", label: "Library", icon: BookOpen },
@@ -41,8 +41,8 @@ const NAV = [
 
 const DESCRIPTIONS = {
   overview: "Snapshot of the selected brand and product.",
-  brands: "Create and manage Brands (Each brand maps to 1 Meta Ad Account)",
-  products: "Create and manage Products for the selected Brand",
+  brands: "View and manage connected Meta ad accounts.",
+  products: "Create and manage products for the selected account.",
   intelligence: "Run Meta ad analysis and review analyzed creatives + the strategy audit.",
   research: "Run the 7-phase research agent → personas, brand deep dive, language bank.",
   library: "Generate draft hooks, headlines, and primary text per persona.",
@@ -93,6 +93,10 @@ export default function CreativeStrategyLayout() {
       })
       .filter(Boolean);
   }, [adAccounts, creativeClients]);
+  const accountsWithProducts = useMemo(
+    () => brands.filter((account) => Number(account.productCount) > 0),
+    [brands],
+  );
   const brandsLoading = adAccountsLoading || creativeClientsLoading;
 
   const loadBrands = useCallback(
@@ -154,6 +158,12 @@ export default function CreativeStrategyLayout() {
     }
   }, [brands, selectedBrandId]);
   useEffect(() => {
+    const allowsEmptyAccount = activeTab === "brands" || activeTab === "products";
+    if (!allowsEmptyAccount && selectedBrandId && !accountsWithProducts.some((account) => account.id === selectedBrandId)) {
+      setSelectedBrandId(null);
+    }
+  }, [accountsWithProducts, activeTab, selectedBrandId]);
+  useEffect(() => {
     if (selectedBrandId) loadProducts(selectedBrandId);
     else setProducts([]);
     setSelectedProductId(null);
@@ -163,7 +173,7 @@ export default function CreativeStrategyLayout() {
   const selectedProduct = products.find((p) => p.id === selectedProductId) || null;
 
   const ctx = {
-    brands,
+    brands: activeTab === "brands" || activeTab === "products" ? brands : accountsWithProducts,
     brandsLoading,
     selectedBrand,
     selectedBrandId,
@@ -305,10 +315,10 @@ export default function CreativeStrategyLayout() {
                   <div className="mb-7 flex flex-wrap items-center gap-4">
                     <Select value={selectedBrandId || ""} onValueChange={(v) => setSelectedBrandId(v || null)}>
                       <SelectTrigger className="cs-pill-control w-[240px] px-5">
-                        <SelectValue placeholder="Select Brand" />
+                        <SelectValue placeholder="Select Account" />
                       </SelectTrigger>
                       <SelectContent className="cs-select-content bg-white">
-                        {brands.map((b) => (
+                        {accountsWithProducts.map((b) => (
                           <SelectItem key={b.id} value={b.id}>
                             {b.name}
                           </SelectItem>

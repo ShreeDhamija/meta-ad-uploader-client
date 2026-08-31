@@ -1,4 +1,4 @@
-// Generate workspace — statics, copy/scripts, briefs, and the product's saved
+// Generate workspace — statics, video scripts, briefs, and the product's saved
 // generation gallery share one shell while retaining their existing API flows.
 import { useEffect, useMemo, useState } from "react";
 import PropTypes from "prop-types";
@@ -136,7 +136,7 @@ export default function GenerateView({ ctx }) {
         <div className="flex flex-wrap items-center gap-3">
           <Select value={selectedBrandId || ""} onValueChange={(value) => setSelectedBrandId(value || null)}>
             <SelectTrigger className="cs-pill-control w-[210px] px-4">
-              <SelectValue placeholder={brandsLoading ? "Loading Brands…" : "Select Brand"} />
+              <SelectValue placeholder={brandsLoading ? "Loading Accounts…" : "Select Account"} />
             </SelectTrigger>
             <SelectContent className="cs-select-content bg-white">
               {brands.map((brand) => <SelectItem key={brand.id} value={brand.id}>{brand.name}</SelectItem>)}
@@ -263,24 +263,18 @@ export default function GenerateView({ ctx }) {
   );
 }
 
-const COPY_TYPES = [
-  { key: "hook", label: "Hooks" },
-  { key: "headline", label: "Headlines" },
-  { key: "primary_text", label: "Primary text" },
-];
-
 function ScriptsPanel({ productId }) {
   const [personas, setPersonas] = useState([]);
   const [personasLoading, setPersonasLoading] = useState(false);
-  const [copyType, setCopyType] = useState("hook");
   const [avatar, setAvatar] = useState("");
-  const [count, setCount] = useState(8);
+  const [count, setCount] = useState(3);
+  const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
-  const [results, setResults] = useState([]);
-  const [saved, setSaved] = useState(null);
+  const [items, setItems] = useState([]);
   const [err, setErr] = useState(null);
 
   useEffect(() => {
+    setItems([]);
     if (!productId) { setPersonas([]); setPersonasLoading(false); return; }
     setPersonasLoading(true);
     creativeApi.getResearch(productId)
@@ -294,11 +288,15 @@ function ScriptsPanel({ productId }) {
 
   const run = async () => {
     if (!productId) return;
-    setErr(null); setBusy(true); setResults([]); setSaved(null);
+    setErr(null); setBusy(true); setItems([]);
     try {
-      const response = await creativeApi.generateCopy({ productId, copyType, count, selectedAvatar: avatar || undefined });
-      setResults(response.results || []);
-      setSaved(response.saved ?? 0);
+      const response = await creativeApi.generateVideoScripts({
+        productId,
+        count,
+        selectedAvatar: avatar || undefined,
+        notes: notes || undefined,
+      });
+      setItems(response.items || []);
     } catch (error) {
       setErr(error.message);
     } finally {
@@ -311,8 +309,16 @@ function ScriptsPanel({ productId }) {
       sidebar={(
         <>
           <div className="space-y-4">
-            <SidebarSelect label="Script Type" value={copyType} onChange={setCopyType} options={COPY_TYPES} />
-            <SidebarNumber label="Count" value={count} min={1} max={20} onChange={setCount} />
+            <div className="rounded-2xl border border-[#6c3403]/20 bg-[#fffaf4] p-4">
+              <div className="flex items-start gap-3">
+                <FileText className="mt-0.5 h-5 w-5 shrink-0 text-[#6c3403]" />
+                <div>
+                  <p className="text-sm font-semibold text-[#3b170b]">Video scripts</p>
+                  <p className="mt-1 text-xs leading-5 text-[#6d605a]">Generates the requested number of concept-led Meta video scripts, each with three hook options.</p>
+                </div>
+              </div>
+            </div>
+            <SidebarNumber label="Count" value={count} min={1} max={8} onChange={setCount} />
             {personasLoading ? (
               <SidebarLoading label="Loading personas…" />
             ) : (
@@ -323,26 +329,53 @@ function ScriptsPanel({ productId }) {
                 options={[{ key: "auto", label: "Auto persona" }, ...personas.map((persona) => ({ key: persona, label: persona }))]}
               />
             )}
+            <SidebarInput
+              label="Direction (optional)"
+              type="textarea"
+              value={notes}
+              onChange={setNotes}
+              placeholder="e.g. focus on the bundle offer or a specific persona"
+            />
           </div>
-          <button type="button" onClick={run} disabled={!productId || busy} className="cs-primary-button mt-auto w-full">
-            {busy ? "Generating…" : "Generate Scripts"}
+          <button type="button" onClick={run} disabled={!productId || busy || personasLoading} className="cs-primary-button mt-auto w-full">
+            {busy ? `Writing ${count} Script${count === 1 ? "" : "s"}…` : `Generate ${count} Video Script${count === 1 ? "" : "s"}`}
           </button>
         </>
       )}
     >
       <ErrorBanner message={err} />
       {!productId ? (
-        <WorkspaceEmpty icon={Box} title="Select a product" hint="Choose a product above before generating copy." />
-      ) : personasLoading ? (
-        <GenerateLoading label="Loading personas and script options…" />
+        <WorkspaceEmpty icon={Box} title="Select a product" hint="Choose a product above before generating a video script." />
       ) : busy ? (
-        <GenerateLoading label="Generating scripts…" />
-      ) : results.length === 0 ? (
-        <WorkspaceEmpty icon={FileText} title="No scripts generated yet" hint="Set the script type, count, and persona in the sidebar." />
+        <GenerateLoading label={`Writing ${count} video script${count === 1 ? "" : "s"}…`} />
+      ) : items.length === 0 ? (
+        <WorkspaceEmpty icon={FileText} title="Video script generation" hint="Generate a concept-led video ad script with three opening hooks." />
       ) : (
-        <div className="space-y-3">
-          {saved != null && <p className="text-xs font-medium text-[#6c3403]">{results.length} generated · {saved} saved to Library</p>}
-          {results.map((result, index) => <div key={index} className="cs-generate-result whitespace-pre-wrap">{result}</div>)}
+        <div className="space-y-7">
+          {items.map((item, itemIndex) => {
+            const concept = item.concept;
+            const brief = item.brief;
+            return (
+              <section key={`${concept?.concept_name || "script"}-${itemIndex}`} className="space-y-4">
+                {items.length > 1 && <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#8a746c]">Video Script {itemIndex + 1}</p>}
+                {concept && (
+                  <div className="cs-generate-result space-y-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-semibold">{concept.concept_name}</span>
+                      <Tag>video</Tag>
+                      {concept.persona_label && <Tag>{concept.persona_label}</Tag>}
+                      {concept.awareness_stage && <Tag>{concept.awareness_stage}</Tag>}
+                    </div>
+                    {concept.hypothesis && <p><strong>Hypothesis:</strong> {concept.hypothesis}</p>}
+                    {concept.angle && <p><strong>Angle:</strong> {concept.angle}</p>}
+                    {concept.concept_direction && <p><strong>Direction:</strong> {concept.concept_direction}</p>}
+                  </div>
+                )}
+                {brief?.hooks?.length > 0 && <ResultSection title="Hooks"><ul className="list-disc space-y-1 pl-5">{brief.hooks.map((hook, index) => <li key={index}>{hook}</li>)}</ul></ResultSection>}
+                {brief?.script && <ResultSection title="Video Script"><pre className="whitespace-pre-wrap font-sans">{brief.script}</pre></ResultSection>}
+              </section>
+            );
+          })}
         </div>
       )}
     </GenerateWorkspace>

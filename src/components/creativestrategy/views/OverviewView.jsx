@@ -84,7 +84,7 @@ export default function OverviewView({ ctx }) {
   }, [selectedBrandId, selectedProductId]);
 
   if (!selectedBrandId) {
-    return <EmptyState icon={Layers} title="No brand selected" hint="Pick a brand in the top bar to see its overview." />;
+    return <EmptyState icon={Layers} title="No account selected" hint="Pick an account in the top bar to see its overview." />;
   }
   if (loading) return <OverviewSkeleton />;
 

@@ -60,18 +60,11 @@ export default function IntelligenceView({ ctx }) {
   // Tracked jobs (persist across tab switches + reload on completion).
   const { job: analyzeJob, start: startAnalyze } = useJobRunner({ kind: "analyze_ads", productId: selectedProductId, onComplete: () => load(selectedProductId) });
   const { job: trendJob, start: startTrend } = useJobRunner({ kind: "trending_creative", productId: selectedProductId, onComplete: () => load(selectedProductId) });
-  const { job: backfillJob, start: startBackfill } = useJobRunner({ kind: "backfill", brandId: ctx.selectedBrandId, onComplete: () => load(selectedProductId) });
 
   const run = async () => {
     if (!selectedProductId) return;
     setErr(null);
     try { const { jobId } = await creativeApi.runInsights(selectedProductId); startAnalyze(jobId); }
-    catch (e) { setErr(e.message); }
-  };
-  const runBackfill = async (kind) => {
-    setErr(null);
-    if (!ctx.selectedBrandId) { setErr("Select a brand first"); return; }
-    try { const { jobId } = await creativeApi.runBackfill(ctx.selectedBrandId, kind); startBackfill(jobId); }
     catch (e) { setErr(e.message); }
   };
   const a = audit || {};
@@ -114,7 +107,7 @@ export default function IntelligenceView({ ctx }) {
       <div className="cs-intel-toolbar">
         <Select value={selectedBrandId || ""} onValueChange={(value) => setSelectedBrandId(value || null)}>
           <SelectTrigger className="cs-pill-control w-[220px] px-4">
-            <SelectValue placeholder={brandsLoading ? "Loading Brands…" : "Select Brand"} />
+            <SelectValue placeholder={brandsLoading ? "Loading Accounts…" : "Select Account"} />
           </SelectTrigger>
           <SelectContent className="cs-select-content bg-white">
             {brands.map((brand) => <SelectItem key={brand.id} value={brand.id}>{brand.name}</SelectItem>)}
@@ -141,14 +134,6 @@ export default function IntelligenceView({ ctx }) {
       </div>
       {selectedProduct && <p className="cs-intel-toolbar__hint">{selectedProduct.name}{selectedProduct.metaAdAccountId ? ` · ${selectedProduct.metaAdAccountId}` : ""}</p>}
       <ErrorBanner message={err} />
-
-      <div className="cs-intel-maintenance">
-        <span>Brand maintenance</span>
-        <button type="button" onClick={() => runBackfill("classify")}>Classify Ads</button>
-        <button type="button" onClick={() => runBackfill("curate_hooks")}>Curate Proven Hooks</button>
-        <button type="button" onClick={() => runBackfill("normalize_angles")}>Normalize Angles</button>
-        <JobBadge job={backfillJob} />
-      </div>
 
       {!selectedProductId ? (
         <EmptyState icon={Zap} title="No product selected" hint="Select a product above to run and view ad analysis." />

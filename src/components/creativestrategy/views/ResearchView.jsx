@@ -54,9 +54,6 @@ export default function ResearchView({ ctx }) {
   const { job: researchJob, start: startResearch } = useJobRunner({
     kind: "research", productId: selectedProductId, onComplete: () => load(selectedProductId),
   });
-  const { job: redditJob, start: startReddit } = useJobRunner({
-    kind: "reddit_sentiment", productId: selectedProductId, onComplete: () => load(selectedProductId),
-  });
 
   const run = async () => {
     if (!selectedProductId) return;
@@ -64,15 +61,6 @@ export default function ResearchView({ ctx }) {
     try {
       const { jobId } = await creativeApi.runResearch(selectedProductId);
       startResearch(jobId);
-    } catch (error) { setErr(error.message); }
-  };
-
-  const runReddit = async () => {
-    if (!selectedProductId) return;
-    setErr(null);
-    try {
-      const { jobId } = await creativeApi.runReddit(selectedProductId);
-      startReddit(jobId);
     } catch (error) { setErr(error.message); }
   };
 
@@ -117,21 +105,20 @@ export default function ResearchView({ ctx }) {
 
   const personas = intel.personas?.personas || (Array.isArray(intel.personas) ? intel.personas : []);
   const sectionTypes = types
-    .filter((type) => type !== "personas")
+    .filter((type) => type !== "personas" && type !== "trending_creative")
     .sort((a, b) => {
       const first = ORDER.indexOf(a);
       const second = ORDER.indexOf(b);
       return (first === -1 ? 999 : first) - (second === -1 ? 999 : second);
     });
   const researchActive = isActiveJob(researchJob);
-  const redditActive = isActiveJob(redditJob);
 
   return (
     <div className="space-y-5">
       <div className="cs-research-toolbar">
         <Select value={selectedBrandId || ""} onValueChange={(value) => setSelectedBrandId(value || null)}>
           <SelectTrigger className="cs-pill-control w-[220px] px-4">
-            <SelectValue placeholder={brandsLoading ? "Loading Brands…" : "Select Brand"} />
+            <SelectValue placeholder={brandsLoading ? "Loading Accounts…" : "Select Account"} />
           </SelectTrigger>
           <SelectContent className="cs-select-content bg-white">
             {brands.map((brand) => <SelectItem key={brand.id} value={brand.id}>{brand.name}</SelectItem>)}
@@ -154,11 +141,6 @@ export default function ResearchView({ ctx }) {
         <button type="button" onClick={run} disabled={!selectedProductId || researchActive} className="cs-primary-button">
           {researchActive && <Loader2 className="h-4 w-4 animate-spin" />}
           {researchActive ? "Running Research…" : "Run Research"}
-        </button>
-        <JobBadge job={redditJob} />
-        <button type="button" onClick={runReddit} disabled={!selectedProductId || redditActive} className="cs-research-secondary-button">
-          {redditActive && <Loader2 className="h-4 w-4 animate-spin" />}
-          {redditActive ? "Analyzing Reddit…" : "Run Reddit Sentiment"}
         </button>
       </div>
       {selectedProduct && <p className="cs-research-toolbar__hint">{selectedProduct.name} · complete research usually takes 5–10 minutes</p>}

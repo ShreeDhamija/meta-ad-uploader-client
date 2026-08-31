@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import PropTypes from "prop-types";
 import {
-  Activity, CircleCheck, CircleX, ClipboardList, Loader2, MousePointerClick, RefreshCw,
+  CircleCheck, CircleX, ClipboardList, Loader2, MousePointerClick,
 } from "lucide-react";
 import { creativeApi } from "@/lib/creativeApi";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
@@ -38,8 +38,6 @@ export default function WeeklyView({ ctx }) {
   const [filters, setFilters] = useState({ persona: "all", angle: "all", format: "all", awareness: "all" });
   const [briefs, setBriefs] = useState({});
   const [briefing, setBriefing] = useState(null);
-  const [heartbeat, setHeartbeat] = useState(null);
-  const [hbLoading, setHbLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [updating, setUpdating] = useState(null);
 
@@ -58,7 +56,6 @@ export default function WeeklyView({ ctx }) {
   };
 
   useEffect(() => {
-    setHeartbeat(null);
     setBriefs({});
     if (selectedBrandId) load(selectedBrandId);
     else { setIdeas([]); setRun(null); }
@@ -118,20 +115,6 @@ export default function WeeklyView({ ctx }) {
     }
   };
 
-  const loadHeartbeat = async (force) => {
-    if (!selectedBrandId) return;
-    setErr(null);
-    setHbLoading(true);
-    try {
-      const response = await creativeApi.getHeartbeat(selectedBrandId, force);
-      setHeartbeat(response.markdown);
-    } catch (error) {
-      setErr(error.message);
-    } finally {
-      setHbLoading(false);
-    }
-  };
-
   const byStatus = ideas.filter((idea) => (
     status === "pending" ? (idea.status ?? "pending") === "pending"
       : status === "approved" ? idea.status === "approved" || idea.status === "sent_to_inspo"
@@ -174,7 +157,7 @@ export default function WeeklyView({ ctx }) {
           <div className="flex flex-wrap items-center gap-4">
             <Select value={selectedBrandId || ""} onValueChange={(value) => setSelectedBrandId(value || null)}>
               <SelectTrigger className="cs-pill-control w-[230px] px-4">
-                <SelectValue placeholder={brandsLoading ? "Loading Brands…" : "Select Brand"} />
+                <SelectValue placeholder={brandsLoading ? "Loading Accounts…" : "Select Account"} />
               </SelectTrigger>
               <SelectContent className="cs-select-content bg-white">
                 {brands.map((brand) => <SelectItem key={brand.id} value={brand.id}>{brand.name}</SelectItem>)}
@@ -207,7 +190,7 @@ export default function WeeklyView({ ctx }) {
       <ErrorBanner message={err} />
 
       {!selectedBrandId ? (
-        <EmptyState icon={MousePointerClick} title="No brand selected" hint="Select a brand above to run the weekly strategist." className="min-h-[420px]" />
+        <EmptyState icon={MousePointerClick} title="No account selected" hint="Select an account above to run the weekly strategist." className="min-h-[420px]" />
       ) : loading && ideas.length === 0 ? (
         <ViewLoading label="Loading weekly strategy…" className="min-h-[420px]" />
       ) : (
@@ -222,31 +205,6 @@ export default function WeeklyView({ ctx }) {
               <p>{summary.signals?.concept_distribution_hint || "Concepts are balanced across current performance signals, audience awareness, and creative opportunity."}</p>
             </section>
           )}
-
-          <section className="cs-weekly-heartbeat">
-            <header className="cs-weekly-heartbeat__header">
-              <div className="flex items-center gap-2">
-                <Activity className="h-4 w-4 text-[#6c3403]" />
-                <div>
-                  <h2 className="text-sm font-semibold text-[#3b170b]">Heartbeat</h2>
-                  <p className="text-[11px] font-normal text-[#6c3403]/65">14-day performance digest</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <button type="button" onClick={() => loadHeartbeat(false)} disabled={hbLoading} className="cs-weekly-small-button">
-                  {hbLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "View"}
-                </button>
-                <button type="button" onClick={() => loadHeartbeat(true)} disabled={hbLoading} className="cs-weekly-small-button">
-                  <RefreshCw className="h-3.5 w-3.5" /> Refresh
-                </button>
-              </div>
-            </header>
-            <div className="cs-weekly-heartbeat__body">
-              {(heartbeat || summary?.heartbeat_markdown)
-                ? <HeartbeatMarkdown markdown={heartbeat || summary.heartbeat_markdown} />
-                : <p className="text-xs font-normal text-[#6c3403]/55">Click View to load the digest.</p>}
-            </div>
-          </section>
 
           {ideas.length === 0 ? (
             <EmptyState icon={MousePointerClick} title="No concepts yet" hint="Run Strategy to generate concepts from analyzed ads and research." />
@@ -397,85 +355,6 @@ function BriefSection({ title, children }) {
   return <div><p className="font-semibold text-[#3b170b]">{title}</p>{children}</div>;
 }
 
-function HeartbeatMarkdown({ markdown }) {
-  const lines = String(markdown || "").replace(/\r/g, "").split("\n");
-  const blocks = [];
-  let index = 0;
-
-  while (index < lines.length) {
-    const line = lines[index].trim();
-    if (!line) { index += 1; continue; }
-
-    const heading = line.match(/^(#{1,3})\s+(.+)$/);
-    if (heading) {
-      const level = heading[1].length;
-      const Tag = level === 1 ? "h2" : level === 2 ? "h3" : "h4";
-      blocks.push(<Tag key={`heading-${index}`} className={`cs-heartbeat-heading is-level-${level}`}>{renderInline(heading[2])}</Tag>);
-      index += 1;
-      continue;
-    }
-
-    if (/^---+$/.test(line)) {
-      blocks.push(<hr key={`rule-${index}`} className="cs-heartbeat-rule" />);
-      index += 1;
-      continue;
-    }
-
-    if (line.startsWith("- ")) {
-      const items = [];
-      while (index < lines.length && lines[index].trim().startsWith("- ")) {
-        items.push(lines[index].trim().slice(2));
-        index += 1;
-      }
-      blocks.push(<ul key={`list-${index}`} className="cs-heartbeat-list">{items.map((item, itemIndex) => <li key={itemIndex}>{renderInline(item)}</li>)}</ul>);
-      continue;
-    }
-
-    if (line.includes("|") && lines[index + 1] && /^\|?\s*:?-+/.test(lines[index + 1].trim())) {
-      const headers = splitTableRow(line);
-      index += 2;
-      const rows = [];
-      while (index < lines.length && lines[index].trim().includes("|")) {
-        rows.push(splitTableRow(lines[index].trim()));
-        index += 1;
-      }
-      blocks.push(
-        <div key={`table-${index}`} className="cs-heartbeat-table-wrap">
-          <table className="cs-heartbeat-table">
-            <thead><tr>{headers.map((cell, cellIndex) => <th key={cellIndex}>{renderInline(cell)}</th>)}</tr></thead>
-            <tbody>{rows.map((row, rowIndex) => <tr key={rowIndex}>{row.map((cell, cellIndex) => <td key={cellIndex}>{renderInline(cell)}</td>)}</tr>)}</tbody>
-          </table>
-        </div>,
-      );
-      continue;
-    }
-
-    const paragraph = [line];
-    index += 1;
-    while (index < lines.length) {
-      const next = lines[index].trim();
-      if (!next || /^(#{1,3})\s+/.test(next) || /^---+$/.test(next) || next.startsWith("- ") || (next.includes("|") && lines[index + 1] && /^\|?\s*:?-+/.test(lines[index + 1].trim()))) break;
-      paragraph.push(next);
-      index += 1;
-    }
-    blocks.push(<p key={`paragraph-${index}`} className="cs-heartbeat-paragraph">{renderInline(paragraph.join(" "))}</p>);
-  }
-
-  return <div className="cs-heartbeat-markdown">{blocks}</div>;
-}
-
-function splitTableRow(row) {
-  return row.replace(/^\|/, "").replace(/\|$/, "").split("|").map((cell) => cell.trim());
-}
-
-function renderInline(value) {
-  return String(value).replace(/\\_/g, "_").split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g).filter(Boolean).map((part, index) => {
-    if (part.startsWith("**") && part.endsWith("**")) return <strong key={index}>{part.slice(2, -2)}</strong>;
-    if (part.startsWith("*") && part.endsWith("*")) return <em key={index}>{part.slice(1, -1)}</em>;
-    return <span key={index}>{part}</span>;
-  });
-}
-
 function formatTier(value) {
   return TIERS.find((tier) => tier.key === value)?.label || value || "Concept";
 }
@@ -494,4 +373,3 @@ ConceptCard.propTypes = {
 };
 Brief.propTypes = { brief: PropTypes.object.isRequired };
 BriefSection.propTypes = { title: PropTypes.string.isRequired, children: PropTypes.node.isRequired };
-HeartbeatMarkdown.propTypes = { markdown: PropTypes.string.isRequired };

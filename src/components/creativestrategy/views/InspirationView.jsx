@@ -44,7 +44,7 @@ export default function InspirationView({ ctx }) {
   });
 
   if (!selectedBrandId) {
-    return <EmptyState icon={Heart} title="No brand selected" hint="Select a brand in the top bar to upload reference ads." />;
+    return <EmptyState icon={Heart} title="No account selected" hint="Select an account in the top bar to upload reference ads." />;
   }
 
   const onPick = async (e) => {

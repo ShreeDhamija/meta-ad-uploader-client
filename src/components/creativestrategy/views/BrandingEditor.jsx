@@ -56,7 +56,7 @@ export default function BrandingEditor({ clientId, productId, productName }) {
   useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [clientId]);
   useEffect(() => { loadAssets(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [productId]);
 
-  if (!clientId) return <EmptyState icon={Box} title="No brand selected" hint="Select a brand first." />;
+  if (!clientId) return <EmptyState icon={Box} title="No account selected" hint="Select an account first." />;
   if (loading) return <ViewLoading label="Loading brand guidelines…" />;
 
   const save = async () => {
