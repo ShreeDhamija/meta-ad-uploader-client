@@ -1,13 +1,8 @@
-// Intelligence (= the colleague's "Insights" / Creative Insights tab). Mirrors
-// his InsightsTab section hierarchy: Executive KPIs → Winners → Top hooks →
-// Messaging themes → Persona performance → Visual openers → Messaging trends →
-// Strategic patterns → Untapped angles → Recent launches → Fatigue → full audit
-// details. Data comes from creative_strategy_audit
-// (sub-fields) + ad_creative_insights. Structure/headings/data map 1:1 to his;
-// visual polish is a later pass.
+// Intelligence (= the source app's "Insights" tab). The detailed sections use
+// creative_strategy_audit aggregates plus per-ad ad_creative_insights evidence.
 import { useEffect, useRef, useState } from "react";
 import PropTypes from "prop-types";
-import { Loader2, Plus, RefreshCw, Zap } from "lucide-react";
+import { AlertTriangle, ChevronDown, ChevronRight, Loader2, Plus, RefreshCw, Zap } from "lucide-react";
 import { creativeApi } from "@/lib/creativeApi";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -18,8 +13,10 @@ import { useJobRunner, JobBadge } from "../JobsContext";
 
 // audit keys rendered in named sections below → excluded from the generic dump.
 const NAMED_AUDIT_KEYS = new Set([
-  "messaging_themes", "persona_ad_mapping", "visual_openers", "messaging_trends",
-  "patterns", "angles_not_yet_tested", "untapped_angles", "prioritized_gaps",
+  "messaging_themes", "persona_ad_mapping", "visual_openers", "visual_hook_trends", "messaging_trends",
+  "patterns", "top_hooks", "top_ad_grades", "angles_not_yet_tested", "untapped_angles",
+  "untapped_angles_by_persona", "prioritized_gaps", "concept_seed_list", "concept_seeds",
+  "first_test_recommendations", "creative_strategy_summary",
 ]);
 
 const money = (n) => `$${Math.round(n || 0).toLocaleString()}`;
@@ -86,12 +83,15 @@ export default function IntelligenceView({ ctx }) {
   };
   const trendingAds = trending?.trending_ads || [];
 
-  const winners = [...ads].sort((x, y) => (gradeRank(y.grade) - gradeRank(x.grade)) || (y.spend - x.spend)).slice(0, 5);
-  const topHooks = [...ads].sort((x, y) => y.spend - x.spend)
-    .map((x) => ({ text: x.firstSpokenSentence || x.firstOverlayHeadline || x.headlineText, style: x.hookStyle, spend: x.spend, ad: x.adName }))
-    .filter((h) => h.text).slice(0, 6);
-  const recent = [...ads].filter((x) => x.createdTime).sort((x, y) => new Date(y.createdTime) - new Date(x.createdTime)).slice(0, 5);
+  const winners = [...ads].sort((x, y) => (y.spend || 0) - (x.spend || 0)).slice(0, 3);
+  const topHooks = deriveHooksFromAds(ads, a.top_hooks);
+  const recentCutoff = Date.now() - 14 * 24 * 60 * 60 * 1000;
+  const recent = [...ads].filter((x) => x.createdTime && new Date(x.createdTime).getTime() >= recentCutoff)
+    .sort((x, y) => new Date(y.createdTime) - new Date(x.createdTime));
   const fatigued = ads.filter((x) => (x.frequency || 0) >= 3 && (x.spend || 0) > 100).sort((x, y) => (y.frequency || 0) - (x.frequency || 0)).slice(0, 5);
+  const failedDownloads = ads.filter((x) => !x.storagePath);
+  const patterns = Array.isArray(a.patterns) ? [...a.patterns].sort((x, y) =>
+    ((y.spend_pct || 0) * 0.6 + (y.ad_count || 0) * 4) - ((x.spend_pct || 0) * 0.6 + (x.ad_count || 0) * 4)) : [];
 
   const otherAuditEntries = Object.entries(a).filter(([k, v]) => v != null && !NAMED_AUDIT_KEYS.has(k));
   const analyzeActive = isActiveJob(analyzeJob);
@@ -150,21 +150,13 @@ export default function IntelligenceView({ ctx }) {
         </div>
       )}
 
-      {winners.length > 0 && (
-        <Block title="Winners spotlight" noDivider>
-          <div className="cs-intel-creative-grid">
-            {winners.map((w) => (
-              <div key={w.adId} className="cs-intel-creative-card">
-                <CreativeThumbnail src={w.imageUrl || w.thumbnailUrl} />
-                <div className="cs-intel-creative-card__body">
-                  <div className="truncate">{w.adName || "(unnamed)"}</div>
-                  <p>{w.grade ? `${w.grade} · ` : ""}{money(w.spend)}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Block>
-      )}
+      <FailedDownloadsBanner ads={failedDownloads} total={ads.length} />
+      <StrategicPatterns patterns={patterns} />
+      <TopHooksSection hooks={topHooks} />
+      <MessagingThemesSection themes={a.messaging_themes} ads={ads} />
+      <FunnelBalanceSection ads={ads} />
+      <TopPerformers ads={winners} />
+      <PersonaPerformanceSection mappings={a.persona_ad_mapping} ads={ads} />
 
       <Block title="Trending creative · rising spend / new, last 7d" noDivider
         actions={
@@ -188,58 +180,15 @@ export default function IntelligenceView({ ctx }) {
         ) : <p className="text-xs text-neutral-400">No trending creatives{trending ? "" : " yet — click Refresh (needs Meta)"}.</p>}
       </Block>
 
-      {topHooks.length > 0 && (
-        <InsightSection title="Top hooks" tone="dark">
-          <div className="cs-intel-ranked-list">{topHooks.map((h, i) => (
-            <div key={i}><span>{i + 1}</span><p>“{h.text}” <small>{h.style ? `· ${h.style}` : ""} · {money(h.spend)}</small></p></div>
-          ))}</div>
-        </InsightSection>
-      )}
-
-      <div className="cs-intel-two-column">
-        <AuditList title="Messaging themes" tone="orange" items={a.messaging_themes} render={(t) => (
-          <div><span className="font-medium text-neutral-800">{str(t)}</span>{t?.spend_pct ? <span className="text-xs text-neutral-400"> · {Math.round(t.spend_pct)}% spend</span> : null}{t?.description ? <div className="text-xs text-neutral-500">{t.description}</div> : null}</div>
-        )} />
-        <AuditList title="Visual openers" tone="dark" items={a.visual_openers} render={(o) => <div className="text-neutral-700">{str(o)}</div>} />
-      </div>
-
-      <AuditList title="Messaging trends" tone="orange" items={a.messaging_trends} render={(t) => (
-        <div><span className="font-medium text-neutral-800">{t.trend || str(t)}</span>{t?.spend_pct ? <span className="text-xs text-neutral-400"> · {Math.round(t.spend_pct)}%</span> : null}{t?.description ? <div className="text-xs text-neutral-500">{t.description}</div> : null}</div>
-      )} />
-
-      <AuditList title="Persona performance" tone="dark" items={a.persona_ad_mapping} render={(p) => (
-        <div><span className="font-medium text-neutral-800">{p.matched_research_persona || p.persona_short_title || p.persona || str(p)}</span>
-          <span className="text-xs text-neutral-400"> · {p.ad_count ?? 0} ads · {money(p.total_spend)}</span>
-          {p.top_unmet_angle ? <div className="text-xs text-neutral-500">unmet: {p.top_unmet_angle}</div> : null}</div>
-      )} />
-
-      <AuditList title="Strategic patterns" tone="orange" items={a.patterns} render={(p) => (
-        <div><span className="font-medium text-neutral-800">{p.pattern_name || str(p)}</span>{p?.insight ? <div className="text-xs text-neutral-500">{p.insight}</div> : null}</div>
-      )} />
-
-      <AuditList title="Untapped angles & gaps" items={a.angles_not_yet_tested || a.untapped_angles || a.prioritized_gaps}
-        render={(g) => <Pill>{str(g)}</Pill>} wrap />
+      <RecentLaunches ads={recent} />
+      <VisualOpenersSection openers={a.visual_openers} ads={ads} />
+      <MessagingTrendsSection trends={a.messaging_trends} ads={ads} />
+      <WhatToTestNext audit={a} />
+      <UntappedAnglesSection audit={a} />
 
       {angles.length > 0 && <AngleGroups groups={angleGroups} />}
 
       <LearningTruths clientId={ctx.selectedBrandId} items={learnings} onChange={loadLearnings} setErr={setErr} />
-
-      {recent.length > 0 && (
-        <Block title="Recent launches">
-          <ol className="cs-intel-recent-list">
-            {recent.map((r, index) => (
-              <li key={r.adId}>
-                <span className="cs-intel-recent-list__number">{index + 1}</span>
-                <strong>{r.adName || "(unnamed)"}</strong>
-                <span className="cs-intel-recent-list__meta">
-                  <span>{new Date(r.createdTime).toLocaleDateString()}</span>
-                  <span>{money(r.spend)} spent</span>
-                </span>
-              </li>
-            ))}
-          </ol>
-        </Block>
-      )}
 
       {fatigued.length > 0 && (
         <Block title="Fatigue alerts (frequency ≥ 3)">
@@ -262,7 +211,362 @@ export default function IntelligenceView({ ctx }) {
   );
 }
 
-function gradeRank(g) { return { A: 4, B: 3, C: 2, D: 1 }[g] || 0; }
+const HOOK_ERROR_INDICATORS = [
+  "unable to extract", "static frame", "error:", "failed to process", "no spoken dialogue",
+  "analysis unavailable", "cannot extract", "not available", "could not extract", "insufficient audio", "n/a",
+];
+
+function isHookError(text) {
+  const value = String(text || "").toLowerCase().trim();
+  return !value || value.length < 3 || HOOK_ERROR_INDICATORS.some((indicator) => value.includes(indicator));
+}
+
+function isSocialChrome(text) {
+  const value = String(text || "").toLowerCase().trim();
+  return !value || /^\S{1,25}\s+\d{1,3}[wdhms]\b/.test(value) || /\bby\s+(author|creator)\b/.test(value)
+    || (/^(reply|like|share|repost|comment|follow|subscribe|send|save)\b/.test(value) && value.length < 25)
+    || (/^[\p{Emoji_Presentation}\p{Emoji}\s❤️💙💚🧡💛💜🖤🤍👍🔥]+\s*\d*$/u.test(value))
+    || (/^@?\w{1,20}$/.test(value) && !/\s/.test(value) && value.length < 15);
+}
+
+function extractHookFromFormula(formula) {
+  const pattern = String(formula?.pattern_interrupt || "");
+  if (!pattern) return "";
+  const quoted = pattern.match(/["“”']([^"“”']{10,})["“”']/);
+  if (quoted) return quoted[1].trim();
+  return pattern.length < 100 && !/\bover\s+(a|an|the)\b/i.test(pattern) ? pattern.trim() : "";
+}
+
+function normalizeHook(text) {
+  return String(text || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function isSimilarHook(first, second) {
+  const a = normalizeHook(first);
+  const b = normalizeHook(second);
+  if (a === b) return true;
+  if (!a || !b) return false;
+  if (a.includes(b) || b.includes(a)) return true;
+  const shorter = a.length <= b.length ? a : b;
+  const longer = a.length <= b.length ? b : a;
+  if (shorter.length / longer.length <= 0.7) return false;
+  let differences = 0;
+  for (let index = 0; index < longer.length; index += 1) if (shorter[index] !== longer[index]) differences += 1;
+  return differences / longer.length < 0.2;
+}
+
+function deriveHooksFromAds(ads, auditHooks) {
+  const hooks = [];
+  for (const ad of [...ads].sort((x, y) => (y.spend || 0) - (x.spend || 0))) {
+    const isVideo = String(ad.mediaType || "").toLowerCase() === "video";
+    const throwaway = (text) => {
+      const value = String(text || "").toLowerCase().trim();
+      return /^(thank you|thanks|hi|hey|hello|okay|ok|so|um|uh|well|right|alright|oh)[.!,\s]?$/i.test(value)
+        || value.length < 8 || (/^(hi |hey |hello |thanks |thank you)/i.test(value) && value.length < 20);
+    };
+    let hookText = "";
+    let hookSource = "headline";
+    const audioHook = isVideo ? ad.firstSpokenSentence || "" : "";
+    const overlayHook = ad.firstOverlayHeadline || "";
+    if (audioHook && !isHookError(audioHook) && !throwaway(audioHook)) {
+      hookText = audioHook;
+      hookSource = "audio";
+    } else if (overlayHook && !isHookError(overlayHook) && !isSocialChrome(overlayHook)) {
+      hookText = overlayHook;
+      hookSource = "overlay";
+    } else if (overlayHook && isSocialChrome(overlayHook)) {
+      hookText = extractHookFromFormula(ad.hookFormula);
+      if (!hookText && isVideo) {
+        const overlays = ad.visualHookAnalysis?.opening_text_overlays || [];
+        hookText = overlays.slice(1).map((item) => String(item?.text || "").trim())
+          .find((text) => text && !isHookError(text) && !isSocialChrome(text)) || "";
+      }
+      if (hookText) hookSource = "overlay";
+    }
+    if (!hookText && isVideo && audioHook && throwaway(audioHook) && ad.transcript) {
+      const sentences = String(ad.transcript).split(/[.!?]+/).map((s) => s.trim()).filter((s) => s.length > 10);
+      const fallback = sentences[1] || sentences[0] || "";
+      if (fallback && !isHookError(fallback) && !throwaway(fallback)) { hookText = fallback; hookSource = "audio"; }
+    }
+    if (!hookText && !isVideo && ad.headlineText && !isHookError(ad.headlineText)) hookText = ad.headlineText;
+    if (!hookText || isHookError(hookText)) continue;
+    if (!hooks.some((prior) => isSimilarHook(prior.hookText, hookText))) hooks.push({ ...ad, hookText, hookSource });
+  }
+
+  for (const auditHook of Array.isArray(auditHooks) ? auditHooks : []) {
+    const hookText = auditHook?.hook || auditHook?.text || "";
+    if (!hookText || isHookError(hookText) || hooks.some((prior) => isSimilarHook(prior.hookText, hookText))) continue;
+    hooks.push({
+      ...auditHook,
+      hookText,
+      adName: auditHook.ad_name,
+      adId: auditHook.ad_id || `audit-hook-${hooks.length}`,
+      mediaType: auditHook.media_type,
+      hookSource: auditHook.hook_source,
+      costPerPurchase: auditHook.cpa,
+      hookRate: auditHook.hook_rate,
+      avgWatchTime: auditHook.avg_watch_time,
+      primaryAngle: auditHook.primary_angle,
+      hookStyle: auditHook.hook_style,
+      emotionalTrigger: auditHook.emotional_trigger,
+      awarenessStage: auditHook.awareness_stage,
+      benefitType: auditHook.benefit_type,
+      buildingBlocks: auditHook.building_blocks,
+      lifeForce8: auditHook.life_force_8,
+      funnelPosition: auditHook.funnel_position,
+      frequency: auditHook.avg_frequency,
+      whyItWorks: auditHook.why_it_works,
+      hookFormula: auditHook.hook_formula,
+      adsManagerCopy: { primary_text: auditHook.primary_text, headline: auditHook.headline, cta: auditHook.cta },
+    });
+  }
+  return hooks;
+}
+
+function FailedDownloadsBanner({ ads, total }) {
+  const [open, setOpen] = useState(false);
+  if (!ads.length) return null;
+  return (
+    <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
+      <button type="button" onClick={() => setOpen((value) => !value)} className="flex w-full items-center gap-2 text-left">
+        <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />
+        <span className="flex-1 text-sm font-medium text-amber-900">{ads.length} of {total} ads are missing a saved preview</span>
+        {open ? <ChevronDown className="h-4 w-4 text-amber-700" /> : <ChevronRight className="h-4 w-4 text-amber-700" />}
+      </button>
+      {open && <div className="mt-3 space-y-2 border-t border-amber-200 pt-3">
+        {ads.map((ad) => <div key={ad.adId} className="rounded-lg bg-white/70 p-2 text-xs text-amber-900">
+          <strong>{ad.adName || "Unnamed ad"}</strong><span className="text-amber-700"> · {money(ad.spend)}</span>
+          {Array.isArray(ad.analysisWarnings) && ad.analysisWarnings.length > 0
+            ? <ul className="mt-1 list-disc pl-4">{ad.analysisWarnings.map((warning, index) => <li key={index}>{warning}</li>)}</ul>
+            : <p className="mt-1 text-amber-700">No specific warning was recorded.</p>}
+        </div>)}
+      </div>}
+    </div>
+  );
+}
+FailedDownloadsBanner.propTypes = { ads: PropTypes.array.isRequired, total: PropTypes.number.isRequired };
+
+function StrategicPatterns({ patterns }) {
+  if (!patterns.length) return null;
+  return <InsightSection title="Strategic patterns by spend">
+    <div className="space-y-4">{patterns.map((pattern, index) => {
+      const pct = Number(pattern.spend_pct || 0);
+      return <div key={index} className="space-y-1.5">
+        <div className="flex gap-3 text-sm"><span className="text-xs text-neutral-400">{index + 1}.</span><div className="flex-1">
+          <p className="text-neutral-700"><strong>{pattern.pattern_name ? `${pattern.pattern_name}: ` : ""}</strong>{pattern.pattern || pattern.insight || ""}</p>
+          <p className="mt-1 text-xs text-neutral-400">{pct.toFixed(0)}% of spend · {pattern.ad_count || 0} ads{pattern.learning_sheet_level ? ` · ${pattern.learning_sheet_level}` : ""}</p>
+        </div></div>
+        <div className="h-1.5 overflow-hidden rounded-full bg-neutral-100"><div className="h-full rounded-full bg-orange-400" style={{ width: `${Math.max(Math.min(pct, 100), 2)}%` }} /></div>
+      </div>;
+    })}</div>
+  </InsightSection>;
+}
+StrategicPatterns.propTypes = { patterns: PropTypes.array.isRequired };
+
+function TopHooksSection({ hooks }) {
+  const [expanded, setExpanded] = useState(null);
+  if (!hooks.length) return null;
+  return <InsightSection title={`Top hooks · ${hooks.length}`} tone="dark">
+    <div className="max-h-[560px] space-y-1 overflow-y-auto pr-1">{hooks.map((hook, index) => {
+      const open = expanded === index;
+      const formula = hook.hookFormula || {};
+      const primaryCopy = hook.adsManagerCopy || {};
+      return <div key={`${hook.adId}-${index}`} className="overflow-hidden rounded-lg border border-white/15 bg-white/5">
+        <button type="button" onClick={() => setExpanded(open ? null : index)} className="flex w-full items-center gap-2 px-3 py-2 text-left">
+          <span className="w-5 text-right text-[10px] font-bold text-orange-300">{index + 1}</span>
+          <p className="min-w-0 flex-1 truncate text-xs font-medium italic text-white">“{hook.hookText}”</p>
+          <Badge variant="secondary" className="text-[9px]">{hook.mediaType === "video" ? "Video" : "Static"}</Badge>
+          <span className="text-[10px] text-neutral-300">{money(hook.spend)}{hook.costPerPurchase ? ` · ${money(hook.costPerPurchase)} CPA` : ""}</span>
+          {open ? <ChevronDown className="h-3.5 w-3.5 text-neutral-300" /> : <ChevronRight className="h-3.5 w-3.5 text-neutral-300" />}
+        </button>
+        {open && <div className="space-y-3 border-t border-white/10 px-3 py-3 text-xs text-neutral-200">
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-neutral-300">
+            <strong className="text-white">{hook.adName || "Unnamed"}</strong>
+            {hook.purchases > 0 && <span>{hook.purchases} purchases</span>}
+            {hook.ctr != null && <span>{Number(hook.ctr).toFixed(2)}% CTR</span>}
+            {hook.cpm != null && <span>{money(hook.cpm)} CPM</span>}
+            {hook.hookRate > 0 && <span>{(hook.hookRate * 100).toFixed(1)}% hook rate</span>}
+            {hook.avgWatchTime > 0 && <span>{Number(hook.avgWatchTime).toFixed(1)}s avg watch</span>}
+            {hook.frequency > 0 && <span>{Number(hook.frequency).toFixed(1)}x freq</span>}
+            {hook.funnelPosition && <span>{hook.funnelPosition}</span>}
+          </div>
+          {(formula.pattern_interrupt || formula.qualifier || formula.gap) && <div>
+            <p className="mb-1 text-[9px] font-semibold uppercase tracking-wide text-neutral-400">Hook formula</p>
+            <div className="grid gap-2 sm:grid-cols-3">{[["Pattern interrupt", formula.pattern_interrupt], ["Qualifier", formula.qualifier], ["Gap", formula.gap]].filter(([, value]) => value).map(([label, value]) =>
+              <div key={label} className="rounded border border-white/10 bg-black/10 p-2"><small className="block text-[9px] uppercase text-neutral-400">{label}</small>{value}</div>)}</div>
+          </div>}
+          <div className="flex flex-wrap gap-1">{[
+            hook.primaryAngle && `angle: ${hook.primaryAngle}`, hook.hookStyle && `style: ${hook.hookStyle}`,
+            hook.emotionalTrigger && `emotion: ${hook.emotionalTrigger}`, hook.awarenessStage && `awareness: ${hook.awarenessStage}`,
+            hook.benefitType && `benefit: ${hook.benefitType}`, hook.conceptClassification && `bucket: ${hook.conceptClassification}`,
+          ].filter(Boolean).map((tag) => <Badge key={tag} variant="outline" className="border-white/20 text-[9px] text-neutral-200">{tag}</Badge>)}</div>
+          {hook.buildingBlocks?.length > 0 && <p><strong>Building blocks:</strong> {hook.buildingBlocks.join(" → ")}</p>}
+          {hook.lifeForce8?.length > 0 && <p><strong>Core desires:</strong> {hook.lifeForce8.join(", ")}</p>}
+          {primaryCopy.primary_text && <p><strong>Primary text:</strong> {primaryCopy.primary_text}</p>}
+          {(primaryCopy.headline || hook.headlineText) && <p><strong>Headline:</strong> {primaryCopy.headline || hook.headlineText}</p>}
+          {(primaryCopy.cta || hook.ctaType) && <p><strong>CTA:</strong> {primaryCopy.cta || hook.ctaType}</p>}
+          {hook.transcript && hook.mediaType === "video" && <div><strong>Transcript</strong><p className="mt-1 max-h-36 overflow-y-auto whitespace-pre-wrap rounded bg-black/10 p-2">{hook.transcript}</p></div>}
+          {hook.whyItWorks && <p><strong>Why it works:</strong> {hook.whyItWorks}</p>}
+          {hook.gradeRationale && <p><strong>Performance read:</strong> {hook.gradeRationale}</p>}
+        </div>}
+      </div>;
+    })}</div>
+  </InsightSection>;
+}
+TopHooksSection.propTypes = { hooks: PropTypes.array.isRequired };
+
+function MessagingThemesSection({ themes, ads }) {
+  const [expanded, setExpanded] = useState(null);
+  if (!Array.isArray(themes) || !themes.length) return null;
+  const byName = new Map(ads.map((ad) => [ad.adName, ad]));
+  const enriched = themes.map((theme) => {
+    const matchedAds = (theme.ad_names || []).map((name) => byName.get(name)).filter(Boolean);
+    const spend = matchedAds.reduce((sum, ad) => sum + (ad.spend || 0), 0);
+    const purchases = matchedAds.reduce((sum, ad) => sum + (ad.purchases || 0), 0);
+    const repAd = byName.get(theme.representative_ad_name) || [...matchedAds].sort((x, y) => (y.spend || 0) - (x.spend || 0))[0];
+    return { ...theme, matchedAds, spend, purchases, cpa: purchases > 0 ? spend / purchases : null, repAd };
+  }).sort((x, y) => y.spend - x.spend);
+  return <InsightSection title="Messaging themes" tone="orange">
+    <div className="space-y-2">{enriched.map((theme, index) => {
+      const open = expanded === index;
+      return <div key={`${theme.theme}-${index}`} className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
+        <button type="button" onClick={() => setExpanded(open ? null : index)} className="flex w-full items-start gap-3 p-3 text-left">
+          <CreativeThumbnail src={theme.repAd?.imageUrl || theme.repAd?.thumbnailUrl} />
+          <div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><strong className="text-sm text-neutral-800">{theme.theme}</strong>{theme.proven && <Badge variant="secondary" className="text-[9px] text-emerald-700">Proven</Badge>}</div>
+            <p className="mt-1 text-xs text-neutral-500">{theme.description}</p>
+            <p className="mt-1 text-[10px] text-neutral-400">{money(theme.spend)} spend · {theme.matchedAds.length} ads{theme.cpa ? ` · ${money(theme.cpa)} CPA` : ""}{theme.awareness_level ? ` · ${humanize(theme.awareness_level)}` : ""}</p>
+          </div>{open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+        </button>
+        {open && <div className="grid gap-2 border-t border-neutral-100 p-3 sm:grid-cols-2">{theme.matchedAds.map((ad) => <AdEvidenceCard key={ad.adId} ad={ad} />)}</div>}
+      </div>;
+    })}</div>
+  </InsightSection>;
+}
+MessagingThemesSection.propTypes = { themes: PropTypes.any, ads: PropTypes.array.isRequired };
+
+function FunnelBalanceSection({ ads }) {
+  const stages = ["TOF", "MOF", "BOF"];
+  const buckets = Object.fromEntries(stages.map((stage) => [stage, { spend: 0, count: 0, purchases: 0 }]));
+  ads.forEach((ad) => {
+    const stage = String(ad.funnelPosition || "").toUpperCase();
+    if (!buckets[stage]) return;
+    buckets[stage].spend += ad.spend || 0; buckets[stage].count += 1; buckets[stage].purchases += ad.purchases || 0;
+  });
+  const total = stages.reduce((sum, stage) => sum + buckets[stage].spend, 0);
+  if (!total) return null;
+  const colors = { TOF: "bg-blue-500", MOF: "bg-purple-500", BOF: "bg-emerald-500" };
+  return <InsightSection title="Funnel balance">
+    <p className="mb-3 text-xs text-neutral-400">Share of current spend across prospecting, consideration, and conversion ads.</p>
+    <div className="flex h-3 overflow-hidden rounded-full bg-neutral-100">{stages.map((stage) => <div key={stage} className={colors[stage]} style={{ width: `${(buckets[stage].spend / total) * 100}%` }} />)}</div>
+    <div className="mt-3 grid grid-cols-3 gap-2">{stages.map((stage) => {
+      const bucket = buckets[stage]; const cpa = bucket.purchases > 0 ? bucket.spend / bucket.purchases : null;
+      return <div key={stage} className="rounded-lg bg-neutral-50 p-3 text-center"><strong>{Math.round((bucket.spend / total) * 100)}%</strong><p className="text-xs font-medium">{stage}</p><small className="text-[10px] text-neutral-400">{bucket.count} ads{cpa ? ` · ${money(cpa)} CPA` : ""}</small></div>;
+    })}</div>
+  </InsightSection>;
+}
+FunnelBalanceSection.propTypes = { ads: PropTypes.array.isRequired };
+
+function TopPerformers({ ads }) {
+  if (!ads.length) return null;
+  return <Block title="Top performers · by spend" noDivider><div className="grid gap-3 sm:grid-cols-3">{ads.map((ad, index) =>
+    <div key={ad.adId} className="flex gap-3 rounded-xl border border-neutral-200 p-3"><div className="relative"><CreativeThumbnail src={ad.imageUrl || ad.thumbnailUrl} /><span className="absolute -left-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-neutral-900 text-[10px] font-bold text-white">{index + 1}</span></div>
+      <div className="min-w-0"><strong className="block truncate text-xs" title={ad.adName}>{ad.adName || "Unnamed"}</strong><p className="mt-1 line-clamp-2 text-[10px] italic text-neutral-500">{ad.firstSpokenSentence || ad.firstOverlayHeadline || ad.headlineText || "No hook captured"}</p><p className="mt-2 text-[10px] text-neutral-400"><b className="text-neutral-700">{money(ad.spend)}</b> spend{ad.costPerPurchase ? ` · ${money(ad.costPerPurchase)} CPA` : ""}{ad.purchases > 0 ? ` · ${ad.purchases} purchases` : ""}</p></div>
+    </div>)}</div></Block>;
+}
+TopPerformers.propTypes = { ads: PropTypes.array.isRequired };
+
+function PersonaPerformanceSection({ mappings, ads }) {
+  const [expanded, setExpanded] = useState(null);
+  if (!Array.isArray(mappings) || !mappings.length) return null;
+  const byName = new Map(ads.map((ad) => [ad.adName, ad]));
+  const enriched = mappings.map((mapping) => {
+    const matchedAds = (mapping.ad_names || []).map((name) => byName.get(name)).filter(Boolean);
+    const spend = matchedAds.reduce((sum, ad) => sum + (ad.spend || 0), 0);
+    const purchases = matchedAds.reduce((sum, ad) => sum + (ad.purchases || 0), 0);
+    return { ...mapping, matchedAds, spend, cpa: purchases > 0 ? spend / purchases : null };
+  }).sort((x, y) => y.spend - x.spend);
+  const total = enriched.reduce((sum, item) => sum + item.spend, 0);
+  return <InsightSection title="Customer personas" tone="dark"><div className="space-y-2">{enriched.map((persona, index) => {
+    const open = expanded === index; const share = total > 0 ? (persona.spend / total) * 100 : 0;
+    const title = persona.persona_short_title || persona.matched_research_persona || persona.persona || `Persona ${index + 1}`;
+    return <div key={`${title}-${index}`} className="overflow-hidden rounded-xl border border-white/15 bg-white/5"><button type="button" onClick={() => setExpanded(open ? null : index)} className="flex w-full gap-3 p-3 text-left">
+      <div className="min-w-0 flex-1"><strong className="text-sm text-white">{title}</strong>{persona.persona && persona.persona !== title && <p className="mt-1 line-clamp-2 text-xs text-neutral-300">{persona.persona}</p>}
+        <p className="mt-1 text-[10px] text-neutral-300">{persona.matchedAds.length} ads · {money(persona.spend)} spend · {Math.round(share)}%{persona.cpa ? ` · ${money(persona.cpa)} CPA` : ""}</p><div className="mt-2 h-1.5 overflow-hidden rounded bg-white/10"><div className="h-full rounded bg-orange-400" style={{ width: `${Math.max(share, 2)}%` }} /></div>
+      </div>{open ? <ChevronDown className="h-4 w-4 text-neutral-300" /> : <ChevronRight className="h-4 w-4 text-neutral-300" />}</button>
+      {open && <div className="space-y-3 border-t border-white/10 p-3 text-xs text-neutral-200">
+        {persona.top_angles_used?.length > 0 && <div><strong>Angles currently in use</strong><div className="mt-1 flex flex-wrap gap-1">{persona.top_angles_used.map((angle) => <Badge key={angle} variant="outline" className="border-white/20 text-[9px] text-white">{angle}</Badge>)}</div></div>}
+        {(persona.angles_not_yet_tested?.length > 0 || persona.top_unmet_angle) && <p><strong>Still untested:</strong> {(persona.angles_not_yet_tested || [persona.top_unmet_angle]).join(", ")}</p>}
+        <div className="grid gap-2 sm:grid-cols-2">{persona.matchedAds.map((ad) => <AdEvidenceCard key={ad.adId} ad={ad} dark />)}</div>
+      </div>}
+    </div>;
+  })}</div></InsightSection>;
+}
+PersonaPerformanceSection.propTypes = { mappings: PropTypes.any, ads: PropTypes.array.isRequired };
+
+function RecentLaunches({ ads }) {
+  if (!ads.length) return null;
+  return <Block title="Recent launches · last 14 days"><div className="flex gap-3 overflow-x-auto pb-2">{ads.map((ad) => {
+    const days = Math.max(0, Math.floor((Date.now() - new Date(ad.createdTime).getTime()) / 86400000));
+    const src = ad.imageUrl || ad.thumbnailUrl;
+    return <div key={ad.adId} className="w-[170px] shrink-0 overflow-hidden rounded-xl border border-neutral-200"><div className="relative aspect-[9/16] bg-neutral-100">{src ? <img src={src} alt="" className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center text-neutral-400"><Zap className="h-5 w-5" /></div>}<Badge className="absolute left-2 top-2 text-[9px]">{days === 0 ? "Today" : days === 1 ? "Yesterday" : `${days}d ago`}</Badge><Badge variant="outline" className="absolute right-2 top-2 border-white/30 bg-black/50 text-[9px] text-white">{ad.mediaType === "video" ? "Video" : "Static"}</Badge></div><div className="p-2"><strong className="block truncate text-xs">{ad.adName || "Unnamed"}</strong><p className="mt-1 text-[10px] text-neutral-400">{money(ad.spend)} spend{ad.costPerPurchase ? ` · ${money(ad.costPerPurchase)} CPA` : ""}{ad.purchases > 0 ? ` · ${ad.purchases} purchases` : ""}{ad.hookRate > 0 ? ` · ${(ad.hookRate * 100).toFixed(1)}% HR` : ""}</p></div></div>;
+  })}</div></Block>;
+}
+RecentLaunches.propTypes = { ads: PropTypes.array.isRequired };
+
+function VisualOpenersSection({ openers, ads }) {
+  if (!Array.isArray(openers) || !openers.length) return null;
+  const byName = new Map(ads.map((ad) => [ad.adName, ad]));
+  return <InsightSection title="Visual openers"><p className="mb-3 text-xs text-neutral-400">Video ads · what appears in the first 2–5 seconds</p><div className="grid gap-3 md:grid-cols-2">{openers.map((opener, index) => {
+    const examples = (opener.example_ad_names || []).map((name) => byName.get(name)).filter(Boolean);
+    return <div key={index} className="rounded-xl border border-neutral-200 p-3"><div className="flex justify-between gap-2"><strong className="text-sm">{opener.pattern_name || opener.trend_name}</strong><small className="text-[10px] text-neutral-400">{opener.ad_count || examples.length} ads · {Math.round(opener.spend_pct || 0)}% spend</small></div><p className="mt-1 text-xs text-neutral-500">{opener.visual_description || opener.opening_description}</p><div className="mt-2 flex flex-wrap gap-1">{[opener.talent_type, opener.camera_style, opener.environment].filter(Boolean).map((tag) => <Badge key={tag} variant="outline" className="text-[9px]">{tag}</Badge>)}</div>{examples.length > 0 && <div className="mt-3 flex gap-2">{examples.slice(0, 5).map((ad) => <CreativeThumbnail key={ad.adId} src={ad.imageUrl || ad.thumbnailUrl} />)}</div>}</div>;
+  })}</div></InsightSection>;
+}
+VisualOpenersSection.propTypes = { openers: PropTypes.any, ads: PropTypes.array.isRequired };
+
+function normalizeTrends(trends) {
+  if (Array.isArray(trends)) return trends.map((trend) => ({ ...trend, trend: trend.trend || trend.trend_name || "", examples: trend.examples || trend.ad_names || [] }));
+  if (!trends || typeof trends !== "object") return [];
+  return ["hooks", "claims", "callouts", "ctas"].flatMap((surface) => Array.isArray(trends[surface]) ? trends[surface].map((trend) => ({ ...trend, trend: trend.trend || trend.trend_name || "", examples: trend.examples || trend.verbatim_examples || [] })) : []);
+}
+
+function MessagingTrendsSection({ trends, ads }) {
+  const normalized = normalizeTrends(trends);
+  if (!normalized.length) return null;
+  const byName = new Map(ads.map((ad) => [ad.adName, ad]));
+  const max = Math.max(...normalized.map((trend) => Number(trend.spend_pct || 0)), 1);
+  return <InsightSection title="Messaging trends" tone="orange"><div className="space-y-3">{normalized.map((trend, index) => {
+    const examples = (trend.examples || []).map((name) => byName.get(name)).filter(Boolean);
+    return <div key={index} className="rounded-xl border border-neutral-200 bg-white p-3"><strong className="text-sm">{trend.trend}</strong>{trend.description && <p className="mt-1 text-xs text-neutral-500">{trend.description}</p>}<div className="mt-2 h-1.5 overflow-hidden rounded bg-neutral-100"><div className="h-full rounded bg-orange-400" style={{ width: `${Math.max((Number(trend.spend_pct || 0) / max) * 100, 3)}%` }} /></div><p className="mt-1 text-[10px] text-neutral-400">{trend.ad_count || examples.length} ads · {Number(trend.spend_pct || 0).toFixed(1)}% spend</p>{examples.length > 0 && <div className="mt-2 flex gap-2">{examples.slice(0, 4).map((ad) => <CreativeThumbnail key={ad.adId} src={ad.imageUrl || ad.thumbnailUrl} />)}</div>}</div>;
+  })}</div></InsightSection>;
+}
+MessagingTrendsSection.propTypes = { trends: PropTypes.any, ads: PropTypes.array.isRequired };
+
+function WhatToTestNext({ audit }) {
+  const all = audit.concept_seed_list || audit.concept_seeds || [];
+  if (!Array.isArray(all) || !all.length) return null;
+  const priorityNames = new Set((audit.first_test_recommendations || []).map((item) => item.concept_name));
+  const seeds = [...all.filter((seed) => priorityNames.has(seed.concept_name)), ...all.filter((seed) => !priorityNames.has(seed.concept_name))].slice(0, 10);
+  return <InsightSection title={`What to test next · ${seeds.length}`}><div className="space-y-2">{seeds.map((seed, index) => {
+    const priority = priorityNames.has(seed.concept_name);
+    return <div key={index} className={`rounded-xl border p-3 ${priority ? "border-orange-300 bg-orange-50" : "border-neutral-200"}`}><div className="flex flex-wrap gap-1">{priority && <Badge className="text-[9px]">Test first</Badge>}{(seed.persona_description || seed.persona) && <Badge variant="secondary" className="text-[9px]">{seed.persona_description || seed.persona}</Badge>}{seed.format && <Badge variant="outline" className="text-[9px]">{seed.format}</Badge>}{seed.awareness_stage && <Badge variant="outline" className="text-[9px]">{humanize(seed.awareness_stage)}</Badge>}</div><strong className="mt-2 block text-sm">{seed.concept_name || seed.name || `Concept ${index + 1}`}</strong>{seed.hook_verbatim && <p className="mt-1 text-xs italic">“{seed.hook_verbatim}”</p>}{seed.why_this_now && <p className="mt-1 text-xs text-neutral-500">{seed.why_this_now}</p>}</div>;
+  })}</div></InsightSection>;
+}
+WhatToTestNext.propTypes = { audit: PropTypes.object.isRequired };
+
+function UntappedAnglesSection({ audit }) {
+  const groups = Array.isArray(audit.untapped_angles_by_persona) ? audit.untapped_angles_by_persona : [];
+  const flat = audit.angles_not_yet_tested || audit.untapped_angles || audit.prioritized_gaps || [];
+  if (!groups.length && !Array.isArray(flat)) return null;
+  if (groups.length) return <InsightSection title="Untapped angles · what current ads aren't saying"><div className="space-y-3">{groups.map((group, index) => <div key={index} className="rounded-xl border border-neutral-200 p-3"><p className="text-xs text-neutral-500"><strong className="text-neutral-700">Persona:</strong> {group.persona_description || "Unnamed persona"}</p><div className="mt-2 space-y-2">{(group.untapped_combinations || []).map((item, itemIndex) => <div key={itemIndex} className="border-l-2 border-orange-300 pl-3"><div className="flex flex-wrap gap-2"><strong className="text-sm">{item.angle}</strong>{item.awareness_stage && <Badge variant="outline" className="text-[9px]">{humanize(item.awareness_stage)}</Badge>}</div>{item.rationale && <p className="mt-1 text-xs text-neutral-500">{item.rationale}</p>}{item.suggested_hook_direction && <p className="mt-1 text-xs italic">“{item.suggested_hook_direction}”</p>}</div>)}</div></div>)}</div></InsightSection>;
+  if (!flat.length) return null;
+  return <InsightSection title="Untapped angles & gaps"><div className="flex flex-wrap gap-2">{flat.map((item, index) => <Pill key={index}>{str(item)}</Pill>)}</div></InsightSection>;
+}
+UntappedAnglesSection.propTypes = { audit: PropTypes.object.isRequired };
+
+function AdEvidenceCard({ ad, dark = false }) {
+  return <div className={`flex items-center gap-2 rounded-lg border p-2 ${dark ? "border-white/10 bg-white/5" : "border-neutral-100 bg-neutral-50"}`}><CreativeThumbnail src={ad.imageUrl || ad.thumbnailUrl} /><div className="min-w-0 flex-1"><strong className={`block truncate text-xs ${dark ? "text-white" : "text-neutral-700"}`}>{ad.adName || "Unnamed"}</strong><p className={`text-[10px] ${dark ? "text-neutral-300" : "text-neutral-400"}`}>{money(ad.spend)}{ad.costPerPurchase ? ` · ${money(ad.costPerPurchase)} CPA` : ""}{ad.hookRate > 0 ? ` · ${(ad.hookRate * 100).toFixed(1)}% HR` : ""}</p></div><Badge variant="outline" className={`text-[9px] ${dark ? "border-white/20 text-white" : ""}`}>{ad.mediaType === "video" ? "Video" : "Static"}</Badge></div>;
+}
+AdEvidenceCard.propTypes = { ad: PropTypes.object.isRequired, dark: PropTypes.bool };
 
 function Block({ title, children, actions, noDivider = false }) {
   return (
@@ -289,19 +593,6 @@ function InsightSection({ title, children, actions, tone }) {
   );
 }
 InsightSection.propTypes = { title: PropTypes.string.isRequired, children: PropTypes.node, actions: PropTypes.node, tone: PropTypes.oneOf(["dark", "orange"]) };
-
-function AuditList({ title, items, render, wrap, tone }) {
-  const arr = Array.isArray(items) ? items : items && typeof items === "object" ? Object.values(items) : [];
-  if (!arr.length) return null;
-  return (
-    <InsightSection title={title} tone={tone}>
-      <div className={wrap ? "flex flex-wrap gap-2" : "cs-intel-insight-list"}>
-        {arr.slice(0, 12).map((it, i) => <div key={i}>{render(it)}</div>)}
-      </div>
-    </InsightSection>
-  );
-}
-AuditList.propTypes = { title: PropTypes.string.isRequired, items: PropTypes.any, render: PropTypes.func.isRequired, wrap: PropTypes.bool, tone: PropTypes.oneOf(["dark", "orange"]) };
 
 function Pill({ children }) {
   return <span className="cs-intel-pill">{children}</span>;
