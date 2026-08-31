@@ -1,13 +1,13 @@
 // Research — run the research agents and present the captured intel through
 // persona previews, detailed persona dialogs, and expandable research rows.
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import PropTypes from "prop-types";
-import { Box, Loader2, Plus, SearchCheck } from "lucide-react";
+import { Box, Loader2, Plus } from "lucide-react";
 import { creativeApi } from "@/lib/creativeApi";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { humanize } from "../JsonView";
-import { EmptyState, ErrorBanner, ViewLoading } from "../ui";
+import { EmptyState, ErrorBanner, PartialResultsNotice, ProgressiveSection } from "../ui";
 import { JobBadge, useJobRunner } from "../JobsContext";
 
 const ORDER = [
@@ -15,6 +15,17 @@ const ORDER = [
   "sentiment_alignment", "reddit_sentiment", "competitor_scan", "persona_cross_map",
   "persona_summary_table", "market_analysis", "features", "benefits", "pricing",
   "branding", "pain_points", "objections", "testimonials",
+];
+
+const PROGRESSIVE_RESEARCH_SECTIONS = [
+  { type: "brand_deep_dive", title: "Brand deep dive", phase: 1 },
+  { type: "review_mining", title: "Review mining", phase: 2 },
+  { type: "language_bank", title: "Language bank", phase: 2 },
+  { type: "competitor_scan", title: "Competitor and market scan", phase: 3 },
+  { type: "sentiment_alignment", title: "Sentiment alignment", phase: 4 },
+  { type: "consumer_research_report", title: "Consumer research report", phase: 5 },
+  { type: "reddit_sentiment", title: "Reddit sentiment", phase: "mining_reddit" },
+  { type: "persona_cross_map", title: "Persona cross-map", phase: 7 },
 ];
 
 const PERSONA_IDENTITY_KEYS = new Set(["label", "name", "title", "source"]);
@@ -32,28 +43,36 @@ export default function ResearchView({ ctx }) {
   const [openPersona, setOpenPersona] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const load = async (productId) => {
-    setLoading(true);
+  const load = useCallback(async (productId, { silent = false } = {}) => {
+    if (!silent) setLoading(true);
     try {
       const response = await creativeApi.getResearch(productId);
-      setIntel(response.intel);
-      setTypes(response.intelTypes);
+      setIntel(response.intel || {});
+      setTypes(response.intelTypes || []);
     } catch (error) {
       setErr(error.message);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     setOpenPersona(null);
     if (selectedProductId) load(selectedProductId);
     else { setIntel({}); setTypes([]); }
-  }, [selectedProductId]);
+  }, [load, selectedProductId]);
 
   const { job: researchJob, start: startResearch } = useJobRunner({
     kind: "research", productId: selectedProductId, onComplete: () => load(selectedProductId),
   });
+  const researchActive = isActiveJob(researchJob);
+
+  useEffect(() => {
+    if (!researchActive || !selectedProductId) return undefined;
+    load(selectedProductId, { silent: true });
+    const interval = window.setInterval(() => load(selectedProductId, { silent: true }), 2500);
+    return () => window.clearInterval(interval);
+  }, [load, researchActive, selectedProductId]);
 
   const run = async () => {
     if (!selectedProductId) return;
@@ -111,7 +130,11 @@ export default function ResearchView({ ctx }) {
       const second = ORDER.indexOf(b);
       return (first === -1 ? 999 : first) - (second === -1 ? 999 : second);
     });
-  const researchActive = isActiveJob(researchJob);
+  const researchPhase = researchJob?.progress?.phase;
+  const progressiveTypes = new Set(PROGRESSIVE_RESEARCH_SECTIONS.map((section) => section.type));
+  const extraSectionTypes = sectionTypes.filter((type) => !progressiveTypes.has(type));
+  const readyCount = PROGRESSIVE_RESEARCH_SECTIONS.filter((section) => intel[section.type]).length + (personas.length > 0 ? 1 : 0);
+  const stageActive = (phase) => researchActive && String(researchPhase) === String(phase);
 
   return (
     <div className="space-y-5">
@@ -146,21 +169,15 @@ export default function ResearchView({ ctx }) {
       {selectedProduct && <p className="cs-research-toolbar__hint">{selectedProduct.name} · complete research usually takes 5–10 minutes</p>}
 
       <ErrorBanner message={err} />
+      <PartialResultsNotice active={researchActive} completed={readyCount} total={PROGRESSIVE_RESEARCH_SECTIONS.length + 1} label="research sections" />
 
       {!selectedProductId ? (
         <EmptyState icon={Box} title="No product selected" hint="Select a product above to run the research agent." />
-      ) : loading && types.length === 0 ? (
-        <ViewLoading label="Loading research…" />
-      ) : types.length === 0 ? (
-        <EmptyState
-          icon={SearchCheck}
-          title="No research yet"
-          hint="Run the research agent to build personas, brand deep dives, language banks, and more. The product needs a URL."
-        />
       ) : (
         <div className="space-y-7">
-          {Array.isArray(personas) && personas.length > 0 && (
-            <section>
+          <section>
+            {Array.isArray(personas) && personas.length > 0 ? (
+              <>
               <div className="cs-research-section-heading">
                 <div className="flex items-center gap-2">
                   <h2>Personas</h2>
@@ -204,24 +221,31 @@ export default function ResearchView({ ctx }) {
                   />
                 ))}
               </div>
-            </section>
-          )}
+              </>
+            ) : (
+              <ProgressiveSection
+                title="Personas"
+                description={researchActive ? "Built after the market and consumer evidence is synthesized." : "Run research to build evidence-backed customer personas."}
+                active={stageActive(6) || (loading && types.length === 0)}
+                cards={4}
+              />
+            )}
+          </section>
 
-          {sectionTypes.length > 0 && (
-            <section>
+          <section>
               <div className="cs-research-section-heading">
                 <div className="flex items-center gap-2">
                   <h2>Research Intel</h2>
-                  <span>{sectionTypes.length}</span>
+                  <span>{readyCount}</span>
                 </div>
               </div>
               <div className="cs-research-intel-list">
-                {sectionTypes.map((type) => (
-                  <ResearchIntelRow key={type} title={humanize(type)} data={intel[type]} />
-                ))}
+                {PROGRESSIVE_RESEARCH_SECTIONS.map((section) => intel[section.type]
+                  ? <ResearchIntelRow key={section.type} title={section.title} data={intel[section.type]} />
+                  : <ProgressiveSection key={section.type} title={section.title} active={stageActive(section.phase)} lines={2} className="rounded-[20px]" />)}
+                {extraSectionTypes.map((type) => <ResearchIntelRow key={type} title={humanize(type)} data={intel[type]} />)}
               </div>
-            </section>
-          )}
+          </section>
         </div>
       )}
 

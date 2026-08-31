@@ -7,10 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { creativeApi } from "@/lib/creativeApi";
-import { ArrowLeft, Box, BrainCircuit, Image as ImageIcon, Pencil, Plus, Route, Star } from "lucide-react";
+import { ArrowLeft, Box, BrainCircuit, ExternalLink, Image as ImageIcon, Pencil, Plus, Route, Star } from "lucide-react";
 import PropTypes from "prop-types";
 import { useCallback, useEffect, useState } from "react";
-import { JobBadge, useJobRunner } from "../JobsContext";
+import { JobBadge, useJobRunner, useJobs } from "../JobsContext";
 import { EmptyState, ErrorBanner, ViewLoading } from "../ui";
 import BrandingEditor from "./BrandingEditor";
 
@@ -44,6 +44,7 @@ export default function ProductsView({ ctx }) {
   const [err, setErr] = useState(null);
   const [adding, setAdding] = useState(false);
   const [creating, setCreating] = useState(false);
+  const { track } = useJobs();
 
   const add = async (e) => {
     e.preventDefault();
@@ -51,7 +52,16 @@ export default function ProductsView({ ctx }) {
     setCreating(true);
     try {
       const response = await creativeApi.createProduct({ ...form, clientId: selectedBrandId });
-      if (response.product?.id) setSelectedProductId(response.product.id);
+      if (response.product?.id) {
+        setSelectedProductId(response.product.id);
+        if (response.cascade?.jobId) {
+          track(response.cascade.jobId, {
+            kind: response.cascade.root || "ingest_context",
+            brandId: selectedBrandId,
+            productId: response.product.id,
+          });
+        }
+      }
       setForm({ name: "", url: "", productType: "physical" });
       setAdding(false);
       await reloadProducts();
@@ -223,7 +233,7 @@ export default function ProductsView({ ctx }) {
         <ContextEditor
           productId={selectedProductId}
           productName={selectedProduct?.name}
-          hasUrl={!!selectedProduct?.url}
+          productUrl={selectedProduct?.url}
           toolbar={
             <div className="flex flex-wrap items-center gap-5">
               <Select value={selectedBrandId || ""} onValueChange={(v) => setSelectedBrandId(v || null)}>
@@ -308,7 +318,7 @@ ProductEditorNav.propTypes = { active: PropTypes.string.isRequired, onBack: Prop
 
 // Context editor — per-category manual intel + "Run ingestion" (scrape the
 // product URL to auto-fill).
-function ContextEditor({ productId, productName, hasUrl, toolbar }) {
+function ContextEditor({ productId, productName, productUrl, toolbar }) {
   const [intel, setIntel] = useState({});
   const [drafts, setDrafts] = useState({});
   const [savingType, setSavingType] = useState(null);
@@ -368,9 +378,9 @@ function ContextEditor({ productId, productName, hasUrl, toolbar }) {
           <button
             type="button"
             onClick={ingest}
-            disabled={!productId || !hasUrl}
+            disabled={!productId || !productUrl}
             className="cs-primary-button"
-            title={hasUrl ? "" : "Add a product URL first"}
+            title={productUrl ? "" : "Add a product URL first"}
           >
             Run Ingestion
           </button>
@@ -384,7 +394,14 @@ function ContextEditor({ productId, productName, hasUrl, toolbar }) {
       ) : (
         <>
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-sm font-normal text-neutral-500">{productName} · scrape the URL to auto-fill, or edit each section by hand</p>
+            <div className="min-w-0">
+              <p className="text-sm font-normal text-neutral-500">{productName} · scrape the URL to auto-fill, or edit each section by hand</p>
+              {productUrl && (
+                <a href={productUrl} target="_blank" rel="noreferrer" className="mt-1 inline-flex max-w-full items-center gap-1.5 truncate text-xs font-medium text-[#6c3403] underline decoration-[#6c3403]/25 underline-offset-4 hover:decoration-[#6c3403]">
+                  <span className="truncate">{productUrl}</span><ExternalLink className="h-3 w-3 shrink-0" />
+                </a>
+              )}
+            </div>
             <ErrorBanner message={err} />
           </div>
 
@@ -425,6 +442,6 @@ function ContextEditor({ productId, productName, hasUrl, toolbar }) {
 ContextEditor.propTypes = {
   productId: PropTypes.string,
   productName: PropTypes.string,
-  hasUrl: PropTypes.bool,
+  productUrl: PropTypes.string,
   toolbar: PropTypes.node,
 };

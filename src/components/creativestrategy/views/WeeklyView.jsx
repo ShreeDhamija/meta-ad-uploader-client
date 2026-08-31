@@ -1,13 +1,13 @@
 // Weekly Strategy — generate, filter, review, and brief strategist concepts.
 // The existing weekly APIs are retained behind the shared Creative Strategy UI.
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import PropTypes from "prop-types";
 import {
   CircleCheck, CircleX, ClipboardList, Loader2, MousePointerClick,
 } from "lucide-react";
 import { creativeApi } from "@/lib/creativeApi";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { ViewLoading, EmptyState, ErrorBanner } from "../ui";
+import { EmptyState, ErrorBanner, PartialResultsNotice, ProgressiveSection } from "../ui";
 import { useJobRunner, JobBadge } from "../JobsContext";
 
 const TIERS = [
@@ -41,9 +41,9 @@ export default function WeeklyView({ ctx }) {
   const [loading, setLoading] = useState(false);
   const [updating, setUpdating] = useState(null);
 
-  const load = async (brandId) => {
+  const load = useCallback(async (brandId, { silent = false } = {}) => {
     if (!brandId) { setIdeas([]); setRun(null); return; }
-    setLoading(true);
+    if (!silent) setLoading(true);
     try {
       const response = await creativeApi.getWeekly(brandId);
       setIdeas(response.ideas || []);
@@ -51,21 +51,28 @@ export default function WeeklyView({ ctx }) {
     } catch (error) {
       setErr(error.message);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     setBriefs({});
     if (selectedBrandId) load(selectedBrandId);
     else { setIdeas([]); setRun(null); }
-  }, [selectedBrandId]);
+  }, [load, selectedBrandId]);
 
   const { job: weeklyJob, start: startWeekly } = useJobRunner({
     kind: "weekly_strategy",
     brandId: selectedBrandId,
     onComplete: () => load(selectedBrandId),
   });
+  const jobActive = weeklyJob && (weeklyJob.status == null || weeklyJob.status === "queued" || weeklyJob.status === "running");
+
+  useEffect(() => {
+    if (!jobActive || !selectedBrandId) return undefined;
+    const interval = window.setInterval(() => load(selectedBrandId, { silent: true }), 2500);
+    return () => window.clearInterval(interval);
+  }, [jobActive, load, selectedBrandId]);
 
   const runStrategy = async () => {
     if (!selectedBrandId) return;
@@ -148,7 +155,8 @@ export default function WeeklyView({ ctx }) {
   ];
   const summary = run?.summary;
   const filtersActive = Object.values(filters).some((value) => value !== "all");
-  const jobActive = weeklyJob && (weeklyJob.status == null || weeklyJob.status === "queued" || weeklyJob.status === "running");
+  const weeklyPhase = weeklyJob?.progress?.phase;
+  const readySections = (summary ? 1 : 0) + (ideas.length > 0 ? 1 : 0);
 
   return (
     <div className="space-y-5">
@@ -188,14 +196,13 @@ export default function WeeklyView({ ctx }) {
       </div>
 
       <ErrorBanner message={err} />
+      <PartialResultsNotice active={Boolean(jobActive)} completed={readySections} total={2} label="strategy sections" />
 
       {!selectedBrandId ? (
         <EmptyState icon={MousePointerClick} title="No account selected" hint="Select an account above to run the weekly strategist." className="min-h-[420px]" />
-      ) : loading && ideas.length === 0 ? (
-        <ViewLoading label="Loading weekly strategy…" className="min-h-[420px]" />
       ) : (
         <>
-          {summary && (
+          {summary ? (
             <section className="cs-weekly-summary">
               <div className="cs-weekly-summary__pills">
                 <span>{ideas.length} New Concepts Generated</span>
@@ -204,10 +211,15 @@ export default function WeeklyView({ ctx }) {
               <h2>Why These Ideas</h2>
               <p>{summary.signals?.concept_distribution_hint || "Concepts are balanced across current performance signals, audience awareness, and creative opportunity."}</p>
             </section>
-          )}
+          ) : <ProgressiveSection title="Strategy rationale" description="Why these concepts, based on performance signals and coverage gaps." active={loading || weeklyPhase === "building_briefing" || weeklyPhase === "running_strategist"} />}
 
           {ideas.length === 0 ? (
-            <EmptyState icon={MousePointerClick} title="No concepts yet" hint="Run Strategy to generate concepts from analyzed ads and research." />
+            <ProgressiveSection
+              title="Concept board"
+              description={jobActive ? "Concepts will appear here as soon as the strategist finishes computing them." : "Run Strategy to generate concepts from analyzed ads and research."}
+              active={weeklyPhase === "running_strategist" || weeklyPhase === "saving_concepts"}
+              cards={6}
+            />
           ) : (
             <div className="space-y-4">
               <div className="cs-weekly-filters">

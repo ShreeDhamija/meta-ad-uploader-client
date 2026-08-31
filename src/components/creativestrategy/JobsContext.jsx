@@ -80,6 +80,14 @@ export function JobsProvider({ children }) {
             return;
           }
           const finished = job.status === "completed" || job.status === "failed";
+          const nextJobs = Array.isArray(job.progress?.nextJobs) ? job.progress.nextJobs : [];
+          for (const next of nextJobs) {
+            track(next.jobId, {
+              kind: next.type,
+              brandId: next.clientId || j.meta?.brandId,
+              productId: next.productId || j.meta?.productId,
+            });
+          }
           upsert(j.id, {
             type: job.type, status: job.status, progress: job.progress || {},
             error: job.error || null, result: job.result || null, costCents: job.costCents,
@@ -91,7 +99,7 @@ export function JobsProvider({ children }) {
     tick();
     const iv = setInterval(tick, POLL_MS);
     return () => { cancelled = true; clearInterval(iv); };
-  }, [upsert, untrack]);
+  }, [track, upsert, untrack]);
 
   // Auto-prune finished jobs after KEEP_DONE_MS so badges/indicator clear.
   useEffect(() => {
@@ -168,6 +176,7 @@ const PHASE_LABELS = {
   gathering_context: "Gathering brand context", generating: "Generating",
   // others
   running_strategist: "Running the strategist", mining_reddit: "Mining Reddit threads",
+  building_briefing: "Building the strategy briefing", saving_concepts: "Saving concept cards",
   scraping_and_extracting: "Scraping + extracting", analyzing: "Analyzing reference",
   analyzing_batch: "Analyzing",
 };

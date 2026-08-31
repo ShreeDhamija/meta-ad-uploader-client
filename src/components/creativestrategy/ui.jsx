@@ -3,7 +3,7 @@
 // borders, text-xl/sm/xs hierarchy) so every view is consistent: loading
 // states, empty states, section cards, KPI tiles, pills.
 import PropTypes from "prop-types";
-import { Loader2 } from "lucide-react";
+import { CircleDashed, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -44,6 +44,57 @@ export function LoadingCards({ count = 4, className }) {
   );
 }
 LoadingCards.propTypes = { count: PropTypes.number, className: PropTypes.string };
+
+// A stable page section while long-running server work is still pending. The
+// layout remains visible instead of collapsing into one full-page spinner;
+// only the section currently being computed receives a spinner.
+export function ProgressiveSection({ title, description, active = false, cards = 0, lines = 3, className }) {
+  return (
+    <section className={cn("rounded-2xl border border-neutral-200 bg-neutral-50/70 p-4 opacity-65 grayscale", className)} aria-busy={active}>
+      <header className="mb-4 flex items-start justify-between gap-3">
+        <div>
+          <h3 className="text-sm font-semibold text-neutral-500">{title}</h3>
+          {description && <p className="mt-1 text-xs text-neutral-400">{description}</p>}
+        </div>
+        {active
+          ? <Loader2 className="h-4 w-4 shrink-0 animate-spin text-neutral-500" />
+          : <CircleDashed className="h-4 w-4 shrink-0 text-neutral-300" />}
+      </header>
+      {cards > 0 ? (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {Array.from({ length: cards }).map((_, index) => (
+            <div key={index} className="space-y-2 rounded-xl border border-neutral-200/80 bg-white/70 p-3">
+              <Skeleton className="h-3.5 w-2/5" />
+              <Skeleton className="h-3 w-full" />
+              <Skeleton className="h-3 w-4/5" />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {Array.from({ length: lines }).map((_, index) => <Skeleton key={index} className={cn("h-3", index === lines - 1 ? "w-2/3" : "w-full")} />)}
+        </div>
+      )}
+    </section>
+  );
+}
+ProgressiveSection.propTypes = {
+  title: PropTypes.string.isRequired, description: PropTypes.string,
+  active: PropTypes.bool, cards: PropTypes.number, lines: PropTypes.number, className: PropTypes.string,
+};
+
+export function PartialResultsNotice({ active, completed = 0, total = 0, label = "sections" }) {
+  if (!active) return null;
+  return (
+    <div className="flex items-center gap-3 rounded-xl border border-blue-100 bg-blue-50/70 px-3 py-2 text-xs text-blue-800">
+      <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
+      <span><strong>{completed} of {total}</strong> {label} ready. Completed sections are live; the remaining placeholders will fill automatically.</span>
+    </div>
+  );
+}
+PartialResultsNotice.propTypes = {
+  active: PropTypes.bool, completed: PropTypes.number, total: PropTypes.number, label: PropTypes.string,
+};
 
 // ── Empty state ──────────────────────────────────────────────────────────────
 export function EmptyState({ icon: Icon, title, hint, action, className }) {

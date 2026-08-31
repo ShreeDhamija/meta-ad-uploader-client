@@ -1,6 +1,6 @@
 // Intelligence (= the source app's "Insights" tab). The detailed sections use
 // creative_strategy_audit aggregates plus per-ad ad_creative_insights evidence.
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import PropTypes from "prop-types";
 import { AlertTriangle, ChevronDown, ChevronRight, Loader2, Plus, RefreshCw, Zap } from "lucide-react";
 import { creativeApi } from "@/lib/creativeApi";
@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { humanize } from "../JsonView";
-import { ViewLoading, EmptyState, ErrorBanner } from "../ui";
+import { EmptyState, ErrorBanner, PartialResultsNotice, ProgressiveSection } from "../ui";
 import { useJobRunner, JobBadge } from "../JobsContext";
 
 // audit keys rendered in named sections below → excluded from the generic dump.
@@ -36,27 +36,35 @@ export default function IntelligenceView({ ctx }) {
   const [learnings, setLearnings] = useState([]);
   const [trending, setTrending] = useState(null);
 
-  const loadLearnings = async () => {
+  const loadLearnings = useCallback(async () => {
     if (!ctx.selectedBrandId) { setLearnings([]); return; }
     try { const r = await creativeApi.getLearnings(ctx.selectedBrandId); setLearnings(r.items); } catch { /* non-fatal */ }
-  };
+  }, [ctx.selectedBrandId]);
 
-  const load = async (pid) => {
-    setLoading(true); setErr(null);
+  const load = useCallback(async (pid, { silent = false } = {}) => {
+    if (!silent) { setLoading(true); setErr(null); }
     try {
       const [r, ang] = await Promise.all([creativeApi.getInsights(pid), creativeApi.getAngles(pid).catch(() => ({ angles: [] }))]);
-      setAds(r.ads); setAudit(r.audit); setAngles(ang.angles || []); setTrending(r.trending || null);
-    } catch (e) { setErr(e.message); } finally { setLoading(false); }
-    loadLearnings();
-  };
+      setAds(r.ads || []); setAudit(r.audit || null); setAngles(ang.angles || []); setTrending(r.trending || null);
+    } catch (e) { if (!silent) setErr(e.message); } finally { if (!silent) setLoading(false); }
+    if (!silent) loadLearnings();
+  }, [loadLearnings]);
 
   useEffect(() => {
     if (selectedProductId) load(selectedProductId); else { setAds([]); setAudit(null); }
-  }, [selectedProductId]);
+  }, [load, selectedProductId]);
 
   // Tracked jobs (persist across tab switches + reload on completion).
   const { job: analyzeJob, start: startAnalyze } = useJobRunner({ kind: "analyze_ads", productId: selectedProductId, onComplete: () => load(selectedProductId) });
   const { job: trendJob, start: startTrend } = useJobRunner({ kind: "trending_creative", productId: selectedProductId, onComplete: () => load(selectedProductId) });
+  const analyzeActive = isActiveJob(analyzeJob);
+
+  useEffect(() => {
+    if (!analyzeActive || !selectedProductId) return undefined;
+    load(selectedProductId, { silent: true });
+    const interval = window.setInterval(() => load(selectedProductId, { silent: true }), 2500);
+    return () => window.clearInterval(interval);
+  }, [analyzeActive, load, selectedProductId]);
 
   const run = async () => {
     if (!selectedProductId) return;
@@ -94,7 +102,18 @@ export default function IntelligenceView({ ctx }) {
     ((y.spend_pct || 0) * 0.6 + (y.ad_count || 0) * 4) - ((x.spend_pct || 0) * 0.6 + (x.ad_count || 0) * 4)) : [];
 
   const otherAuditEntries = Object.entries(a).filter(([k, v]) => v != null && !NAMED_AUDIT_KEYS.has(k));
-  const analyzeActive = isActiveJob(analyzeJob);
+  const analyzePhase = analyzeJob?.progress?.phase;
+  const adWorkActive = analyzeActive && !String(analyzePhase || "").startsWith("audit");
+  const auditWorkActive = analyzeActive && String(analyzePhase || "").startsWith("audit");
+  const messagingTrendItems = normalizeTrends(a.messaging_trends);
+  const conceptSeeds = a.concept_seed_list || a.concept_seeds || [];
+  const hasUntapped = (Array.isArray(a.untapped_angles_by_persona) && a.untapped_angles_by_persona.length > 0)
+    || (Array.isArray(a.angles_not_yet_tested || a.untapped_angles || a.prioritized_gaps) && (a.angles_not_yet_tested || a.untapped_angles || a.prioritized_gaps).length > 0);
+  const insightReadyCount = [
+    ads.length > 0, patterns.length > 0, topHooks.length > 0, Array.isArray(a.messaging_themes) && a.messaging_themes.length > 0,
+    Array.isArray(a.persona_ad_mapping) && a.persona_ad_mapping.length > 0, Array.isArray(a.visual_openers) && a.visual_openers.length > 0,
+    messagingTrendItems.length > 0, Array.isArray(conceptSeeds) && conceptSeeds.length > 0,
+  ].filter(Boolean).length;
   const angleGroups = angles.reduce((groups, angle) => {
     const key = angle.status || "uncategorized";
     if (!groups[key]) groups[key] = [];
@@ -134,29 +153,29 @@ export default function IntelligenceView({ ctx }) {
       </div>
       {selectedProduct && <p className="cs-intel-toolbar__hint">{selectedProduct.name}{selectedProduct.metaAdAccountId ? ` · ${selectedProduct.metaAdAccountId}` : ""}</p>}
       <ErrorBanner message={err} />
+      <PartialResultsNotice active={analyzeActive} completed={insightReadyCount} total={8} label="insight sections" />
 
       {!selectedProductId ? (
         <EmptyState icon={Zap} title="No product selected" hint="Select a product above to run and view ad analysis." />
-      ) : loading && ads.length === 0 && !audit ? (
-        <ViewLoading label="Loading intelligence…" />
-      ) : ads.length === 0 && !audit ? (
-        <EmptyState icon={Zap} title="No analysis yet"
-          hint="Run analysis to pull this brand's Meta ads and build the creative-strategy audit: KPIs, winners, hooks, themes, persona performance, and more." />
       ) : (
-      <div className="space-y-5">
-      {ads.length > 0 && (
-        <div className="cs-intel-kpis">
-          {kpis.map(([label, val]) => <div key={label} className="cs-intel-kpi"><span>{label}</span><strong>{val}</strong></div>)}
-        </div>
-      )}
+        <div className="space-y-5">
+      {ads.length > 0 ? (
+          <div className="cs-intel-kpis">
+            {kpis.map(([label, val]) => <div key={label} className="cs-intel-kpi"><span>{label}</span><strong>{val}</strong></div>)}
+          </div>
+        ) : <ProgressiveSection title="Performance overview" description="Meta spend, efficiency, hook rate, and winners." active={adWorkActive || loading} cards={4} />}
 
       <FailedDownloadsBanner ads={failedDownloads} total={ads.length} />
-      <StrategicPatterns patterns={patterns} />
-      <TopHooksSection hooks={topHooks} />
-      <MessagingThemesSection themes={a.messaging_themes} ads={ads} />
-      <FunnelBalanceSection ads={ads} />
-      <TopPerformers ads={winners} />
-      <PersonaPerformanceSection mappings={a.persona_ad_mapping} ads={ads} />
+      {patterns.length > 0 ? <StrategicPatterns patterns={patterns} /> : <ProgressiveSection title="Strategic patterns by spend" active={auditWorkActive} />}
+      {topHooks.length > 0 ? <TopHooksSection hooks={topHooks} /> : <ProgressiveSection title="Top hooks" active={adWorkActive} cards={2} />}
+      {Array.isArray(a.messaging_themes) && a.messaging_themes.length > 0
+        ? <MessagingThemesSection themes={a.messaging_themes} ads={ads} />
+        : <ProgressiveSection title="Messaging themes" active={auditWorkActive} cards={2} />}
+      {ads.length > 0 ? <FunnelBalanceSection ads={ads} /> : <ProgressiveSection title="Funnel balance" active={adWorkActive} />}
+      {winners.length > 0 ? <TopPerformers ads={winners} /> : <ProgressiveSection title="Top performers" active={adWorkActive} cards={3} />}
+      {Array.isArray(a.persona_ad_mapping) && a.persona_ad_mapping.length > 0
+        ? <PersonaPerformanceSection mappings={a.persona_ad_mapping} ads={ads} />
+        : <ProgressiveSection title="Customer persona performance" active={auditWorkActive} cards={2} />}
 
       <Block title="Trending creative · rising spend / new, last 7d" noDivider
         actions={
@@ -180,11 +199,17 @@ export default function IntelligenceView({ ctx }) {
         ) : <p className="text-xs text-neutral-400">No trending creatives{trending ? "" : " yet — click Refresh (needs Meta)"}.</p>}
       </Block>
 
-      <RecentLaunches ads={recent} />
-      <VisualOpenersSection openers={a.visual_openers} ads={ads} />
-      <MessagingTrendsSection trends={a.messaging_trends} ads={ads} />
-      <WhatToTestNext audit={a} />
-      <UntappedAnglesSection audit={a} />
+      {recent.length > 0 ? <RecentLaunches ads={recent} /> : <ProgressiveSection title="Recent launches" active={adWorkActive} cards={2} />}
+      {Array.isArray(a.visual_openers) && a.visual_openers.length > 0
+        ? <VisualOpenersSection openers={a.visual_openers} ads={ads} />
+        : <ProgressiveSection title="Visual openers" active={auditWorkActive} cards={2} />}
+      {messagingTrendItems.length > 0
+        ? <MessagingTrendsSection trends={a.messaging_trends} ads={ads} />
+        : <ProgressiveSection title="Messaging trends" active={auditWorkActive} />}
+      {Array.isArray(conceptSeeds) && conceptSeeds.length > 0
+        ? <WhatToTestNext audit={a} />
+        : <ProgressiveSection title="What to test next" active={auditWorkActive} cards={2} />}
+      {hasUntapped ? <UntappedAnglesSection audit={a} /> : <ProgressiveSection title="Untapped angles and gaps" active={auditWorkActive} />}
 
       {angles.length > 0 && <AngleGroups groups={angleGroups} />}
 
@@ -205,7 +230,7 @@ export default function IntelligenceView({ ctx }) {
         </section>
       )}
 
-      </div>
+        </div>
       )}
     </div>
   );
@@ -225,7 +250,7 @@ function isSocialChrome(text) {
   const value = String(text || "").toLowerCase().trim();
   return !value || /^\S{1,25}\s+\d{1,3}[wdhms]\b/.test(value) || /\bby\s+(author|creator)\b/.test(value)
     || (/^(reply|like|share|repost|comment|follow|subscribe|send|save)\b/.test(value) && value.length < 25)
-    || (/^[\p{Emoji_Presentation}\p{Emoji}\s❤️💙💚🧡💛💜🖤🤍👍🔥]+\s*\d*$/u.test(value))
+    || (/^[\p{Emoji_Presentation}\p{Emoji}\s]+\s*\d*$/u.test(value))
     || (/^@?\w{1,20}$/.test(value) && !/\s/.test(value) && value.length < 15);
 }
 
