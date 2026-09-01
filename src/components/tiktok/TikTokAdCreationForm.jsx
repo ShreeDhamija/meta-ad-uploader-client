@@ -786,6 +786,7 @@ export default function TikTokAdCreationForm({
     errors: [],
   });
   const [preserveMedia, setPreserveMedia] = useState(false);
+  const [discloseAiMedia, setDiscloseAiMedia] = useState(false);
 
   const [formCatalogs, setFormCatalogs] = useState([]);
   const [loadingFormCatalogs, setLoadingFormCatalogs] = useState(false);
@@ -2230,6 +2231,7 @@ export default function TikTokAdCreationForm({
               : {}),
             ...(shoppingAdsType ? { shopping_ads_type: shoppingAdsType } : {}),
             ...(productSource ? { product_source: productSource } : {}),
+            ...(adType !== "SPARK" ? { aigc_disclosure_type: discloseAiMedia ? "SELF_DISCLOSURE" : "NOT_DECLARED" } : {}),
           };
           if (currentIdentityId) creative.identity_id = currentIdentityId;
           if (currentIdentityAuthorizedBcId) creative.identity_authorized_bc_id = currentIdentityAuthorizedBcId;
@@ -7149,19 +7151,42 @@ export default function TikTokAdCreationForm({
                   </div>
                 </div>
 
-                <div className="flex items-center space-x-2 rounded-xl transition-colors duration-150">
-                  <Checkbox
-                    id="preserveMedia"
-                    checked={preserveMedia}
-                    onCheckedChange={setPreserveMedia}
-                    className="rounded-md focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
-                  />
-                  <Label
-                    htmlFor="preserveMedia"
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                <div className="flex items-center justify-between gap-4">
+                  <div
+                    className={cn(
+                      "flex items-center space-x-2 rounded-xl transition-colors duration-150",
+                      adType === "SPARK" && "opacity-50",
+                    )}
                   >
-                    Don't clear media after publishing ads
-                  </Label>
+                    <Checkbox
+                      id="discloseAiMedia"
+                      checked={discloseAiMedia}
+                      onCheckedChange={(checked) => setDiscloseAiMedia(Boolean(checked))}
+                      disabled={adType === "SPARK"}
+                      className="rounded-md focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                    />
+                    <Label
+                      htmlFor="discloseAiMedia"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                    >
+                      Disclose AI Media
+                    </Label>
+                  </div>
+
+                  <div className="flex items-center space-x-2 rounded-xl transition-colors duration-150">
+                    <Checkbox
+                      id="preserveMedia"
+                      checked={preserveMedia}
+                      onCheckedChange={setPreserveMedia}
+                      className="rounded-md focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                    />
+                    <Label
+                      htmlFor="preserveMedia"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                    >
+                      Don't clear media after publishing ads
+                    </Label>
+                  </div>
                 </div>
               </div>
             </div>
