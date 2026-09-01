@@ -787,6 +787,7 @@ export default function TikTokAdCreationForm({
   });
   const [preserveMedia, setPreserveMedia] = useState(false);
   const [discloseAiMedia, setDiscloseAiMedia] = useState(false);
+  const [creativeAuthorized, setCreativeAuthorized] = useState(false);
 
   const [formCatalogs, setFormCatalogs] = useState([]);
   const [loadingFormCatalogs, setLoadingFormCatalogs] = useState(false);
@@ -2232,6 +2233,7 @@ export default function TikTokAdCreationForm({
             ...(shoppingAdsType ? { shopping_ads_type: shoppingAdsType } : {}),
             ...(productSource ? { product_source: productSource } : {}),
             ...(adType !== "SPARK" && productSource !== "SHOWCASE" ? { aigc_disclosure_type: discloseAiMedia ? "SELF_DISCLOSURE" : "NOT_DECLARED" } : {}),
+            ...(!creativeAuthorizedDisabled ? { creative_authorized: creativeAuthorized } : {}),
           };
           if (currentIdentityId) creative.identity_id = currentIdentityId;
           if (currentIdentityAuthorizedBcId) creative.identity_authorized_bc_id = currentIdentityAuthorizedBcId;
@@ -4629,6 +4631,15 @@ export default function TikTokAdCreationForm({
   const publishDisabled = !isFormValid || loadingAdGroups || (selectedFiles && selectedFiles.size > 0);
   const isAdvertiserLocked = variants.length > 1 && activeVariantId !== "default";
   const shouldScrollVariantPicker = variants.length > 5;
+  const selectedCampaignForAuth = campaigns.find((c) => c.campaign_id === selectedCampaign[0]);
+  const isSmartPlusCampaignSelected = Boolean(
+    selectedCampaignForAuth?.campaign_automation_type === "UPGRADED_SMART_PLUS" ||
+      selectedCampaignForAuth?.campaign_automation_type === "SMART_PLUS" ||
+      selectedCampaignForAuth?.campaign_automation_type === "SMART_PERFORMANCE_CAMPAIGN" ||
+      selectedCampaignForAuth?.is_smart_performance_campaign === true ||
+      selectedCampaignForAuth?.is_smart_performance_campaign === "true",
+  );
+  const creativeAuthorizedDisabled = adType === "SPARK" || isSmartPlusCampaignSelected;
 
   return (
     <>
@@ -7187,6 +7198,27 @@ export default function TikTokAdCreationForm({
                       Don't clear media after publishing ads
                     </Label>
                   </div>
+                </div>
+
+                <div
+                  className={cn(
+                    "flex items-center space-x-2 rounded-xl transition-colors duration-150",
+                    creativeAuthorizedDisabled && "opacity-50",
+                  )}
+                >
+                  <Checkbox
+                    id="creativeAuthorized"
+                    checked={creativeAuthorized}
+                    onCheckedChange={(checked) => setCreativeAuthorized(Boolean(checked))}
+                    disabled={creativeAuthorizedDisabled}
+                    className="rounded-md focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                  />
+                  <Label
+                    htmlFor="creativeAuthorized"
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                  >
+                    Authorize ad & performance data for TikTok Top Ads
+                  </Label>
                 </div>
               </div>
             </div>
