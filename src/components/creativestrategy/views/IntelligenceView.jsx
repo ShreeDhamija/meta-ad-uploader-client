@@ -188,7 +188,7 @@ export default function IntelligenceView({ ctx }) {
           <div className="cs-intel-creative-grid">
             {trendingAds.slice(0, 8).map((t) => (
               <div key={t.adId} className="cs-intel-creative-card">
-                <CreativeThumbnail src={t.thumbnailUrl} />
+                <CreativeThumbnail src={t.thumbnailUrl} variant="card" />
                 <div className="cs-intel-creative-card__body">
                   <div className="truncate" title={t.adName}>{t.adName}</div>
                   <p>{money(t.currentSpend)}{t.spendDelta != null ? ` · +${Math.round(t.spendDelta * 100)}% WoW` : " · new"}</p>
@@ -396,17 +396,17 @@ function TopHooksSection({ hooks }) {
       const open = expanded === index;
       const formula = hook.hookFormula || {};
       const primaryCopy = hook.adsManagerCopy || {};
-      return <div key={`${hook.adId}-${index}`} className="overflow-hidden rounded-lg border border-white/15 bg-white/5">
+      return <div key={`${hook.adId}-${index}`} className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
         <button type="button" onClick={() => setExpanded(open ? null : index)} className="flex w-full items-center gap-2 px-3 py-2 text-left">
-          <span className="w-5 text-right text-[10px] font-bold text-orange-300">{index + 1}</span>
-          <p className="min-w-0 flex-1 truncate text-xs font-medium italic text-white">“{hook.hookText}”</p>
+          <span className="w-5 text-right text-[10px] font-bold text-orange-600">{index + 1}</span>
+          <p className="min-w-0 flex-1 truncate text-xs font-medium italic text-neutral-800">“{hook.hookText}”</p>
           <Badge variant="secondary" className="text-[9px]">{hook.mediaType === "video" ? "Video" : "Static"}</Badge>
-          <span className="text-[10px] text-neutral-300">{money(hook.spend)}{hook.costPerPurchase ? ` · ${money(hook.costPerPurchase)} CPA` : ""}</span>
-          {open ? <ChevronDown className="h-3.5 w-3.5 text-neutral-300" /> : <ChevronRight className="h-3.5 w-3.5 text-neutral-300" />}
+          <span className="text-[10px] text-neutral-500">{money(hook.spend)}{hook.costPerPurchase ? ` · ${money(hook.costPerPurchase)} CPA` : ""}</span>
+          {open ? <ChevronDown className="h-3.5 w-3.5 text-neutral-400" /> : <ChevronRight className="h-3.5 w-3.5 text-neutral-400" />}
         </button>
-        {open && <div className="space-y-3 border-t border-white/10 px-3 py-3 text-xs text-neutral-200">
-          <div className="flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-neutral-300">
-            <strong className="text-white">{hook.adName || "Unnamed"}</strong>
+        {open && <div className="space-y-3 border-t border-neutral-100 px-3 py-3 text-xs text-neutral-600">
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-neutral-500">
+            <strong className="text-neutral-800">{hook.adName || "Unnamed"}</strong>
             {hook.purchases > 0 && <span>{hook.purchases} purchases</span>}
             {hook.ctr != null && <span>{Number(hook.ctr).toFixed(2)}% CTR</span>}
             {hook.cpm != null && <span>{money(hook.cpm)} CPM</span>}
@@ -418,19 +418,19 @@ function TopHooksSection({ hooks }) {
           {(formula.pattern_interrupt || formula.qualifier || formula.gap) && <div>
             <p className="mb-1 text-[9px] font-semibold uppercase tracking-wide text-neutral-400">Hook formula</p>
             <div className="grid gap-2 sm:grid-cols-3">{[["Pattern interrupt", formula.pattern_interrupt], ["Qualifier", formula.qualifier], ["Gap", formula.gap]].filter(([, value]) => value).map(([label, value]) =>
-              <div key={label} className="rounded border border-white/10 bg-black/10 p-2"><small className="block text-[9px] uppercase text-neutral-400">{label}</small>{value}</div>)}</div>
+              <div key={label} className="rounded-lg border border-neutral-200 bg-neutral-50 p-2"><small className="block text-[9px] uppercase text-neutral-400">{label}</small>{value}</div>)}</div>
           </div>}
           <div className="flex flex-wrap gap-1">{[
             hook.primaryAngle && `angle: ${hook.primaryAngle}`, hook.hookStyle && `style: ${hook.hookStyle}`,
             hook.emotionalTrigger && `emotion: ${hook.emotionalTrigger}`, hook.awarenessStage && `awareness: ${hook.awarenessStage}`,
             hook.benefitType && `benefit: ${hook.benefitType}`, hook.conceptClassification && `bucket: ${hook.conceptClassification}`,
-          ].filter(Boolean).map((tag) => <Badge key={tag} variant="outline" className="border-white/20 text-[9px] text-neutral-200">{tag}</Badge>)}</div>
+          ].filter(Boolean).map((tag) => <Badge key={tag} variant="outline" className="border-neutral-200 text-[9px] text-neutral-600">{tag}</Badge>)}</div>
           {hook.buildingBlocks?.length > 0 && <p><strong>Building blocks:</strong> {hook.buildingBlocks.join(" → ")}</p>}
           {hook.lifeForce8?.length > 0 && <p><strong>Core desires:</strong> {hook.lifeForce8.join(", ")}</p>}
           {primaryCopy.primary_text && <p><strong>Primary text:</strong> {primaryCopy.primary_text}</p>}
           {(primaryCopy.headline || hook.headlineText) && <p><strong>Headline:</strong> {primaryCopy.headline || hook.headlineText}</p>}
           {(primaryCopy.cta || hook.ctaType) && <p><strong>CTA:</strong> {primaryCopy.cta || hook.ctaType}</p>}
-          {hook.transcript && hook.mediaType === "video" && <div><strong>Transcript</strong><p className="mt-1 max-h-36 overflow-y-auto whitespace-pre-wrap rounded bg-black/10 p-2">{hook.transcript}</p></div>}
+          {hook.transcript && hook.mediaType === "video" && <div><strong>Transcript</strong><p className="mt-1 max-h-36 overflow-y-auto whitespace-pre-wrap rounded-lg bg-neutral-50 p-2">{hook.transcript}</p></div>}
           {hook.whyItWorks && <p><strong>Why it works:</strong> {hook.whyItWorks}</p>}
           {hook.gradeRationale && <p><strong>Performance read:</strong> {hook.gradeRationale}</p>}
         </div>}
@@ -514,14 +514,14 @@ function PersonaPerformanceSection({ mappings, ads }) {
   return <InsightSection title="Customer personas" tone="dark"><div className="space-y-2">{enriched.map((persona, index) => {
     const open = expanded === index; const share = total > 0 ? (persona.spend / total) * 100 : 0;
     const title = persona.persona_short_title || persona.matched_research_persona || persona.persona || `Persona ${index + 1}`;
-    return <div key={`${title}-${index}`} className="overflow-hidden rounded-xl border border-white/15 bg-white/5"><button type="button" onClick={() => setExpanded(open ? null : index)} className="flex w-full gap-3 p-3 text-left">
-      <div className="min-w-0 flex-1"><strong className="text-sm text-white">{title}</strong>{persona.persona && persona.persona !== title && <p className="mt-1 line-clamp-2 text-xs text-neutral-300">{persona.persona}</p>}
-        <p className="mt-1 text-[10px] text-neutral-300">{persona.matchedAds.length} ads · {money(persona.spend)} spend · {Math.round(share)}%{persona.cpa ? ` · ${money(persona.cpa)} CPA` : ""}</p><div className="mt-2 h-1.5 overflow-hidden rounded bg-white/10"><div className="h-full rounded bg-orange-400" style={{ width: `${Math.max(share, 2)}%` }} /></div>
-      </div>{open ? <ChevronDown className="h-4 w-4 text-neutral-300" /> : <ChevronRight className="h-4 w-4 text-neutral-300" />}</button>
-      {open && <div className="space-y-3 border-t border-white/10 p-3 text-xs text-neutral-200">
-        {persona.top_angles_used?.length > 0 && <div><strong>Angles currently in use</strong><div className="mt-1 flex flex-wrap gap-1">{persona.top_angles_used.map((angle) => <Badge key={angle} variant="outline" className="border-white/20 text-[9px] text-white">{angle}</Badge>)}</div></div>}
+    return <div key={`${title}-${index}`} className="overflow-hidden rounded-xl border border-neutral-200 bg-white"><button type="button" onClick={() => setExpanded(open ? null : index)} className="flex w-full gap-3 p-3 text-left">
+      <div className="min-w-0 flex-1"><strong className="text-sm text-neutral-800">{title}</strong>{persona.persona && persona.persona !== title && <p className="mt-1 line-clamp-2 text-xs text-neutral-500">{persona.persona}</p>}
+        <p className="mt-1 text-[10px] text-neutral-400">{persona.matchedAds.length} ads · {money(persona.spend)} spend · {Math.round(share)}%{persona.cpa ? ` · ${money(persona.cpa)} CPA` : ""}</p><div className="mt-2 h-1.5 overflow-hidden rounded bg-neutral-100"><div className="h-full rounded bg-orange-400" style={{ width: `${Math.max(share, 2)}%` }} /></div>
+      </div>{open ? <ChevronDown className="h-4 w-4 text-neutral-400" /> : <ChevronRight className="h-4 w-4 text-neutral-400" />}</button>
+      {open && <div className="space-y-3 border-t border-neutral-100 p-3 text-xs text-neutral-600">
+        {persona.top_angles_used?.length > 0 && <div><strong>Angles currently in use</strong><div className="mt-1 flex flex-wrap gap-1">{persona.top_angles_used.map((angle) => <Badge key={angle} variant="outline" className="text-[9px]">{angle}</Badge>)}</div></div>}
         {(persona.angles_not_yet_tested?.length > 0 || persona.top_unmet_angle) && <p><strong>Still untested:</strong> {(persona.angles_not_yet_tested || [persona.top_unmet_angle]).join(", ")}</p>}
-        <div className="grid gap-2 sm:grid-cols-2">{persona.matchedAds.map((ad) => <AdEvidenceCard key={ad.adId} ad={ad} dark />)}</div>
+        <div className="grid gap-2 sm:grid-cols-2">{persona.matchedAds.map((ad) => <AdEvidenceCard key={ad.adId} ad={ad} />)}</div>
       </div>}
     </div>;
   })}</div></InsightSection>;
@@ -588,10 +588,10 @@ function UntappedAnglesSection({ audit }) {
 }
 UntappedAnglesSection.propTypes = { audit: PropTypes.object.isRequired };
 
-function AdEvidenceCard({ ad, dark = false }) {
-  return <div className={`flex items-center gap-2 rounded-lg border p-2 ${dark ? "border-white/10 bg-white/5" : "border-neutral-100 bg-neutral-50"}`}><CreativeThumbnail src={ad.imageUrl || ad.thumbnailUrl} /><div className="min-w-0 flex-1"><strong className={`block truncate text-xs ${dark ? "text-white" : "text-neutral-700"}`}>{ad.adName || "Unnamed"}</strong><p className={`text-[10px] ${dark ? "text-neutral-300" : "text-neutral-400"}`}>{money(ad.spend)}{ad.costPerPurchase ? ` · ${money(ad.costPerPurchase)} CPA` : ""}{ad.hookRate > 0 ? ` · ${(ad.hookRate * 100).toFixed(1)}% HR` : ""}</p></div><Badge variant="outline" className={`text-[9px] ${dark ? "border-white/20 text-white" : ""}`}>{ad.mediaType === "video" ? "Video" : "Static"}</Badge></div>;
+function AdEvidenceCard({ ad }) {
+  return <div className="flex items-center gap-2 rounded-lg border border-neutral-100 bg-neutral-50 p-2"><CreativeThumbnail src={ad.imageUrl || ad.thumbnailUrl} /><div className="min-w-0 flex-1"><strong className="block truncate text-xs text-neutral-700">{ad.adName || "Unnamed"}</strong><p className="text-[10px] text-neutral-400">{money(ad.spend)}{ad.costPerPurchase ? ` · ${money(ad.costPerPurchase)} CPA` : ""}{ad.hookRate > 0 ? ` · ${(ad.hookRate * 100).toFixed(1)}% HR` : ""}</p></div><Badge variant="outline" className="text-[9px]">{ad.mediaType === "video" ? "Video" : "Static"}</Badge></div>;
 }
-AdEvidenceCard.propTypes = { ad: PropTypes.object.isRequired, dark: PropTypes.bool };
+AdEvidenceCard.propTypes = { ad: PropTypes.object.isRequired };
 
 function Block({ title, children, actions, noDivider = false }) {
   return (
@@ -624,12 +624,13 @@ function Pill({ children }) {
 }
 Pill.propTypes = { children: PropTypes.node };
 
-function CreativeThumbnail({ src }) {
+function CreativeThumbnail({ src, variant = "compact" }) {
+  const className = `cs-intel-thumbnail is-${variant}`;
   return src
-    ? <img src={src} alt="" className="cs-intel-thumbnail" />
-    : <div className="cs-intel-thumbnail is-empty"><Zap className="h-5 w-5" /></div>;
+    ? <img src={src} alt="" className={className} />
+    : <div className={`${className} is-empty`}><Zap className="h-5 w-5" /></div>;
 }
-CreativeThumbnail.propTypes = { src: PropTypes.string };
+CreativeThumbnail.propTypes = { src: PropTypes.string, variant: PropTypes.oneOf(["compact", "card"]) };
 
 function AngleGroups({ groups }) {
   const order = ["proven", "in_research", "untapped", "uncategorized"];
