@@ -2231,7 +2231,7 @@ export default function TikTokAdCreationForm({
               : {}),
             ...(shoppingAdsType ? { shopping_ads_type: shoppingAdsType } : {}),
             ...(productSource ? { product_source: productSource } : {}),
-            ...(adType !== "SPARK" ? { aigc_disclosure_type: discloseAiMedia ? "SELF_DISCLOSURE" : "NOT_DECLARED" } : {}),
+            ...(adType !== "SPARK" && productSource !== "SHOWCASE" ? { aigc_disclosure_type: discloseAiMedia ? "SELF_DISCLOSURE" : "NOT_DECLARED" } : {}),
           };
           if (currentIdentityId) creative.identity_id = currentIdentityId;
           if (currentIdentityAuthorizedBcId) creative.identity_authorized_bc_id = currentIdentityAuthorizedBcId;
@@ -7155,14 +7155,14 @@ export default function TikTokAdCreationForm({
                   <div
                     className={cn(
                       "flex items-center space-x-2 rounded-xl transition-colors duration-150",
-                      adType === "SPARK" && "opacity-50",
+                      (adType === "SPARK" || isShowcaseSelection) && "opacity-50",
                     )}
                   >
                     <Checkbox
                       id="discloseAiMedia"
                       checked={discloseAiMedia}
                       onCheckedChange={(checked) => setDiscloseAiMedia(Boolean(checked))}
-                      disabled={adType === "SPARK"}
+                      disabled={adType === "SPARK" || isShowcaseSelection}
                       className="rounded-md focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
                     />
                     <Label
