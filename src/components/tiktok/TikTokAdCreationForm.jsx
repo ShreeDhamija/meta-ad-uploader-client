@@ -7155,14 +7155,14 @@ export default function TikTokAdCreationForm({
                   <div
                     className={cn(
                       "flex items-center space-x-2 rounded-xl transition-colors duration-150",
-                      (adType === "SPARK" || isShowcaseSelection) && "opacity-50",
+                      (adType === "SPARK" || areAllSelectedAdGroupsShopping) && "opacity-50",
                     )}
                   >
                     <Checkbox
                       id="discloseAiMedia"
                       checked={discloseAiMedia}
                       onCheckedChange={(checked) => setDiscloseAiMedia(Boolean(checked))}
-                      disabled={adType === "SPARK" || isShowcaseSelection}
+                      disabled={adType === "SPARK" || areAllSelectedAdGroupsShopping}
                       className="rounded-md focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
                     />
                     <Label
