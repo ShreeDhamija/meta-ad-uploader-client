@@ -1540,6 +1540,8 @@ export default function AdCreationForm({
   const [uploadSourcesOpen, setUploadSourcesOpen] = useState(false);
   const [showCsvImportGuide, setShowCsvImportGuide] = useState(false);
   const [isImportingCsv, setIsImportingCsv] = useState(false);
+  const [selectedCsvFile, setSelectedCsvFile] = useState(null);
+  const [isCsvDragActive, setIsCsvDragActive] = useState(false);
   const csvFileInputRef = useRef(null);
   const downloadCsvTemplate = useCallback(async () => {
     const templateUrl = "https://api.withblip.com/csv-variant-import-template.csv";
@@ -3857,6 +3859,8 @@ export default function AdCreationForm({
       } finally {
         setIsImportingCsv(false);
         setShowCsvImportGuide(false);
+        setSelectedCsvFile(null);
+        setIsCsvDragActive(false);
       }
     },
     [handleDriveClick, hasImportedCsv, isImportingCsv, onImportCsv, setHasImportedCsv],
@@ -3888,8 +3892,28 @@ export default function AdCreationForm({
     [getCatalogueMediaCount, handleDriveClick, importCsvFile, importedPosts.length, onImportCsv, pendingCsvDriveImport],
   );
 
+  const stageCsvFile = useCallback(
+    (file) => {
+      if (!file) return;
+      if (pendingCsvDriveImport) {
+        toast.error("Finish selecting the Drive files for the current CSV first");
+        void handleDriveClick();
+        return;
+      }
+      if (!file.name?.toLowerCase().endsWith(".csv") && file.type !== "text/csv") {
+        toast.error("Please choose a CSV file");
+        return;
+      }
+      setSelectedCsvFile(file);
+    },
+    [handleDriveClick, pendingCsvDriveImport],
+  );
+
   const handleCsvSourceClick = useCallback(() => {
-    if (!isImportingCsv) csvFileInputRef.current?.click();
+    if (isImportingCsv) return;
+    setSelectedCsvFile(null);
+    setIsCsvDragActive(false);
+    setShowCsvImportGuide(true);
   }, [isImportingCsv]);
 
   const handleCsvFilePickerChange = useCallback(
@@ -3897,9 +3921,23 @@ export default function AdCreationForm({
       const file = event.target.files?.[0];
       // Allow selecting the same file again after cancelling or completing an import.
       event.target.value = "";
-      handleCsvSelection(file);
+      stageCsvFile(file);
     },
-    [handleCsvSelection],
+    [stageCsvFile],
+  );
+
+  const handleCsvGuideDrop = useCallback(
+    (event) => {
+      event.preventDefault();
+      setIsCsvDragActive(false);
+      const droppedFiles = Array.from(event.dataTransfer.files || []);
+      if (droppedFiles.length !== 1) {
+        toast.error("Choose one CSV file at a time");
+        return;
+      }
+      stageCsvFile(droppedFiles[0]);
+    },
+    [stageCsvFile],
   );
 
   const onDrop = useCallback(
@@ -3912,7 +3950,8 @@ export default function AdCreationForm({
           toast.error("Choose one CSV by itself, without media files");
           return;
         }
-        handleCsvSelection(csvFiles[0]);
+        stageCsvFile(csvFiles[0]);
+        setShowCsvImportGuide(true);
         return;
       }
 
@@ -3927,7 +3966,7 @@ export default function AdCreationForm({
 
       setFiles((prev) => [...prev, ...catalogueImageFiles.map(withUniqueId)]);
     },
-    [filterCatalogueImageFiles, handleCsvSelection],
+    [filterCatalogueImageFiles, stageCsvFile],
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -10832,6 +10871,8 @@ export default function AdCreationForm({
                     </div>
                   </div>
 
+                  <input ref={csvFileInputRef} type="file" accept=".csv,text/csv" className="hidden" onChange={handleCsvFilePickerChange} />
+
                   {uploadSources.includes("local") && (
                     <div
                       {...getRootProps()}
@@ -10891,7 +10932,6 @@ export default function AdCreationForm({
 
                     return (
                       <div className="mb-2 space-y-1">
-                        <input ref={csvFileInputRef} type="file" accept=".csv,text/csv" className="hidden" onChange={handleCsvFilePickerChange} />
                         <div className="flex gap-2">
                           {rowSources.map((id) => {
                             const src = UPLOAD_SOURCE_OPTIONS.find((o) => o.id === id);
@@ -11576,9 +11616,16 @@ export default function AdCreationForm({
       )}
       {showCsvImportGuide && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/35" onClick={() => setShowCsvImportGuide(false)} />
           <div
-            className="relative w-[min(34rem,calc(100vw-2rem))] rounded-[28px] border border-gray-200 bg-white p-6 shadow-xl"
+            className="absolute inset-0 bg-black/35"
+            onClick={() => {
+              setShowCsvImportGuide(false);
+              setSelectedCsvFile(null);
+              setIsCsvDragActive(false);
+            }}
+          />
+          <div
+            className="relative max-h-[calc(100vh-2rem)] w-[min(36rem,calc(100vw-2rem))] overflow-y-auto rounded-[28px] border border-gray-200 bg-white p-6 shadow-xl"
             style={{ animation: "templateBtnIn 0.2s ease-out forwards" }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -11586,7 +11633,11 @@ export default function AdCreationForm({
               type="button"
               aria-label="Close CSV import guide"
               className="absolute right-4 top-4 rounded-full p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-black"
-              onClick={() => setShowCsvImportGuide(false)}
+              onClick={() => {
+                setShowCsvImportGuide(false);
+                setSelectedCsvFile(null);
+                setIsCsvDragActive(false);
+              }}
             >
               <X className="h-4 w-4" />
             </button>
@@ -11619,25 +11670,68 @@ export default function AdCreationForm({
               </ul>
             </div>
 
-            <div className="mt-5 grid grid-cols-2 gap-3">
-              <Button
-                type="button"
-                className="h-12 w-full rounded-2xl bg-gray-100 text-black shadow-none hover:bg-gray-200 hover:text-black"
-                onClick={() => void downloadCsvTemplate()}
-              >
-                Download Template
-              </Button>
+            <div className="mt-5 space-y-5 border-t border-gray-100 pt-5">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">1. Prepare your sheet</p>
+                  <p className="mt-0.5 text-xs text-gray-500">Start with the latest CSV template.</p>
+                </div>
+                <Button
+                  type="button"
+                  className="h-10 shrink-0 rounded-xl bg-gray-100 px-4 text-black shadow-none hover:bg-gray-200 hover:text-black"
+                  onClick={() => void downloadCsvTemplate()}
+                >
+                  Download Template
+                </Button>
+              </div>
+
+              <div>
+                <p className="text-sm font-semibold text-gray-900">2. Upload and import</p>
+                <button
+                  type="button"
+                  className={cn(
+                    "mt-2 flex min-h-24 w-full flex-col items-center justify-center rounded-2xl border-2 border-dashed px-4 py-4 text-center transition-colors",
+                    isCsvDragActive ? "border-blue-500 bg-blue-50" : "border-gray-300 bg-gray-50 hover:border-blue-400 hover:bg-blue-50/50",
+                  )}
+                  disabled={isImportingCsv}
+                  onClick={() => csvFileInputRef.current?.click()}
+                  onDragEnter={(event) => {
+                    event.preventDefault();
+                    if (!isImportingCsv) setIsCsvDragActive(true);
+                  }}
+                  onDragOver={(event) => {
+                    event.preventDefault();
+                    if (!isImportingCsv) setIsCsvDragActive(true);
+                  }}
+                  onDragLeave={(event) => {
+                    event.preventDefault();
+                    if (!event.currentTarget.contains(event.relatedTarget)) setIsCsvDragActive(false);
+                  }}
+                  onDrop={handleCsvGuideDrop}
+                >
+                  <Upload className="h-5 w-5 text-gray-500" />
+                  {selectedCsvFile ? (
+                    <>
+                      <span className="mt-2 max-w-full truncate text-sm font-medium text-gray-900">{selectedCsvFile.name}</span>
+                      <span className="mt-0.5 text-xs text-gray-500">Click or drop another CSV to replace it</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="mt-2 text-sm font-medium text-gray-700">Drag &amp; drop your CSV here</span>
+                      <span className="mt-0.5 text-xs text-gray-500">or click to choose a file</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
               <Button
                 type="button"
                 className="h-12 w-full rounded-2xl bg-zinc-900 text-white hover:bg-zinc-800"
-                disabled={isImportingCsv}
-                onClick={() => {
-                  setShowCsvImportGuide(false);
-                  csvFileInputRef.current?.click();
-                }}
+                disabled={!selectedCsvFile || isImportingCsv}
+                onClick={() => handleCsvSelection(selectedCsvFile)}
               >
                 {isImportingCsv && <Loader className="mr-2 h-4 w-4 animate-spin" />}
-                Import CSV
+                {isImportingCsv ? "Importing CSV…" : "Import CSV"}
               </Button>
             </div>
           </div>
