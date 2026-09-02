@@ -7,6 +7,7 @@ import { creativeApi } from "@/lib/creativeApi";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { humanize } from "../JsonView";
 import { EmptyState, ErrorBanner, PartialResultsNotice, ProgressiveSection } from "../ui";
 import { useJobRunner, JobBadge } from "../JobsContext";
@@ -374,14 +375,18 @@ FailedDownloadsBanner.propTypes = { ads: PropTypes.array.isRequired, total: Prop
 function StrategicPatterns({ patterns }) {
   if (!patterns.length) return null;
   return <InsightSection title="Strategic patterns by spend">
-    <div className="space-y-4">{patterns.map((pattern, index) => {
+    <div className="cs-intel-patterns">{patterns.map((pattern, index) => {
       const pct = Number(pattern.spend_pct || 0);
-      return <div key={index} className="space-y-1.5">
-        <div className="flex gap-3 text-sm"><span className="text-xs text-neutral-400">{index + 1}.</span><div className="flex-1">
+      return <div key={index} className="cs-intel-pattern">
+        <div className="flex gap-3 text-sm"><span className="cs-intel-list-index">{index + 1}</span><div className="min-w-0 flex-1">
           <p className="text-neutral-700"><strong>{pattern.pattern_name ? `${pattern.pattern_name}: ` : ""}</strong>{pattern.pattern || pattern.insight || ""}</p>
-          <p className="mt-1 text-xs text-neutral-400">{pct.toFixed(0)}% of spend · {pattern.ad_count || 0} ads{pattern.learning_sheet_level ? ` · ${pattern.learning_sheet_level}` : ""}</p>
+          <MetricPills className="mt-2" items={[
+            `${pct.toFixed(0)}% of spend`,
+            `${pattern.ad_count || 0} ads`,
+            pattern.learning_sheet_level && humanize(pattern.learning_sheet_level),
+          ]} />
         </div></div>
-        <div className="h-1.5 overflow-hidden rounded-full bg-neutral-100"><div className="h-full rounded-full bg-orange-400" style={{ width: `${Math.max(Math.min(pct, 100), 2)}%` }} /></div>
+        <div className="cs-intel-spend-bar"><div style={{ width: `${Math.max(Math.min(pct, 100), 2)}%` }} /></div>
       </div>;
     })}</div>
   </InsightSection>;
@@ -391,48 +396,67 @@ StrategicPatterns.propTypes = { patterns: PropTypes.array.isRequired };
 function TopHooksSection({ hooks }) {
   const [expanded, setExpanded] = useState(null);
   if (!hooks.length) return null;
-  return <InsightSection title={`Top hooks · ${hooks.length}`} tone="dark">
-    <div className="max-h-[560px] space-y-1 overflow-y-auto pr-1">{hooks.map((hook, index) => {
+  return <InsightSection title="Top hooks" tone="dark">
+    <div className="cs-intel-accordion-list max-h-[720px] overflow-y-auto pr-1">{hooks.map((hook, index) => {
       const open = expanded === index;
       const formula = hook.hookFormula || {};
       const primaryCopy = hook.adsManagerCopy || {};
-      return <div key={`${hook.adId}-${index}`} className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
-        <button type="button" onClick={() => setExpanded(open ? null : index)} className="flex w-full items-center gap-2 px-3 py-2 text-left">
-          <span className="w-5 text-right text-[10px] font-bold text-orange-600">{index + 1}</span>
-          <p className="min-w-0 flex-1 truncate text-xs font-medium italic text-neutral-800">“{hook.hookText}”</p>
-          <Badge variant="secondary" className="text-[9px]">{hook.mediaType === "video" ? "Video" : "Static"}</Badge>
-          <span className="text-[10px] text-neutral-500">{money(hook.spend)}{hook.costPerPurchase ? ` · ${money(hook.costPerPurchase)} CPA` : ""}</span>
+      const transcriptSections = parseTranscriptSections(hook.transcript);
+      return <div key={`${hook.adId}-${index}`} className="cs-intel-accordion-card">
+        <button type="button" onClick={() => setExpanded(open ? null : index)} className="cs-intel-hook-trigger">
+          <span className="cs-intel-list-index">{index + 1}</span>
+          <p className="cs-intel-hook-title">“{hook.hookText}”</p>
+          <MediaTag mediaType={hook.mediaType} />
+          <MetricPills compact items={[`${money(hook.spend)} spend`, hook.costPerPurchase ? `${money(hook.costPerPurchase)} CPA` : null]} />
           {open ? <ChevronDown className="h-3.5 w-3.5 text-neutral-400" /> : <ChevronRight className="h-3.5 w-3.5 text-neutral-400" />}
         </button>
-        {open && <div className="space-y-3 border-t border-neutral-100 px-3 py-3 text-xs text-neutral-600">
-          <div className="flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-neutral-500">
-            <strong className="text-neutral-800">{hook.adName || "Unnamed"}</strong>
-            {hook.purchases > 0 && <span>{hook.purchases} purchases</span>}
-            {hook.ctr != null && <span>{Number(hook.ctr).toFixed(2)}% CTR</span>}
-            {hook.cpm != null && <span>{money(hook.cpm)} CPM</span>}
-            {hook.hookRate > 0 && <span>{(hook.hookRate * 100).toFixed(1)}% hook rate</span>}
-            {hook.avgWatchTime > 0 && <span>{Number(hook.avgWatchTime).toFixed(1)}s avg watch</span>}
-            {hook.frequency > 0 && <span>{Number(hook.frequency).toFixed(1)}x freq</span>}
-            {hook.funnelPosition && <span>{hook.funnelPosition}</span>}
-          </div>
-          {(formula.pattern_interrupt || formula.qualifier || formula.gap) && <div>
-            <p className="mb-1 text-[9px] font-semibold uppercase tracking-wide text-neutral-400">Hook formula</p>
-            <div className="grid gap-2 sm:grid-cols-3">{[["Pattern interrupt", formula.pattern_interrupt], ["Qualifier", formula.qualifier], ["Gap", formula.gap]].filter(([, value]) => value).map(([label, value]) =>
-              <div key={label} className="rounded-lg border border-neutral-200 bg-neutral-50 p-2"><small className="block text-[9px] uppercase text-neutral-400">{label}</small>{value}</div>)}</div>
-          </div>}
-          <div className="flex flex-wrap gap-1">{[
-            hook.primaryAngle && `angle: ${hook.primaryAngle}`, hook.hookStyle && `style: ${hook.hookStyle}`,
-            hook.emotionalTrigger && `emotion: ${hook.emotionalTrigger}`, hook.awarenessStage && `awareness: ${hook.awarenessStage}`,
-            hook.benefitType && `benefit: ${hook.benefitType}`, hook.conceptClassification && `bucket: ${hook.conceptClassification}`,
-          ].filter(Boolean).map((tag) => <Badge key={tag} variant="outline" className="border-neutral-200 text-[9px] text-neutral-600">{tag}</Badge>)}</div>
-          {hook.buildingBlocks?.length > 0 && <p><strong>Building blocks:</strong> {hook.buildingBlocks.join(" → ")}</p>}
-          {hook.lifeForce8?.length > 0 && <p><strong>Core desires:</strong> {hook.lifeForce8.join(", ")}</p>}
-          {primaryCopy.primary_text && <p><strong>Primary text:</strong> {primaryCopy.primary_text}</p>}
-          {(primaryCopy.headline || hook.headlineText) && <p><strong>Headline:</strong> {primaryCopy.headline || hook.headlineText}</p>}
-          {(primaryCopy.cta || hook.ctaType) && <p><strong>CTA:</strong> {primaryCopy.cta || hook.ctaType}</p>}
-          {hook.transcript && hook.mediaType === "video" && <div><strong>Transcript</strong><p className="mt-1 max-h-36 overflow-y-auto whitespace-pre-wrap rounded-lg bg-neutral-50 p-2">{hook.transcript}</p></div>}
-          {hook.whyItWorks && <p><strong>Why it works:</strong> {hook.whyItWorks}</p>}
-          {hook.gradeRationale && <p><strong>Performance read:</strong> {hook.gradeRationale}</p>}
+        {open && <div className="cs-intel-hook-details">
+          <section className="cs-intel-detail-section is-first">
+            <p className="cs-intel-field-label">Ad name</p>
+            <strong className="cs-intel-ad-name">{hook.adName || "Unnamed"}</strong>
+            <div className="cs-intel-stat-line">
+              {[
+                hook.purchases > 0 && `${hook.purchases} purchases`,
+                hook.ctr != null && `${Number(hook.ctr).toFixed(2)}% CTR`,
+                hook.cpm != null && `${money(hook.cpm)} CPM`,
+                hook.hookRate > 0 && `${(hook.hookRate * 100).toFixed(1)}% hook rate`,
+                hook.avgWatchTime > 0 && `${Number(hook.avgWatchTime).toFixed(1)}s avg watch`,
+                hook.frequency > 0 && `${Number(hook.frequency).toFixed(1)}x frequency`,
+                hook.funnelPosition && humanize(hook.funnelPosition),
+              ].filter(Boolean).map((stat) => <span key={stat}>{stat}</span>)}
+            </div>
+          </section>
+          {(formula.pattern_interrupt || formula.qualifier || formula.gap) && <section className="cs-intel-detail-section">
+            <h3 className="cs-intel-subsection-title">Hook formula</h3>
+            <div className="cs-intel-formula-grid">{[["Pattern interrupt", formula.pattern_interrupt], ["Qualifier", formula.qualifier], ["Gap", formula.gap]].filter(([, value]) => value).map(([label, value]) =>
+              <div key={label} className="cs-intel-formula-card"><small>{label}</small><p>{value}</p></div>)}</div>
+          </section>}
+          <section className="cs-intel-detail-section">
+            <div className="cs-intel-tag-row">{[
+              hook.primaryAngle && `Angle: ${hook.primaryAngle}`, hook.hookStyle && `Style: ${hook.hookStyle}`,
+              hook.emotionalTrigger && `Emotion: ${hook.emotionalTrigger}`, hook.awarenessStage && `Awareness: ${hook.awarenessStage}`,
+              hook.benefitType && `Benefit: ${hook.benefitType}`, hook.conceptClassification && `Bucket: ${hook.conceptClassification}`,
+            ].filter(Boolean).map((tag, tagIndex) => <span key={tag} className={`cs-intel-attribute-pill is-tone-${tagIndex % 4}`}>{tag}</span>)}</div>
+            {hook.buildingBlocks?.length > 0 && <DetailList label="Building blocks" items={hook.buildingBlocks} />}
+            {hook.lifeForce8?.length > 0 && <DetailList label="Core desires" items={hook.lifeForce8} />}
+          </section>
+          {(primaryCopy.primary_text || primaryCopy.headline || hook.headlineText || primaryCopy.cta || hook.ctaType) && <section className="cs-intel-detail-section">
+            <h3 className="cs-intel-subsection-title">Ad copy</h3>
+            <div className="cs-intel-copy-grid">
+              {primaryCopy.primary_text && <LabeledCopy label="Primary text">{primaryCopy.primary_text}</LabeledCopy>}
+              {(primaryCopy.headline || hook.headlineText) && <LabeledCopy label="Headline">{primaryCopy.headline || hook.headlineText}</LabeledCopy>}
+              {(primaryCopy.cta || hook.ctaType) && <LabeledCopy label="Call to action">{primaryCopy.cta || hook.ctaType}</LabeledCopy>}
+            </div>
+          </section>}
+          {hook.transcript && hook.mediaType === "video" && <section className="cs-intel-detail-section">
+            <h3 className="cs-intel-subsection-title">Transcript</h3>
+            {transcriptSections.length > 1 ? <div className="cs-intel-transcript-grid">{transcriptSections.map((section) => <LabeledCopy key={section.label} label={section.label}>{section.value}</LabeledCopy>)}</div>
+              : <p className="cs-intel-transcript">{hook.transcript}</p>}
+          </section>}
+          {(hook.whyItWorks || hook.gradeRationale) && <section className="cs-intel-detail-section cs-intel-copy-grid">
+            {hook.whyItWorks && <LabeledCopy label="Why it works">{hook.whyItWorks}</LabeledCopy>}
+            {hook.gradeRationale && <LabeledCopy label="Performance read">{hook.gradeRationale}</LabeledCopy>}
+          </section>}
         </div>}
       </div>;
     })}</div>
@@ -458,8 +482,8 @@ function MessagingThemesSection({ themes, ads }) {
         <button type="button" onClick={() => setExpanded(open ? null : index)} className="flex w-full items-start gap-3 p-3 text-left">
           <CreativeThumbnail src={theme.repAd?.imageUrl || theme.repAd?.thumbnailUrl} />
           <div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><strong className="text-sm text-neutral-800">{theme.theme}</strong>{theme.proven && <Badge variant="secondary" className="text-[9px] text-emerald-700">Proven</Badge>}</div>
-            <p className="mt-1 text-xs text-neutral-500">{theme.description}</p>
-            <p className="mt-1 text-[10px] text-neutral-400">{money(theme.spend)} spend · {theme.matchedAds.length} ads{theme.cpa ? ` · ${money(theme.cpa)} CPA` : ""}{theme.awareness_level ? ` · ${humanize(theme.awareness_level)}` : ""}</p>
+            <p className="mt-1 text-[13px] leading-relaxed text-neutral-600">{theme.description}</p>
+            <MetricPills className="mt-2" items={[`${money(theme.spend)} spend`, `${theme.matchedAds.length} ads`, theme.cpa ? `${money(theme.cpa)} CPA` : null, theme.awareness_level && humanize(theme.awareness_level)]} />
           </div>{open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
         </button>
         {open && <div className="grid gap-2 border-t border-neutral-100 p-3 sm:grid-cols-2">{theme.matchedAds.map((ad) => <AdEvidenceCard key={ad.adId} ad={ad} />)}</div>}
@@ -479,13 +503,14 @@ function FunnelBalanceSection({ ads }) {
   });
   const total = stages.reduce((sum, stage) => sum + buckets[stage].spend, 0);
   if (!total) return null;
-  const colors = { TOF: "bg-blue-500", MOF: "bg-purple-500", BOF: "bg-emerald-500" };
+  const activeStages = stages.filter((stage) => buckets[stage].spend > 0);
+  const colors = { TOF: "is-tof", MOF: "is-mof", BOF: "is-bof" };
   return <InsightSection title="Funnel balance">
     <p className="mb-3 text-xs text-neutral-400">Share of current spend across prospecting, consideration, and conversion ads.</p>
-    <div className="flex h-3 overflow-hidden rounded-full bg-neutral-100">{stages.map((stage) => <div key={stage} className={colors[stage]} style={{ width: `${(buckets[stage].spend / total) * 100}%` }} />)}</div>
-    <div className="mt-3 grid grid-cols-3 gap-2">{stages.map((stage) => {
+    <div className="cs-intel-funnel-bar">{activeStages.map((stage) => <div key={stage} className={colors[stage]} style={{ width: `${(buckets[stage].spend / total) * 100}%` }} />)}</div>
+    <div className="cs-intel-funnel-breakdown">{activeStages.map((stage) => {
       const bucket = buckets[stage]; const cpa = bucket.purchases > 0 ? bucket.spend / bucket.purchases : null;
-      return <div key={stage} className="rounded-lg bg-neutral-50 p-3 text-center"><strong>{Math.round((bucket.spend / total) * 100)}%</strong><p className="text-xs font-medium">{stage}</p><small className="text-[10px] text-neutral-400">{bucket.count} ads{cpa ? ` · ${money(cpa)} CPA` : ""}</small></div>;
+      return <div key={stage} className={`cs-intel-funnel-segment ${colors[stage]}`} style={{ width: `${(bucket.spend / total) * 100}%` }}><div><strong>{Math.round((bucket.spend / total) * 100)}%</strong><p>{stage}</p><small>{bucket.count} ads{cpa ? ` / ${money(cpa)} CPA` : ""}</small></div></div>;
     })}</div>
   </InsightSection>;
 }
@@ -493,10 +518,15 @@ FunnelBalanceSection.propTypes = { ads: PropTypes.array.isRequired };
 
 function TopPerformers({ ads }) {
   if (!ads.length) return null;
-  return <Block title="Top performers · by spend" noDivider><div className="grid gap-3 sm:grid-cols-3">{ads.map((ad, index) =>
-    <div key={ad.adId} className="flex gap-3 rounded-xl border border-neutral-200 p-3"><div className="relative"><CreativeThumbnail src={ad.imageUrl || ad.thumbnailUrl} /><span className="absolute -left-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-neutral-900 text-[10px] font-bold text-white">{index + 1}</span></div>
-      <div className="min-w-0"><strong className="block truncate text-xs" title={ad.adName}>{ad.adName || "Unnamed"}</strong><p className="mt-1 line-clamp-2 text-[10px] italic text-neutral-500">{ad.firstSpokenSentence || ad.firstOverlayHeadline || ad.headlineText || "No hook captured"}</p><p className="mt-2 text-[10px] text-neutral-400"><b className="text-neutral-700">{money(ad.spend)}</b> spend{ad.costPerPurchase ? ` · ${money(ad.costPerPurchase)} CPA` : ""}{ad.purchases > 0 ? ` · ${ad.purchases} purchases` : ""}</p></div>
-    </div>)}</div></Block>;
+  return <Block title="Top performers by spend"><TooltipProvider delayDuration={150}><div className="cs-intel-performer-grid">{ads.map((ad) =>
+    <article key={ad.adId} className="cs-intel-performer-card">
+      <CreativeThumbnail src={ad.imageUrl || ad.thumbnailUrl} variant="performer" />
+      <div className="cs-intel-performer-card__body">
+        <Tooltip><TooltipTrigger asChild><strong className="cs-intel-performer-name" tabIndex={0}>{ad.adName || "Unnamed"}</strong></TooltipTrigger><TooltipContent side="top" className="max-w-[320px] break-words text-xs">{ad.adName || "Unnamed"}</TooltipContent></Tooltip>
+        <p className="cs-intel-performer-hook">{ad.firstSpokenSentence || ad.firstOverlayHeadline || ad.headlineText || "No hook captured"}</p>
+        <MetricPills items={[`${money(ad.spend)} spend`, ad.costPerPurchase ? `${money(ad.costPerPurchase)} CPA` : null, ad.purchases > 0 ? `${ad.purchases} purchases` : null]} />
+      </div>
+    </article>)}</div></TooltipProvider></Block>;
 }
 TopPerformers.propTypes = { ads: PropTypes.array.isRequired };
 
@@ -515,13 +545,13 @@ function PersonaPerformanceSection({ mappings, ads }) {
     const open = expanded === index; const share = total > 0 ? (persona.spend / total) * 100 : 0;
     const title = persona.persona_short_title || persona.matched_research_persona || persona.persona || `Persona ${index + 1}`;
     return <div key={`${title}-${index}`} className="overflow-hidden rounded-xl border border-neutral-200 bg-white"><button type="button" onClick={() => setExpanded(open ? null : index)} className="flex w-full gap-3 p-3 text-left">
-      <div className="min-w-0 flex-1"><strong className="text-sm text-neutral-800">{title}</strong>{persona.persona && persona.persona !== title && <p className="mt-1 line-clamp-2 text-xs text-neutral-500">{persona.persona}</p>}
-        <p className="mt-1 text-[10px] text-neutral-400">{persona.matchedAds.length} ads · {money(persona.spend)} spend · {Math.round(share)}%{persona.cpa ? ` · ${money(persona.cpa)} CPA` : ""}</p><div className="mt-2 h-1.5 overflow-hidden rounded bg-neutral-100"><div className="h-full rounded bg-orange-400" style={{ width: `${Math.max(share, 2)}%` }} /></div>
+      <div className="min-w-0 flex-1"><strong className="text-[15px] text-neutral-800">{title}</strong>{persona.persona && persona.persona !== title && <p className="mt-1 line-clamp-2 text-[13px] leading-relaxed text-neutral-600">{persona.persona}</p>}
+        <MetricPills className="mt-2" items={[`${persona.matchedAds.length} ads`, `${money(persona.spend)} spend`, `${Math.round(share)}% share`, persona.cpa ? `${money(persona.cpa)} CPA` : null]} /><div className="cs-intel-spend-bar mt-3"><div style={{ width: `${Math.max(share, 2)}%` }} /></div>
       </div>{open ? <ChevronDown className="h-4 w-4 text-neutral-400" /> : <ChevronRight className="h-4 w-4 text-neutral-400" />}</button>
-      {open && <div className="space-y-3 border-t border-neutral-100 p-3 text-xs text-neutral-600">
-        {persona.top_angles_used?.length > 0 && <div><strong>Angles currently in use</strong><div className="mt-1 flex flex-wrap gap-1">{persona.top_angles_used.map((angle) => <Badge key={angle} variant="outline" className="text-[9px]">{angle}</Badge>)}</div></div>}
-        {(persona.angles_not_yet_tested?.length > 0 || persona.top_unmet_angle) && <p><strong>Still untested:</strong> {(persona.angles_not_yet_tested || [persona.top_unmet_angle]).join(", ")}</p>}
-        <div className="grid gap-2 sm:grid-cols-2">{persona.matchedAds.map((ad) => <AdEvidenceCard key={ad.adId} ad={ad} />)}</div>
+      {open && <div className="cs-intel-expanded-stack">
+        {persona.top_angles_used?.length > 0 && <section><h3 className="cs-intel-subsection-title">Angles currently in use</h3><div className="cs-intel-tag-row mt-2">{persona.top_angles_used.map((angle, angleIndex) => <span key={angle} className={`cs-intel-attribute-pill is-tone-${angleIndex % 4}`}>{angle}</span>)}</div></section>}
+        {(persona.angles_not_yet_tested?.length > 0 || persona.top_unmet_angle) && <section><h3 className="cs-intel-subsection-title">Still untested</h3><p className="mt-1 text-[13px] text-neutral-600">{(persona.angles_not_yet_tested || [persona.top_unmet_angle]).join(", ")}</p></section>}
+        <section><h3 className="cs-intel-subsection-title">Supporting ads</h3><div className="mt-2 grid gap-2 sm:grid-cols-2">{persona.matchedAds.map((ad) => <AdEvidenceCard key={ad.adId} ad={ad} />)}</div></section>
       </div>}
     </div>;
   })}</div></InsightSection>;
@@ -541,9 +571,9 @@ RecentLaunches.propTypes = { ads: PropTypes.array.isRequired };
 function VisualOpenersSection({ openers, ads }) {
   if (!Array.isArray(openers) || !openers.length) return null;
   const byName = new Map(ads.map((ad) => [ad.adName, ad]));
-  return <InsightSection title="Visual openers"><p className="mb-3 text-xs text-neutral-400">Video ads · what appears in the first 2–5 seconds</p><div className="grid gap-3 md:grid-cols-2">{openers.map((opener, index) => {
+  return <InsightSection title="Visual openers"><p className="mb-3 text-[13px] text-neutral-500">Video ads — what appears in the first 2–5 seconds</p><div className="grid gap-3 md:grid-cols-2">{openers.map((opener, index) => {
     const examples = (opener.example_ad_names || []).map((name) => byName.get(name)).filter(Boolean);
-    return <div key={index} className="rounded-xl border border-neutral-200 p-3"><div className="flex justify-between gap-2"><strong className="text-sm">{opener.pattern_name || opener.trend_name}</strong><small className="text-[10px] text-neutral-400">{opener.ad_count || examples.length} ads · {Math.round(opener.spend_pct || 0)}% spend</small></div><p className="mt-1 text-xs text-neutral-500">{opener.visual_description || opener.opening_description}</p><div className="mt-2 flex flex-wrap gap-1">{[opener.talent_type, opener.camera_style, opener.environment].filter(Boolean).map((tag) => <Badge key={tag} variant="outline" className="text-[9px]">{tag}</Badge>)}</div>{examples.length > 0 && <div className="mt-3 flex gap-2">{examples.slice(0, 5).map((ad) => <CreativeThumbnail key={ad.adId} src={ad.imageUrl || ad.thumbnailUrl} />)}</div>}</div>;
+    return <div key={index} className="cs-intel-content-card"><strong className="text-[15px] text-neutral-800">{opener.pattern_name || opener.trend_name}</strong><p className="mt-1 text-[13px] leading-relaxed text-neutral-600">{opener.visual_description || opener.opening_description}</p><MetricPills className="mt-2" items={[`${opener.ad_count || examples.length} ads`, `${Math.round(opener.spend_pct || 0)}% spend`]} /><div className="cs-intel-tag-row mt-2">{[opener.talent_type, opener.camera_style, opener.environment].filter(Boolean).map((tag, tagIndex) => <span key={tag} className={`cs-intel-attribute-pill is-tone-${tagIndex % 4}`}>{tag}</span>)}</div>{examples.length > 0 && <div className="cs-intel-opener-thumbnails">{examples.slice(0, 5).map((ad) => <CreativeThumbnail key={ad.adId} src={ad.imageUrl || ad.thumbnailUrl} variant="opener" />)}</div>}</div>;
   })}</div></InsightSection>;
 }
 VisualOpenersSection.propTypes = { openers: PropTypes.any, ads: PropTypes.array.isRequired };
@@ -561,7 +591,7 @@ function MessagingTrendsSection({ trends, ads }) {
   const max = Math.max(...normalized.map((trend) => Number(trend.spend_pct || 0)), 1);
   return <InsightSection title="Messaging trends" tone="orange"><div className="space-y-3">{normalized.map((trend, index) => {
     const examples = (trend.examples || []).map((name) => byName.get(name)).filter(Boolean);
-    return <div key={index} className="rounded-xl border border-neutral-200 bg-white p-3"><strong className="text-sm">{trend.trend}</strong>{trend.description && <p className="mt-1 text-xs text-neutral-500">{trend.description}</p>}<div className="mt-2 h-1.5 overflow-hidden rounded bg-neutral-100"><div className="h-full rounded bg-orange-400" style={{ width: `${Math.max((Number(trend.spend_pct || 0) / max) * 100, 3)}%` }} /></div><p className="mt-1 text-[10px] text-neutral-400">{trend.ad_count || examples.length} ads · {Number(trend.spend_pct || 0).toFixed(1)}% spend</p>{examples.length > 0 && <div className="mt-2 flex gap-2">{examples.slice(0, 4).map((ad) => <CreativeThumbnail key={ad.adId} src={ad.imageUrl || ad.thumbnailUrl} />)}</div>}</div>;
+    return <div key={index} className="cs-intel-content-card"><strong className="text-[15px] text-neutral-800">{trend.trend}</strong>{trend.description && <p className="mt-1 text-[13px] leading-relaxed text-neutral-600">{trend.description}</p>}<div className="cs-intel-spend-bar mt-3"><div style={{ width: `${Math.max((Number(trend.spend_pct || 0) / max) * 100, 3)}%` }} /></div><MetricPills className="mt-2" items={[`${trend.ad_count || examples.length} ads`, `${Number(trend.spend_pct || 0).toFixed(1)}% spend`]} />{examples.length > 0 && <div className="cs-intel-opener-thumbnails">{examples.slice(0, 4).map((ad) => <CreativeThumbnail key={ad.adId} src={ad.imageUrl || ad.thumbnailUrl} variant="opener" />)}</div>}</div>;
   })}</div></InsightSection>;
 }
 MessagingTrendsSection.propTypes = { trends: PropTypes.any, ads: PropTypes.array.isRequired };
@@ -571,9 +601,9 @@ function WhatToTestNext({ audit }) {
   if (!Array.isArray(all) || !all.length) return null;
   const priorityNames = new Set((audit.first_test_recommendations || []).map((item) => item.concept_name));
   const seeds = [...all.filter((seed) => priorityNames.has(seed.concept_name)), ...all.filter((seed) => !priorityNames.has(seed.concept_name))].slice(0, 10);
-  return <InsightSection title={`What to test next · ${seeds.length}`}><div className="space-y-2">{seeds.map((seed, index) => {
+  return <InsightSection title="What to test next"><div className="space-y-2">{seeds.map((seed, index) => {
     const priority = priorityNames.has(seed.concept_name);
-    return <div key={index} className={`rounded-xl border p-3 ${priority ? "border-orange-300 bg-orange-50" : "border-neutral-200"}`}><div className="flex flex-wrap gap-1">{priority && <Badge className="text-[9px]">Test first</Badge>}{(seed.persona_description || seed.persona) && <Badge variant="secondary" className="text-[9px]">{seed.persona_description || seed.persona}</Badge>}{seed.format && <Badge variant="outline" className="text-[9px]">{seed.format}</Badge>}{seed.awareness_stage && <Badge variant="outline" className="text-[9px]">{humanize(seed.awareness_stage)}</Badge>}</div><strong className="mt-2 block text-sm">{seed.concept_name || seed.name || `Concept ${index + 1}`}</strong>{seed.hook_verbatim && <p className="mt-1 text-xs italic">“{seed.hook_verbatim}”</p>}{seed.why_this_now && <p className="mt-1 text-xs text-neutral-500">{seed.why_this_now}</p>}</div>;
+    return <div key={index} className={`cs-intel-test-card ${priority ? "is-priority" : ""}`}><div className="cs-intel-tag-row">{priority && <span className="cs-intel-attribute-pill is-priority">Test first</span>}{(seed.persona_description || seed.persona) && <span className="cs-intel-attribute-pill is-tone-0">{seed.persona_description || seed.persona}</span>}{seed.format && <span className="cs-intel-attribute-pill is-tone-1">{seed.format}</span>}{seed.awareness_stage && <span className="cs-intel-attribute-pill is-tone-2">{humanize(seed.awareness_stage)}</span>}</div><strong className="mt-3 block text-[15px] text-neutral-800">{seed.concept_name || seed.name || `Concept ${index + 1}`}</strong>{seed.hook_verbatim && <p className="mt-1 text-[13px] text-neutral-700">“{seed.hook_verbatim}”</p>}{seed.why_this_now && <div className="mt-3 border-t border-orange-200/70 pt-3"><p className="cs-intel-field-label">Why test this now</p><p className="mt-1 text-[13px] leading-relaxed text-neutral-600">{seed.why_this_now}</p></div>}</div>;
   })}</div></InsightSection>;
 }
 WhatToTestNext.propTypes = { audit: PropTypes.object.isRequired };
@@ -589,7 +619,7 @@ function UntappedAnglesSection({ audit }) {
 UntappedAnglesSection.propTypes = { audit: PropTypes.object.isRequired };
 
 function AdEvidenceCard({ ad }) {
-  return <div className="flex items-center gap-2 rounded-lg border border-neutral-100 bg-neutral-50 p-2"><CreativeThumbnail src={ad.imageUrl || ad.thumbnailUrl} /><div className="min-w-0 flex-1"><strong className="block truncate text-xs text-neutral-700">{ad.adName || "Unnamed"}</strong><p className="text-[10px] text-neutral-400">{money(ad.spend)}{ad.costPerPurchase ? ` · ${money(ad.costPerPurchase)} CPA` : ""}{ad.hookRate > 0 ? ` · ${(ad.hookRate * 100).toFixed(1)}% HR` : ""}</p></div><Badge variant="outline" className="text-[9px]">{ad.mediaType === "video" ? "Video" : "Static"}</Badge></div>;
+  return <div className="cs-intel-evidence-card"><CreativeThumbnail src={ad.imageUrl || ad.thumbnailUrl} /><div className="min-w-0 flex-1"><strong className="block truncate text-[13px] text-neutral-800">{ad.adName || "Unnamed"}</strong><MetricPills className="mt-1.5" compact items={[`${money(ad.spend)} spend`, ad.costPerPurchase ? `${money(ad.costPerPurchase)} CPA` : null, ad.hookRate > 0 ? `${(ad.hookRate * 100).toFixed(1)}% HR` : null]} /></div><MediaTag mediaType={ad.mediaType} /></div>;
 }
 AdEvidenceCard.propTypes = { ad: PropTypes.object.isRequired };
 
@@ -624,13 +654,54 @@ function Pill({ children }) {
 }
 Pill.propTypes = { children: PropTypes.node };
 
+function MetricPills({ items, className = "", compact = false }) {
+  const visible = items.filter(Boolean);
+  if (!visible.length) return null;
+  return <div className={`cs-intel-metric-pills ${compact ? "is-compact" : ""} ${className}`}>{visible.map((item, index) => <span key={`${item}-${index}`}>{item}</span>)}</div>;
+}
+MetricPills.propTypes = { items: PropTypes.array.isRequired, className: PropTypes.string, compact: PropTypes.bool };
+
+function MediaTag({ mediaType }) {
+  const isVideo = String(mediaType || "").toLowerCase() === "video";
+  return <span className={`cs-intel-media-tag ${isVideo ? "is-video" : "is-static"}`}>{isVideo ? "Video" : "Static"}</span>;
+}
+MediaTag.propTypes = { mediaType: PropTypes.string };
+
+function DetailList({ label, items }) {
+  return <div className="cs-intel-detail-list"><h3 className="cs-intel-subsection-title">{label}</h3><div>{items.map((item, index) => <span key={`${item}-${index}`}>{item}</span>)}</div></div>;
+}
+DetailList.propTypes = { label: PropTypes.string.isRequired, items: PropTypes.array.isRequired };
+
+function LabeledCopy({ label, children }) {
+  return <div className="cs-intel-labeled-copy"><p className="cs-intel-field-label">{label}</p><p>{children}</p></div>;
+}
+LabeledCopy.propTypes = { label: PropTypes.string.isRequired, children: PropTypes.node };
+
+const TRANSCRIPT_LABELS = ["Speech quality", "First sentence word count", "Quality", "Full transcript"];
+
+function parseTranscriptSections(transcript) {
+  const lines = String(transcript || "").split(/\r?\n/);
+  const sections = [];
+  let active = null;
+  lines.forEach((rawLine) => {
+    const line = rawLine.trim();
+    if (!line) return;
+    const match = line.match(/^(Speech quality|First sentence word count|Quality|Full transcript)\s*:?\s*(.*)$/i);
+    if (match) {
+      active = { label: TRANSCRIPT_LABELS.find((label) => label.toLowerCase() === match[1].toLowerCase()) || match[1], value: match[2] || "" };
+      sections.push(active);
+    } else if (active) active.value = active.value ? `${active.value}\n${line}` : line;
+  });
+  return sections.filter((section) => section.value);
+}
+
 function CreativeThumbnail({ src, variant = "compact" }) {
   const className = `cs-intel-thumbnail is-${variant}`;
   return src
     ? <img src={src} alt="" className={className} />
     : <div className={`${className} is-empty`}><Zap className="h-5 w-5" /></div>;
 }
-CreativeThumbnail.propTypes = { src: PropTypes.string, variant: PropTypes.oneOf(["compact", "card"]) };
+CreativeThumbnail.propTypes = { src: PropTypes.string, variant: PropTypes.oneOf(["compact", "card", "opener", "performer"]) };
 
 function AngleGroups({ groups }) {
   const order = ["proven", "in_research", "untapped", "uncategorized"];
