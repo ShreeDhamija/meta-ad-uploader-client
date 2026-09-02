@@ -3619,17 +3619,28 @@ export default function TikTokAdCreationForm({
       let mainView;
       if (initialFolderId) {
         mainView = new google.picker.DocsView()
+          .setMode(google.picker.DocsViewMode.LIST)
           .setIncludeFolders(true)
           .setMimeTypes(mimeTypes)
           .setSelectFolderEnabled(false)
           .setParent(initialFolderId);
       } else {
-        mainView = new google.picker.DocsView().setIncludeFolders(true).setMimeTypes(mimeTypes).setSelectFolderEnabled(false);
+        mainView = new google.picker.DocsView()
+          .setMode(google.picker.DocsViewMode.LIST)
+          .setIncludeFolders(true)
+          .setMimeTypes(mimeTypes)
+          .setSelectFolderEnabled(false);
       }
 
-      const myFolders = new google.picker.DocsView().setOwnedByMe(true).setIncludeFolders(true).setMimeTypes(mimeTypes).setSelectFolderEnabled(false);
+      const myFolders = new google.picker.DocsView()
+        .setMode(google.picker.DocsViewMode.LIST)
+        .setOwnedByMe(true)
+        .setIncludeFolders(true)
+        .setMimeTypes(mimeTypes)
+        .setSelectFolderEnabled(false);
 
       const sharedDriveFolders = new google.picker.DocsView()
+        .setMode(google.picker.DocsViewMode.LIST)
         .setOwnedByMe(true)
         .setIncludeFolders(true)
         .setMimeTypes(mimeTypes)
@@ -3637,6 +3648,7 @@ export default function TikTokAdCreationForm({
         .setEnableDrives(true);
 
       const onlySharedFolders = new google.picker.DocsView()
+        .setMode(google.picker.DocsViewMode.LIST)
         .setOwnedByMe(false)
         .setIncludeFolders(true)
         .setMimeTypes(mimeTypes)
