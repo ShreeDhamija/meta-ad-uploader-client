@@ -957,6 +957,42 @@ export default function TikTokAdCreationForm({
     return false;
   }, [selectedCampaign, campaigns, selectedAdGroup, showDuplicateAdGroupBlock, duplicateAdGroup, adGroups]);
 
+  // Campaign objects behind the current selection — Smart+ keeps the catalog on the
+  // campaign, so the ad group tells us nothing about it.
+  const activeCampaignObjects = useMemo(() => {
+    const out = [];
+    (selectedCampaign || []).forEach((campId) => {
+      const c = campaigns.find((x) => x.campaign_id === campId);
+      if (c) out.push(c);
+    });
+
+    const activeAdGroups = showDuplicateAdGroupBlock && duplicateAdGroup ? [duplicateAdGroup] : selectedAdGroup || [];
+    activeAdGroups.forEach((agId) => {
+      const agObj = adGroups.find((g) => g.adgroup_id === agId);
+      if (!agObj) return;
+      const campId = agObj.campaignId || agObj.campaign_id;
+      const c = campaigns.find((x) => x.campaign_id === campId);
+      if (c && !out.includes(c)) out.push(c);
+    });
+
+    return out;
+  }, [selectedCampaign, campaigns, selectedAdGroup, adGroups, showDuplicateAdGroupBlock, duplicateAdGroup]);
+
+  // A Smart+ campaign with catalog_enabled still needs a product selection on every ad,
+  // even though none of the ad-group-level shopping fields are set.
+  const isSmartCatalogCampaign = useMemo(() => {
+    if (!isSmartCampaign) return false;
+    return activeCampaignObjects.some((c) => c.catalog_enabled === true || c.catalog_enabled === "true");
+  }, [isSmartCampaign, activeCampaignObjects]);
+
+  // Catalog id for a Smart+ catalog campaign: from the campaign when TikTok returns one,
+  // otherwise the advertiser's saved catalog from Settings.
+  const smartCatalogCatalogId = useMemo(() => {
+    if (!isSmartCatalogCampaign) return null;
+    const fromCampaign = activeCampaignObjects.find((c) => c.catalog_id)?.catalog_id;
+    return fromCampaign || advertiserPrefs?.catalogSelection?.catalog_id || null;
+  }, [isSmartCatalogCampaign, activeCampaignObjects, advertiserPrefs]);
+
   useEffect(() => {
     const activeAdGroups = showDuplicateAdGroupBlock && duplicateAdGroup ? [duplicateAdGroup] : selectedAdGroup || [];
 
@@ -996,12 +1032,31 @@ export default function TikTokAdCreationForm({
           setFormCatalogId(null);
           setFormCatalogName(null);
         }
+      } else if (smartCatalogCatalogId) {
+        // Smart+ catalog campaign: the catalog is bound to the campaign, so no ad group
+        // carries a catalog_id. Clearing here would hide the product picker entirely and
+        // ship the ad with no product selection, which TikTok rejects.
+        setFormCatalogId(smartCatalogCatalogId);
+        const matchedCat = formCatalogs.find((c) => c.catalog_id === smartCatalogCatalogId);
+        setFormCatalogName(
+          matchedCat ? matchedCat.catalog_name : advertiserPrefs?.catalogSelection?.catalog_name || `Catalog ${smartCatalogCatalogId}`,
+        );
       } else {
         setFormCatalogId(null);
         setFormCatalogName(null);
       }
     }
-  }, [selectedAdGroup, adGroups, showDuplicateAdGroupBlock, duplicateAdGroup, formCatalogs, formStores, formStoreCatalogId]);
+  }, [
+    selectedAdGroup,
+    adGroups,
+    showDuplicateAdGroupBlock,
+    duplicateAdGroup,
+    formCatalogs,
+    formStores,
+    formStoreCatalogId,
+    smartCatalogCatalogId,
+    advertiserPrefs,
+  ]);
 
   useEffect(() => {
     if (formCatalogId && formCatalogs.length > 0) {
@@ -2058,7 +2113,34 @@ export default function TikTokAdCreationForm({
           const adGroupObj = jobAdGroups.find((ag) => ag.adgroup_id === adgroupId) || sourceAgForDuplication;
           const shoppingAdsType = adGroupObj?.shopping_ads_type || null;
           const productSource = adGroupObj?.product_source || null;
-          const isShoppingAg = !!((shoppingAdsType && shoppingAdsType !== "UNSET") || (productSource && productSource !== "UNSET"));
+          // Resolved before the catalog block below: Smart+ ad groups carry no
+          // shopping_ads_type / product_source / catalog_id (in Smart+ the catalog is bound to
+          // the campaign), so the campaign is the only place the catalog context can come from.
+          const currentAgCampaignId = adGroupObj?.campaignId || adGroupObj?.campaign_id || selectedCampaign[0];
+          const targetCampaignObj = campaigns.find((c) => c.campaign_id === currentAgCampaignId) || campaignObj;
+
+          const isSmartForThisCampaign = Boolean(
+            targetCampaignObj?.is_smart_performance_campaign === true ||
+            targetCampaignObj?.is_smart_performance_campaign === "true" ||
+            targetCampaignObj?.is_smart_performance_campaign === 1 ||
+            targetCampaignObj?.campaign_automation_type === "UPGRADED_SMART_PLUS" ||
+            targetCampaignObj?.campaign_automation_type === "SMART_PLUS" ||
+            targetCampaignObj?.campaign_automation_type === "SMART_PERFORMANCE_CAMPAIGN" ||
+            targetCampaignObj?.is_smart === true ||
+            targetCampaignObj?.is_smart === "true",
+          );
+
+          // Smart+ catalog campaign: the ad-group-level shopping flags are absent, so
+          // catalog_enabled is the signal that this ad still needs a product selection.
+          const isSmartCatalogAg = Boolean(
+            isSmartForThisCampaign && (targetCampaignObj?.catalog_enabled === true || targetCampaignObj?.catalog_enabled === "true"),
+          );
+
+          const isShoppingAg = !!(
+            (shoppingAdsType && shoppingAdsType !== "UNSET") ||
+            (productSource && productSource !== "UNSET") ||
+            isSmartCatalogAg
+          );
 
           let catalogIdToUse = null;
           let skuIdToUse = null;
@@ -2173,22 +2255,6 @@ export default function TikTokAdCreationForm({
 
           const isSalesCampaign = !!((campaignObj && isSalesObjective(campaignObj)) || isShoppingAg);
           let creativeCTAs = Array.isArray(cta) ? cta : [cta];
-
-          // For Smart+ campaigns: send up to 5 texts in 1 creative object (ad_text_list).
-          // For normal campaigns: only send the first text.
-          const currentAgCampaignId = adGroupObj?.campaignId || adGroupObj?.campaign_id || selectedCampaign[0];
-          const targetCampaignObj = campaigns.find((c) => c.campaign_id === currentAgCampaignId) || campaignObj;
-
-          const isSmartForThisCampaign = Boolean(
-            targetCampaignObj?.is_smart_performance_campaign === true ||
-            targetCampaignObj?.is_smart_performance_campaign === "true" ||
-            targetCampaignObj?.is_smart_performance_campaign === 1 ||
-            targetCampaignObj?.campaign_automation_type === "UPGRADED_SMART_PLUS" ||
-            targetCampaignObj?.campaign_automation_type === "SMART_PLUS" ||
-            targetCampaignObj?.campaign_automation_type === "SMART_PERFORMANCE_CAMPAIGN" ||
-            targetCampaignObj?.is_smart === true ||
-            targetCampaignObj?.is_smart === "true",
-          );
 
           if (isSalesCampaign && !isSmartForThisCampaign && creativeCTAs.length > 0) {
             creativeCTAs = [creativeCTAs[0]];
@@ -6470,7 +6536,7 @@ export default function TikTokAdCreationForm({
               </div>
 
               {/* Optional Section: Add Product Information — only shown when ad group has a catalog */}
-              {isShoppingAdGroup && showProductCatalog && formCatalogId && (
+              {(isShoppingAdGroup || isSmartCatalogCampaign) && showProductCatalog && formCatalogId && (
                 <div className="space-y-4">
                   <div className="flex flex-col m-0 pt-1">
                     <Label className="flex items-center gap-2 font-semibold text-sm">
