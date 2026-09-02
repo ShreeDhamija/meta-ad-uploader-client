@@ -235,7 +235,7 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
         <DialogPrimitive.Content
           onOpenAutoFocus={(event) => event.preventDefault()}
           className={cn(
-            "fixed left-1/2 top-1/2 z-50 flex w-full max-w-3xl -translate-x-1/2 -translate-y-1/2 flex-col gap-4 border-0 bg-[#FFFFFF] px-5 py-5 shadow-xl transition-opacity duration-200 data-[state=closed]:opacity-0 data-[state=open]:opacity-100 focus:outline-none max-h-[min(625px,calc(100vh-2rem))] sm:rounded-[28px]"
+            "fixed left-1/2 top-1/2 z-50 flex h-[min(625px,calc(100dvh-2rem))] min-h-0 w-full max-w-3xl -translate-x-1/2 -translate-y-1/2 flex-col gap-4 overflow-hidden border-0 bg-[#FFFFFF] px-5 py-5 shadow-xl transition-opacity duration-200 data-[state=closed]:opacity-0 data-[state=open]:opacity-100 focus:outline-none sm:rounded-[28px]"
           )}
         >
           <DialogPrimitive.Close className="absolute right-5 top-5 rounded-full p-2 text-[#6B7280] transition-colors hover:bg-[#F3F4F6] hover:text-[#111111] focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:ring-offset-2">
@@ -243,7 +243,7 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
             <span className="sr-only">Close</span>
           </DialogPrimitive.Close>
 
-          <DialogHeader className="space-y-0">
+          <DialogHeader className="shrink-0 space-y-0">
             <div className="flex items-center gap-4 pr-10">
               <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-[18px] bg-white">
                 <img src={FrameHeaderImage} alt="Frame.io" className="h-full w-full object-cover" />
@@ -255,7 +255,7 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
           </DialogHeader>
 
           {/* Breadcrumb */}
-          <div className="flex items-center gap-3 text-sm text-[#5F5F5F]">
+          <div className="flex shrink-0 items-center gap-3 text-sm text-[#5F5F5F]">
             {stack.length > 1 && (
               <Button
                 type="button"
@@ -291,7 +291,11 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
           </div>
 
           {/* List */}
-          <ScrollArea className="min-h-0 flex-1 overflow-hidden rounded-[20px] border border-[#E2E2E2] bg-[#F0F0F0]">
+          <ScrollArea
+            key={[current.kind, current.accountId, current.workspaceId, current.projectId, current.folderId].filter(Boolean).join(":")}
+            className="h-0 min-h-0 flex-1 overflow-hidden rounded-[20px] border border-[#E2E2E2] bg-[#F0F0F0]"
+            viewportClassName="h-full overscroll-contain"
+          >
             <div className="divide-y divide-[#E1E1E1]">
               {loading && (
                 <div className="flex items-center justify-center py-8">
@@ -397,7 +401,7 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
             </div>
           </ScrollArea>
 
-          <DialogFooter className="flex items-center justify-between pt-2">
+          <DialogFooter className="flex shrink-0 items-center justify-between pt-2">
             <div className="text-sm text-[#5F5F5F]">{selectedCount} selected</div>
             <div className="flex gap-2">
               <Button
