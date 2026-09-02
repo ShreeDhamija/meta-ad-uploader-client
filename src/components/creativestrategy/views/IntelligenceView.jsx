@@ -524,7 +524,7 @@ function TopPerformers({ ads }) {
       <div className="cs-intel-performer-card__body">
         <Tooltip><TooltipTrigger asChild><strong className="cs-intel-performer-name" tabIndex={0}>{ad.adName || "Unnamed"}</strong></TooltipTrigger><TooltipContent side="top" className="max-w-[320px] break-words text-xs">{ad.adName || "Unnamed"}</TooltipContent></Tooltip>
         <p className="cs-intel-performer-hook">{ad.firstSpokenSentence || ad.firstOverlayHeadline || ad.headlineText || "No hook captured"}</p>
-        <MetricPills items={[`${money(ad.spend)} spend`, ad.costPerPurchase ? `${money(ad.costPerPurchase)} CPA` : null, ad.purchases > 0 ? `${ad.purchases} purchases` : null]} />
+        <MetricPills className="is-performer-metrics" items={[`${money(ad.spend)} spend`, ad.costPerPurchase ? `${money(ad.costPerPurchase)} CPA` : null, ad.purchases > 0 ? `${ad.purchases} purchases` : null]} />
       </div>
     </article>)}</div></TooltipProvider></Block>;
 }
@@ -571,7 +571,7 @@ RecentLaunches.propTypes = { ads: PropTypes.array.isRequired };
 function VisualOpenersSection({ openers, ads }) {
   if (!Array.isArray(openers) || !openers.length) return null;
   const byName = new Map(ads.map((ad) => [ad.adName, ad]));
-  return <InsightSection title="Visual openers"><p className="mb-3 text-[13px] text-neutral-500">Video ads — what appears in the first 2–5 seconds</p><div className="grid gap-3 md:grid-cols-2">{openers.map((opener, index) => {
+  return <InsightSection title="Visual openers"><p className="mb-3 text-[13px] text-neutral-500">Video ads — what appears in the first 2–5 seconds</p><div className="cs-intel-opener-grid">{openers.map((opener, index) => {
     const examples = (opener.example_ad_names || []).map((name) => byName.get(name)).filter(Boolean);
     return <div key={index} className="cs-intel-content-card"><strong className="text-[15px] text-neutral-800">{opener.pattern_name || opener.trend_name}</strong><p className="mt-1 text-[13px] leading-relaxed text-neutral-600">{opener.visual_description || opener.opening_description}</p><MetricPills className="mt-2" items={[`${opener.ad_count || examples.length} ads`, `${Math.round(opener.spend_pct || 0)}% spend`]} /><div className="cs-intel-tag-row mt-2">{[opener.talent_type, opener.camera_style, opener.environment].filter(Boolean).map((tag, tagIndex) => <span key={tag} className={`cs-intel-attribute-pill is-tone-${tagIndex % 4}`}>{tag}</span>)}</div>{examples.length > 0 && <div className="cs-intel-opener-thumbnails">{examples.slice(0, 5).map((ad) => <CreativeThumbnail key={ad.adId} src={ad.imageUrl || ad.thumbnailUrl} variant="opener" />)}</div>}</div>;
   })}</div></InsightSection>;
