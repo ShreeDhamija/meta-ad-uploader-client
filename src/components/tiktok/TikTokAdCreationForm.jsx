@@ -82,6 +82,22 @@ const isSalesObjective = (c) => {
   return obj === "SALES" || obj === "PRODUCT_SALES" || obj === "CATALOG_SALES";
 };
 
+// `virtual_objective_type: "SALES"` is only TikTok's new objective *grouping* — a
+// plain WEB_CONVERSIONS campaign pointing at a website reports SALES there too.
+// So it must not be used to decide whether products come from a catalog, or the
+// product catalog picker shows up on ordinary website conversion campaigns.
+const isCatalogSalesCampaign = (c) => {
+  if (!c) return false;
+  if (c.catalog_enabled === true || c.catalog_enabled === "true") return true;
+
+  // A website/app destination sells through a landing page, never a catalog.
+  const destination = String(c.sales_destination || "").toUpperCase();
+  if (destination === "WEBSITE" || destination === "APP") return false;
+
+  const objective = String(c.objective_type || c.objective || "").toUpperCase();
+  return objective === "PRODUCT_SALES" || objective === "CATALOG_SALES";
+};
+
 const CTA_ASSET_MAPPING = {
   LEARN_MORE: {
     asset_content: "Learn more ",
@@ -859,11 +875,11 @@ export default function TikTokAdCreationForm({
     if (showStoreProductSelection) return true;
 
     if (selectedCampaign && selectedCampaign.length > 0) {
-      const hasSalesCampaign = selectedCampaign.some((campId) => {
+      const hasCatalogCampaign = selectedCampaign.some((campId) => {
         const c = campaigns.find((x) => x.campaign_id === campId);
-        return isSalesObjective(c);
+        return isCatalogSalesCampaign(c);
       });
-      if (hasSalesCampaign) return true;
+      if (hasCatalogCampaign) return true;
     }
 
     const activeAgId = selectedAdGroup?.[0] || (showDuplicateAdGroupBlock ? duplicateAdGroup : null);
@@ -874,7 +890,7 @@ export default function TikTokAdCreationForm({
 
         const campId = agObj.campaignId || agObj.campaign_id;
         const c = campaigns.find((x) => x.campaign_id === campId);
-        if (isSalesObjective(c)) {
+        if (isCatalogSalesCampaign(c)) {
           return true;
         }
       }
