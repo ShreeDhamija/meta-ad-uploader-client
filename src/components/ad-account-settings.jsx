@@ -103,7 +103,22 @@ export default function AdAccountSettings({
   const [isLoadingAdAccounts, setIsLoadingAdAccounts] = useState(false);
   const [isLoadingCampaigns, setIsLoadingCampaigns] = useState(false);
   const [isLoadingAdSetsLocal, setIsLoadingAdSetsLocal] = useState(false);
+  const [isLoadingEditCreative, setIsLoadingEditCreative] = useState(false);
   const { refetchAdAccounts } = useAppData()
+
+  const handleEditCreativeClick = useCallback(async () => {
+    if (editAdCreativeMode) {
+      exitEditAdCreativeMode();
+      return;
+    }
+
+    setIsLoadingEditCreative(true);
+    try {
+      await enterEditAdCreativeMode();
+    } finally {
+      setIsLoadingEditCreative(false);
+    }
+  }, [editAdCreativeMode, enterEditAdCreativeMode, exitEditAdCreativeMode]);
 
 
 
@@ -1364,18 +1379,20 @@ transition-all duration-150 hover:!bg-black
                   type="button"
                   size="sm"
                   variant="outline"
-                  onClick={editAdCreativeMode ? exitEditAdCreativeMode : enterEditAdCreativeMode}
-                  disabled={!editAdCreativeMode && importedPosts.length === 0}
+                  onClick={handleEditCreativeClick}
+                  disabled={isLoadingEditCreative || (!editAdCreativeMode && importedPosts.length === 0)}
                   className={`ml-auto px-3 rounded-[14px] disabled:opacity-50 disabled:cursor-not-allowed ${editAdCreativeMode
                     ? "border border-red-500 text-red-600 hover:text-red-600 hover:bg-red-50"
                     : "border border-gray-300 text-black hover:text-black"}`}
                 >
-                  {editAdCreativeMode ? (
+                  {isLoadingEditCreative ? (
+                    <Loader className="h-3.5 w-3.5 mr-1 animate-spin" />
+                  ) : editAdCreativeMode ? (
                     <Ban className="h-3.5 w-3.5 mr-1 text-red-600" />
                   ) : (
                     <Pencil className="h-3.5 w-3.5 mr-1" />
                   )}
-                  {editAdCreativeMode ? "Disable Ad Creative Editing" : "Edit Ad Creative While Duplicating"}
+                  {isLoadingEditCreative ? "Loading..." : editAdCreativeMode ? "Disable Ad Creative Editing" : "Edit Ad Creative While Duplicating"}
                 </Button>
               )}
             </div>

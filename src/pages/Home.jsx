@@ -295,23 +295,53 @@ export default function Home() {
     // library-style media (reusing each ad's existing image hash / video id).
     // Ads without a single reusable asset (carousel / flex / IG boosted posts)
     // can't be edited this way and are set aside, then restored on exit.
-    const enterEditAdCreativeMode = useCallback(() => {
+    const enterEditAdCreativeMode = useCallback(async () => {
+        const videoIds = [...new Set(importedPosts
+            .map((post) => post.video_id || post.placement_primary_video_id)
+            .filter(Boolean)
+            .map(String))];
+        let videoTitles = {};
+
+        if (videoIds.length > 0) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/auth/video-titles`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ videoIds }),
+                });
+                if (!response.ok) throw new Error('Failed to fetch video titles');
+                const data = await response.json();
+                videoTitles = data.titles || {};
+            } catch (error) {
+                console.warn('Failed to load imported video titles:', error);
+                toast.warning('Could not load some video file names. Ad names will be used instead.');
+            }
+        }
+
         const derived = [];
         let skippedCount = 0;
         importedPosts.forEach((post) => {
             if (post.placement_customized_creative_id && post.placement_media_type) {
                 const templateKey = `placement:${post.placement_customized_creative_id}:${post.ad_id || post.id}`;
                 const previewUrl = post.placement_preview_url || post.image_url;
+                const videoTitle = post.placement_primary_video_id ? videoTitles[String(post.placement_primary_video_id)] : null;
                 derived.push({
                     type: post.placement_media_type,
                     ...(post.placement_media_type === 'video' ? { id: templateKey, thumbnail_url: previewUrl } : { hash: templateKey, url: previewUrl }),
-                    name: post.ad_name,
+                    name: videoTitle || post.ad_name,
                     previewUrl,
                     isPlacementCustomizedTemplate: true,
                     sourcePlacementCreativeId: post.placement_customized_creative_id,
                 });
             } else if (post.video_id) {
-                derived.push({ type: 'video', id: post.video_id, name: post.ad_name, previewUrl: post.image_url, thumbnail_url: post.image_url });
+                derived.push({
+                    type: 'video',
+                    id: post.video_id,
+                    name: videoTitles[String(post.video_id)] || post.ad_name,
+                    previewUrl: post.image_url,
+                    thumbnail_url: post.image_url,
+                });
             } else if (post.image_hash) {
                 derived.push({ type: 'image', hash: post.image_hash, name: post.ad_name, previewUrl: post.image_url, url: post.image_url });
             } else {

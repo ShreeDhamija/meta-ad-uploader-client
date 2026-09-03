@@ -1,6 +1,6 @@
 // Products under the selected brand: a card grid + a create-product dialog,
-// plus Context and Branding sub-tabs (shadcn Tabs). Meta ad account is
-// inherited from the brand.
+// plus a single product editor containing context and brand guidelines. Meta
+// ad account is inherited from the brand.
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -159,7 +159,6 @@ export default function ProductsView({ ctx }) {
       <TabsList className="sr-only">
         <TabsTrigger value="products">Products</TabsTrigger>
         <TabsTrigger value="context">Context</TabsTrigger>
-        <TabsTrigger value="branding">Branding</TabsTrigger>
       </TabsList>
 
       <TabsContent value="products" className="mt-0 space-y-5">
@@ -229,7 +228,7 @@ export default function ProductsView({ ctx }) {
       </TabsContent>
 
       <TabsContent value="context" className="mt-0">
-        <ProductEditorNav active="context" onBack={() => setTab("products")} onChange={setTab} />
+        <ProductEditorNav onBack={() => setTab("products")} />
         <ContextEditor
           productId={selectedProductId}
           productName={selectedProduct?.name}
@@ -263,29 +262,9 @@ export default function ProductsView({ ctx }) {
             </div>
           }
         />
-      </TabsContent>
-
-      <TabsContent value="branding" className="mt-0">
-        <ProductEditorNav active="branding" onBack={() => setTab("products")} onChange={setTab} />
-        <div className="mb-6 flex flex-wrap items-center gap-5">
-          <Select value={selectedBrandId || ""} onValueChange={(v) => setSelectedBrandId(v || null)}>
-            <SelectTrigger className="cs-pill-control w-[230px] px-4">
-              <SelectValue placeholder="Select Account" />
-            </SelectTrigger>
-            <SelectContent className="cs-select-content bg-white">
-              {brands.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <Select value={selectedProductId || ""} onValueChange={(v) => setSelectedProductId(v || null)} disabled={!selectedBrandId}>
-            <SelectTrigger className="cs-pill-control w-[230px] px-4">
-              <SelectValue placeholder="Select Product" />
-            </SelectTrigger>
-            <SelectContent className="cs-select-content bg-white">
-              {products.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
+        <div className="mt-7">
+          <BrandingEditor clientId={selectedBrandId} productId={selectedProductId} productName={selectedProduct?.name} />
         </div>
-        <BrandingEditor clientId={selectedBrandId} productId={selectedProductId} productName={selectedProduct?.name} />
       </TabsContent>
     </Tabs>
   );
@@ -293,9 +272,9 @@ export default function ProductsView({ ctx }) {
 
 ProductsView.propTypes = { ctx: PropTypes.object.isRequired };
 
-function ProductEditorNav({ active, onBack, onChange }) {
+function ProductEditorNav({ onBack }) {
   return (
-    <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+    <div className="mb-5">
       <button
         type="button"
         onClick={onBack}
@@ -303,18 +282,10 @@ function ProductEditorNav({ active, onBack, onChange }) {
       >
         <ArrowLeft className="h-4 w-4" /> Back to all products
       </button>
-      <div className="inline-flex rounded-2xl border border-[#6c3403]/15 bg-white/70 p-1 shadow-sm">
-        <button type="button" onClick={() => onChange("context")} className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${active === "context" ? "bg-[#3b170b] text-white shadow-sm" : "text-[#6c3403]/70 hover:text-[#3b170b]"}`}>
-          Product context
-        </button>
-        <button type="button" onClick={() => onChange("branding")} className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${active === "branding" ? "bg-[#3b170b] text-white shadow-sm" : "text-[#6c3403]/70 hover:text-[#3b170b]"}`}>
-          Brand guidelines
-        </button>
-      </div>
     </div>
   );
 }
-ProductEditorNav.propTypes = { active: PropTypes.string.isRequired, onBack: PropTypes.func.isRequired, onChange: PropTypes.func.isRequired };
+ProductEditorNav.propTypes = { onBack: PropTypes.func.isRequired };
 
 // Context editor — per-category manual intel + "Run ingestion" (scrape the
 // product URL to auto-fill).
