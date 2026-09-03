@@ -88,11 +88,12 @@ const isSalesObjective = (c) => {
 // product catalog picker shows up on ordinary website conversion campaigns.
 const isCatalogSalesCampaign = (c) => {
   if (!c) return false;
-  if (c.catalog_enabled === true || c.catalog_enabled === "true") return true;
 
-  // A website/app destination sells through a landing page, never a catalog.
-  const destination = String(c.sales_destination || "").toUpperCase();
-  if (destination === "WEBSITE" || destination === "APP") return false;
+  // Any positive catalog signal is decisive. catalog_enabled is under-reported for
+  // Smart+ campaigns on the list endpoint, so campaign_product_source and the real
+  // catalog objectives act as backstops rather than relying on the flag alone.
+  if (c.catalog_enabled === true || c.catalog_enabled === "true") return true;
+  if (String(c.campaign_product_source || "").toUpperCase() === "CATALOG") return true;
 
   const objective = String(c.objective_type || c.objective || "").toUpperCase();
   return objective === "PRODUCT_SALES" || objective === "CATALOG_SALES";
