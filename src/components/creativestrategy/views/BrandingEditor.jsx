@@ -296,7 +296,7 @@ function ColorRows({ label, hint, rows, onChange }) {
   return (
     <div className="rounded-2xl bg-[#fffaf4] p-3">
       <div className="mb-3 flex items-start justify-between gap-3">
-        <div><h4 className="text-xs font-bold uppercase tracking-wide text-[#3b170b]">{label}</h4><p className="mt-0.5 text-[11px] leading-4 text-neutral-400">{hint}</p></div>
+        <div><h4 className="text-xs font-bold text-[#3b170b]">{label}</h4><p className="mt-0.5 text-[11px] leading-4 text-neutral-400">{hint}</p></div>
         <button type="button" onClick={() => onChange([...rows, { hex: "#000000", name: "", usage: "" }])} className="inline-flex items-center gap-1 text-xs font-semibold text-[#6c3403]"><Plus className="h-3.5 w-3.5" /> Add</button>
       </div>
       <div className="space-y-2">
