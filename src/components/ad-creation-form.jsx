@@ -4440,7 +4440,7 @@ export default function AdCreationForm({
   const resolveCtaForServer = (ctaValue) =>
     ctaValue === "BOOK_NOW" &&
       campaignObjective.length > 0 &&
-      campaignObjective.every((obj) => obj === "OUTCOME_SALES" || obj === "OUTCOME_LEADS" || obj === "OUTCOME_AWARENESS" || obj === "LINK_CLICKS")
+      campaignObjective.every((obj) => obj === "OUTCOME_SALES" || obj === "OUTCOME_LEADS" || obj === "OUTCOME_AWARENESS" || obj === "LINK_CLICKS" || obj === "OUTCOME_TRAFFIC")
       ? "BOOK_TRAVEL"
       : ctaValue;
 
