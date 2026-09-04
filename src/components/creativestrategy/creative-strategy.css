@@ -29,7 +29,7 @@
 }
 
 .cs-page-header {
-  border-bottom: 1px solid var(--cs-border);
+  border-bottom: 0;
 }
 
 .cs-global-selector-card {
@@ -39,11 +39,10 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 10px 12px;
-  border: 1px solid var(--cs-border);
-  border-radius: 24px;
-  background: var(--cs-surface);
-  box-shadow: var(--cs-shadow-sm);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .cs-global-selector-card__selectors,
@@ -52,6 +51,16 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 10px;
+}
+
+.creative-strategy .cs-global-selector-card button.cs-pill-control:disabled,
+.creative-strategy .cs-global-selector-card button.cs-pill-control[data-disabled] {
+  cursor: not-allowed;
+  border-color: #dedede !important;
+  color: #9a9a9a !important;
+  background-color: #ececec !important;
+  box-shadow: none;
+  opacity: 0.75;
 }
 
 .cs-global-selector-card__status {
@@ -168,7 +177,7 @@
   height: 100px;
   overflow: hidden;
   border: 1.5px solid var(--cs-border-strong);
-  border-radius: 22px;
+  border-radius: 30px;
   background: var(--cs-peach);
   box-shadow: var(--cs-shadow-card);
   transition:

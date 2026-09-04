@@ -169,6 +169,8 @@ export default function CreativeStrategyLayout() {
 
   const selectedBrand = brands.find((b) => b.id === selectedBrandId) || null;
   const selectedProduct = products.find((p) => p.id === selectedProductId) || null;
+  const selectorsDisabled = activeTab === "brands";
+  const showProductSelector = activeTab !== "products";
   const selectorBrands = activeTab === "brands" || activeTab === "products" ? brands : accountsWithProducts;
   const renderHeaderActions = useCallback(
     (actions) => (headerActionsTarget ? createPortal(actions, headerActionsTarget) : null),
@@ -287,7 +289,11 @@ export default function CreativeStrategyLayout() {
           <div className="flex h-[calc(100vh-3rem)] min-h-0 flex-col gap-4">
             <div className="cs-global-selector-card">
               <div className="cs-global-selector-card__selectors">
-                <Select value={selectedBrandId || ""} onValueChange={(value) => setSelectedBrandId(value || null)}>
+                <Select
+                  value={selectedBrandId || ""}
+                  onValueChange={(value) => setSelectedBrandId(value || null)}
+                  disabled={selectorsDisabled}
+                >
                   <SelectTrigger className="cs-pill-control w-[230px] px-4">
                     <SelectValue placeholder={brandsLoading ? "Loading Accounts…" : "Select Account"} />
                   </SelectTrigger>
@@ -297,20 +303,22 @@ export default function CreativeStrategyLayout() {
                     ))}
                   </SelectContent>
                 </Select>
-                <Select
-                  value={selectedProductId || ""}
-                  onValueChange={(value) => setSelectedProductId(value || null)}
-                  disabled={!selectedBrandId || productsLoading}
-                >
-                  <SelectTrigger className="cs-pill-control w-[230px] px-4">
-                    <SelectValue placeholder={productsLoading ? "Loading Products…" : "Select Product"} />
-                  </SelectTrigger>
-                  <SelectContent className="cs-select-content bg-white">
-                    {products.map((product) => (
-                      <SelectItem key={product.id} value={product.id}>{product.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {showProductSelector && (
+                  <Select
+                    value={selectedProductId || ""}
+                    onValueChange={(value) => setSelectedProductId(value || null)}
+                    disabled={selectorsDisabled || !selectedBrandId || productsLoading}
+                  >
+                    <SelectTrigger className="cs-pill-control w-[230px] px-4">
+                      <SelectValue placeholder={productsLoading ? "Loading Products…" : "Select Product"} />
+                    </SelectTrigger>
+                    <SelectContent className="cs-select-content bg-white">
+                      {products.map((product) => (
+                        <SelectItem key={product.id} value={product.id}>{product.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
               <div className="cs-global-selector-card__status">
                 <JobsIndicator />
@@ -319,7 +327,7 @@ export default function CreativeStrategyLayout() {
             </div>
 
             <div className="cs-main-surface flex min-h-0 flex-1 flex-col overflow-hidden">
-            <header className="cs-page-header flex items-center justify-between gap-6 px-12 pb-5 pt-6 max-lg:px-7 max-md:flex-wrap max-md:px-5 max-md:py-5">
+            <header className="cs-page-header flex items-center justify-between gap-6 px-12 pb-3 pt-6 max-lg:px-7 max-md:flex-wrap max-md:px-5 max-md:pb-3 max-md:pt-5">
               <div className="min-w-0">
                 <h1 className="text-[28px] font-bold leading-none tracking-[-0.035em] max-md:text-2xl">{active?.label}</h1>
                 {DESCRIPTIONS[activeTab] && (
@@ -332,7 +340,7 @@ export default function CreativeStrategyLayout() {
             <div className="flex-1 overflow-auto">
               <div
                 className={cn(
-                  "w-full px-12 pb-12 pt-6 max-lg:px-7 max-lg:pb-7 max-lg:pt-5 max-md:p-5",
+                  "w-full px-12 pb-12 pt-3 max-lg:px-7 max-lg:pb-7 max-lg:pt-3 max-md:px-5 max-md:pb-5 max-md:pt-3",
                   activeTab === "generate" && "flex min-h-full flex-col pb-6 max-lg:pb-5",
                 )}
               >
