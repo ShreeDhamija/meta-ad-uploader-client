@@ -284,9 +284,9 @@ export default function CreativeStrategyLayout() {
 
         {/* Main */}
         <main className="min-w-0 flex-1 py-6 pr-6">
-          <div className="cs-main-surface flex h-[calc(100vh-3rem)] flex-col overflow-hidden">
-            <div className="cs-global-selector-wrap px-12 pt-6 max-lg:px-7 max-md:px-5">
-              <div className="cs-global-selector-card">
+          <div className="flex h-[calc(100vh-3rem)] min-h-0 flex-col gap-4">
+            <div className="cs-global-selector-card">
+              <div className="cs-global-selector-card__selectors">
                 <Select value={selectedBrandId || ""} onValueChange={(value) => setSelectedBrandId(value || null)}>
                   <SelectTrigger className="cs-pill-control w-[230px] px-4">
                     <SelectValue placeholder={brandsLoading ? "Loading Accounts…" : "Select Account"} />
@@ -311,11 +311,14 @@ export default function CreativeStrategyLayout() {
                     ))}
                   </SelectContent>
                 </Select>
-                <CostTracker clientId={selectedBrandId} />
+              </div>
+              <div className="cs-global-selector-card__status">
                 <JobsIndicator />
+                <CostTracker clientId={selectedBrandId} />
               </div>
             </div>
 
+            <div className="cs-main-surface flex min-h-0 flex-1 flex-col overflow-hidden">
             <header className="cs-page-header flex items-center justify-between gap-6 px-12 pb-5 pt-6 max-lg:px-7 max-md:flex-wrap max-md:px-5 max-md:py-5">
               <div className="min-w-0">
                 <h1 className="text-[28px] font-bold leading-none tracking-[-0.035em] max-md:text-2xl">{active?.label}</h1>
@@ -336,6 +339,7 @@ export default function CreativeStrategyLayout() {
                 {error && <div className="mb-4 text-sm text-red-600">{error}</div>}
                 {renderView()}
               </div>
+            </div>
             </div>
           </div>
         </main>

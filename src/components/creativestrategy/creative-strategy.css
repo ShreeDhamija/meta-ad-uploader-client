@@ -32,33 +32,44 @@
   border-bottom: 1px solid var(--cs-border);
 }
 
-.cs-global-selector-wrap {
-  display: flex;
-  justify-content: flex-end;
-}
-
 .cs-global-selector-card {
   display: flex;
-  width: fit-content;
-  max-width: 100%;
+  width: 100%;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
-  padding: 10px;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 12px;
   border: 1px solid var(--cs-border);
   border-radius: 24px;
-  background: #f7f7f6;
-  box-shadow: 0 2px 8px rgba(29, 29, 29, 0.07);
+  background: var(--cs-surface);
+  box-shadow: var(--cs-shadow-sm);
+}
+
+.cs-global-selector-card__selectors,
+.cs-global-selector-card__status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.cs-global-selector-card__status {
+  margin-left: auto;
+  justify-content: flex-end;
 }
 
 @media (max-width: 640px) {
   .cs-global-selector-card {
-    width: 100%;
-    justify-content: stretch;
+    align-items: stretch;
   }
 
-  .cs-global-selector-card > button[role="combobox"] {
+  .cs-global-selector-card__selectors,
+  .cs-global-selector-card__status {
+    width: 100%;
+  }
+
+  .cs-global-selector-card__selectors > button[role="combobox"] {
     width: 100%;
   }
 }
