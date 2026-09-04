@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import PropTypes from "prop-types";
 import { Archive, BookOpen, Box, Check, Copy, Loader2, Sparkles } from "lucide-react";
 import { creativeApi } from "@/lib/creativeApi";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ViewLoading, EmptyState, ErrorBanner } from "../ui";
 import { useJobRunner, JobBadge } from "../JobsContext";
 
@@ -22,8 +21,7 @@ const STATUS_LABELS = {
 
 export default function LibraryView({ ctx }) {
   const {
-    brands, brandsLoading, selectedBrandId, setSelectedBrandId,
-    products, productsLoading, selectedProductId, setSelectedProductId,
+    selectedProductId, renderHeaderActions,
   } = ctx;
   const [items, setItems] = useState([]);
   const [err, setErr] = useState(null);
@@ -87,32 +85,7 @@ export default function LibraryView({ ctx }) {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <div className="flex flex-wrap items-center gap-4">
-            <Select value={selectedBrandId || ""} onValueChange={(value) => setSelectedBrandId(value || null)}>
-              <SelectTrigger className="cs-pill-control w-[230px] px-4">
-                <SelectValue placeholder={brandsLoading ? "Loading Accounts…" : "Select Account"} />
-              </SelectTrigger>
-              <SelectContent className="cs-select-content bg-white">
-                {brands.map((brand) => <SelectItem key={brand.id} value={brand.id}>{brand.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select
-              value={selectedProductId || ""}
-              onValueChange={(value) => setSelectedProductId(value || null)}
-              disabled={!selectedBrandId || productsLoading}
-            >
-              <SelectTrigger className="cs-pill-control w-[230px] px-4">
-                <SelectValue placeholder={productsLoading ? "Loading Products…" : "Select Product"} />
-              </SelectTrigger>
-              <SelectContent className="cs-select-content bg-white">
-                {products.map((product) => <SelectItem key={product.id} value={product.id}>{product.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          <p className="mt-0.5 text-xs font-normal text-neutral-400">Copy generated from personas and analyzed ads</p>
-        </div>
+      {renderHeaderActions(
         <div className="flex flex-wrap items-center gap-3">
           <JobBadge job={job} />
           <button type="button" onClick={run} disabled={!selectedProductId || jobActive} className="cs-primary-button">
@@ -120,7 +93,8 @@ export default function LibraryView({ ctx }) {
             {jobActive ? "Generating…" : "Generate Library"}
           </button>
         </div>
-      </div>
+      )}
+      <p className="text-xs font-normal text-neutral-400">Copy generated from personas and analyzed ads</p>
 
       <ErrorBanner message={err} />
 

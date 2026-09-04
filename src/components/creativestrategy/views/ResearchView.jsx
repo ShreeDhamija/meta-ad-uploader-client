@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import PropTypes from "prop-types";
 import { Box, Loader2, Plus } from "lucide-react";
 import { creativeApi } from "@/lib/creativeApi";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { humanize } from "../JsonView";
 import { EmptyState, ErrorBanner, PartialResultsNotice, ProgressiveSection } from "../ui";
@@ -32,8 +31,7 @@ const PERSONA_IDENTITY_KEYS = new Set(["label", "name", "title", "source"]);
 
 export default function ResearchView({ ctx }) {
   const {
-    brands, brandsLoading, selectedBrandId, setSelectedBrandId,
-    products, productsLoading, selectedProduct, selectedProductId, setSelectedProductId,
+    selectedProduct, selectedProductId, renderHeaderActions,
   } = ctx;
   const [intel, setIntel] = useState({});
   const [types, setTypes] = useState([]);
@@ -138,35 +136,16 @@ export default function ResearchView({ ctx }) {
 
   return (
     <div className="space-y-5">
-      <div className="cs-research-toolbar">
-        <Select value={selectedBrandId || ""} onValueChange={(value) => setSelectedBrandId(value || null)}>
-          <SelectTrigger className="cs-pill-control w-[220px] px-4">
-            <SelectValue placeholder={brandsLoading ? "Loading Accounts…" : "Select Account"} />
-          </SelectTrigger>
-          <SelectContent className="cs-select-content bg-white">
-            {brands.map((brand) => <SelectItem key={brand.id} value={brand.id}>{brand.name}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select
-          value={selectedProductId || ""}
-          onValueChange={(value) => setSelectedProductId(value || null)}
-          disabled={!selectedBrandId || productsLoading}
-        >
-          <SelectTrigger className="cs-pill-control w-[220px] px-4">
-            <SelectValue placeholder={productsLoading ? "Loading Products…" : "Select Product"} />
-          </SelectTrigger>
-          <SelectContent className="cs-select-content bg-white">
-            {products.map((product) => <SelectItem key={product.id} value={product.id}>{product.name}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <span className="cs-research-toolbar__spacer" />
+      {renderHeaderActions(
+        <div className="flex items-center gap-3">
         <JobBadge job={researchJob} />
         <button type="button" onClick={run} disabled={!selectedProductId || researchActive} className="cs-primary-button">
           {researchActive && <Loader2 className="h-4 w-4 animate-spin" />}
           {researchActive ? "Running Research…" : "Run Research"}
         </button>
-      </div>
-      {selectedProduct && <p className="cs-research-toolbar__hint">{selectedProduct.name} · complete research usually takes 5–10 minutes</p>}
+        </div>
+      )}
+      {selectedProduct && <p className="text-xs font-normal text-neutral-400">{selectedProduct.name} · complete research usually takes 5–10 minutes</p>}
 
       <ErrorBanner message={err} />
       <PartialResultsNotice active={researchActive} completed={readyCount} total={PROGRESSIVE_RESEARCH_SECTIONS.length + 1} label="research sections" />

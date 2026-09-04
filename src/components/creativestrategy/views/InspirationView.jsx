@@ -20,7 +20,7 @@ function fileToDataUrl(file) {
 }
 
 export default function InspirationView({ ctx }) {
-  const { selectedBrand, selectedBrandId, selectedProductId } = ctx;
+  const { selectedBrand, selectedBrandId, selectedProductId, renderHeaderActions } = ctx;
   const [items, setItems] = useState([]);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
@@ -43,8 +43,17 @@ export default function InspirationView({ ctx }) {
     kind: "inspo_analyze", brandId: selectedBrandId, onComplete: () => load(selectedBrandId),
   });
 
+  const headerAction = renderHeaderActions(
+    <div className="flex items-center gap-3">
+      <JobBadge job={job} />
+      <Button onClick={() => fileRef.current?.click()} disabled={!selectedBrandId || busy} size="sm" className="rounded-xl gap-1.5">
+        <Upload className="w-4 h-4" />{busy ? "Uploading…" : "Upload Reference"}
+      </Button>
+    </div>
+  );
+
   if (!selectedBrandId) {
-    return <EmptyState icon={Heart} title="No account selected" hint="Select an account in the top bar to upload reference ads." />;
+    return <>{headerAction}<EmptyState icon={Heart} title="No account selected" hint="Select an account in the global selector to upload reference ads." /></>;
   }
 
   const onPick = async (e) => {
@@ -71,14 +80,9 @@ export default function InspirationView({ ctx }) {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center gap-3">
-        <input ref={fileRef} type="file" accept="image/*,video/*" onChange={onPick} className="hidden" />
-        <Button onClick={() => fileRef.current?.click()} disabled={busy} size="sm" className="rounded-xl gap-1.5">
-          <Upload className="w-4 h-4" />{busy ? "Uploading…" : "Upload reference"}
-        </Button>
-        <JobBadge job={job} />
-        <span className="text-sm text-neutral-400">{selectedBrand?.name} · image analyzes in background, video inline (not stored)</span>
-      </div>
+      {headerAction}
+      <input ref={fileRef} type="file" accept="image/*,video/*" onChange={onPick} className="hidden" />
+      <span className="text-sm text-neutral-400">{selectedBrand?.name} · image analyzes in background, video inline (not stored)</span>
       <ErrorBanner message={err} />
 
       {loading && items.length === 0 ? <ViewLoading label="Loading references…" /> : items.length === 0 ? (

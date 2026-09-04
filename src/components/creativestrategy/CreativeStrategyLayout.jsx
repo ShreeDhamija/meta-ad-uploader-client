@@ -1,6 +1,5 @@
-// Creative-strategy module shell. The page header and sidebar are shared;
-// brand/product context controls move into each workflow so the first screen
-// of every tab can follow its own hierarchy without losing shared state.
+// Creative-strategy module shell. Navigation, global account/product context,
+// page headings, and cross-workflow status controls are shared here.
 import doodle from "@/assets/doodle.webp";
 import rocket from "@/assets/rocket2.webp";
 import { Button } from "@/components/ui/button";
@@ -9,8 +8,9 @@ import { useAppData } from "@/lib/AppContext";
 import { useAuth } from "@/lib/AuthContext";
 import { creativeApi } from "@/lib/creativeApi";
 import { cn } from "@/lib/utils";
-import { AudioLines, BookOpen, Box, Flame, Heart, Layers, LogOut, MousePointerClick, SearchCheck, Zap } from "lucide-react";
+import { BookOpen, Box, Flame, Heart, Layers, LogOut, MousePointerClick, SearchCheck, Zap } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import CostTracker from "./CostTracker";
 import "./creative-strategy.css";
@@ -22,16 +22,14 @@ import GenerateView from "./views/GenerateView";
 import InspirationView from "./views/InspirationView";
 import IntelligenceView from "./views/IntelligenceView";
 import LibraryView from "./views/LibraryView";
-import OverviewView from "./views/OverviewView";
 import ProductsView from "./views/ProductsView";
 import ResearchView from "./views/ResearchView";
 import WeeklyView from "./views/WeeklyView";
 
 const NAV = [
-  { key: "overview", label: "Overview", icon: AudioLines, phase: "later" },
   { key: "brands", label: "Accounts", icon: Layers },
   { key: "products", label: "Products", icon: Box },
-  { key: "intelligence", label: "Intelligence", icon: Zap },
+  { key: "intelligence", label: "Insights", icon: Zap },
   { key: "library", label: "Library", icon: BookOpen },
   { key: "generate", label: "Generate", icon: Flame },
   { key: "inspiration", label: "Inspiration", icon: Heart },
@@ -40,7 +38,6 @@ const NAV = [
 ];
 
 const DESCRIPTIONS = {
-  overview: "Snapshot of the selected brand and product.",
   brands: "View and manage connected Meta ad accounts.",
   products: "Create and manage products for the selected account.",
   intelligence: "Run Meta ad analysis and review analyzed creatives + the strategy audit.",
@@ -64,6 +61,7 @@ export default function CreativeStrategyLayout() {
   const [productsLoading, setProductsLoading] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState(null);
   const [error, setError] = useState(null);
+  const [headerActionsTarget, setHeaderActionsTarget] = useState(null);
 
   const normalizeMetaAccountId = (value) => String(value || "").replace(/^act_/, "");
   const accountFingerprint = useMemo(
@@ -171,6 +169,11 @@ export default function CreativeStrategyLayout() {
 
   const selectedBrand = brands.find((b) => b.id === selectedBrandId) || null;
   const selectedProduct = products.find((p) => p.id === selectedProductId) || null;
+  const selectorBrands = activeTab === "brands" || activeTab === "products" ? brands : accountsWithProducts;
+  const renderHeaderActions = useCallback(
+    (actions) => (headerActionsTarget ? createPortal(actions, headerActionsTarget) : null),
+    [headerActionsTarget],
+  );
 
   const ctx = {
     brands: activeTab === "brands" || activeTab === "products" ? brands : accountsWithProducts,
@@ -186,14 +189,13 @@ export default function CreativeStrategyLayout() {
     setSelectedProductId,
     reloadProducts: () => loadProducts(selectedBrandId),
     goTo: setActiveTab,
+    renderHeaderActions,
   };
 
   if (!isLoggedIn) return null;
 
   const renderView = () => {
     switch (activeTab) {
-      case "overview":
-        return <OverviewView ctx={ctx} />;
       case "brands":
         return <BrandsView ctx={ctx} />;
       case "products":
@@ -218,14 +220,6 @@ export default function CreativeStrategyLayout() {
   };
 
   const active = NAV.find((n) => n.key === activeTab);
-  const showContextSelectors =
-    activeTab !== "brands" &&
-    activeTab !== "products" &&
-    activeTab !== "generate" &&
-    activeTab !== "library" &&
-    activeTab !== "weekly" &&
-    activeTab !== "research" &&
-    activeTab !== "intelligence";
 
   return (
     <JobsProvider>
@@ -291,17 +285,45 @@ export default function CreativeStrategyLayout() {
         {/* Main */}
         <main className="min-w-0 flex-1 py-6 pr-6">
           <div className="cs-main-surface flex h-[calc(100vh-3rem)] flex-col overflow-hidden">
-            <header className="cs-page-header flex items-center justify-between gap-6 px-12 pb-5 pt-7 max-lg:px-7 max-md:px-5 max-md:py-5">
+            <div className="cs-global-selector-wrap px-12 pt-6 max-lg:px-7 max-md:px-5">
+              <div className="cs-global-selector-card">
+                <Select value={selectedBrandId || ""} onValueChange={(value) => setSelectedBrandId(value || null)}>
+                  <SelectTrigger className="cs-pill-control w-[230px] px-4">
+                    <SelectValue placeholder={brandsLoading ? "Loading Accounts…" : "Select Account"} />
+                  </SelectTrigger>
+                  <SelectContent className="cs-select-content bg-white">
+                    {selectorBrands.map((brand) => (
+                      <SelectItem key={brand.id} value={brand.id}>{brand.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={selectedProductId || ""}
+                  onValueChange={(value) => setSelectedProductId(value || null)}
+                  disabled={!selectedBrandId || productsLoading}
+                >
+                  <SelectTrigger className="cs-pill-control w-[230px] px-4">
+                    <SelectValue placeholder={productsLoading ? "Loading Products…" : "Select Product"} />
+                  </SelectTrigger>
+                  <SelectContent className="cs-select-content bg-white">
+                    {products.map((product) => (
+                      <SelectItem key={product.id} value={product.id}>{product.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <CostTracker clientId={selectedBrandId} />
+                <JobsIndicator />
+              </div>
+            </div>
+
+            <header className="cs-page-header flex items-center justify-between gap-6 px-12 pb-5 pt-6 max-lg:px-7 max-md:flex-wrap max-md:px-5 max-md:py-5">
               <div className="min-w-0">
                 <h1 className="text-[28px] font-bold leading-none tracking-[-0.035em] max-md:text-2xl">{active?.label}</h1>
                 {DESCRIPTIONS[activeTab] && (
                   <p className="mt-1.5 truncate text-[14px] font-normal text-[var(--cs-muted)]">{DESCRIPTIONS[activeTab]}</p>
                 )}
               </div>
-              <div className="flex shrink-0 items-center gap-2">
-                <CostTracker clientId={selectedBrandId} />
-                <JobsIndicator />
-              </div>
+              <div ref={setHeaderActionsTarget} className="flex shrink-0 flex-wrap items-center justify-end gap-3" />
             </header>
 
             <div className="flex-1 overflow-auto">
@@ -311,34 +333,6 @@ export default function CreativeStrategyLayout() {
                   activeTab === "generate" && "flex min-h-full flex-col pb-6 max-lg:pb-5",
                 )}
               >
-                {showContextSelectors && (
-                  <div className="mb-7 flex flex-wrap items-center gap-4">
-                    <Select value={selectedBrandId || ""} onValueChange={(v) => setSelectedBrandId(v || null)}>
-                      <SelectTrigger className="cs-pill-control w-[240px] px-5">
-                        <SelectValue placeholder="Select Account" />
-                      </SelectTrigger>
-                      <SelectContent className="cs-select-content bg-white">
-                        {accountsWithProducts.map((b) => (
-                          <SelectItem key={b.id} value={b.id}>
-                            {b.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select value={selectedProductId || ""} onValueChange={(v) => setSelectedProductId(v || null)} disabled={!selectedBrandId}>
-                      <SelectTrigger className="cs-pill-control w-[240px] px-5">
-                        <SelectValue placeholder="Select Product" />
-                      </SelectTrigger>
-                      <SelectContent className="cs-select-content bg-white">
-                        {products.map((p) => (
-                          <SelectItem key={p.id} value={p.id}>
-                            {p.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
                 {error && <div className="mb-4 text-sm text-red-600">{error}</div>}
                 {renderView()}
               </div>

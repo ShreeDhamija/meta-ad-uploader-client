@@ -26,8 +26,7 @@ const str = (v) => (typeof v === "string" ? v : v?.theme || v?.name || v?.title 
 
 export default function IntelligenceView({ ctx }) {
   const {
-    brands, brandsLoading, selectedBrandId, setSelectedBrandId,
-    products, productsLoading, selectedProduct, selectedProductId, setSelectedProductId,
+    selectedProduct, selectedProductId, renderHeaderActions,
   } = ctx;
   const [ads, setAds] = useState([]);
   const [audit, setAudit] = useState(null);
@@ -124,35 +123,16 @@ export default function IntelligenceView({ ctx }) {
 
   return (
     <div className="space-y-5">
-      <div className="cs-intel-toolbar">
-        <Select value={selectedBrandId || ""} onValueChange={(value) => setSelectedBrandId(value || null)}>
-          <SelectTrigger className="cs-pill-control w-[220px] px-4">
-            <SelectValue placeholder={brandsLoading ? "Loading Accounts…" : "Select Account"} />
-          </SelectTrigger>
-          <SelectContent className="cs-select-content bg-white">
-            {brands.map((brand) => <SelectItem key={brand.id} value={brand.id}>{brand.name}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select
-          value={selectedProductId || ""}
-          onValueChange={(value) => setSelectedProductId(value || null)}
-          disabled={!selectedBrandId || productsLoading}
-        >
-          <SelectTrigger className="cs-pill-control w-[220px] px-4">
-            <SelectValue placeholder={productsLoading ? "Loading Products…" : "Select Product"} />
-          </SelectTrigger>
-          <SelectContent className="cs-select-content bg-white">
-            {products.map((product) => <SelectItem key={product.id} value={product.id}>{product.name}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <span className="cs-intel-toolbar__spacer" />
+      {renderHeaderActions(
+        <div className="flex items-center gap-3">
         <JobBadge job={analyzeJob} />
         <button type="button" onClick={run} disabled={!selectedProductId || analyzeActive} className="cs-primary-button">
           {analyzeActive && <Loader2 className="h-4 w-4 animate-spin" />}
           {analyzeActive ? "Running Analysis…" : "Run Analysis"}
         </button>
-      </div>
-      {selectedProduct && <p className="cs-intel-toolbar__hint">{selectedProduct.name}{selectedProduct.metaAdAccountId ? ` · ${selectedProduct.metaAdAccountId}` : ""}</p>}
+        </div>
+      )}
+      {selectedProduct && <p className="text-xs font-normal text-neutral-400">{selectedProduct.name}</p>}
       <ErrorBanner message={err} />
       <PartialResultsNotice active={analyzeActive} completed={insightReadyCount} total={8} label="insight sections" />
 

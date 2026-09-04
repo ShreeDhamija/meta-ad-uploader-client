@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { creativeApi } from "@/lib/creativeApi";
-import { ArrowLeft, Box, BrainCircuit, ExternalLink, Image as ImageIcon, Pencil, Plus, Route, Star } from "lucide-react";
+import { ArrowLeft, Box, Brain, ExternalLink, Image as ImageIcon, Pencil, Plus, Route, Star } from "lucide-react";
 import PropTypes from "prop-types";
 import { useCallback, useEffect, useState } from "react";
 import { JobBadge, useJobRunner, useJobs } from "../JobsContext";
@@ -27,9 +27,7 @@ const CONTEXT_ORDER = ["features", "benefits", "pain_points", "testimonials", "p
 
 export default function ProductsView({ ctx }) {
   const {
-    brands,
     selectedBrandId,
-    setSelectedBrandId,
     selectedProduct,
     products,
     productsLoading,
@@ -38,6 +36,7 @@ export default function ProductsView({ ctx }) {
     reloadBrands,
     reloadProducts,
     goTo,
+    renderHeaderActions,
   } = ctx;
   const [tab, setTab] = useState("products");
   const [form, setForm] = useState({ name: "", url: "", productType: "physical" });
@@ -80,26 +79,13 @@ export default function ProductsView({ ctx }) {
   const formatDate = (value) => {
     if (!value) return "—";
     const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString("en-GB");
+    return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString("en-US");
   };
 
   return (
     <Tabs value={tab} onValueChange={setTab} className="space-y-7">
       {tab === "products" && (
-        <div className="flex flex-wrap items-center justify-between gap-5">
-          <Select value={selectedBrandId || ""} onValueChange={(v) => setSelectedBrandId(v || null)}>
-            <SelectTrigger className="cs-pill-control w-[230px] px-4">
-              <SelectValue placeholder="Select Account" />
-            </SelectTrigger>
-            <SelectContent className="cs-select-content bg-white">
-              {brands.map((b) => (
-                <SelectItem key={b.id} value={b.id}>
-                  {b.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
+        renderHeaderActions(
           <Dialog open={adding} onOpenChange={setAdding}>
             <DialogTrigger asChild>
               <button disabled={!selectedBrandId} className="cs-primary-button">
@@ -153,7 +139,7 @@ export default function ProductsView({ ctx }) {
               </form>
             </DialogContent>
           </Dialog>
-        </div>
+        )
       )}
 
       <TabsList className="sr-only">
@@ -210,13 +196,13 @@ export default function ProductsView({ ctx }) {
                   </button>
                   <div className="space-y-3 p-4">
                     <button type="button" onClick={() => selectAndGo(p.id, "intelligence")} className="cs-product-action">
-                      <BrainCircuit className="h-5 w-5" /> View Insights
+                      <Brain className="h-5 w-5" /> View Insights
                     </button>
                     <button type="button" onClick={() => selectAndGo(p.id, "weekly")} className="cs-product-action">
                       <Route className="h-5 w-5" /> Weekly Strategy
                     </button>
                     <button type="button" onClick={() => selectAndGo(p.id, "generate")} className="cs-product-action">
-                      <ImageIcon className="h-5 w-5" /> Generate Statics
+                      <ImageIcon className="h-5 w-5" /> Generate Static Ads
                     </button>
                     <p className="px-2 pt-1 text-xs font-medium text-neutral-600">Created at: {formatDate(p.createdAt || p.created_at)}</p>
                   </div>
@@ -233,34 +219,7 @@ export default function ProductsView({ ctx }) {
           productId={selectedProductId}
           productName={selectedProduct?.name}
           productUrl={selectedProduct?.url}
-          toolbar={
-            <div className="flex flex-wrap items-center gap-5">
-              <Select value={selectedBrandId || ""} onValueChange={(v) => setSelectedBrandId(v || null)}>
-                <SelectTrigger className="cs-pill-control w-[230px] px-4">
-                  <SelectValue placeholder="Select Account" />
-                </SelectTrigger>
-                <SelectContent className="cs-select-content bg-white">
-                  {brands.map((b) => (
-                    <SelectItem key={b.id} value={b.id}>
-                      {b.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={selectedProductId || ""} onValueChange={(v) => setSelectedProductId(v || null)} disabled={!selectedBrandId}>
-                <SelectTrigger className="cs-pill-control w-[230px] px-4">
-                  <SelectValue placeholder="Select Product" />
-                </SelectTrigger>
-                <SelectContent className="cs-select-content bg-white">
-                  {products.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          }
+          renderHeaderActions={renderHeaderActions}
         />
         <div className="mt-7">
           <BrandingEditor clientId={selectedBrandId} productId={selectedProductId} productName={selectedProduct?.name} />
@@ -289,7 +248,7 @@ ProductEditorNav.propTypes = { onBack: PropTypes.func.isRequired };
 
 // Context editor — per-category manual intel + "Run ingestion" (scrape the
 // product URL to auto-fill).
-function ContextEditor({ productId, productName, productUrl, toolbar }) {
+function ContextEditor({ productId, productName, productUrl, renderHeaderActions }) {
   const [intel, setIntel] = useState({});
   const [drafts, setDrafts] = useState({});
   const [savingType, setSavingType] = useState(null);
@@ -342,8 +301,7 @@ function ContextEditor({ productId, productName, productUrl, toolbar }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-5">
-        {toolbar}
+      {renderHeaderActions(
         <div className="flex items-center gap-3">
           <JobBadge job={ingestJob} />
           <button
@@ -356,7 +314,7 @@ function ContextEditor({ productId, productName, productUrl, toolbar }) {
             Run Ingestion
           </button>
         </div>
-      </div>
+      )}
 
       {!productId ? (
         <EmptyState icon={Box} title="No product selected" hint="Select a product above to edit its context." />
@@ -414,5 +372,5 @@ ContextEditor.propTypes = {
   productId: PropTypes.string,
   productName: PropTypes.string,
   productUrl: PropTypes.string,
-  toolbar: PropTypes.node,
+  renderHeaderActions: PropTypes.func.isRequired,
 };

@@ -32,8 +32,7 @@ const MODES = [
 
 export default function GenerateView({ ctx }) {
   const {
-    brands, brandsLoading, selectedBrandId, setSelectedBrandId, products, productsLoading,
-    selectedProductId, setSelectedProductId,
+    selectedProductId, renderHeaderActions,
   } = ctx;
   const [mode, setMode] = useState("statics");
   const [formats, setFormats] = useState([]);
@@ -132,26 +131,7 @@ export default function GenerateView({ ctx }) {
 
   return (
     <div className="cs-generate-view">
-      <div className="cs-generate-toolbar">
-        <div className="flex flex-wrap items-center gap-3">
-          <Select value={selectedBrandId || ""} onValueChange={(value) => setSelectedBrandId(value || null)}>
-            <SelectTrigger className="cs-pill-control w-[210px] px-4">
-              <SelectValue placeholder={brandsLoading ? "Loading Accounts…" : "Select Account"} />
-            </SelectTrigger>
-            <SelectContent className="cs-select-content bg-white">
-              {brands.map((brand) => <SelectItem key={brand.id} value={brand.id}>{brand.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <Select value={selectedProductId || ""} onValueChange={(value) => setSelectedProductId(value || null)} disabled={!selectedBrandId || productsLoading}>
-            <SelectTrigger className="cs-pill-control w-[210px] px-4">
-              <SelectValue placeholder={productsLoading ? "Loading Products…" : "Select Product"} />
-            </SelectTrigger>
-            <SelectContent className="cs-select-content bg-white">
-              {products.map((product) => <SelectItem key={product.id} value={product.id}>{product.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-
+      {renderHeaderActions(
         <div className="cs-generate-switcher" aria-label="Generate mode">
           {MODES.map((item) => (
             <button
@@ -165,7 +145,7 @@ export default function GenerateView({ ctx }) {
             </button>
           ))}
         </div>
-      </div>
+      )}
 
       {mode === "statics" && (
         <GenerateWorkspace

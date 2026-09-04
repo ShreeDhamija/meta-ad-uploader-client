@@ -27,8 +27,7 @@ const STATUSES = [
 
 export default function WeeklyView({ ctx }) {
   const {
-    brands, brandsLoading, selectedBrandId, setSelectedBrandId,
-    products, productsLoading, selectedProductId, setSelectedProductId,
+    selectedBrandId, selectedProductId, renderHeaderActions,
   } = ctx;
   const [ideas, setIdeas] = useState([]);
   const [run, setRun] = useState(null);
@@ -160,32 +159,7 @@ export default function WeeklyView({ ctx }) {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <div className="flex flex-wrap items-center gap-4">
-            <Select value={selectedBrandId || ""} onValueChange={(value) => setSelectedBrandId(value || null)}>
-              <SelectTrigger className="cs-pill-control w-[230px] px-4">
-                <SelectValue placeholder={brandsLoading ? "Loading Accounts…" : "Select Account"} />
-              </SelectTrigger>
-              <SelectContent className="cs-select-content bg-white">
-                {brands.map((brand) => <SelectItem key={brand.id} value={brand.id}>{brand.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select
-              value={selectedProductId || ""}
-              onValueChange={(value) => setSelectedProductId(value || null)}
-              disabled={!selectedBrandId || productsLoading}
-            >
-              <SelectTrigger className="cs-pill-control w-[230px] px-4">
-                <SelectValue placeholder={productsLoading ? "Loading Products…" : "Select Product"} />
-              </SelectTrigger>
-              <SelectContent className="cs-select-content bg-white">
-                {products.map((product) => <SelectItem key={product.id} value={product.id}>{product.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          <p className="mt-0.5 text-xs font-normal text-neutral-400">Needs analyzed ads and completed research</p>
-        </div>
+      {renderHeaderActions(
         <div className="flex flex-wrap items-center gap-3">
           <JobBadge job={weeklyJob} />
           <button type="button" onClick={runStrategy} disabled={!selectedBrandId || jobActive} className="cs-primary-button">
@@ -193,7 +167,8 @@ export default function WeeklyView({ ctx }) {
             {jobActive ? "Running Strategy…" : "Run Strategy"}
           </button>
         </div>
-      </div>
+      )}
+      <p className="text-xs font-normal text-neutral-400">Needs analyzed ads and completed research</p>
 
       <ErrorBanner message={err} />
       <PartialResultsNotice active={Boolean(jobActive)} completed={readySections} total={2} label="strategy sections" />

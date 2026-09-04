@@ -169,7 +169,7 @@ export default function OverviewView({ ctx }) {
 
           <OverviewCard title="Quick Actions">
             <div className="grid grid-cols-2 gap-3 max-md:grid-cols-1">
-              <ActionBtn icon={Radio} label="Generate Statics" onClick={() => goTo("generate")} />
+              <ActionBtn icon={Radio} label="Generate Static Ads" onClick={() => goTo("generate")} />
               <ActionBtn icon={Zap} label="Run Analysis" onClick={() => goTo("intelligence")} />
               <ActionBtn icon={MousePointerClick} label="Weekly Strategy" onClick={() => goTo("weekly")} />
               <ActionBtn icon={SearchCheck} label="Research" onClick={() => goTo("research")} />

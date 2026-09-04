@@ -32,6 +32,37 @@
   border-bottom: 1px solid var(--cs-border);
 }
 
+.cs-global-selector-wrap {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.cs-global-selector-card {
+  display: flex;
+  width: fit-content;
+  max-width: 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--cs-border);
+  border-radius: 24px;
+  background: #f7f7f6;
+  box-shadow: 0 2px 8px rgba(29, 29, 29, 0.07);
+}
+
+@media (max-width: 640px) {
+  .cs-global-selector-card {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .cs-global-selector-card > button[role="combobox"] {
+    width: 100%;
+  }
+}
+
 .cs-primary-button {
   display: inline-flex;
   align-items: center;
@@ -66,6 +97,11 @@
   cursor: not-allowed;
   opacity: 0.5;
   transform: none;
+}
+
+.cs-link-accounts-button {
+  border-color: #075fc7;
+  background: linear-gradient(0deg, #0866ff 0%, #1877f2 78%);
 }
 
 .creative-strategy button.cs-pill-control {
@@ -127,6 +163,16 @@
   transition:
     transform 180ms ease,
     box-shadow 180ms ease;
+}
+
+.cs-brand-card--compact {
+  height: 64px;
+}
+
+.cs-brand-card--compact .cs-brand-card__top {
+  height: 100%;
+  flex-basis: 100%;
+  border-bottom: 0;
 }
 
 .cs-brand-card:hover {
