@@ -2355,12 +2355,7 @@ export default function TikTokAdCreationForm({
           if (currentIdentityId) creative.identity_id = currentIdentityId;
           if (currentIdentityAuthorizedBcId) creative.identity_authorized_bc_id = currentIdentityAuthorizedBcId;
 
-          // Smart+ ads carry no product details. /smart_plus/ad/create/ rejected every product
-          // selection we tried with 40002 "Invalid product selection" — ALL, specific product
-          // ids, and a product set alike — and only creates ads when no product fields are sent,
-          // so the server drops them for Smart+ and sending them here is pointless. Regular
-          // campaigns are unaffected and still carry the full selection.
-          if (isShoppingAg && !isSmartForThisCampaign) {
+          if (isShoppingAg) {
             if (catalogIdToUse) creative.catalog_id = catalogIdToUse;
             if (productSetIdToUse) creative.product_set_id = productSetIdToUse;
             if (skuIdToUse) creative.sku_id = skuIdToUse;
