@@ -357,6 +357,8 @@ export async function importVariantsFromCsv(file, ctx) {
 
   const newVariants = [];      // variants for rows 1..N (row 0 → Default)
   const fileVariantAssignments = {};
+  const driveFilesByVariant = new Map();
+  const skippedDriveAssignments = [];
   let defaultSnapshot = null;  // row 0 populates the existing Default variant
 
   // Rows that are identical in every column EXCEPT the Google Drive link collapse
@@ -370,12 +372,11 @@ export async function importVariantsFromCsv(file, ctx) {
   // so the form can attach the selected Picker documents after authorization.
   const attachDriveFile = (fileId, variantId, rowNum) => {
     if (!fileId) return;
+    if (!driveFilesByVariant.has(variantId)) driveFilesByVariant.set(variantId, new Set());
+    driveFilesByVariant.get(variantId).add(fileId);
     const existingVariantId = fileVariantAssignments[fileId];
     if (existingVariantId && existingVariantId !== variantId) {
-      addWarning(
-        "Google Drive Link",
-        `Row ${rowNum}: the same Drive file is assigned to more than one variant; the later assignment was skipped`
-      );
+      skippedDriveAssignments.push(rowNum);
       return;
     }
     fileVariantAssignments[fileId] = variantId;
@@ -478,6 +479,21 @@ export async function importVariantsFromCsv(file, ctx) {
     } else {
       newVariants.push({ id: variantId, name: `Variant ${nextLetter()}`, snapshot: snap });
     }
+  }
+
+  // A single file, or one complete regular-ad group, is shared by every
+  // variant at launch. Keep importing its Drive files once without a false
+  // skipped-assignment warning. Mixed groups still need explicit assignments.
+  const uniqueDriveCount = Object.keys(fileVariantAssignments).length;
+  const sharesSingleDriveCreative =
+    (uniqueDriveCount === 1 || (ctx.adType === "regular" && uniqueDriveCount > 1)) &&
+    driveFilesByVariant.size === signatureToVariantId.size &&
+    [...driveFilesByVariant.values()].every((ids) => ids.size === uniqueDriveCount);
+  if (!sharesSingleDriveCreative) {
+    skippedDriveAssignments.forEach((rowNum) => addWarning(
+      "Google Drive Link",
+      `Row ${rowNum}: the same Drive file is assigned to more than one variant; the later assignment was skipped`
+    ));
   }
 
   // Row 0 → Default (the active variant): clear its stored snapshot and load it

@@ -972,6 +972,10 @@ export default function MediaPreview({
     !hasProfileVisitDestinationAdSets && !isFlexLikeAdType && importedPosts.length === 0 && selectedIgOrganicPosts.length === 0;
   const showVariantSetupButton = variants.length > 1 || totalFileCount >= 1;
   const isSingleMediaSplit = totalFileCount === 1;
+  const isSingleGroupSplit =
+    (isCarouselAd || enablePlacementCustomization || isFlexLikeAdType) && fileGroups.length === 1 &&
+    totalFileCount > 1 && importedPosts.length === 0 && selectedIgOrganicPosts.length === 0 &&
+    ungroupedFiles.length === 0 && groupedFileIds.size === totalFileCount;
   const showVariantButtonInPlacementRow = showVariantSetupButton && showPlacementCustomizationRow;
   const showVariantButtonInHeader = showVariantSetupButton && !showPlacementCustomizationRow;
   const variantSetupLabel = variants.length === 1 ? "Split Ad Data" : "Disable Split";
@@ -1006,9 +1010,11 @@ export default function MediaPreview({
   );
 
   const renderSingleMediaSplitNote = () =>
-    isSingleMediaSplit && variants.length > 1 ? (
+    (isSingleMediaSplit || isSingleGroupSplit) && variants.length > 1 ? (
       <span className="block text-xs text-gray-500 leading-tight mt-1">
-        Note: With 1 file uploaded, every variant will reuse the same file while you edit all other fields independently.
+        {isSingleGroupSplit
+          ? "Note: With 1 group and no other media, every variant will reuse the same group while you edit all other fields independently."
+          : "Note: With 1 file uploaded, every variant will reuse the same file while you edit all other fields independently."}
       </span>
     ) : null;
 
@@ -1901,7 +1907,7 @@ export default function MediaPreview({
                 >
                   <div className="space-y-4">
                     {fileGroups.map((group, groupIndex) => {
-                      const isGroupDimmed = (groupVariantMap[group.id] || "default") !== activeVariantId;
+                      const isGroupDimmed = !isSingleGroupSplit && (groupVariantMap[group.id] || "default") !== activeVariantId;
                       const groupFileIds = getGroupFileIds(group);
                       const placementCarouselCards = isPlacementCustomizedCarousel
                         ? Array.from({ length: Math.ceil(groupFileIds.length / 2) }, (_, cardIndex) =>
@@ -1931,7 +1937,7 @@ export default function MediaPreview({
                           >
                             Ungroup
                           </Button>
-                          {variants.length > 1 && (
+                          {variants.length > 1 && !isSingleGroupSplit && (
                             <div className="absolute bottom-2 left-2 z-20">
                               <VariantAssignmentPopover
                                 assignedVariantId={groupVariantMap[group.id] || "default"}

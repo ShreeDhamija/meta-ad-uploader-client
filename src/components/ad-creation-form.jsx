@@ -1791,6 +1791,22 @@ export default function AdCreationForm({
 
   const groupedFileIds = useMemo(() => new Set(fileGroups.flatMap((group) => getGroupFileIds(group))), [fileGroups]);
 
+  // One complete group is one creative, just like the existing single-file split.
+  // Extra ungrouped media or posts must keep their explicit variant assignments.
+  const isSingleGroupSplit = useMemo(() => {
+    if (!(isCarouselAd || enablePlacementCustomization || isFlexLikeAdType) || fileGroups.length !== 1 ||
+        importedPosts.length > 0 || selectedIgOrganicPosts.length > 0) return false;
+    const mediaIds = [
+      ...files.map(getFileId),
+      ...driveFiles.map((file) => file.id),
+      ...dropboxFiles.map((file) => file.dropboxId),
+      ...(frameioFiles || []).map((file) => file.frameioId),
+      ...importedFiles.map((file) => file.type === "image" ? file.hash : file.id),
+    ];
+    return mediaIds.length > 1 && groupedFileIds.size === mediaIds.length && mediaIds.every((id) => groupedFileIds.has(id));
+  }, [isCarouselAd, enablePlacementCustomization, isFlexLikeAdType, fileGroups, importedPosts, selectedIgOrganicPosts,
+    files, driveFiles, dropboxFiles, frameioFiles, importedFiles, groupedFileIds]);
+
   const liveVariantSnapshot = useMemo(
     () => ({
       headlines,
@@ -1979,9 +1995,9 @@ export default function AdCreationForm({
         importedFiles.length +
         importedPosts.length +
         selectedIgOrganicPosts.length;
-      if (totalMediaCount === 1) return 1;
+      if (totalMediaCount === 1 || isSingleGroupSplit) return 1;
 
-      const variantGroups = fileGroups.filter((group) => (groupVariantMap[group.id] || "default") === variantId);
+      const variantGroups = fileGroups.filter((group) => isSingleGroupSplit || (groupVariantMap[group.id] || "default") === variantId);
       const allFiles = [
         ...files,
         ...driveFiles.map((file) => ({ ...file, isDrive: true })),
@@ -2032,6 +2048,7 @@ export default function AdCreationForm({
       groupVariantMap,
       importedFiles,
       importedPosts,
+      isSingleGroupSplit,
       isCarouselAd,
       postVariantMap,
       selectedIgOrganicPosts,
@@ -2064,7 +2081,7 @@ export default function AdCreationForm({
         if (onlyFile) mediaItems.push({ label: "Ad 1", files: [onlyFile], isGroup: false });
       } else {
         overviewGroups
-          .filter((group) => (groupVariantMap[group.id] || "default") === variant.id)
+          .filter((group) => isSingleGroupSplit || (groupVariantMap[group.id] || "default") === variant.id)
           .forEach((group) => {
             mediaItems.push({
               label: `Group ${group.index + 1}`,
@@ -2153,6 +2170,7 @@ export default function AdCreationForm({
     groupVariantMap,
     importedFiles,
     importedPosts,
+    isSingleGroupSplit,
     isCarouselAd,
     isFlexLikeAdType,
     pages,
@@ -2236,7 +2254,7 @@ export default function AdCreationForm({
 
       const filterFiles = (items, mapper = (item) => item) =>
         items.filter((item) => {
-          if (isSingleMediaSplit) return true;
+          if (isSingleMediaSplit || isSingleGroupSplit) return true;
           const file = mapper(item);
           const fileId = getFileId(file);
           const owningGroup = fileGroups.find((group) => getGroupFileIds(group).includes(fileId));
@@ -2261,7 +2279,7 @@ export default function AdCreationForm({
       const variantDropboxFiles = filterFiles(dropboxFiles, (file) => ({ ...file, isDropbox: true }));
       const variantFrameioFiles = filterFiles(frameioFiles || [], (file) => ({ ...file, isFrameio: true }));
       const variantImportedFiles = filterFiles(importedFiles, (file) => ({ ...file, isMetaLibrary: true }));
-      const variantFileGroups = fileGroups.filter((group) => (groupVariantMap[group.id] || "default") === variantId);
+      const variantFileGroups = fileGroups.filter((group) => isSingleGroupSplit || (groupVariantMap[group.id] || "default") === variantId);
       const variantImportedPosts = importedPosts.filter(
         (post) => isSingleMediaSplit || (postVariantMap[`post:${post.id}`] || "default") === variantId,
       );
@@ -2368,6 +2386,7 @@ export default function AdCreationForm({
       importedFiles,
       importedPosts,
       importedPostAdNames,
+      isSingleGroupSplit,
       isCarouselAd,
       postVariantMap,
       selectedIgOrganicPosts,
