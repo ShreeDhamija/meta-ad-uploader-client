@@ -78,7 +78,7 @@ function VariantDot({ variantId, variants }) {
 
 const isSalesObjective = (c) => {
   if (!c) return false;
-  const obj = String(c.virtual_objective_type || c.objective_type || c.objective || "").toUpperCase();
+  const obj = String(c.objective_type || c.objective || "").toUpperCase();
   return obj === "SALES" || obj === "PRODUCT_SALES" || obj === "CATALOG_SALES";
 };
 
@@ -97,6 +97,18 @@ const isCatalogSalesCampaign = (c) => {
 
   const objective = String(c.objective_type || c.objective || "").toUpperCase();
   return objective === "PRODUCT_SALES" || objective === "CATALOG_SALES";
+};
+
+// Direct evidence that a catalog is BOUND to the campaign — not merely that the campaign
+// could involve products. A PRODUCT_SALES campaign can source products from a website or a
+// TikTok Shop with no catalog at all, so the objective is not evidence and is left out.
+// This is the signal the server uses to decide whether to send a product selection, so the
+// picker must gate on exactly the same thing or the two disagree.
+const hasCatalogBinding = (c) => {
+  if (!c) return false;
+  if (c.catalog_enabled === true || c.catalog_enabled === "true") return true;
+  if (c.catalog_id && c.catalog_id !== "UNSET") return true;
+  return String(c.campaign_product_source || "").toUpperCase() === "CATALOG";
 };
 
 const CTA_ASSET_MAPPING = {
@@ -1017,7 +1029,10 @@ export default function TikTokAdCreationForm({
   // even though none of the ad-group-level shopping fields are set.
   const isSmartCatalogCampaign = useMemo(() => {
     if (!isSmartCampaign) return false;
-    return activeCampaignObjects.some((c) => c.catalog_enabled === true || c.catalog_enabled === "true");
+    // catalog_enabled is under-reported for Smart+ on the list endpoint, so accept the
+    // campaign's other catalog-binding signals too — the same set the server uses when it
+    // decides whether to send a product selection.
+    return activeCampaignObjects.some(hasCatalogBinding);
   }, [isSmartCampaign, activeCampaignObjects]);
 
   // Catalog id for a Smart+ catalog campaign: from the campaign when TikTok returns one,
@@ -2168,11 +2183,9 @@ export default function TikTokAdCreationForm({
             targetCampaignObj?.is_smart === "true",
           );
 
-          // Smart+ catalog campaign: the ad-group-level shopping flags are absent, so
-          // catalog_enabled is the signal that this ad still needs a product selection.
-          const isSmartCatalogAg = Boolean(
-            isSmartForThisCampaign && (targetCampaignObj?.catalog_enabled === true || targetCampaignObj?.catalog_enabled === "true"),
-          );
+          // Smart+ catalog campaign: the ad-group-level shopping flags are absent, so the
+          // campaign's catalog signals are what say this ad still needs a product selection.
+          const isSmartCatalogAg = Boolean(isSmartForThisCampaign && hasCatalogBinding(targetCampaignObj));
 
           const isShoppingAg = !!(
             (shoppingAdsType && shoppingAdsType !== "UNSET") ||
@@ -4738,10 +4751,10 @@ export default function TikTokAdCreationForm({
   const selectedCampaignForAuth = campaigns.find((c) => c.campaign_id === selectedCampaign[0]);
   const isSmartPlusCampaignSelected = Boolean(
     selectedCampaignForAuth?.campaign_automation_type === "UPGRADED_SMART_PLUS" ||
-      selectedCampaignForAuth?.campaign_automation_type === "SMART_PLUS" ||
-      selectedCampaignForAuth?.campaign_automation_type === "SMART_PERFORMANCE_CAMPAIGN" ||
-      selectedCampaignForAuth?.is_smart_performance_campaign === true ||
-      selectedCampaignForAuth?.is_smart_performance_campaign === "true",
+    selectedCampaignForAuth?.campaign_automation_type === "SMART_PLUS" ||
+    selectedCampaignForAuth?.campaign_automation_type === "SMART_PERFORMANCE_CAMPAIGN" ||
+    selectedCampaignForAuth?.is_smart_performance_campaign === true ||
+    selectedCampaignForAuth?.is_smart_performance_campaign === "true",
   );
   const creativeAuthorizedDisabled = adType === "SPARK" || isSmartPlusCampaignSelected;
 
