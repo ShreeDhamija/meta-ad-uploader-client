@@ -871,7 +871,12 @@ export default function TikTokAdCreationForm({
   }, [isShowcaseSelection, isStoreSelection]);
 
   const showProductCatalog = useMemo(() => {
-    if (isShoppingAdGroup) return true;
+    // NOTE: an ad group having shopping_ads_type / product_source set is deliberately NOT a
+    // reason to show the picker. Those can be stale metadata under a campaign that declares no
+    // catalog product source, and short-circuiting on them here bypassed the campaign check
+    // entirely — which is how the picker kept appearing on plain website campaigns whose ads
+    // TikTok then rejected with 40002 "Invalid product selection". Only the campaign decides.
+    // STORE / SHOWCASE are a separate product source and keep their own ad-group-driven path.
     if (showStoreProductSelection) return true;
 
     if (selectedCampaign && selectedCampaign.length > 0) {
