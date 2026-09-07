@@ -89,13 +89,14 @@ const isSalesObjective = (c) => {
 const isCatalogSalesCampaign = (c) => {
   if (!c) return false;
 
-  // campaign_product_source is the only field that states where a campaign's products come
-  // from, so it alone decides whether a product picker makes sense. The previous backstops
-  // were too loose: catalog_enabled reads true on Smart+ campaigns that merely *support* a
-  // catalog, and a SALES-family objective says nothing about a product source. Both let the
-  // picker onto plain website campaigns, whose ads TikTok then rejected with 40002 "Invalid
-  // product selection".
-  return String(c.campaign_product_source || "").toUpperCase() === "CATALOG";
+  // Any positive catalog signal is decisive. catalog_enabled is under-reported for
+  // Smart+ campaigns on the list endpoint, so campaign_product_source and the real
+  // catalog objectives act as backstops rather than relying on the flag alone.
+  if (c.catalog_enabled === true || c.catalog_enabled === "true") return true;
+  if (String(c.campaign_product_source || "").toUpperCase() === "CATALOG") return true;
+
+  const objective = String(c.objective_type || c.objective || "").toUpperCase();
+  return objective === "PRODUCT_SALES" || objective === "CATALOG_SALES";
 };
 
 const CTA_ASSET_MAPPING = {
@@ -836,6 +837,22 @@ export default function TikTokAdCreationForm({
     });
   }, [selectedAdGroup, adGroups, showDuplicateAdGroupBlock, duplicateAdGroup]);
 
+  // Only product_source: "CATALOG" means catalog products can be attached to these ads.
+  // isShoppingAdGroup is deliberately NOT used for the catalog picker: it is also true for
+  // STORE / SHOWCASE ad groups (which have their own picker via showStoreProductSelection)
+  // and for any ad group with a shopping_ads_type set, so it offered catalog product selection
+  // on ad groups that have no catalog product source at all.
+  const isCatalogAdGroup = useMemo(() => {
+    const activeAdGroups = showDuplicateAdGroupBlock && duplicateAdGroup ? [duplicateAdGroup] : selectedAdGroup || [];
+
+    if (activeAdGroups.length === 0) return false;
+
+    return activeAdGroups.some((agId) => {
+      const agObj = adGroups.find((g) => g.adgroup_id === agId);
+      return agObj?.product_source === "CATALOG";
+    });
+  }, [selectedAdGroup, adGroups, showDuplicateAdGroupBlock, duplicateAdGroup]);
+
   const areAllSelectedAdGroupsShopping = useMemo(() => {
     const activeAdGroups = showDuplicateAdGroupBlock && duplicateAdGroup ? [duplicateAdGroup] : selectedAdGroup || [];
 
@@ -871,12 +888,7 @@ export default function TikTokAdCreationForm({
   }, [isShowcaseSelection, isStoreSelection]);
 
   const showProductCatalog = useMemo(() => {
-    // NOTE: an ad group having shopping_ads_type / product_source set is deliberately NOT a
-    // reason to show the picker. Those can be stale metadata under a campaign that declares no
-    // catalog product source, and short-circuiting on them here bypassed the campaign check
-    // entirely — which is how the picker kept appearing on plain website campaigns whose ads
-    // TikTok then rejected with 40002 "Invalid product selection". Only the campaign decides.
-    // STORE / SHOWCASE are a separate product source and keep their own ad-group-driven path.
+    if (isCatalogAdGroup) return true;
     if (showStoreProductSelection) return true;
 
     if (selectedCampaign && selectedCampaign.length > 0) {
@@ -891,8 +903,9 @@ export default function TikTokAdCreationForm({
     if (activeAgId) {
       const agObj = adGroups.find((g) => g.adgroup_id === activeAgId);
       if (agObj) {
-        // An ad-group catalog_id is NOT sufficient on its own: it can be stale metadata under
-        // a campaign that declares no catalog product source. Only the campaign decides.
+        // A catalog_id alone is not enough: an ad group can carry one while its product
+        // source is something else entirely, in which case its products are not usable here.
+        if (agObj.catalog_id && agObj.product_source === "CATALOG") return true;
 
         const campId = agObj.campaignId || agObj.campaign_id;
         const c = campaigns.find((x) => x.campaign_id === campId);
@@ -911,7 +924,7 @@ export default function TikTokAdCreationForm({
     duplicateAdGroup,
     adGroups,
     showStoreProductSelection,
-    isShoppingAdGroup,
+    isCatalogAdGroup,
   ]);
 
   const isSalesCampaignSelected = useMemo(() => {
@@ -1024,10 +1037,13 @@ export default function TikTokAdCreationForm({
       return;
     }
 
-    // Find the first selected ad group that has a catalog_id (catalog-based)
+    // Find the first selected ad group that has a catalog_id (catalog-based). The product
+    // source must actually be CATALOG: an ad group can carry a stale catalog_id under a
+    // different product source, and seeding the picker from it shows a catalog whose products
+    // cannot be attached to these ads.
     const catalogAgId = activeAdGroups.find((agId) => {
       const agObj = adGroups.find((g) => g.adgroup_id === agId);
-      return agObj && agObj.catalog_id;
+      return agObj && agObj.catalog_id && agObj.product_source === "CATALOG";
     });
 
     if (catalogAgId) {
@@ -2152,17 +2168,16 @@ export default function TikTokAdCreationForm({
             targetCampaignObj?.is_smart === "true",
           );
 
-          // Products come from the campaign's declared product source. An ad group's own
-          // product_source: CATALOG is not enough — it can be stale metadata under a campaign
-          // that has no catalog, which is exactly what made the server emit
-          // product_specific_type: "ALL" and TikTok reject every ad with 40002 "Invalid product
-          // selection". STORE / SHOWCASE stay ad-group driven; those are separate flows.
-          const campaignIsCatalog = String(targetCampaignObj?.campaign_product_source || "").toUpperCase() === "CATALOG";
+          // Smart+ catalog campaign: the ad-group-level shopping flags are absent, so
+          // catalog_enabled is the signal that this ad still needs a product selection.
+          const isSmartCatalogAg = Boolean(
+            isSmartForThisCampaign && (targetCampaignObj?.catalog_enabled === true || targetCampaignObj?.catalog_enabled === "true"),
+          );
 
           const isShoppingAg = !!(
-            campaignIsCatalog ||
-            (productSource !== "CATALOG" &&
-              ((shoppingAdsType && shoppingAdsType !== "UNSET") || (productSource && productSource !== "UNSET")))
+            (shoppingAdsType && shoppingAdsType !== "UNSET") ||
+            (productSource && productSource !== "UNSET") ||
+            isSmartCatalogAg
           );
 
           let catalogIdToUse = null;
