@@ -3940,9 +3940,9 @@ export default function AdCreationForm({
       const file = event.target.files?.[0];
       // Allow selecting the same file again after cancelling or completing an import.
       event.target.value = "";
-      stageCsvFile(file);
+      handleCsvSelection(file);
     },
-    [stageCsvFile],
+    [handleCsvSelection],
   );
 
   const handleCsvGuideDrop = useCallback(
