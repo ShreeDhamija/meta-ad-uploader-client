@@ -849,14 +849,11 @@ export default function TikTokAdCreationForm({
     });
   }, [selectedAdGroup, adGroups, showDuplicateAdGroupBlock, duplicateAdGroup]);
 
-  // An ad group offers catalog products when its product source is CATALOG, or when it simply
-  // carries a catalog_id — Ads Manager keeps offering catalog products on such ad groups even
-  // after the campaign's catalog toggle is switched off, and the server sends whatever is picked
-  // there. STORE / SHOWCASE ad groups are excluded: they have their own picker via
-  // showStoreProductSelection.
-  // isShoppingAdGroup is deliberately NOT used for the catalog picker: it is also true for any
-  // ad group with a shopping_ads_type set, so it offered catalog product selection on ad groups
-  // that have no catalog at all.
+  // Only product_source: "CATALOG" means catalog products can be attached to these ads.
+  // isShoppingAdGroup is deliberately NOT used for the catalog picker: it is also true for
+  // STORE / SHOWCASE ad groups (which have their own picker via showStoreProductSelection)
+  // and for any ad group with a shopping_ads_type set, so it offered catalog product selection
+  // on ad groups that have no catalog product source at all.
   const isCatalogAdGroup = useMemo(() => {
     const activeAdGroups = showDuplicateAdGroupBlock && duplicateAdGroup ? [duplicateAdGroup] : selectedAdGroup || [];
 
@@ -864,10 +861,7 @@ export default function TikTokAdCreationForm({
 
     return activeAdGroups.some((agId) => {
       const agObj = adGroups.find((g) => g.adgroup_id === agId);
-      if (!agObj) return false;
-      if (agObj.product_source === "CATALOG") return true;
-      if (agObj.product_source === "STORE" || agObj.product_source === "SHOWCASE") return false;
-      return !!(agObj.catalog_id && agObj.catalog_id !== "UNSET");
+      return agObj?.product_source === "CATALOG";
     });
   }, [selectedAdGroup, adGroups, showDuplicateAdGroupBlock, duplicateAdGroup]);
 
@@ -1031,21 +1025,15 @@ export default function TikTokAdCreationForm({
     return out;
   }, [selectedCampaign, campaigns, selectedAdGroup, adGroups, showDuplicateAdGroupBlock, duplicateAdGroup]);
 
-  // A Smart+ campaign can take a product selection on every ad even though none of the
-  // ad-group-level shopping fields are set. catalog_enabled is not required for this: it is
-  // under-reported for Smart+ on the list endpoint and stays false after a campaign's catalog
-  // toggle is switched off, while the catalog itself remains bound and usable. A catalog on the
-  // campaign or on any selected ad group is enough — the same rule the server applies.
+  // A Smart+ campaign with catalog_enabled still needs a product selection on every ad,
+  // even though none of the ad-group-level shopping fields are set.
   const isSmartCatalogCampaign = useMemo(() => {
     if (!isSmartCampaign) return false;
-    if (activeCampaignObjects.some(hasCatalogBinding)) return true;
-
-    const activeAdGroups = showDuplicateAdGroupBlock && duplicateAdGroup ? [duplicateAdGroup] : selectedAdGroup || [];
-    return activeAdGroups.some((agId) => {
-      const agObj = adGroups.find((g) => g.adgroup_id === agId);
-      return !!(agObj?.catalog_id && agObj.catalog_id !== "UNSET");
-    });
-  }, [isSmartCampaign, activeCampaignObjects, selectedAdGroup, adGroups, showDuplicateAdGroupBlock, duplicateAdGroup]);
+    // catalog_enabled is under-reported for Smart+ on the list endpoint, so accept the
+    // campaign's other catalog-binding signals too — the same set the server uses when it
+    // decides whether to send a product selection.
+    return activeCampaignObjects.some(hasCatalogBinding);
+  }, [isSmartCampaign, activeCampaignObjects]);
 
   // Catalog id for a Smart+ catalog campaign: from the campaign when TikTok returns one,
   // otherwise the advertiser's saved catalog from Settings.
@@ -1064,14 +1052,13 @@ export default function TikTokAdCreationForm({
       return;
     }
 
-    // Find the first selected ad group that has a catalog_id. STORE / SHOWCASE ad groups are
-    // skipped because they are seeded from their store below; every other ad group carrying a
-    // catalog_id seeds the picker, whatever its product source and whatever the campaign's
-    // catalog toggle says.
+    // Find the first selected ad group that has a catalog_id (catalog-based). The product
+    // source must actually be CATALOG: an ad group can carry a stale catalog_id under a
+    // different product source, and seeding the picker from it shows a catalog whose products
+    // cannot be attached to these ads.
     const catalogAgId = activeAdGroups.find((agId) => {
       const agObj = adGroups.find((g) => g.adgroup_id === agId);
-      if (!agObj?.catalog_id || agObj.catalog_id === "UNSET") return false;
-      return agObj.product_source !== "STORE" && agObj.product_source !== "SHOWCASE";
+      return agObj && agObj.catalog_id && agObj.product_source === "CATALOG";
     });
 
     if (catalogAgId) {
@@ -2198,15 +2185,12 @@ export default function TikTokAdCreationForm({
 
           // Smart+ catalog campaign: the ad-group-level shopping flags are absent, so the
           // campaign's catalog signals are what say this ad still needs a product selection.
-          // A catalog on the ad group counts too, and neither depends on catalog_enabled.
-          const agCatalogId = adGroupObj?.catalog_id && adGroupObj.catalog_id !== "UNSET" ? adGroupObj.catalog_id : null;
-          const isSmartCatalogAg = Boolean(isSmartForThisCampaign && (hasCatalogBinding(targetCampaignObj) || agCatalogId));
+          const isSmartCatalogAg = Boolean(isSmartForThisCampaign && hasCatalogBinding(targetCampaignObj));
 
           const isShoppingAg = !!(
             (shoppingAdsType && shoppingAdsType !== "UNSET") ||
             (productSource && productSource !== "UNSET") ||
-            isSmartCatalogAg ||
-            agCatalogId
+            isSmartCatalogAg
           );
 
           let catalogIdToUse = null;
@@ -2371,7 +2355,12 @@ export default function TikTokAdCreationForm({
           if (currentIdentityId) creative.identity_id = currentIdentityId;
           if (currentIdentityAuthorizedBcId) creative.identity_authorized_bc_id = currentIdentityAuthorizedBcId;
 
-          if (isShoppingAg) {
+          // Smart+ ads carry no product details. /smart_plus/ad/create/ rejected every product
+          // selection we tried with 40002 "Invalid product selection" — ALL, specific product
+          // ids, and a product set alike — and only creates ads when no product fields are sent,
+          // so the server drops them for Smart+ and sending them here is pointless. Regular
+          // campaigns are unaffected and still carry the full selection.
+          if (isShoppingAg && !isSmartForThisCampaign) {
             if (catalogIdToUse) creative.catalog_id = catalogIdToUse;
             if (productSetIdToUse) creative.product_set_id = productSetIdToUse;
             if (skuIdToUse) creative.sku_id = skuIdToUse;
@@ -6603,13 +6592,14 @@ export default function TikTokAdCreationForm({
               </div>
 
               {/* Optional Section: Add Product Information — only shown when ad group has a catalog */}
-              {(isShoppingAdGroup || isSmartCatalogCampaign || isCatalogAdGroup) && showProductCatalog && formCatalogId && (
+              {(isShoppingAdGroup || isSmartCatalogCampaign) && showProductCatalog && formCatalogId && (
                 <div className="space-y-4">
                   <div className="flex flex-col m-0 pt-1">
                     <Label className="flex items-center gap-2 font-semibold text-sm">
                       {renderDiffMark(["formCatalogId", "formProductId"])}
                       <BookOpen className="w-4 h-4" />
                       Product Information
+                      <span className="font-normal text-gray-400">(Optional)</span>
                     </Label>
                     <span className="text-xs text-gray-500 leading-relaxed">Select a product to promote from the auto-selected catalog.</span>
                   </div>
@@ -6635,11 +6625,9 @@ export default function TikTokAdCreationForm({
                       <Label className="text-xs font-semibold text-gray-700 flex items-center gap-2">
                         {renderDiffMark(["formCatalogId", "formProductId", "formProductSetId"])}
                         Product / Product Set
-                        <span className="font-normal text-gray-400">(Optional)</span>
                       </Label>
                       <span className="text-xs text-gray-500 leading-relaxed block">
-                        Pick individual products, or target a whole product set from this catalog instead. Leave this empty to promote all
-                        products in the catalog.
+                        Pick individual products, or target a whole product set from this catalog instead.
                       </span>
                       <Popover
                         open={openFormProduct}
