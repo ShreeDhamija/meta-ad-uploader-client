@@ -6606,9 +6606,11 @@ export default function TikTokAdCreationForm({
                       <Label className="text-xs font-semibold text-gray-700 flex items-center gap-2">
                         {renderDiffMark(["formCatalogId", "formProductId", "formProductSetId"])}
                         Product / Product Set
+                        <span className="font-normal text-gray-400">(Optional)</span>
                       </Label>
                       <span className="text-xs text-gray-500 leading-relaxed block">
-                        Pick individual products, or target a whole product set from this catalog instead.
+                        Pick individual products, or target a whole product set from this catalog instead. Leave this empty to promote all
+                        products in the catalog.
                       </span>
                       <Popover
                         open={openFormProduct}
