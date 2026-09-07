@@ -89,14 +89,13 @@ const isSalesObjective = (c) => {
 const isCatalogSalesCampaign = (c) => {
   if (!c) return false;
 
-  // Any positive catalog signal is decisive. catalog_enabled is under-reported for
-  // Smart+ campaigns on the list endpoint, so campaign_product_source and the real
-  // catalog objectives act as backstops rather than relying on the flag alone.
-  if (c.catalog_enabled === true || c.catalog_enabled === "true") return true;
-  if (String(c.campaign_product_source || "").toUpperCase() === "CATALOG") return true;
-
-  const objective = String(c.objective_type || c.objective || "").toUpperCase();
-  return objective === "PRODUCT_SALES" || objective === "CATALOG_SALES";
+  // campaign_product_source is the only field that states where a campaign's products come
+  // from, so it alone decides whether a product picker makes sense. The previous backstops
+  // were too loose: catalog_enabled reads true on Smart+ campaigns that merely *support* a
+  // catalog, and a SALES-family objective says nothing about a product source. Both let the
+  // picker onto plain website campaigns, whose ads TikTok then rejected with 40002 "Invalid
+  // product selection".
+  return String(c.campaign_product_source || "").toUpperCase() === "CATALOG";
 };
 
 const CTA_ASSET_MAPPING = {
@@ -887,7 +886,8 @@ export default function TikTokAdCreationForm({
     if (activeAgId) {
       const agObj = adGroups.find((g) => g.adgroup_id === activeAgId);
       if (agObj) {
-        if (agObj.catalog_id) return true;
+        // An ad-group catalog_id is NOT sufficient on its own: it can be stale metadata under
+        // a campaign that declares no catalog product source. Only the campaign decides.
 
         const campId = agObj.campaignId || agObj.campaign_id;
         const c = campaigns.find((x) => x.campaign_id === campId);
@@ -2147,16 +2147,17 @@ export default function TikTokAdCreationForm({
             targetCampaignObj?.is_smart === "true",
           );
 
-          // Smart+ catalog campaign: the ad-group-level shopping flags are absent, so
-          // catalog_enabled is the signal that this ad still needs a product selection.
-          const isSmartCatalogAg = Boolean(
-            isSmartForThisCampaign && (targetCampaignObj?.catalog_enabled === true || targetCampaignObj?.catalog_enabled === "true"),
-          );
+          // Products come from the campaign's declared product source. An ad group's own
+          // product_source: CATALOG is not enough — it can be stale metadata under a campaign
+          // that has no catalog, which is exactly what made the server emit
+          // product_specific_type: "ALL" and TikTok reject every ad with 40002 "Invalid product
+          // selection". STORE / SHOWCASE stay ad-group driven; those are separate flows.
+          const campaignIsCatalog = String(targetCampaignObj?.campaign_product_source || "").toUpperCase() === "CATALOG";
 
           const isShoppingAg = !!(
-            (shoppingAdsType && shoppingAdsType !== "UNSET") ||
-            (productSource && productSource !== "UNSET") ||
-            isSmartCatalogAg
+            campaignIsCatalog ||
+            (productSource !== "CATALOG" &&
+              ((shoppingAdsType && shoppingAdsType !== "UNSET") || (productSource && productSource !== "UNSET")))
           );
 
           let catalogIdToUse = null;
