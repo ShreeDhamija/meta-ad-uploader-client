@@ -4238,20 +4238,6 @@ export default function TikTokAdCreationForm({
           }
         }
 
-        const variantNeedsProduct =
-          (fd.selectedCampaign || []).some((campId) => isSalesCatalogCampaign(campaigns.find((c) => c.campaign_id === campId))) &&
-          activeVariantAdGroupIds.some(
-            (adgroupId) => variantAdGroups.find((adGroup) => adGroup.adgroup_id === adgroupId)?.product_source === "CATALOG",
-          );
-
-        if (variantNeedsProduct) {
-          const pickedProducts = Array.isArray(fd.formProductId) ? fd.formProductId.length > 0 : !!fd.formProductId;
-          if (!fd.formProductSetId && !pickedProducts) {
-            toast.error(`${variant.name}: select a product or product set — catalog sales campaigns require one`);
-            return;
-          }
-        }
-
         newJobs.push(job);
       }
 
@@ -4617,6 +4603,11 @@ export default function TikTokAdCreationForm({
     areAllSelectedAdGroupsShopping &&
     (!formStoreProductId || (Array.isArray(formStoreProductId) && formStoreProductId.length === 0));
 
+  const isCatalogProductMissing =
+    requiresProductSelection &&
+    !formProductSetId &&
+    (!formProductId || (Array.isArray(formProductId) && formProductId.length === 0));
+
   const isDuplicatingAdGroup = showDuplicateAdGroupBlock && duplicateAdGroup;
   const isDuplicatedAdGroupNameMissing = isDuplicatingAdGroup && !newAdGroupName.trim();
   const isAdGroupMissing = !isDuplicatingAdGroup && (!selectedAdGroup || selectedAdGroup.length === 0);
@@ -4749,6 +4740,13 @@ export default function TikTokAdCreationForm({
       }
     }
 
+    if (requiresProductSelection) {
+      const productIds = Array.isArray(formProductId) ? formProductId : formProductId ? [formProductId] : [];
+      if (!formProductSetId && productIds.length === 0) {
+        errors.push("Product or Product Set is required");
+      }
+    }
+
     return errors;
   }, [
     selectedAdvertiser,
@@ -4774,6 +4772,9 @@ export default function TikTokAdCreationForm({
     areAllSelectedAdGroupsShopping,
     formStoreId,
     formStoreProductId,
+    requiresProductSelection,
+    formProductId,
+    formProductSetId,
   ]);
 
   const validationErrors = getValidationErrors();
@@ -6627,11 +6628,7 @@ export default function TikTokAdCreationForm({
                       {renderDiffMark(["formCatalogId", "formProductId"])}
                       <BookOpen className="w-4 h-4" />
                       Product Information
-                      {requiresProductSelection ? (
-                        <span className="font-normal text-red-500">(Required)</span>
-                      ) : (
-                        <span className="font-normal text-gray-400">(Optional)</span>
-                      )}
+                      <span className="font-normal text-gray-400">(Optional)</span>
                     </Label>
                     <span className="text-xs text-gray-500 leading-relaxed">Select a product to promote from the auto-selected catalog.</span>
                   </div>
@@ -7216,6 +7213,12 @@ export default function TikTokAdCreationForm({
                   {isShowcaseProductMissing && (
                     <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
                       Please select a showcase product
+                    </div>
+                  )}
+
+                  {isCatalogProductMissing && (
+                    <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                      Please select a product or product set from the catalog
                     </div>
                   )}
 
