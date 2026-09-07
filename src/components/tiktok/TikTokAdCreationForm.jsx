@@ -104,6 +104,20 @@ const isCatalogSalesCampaign = (c) => {
 // TikTok Shop with no catalog at all, so the objective is not evidence and is left out.
 // This is the signal the server uses to decide whether to send a product selection, so the
 // picker must gate on exactly the same thing or the two disagree.
+// A Sales campaign sourcing from a catalog: TikTok expects an explicit product selection on
+// every ad, so the picker is mandatory there. Smart+ catalog campaigns are not included — they
+// accept "all products".
+const isSalesCatalogCampaign = (c) => {
+  if (!c) return false;
+  const objective = String(c.objective_type || c.objective || "").toUpperCase();
+  if (objective !== "PRODUCT_SALES" && objective !== "CATALOG_SALES") return false;
+  return (
+    c.catalog_enabled === true ||
+    c.catalog_enabled === "true" ||
+    String(c.campaign_product_source || "").toUpperCase() === "CATALOG"
+  );
+};
+
 const hasCatalogBinding = (c) => {
   if (!c) return false;
   if (c.catalog_enabled === true || c.catalog_enabled === "true") return true;
@@ -1034,6 +1048,11 @@ export default function TikTokAdCreationForm({
     // decides whether to send a product selection.
     return activeCampaignObjects.some(hasCatalogBinding);
   }, [isSmartCampaign, activeCampaignObjects]);
+
+  const requiresProductSelection = useMemo(
+    () => isCatalogAdGroup && activeCampaignObjects.some(isSalesCatalogCampaign),
+    [isCatalogAdGroup, activeCampaignObjects],
+  );
 
   // Catalog id for a Smart+ catalog campaign: from the campaign when TikTok returns one,
   // otherwise the advertiser's saved catalog from Settings.
@@ -4219,6 +4238,20 @@ export default function TikTokAdCreationForm({
           }
         }
 
+        const variantNeedsProduct =
+          (fd.selectedCampaign || []).some((campId) => isSalesCatalogCampaign(campaigns.find((c) => c.campaign_id === campId))) &&
+          activeVariantAdGroupIds.some(
+            (adgroupId) => variantAdGroups.find((adGroup) => adGroup.adgroup_id === adgroupId)?.product_source === "CATALOG",
+          );
+
+        if (variantNeedsProduct) {
+          const pickedProducts = Array.isArray(fd.formProductId) ? fd.formProductId.length > 0 : !!fd.formProductId;
+          if (!fd.formProductSetId && !pickedProducts) {
+            toast.error(`${variant.name}: select a product or product set — catalog sales campaigns require one`);
+            return;
+          }
+        }
+
         newJobs.push(job);
       }
 
@@ -6594,7 +6627,11 @@ export default function TikTokAdCreationForm({
                       {renderDiffMark(["formCatalogId", "formProductId"])}
                       <BookOpen className="w-4 h-4" />
                       Product Information
-                      <span className="font-normal text-gray-400">(Optional)</span>
+                      {requiresProductSelection ? (
+                        <span className="font-normal text-red-500">(Required)</span>
+                      ) : (
+                        <span className="font-normal text-gray-400">(Optional)</span>
+                      )}
                     </Label>
                     <span className="text-xs text-gray-500 leading-relaxed">Select a product to promote from the auto-selected catalog.</span>
                   </div>
