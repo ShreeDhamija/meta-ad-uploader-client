@@ -965,9 +965,9 @@ html body #root .creative-strategy button.cs-generate-switcher__item.is-active {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  margin-top: 8px;
-  padding-top: 24px;
-  border-top: 1px solid rgba(108, 52, 3, 0.28);
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
 }
 
 .cs-weekly-switchers-row {
@@ -1731,7 +1731,7 @@ html body #root .creative-strategy .cs-research-intel.is-open.is-stuck button.cs
 
 .cs-intel-kpis {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   overflow: hidden;
   border: 1.5px solid rgba(59, 23, 11, 0.7);
   border-radius: 24px;

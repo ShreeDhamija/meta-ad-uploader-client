@@ -2,12 +2,10 @@
 // creative_strategy_audit aggregates plus per-ad ad_creative_insights evidence.
 import { useCallback, useEffect, useRef, useState } from "react";
 import PropTypes from "prop-types";
-import { AlertTriangle, ChevronDown, ChevronRight, Loader2, Plus, RefreshCw, Zap } from "lucide-react";
+import { AlertTriangle, ChevronDown, ChevronRight, Loader2, Plus, Zap } from "lucide-react";
 import { creativeApi } from "@/lib/creativeApi";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { humanize } from "../JsonView";
 import { EmptyState, ErrorBanner, PartialResultsNotice, ProgressiveSection } from "../ui";
 import { useJobRunner, JobBadge } from "../JobsContext";
@@ -26,37 +24,38 @@ const str = (v) => (typeof v === "string" ? v : v?.theme || v?.name || v?.title 
 
 export default function IntelligenceView({ ctx }) {
   const {
-    selectedProduct, selectedProductId, renderHeaderActions,
+    selectedProductId, renderHeaderActions,
   } = ctx;
   const [ads, setAds] = useState([]);
   const [audit, setAudit] = useState(null);
   const [err, setErr] = useState(null);
   const [loading, setLoading] = useState(false);
   const [angles, setAngles] = useState([]);
-  const [learnings, setLearnings] = useState([]);
+  const [updatedAt, setUpdatedAt] = useState(null);
+  const currentProduct = useRef(selectedProductId);
+  currentProduct.current = selectedProductId;
+  const requestId = useRef(0);
   const [trending, setTrending] = useState(null);
 
-  const loadLearnings = useCallback(async () => {
-    if (!ctx.selectedBrandId) { setLearnings([]); return; }
-    try { const r = await creativeApi.getLearnings(ctx.selectedBrandId); setLearnings(r.items); } catch { /* non-fatal */ }
-  }, [ctx.selectedBrandId]);
-
   const load = useCallback(async (pid, { silent = false } = {}) => {
+    const request = ++requestId.current;
+    if (!pid) return;
     if (!silent) { setLoading(true); setErr(null); }
     try {
       const [r, ang] = await Promise.all([creativeApi.getInsights(pid), creativeApi.getAngles(pid).catch(() => ({ angles: [] }))]);
+      if (currentProduct.current !== pid || request !== requestId.current) return;
+      setUpdatedAt(r.updatedAt || null);
       setAds(r.ads || []); setAudit(r.audit || null); setAngles(ang.angles || []); setTrending(r.trending || null);
-    } catch (e) { if (!silent) setErr(e.message); } finally { if (!silent) setLoading(false); }
-    if (!silent) loadLearnings();
-  }, [loadLearnings]);
+    } catch (e) { if (!silent && currentProduct.current === pid) setErr(e.message); } finally { if (!silent && currentProduct.current === pid) setLoading(false); }
+  }, []);
 
   useEffect(() => {
-    if (selectedProductId) load(selectedProductId); else { setAds([]); setAudit(null); }
+    setAds([]); setAudit(null); setAngles([]); setTrending(null); setUpdatedAt(null); setErr(null);
+    if (selectedProductId) load(selectedProductId);
   }, [load, selectedProductId]);
 
   // Tracked jobs (persist across tab switches + reload on completion).
   const { job: analyzeJob, start: startAnalyze } = useJobRunner({ kind: "analyze_ads", productId: selectedProductId, onComplete: () => load(selectedProductId) });
-  const { job: trendJob, start: startTrend } = useJobRunner({ kind: "trending_creative", productId: selectedProductId, onComplete: () => load(selectedProductId) });
   const analyzeActive = isActiveJob(analyzeJob);
 
   useEffect(() => {
@@ -78,20 +77,13 @@ export default function IntelligenceView({ ctx }) {
   const kpis = [
     ["Ads analyzed", ads.length],
     ["Total spend", money(totalSpend)],
-    ["Avg CPA", (() => { const v = mean(ads.map((x) => x.costPerPurchase).filter((x) => x > 0)); return v ? money(v) : "—"; })()],
     ["Avg ROAS", (() => { const v = mean(ads.map((x) => x.roas).filter((x) => x > 0)); return v ? `${v.toFixed(2)}x` : "—"; })()],
     ["Avg hook rate", (() => { const v = mean(ads.map((x) => x.hookRate).filter((x) => x > 0)); return v ? `${(v * 100).toFixed(0)}%` : "—"; })()],
     ["A/B winners", ads.filter((x) => x.grade === "A" || x.grade === "B").length],
   ];
 
-  const runTrending = async () => {
-    setErr(null);
-    try { const { jobId } = await creativeApi.runTrending(selectedProductId); startTrend(jobId); }
-    catch (e) { setErr(e.message); }
-  };
   const trendingAds = trending?.trending_ads || [];
 
-  const winners = [...ads].sort((x, y) => (y.spend || 0) - (x.spend || 0)).slice(0, 3);
   const topHooks = deriveHooksFromAds(ads, a.top_hooks);
   const recentCutoff = Date.now() - 14 * 24 * 60 * 60 * 1000;
   const recent = [...ads].filter((x) => x.createdTime && new Date(x.createdTime).getTime() >= recentCutoff)
@@ -126,13 +118,15 @@ export default function IntelligenceView({ ctx }) {
       {renderHeaderActions(
         <div className="flex items-center gap-3">
         <JobBadge job={analyzeJob} />
+        <div className="flex flex-col items-end gap-2">
         <button type="button" onClick={run} disabled={!selectedProductId || analyzeActive} className="cs-primary-button">
           {analyzeActive && <Loader2 className="h-4 w-4 animate-spin" />}
           {analyzeActive ? "Running Analysis…" : "Run Analysis"}
         </button>
+        <p className="text-[11px] text-neutral-500">Updated: {updatedAt ? <time dateTime={updatedAt}>{new Date(updatedAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}</time> : "Not analyzed yet"}</p>
+        </div>
         </div>
       )}
-      {selectedProduct && <p className="text-xs font-normal text-neutral-400">{selectedProduct.name}</p>}
       <ErrorBanner message={err} />
       <PartialResultsNotice active={analyzeActive} completed={insightReadyCount} total={8} label="insight sections" />
 
@@ -153,18 +147,11 @@ export default function IntelligenceView({ ctx }) {
         ? <MessagingThemesSection themes={a.messaging_themes} ads={ads} />
         : <ProgressiveSection title="Messaging themes" active={auditWorkActive} cards={2} />}
       {ads.length > 0 ? <FunnelBalanceSection ads={ads} /> : <ProgressiveSection title="Funnel balance" active={adWorkActive} />}
-      {winners.length > 0 ? <TopPerformers ads={winners} /> : <ProgressiveSection title="Top performers" active={adWorkActive} cards={3} />}
       {Array.isArray(a.persona_ad_mapping) && a.persona_ad_mapping.length > 0
         ? <PersonaPerformanceSection mappings={a.persona_ad_mapping} ads={ads} />
         : <ProgressiveSection title="Customer persona performance" active={auditWorkActive} cards={2} />}
 
-      <Block title="Trending creative · rising spend / new, last 7d" noDivider
-        actions={
-          <div className="flex items-center gap-2">
-            <JobBadge job={trendJob} />
-            <button type="button" onClick={runTrending} className="cs-intel-small-button"><RefreshCw className="h-3.5 w-3.5" /> Refresh</button>
-          </div>
-        }>
+      <Block title="Trending creative · rising spend / new, last 7d" noDivider>
         {trendingAds.length > 0 ? (
           <div className="cs-intel-creative-grid">
             {trendingAds.slice(0, 8).map((t) => (
@@ -177,10 +164,10 @@ export default function IntelligenceView({ ctx }) {
               </div>
             ))}
           </div>
-        ) : <p className="text-xs text-neutral-400">No trending creatives{trending ? "" : " yet — click Refresh (needs Meta)"}.</p>}
+        ) : <p className="text-xs text-neutral-400">{analyzeActive ? "Refreshing with analysis…" : "No trending creatives in the latest data. Run Analysis to refresh."}</p>}
       </Block>
 
-      {recent.length > 0 ? <RecentLaunches ads={recent} /> : <ProgressiveSection title="Recent launches" active={adWorkActive} cards={2} />}
+      {recent.length > 0 ? <RecentLaunches ads={recent} /> : <Block title="Recent launches · last 14 days" noDivider><p className="text-xs text-neutral-500">{adWorkActive || loading ? "Loading recent launches…" : "No ads launched in the last 14 days in the saved analysis. Run Analysis to refresh."}</p></Block>}
       {Array.isArray(a.visual_openers) && a.visual_openers.length > 0
         ? <VisualOpenersSection openers={a.visual_openers} ads={ads} />
         : <ProgressiveSection title="Visual openers" active={auditWorkActive} cards={2} />}
@@ -192,9 +179,8 @@ export default function IntelligenceView({ ctx }) {
         : <ProgressiveSection title="What to test next" active={auditWorkActive} cards={2} />}
       {hasUntapped ? <UntappedAnglesSection audit={a} /> : <ProgressiveSection title="Untapped angles and gaps" active={auditWorkActive} />}
 
-      {angles.length > 0 && <AngleGroups groups={angleGroups} />}
+      {angles.length > 0 && <AngleGroups groups={angleGroups} ads={ads} />}
 
-      <LearningTruths clientId={ctx.selectedBrandId} items={learnings} onChange={loadLearnings} setErr={setErr} />
 
       {fatigued.length > 0 && (
         <Block title="Fatigue alerts (frequency ≥ 3)">
@@ -496,20 +482,6 @@ function FunnelBalanceSection({ ads }) {
 }
 FunnelBalanceSection.propTypes = { ads: PropTypes.array.isRequired };
 
-function TopPerformers({ ads }) {
-  if (!ads.length) return null;
-  return <Block title="Top performers by spend"><TooltipProvider delayDuration={150}><div className="cs-intel-performer-grid">{ads.map((ad) =>
-    <article key={ad.adId} className="cs-intel-performer-card">
-      <CreativeThumbnail src={ad.imageUrl || ad.thumbnailUrl} variant="performer" />
-      <div className="cs-intel-performer-card__body">
-        <Tooltip><TooltipTrigger asChild><strong className="cs-intel-performer-name" tabIndex={0}>{ad.adName || "Unnamed"}</strong></TooltipTrigger><TooltipContent side="top" className="max-w-[320px] break-words text-xs">{ad.adName || "Unnamed"}</TooltipContent></Tooltip>
-        <p className="cs-intel-performer-hook">{ad.firstSpokenSentence || ad.firstOverlayHeadline || ad.headlineText || "No hook captured"}</p>
-        <MetricPills className="is-performer-metrics" items={[`${money(ad.spend)} spend`, ad.costPerPurchase ? `${money(ad.costPerPurchase)} CPA` : null, ad.purchases > 0 ? `${ad.purchases} purchases` : null]} />
-      </div>
-    </article>)}</div></TooltipProvider></Block>;
-}
-TopPerformers.propTypes = { ads: PropTypes.array.isRequired };
-
 function PersonaPerformanceSection({ mappings, ads }) {
   const [expanded, setExpanded] = useState(null);
   if (!Array.isArray(mappings) || !mappings.length) return null;
@@ -683,7 +655,9 @@ function CreativeThumbnail({ src, variant = "compact" }) {
 }
 CreativeThumbnail.propTypes = { src: PropTypes.string, variant: PropTypes.oneOf(["compact", "card", "opener", "performer"]) };
 
-function AngleGroups({ groups }) {
+function AngleGroups({ groups, ads }) {
+  const [selectedAngle, setSelectedAngle] = useState(null);
+  const matchingAds = selectedAngle ? ads.filter((ad) => selectedAngle.adIds?.includes(ad.adId)) : [];
   const order = ["proven", "in_research", "untapped", "uncategorized"];
   const entries = Object.entries(groups).sort(([first], [second]) => {
     const firstIndex = order.indexOf(first);
@@ -700,20 +674,35 @@ function AngleGroups({ groups }) {
               <h3>{humanize(status)}</h3>
               <span>{items.length}</span>
             </div>
+            {status === "proven" && <p className="mb-3 text-xs text-neutral-500">Click on angle to view ads</p>}
             <div className="cs-intel-angle-group__pills">
               {items.map((angle, index) => (
-                <span key={index} className="cs-intel-angle-pill" title={`${status}${angle.ad_count ? ` · ${angle.ad_count} ads · $${Math.round(angle.total_spend || 0)}` : ""}`}>
-                  {angle.name}{angle.ad_count ? ` (${angle.ad_count})` : ""}
-                </span>
+                status === "proven" ? <button key={index} type="button" onClick={() => setSelectedAngle(angle)} className="cs-intel-angle-pill inline-flex items-center gap-2" aria-label={`View ads for ${angle.name}`}>
+                  {angle.name}{angle.ad_count ? ` (${angle.ad_count})` : ""}<ChevronRight size={14} />
+                </button> : <span key={index} className="cs-intel-angle-pill">{angle.name}</span>
               ))}
             </div>
           </section>
         ))}
       </div>
+      <Dialog open={Boolean(selectedAngle)} onOpenChange={(open) => { if (!open) setSelectedAngle(null); }}>
+        <DialogContent disableSlide className="max-w-3xl rounded-[28px] sm:rounded-[28px] bg-[#fffaf5]" overlayClassName="bg-black/40">
+          <DialogHeader><DialogTitle>{selectedAngle?.name}</DialogTitle><DialogDescription>Ads using this proven angle</DialogDescription></DialogHeader>
+          <div className="max-h-[65vh] overflow-y-auto grid gap-4 sm:grid-cols-2">
+            {matchingAds.length ? matchingAds.map((ad) => <article key={ad.adId} className="rounded-2xl border border-orange-100 bg-white p-3">
+              <div className="rounded-xl bg-stone-100 overflow-hidden">{ad.imageUrl || ad.thumbnailUrl ? <img src={ad.imageUrl || ad.thumbnailUrl} alt={ad.adName || "Ad preview"} className="h-64 w-full object-contain" loading="lazy" /> : <div className="grid h-40 place-items-center text-xs text-stone-400">Preview unavailable</div>}</div>
+              <h3 className="mt-3 text-sm font-semibold text-stone-800">{ad.adName || "Unnamed ad"}</h3>
+              <MetricPills className="mt-2" items={[`${money(ad.spend)} spend`, ad.mediaType === "video" ? "Video" : "Static"]} />
+              {(ad.firstSpokenSentence || ad.firstOverlayHeadline || ad.headlineText) && <p className="mt-3 text-sm text-stone-700">{ad.firstSpokenSentence || ad.firstOverlayHeadline || ad.headlineText}</p>}
+              {ad.whyItWorks && <p className="mt-2 text-xs text-stone-500">{ad.whyItWorks}</p>}
+            </article>) : <p className="text-sm text-stone-500">No saved ads available for this angle. Run Analysis to refresh.</p>}
+          </div>
+        </DialogContent>
+      </Dialog>
     </InsightSection>
   );
 }
-AngleGroups.propTypes = { groups: PropTypes.object.isRequired };
+AngleGroups.propTypes = { groups: PropTypes.object.isRequired, ads: PropTypes.array.isRequired };
 
 function AuditAccordion({ title, data }) {
   const [open, setOpen] = useState(false);
@@ -898,63 +887,5 @@ function findScrollParent(node) {
 function isActiveJob(job) {
   return Boolean(job && (job.status == null || job.status === "queued" || job.status === "running"));
 }
-
-const LT_CATEGORIES = ["Hook", "Creator", "Angle", "Format", "CTA", "Script", "Visual", "Persona", "Offer"];
-const LT_LEVELS = ["suspected", "tested", "gospel", "discredited"];
-const LEVEL_TONE = { suspected: "bg-neutral-100 text-neutral-600", tested: "bg-blue-100 text-blue-700", gospel: "bg-emerald-100 text-emerald-700", discredited: "bg-red-100 text-red-700" };
-
-// Manual learning-truths panel (mirrors his LearningTruthsPanel). The weekly
-// strategist reads these so it never re-proposes discredited ideas.
-function LearningTruths({ clientId, items, onChange, setErr }) {
-  const [cat, setCat] = useState("Hook");
-  const [desc, setDesc] = useState("");
-  const [level, setLevel] = useState("suspected");
-
-  if (!clientId) return null;
-
-  const add = async () => {
-    if (!desc.trim()) return;
-    try { await creativeApi.createLearning({ clientId, category: cat, description: desc.trim(), truthLevel: level }); setDesc(""); onChange(); }
-    catch (e) { setErr(e.message); }
-  };
-  const setLevelFor = async (id, truthLevel) => {
-    try { await creativeApi.updateLearning(id, { truthLevel }); onChange(); } catch (e) { setErr(e.message); }
-  };
-  const remove = async (id) => {
-    try { await creativeApi.deleteLearning(id); onChange(); } catch (e) { setErr(e.message); }
-  };
-
-  return (
-    <Block title="Learning truths">
-      <div className="flex flex-wrap items-center gap-2">
-        <Select value={cat} onValueChange={setCat}>
-          <SelectTrigger className="cs-intel-field w-[120px]"><SelectValue /></SelectTrigger>
-          <SelectContent className="cs-select-content bg-white">{LT_CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-        </Select>
-        <Input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="e.g. Founder-POV hooks beat UGC for TOF" className="cs-intel-field flex-1 min-w-[220px]" />
-        <Select value={level} onValueChange={setLevel}>
-          <SelectTrigger className="cs-intel-field w-[130px]"><SelectValue /></SelectTrigger>
-          <SelectContent className="cs-select-content bg-white">{LT_LEVELS.map((l) => <SelectItem key={l} value={l}>{l}</SelectItem>)}</SelectContent>
-        </Select>
-        <button type="button" onClick={add} className="cs-intel-small-button">Add</button>
-      </div>
-      <div className="space-y-1.5 mt-2">
-        {items.map((it) => (
-          <div key={it.id} className="flex items-center gap-2 text-sm">
-            <Badge variant="secondary" className="rounded-full text-[10px]">{it.category}</Badge>
-            <span className="flex-1 text-neutral-700">{it.description}</span>
-            <Select value={it.truthLevel} onValueChange={(v) => setLevelFor(it.id, v)}>
-              <SelectTrigger className={`w-[120px] h-7 rounded-full border-0 text-xs ${LEVEL_TONE[it.truthLevel] || ""}`}><SelectValue /></SelectTrigger>
-              <SelectContent className="cs-select-content bg-white">{LT_LEVELS.map((l) => <SelectItem key={l} value={l}>{l}</SelectItem>)}</SelectContent>
-            </Select>
-            <button onClick={() => remove(it.id)} className="text-xs text-neutral-400 hover:text-red-600">✕</button>
-          </div>
-        ))}
-        {items.length === 0 && <p className="text-xs text-neutral-400">No learnings yet — add what works or was disproven so the strategist respects it.</p>}
-      </div>
-    </Block>
-  );
-}
-LearningTruths.propTypes = { clientId: PropTypes.string, items: PropTypes.array.isRequired, onChange: PropTypes.func.isRequired, setErr: PropTypes.func.isRequired };
 
 IntelligenceView.propTypes = { ctx: PropTypes.object.isRequired };

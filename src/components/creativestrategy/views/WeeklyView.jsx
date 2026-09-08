@@ -182,7 +182,7 @@ export default function WeeklyView({ ctx }) {
           </div>
         </div>
       )}
-      <p className="text-xs font-normal text-neutral-400">Needs analyzed ads and completed research</p>
+      {ideas.length === 0 && !loading && !jobActive && !err && <p className="text-xs font-normal text-neutral-400">Needs analyzed ads and completed research</p>}
 
       <ErrorBanner message={err} />
       <PartialResultsNotice active={Boolean(jobActive)} completed={0} total={1} label="concept board" />

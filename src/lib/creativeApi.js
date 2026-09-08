@@ -85,6 +85,7 @@ export const creativeApi = {
   setIdeaStatus: (ideaId, status) => request(`/weekly/ideas/${encodeURIComponent(ideaId)}/status`, { method: "POST", body: { status } }),
   generateBrief: (ideaId, productId) =>
     request(`/weekly/ideas/${encodeURIComponent(ideaId)}/brief`, { method: "POST", body: { productId } }),
+  getJobHistory: (offset = 0) => request(`/jobs?offset=${offset}`),
   getJob: (id) => request(`/jobs/${id}`),
   getUsage: ({ window = "7d", groupBy = "provider", clientId } = {}) =>
     request(`/usage?window=${encodeURIComponent(window)}&groupBy=${encodeURIComponent(groupBy)}${clientId ? `&clientId=${encodeURIComponent(clientId)}` : ""}`),

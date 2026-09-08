@@ -387,7 +387,7 @@ function ScriptsPanel({ productId }) {
       ) : (
         <div className="space-y-5">
           {batches.map((batch, batchIndex) => (
-            <GenerationBatch key={batch.id} createdAt={batch.createdAt} isLatest={batchIndex === 0}>
+            <GenerationBatch key={batch.id} createdAt={batch.createdAt} isLatest={batchIndex === 0} legacyWeekly={batch.legacyWeekly} productUnspecified={batch.productUnspecified}>
               <div className="space-y-7">
                 {(batch.items || []).map((item, itemIndex) => {
                   const concept = item.concept;
@@ -480,7 +480,7 @@ function BriefPanel({ productId }) {
             const concept = batch.data?.concept;
             const brief = batch.data?.brief;
             return (
-              <GenerationBatch key={batch.id} createdAt={batch.createdAt} isLatest={batchIndex === 0}>
+              <GenerationBatch key={batch.id} createdAt={batch.createdAt} isLatest={batchIndex === 0} legacyWeekly={batch.legacyWeekly} productUnspecified={batch.productUnspecified}>
                 <div className="space-y-4">
                   {concept && (
                     <div className="cs-generate-result space-y-2">
@@ -658,7 +658,7 @@ function HistoryControls({ history, disabled }) {
   );
 }
 
-function GenerationBatch({ createdAt, isLatest, children }) {
+function GenerationBatch({ createdAt, isLatest, legacyWeekly, productUnspecified, children }) {
   const date = new Date(createdAt);
   const timestamp = Number.isNaN(date.getTime())
     ? "Time unavailable"
@@ -666,10 +666,10 @@ function GenerationBatch({ createdAt, isLatest, children }) {
   return (
     <section className={`cs-generate-history-batch ${isLatest ? "is-latest" : "is-past"}`}>
       <header className="cs-generate-history-batch__header">
-        <span>{isLatest ? "Latest generation" : "Past generation"}</span>
-        <time dateTime={createdAt}>{timestamp}</time>
+        <span>{legacyWeekly ? "Saved weekly strategy" : isLatest ? "Latest generation" : "Past generation"}</span>
+        <time dateTime={createdAt}>{legacyWeekly ? "Concept created: " : ""}{timestamp}</time>
       </header>
-      <div className="cs-generate-history-batch__content">{children}</div>
+      <div className="cs-generate-history-batch__content">{legacyWeekly && <p className="mb-4 text-xs text-stone-500">{productUnspecified ? "Brand-level weekly history — the original product and generation date were not recorded." : "The original generation date was not recorded."}</p>}{children}</div>
     </section>
   );
 }
@@ -690,7 +690,7 @@ Field.propTypes = { label: PropTypes.string.isRequired, children: PropTypes.node
 GenerationGrid.propTypes = { items: PropTypes.array.isRequired, rate: PropTypes.func.isRequired };
 GeneratedImage.propTypes = { item: PropTypes.object.isRequired, rate: PropTypes.func.isRequired };
 ResultSection.propTypes = { title: PropTypes.string.isRequired, children: PropTypes.node.isRequired };
-GenerationBatch.propTypes = { createdAt: PropTypes.string.isRequired, isLatest: PropTypes.bool.isRequired, children: PropTypes.node.isRequired };
+GenerationBatch.propTypes = { legacyWeekly: PropTypes.bool, productUnspecified: PropTypes.bool, createdAt: PropTypes.string.isRequired, isLatest: PropTypes.bool.isRequired, children: PropTypes.node.isRequired };
 HistoryControls.propTypes = { history: PropTypes.object.isRequired, disabled: PropTypes.bool };
 Tag.propTypes = { children: PropTypes.node };
 ScriptsPanel.propTypes = { productId: PropTypes.string };
