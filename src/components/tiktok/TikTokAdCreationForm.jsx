@@ -104,24 +104,21 @@ const isCatalogSalesCampaign = (c) => {
 // TikTok Shop with no catalog at all, so the objective is not evidence and is left out.
 // This is the signal the server uses to decide whether to send a product selection, so the
 // picker must gate on exactly the same thing or the two disagree.
-// A Sales campaign sourcing from a catalog: TikTok expects an explicit product selection on
-// every ad, so the picker is mandatory there. Smart+ catalog campaigns are not included — they
-// accept "all products".
-const isSalesCatalogCampaign = (c) => {
+// Only the campaign says whether products can be attached. An ad group keeps
+// product_source: CATALOG after the campaign's catalog is switched off, so it is not evidence.
+// campaign_product_source is only returned for manual campaigns; Smart+ campaigns report the
+// catalog through catalog_enabled / catalog_id, which /fetch-campaigns resolves from
+// /smart_plus/campaign/get/ before the list reaches here.
+const isCatalogSourcedCampaign = (c) => {
   if (!c) return false;
-  const objective = String(c.objective_type || c.objective || "").toUpperCase();
-  if (objective !== "PRODUCT_SALES" && objective !== "CATALOG_SALES") return false;
-  return (
-    c.catalog_enabled === true ||
-    c.catalog_enabled === "true" ||
-    String(c.campaign_product_source || "").toUpperCase() === "CATALOG"
-  );
+  if (String(c.campaign_product_source || "").toUpperCase() === "CATALOG") return true;
+  if (c.catalog_enabled === true || c.catalog_enabled === "true") return true;
+  // catalog_type comes from /smart_plus/campaign/get/ (merged in by /fetch-campaigns) and is
+  // only present when a catalog is attached — the one field that separates a Smart+ catalog
+  // campaign from an identical-looking one whose catalog is off.
+  if (c.catalog_type && c.catalog_type !== "UNSET") return true;
+  return !!(c.catalog_id && c.catalog_id !== "UNSET");
 };
-
-// Only the campaign says where products come from. An ad group keeps product_source: CATALOG
-// after the campaign's catalog is switched off, so it is not evidence — campaign_product_source
-// is. Without it TikTok rejects any product selection on the ad, so the picker stays hidden.
-const isCatalogSourcedCampaign = (c) => String(c?.campaign_product_source || "").toUpperCase() === "CATALOG";
 
 const hasCatalogBinding = (c) => {
   if (!c) return false;
@@ -1059,9 +1056,10 @@ export default function TikTokAdCreationForm({
     [activeCampaignObjects],
   );
 
+  // The picker only renders for catalog-sourced campaigns, and a pick is mandatory there.
   const requiresProductSelection = useMemo(
-    () => isCatalogAdGroup && activeCampaignObjects.some(isSalesCatalogCampaign),
-    [isCatalogAdGroup, activeCampaignObjects],
+    () => isCatalogAdGroup && campaignSourcesFromCatalog,
+    [isCatalogAdGroup, campaignSourcesFromCatalog],
   );
 
   // Catalog id for a Smart+ catalog campaign: from the campaign when TikTok returns one,
