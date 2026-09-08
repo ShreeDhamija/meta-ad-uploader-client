@@ -118,6 +118,21 @@ const isSalesCatalogCampaign = (c) => {
   );
 };
 
+// A Smart+ campaign whose catalog is switched off. Its ad groups keep product_source: CATALOG
+// and a catalog_id, but TikTok rejects any product selection on the ad, so the picker is hidden.
+const isSmartCatalogOff = (c) => {
+  if (!c) return false;
+  const isSmart =
+    c.campaign_automation_type === "UPGRADED_SMART_PLUS" ||
+    c.campaign_automation_type === "SMART_PLUS" ||
+    c.campaign_automation_type === "SMART_PERFORMANCE_CAMPAIGN" ||
+    c.is_smart_performance_campaign === true ||
+    c.is_smart_performance_campaign === "true";
+  if (!isSmart) return false;
+  if (c.catalog_enabled === true || c.catalog_enabled === "true") return false;
+  return !(c.catalog_id && c.catalog_id !== "UNSET");
+};
+
 const hasCatalogBinding = (c) => {
   if (!c) return false;
   if (c.catalog_enabled === true || c.catalog_enabled === "true") return true;
@@ -1048,6 +1063,12 @@ export default function TikTokAdCreationForm({
     // decides whether to send a product selection.
     return activeCampaignObjects.some(hasCatalogBinding);
   }, [isSmartCampaign, activeCampaignObjects]);
+
+  // Every selected campaign is Smart+ with its catalog off — nothing picked here can be used.
+  const productSelectionUnusable = useMemo(
+    () => activeCampaignObjects.length > 0 && activeCampaignObjects.every(isSmartCatalogOff),
+    [activeCampaignObjects],
+  );
 
   const requiresProductSelection = useMemo(
     () => isCatalogAdGroup && activeCampaignObjects.some(isSalesCatalogCampaign),
@@ -6621,7 +6642,7 @@ export default function TikTokAdCreationForm({
               </div>
 
               {/* Optional Section: Add Product Information — only shown when ad group has a catalog */}
-              {(isShoppingAdGroup || isSmartCatalogCampaign) && showProductCatalog && formCatalogId && (
+              {(isShoppingAdGroup || isSmartCatalogCampaign) && showProductCatalog && formCatalogId && !productSelectionUnusable && (
                 <div className="space-y-4">
                   <div className="flex flex-col m-0 pt-1">
                     <Label className="flex items-center gap-2 font-semibold text-sm">
