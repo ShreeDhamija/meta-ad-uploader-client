@@ -118,20 +118,10 @@ const isSalesCatalogCampaign = (c) => {
   );
 };
 
-// A Smart+ campaign whose catalog is switched off. Its ad groups keep product_source: CATALOG
-// and a catalog_id, but TikTok rejects any product selection on the ad, so the picker is hidden.
-const isSmartCatalogOff = (c) => {
-  if (!c) return false;
-  const isSmart =
-    c.campaign_automation_type === "UPGRADED_SMART_PLUS" ||
-    c.campaign_automation_type === "SMART_PLUS" ||
-    c.campaign_automation_type === "SMART_PERFORMANCE_CAMPAIGN" ||
-    c.is_smart_performance_campaign === true ||
-    c.is_smart_performance_campaign === "true";
-  if (!isSmart) return false;
-  if (c.catalog_enabled === true || c.catalog_enabled === "true") return false;
-  return !(c.catalog_id && c.catalog_id !== "UNSET");
-};
+// Only the campaign says where products come from. An ad group keeps product_source: CATALOG
+// after the campaign's catalog is switched off, so it is not evidence — campaign_product_source
+// is. Without it TikTok rejects any product selection on the ad, so the picker stays hidden.
+const isCatalogSourcedCampaign = (c) => String(c?.campaign_product_source || "").toUpperCase() === "CATALOG";
 
 const hasCatalogBinding = (c) => {
   if (!c) return false;
@@ -1064,9 +1054,8 @@ export default function TikTokAdCreationForm({
     return activeCampaignObjects.some(hasCatalogBinding);
   }, [isSmartCampaign, activeCampaignObjects]);
 
-  // Every selected campaign is Smart+ with its catalog off — nothing picked here can be used.
-  const productSelectionUnusable = useMemo(
-    () => activeCampaignObjects.length > 0 && activeCampaignObjects.every(isSmartCatalogOff),
+  const campaignSourcesFromCatalog = useMemo(
+    () => activeCampaignObjects.some(isCatalogSourcedCampaign),
     [activeCampaignObjects],
   );
 
@@ -2233,6 +2222,11 @@ export default function TikTokAdCreationForm({
             isSmartCatalogAg
           );
 
+          // The picker is hidden unless the campaign sources from a catalog, so nothing
+          // catalog-related is attached either — a stale saved catalog or product would
+          // otherwise still ride along in the request.
+          const skipCatalogFields = productSource !== "SHOWCASE" && !isCatalogSourcedCampaign(targetCampaignObj);
+
           let catalogIdToUse = null;
           let skuIdToUse = null;
           let itemGroupIdToUse = null;
@@ -2396,11 +2390,13 @@ export default function TikTokAdCreationForm({
           if (currentIdentityAuthorizedBcId) creative.identity_authorized_bc_id = currentIdentityAuthorizedBcId;
 
           if (isShoppingAg) {
-            if (catalogIdToUse) creative.catalog_id = catalogIdToUse;
-            if (productSetIdToUse) creative.product_set_id = productSetIdToUse;
-            if (skuIdToUse) creative.sku_id = skuIdToUse;
-            if (itemGroupIdToUse) creative.item_group_id = itemGroupIdToUse;
-            if (catalogProductIdsToUse) creative.product_ids = catalogProductIdsToUse;
+            if (!skipCatalogFields) {
+              if (catalogIdToUse) creative.catalog_id = catalogIdToUse;
+              if (productSetIdToUse) creative.product_set_id = productSetIdToUse;
+              if (skuIdToUse) creative.sku_id = skuIdToUse;
+              if (itemGroupIdToUse) creative.item_group_id = itemGroupIdToUse;
+              if (catalogProductIdsToUse) creative.product_ids = catalogProductIdsToUse;
+            }
             if (productSource === "SHOWCASE") {
               creative.store_id = jobFormStoreId || adGroupObj?.store_id || null;
             }
@@ -6642,7 +6638,7 @@ export default function TikTokAdCreationForm({
               </div>
 
               {/* Optional Section: Add Product Information — only shown when ad group has a catalog */}
-              {(isShoppingAdGroup || isSmartCatalogCampaign) && showProductCatalog && formCatalogId && !productSelectionUnusable && (
+              {(isShoppingAdGroup || isSmartCatalogCampaign) && showProductCatalog && formCatalogId && campaignSourcesFromCatalog && (
                 <div className="space-y-4">
                   <div className="flex flex-col m-0 pt-1">
                     <Label className="flex items-center gap-2 font-semibold text-sm">
