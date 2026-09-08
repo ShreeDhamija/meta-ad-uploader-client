@@ -6643,7 +6643,6 @@ export default function TikTokAdCreationForm({
                       {renderDiffMark(["formCatalogId", "formProductId"])}
                       <BookOpen className="w-4 h-4" />
                       Product Information
-                      <span className="font-normal text-gray-400">(Optional)</span>
                     </Label>
                     <span className="text-xs text-gray-500 leading-relaxed">Select a product to promote from the auto-selected catalog.</span>
                   </div>
