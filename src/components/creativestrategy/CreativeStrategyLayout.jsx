@@ -42,8 +42,8 @@ const DESCRIPTIONS = {
   products: "Create and manage products for the selected account.",
   intelligence: "Run Meta ad analysis and review analyzed creatives + the strategy audit.",
   research: "Run the 7-phase research agent → personas, brand deep dive, language bank.",
-  library: "Generate draft hooks, headlines, and primary text per persona.",
-  generate: "Generate static image ads from a creative format + brand/product context.",
+  library: "Generate draft hooks, headlines, and primary text from personas and analyzed ads.",
+  generate: "Generate static image ads, video scripts, and creative briefs from brand/product context.",
   inspiration: "Upload reference ads (image/video) and mine their structure for on-brand adaptation.",
   weekly: "Run the weekly creative strategist → tiered concept cards. Approve ideas to brief.",
 };
@@ -268,7 +268,7 @@ export default function CreativeStrategyLayout() {
 
             {/* Footer profile */}
             <div className="relative z-10 mt-auto pt-4">
-              <div className="flex w-full items-center rounded-[20px] border border-neutral-200 bg-neutral-50 py-2 pl-3 pr-3 shadow-xs max-lg:justify-center max-lg:p-2">
+              <div className="cs-sidebar-profile flex w-full items-center rounded-[20px] border bg-neutral-50 py-2 pl-3 pr-3 max-lg:justify-center max-lg:p-2">
                 <div className="flex items-center gap-2 flex-grow max-lg:hidden">
                   <img src={profilePicUrl || "/placeholder.svg"} alt="Profile" className="h-8 w-8 rounded-full object-cover" />
                   <span className="max-w-[120px] truncate text-sm font-medium text-neutral-800">{userName}</span>

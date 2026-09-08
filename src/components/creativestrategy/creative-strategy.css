@@ -32,6 +32,11 @@
   border-bottom: 0;
 }
 
+.cs-sidebar-profile {
+  border-color: #d1d5db;
+  box-shadow: 0 2.4px 6px rgba(0, 0, 0, 0.144);
+}
+
 .cs-global-selector-card {
   display: flex;
   width: 100%;
@@ -452,6 +457,13 @@
   gap: 20px;
 }
 
+.cs-generate-tabs-row {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: flex-start;
+}
+
 .cs-generate-toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -535,6 +547,13 @@ html body #root .creative-strategy button.cs-generate-switcher__item.is-active {
 .cs-generate-sidebar__group {
   padding-top: 14px;
   border-top: 1px solid rgba(108, 52, 3, 0.18);
+}
+
+.cs-generate-sidebar-description {
+  color: #6d605a;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.65;
 }
 
 .creative-strategy button.cs-generate-control,
@@ -655,6 +674,54 @@ html body #root .creative-strategy button.cs-generate-switcher__item.is-active {
   line-height: 1.6;
 }
 
+.cs-generate-history-batch {
+  overflow: hidden;
+  border: 1px solid rgba(59, 23, 11, 0.24);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.cs-generate-history-batch.is-latest {
+  border-color: rgba(108, 52, 3, 0.52);
+  box-shadow: 0 3px 8px rgba(59, 23, 11, 0.09);
+}
+
+.cs-generate-history-batch.is-past {
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.cs-generate-history-batch__header {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 16px;
+  border-bottom: 1px solid rgba(108, 52, 3, 0.14);
+  color: #6c3403;
+  background: #ffe9d6;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.cs-generate-history-batch.is-past .cs-generate-history-batch__header {
+  color: #72645e;
+  background: #f2efed;
+}
+
+.cs-generate-history-batch__header time {
+  color: inherit;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.cs-generate-history-batch__content {
+  padding: 16px;
+}
+
 .cs-library-board {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -748,9 +815,11 @@ html body #root .creative-strategy button.cs-generate-switcher__item.is-active {
 }
 
 .cs-library-pill.is-approved {
-  border-color: rgba(22, 101, 52, 0.15);
-  color: #245c35;
-  background: #f3fbf5;
+  border-color: #4ade80;
+  color: #14532d;
+  background: #bbf7d0;
+  box-shadow: 0 1px 3px rgba(22, 101, 52, 0.14);
+  font-weight: 650;
 }
 
 .cs-library-pill.is-archived {

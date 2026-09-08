@@ -1,8 +1,8 @@
-// Generate workspace — statics, video scripts, briefs, and the product's saved
-// generation gallery share one shell while retaining their existing API flows.
+// Generate workspace — statics, video scripts, and briefs share one shell while
+// retaining their existing API flows.
 import { useEffect, useMemo, useState } from "react";
 import PropTypes from "prop-types";
-import { Box, ClipboardList, FileText, Flame, Images, Loader2, RefreshCw, Sparkles, ThumbsDown, ThumbsUp } from "lucide-react";
+import { Box, ClipboardList, FileText, Flame, Loader2, Sparkles, ThumbsDown, ThumbsUp } from "lucide-react";
 import { creativeApi } from "@/lib/creativeApi";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ErrorBanner } from "../ui";
@@ -27,19 +27,48 @@ const MODES = [
   { key: "statics", label: "Statics" },
   { key: "scripts", label: "Scripts" },
   { key: "briefs", label: "Briefs" },
-  { key: "gallery", label: "Gallery" },
 ];
 
+const HISTORY_LIMIT = 20;
+const historyKey = (productId, type) => `creative-strategy:generate-history:${productId}:${type}`;
+
+function readHistory(productId, type) {
+  if (!productId || typeof window === "undefined") return [];
+  try {
+    const value = JSON.parse(window.localStorage.getItem(historyKey(productId, type)) || "[]");
+    return Array.isArray(value) ? value : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveHistory(productId, type, batches) {
+  const next = batches.slice(0, HISTORY_LIMIT);
+  if (!productId || typeof window === "undefined") return next;
+  try {
+    window.localStorage.setItem(historyKey(productId, type), JSON.stringify(next));
+  } catch {
+    // A full or unavailable local store should not block generation results.
+  }
+  return next;
+}
+
+function createHistoryBatch(payload) {
+  return {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    createdAt: new Date().toISOString(),
+    ...payload,
+  };
+}
+
 export default function GenerateView({ ctx }) {
-  const {
-    selectedProductId, renderHeaderActions,
-  } = ctx;
+  const { selectedProductId } = ctx;
   const [mode, setMode] = useState("statics");
   const [formats, setFormats] = useState([]);
   const [formatsLoading, setFormatsLoading] = useState(true);
   const [items, setItems] = useState([]);
   const [err, setErr] = useState(null);
-  const [galleryLoading, setGalleryLoading] = useState(false);
+  const [generatedLoading, setGeneratedLoading] = useState(false);
 
   const [formatSlug, setFormatSlug] = useState("");
   const [creativityMode, setCreativityMode] = useState("inspired");
@@ -51,14 +80,14 @@ export default function GenerateView({ ctx }) {
 
   const load = async (productId) => {
     if (!productId) { setItems([]); return; }
-    setGalleryLoading(true);
+    setGeneratedLoading(true);
     try {
       const response = await creativeApi.getGenerated(productId);
       setItems(response.items || []);
     } catch (error) {
       setErr(error.message);
     } finally {
-      setGalleryLoading(false);
+      setGeneratedLoading(false);
     }
   };
 
@@ -131,7 +160,7 @@ export default function GenerateView({ ctx }) {
 
   return (
     <div className="cs-generate-view">
-      {renderHeaderActions(
+      <div className="cs-generate-tabs-row">
         <div className="cs-generate-switcher" aria-label="Generate mode">
           {MODES.map((item) => (
             <button
@@ -145,7 +174,7 @@ export default function GenerateView({ ctx }) {
             </button>
           ))}
         </div>
-      )}
+      </div>
 
       {mode === "statics" && (
         <GenerateWorkspace
@@ -200,45 +229,20 @@ export default function GenerateView({ ctx }) {
           <ErrorBanner message={err} />
           {!selectedProductId ? (
             <WorkspaceEmpty icon={Box} title="Select a product" hint="Choose a brand and product above to configure and generate static ads." />
-          ) : formatsLoading || (galleryLoading && imageItems.length === 0) ? (
+          ) : formatsLoading || (generatedLoading && imageItems.length === 0) ? (
             <GenerateLoading label={formatsLoading ? "Loading generation options…" : "Loading previous images…"} />
           ) : generationActive ? (
             <GenerateLoading label="Generating static variations…" />
           ) : imageItems.length === 0 ? (
             <WorkspaceEmpty icon={Flame} title="No generated ads yet" hint="Choose your settings in the sidebar and generate the first variations." />
           ) : (
-            <GenerationGrid items={imageItems.slice(0, Math.max(variationCount, 4))} rate={rate} />
+            <GenerationGrid items={imageItems} rate={rate} />
           )}
         </GenerateWorkspace>
       )}
 
       {mode === "scripts" && <ScriptsPanel productId={selectedProductId} />}
       {mode === "briefs" && <BriefPanel productId={selectedProductId} />}
-      {mode === "gallery" && (
-        <GenerateWorkspace
-          sidebar={(
-            <>
-              <div className="rounded-2xl border border-[#6c3403]/25 bg-[#ffe9d6] p-4 text-sm font-medium text-[#6c3403]">
-                {galleryLoading ? "Loading saved images…" : `${imageItems.length} saved image${imageItems.length === 1 ? "" : "s"}`}
-              </div>
-              <button type="button" onClick={() => load(selectedProductId)} disabled={!selectedProductId || galleryLoading} className="cs-primary-button mt-auto w-full">
-                <RefreshCw className={`h-4 w-4 ${galleryLoading ? "animate-spin" : ""}`} /> Refresh Gallery
-              </button>
-            </>
-          )}
-        >
-          <ErrorBanner message={err} />
-          {!selectedProductId ? (
-            <WorkspaceEmpty icon={Box} title="Select a product" hint="The gallery is scoped to the selected product." />
-          ) : galleryLoading && imageItems.length === 0 ? (
-            <WorkspaceEmpty icon={RefreshCw} title="Loading gallery" hint="Fetching generated images from the database." />
-          ) : imageItems.length === 0 ? (
-            <WorkspaceEmpty icon={Images} title="No images in this gallery" hint="Generate statics and they will appear here automatically." />
-          ) : (
-            <GenerationGrid items={imageItems} rate={rate} gallery />
-          )}
-        </GenerateWorkspace>
-      )}
     </div>
   );
 }
@@ -250,11 +254,11 @@ function ScriptsPanel({ productId }) {
   const [count, setCount] = useState(3);
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
-  const [items, setItems] = useState([]);
+  const [batches, setBatches] = useState([]);
   const [err, setErr] = useState(null);
 
   useEffect(() => {
-    setItems([]);
+    setBatches(readHistory(productId, "scripts"));
     if (!productId) { setPersonas([]); setPersonasLoading(false); return; }
     setPersonasLoading(true);
     creativeApi.getResearch(productId)
@@ -268,7 +272,7 @@ function ScriptsPanel({ productId }) {
 
   const run = async () => {
     if (!productId) return;
-    setErr(null); setBusy(true); setItems([]);
+    setErr(null); setBusy(true);
     try {
       const response = await creativeApi.generateVideoScripts({
         productId,
@@ -276,7 +280,8 @@ function ScriptsPanel({ productId }) {
         selectedAvatar: avatar || undefined,
         notes: notes || undefined,
       });
-      setItems(response.items || []);
+      const batch = createHistoryBatch({ items: response.items || [] });
+      setBatches((current) => saveHistory(productId, "scripts", [batch, ...current]));
     } catch (error) {
       setErr(error.message);
     } finally {
@@ -289,15 +294,7 @@ function ScriptsPanel({ productId }) {
       sidebar={(
         <>
           <div className="space-y-4">
-            <div className="rounded-2xl border border-[#6c3403]/20 bg-[#fffaf4] p-4">
-              <div className="flex items-start gap-3">
-                <FileText className="mt-0.5 h-5 w-5 shrink-0 text-[#6c3403]" />
-                <div>
-                  <p className="text-sm font-semibold text-[#3b170b]">Video scripts</p>
-                  <p className="mt-1 text-xs leading-5 text-[#6d605a]">Generates the requested number of concept-led Meta video scripts, each with three hook options.</p>
-                </div>
-              </div>
-            </div>
+            <p className="cs-generate-sidebar-description">Generates the requested number of concept-led Meta video scripts, each with three hook options.</p>
             <SidebarNumber label="Count" value={count} min={1} max={8} onChange={setCount} />
             {personasLoading ? (
               <SidebarLoading label="Loading personas…" />
@@ -328,34 +325,40 @@ function ScriptsPanel({ productId }) {
         <WorkspaceEmpty icon={Box} title="Select a product" hint="Choose a product above before generating a video script." />
       ) : busy ? (
         <GenerateLoading label={`Writing ${count} video script${count === 1 ? "" : "s"}…`} />
-      ) : items.length === 0 ? (
+      ) : batches.length === 0 ? (
         <WorkspaceEmpty icon={FileText} title="Video script generation" hint="Generate a concept-led video ad script with three opening hooks." />
       ) : (
-        <div className="space-y-7">
-          {items.map((item, itemIndex) => {
-            const concept = item.concept;
-            const brief = item.brief;
-            return (
-              <section key={`${concept?.concept_name || "script"}-${itemIndex}`} className="space-y-4">
-                {items.length > 1 && <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#8a746c]">Video Script {itemIndex + 1}</p>}
-                {concept && (
-                  <div className="cs-generate-result space-y-2">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-semibold">{concept.concept_name}</span>
-                      <Tag>video</Tag>
-                      {concept.persona_label && <Tag>{concept.persona_label}</Tag>}
-                      {concept.awareness_stage && <Tag>{concept.awareness_stage}</Tag>}
-                    </div>
-                    {concept.hypothesis && <p><strong>Hypothesis:</strong> {concept.hypothesis}</p>}
-                    {concept.angle && <p><strong>Angle:</strong> {concept.angle}</p>}
-                    {concept.concept_direction && <p><strong>Direction:</strong> {concept.concept_direction}</p>}
-                  </div>
-                )}
-                {brief?.hooks?.length > 0 && <ResultSection title="Hooks"><ul className="list-disc space-y-1 pl-5">{brief.hooks.map((hook, index) => <li key={index}>{hook}</li>)}</ul></ResultSection>}
-                {brief?.script && <ResultSection title="Video Script"><pre className="whitespace-pre-wrap font-sans">{brief.script}</pre></ResultSection>}
-              </section>
-            );
-          })}
+        <div className="space-y-5">
+          {batches.map((batch, batchIndex) => (
+            <GenerationBatch key={batch.id} createdAt={batch.createdAt} isLatest={batchIndex === 0}>
+              <div className="space-y-7">
+                {(batch.items || []).map((item, itemIndex) => {
+                  const concept = item.concept;
+                  const brief = item.brief;
+                  return (
+                    <section key={`${concept?.concept_name || "script"}-${itemIndex}`} className="space-y-4">
+                      {(batch.items || []).length > 1 && <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#8a746c]">Video Script {itemIndex + 1}</p>}
+                      {concept && (
+                        <div className="cs-generate-result space-y-2">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-semibold">{concept.concept_name}</span>
+                            <Tag>video</Tag>
+                            {concept.persona_label && <Tag>{concept.persona_label}</Tag>}
+                            {concept.awareness_stage && <Tag>{concept.awareness_stage}</Tag>}
+                          </div>
+                          {concept.hypothesis && <p><strong>Hypothesis:</strong> {concept.hypothesis}</p>}
+                          {concept.angle && <p><strong>Angle:</strong> {concept.angle}</p>}
+                          {concept.concept_direction && <p><strong>Direction:</strong> {concept.concept_direction}</p>}
+                        </div>
+                      )}
+                      {brief?.hooks?.length > 0 && <ResultSection title="Hooks"><ul className="list-disc space-y-1 pl-5">{brief.hooks.map((hook, index) => <li key={index}>{hook}</li>)}</ul></ResultSection>}
+                      {brief?.script && <ResultSection title="Video Script"><pre className="whitespace-pre-wrap font-sans">{brief.script}</pre></ResultSection>}
+                    </section>
+                  );
+                })}
+              </div>
+            </GenerationBatch>
+          ))}
         </div>
       )}
     </GenerateWorkspace>
@@ -372,14 +375,20 @@ function BriefPanel({ productId }) {
   const [format, setFormat] = useState("");
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
-  const [data, setData] = useState(null);
+  const [batches, setBatches] = useState([]);
   const [err, setErr] = useState(null);
+
+  useEffect(() => {
+    setBatches(readHistory(productId, "briefs"));
+  }, [productId]);
 
   const run = async () => {
     if (!productId) return;
-    setErr(null); setBusy(true); setData(null);
+    setErr(null); setBusy(true);
     try {
-      setData(await creativeApi.generateConceptBrief({ productId, format: format || undefined, notes: notes || undefined }));
+      const data = await creativeApi.generateConceptBrief({ productId, format: format || undefined, notes: notes || undefined });
+      const batch = createHistoryBatch({ data });
+      setBatches((current) => saveHistory(productId, "briefs", [batch, ...current]));
     } catch (error) {
       setErr(error.message);
     } finally {
@@ -387,14 +396,12 @@ function BriefPanel({ productId }) {
     }
   };
 
-  const concept = data?.concept;
-  const brief = data?.brief;
-
   return (
     <GenerateWorkspace
       sidebar={(
         <>
           <div className="space-y-4">
+            <p className="cs-generate-sidebar-description">Builds a concept-led video script or static creative brief with hooks, headlines, and production direction.</p>
             <SidebarSelect label="Format" value={format || "auto"} onChange={(value) => setFormat(value === "auto" ? "" : value)} options={BRIEF_FORMATS} />
             <SidebarInput label="Notes (optional)" type="textarea" value={notes} onChange={setNotes} placeholder="e.g. lean into the new bundle offer" />
           </div>
@@ -409,27 +416,37 @@ function BriefPanel({ productId }) {
         <WorkspaceEmpty icon={Box} title="Select a product" hint="Choose a product above before generating a brief." />
       ) : busy ? (
         <GenerateLoading label="Building the creative brief…" />
-      ) : !brief ? (
+      ) : batches.length === 0 ? (
         <WorkspaceEmpty icon={ClipboardList} title="No brief generated yet" hint="Choose a format and add optional direction in the sidebar." />
       ) : (
-        <div className="space-y-4">
-          {concept && (
-            <div className="cs-generate-result space-y-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="font-semibold">{concept.concept_name}</span>
-                <Tag>{brief.format}</Tag>
-                {concept.persona_label && <Tag>{concept.persona_label}</Tag>}
-                {concept.awareness_stage && <Tag>{concept.awareness_stage}</Tag>}
-              </div>
-              {concept.hypothesis && <p><strong>Hypothesis:</strong> {concept.hypothesis}</p>}
-              {concept.angle && <p><strong>Angle:</strong> {concept.angle}</p>}
-              {concept.concept_direction && <p><strong>Direction:</strong> {concept.concept_direction}</p>}
-            </div>
-          )}
-          {brief.hooks?.length > 0 && <ResultSection title="Hooks"><ul className="list-disc space-y-1 pl-5">{brief.hooks.map((hook, index) => <li key={index}>{hook}</li>)}</ul></ResultSection>}
-          {brief.headlines?.length > 0 && <ResultSection title="Headlines"><ul className="list-disc space-y-1 pl-5">{brief.headlines.map((headline, index) => <li key={index}>{headline}</li>)}</ul></ResultSection>}
-          {brief.script && <ResultSection title="Script"><pre className="whitespace-pre-wrap font-sans">{brief.script}</pre></ResultSection>}
-          {brief.static_brief && <ResultSection title="Static Brief"><pre className="whitespace-pre-wrap font-sans">{brief.static_brief}</pre></ResultSection>}
+        <div className="space-y-5">
+          {batches.map((batch, batchIndex) => {
+            const concept = batch.data?.concept;
+            const brief = batch.data?.brief;
+            return (
+              <GenerationBatch key={batch.id} createdAt={batch.createdAt} isLatest={batchIndex === 0}>
+                <div className="space-y-4">
+                  {concept && (
+                    <div className="cs-generate-result space-y-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-semibold">{concept.concept_name}</span>
+                        {brief?.format && <Tag>{brief.format}</Tag>}
+                        {concept.persona_label && <Tag>{concept.persona_label}</Tag>}
+                        {concept.awareness_stage && <Tag>{concept.awareness_stage}</Tag>}
+                      </div>
+                      {concept.hypothesis && <p><strong>Hypothesis:</strong> {concept.hypothesis}</p>}
+                      {concept.angle && <p><strong>Angle:</strong> {concept.angle}</p>}
+                      {concept.concept_direction && <p><strong>Direction:</strong> {concept.concept_direction}</p>}
+                    </div>
+                  )}
+                  {brief?.hooks?.length > 0 && <ResultSection title="Hooks"><ul className="list-disc space-y-1 pl-5">{brief.hooks.map((hook, index) => <li key={index}>{hook}</li>)}</ul></ResultSection>}
+                  {brief?.headlines?.length > 0 && <ResultSection title="Headlines"><ul className="list-disc space-y-1 pl-5">{brief.headlines.map((headline, index) => <li key={index}>{headline}</li>)}</ul></ResultSection>}
+                  {brief?.script && <ResultSection title="Script"><pre className="whitespace-pre-wrap font-sans">{brief.script}</pre></ResultSection>}
+                  {brief?.static_brief && <ResultSection title="Static Brief"><pre className="whitespace-pre-wrap font-sans">{brief.static_brief}</pre></ResultSection>}
+                </div>
+              </GenerationBatch>
+            );
+          })}
         </div>
       )}
     </GenerateWorkspace>
@@ -527,9 +544,9 @@ function Field({ label, children }) {
   );
 }
 
-function GenerationGrid({ items, rate, gallery = false }) {
+function GenerationGrid({ items, rate }) {
   return (
-    <div className={`cs-generate-gallery ${gallery ? "is-gallery" : ""}`}>
+    <div className="cs-generate-gallery">
       {items.map((item) => <GeneratedImage key={item.id || item.imageUrl} item={item} rate={rate} />)}
     </div>
   );
@@ -563,6 +580,22 @@ function ResultSection({ title, children }) {
   return <div className="cs-generate-result"><p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#6c3403]">{title}</p>{children}</div>;
 }
 
+function GenerationBatch({ createdAt, isLatest, children }) {
+  const date = new Date(createdAt);
+  const timestamp = Number.isNaN(date.getTime())
+    ? "Time unavailable"
+    : date.toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" });
+  return (
+    <section className={`cs-generate-history-batch ${isLatest ? "is-latest" : "is-past"}`}>
+      <header className="cs-generate-history-batch__header">
+        <span>{isLatest ? "Latest generation" : "Past generation"}</span>
+        <time dateTime={createdAt}>{timestamp}</time>
+      </header>
+      <div className="cs-generate-history-batch__content">{children}</div>
+    </section>
+  );
+}
+
 function Tag({ children }) {
   return <span className="rounded-full border border-[#6c3403]/20 bg-[#ffe9d6] px-2 py-0.5 text-[10px] font-medium text-[#6c3403]">{children}</span>;
 }
@@ -576,9 +609,10 @@ SidebarNumber.propTypes = { label: PropTypes.string.isRequired, value: PropTypes
 SidebarLoading.propTypes = { label: PropTypes.string.isRequired };
 SidebarInput.propTypes = { label: PropTypes.string.isRequired, type: PropTypes.string, value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired, onChange: PropTypes.func.isRequired, placeholder: PropTypes.string };
 Field.propTypes = { label: PropTypes.string.isRequired, children: PropTypes.node.isRequired };
-GenerationGrid.propTypes = { items: PropTypes.array.isRequired, rate: PropTypes.func.isRequired, gallery: PropTypes.bool };
+GenerationGrid.propTypes = { items: PropTypes.array.isRequired, rate: PropTypes.func.isRequired };
 GeneratedImage.propTypes = { item: PropTypes.object.isRequired, rate: PropTypes.func.isRequired };
 ResultSection.propTypes = { title: PropTypes.string.isRequired, children: PropTypes.node.isRequired };
+GenerationBatch.propTypes = { createdAt: PropTypes.string.isRequired, isLatest: PropTypes.bool.isRequired, children: PropTypes.node.isRequired };
 Tag.propTypes = { children: PropTypes.node };
 ScriptsPanel.propTypes = { productId: PropTypes.string };
 BriefPanel.propTypes = { productId: PropTypes.string };

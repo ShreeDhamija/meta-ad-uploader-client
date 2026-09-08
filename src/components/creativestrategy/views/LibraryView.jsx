@@ -77,7 +77,12 @@ export default function LibraryView({ ctx }) {
   };
 
   const grouped = useMemo(() => TYPES.reduce((result, type) => {
-    result[type.key] = items.filter((item) => item.itemType === type.key);
+    result[type.key] = items
+      .filter((item) => item.itemType === type.key)
+      .sort((a, b) => {
+        const statusOrder = { approved: 0, draft: 1, archived: 2 };
+        return (statusOrder[a.status] ?? 1) - (statusOrder[b.status] ?? 1);
+      });
     return result;
   }, {}), [items]);
 
@@ -94,8 +99,6 @@ export default function LibraryView({ ctx }) {
           </button>
         </div>
       )}
-      <p className="text-xs font-normal text-neutral-400">Copy generated from personas and analyzed ads</p>
-
       <ErrorBanner message={err} />
 
       {!selectedProductId ? (
@@ -138,8 +141,7 @@ export default function LibraryView({ ctx }) {
 }
 
 function LibraryCard({ item, updating, setStatus }) {
-  const metadata = (item.tags || []).filter((tag) =>
-    tag.startsWith("grade:") || tag.startsWith("stage:") || tag.startsWith("persona:"));
+  const metadata = (item.tags || []).filter((tag) => tag.startsWith("persona:"));
   const approving = updating === `${item.id}:approved`;
   const archiving = updating === `${item.id}:archived`;
   const resetting = updating === `${item.id}:draft`;
