@@ -229,7 +229,6 @@ export default function GenerateView({ ctx }) {
                   {[['manual', 'Manual tune'], ['strategist', 'AI Strategist']].map(([value, label]) => <button key={value} type="button" aria-pressed={generationMode === value} className={generationMode === value ? "is-active" : ""} onClick={() => setGenerationMode(value)}>{label}</button>)}
                 </div>
                 <p className="cs-generate-sidebar-description">{generationMode === "strategist" ? "AI uses your research and account insights to choose concepts, personas, formats, and copy." : "Choose your format and fine-tune the creative inputs."}</p>
-                <VisualInspiration key={selectedProductId || "none"} productId={selectedProductId} clientId={ctx.selectedBrandId} onChange={setVisualSelection} />
                 {generationMode === "manual" && (formatsLoading ? (
                   <SidebarLoading label="Loading formats…" />
                 ) : (
@@ -265,6 +264,7 @@ export default function GenerateView({ ctx }) {
                     ))}
                   </div>
                 )}
+                <VisualInspiration key={selectedProductId || "none"} productId={selectedProductId} clientId={ctx.selectedBrandId} onChange={setVisualSelection} />
               </div>
               <div className="mt-auto space-y-3 pt-5">
                 {visualSelection?.conceptReferenceIds.length > variationCount && <p className="text-xs text-amber-800">Increase variations to use all selected concept references.</p>}

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import PropTypes from "prop-types";
-import { ImagePlus } from "lucide-react";
+import { ImagePlus, Upload, Loader2 } from "lucide-react";
 import { creativeApi } from "@/lib/creativeApi";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ErrorBanner } from "../ui";
@@ -31,7 +31,13 @@ export default function VisualInspiration({ productId, clientId, onChange }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [retry, setRetry] = useState(0);
-  const [assetType, setAssetType] = useState("hero_product");
+  const fileInput = useRef(null);
+  const [dragging, setDragging] = useState(false);
+  const [scrapeUrl, setScrapeUrl] = useState("");
+  const [scrapedImages, setScrapedImages] = useState([]);
+  const [scrapedSelected, setScrapedSelected] = useState([]);
+  const [scrapeBusy, setScrapeBusy] = useState(false);
+  const [scrapeMessage, setScrapeMessage] = useState("");
   const mounted = useRef(true);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
 
@@ -75,7 +81,7 @@ export default function VisualInspiration({ productId, clientId, onChange }) {
         const dataBase64 = await readFile(file);
         let added;
         if (uploadTab === "products") {
-          const response = await creativeApi.uploadAsset(productId, { dataBase64, assetType, description: file.name });
+          const response = await creativeApi.uploadAsset(productId, { dataBase64, assetType: "hero_product", description: file.name });
           added = response.asset;
         } else {
           const response = await creativeApi.uploadInspo({ clientId, productId, dataBase64, fileName: file.name, fileType: "image", source: "static_generator" });
@@ -92,17 +98,50 @@ export default function VisualInspiration({ productId, clientId, onChange }) {
     finally { if (mounted.current) setBusy(false); }
   };
 
-  const count = Object.values(selected).reduce((total, ids) => total + ids.length, 0);
+  const scrape = async () => {
+    if (scrapeBusy || busy) return;
+    try {
+      const url = new URL(scrapeUrl.trim());
+      if (!["http:", "https:"].includes(url.protocol)) throw new Error();
+    } catch { setScrapeMessage("Enter a valid product-page URL."); return; }
+    setScrapeBusy(true); setScrapeMessage(""); setScrapedImages([]); setScrapedSelected([]);
+    try {
+      const response = await creativeApi.scrapeAssets(productId, scrapeUrl.trim());
+      if (!mounted.current) return;
+      const images = [...new Map((response.images || []).map((image) => [image.url, image])).values()];
+      setScrapedImages(images);
+      if (!images.length) setScrapeMessage("No images found on this page. Try another URL or upload a file.");
+    } catch (err) { if (mounted.current) setScrapeMessage(err.message); }
+    finally { if (mounted.current) setScrapeBusy(false); }
+  };
+
+  const saveScraped = async () => {
+    if (!scrapedSelected.length || scrapeBusy || busy) return;
+    setScrapeBusy(true); setBusy(true); setScrapeMessage("");
+    try {
+      const response = await creativeApi.saveScrapedAssets(productId, scrapedSelected, "hero_product");
+      const assets = await creativeApi.getAssets(productId);
+      if (!mounted.current) return;
+      const next = (assets.assets || []).filter((item) => item.assetType !== "reference_ad" && item.imageUrl);
+      const oldIds = new Set(sources.products.map((item) => item.id));
+      const added = next.filter((item) => !oldIds.has(item.id));
+      setSources((current) => ({ ...current, products: next }));
+      setSelected((current) => ({ ...current, products: [...current.products, ...added.map((item) => item.id)].slice(0, 4) }));
+      const failed = response.failed || [];
+      setScrapedImages((current) => current.filter((image) => !scrapedSelected.includes(image.url) || failed.includes(image.url)));
+      setScrapedSelected(failed);
+      setScrapeMessage(`${response.saved || 0} image(s) saved.${failed.length ? ` ${failed.length} could not be saved. You can retry them.` : ""}`);
+    } catch (err) { if (mounted.current) setScrapeMessage(err.message); }
+    finally { if (mounted.current) { setScrapeBusy(false); setBusy(false); } }
+  };
+
   return <>
     <button type="button" className="cs-visual-trigger" onClick={() => setOpen(true)} disabled={!productId}>
-      <ImagePlus size={16} /> Visual inspiration <span>{loading ? "…" : count}</span>
+      <ImagePlus size={16} /> Visual inspiration
     </button>
-    {!loading && count > 0 && <div className="cs-visual-preview" aria-label="Selected visual inspiration">
-      {TABS.flatMap(({ key }) => sources[key].filter((item) => selected[key].includes(item.id))).slice(0, 6).map((item) => <img key={item.id} src={item.imageUrl} alt={item.name || item.description || item.fileName || "Selected image"} />)}
-    </div>}
     {error && !open && <p className="text-xs text-red-700">Unable to load visual sources. Open Visual inspiration to retry.</p>}
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="cs-visual-dialog" overlayClassName="bg-black/40">
+      <DialogContent disableSlide className="cs-visual-dialog" overlayClassName="bg-black/40">
         <DialogHeader><DialogTitle>Visual inspiration</DialogTitle><DialogDescription>Choose the images your static generator will use.</DialogDescription></DialogHeader>
         <div className="cs-visual-tabs" role="tablist" aria-label="Visual sources">
           {TABS.map(({ key, label }) => <button key={key} type="button" role="tab" id={`visual-tab-${key}`} aria-controls={`visual-panel-${key}`} aria-selected={tab === key} onClick={() => setTab(key)} className={tab === key ? "is-active" : ""}>{label} <span>{selected[key].length}</span></button>)}
@@ -111,25 +150,46 @@ export default function VisualInspiration({ productId, clientId, onChange }) {
           <p className="text-sm text-stone-600">{HELP[tab]}</p>
           <ErrorBanner message={error} />
           {error && <button type="button" className="cs-library-action" disabled={busy} onClick={() => setRetry((value) => value + 1)}>Reload sources</button>}
-          {tab !== "examples" && <div className="cs-visual-upload">
-            {tab === "products" && <label className="text-xs">Image type <select value={assetType} onChange={(event) => setAssetType(event.target.value)} className="ml-2 rounded border p-2">
-              {[['hero_product', 'Product photo'], ['ui_screenshot', 'UI screenshot'], ['phone_mockup', 'Device mockup'], ['illustration', 'Illustration'], ['brand_mark', 'Brand mark'], ['lifestyle', 'Lifestyle']].map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-            </select></label>}
-            <label className="text-sm font-medium">{busy ? "Uploading…" : tab === "products" ? "Upload product images" : "Upload concept references"}
-              <input type="file" accept="image/png,image/jpeg,image/webp" multiple disabled={busy || loading} onChange={(event) => { upload(Array.from(event.target.files || [])); event.target.value = ""; }} className="mt-2 block w-full text-xs" />
-            </label><p className="text-xs text-stone-500">PNG, JPG, WebP · up to 6 MB each · saved for future generations</p>
+          {tab !== "examples" && <>
+            <input ref={fileInput} type="file" accept="image/png,image/jpeg,image/webp" multiple hidden disabled={busy || loading} onChange={(event) => { upload(Array.from(event.target.files || [])); event.target.value = ""; }} />
+            <button type="button" className={`cs-visual-upload ${dragging ? "is-dragging" : ""}`} disabled={busy || loading}
+              onClick={() => fileInput.current?.click()}
+              onDragOver={(event) => { event.preventDefault(); if (!busy && !loading) setDragging(true); }}
+              onDragLeave={() => setDragging(false)}
+              onDrop={(event) => { event.preventDefault(); setDragging(false); if (!busy && !loading) upload(Array.from(event.dataTransfer.files)); }}>
+              {busy ? <Loader2 size={28} className="animate-spin" /> : <Upload size={28} />}
+              <span>{busy ? "Uploading…" : "Drag & drop files here, or click to select files"}</span>
+            </button>
+          </>}
+          {tab === "products" && <div className="cs-visual-scraper">
+            <label htmlFor="visual-product-url">Import from a product page</label>
+            <div className="cs-visual-scraper-row">
+              <input id="visual-product-url" type="url" placeholder="Paste a product-page URL" value={scrapeUrl} disabled={scrapeBusy || busy} onChange={(event) => setScrapeUrl(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); scrape(); } }} />
+              <button type="button" className="cs-library-action" disabled={scrapeBusy || busy || !scrapeUrl.trim()} onClick={scrape}>{scrapeBusy ? "Working…" : "Fetch images"}</button>
+            </div>
+            {scrapeMessage && <p role="status" className="text-xs text-stone-600">{scrapeMessage}</p>}
+            {scrapedImages.length > 0 && <>
+              <div className="cs-visual-grid">{scrapedImages.map((image) => <label key={image.url} className={`cs-visual-card ${scrapedSelected.includes(image.url) ? "is-selected" : ""}`}>
+                <img src={image.url} alt={image.alt || "Product page image"} loading="lazy" referrerPolicy="no-referrer" />
+                <input type="checkbox" className="cs-visual-checkbox" aria-label={`Select ${image.alt || "product page image"}`} checked={scrapedSelected.includes(image.url)} disabled={scrapeBusy || busy} onChange={() => setScrapedSelected((current) => current.includes(image.url) ? current.filter((url) => url !== image.url) : [...current, image.url])} />
+              </label>)}</div>
+              <button type="button" className="cs-library-action self-start" disabled={scrapeBusy || busy || !scrapedSelected.length} onClick={saveScraped}>Save selected images ({scrapedSelected.length})</button>
+            </>}
           </div>}
-          {loading ? <p className="py-8 text-center text-sm">Loading visual sources…</p> : sources[tab].length === 0 ? <p className="py-8 text-center text-sm text-stone-500">{tab === "examples" ? "No analyzed image ads yet. Run Insights analysis for this brand to add examples." : "No images yet. Upload images to get started."}</p> : <div className="cs-visual-grid">
+          {loading ? <p className="py-8 text-center text-sm">Loading visual sources…</p> : sources[tab].length === 0 ? (tab === "examples" ? <p className="py-8 text-center text-sm text-stone-500">No analyzed image ads yet. Run Insights analysis for this brand to add examples.</p> : null) : <div className="cs-visual-grid">
             {sources[tab].map((item) => {
               const checked = selected[tab].includes(item.id);
               const name = item.name || item.description || item.fileName || "Untitled image";
-              return <button key={item.id} type="button" aria-pressed={checked} disabled={!checked && selected[tab].length >= TABS.find((entry) => entry.key === tab).limit} onClick={() => toggle(item.id)} className={`cs-visual-card ${checked ? "is-selected" : ""}`}>
-                <img src={item.imageUrl} alt={name} loading="lazy" /><span className="cs-visual-check">{checked ? "✓" : "+"}</span><span className="cs-visual-name" title={name}>{name}</span>
-              </button>;
+              const disabled = !checked && selected[tab].length >= TABS.find((entry) => entry.key === tab).limit;
+              return <label key={item.id} className={`cs-visual-card ${checked ? "is-selected" : ""} ${disabled ? "is-disabled" : ""}`}>
+                <img src={item.imageUrl} alt={name} loading="lazy" />
+                <input type="checkbox" className="cs-visual-checkbox" aria-label={`Select ${name}`} checked={checked} disabled={disabled} onChange={() => toggle(item.id)} />
+                <span className="cs-visual-name" title={name}>{name}</span>
+              </label>;
             })}
           </div>}
         </div>
-        <div className="flex items-center justify-between border-t pt-4 text-xs text-stone-500"><span>{selected[tab].length} / {TABS.find((item) => item.key === tab).limit} selected</span><button type="button" className="cs-primary-button" onClick={() => setOpen(false)}>Done</button></div>
+        <div className="cs-visual-footer"><span>{selected[tab].length} / {TABS.find((item) => item.key === tab).limit} selected</span><button type="button" className="cs-primary-button cs-visual-done" onClick={() => setOpen(false)}>Done</button></div>
       </DialogContent>
     </Dialog>
   </>;
