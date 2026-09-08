@@ -1,6 +1,6 @@
 // Weekly Strategy — generate, filter, review, and brief strategist concepts.
 // The existing weekly APIs are retained behind the shared Creative Strategy UI.
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import PropTypes from "prop-types";
 import {
   CircleCheck, CircleX, ClipboardList, Loader2, MousePointerClick,
@@ -29,6 +29,9 @@ export default function WeeklyView({ ctx }) {
   const {
     selectedBrandId, selectedProductId, renderHeaderActions,
   } = ctx;
+  const currentBrand = useRef(selectedBrandId);
+  currentBrand.current = selectedBrandId;
+  const loadRequest = useRef(0);
   const [ideas, setIdeas] = useState([]);
   const [run, setRun] = useState(null);
   const [err, setErr] = useState(null);
@@ -41,21 +44,26 @@ export default function WeeklyView({ ctx }) {
   const [updating, setUpdating] = useState(null);
 
   const load = useCallback(async (brandId, { silent = false } = {}) => {
+    const request = ++loadRequest.current;
     if (!brandId) { setIdeas([]); setRun(null); return; }
     if (!silent) setLoading(true);
     try {
       const response = await creativeApi.getWeekly(brandId);
+      if (currentBrand.current !== brandId || request !== loadRequest.current) return;
       setIdeas(response.ideas || []);
       setRun(response.latestRun || null);
     } catch (error) {
-      setErr(error.message);
+      if (currentBrand.current === brandId && request === loadRequest.current) setErr(error.message);
     } finally {
-      if (!silent) setLoading(false);
+      if (!silent && currentBrand.current === brandId) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
     setBriefs({});
+    setIdeas([]);
+    setRun(null);
+    setErr(null);
     if (selectedBrandId) load(selectedBrandId);
     else { setIdeas([]); setRun(null); }
   }, [load, selectedBrandId]);
@@ -113,6 +121,7 @@ export default function WeeklyView({ ctx }) {
     setBriefing(id);
     try {
       const { brief } = await creativeApi.generateBrief(id, selectedProductId || undefined);
+      if (currentBrand.current !== selectedBrandId) return;
       setBriefs((current) => ({ ...current, [id]: brief }));
     } catch (error) {
       setErr(error.message);
@@ -152,47 +161,41 @@ export default function WeeklyView({ ctx }) {
     shown.filter((_, index) => index % 2 === 0),
     shown.filter((_, index) => index % 2 === 1),
   ];
-  const summary = run?.summary;
+  const lastRunAt = run?.startedAt || run?.completedAt;
+  const lastRunDate = lastRunAt ? new Date(lastRunAt) : null;
+  const lastRunLabel = lastRunDate && !Number.isNaN(lastRunDate.getTime()) ? lastRunDate.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) : "Not run yet";
   const filtersActive = Object.values(filters).some((value) => value !== "all");
   const weeklyPhase = weeklyJob?.progress?.phase;
-  const readySections = (summary ? 1 : 0) + (ideas.length > 0 ? 1 : 0);
+
 
   return (
     <div className="space-y-5">
       {renderHeaderActions(
         <div className="flex flex-wrap items-center gap-3">
           <JobBadge job={weeklyJob} />
+          <div className="flex flex-col items-end gap-2">
           <button type="button" onClick={runStrategy} disabled={!selectedBrandId || jobActive} className="cs-primary-button">
             {jobActive && <Loader2 className="h-4 w-4 animate-spin" />}
             {jobActive ? "Running Strategy…" : "Run Strategy"}
           </button>
+          <p className="text-[11px] text-neutral-500">Last run: {lastRunAt ? <time dateTime={lastRunAt}>{lastRunLabel}</time> : lastRunLabel}</p>
+          </div>
         </div>
       )}
       <p className="text-xs font-normal text-neutral-400">Needs analyzed ads and completed research</p>
 
       <ErrorBanner message={err} />
-      <PartialResultsNotice active={Boolean(jobActive)} completed={readySections} total={2} label="strategy sections" />
+      <PartialResultsNotice active={Boolean(jobActive)} completed={0} total={1} label="concept board" />
 
       {!selectedBrandId ? (
         <EmptyState icon={MousePointerClick} title="No account selected" hint="Select an account above to run the weekly strategist." className="min-h-[420px]" />
       ) : (
         <>
-          {summary ? (
-            <section className="cs-weekly-summary">
-              <div className="cs-weekly-summary__pills">
-                <span>{ideas.length} New Concepts Generated</span>
-                <span>{summary.signals?.top_ads_analyzed ?? "—"} Top Ads Analyzed</span>
-              </div>
-              <h2>Why These Ideas</h2>
-              <p>{summary.signals?.concept_distribution_hint || "Concepts are balanced across current performance signals, audience awareness, and creative opportunity."}</p>
-            </section>
-          ) : <ProgressiveSection title="Strategy rationale" description="Why these concepts, based on performance signals and coverage gaps." active={loading || weeklyPhase === "building_briefing" || weeklyPhase === "running_strategist"} />}
-
           {ideas.length === 0 ? (
             <ProgressiveSection
               title="Concept board"
               description={jobActive ? "Concepts will appear here as soon as the strategist finishes computing them." : "Run Strategy to generate concepts from analyzed ads and research."}
-              active={weeklyPhase === "running_strategist" || weeklyPhase === "saving_concepts"}
+              active={loading || weeklyPhase === "running_strategist" || weeklyPhase === "saving_concepts"}
               cards={6}
             />
           ) : (
@@ -231,17 +234,16 @@ export default function WeeklyView({ ctx }) {
                 <div className="cs-weekly-grid">
                   {conceptColumns.map((column, columnIndex) => (
                     <div key={columnIndex} className="cs-weekly-grid__column">
-                      {column.map((idea, cardIndex) => (
+                      {column.map((idea) => (
                         <ConceptCard
                           key={idea.id}
                           idea={idea}
-                          brief={briefs[idea.id]}
+                          brief={briefs[idea.id] || idea.sourceEvidence?.brief_copy}
                           briefing={briefing}
                           updating={updating}
                           approve={approve}
                           updateStatus={updateStatus}
                           makeBrief={makeBrief}
-                          orange={(cardIndex + columnIndex) % 2 === 1}
                         />
                       ))}
                     </div>
@@ -268,7 +270,7 @@ function SegmentedFilter({ items, value, onChange, counts, compact = false }) {
   );
 }
 
-function ConceptCard({ idea, brief, briefing, updating, approve, updateStatus, makeBrief, orange }) {
+function ConceptCard({ idea, brief, briefing, updating, approve, updateStatus, makeBrief }) {
   const approved = idea.status === "approved" || idea.status === "sent_to_inspo";
   const rejected = idea.status === "rejected";
   const approving = updating === `${idea.id}:approved`;
@@ -276,12 +278,12 @@ function ConceptCard({ idea, brief, briefing, updating, approve, updateStatus, m
   const resetting = updating === `${idea.id}:pending`;
 
   return (
-    <article className={`cs-weekly-card ${orange ? "is-orange" : ""}`}>
+    <article className="cs-weekly-card">
       <header className="cs-weekly-card__header">
         <h3>{idea.title}</h3>
         <div className="mt-2 flex flex-wrap items-center gap-2">
-          <span className="cs-weekly-pill is-tier">{formatTier(idea.tier)}</span>
-          {approved && <span className="cs-weekly-pill is-status">Approved</span>}
+          <span className={`cs-weekly-pill is-tier tier-${idea.tier}`}>{formatTier(idea.tier)}</span>
+          {approved && <span className="cs-weekly-pill is-status is-approved">Approved</span>}
           {rejected && <span className="cs-weekly-pill is-status">Dismissed</span>}
         </div>
       </header>
@@ -299,9 +301,9 @@ function ConceptCard({ idea, brief, briefing, updating, approve, updateStatus, m
         </div>
 
         <div className="mt-5 flex flex-wrap items-center gap-3">
-          <button type="button" onClick={() => makeBrief(idea.id)} disabled={briefing === idea.id} className="cs-weekly-brief-button">
+          <button type="button" onClick={() => makeBrief(idea.id)} disabled={Boolean(briefing)} className="cs-weekly-brief-button">
             {briefing === idea.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <ClipboardList className="h-4 w-4" />}
-            {briefing === idea.id ? "Writing…" : idea.format === "static" ? "Generate Brief" : "Generate Script"}
+            {briefing === idea.id ? "Writing…" : idea.format === "static" ? (brief ? "Regenerate Brief" : "Generate Brief") : (brief ? "Regenerate Script" : "Generate Script")}
           </button>
           <span className="flex-1" />
           {!approved && (
@@ -356,7 +358,6 @@ ConceptCard.propTypes = {
   approve: PropTypes.func.isRequired,
   updateStatus: PropTypes.func.isRequired,
   makeBrief: PropTypes.func.isRequired,
-  orange: PropTypes.bool,
 };
 Brief.propTypes = { brief: PropTypes.object.isRequired };
 BriefSection.propTypes = { title: PropTypes.string.isRequired, children: PropTypes.node.isRequired };
