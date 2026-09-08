@@ -3096,3 +3096,27 @@ html body #root .creative-strategy button.cs-intel-ad-card.is-active {
     display: none;
   }
 }
+
+/* Static generator source picker */
+.cs-strategy-toggle { display: flex; gap: 3px; padding: 4px; border-radius: 10px; background: #f2e9e2; }
+.cs-strategy-toggle button { flex: 1; padding: 8px 3px; border-radius: 7px; font-size: 12px; color: #836a59; }
+.cs-strategy-toggle button.is-active { background: white; color: #6c3403; box-shadow: 0 1px 4px #6c340315; font-weight: 600; }
+.cs-visual-trigger { display: flex; align-items: center; gap: 8px; width: 100%; padding: 11px; border: 1px solid #dfcbbc; border-radius: 9px; color: #6c3403; font-size: 12px; font-weight: 600; background: #fffaf6; }
+.cs-visual-trigger span { margin-left: auto; font-size: 11px; background: #f2e5d9; padding: 1px 6px; border-radius: 6px; }
+.cs-visual-preview { display: flex; gap: 5px; flex-wrap: wrap; }
+.cs-visual-preview img { width: 33px; height: 38px; border-radius: 5px; object-fit: cover; border: 1px solid #eadbce; }
+.cs-visual-dialog { width: calc(100vw - 32px); max-width: 820px; max-height: 90dvh; display: flex; flex-direction: column; background: #fffcfa; border: 1px solid #e9ddd4; border-radius: 16px; }
+.cs-visual-tabs { display: flex; gap: 4px; padding: 4px; border-radius: 10px; background: #f3ece7; }
+.cs-visual-tabs button { flex: 1; padding: 10px 4px; font-size: 12px; border-radius: 7px; color: #785f50; }
+.cs-visual-tabs button.is-active { background: white; color: #6c3403; box-shadow: 0 1px 3px #6c340312; }
+.cs-visual-tabs span { margin-left: 4px; font-size: 10px; }
+.cs-visual-panel { overflow-y: auto; min-height: 180px; padding: 3px; display: flex; flex-direction: column; gap: 16px; }
+.cs-visual-upload { display: grid; gap: 12px; padding: 16px; border: 1px dashed #d8bcaa; border-radius: 10px; background: #fff7f0; }
+.cs-visual-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 12px; }
+.cs-visual-card { position: relative; border: 2px solid #e9e0d9; border-radius: 10px; background: white; overflow: hidden; text-align: left; }
+.cs-visual-card.is-selected { border-color: #a85518; }
+.cs-visual-card:disabled { opacity: .45; }
+.cs-visual-card img { width: 100%; height: 135px; object-fit: contain; background: #f6f3f0; }
+.cs-visual-check { position: absolute; right: 6px; top: 6px; width: 22px; height: 22px; text-align: center; border-radius: 50%; background: white; color: #836a59; }
+.cs-visual-card.is-selected .cs-visual-check { background: #85400d; color: white; }
+.cs-visual-name { display: block; padding: 8px; font-size: 11px; color: #6f594d; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

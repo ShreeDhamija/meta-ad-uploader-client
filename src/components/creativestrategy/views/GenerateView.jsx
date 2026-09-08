@@ -1,8 +1,9 @@
 // Generate workspace — statics, video scripts, and briefs share one shell while
 // retaining their existing API flows.
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import PropTypes from "prop-types";
 import { Box, ClipboardList, FileText, Flame, Loader2, Sparkles, ThumbsDown, ThumbsUp } from "lucide-react";
+import VisualInspiration from "./VisualInspiration";
 import { creativeApi } from "@/lib/creativeApi";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ErrorBanner } from "../ui";
@@ -29,36 +30,57 @@ const MODES = [
   { key: "briefs", label: "Briefs" },
 ];
 
-const HISTORY_LIMIT = 20;
-const historyKey = (productId, type) => `creative-strategy:generate-history:${productId}:${type}`;
+function useGenerationHistory(productId, kind) {
+  const [batches, setBatches] = useState([]);
+  const [loading, setLoading] = useState(Boolean(productId));
+  const [error, setError] = useState(null);
+  const [nextOffset, setNextOffset] = useState(null);
+  const [reload, setReload] = useState(0);
 
-function readHistory(productId, type) {
-  if (!productId || typeof window === "undefined") return [];
-  try {
-    const value = JSON.parse(window.localStorage.getItem(historyKey(productId, type)) || "[]");
-    return Array.isArray(value) ? value : [];
-  } catch {
-    return [];
-  }
-}
+  useEffect(() => {
+    let active = true;
+    setBatches([]);
+    setError(null);
+    setNextOffset(null);
+    setLoading(Boolean(productId));
+    if (productId) {
+      creativeApi.getGenerationHistory(productId, kind)
+        .then((response) => {
+          if (!active) return;
+          setBatches(response.batches || []);
+          setNextOffset(response.nextOffset);
+        })
+        .catch((err) => { if (active) setError(err.message); })
+        .finally(() => { if (active) setLoading(false); });
+    }
+    return () => { active = false; };
+  }, [productId, kind, reload]);
 
-function saveHistory(productId, type, batches) {
-  const next = batches.slice(0, HISTORY_LIMIT);
-  if (!productId || typeof window === "undefined") return next;
-  try {
-    window.localStorage.setItem(historyKey(productId, type), JSON.stringify(next));
-  } catch {
-    // A full or unavailable local store should not block generation results.
-  }
-  return next;
-}
-
-function createHistoryBatch(payload) {
-  return {
-    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    createdAt: new Date().toISOString(),
-    ...payload,
+  const loadMore = async () => {
+    if (loading || nextOffset == null) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await creativeApi.getGenerationHistory(productId, kind, nextOffset);
+      setBatches((current) => {
+        const ids = new Set(current.map((batch) => batch.id));
+        return [...current, ...(response.batches || []).filter((batch) => !ids.has(batch.id))];
+      });
+      setNextOffset(response.nextOffset);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const addBatch = (batch) => {
+    if (!batch?.id || !batch?.createdAt) throw new Error("The server did not return a saved generation.");
+    setBatches((current) => [batch, ...current.filter((item) => item.id !== batch.id)]);
+    setNextOffset((offset) => offset == null ? null : offset + 1);
+  };
+
+  return { batches, loading, error, nextOffset, loadMore, addBatch, retry: () => setReload((value) => value + 1) };
 }
 
 export default function GenerateView({ ctx }) {
@@ -69,6 +91,11 @@ export default function GenerateView({ ctx }) {
   const [items, setItems] = useState([]);
   const [err, setErr] = useState(null);
   const [generatedLoading, setGeneratedLoading] = useState(false);
+  const [nextStaticOffset, setNextStaticOffset] = useState(null);
+  const staticRequest = useRef(0);
+
+  const [generationMode, setGenerationMode] = useState("manual");
+  const [visualSelection, setVisualSelection] = useState(null);
 
   const [formatSlug, setFormatSlug] = useState("");
   const [creativityMode, setCreativityMode] = useState("inspired");
@@ -78,16 +105,24 @@ export default function GenerateView({ ctx }) {
   const [userInputs, setUserInputs] = useState({});
   const [filling, setFilling] = useState(false);
 
-  const load = async (productId) => {
-    if (!productId) { setItems([]); return; }
+  const load = async (productId, offset = 0) => {
+    const requestId = ++staticRequest.current;
+    if (!productId) { setItems([]); setNextStaticOffset(null); setGeneratedLoading(false); return; }
     setGeneratedLoading(true);
+    setErr(null);
     try {
-      const response = await creativeApi.getGenerated(productId);
-      setItems(response.items || []);
+      const response = await creativeApi.getGenerated(productId, offset);
+      if (requestId !== staticRequest.current) return;
+      setItems((current) => {
+        if (offset === 0) return response.items || [];
+        const ids = new Set(current.map((item) => item.id));
+        return [...current, ...(response.items || []).filter((item) => !ids.has(item.id))];
+      });
+      setNextStaticOffset(response.nextOffset ?? null);
     } catch (error) {
-      setErr(error.message);
+      if (requestId === staticRequest.current) setErr(error.message);
     } finally {
-      setGeneratedLoading(false);
+      if (requestId === staticRequest.current) setGeneratedLoading(false);
     }
   };
 
@@ -99,7 +134,12 @@ export default function GenerateView({ ctx }) {
       .finally(() => setFormatsLoading(false));
   }, []);
 
-  useEffect(() => { load(selectedProductId); }, [selectedProductId]);
+  useEffect(() => {
+    setItems([]);
+    setNextStaticOffset(null);
+    load(selectedProductId);
+    return () => { staticRequest.current += 1; };
+  }, [selectedProductId]);
 
   const selectedFormat = useMemo(
     () => formats.find((format) => format.slug === formatSlug) || null,
@@ -122,12 +162,16 @@ export default function GenerateView({ ctx }) {
       }
       const { jobId } = await creativeApi.runGenerate({
         productId: selectedProductId,
-        formatSlug: formatSlug || undefined,
+        generationMode,
+        brandExampleAdIds: visualSelection?.brandExampleAdIds,
+        productAssetIds: visualSelection?.productAssetIds,
+        conceptReferenceIds: visualSelection?.conceptReferenceIds,
+        formatSlug: generationMode === "manual" ? formatSlug || undefined : undefined,
         creativityMode,
         productionStyle,
         aspectRatio: aspectRatio || undefined,
         variationCount,
-        userInputs: Object.keys(cleanedInputs).length ? cleanedInputs : undefined,
+        userInputs: generationMode === "manual" && Object.keys(cleanedInputs).length ? cleanedInputs : undefined,
       });
       start(jobId);
     } catch (error) {
@@ -181,7 +225,12 @@ export default function GenerateView({ ctx }) {
           sidebar={(
             <>
               <div className="space-y-4">
-                {formatsLoading ? (
+                <div className="cs-strategy-toggle" aria-label="Static generation mode">
+                  {[['manual', 'Manual tune'], ['strategist', 'AI Strategist']].map(([value, label]) => <button key={value} type="button" aria-pressed={generationMode === value} className={generationMode === value ? "is-active" : ""} onClick={() => setGenerationMode(value)}>{label}</button>)}
+                </div>
+                <p className="cs-generate-sidebar-description">{generationMode === "strategist" ? "AI uses your research and account insights to choose concepts, personas, formats, and copy." : "Choose your format and fine-tune the creative inputs."}</p>
+                <VisualInspiration key={selectedProductId || "none"} productId={selectedProductId} clientId={ctx.selectedBrandId} onChange={setVisualSelection} />
+                {generationMode === "manual" && (formatsLoading ? (
                   <SidebarLoading label="Loading formats…" />
                 ) : (
                   <SidebarSelect
@@ -190,13 +239,13 @@ export default function GenerateView({ ctx }) {
                     onChange={(value) => { setFormatSlug(value === "auto" ? "" : value); setUserInputs({}); }}
                     options={[{ key: "auto", label: "Auto format" }, ...formats.map((format) => ({ key: format.slug, label: format.category }))]}
                   />
-                )}
+                ))}
                 <SidebarNumber label="Variations" value={variationCount} min={1} max={8} onChange={setVariationCount} />
                 <SidebarSelect label="Creativity" value={creativityMode} onChange={setCreativityMode} options={CREATIVITY} />
                 <SidebarSelect label="Aspect Ratio" value={aspectRatio || "reference"} onChange={(value) => setAspectRatio(value === "reference" ? "" : value)} options={ASPECT} />
                 <SidebarSelect label="Production" value={productionStyle} onChange={setProductionStyle} options={PRODUCTION} />
 
-                {inputFields.length > 0 && (
+                {generationMode === "manual" && inputFields.length > 0 && (
                   <div className="cs-generate-sidebar__group space-y-3">
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-xs font-semibold text-[#6c3403]">Concept inputs</span>
@@ -218,9 +267,10 @@ export default function GenerateView({ ctx }) {
                 )}
               </div>
               <div className="mt-auto space-y-3 pt-5">
+                {visualSelection?.conceptReferenceIds.length > variationCount && <p className="text-xs text-amber-800">Increase variations to use all selected concept references.</p>}
                 <JobBadge job={job} />
-                <button type="button" onClick={runStatics} disabled={!selectedProductId} className="cs-primary-button w-full">
-                  Generate Ads
+                <button type="button" onClick={runStatics} disabled={!selectedProductId || !visualSelection?.ready || visualSelection.productId !== selectedProductId || generationActive || visualSelection.conceptReferenceIds.length > variationCount} className="cs-primary-button w-full">
+                  {generationMode === "strategist" ? "Plan & Generate Ads" : "Generate Ads"}
                 </button>
               </div>
             </>
@@ -238,11 +288,16 @@ export default function GenerateView({ ctx }) {
           ) : (
             <GenerationGrid items={imageItems} rate={rate} />
           )}
+          {nextStaticOffset != null && !generationActive && (
+            <button type="button" onClick={() => load(selectedProductId, nextStaticOffset)} disabled={generatedLoading} className="cs-library-action mt-4">
+              {generatedLoading ? "Loading…" : "Load more statics"}
+            </button>
+          )}
         </GenerateWorkspace>
       )}
 
-      {mode === "scripts" && <ScriptsPanel productId={selectedProductId} />}
-      {mode === "briefs" && <BriefPanel productId={selectedProductId} />}
+      {mode === "scripts" && <ScriptsPanel key={selectedProductId} productId={selectedProductId} />}
+      {mode === "briefs" && <BriefPanel key={selectedProductId} productId={selectedProductId} />}
     </div>
   );
 }
@@ -254,11 +309,11 @@ function ScriptsPanel({ productId }) {
   const [count, setCount] = useState(3);
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
-  const [batches, setBatches] = useState([]);
+  const history = useGenerationHistory(productId, "scripts");
+  const { batches } = history;
   const [err, setErr] = useState(null);
 
   useEffect(() => {
-    setBatches(readHistory(productId, "scripts"));
     if (!productId) { setPersonas([]); setPersonasLoading(false); return; }
     setPersonasLoading(true);
     creativeApi.getResearch(productId)
@@ -280,8 +335,7 @@ function ScriptsPanel({ productId }) {
         selectedAvatar: avatar || undefined,
         notes: notes || undefined,
       });
-      const batch = createHistoryBatch({ items: response.items || [] });
-      setBatches((current) => saveHistory(productId, "scripts", [batch, ...current]));
+      history.addBatch(response.batch);
     } catch (error) {
       setErr(error.message);
     } finally {
@@ -314,15 +368,18 @@ function ScriptsPanel({ productId }) {
               placeholder="e.g. focus on the bundle offer or a specific persona"
             />
           </div>
-          <button type="button" onClick={run} disabled={!productId || busy || personasLoading} className="cs-primary-button mt-auto w-full">
+          <button type="button" onClick={run} disabled={!productId || busy || personasLoading || history.loading || Boolean(history.error)} className="cs-primary-button mt-auto w-full">
             {busy ? `Writing ${count} Script${count === 1 ? "" : "s"}…` : `Generate ${count} Video Script${count === 1 ? "" : "s"}`}
           </button>
         </>
       )}
     >
       <ErrorBanner message={err} />
+      <HistoryControls history={history} disabled={busy} />
       {!productId ? (
         <WorkspaceEmpty icon={Box} title="Select a product" hint="Choose a product above before generating a video script." />
+      ) : history.loading && batches.length === 0 ? (
+        <GenerateLoading label="Loading saved scripts…" />
       ) : busy ? (
         <GenerateLoading label={`Writing ${count} video script${count === 1 ? "" : "s"}…`} />
       ) : batches.length === 0 ? (
@@ -375,20 +432,16 @@ function BriefPanel({ productId }) {
   const [format, setFormat] = useState("");
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
-  const [batches, setBatches] = useState([]);
+  const history = useGenerationHistory(productId, "briefs");
+  const { batches } = history;
   const [err, setErr] = useState(null);
-
-  useEffect(() => {
-    setBatches(readHistory(productId, "briefs"));
-  }, [productId]);
 
   const run = async () => {
     if (!productId) return;
     setErr(null); setBusy(true);
     try {
       const data = await creativeApi.generateConceptBrief({ productId, format: format || undefined, notes: notes || undefined });
-      const batch = createHistoryBatch({ data });
-      setBatches((current) => saveHistory(productId, "briefs", [batch, ...current]));
+      history.addBatch(data.batch);
     } catch (error) {
       setErr(error.message);
     } finally {
@@ -405,15 +458,18 @@ function BriefPanel({ productId }) {
             <SidebarSelect label="Format" value={format || "auto"} onChange={(value) => setFormat(value === "auto" ? "" : value)} options={BRIEF_FORMATS} />
             <SidebarInput label="Notes (optional)" type="textarea" value={notes} onChange={setNotes} placeholder="e.g. lean into the new bundle offer" />
           </div>
-          <button type="button" onClick={run} disabled={!productId || busy} className="cs-primary-button mt-auto w-full">
+          <button type="button" onClick={run} disabled={!productId || busy || history.loading || Boolean(history.error)} className="cs-primary-button mt-auto w-full">
             {busy ? "Writing Brief…" : "Generate Brief"}
           </button>
         </>
       )}
     >
       <ErrorBanner message={err} />
+      <HistoryControls history={history} disabled={busy} />
       {!productId ? (
         <WorkspaceEmpty icon={Box} title="Select a product" hint="Choose a product above before generating a brief." />
+      ) : history.loading && batches.length === 0 ? (
+        <GenerateLoading label="Loading saved briefs…" />
       ) : busy ? (
         <GenerateLoading label="Building the creative brief…" />
       ) : batches.length === 0 ? (
@@ -547,7 +603,14 @@ function Field({ label, children }) {
 function GenerationGrid({ items, rate }) {
   return (
     <div className="cs-generate-gallery">
-      {items.map((item) => <GeneratedImage key={item.id || item.imageUrl} item={item} rate={rate} />)}
+      {items.map((item) => <div key={item.id || item.imageUrl}>
+        <GeneratedImage item={item} rate={rate} />
+        {item.briefMeta?.strategy && <div className="px-1 py-3 text-xs text-stone-600">
+          <p className="font-semibold text-stone-800">{item.briefMeta.strategy.concept_name}</p>
+          <p className="mt-1">{[item.briefMeta.strategy.persona_label, item.briefMeta.strategy.angle].filter(Boolean).join(" · ")}</p>
+          <p className="mt-1">{item.briefMeta.strategy.hypothesis}</p>
+        </div>}
+      </div>)}
     </div>
   );
 }
@@ -578,6 +641,21 @@ function GeneratedImage({ item, rate }) {
 
 function ResultSection({ title, children }) {
   return <div className="cs-generate-result"><p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#6c3403]">{title}</p>{children}</div>;
+}
+
+function HistoryControls({ history, disabled }) {
+  return (
+    <>
+      <ErrorBanner message={history.error} />
+      {history.error ? (
+        <button type="button" onClick={history.retry} disabled={disabled || history.loading} className="cs-library-action mb-4">Retry loading history</button>
+      ) : history.nextOffset != null && (
+        <button type="button" onClick={history.loadMore} disabled={disabled || history.loading} className="cs-library-action mb-4">
+          {history.loading ? "Loading…" : "Load older generations"}
+        </button>
+      )}
+    </>
+  );
 }
 
 function GenerationBatch({ createdAt, isLatest, children }) {
@@ -613,6 +691,7 @@ GenerationGrid.propTypes = { items: PropTypes.array.isRequired, rate: PropTypes.
 GeneratedImage.propTypes = { item: PropTypes.object.isRequired, rate: PropTypes.func.isRequired };
 ResultSection.propTypes = { title: PropTypes.string.isRequired, children: PropTypes.node.isRequired };
 GenerationBatch.propTypes = { createdAt: PropTypes.string.isRequired, isLatest: PropTypes.bool.isRequired, children: PropTypes.node.isRequired };
+HistoryControls.propTypes = { history: PropTypes.object.isRequired, disabled: PropTypes.bool };
 Tag.propTypes = { children: PropTypes.node };
 ScriptsPanel.propTypes = { productId: PropTypes.string };
 BriefPanel.propTypes = { productId: PropTypes.string };
