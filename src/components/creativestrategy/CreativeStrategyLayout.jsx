@@ -344,11 +344,11 @@ export default function CreativeStrategyLayout() {
               <div ref={setHeaderActionsTarget} className="flex shrink-0 flex-wrap items-center justify-end gap-3" />
             </header>
 
-            <div className="flex-1 overflow-auto">
+            <div className={cn("min-h-0 flex-1", activeTab === "generate" ? "overflow-hidden" : "overflow-auto")}>
               <div
                 className={cn(
                   "w-full px-12 pb-12 pt-3 max-lg:px-7 max-lg:pb-7 max-lg:pt-3 max-md:px-5 max-md:pb-5 max-md:pt-3",
-                  activeTab === "generate" && "flex min-h-full flex-col pb-6 max-lg:pb-5",
+                  activeTab === "generate" && "flex h-full min-h-0 flex-col pb-6 max-lg:pb-5",
                 )}
               >
                 {error && <div className="mb-4 text-sm text-red-600">{error}</div>}

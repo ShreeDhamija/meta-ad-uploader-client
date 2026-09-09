@@ -30,6 +30,7 @@ export default function VisualInspiration({ productId, clientId, onChange }) {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+  const [loadError, setLoadError] = useState(false);
   const [retry, setRetry] = useState(0);
   const fileInput = useRef(null);
   const [dragging, setDragging] = useState(false);
@@ -46,6 +47,7 @@ export default function VisualInspiration({ productId, clientId, onChange }) {
     if (!productId || !clientId) { setLoading(false); return; }
     setLoading(true);
     setError(null);
+    setLoadError(false);
     Promise.all([creativeApi.getVisualSources(productId), creativeApi.getAssets(productId), creativeApi.getInspo(clientId)])
       .then(([brand, assets, inspo]) => {
         if (!active) return;
@@ -57,14 +59,15 @@ export default function VisualInspiration({ productId, clientId, onChange }) {
         setSources(next);
         setSelected({ examples: next.examples.slice(0, 3).map((item) => item.id), products: next.products.slice(0, 4).map((item) => item.id), concepts: [] });
       })
-      .catch((err) => { if (active) setError(err.message); })
+      .catch((err) => { if (active) { setError(err.message); setLoadError(true); } })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [productId, clientId, retry]);
 
   useEffect(() => {
-    onChange({ productId, ready: !loading && !busy && !error, brandExampleAdIds: selected.examples, productAssetIds: selected.products, conceptReferenceIds: selected.concepts });
-  }, [productId, selected, loading, busy, error, onChange]);
+    const hasImages = selected.examples.length + selected.products.length + selected.concepts.length > 0;
+    onChange({ productId, ready: !loading && !busy && !loadError && hasImages, brandExampleAdIds: selected.examples, productAssetIds: selected.products, conceptReferenceIds: selected.concepts });
+  }, [productId, selected, loading, busy, loadError, onChange]);
 
   const toggle = (id) => {
     const limit = TABS.find((item) => item.key === tab).limit;
@@ -82,17 +85,16 @@ export default function VisualInspiration({ productId, clientId, onChange }) {
         let added;
         if (uploadTab === "products") {
           const response = await creativeApi.uploadAsset(productId, { dataBase64, assetType: "hero_product", description: file.name });
-          added = response.asset;
+          added = { ...response.asset, imageUrl: response.asset.imageUrl || dataBase64 };
         } else {
           const response = await creativeApi.uploadInspo({ clientId, productId, dataBase64, fileName: file.name, fileType: "image", source: "static_generator" });
-          const list = await creativeApi.getInspo(clientId, productId);
-          added = list.items.find((item) => item.id === response.fileId);
-          if (!added) throw new Error("Image uploaded, but could not reload it. Retry loading sources.");
+          added = { id: response.fileId, productId, fileName: file.name, fileType: "image", imageUrl: dataBase64 };
         }
         if (!mounted.current) return;
+        setLoadError(false);
         setSources((current) => ({ ...current, [uploadTab]: [...current[uploadTab], added] }));
         const limit = TABS.find((item) => item.key === uploadTab).limit;
-        setSelected((current) => ({ ...current, [uploadTab]: [...current[uploadTab], added.id].slice(0, limit) }));
+        setSelected((current) => ({ ...current, [uploadTab]: [added.id, ...current[uploadTab]].slice(0, limit) }));
       }
     } catch (err) { if (mounted.current) setError(err.message); }
     finally { if (mounted.current) setBusy(false); }
@@ -125,8 +127,10 @@ export default function VisualInspiration({ productId, clientId, onChange }) {
       const next = (assets.assets || []).filter((item) => item.assetType !== "reference_ad" && item.imageUrl);
       const oldIds = new Set(sources.products.map((item) => item.id));
       const added = next.filter((item) => !oldIds.has(item.id));
+      setLoadError(false);
+      setError(null);
       setSources((current) => ({ ...current, products: next }));
-      setSelected((current) => ({ ...current, products: [...current.products, ...added.map((item) => item.id)].slice(0, 4) }));
+      setSelected((current) => ({ ...current, products: [...added.map((item) => item.id), ...current.products].slice(0, 4) }));
       const failed = response.failed || [];
       setScrapedImages((current) => current.filter((image) => !scrapedSelected.includes(image.url) || failed.includes(image.url)));
       setScrapedSelected(failed);
@@ -139,7 +143,10 @@ export default function VisualInspiration({ productId, clientId, onChange }) {
     <button type="button" className="cs-visual-trigger" onClick={() => setOpen(true)} disabled={!productId}>
       <ImagePlus size={16} /> Visual inspiration
     </button>
-    {error && !open && <p className="text-xs text-red-700">Unable to load visual sources. Open Visual inspiration to retry.</p>}
+    {!loading && !loadError && <p className="text-xs text-stone-500" role="status">{selected.examples.length + selected.products.length + selected.concepts.length > 0
+      ? `${selected.products.length} product images · ${selected.examples.length} brand examples · ${selected.concepts.length} concept references selected`
+      : "Select or upload at least one image to generate ads."}</p>}
+    {error && !open && <p className="text-xs text-red-700">{error} Open Visual inspiration to retry.</p>}
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent disableSlide className="cs-visual-dialog" overlayClassName="bg-black/40">
         <DialogHeader><DialogTitle>Visual inspiration</DialogTitle><DialogDescription>Choose the images your static generator will use.</DialogDescription></DialogHeader>
@@ -180,7 +187,7 @@ export default function VisualInspiration({ productId, clientId, onChange }) {
             {sources[tab].map((item) => {
               const checked = selected[tab].includes(item.id);
               const name = item.name || item.description || item.fileName || "Untitled image";
-              const disabled = !checked && selected[tab].length >= TABS.find((entry) => entry.key === tab).limit;
+              const disabled = busy || loading || (!checked && selected[tab].length >= TABS.find((entry) => entry.key === tab).limit);
               return <label key={item.id} className={`cs-visual-card ${checked ? "is-selected" : ""} ${disabled ? "is-disabled" : ""}`}>
                 <img src={item.imageUrl} alt={name} loading="lazy" />
                 <input type="checkbox" className="cs-visual-checkbox" aria-label={`Select ${name}`} checked={checked} disabled={disabled} onChange={() => toggle(item.id)} />

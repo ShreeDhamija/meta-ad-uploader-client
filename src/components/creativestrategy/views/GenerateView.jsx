@@ -1,12 +1,14 @@
 // Generate workspace — statics, video scripts, and briefs share one shell while
 // retaining their existing API flows.
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import PropTypes from "prop-types";
 import { Box, ClipboardList, Download, FileText, Flame, Loader2, Sparkles, ThumbsDown, ThumbsUp, Trash2 } from "lucide-react";
 import pLimit from "p-limit";
 import VisualInspiration from "./VisualInspiration";
 import { creativeApi } from "@/lib/creativeApi";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { ErrorBanner } from "../ui";
 import { useJobRunner, JobBadge } from "../JobsContext";
 
@@ -113,6 +115,7 @@ export default function GenerateView({ ctx }) {
 
   const [generationMode, setGenerationMode] = useState("manual");
   const [visualSelection, setVisualSelection] = useState(null);
+  const [dismissedJobId, setDismissedJobId] = useState(null);
 
   const [formatSlug, setFormatSlug] = useState("");
   const [creativityMode, setCreativityMode] = useState("inspired");
@@ -166,8 +169,19 @@ export default function GenerateView({ ctx }) {
   const { job, start } = useJobRunner({
     kind: "generate_ad",
     productId: selectedProductId,
+    enabled: Boolean(selectedProductId),
+    restoreFinished: false,
     onComplete: () => load(selectedProductId),
   });
+
+  const visualJob = useRef(null);
+  visualJob.current = job;
+  const handleVisualChange = useCallback((selection) => {
+    setVisualSelection(selection);
+    if (visualJob.current?.status === "failed") setDismissedJobId(visualJob.current.id);
+    setVariationCount((count) => Math.max(count, selection.conceptReferenceIds.length));
+    setErr(null);
+  }, []);
 
   const runStatics = async () => {
     if (!selectedProductId) return;
@@ -215,8 +229,10 @@ export default function GenerateView({ ctx }) {
   };
 
   const rate = async (id, rating) => {
-    setItems((current) => current.map((item) => (item.id === id ? { ...item, myRating: rating } : item)));
-    try { await creativeApi.rateGenerated(id, rating); } catch (error) { setErr(error.message); }
+    try {
+      await creativeApi.rateGenerated(id, rating);
+      setItems((current) => current.map((item) => (item.id === id ? { ...item, myRating: rating } : item)));
+    } catch (error) { setErr(error.message); }
   };
 
   const toggleImage = (id) => setSelectedImages((current) => {
@@ -362,11 +378,11 @@ export default function GenerateView({ ctx }) {
                     ))}
                   </div>
                 )}
-                <VisualInspiration key={selectedProductId || "none"} productId={selectedProductId} clientId={ctx.selectedBrandId} onChange={setVisualSelection} />
+                <VisualInspiration key={selectedProductId || "none"} productId={selectedProductId} clientId={ctx.selectedBrandId} onChange={handleVisualChange} />
               </div>
               <div className="mt-auto space-y-3 pt-5">
                 {visualSelection?.conceptReferenceIds.length > variationCount && <p className="text-xs text-amber-800">Increase variations to use all selected concept references.</p>}
-                <JobBadge job={job} />
+                <JobBadge job={job?.id === dismissedJobId ? null : job} />
                 <button type="button" onClick={runStatics} disabled={bulkBusy || !selectedProductId || !visualSelection?.ready || visualSelection.productId !== selectedProductId || generationActive || visualSelection.conceptReferenceIds.length > variationCount} className="cs-primary-button w-full">
                   {generationMode === "strategist" ? "Plan & Generate Ads" : "Generate Ads"}
                 </button>
@@ -627,8 +643,16 @@ function BriefPanel({ productId }) {
 function GenerateWorkspace({ sidebar, children, isStatics = false }) {
   return (
     <div className="cs-generate-layout">
-      <aside className="cs-generate-sidebar">{sidebar}</aside>
-      <section className={`cs-generate-canvas ${isStatics ? "is-statics" : ""}`}>{children}</section>
+      <aside className="cs-generate-sidebar">
+        <ScrollArea className="cs-generate-scroll" viewportClassName="cs-generate-viewport">
+          <div className="cs-generate-sidebar-content">{sidebar}</div>
+        </ScrollArea>
+      </aside>
+      <section className={`cs-generate-canvas ${isStatics ? "is-statics" : ""}`}>
+        <ScrollArea className="cs-generate-scroll" viewportClassName="cs-generate-viewport">
+          <div className="cs-generate-canvas-content">{children}</div>
+        </ScrollArea>
+      </section>
     </div>
   );
 }
@@ -716,6 +740,7 @@ function Field({ label, children }) {
 }
 
 function GenerationGrid({ items, rate, selecting, selected, toggle, disabled }) {
+  const [preview, setPreview] = useState(null);
   const groups = new Map();
   for (const item of items) {
     const key = item.briefMeta?.pair_id || item.id;
@@ -723,10 +748,10 @@ function GenerationGrid({ items, rate, selecting, selected, toggle, disabled }) 
     groups.get(key).push(item);
   }
   return (
-    <div className={`cs-generate-gallery ${items.some((item) => item.briefMeta?.pair_id) ? "has-pairs" : ""}`}>
+    <><div className={`cs-generate-gallery ${items.some((item) => item.briefMeta?.pair_id) ? "has-pairs" : ""}`}>
       {Array.from(groups, ([key, group]) => <div key={key} className={group.length > 1 ? "cs-generate-pair" : undefined}>
         {group.sort((a, b) => Number(a.briefMeta?.aspect_ratio === "9:16") - Number(b.briefMeta?.aspect_ratio === "9:16")).map((item) => <div key={item.id}>
-          <GeneratedImage item={item} rate={rate} selecting={selecting} selected={selected.has(item.id)} toggle={toggle} disabled={disabled} />
+          <GeneratedImage item={item} rate={rate} selecting={selecting} selected={selected.has(item.id)} toggle={toggle} disabled={disabled} onPreview={setPreview} />
           {item.briefMeta?.strategy && <div className="px-1 py-3 text-xs text-stone-600">
             <p className="font-semibold text-stone-800">{item.briefMeta.strategy.concept_name}</p>
             <p className="mt-1">{[item.briefMeta.strategy.persona_label, item.briefMeta.strategy.angle].filter(Boolean).join(" · ")}</p>
@@ -735,32 +760,37 @@ function GenerationGrid({ items, rate, selecting, selected, toggle, disabled }) 
         </div>)}
       </div>)}
     </div>
+    <Dialog open={Boolean(preview)} onOpenChange={(open) => { if (!open) setPreview(null); }}>
+      <DialogContent hideClose disableSlide aria-describedby={undefined} overlayClassName="bg-black/80" className="w-auto max-w-[95vw] gap-0 border-0 bg-transparent p-0 shadow-none outline-none">
+        <DialogTitle className="sr-only">Generated image preview</DialogTitle>
+        {preview && <img src={preview.imageUrl} alt={preview.formatSlug || "Generated ad"} className="block max-h-[90dvh] max-w-[95vw] object-contain" />}
+      </DialogContent>
+    </Dialog></>
   );
 }
 
-function GeneratedImage({ item, rate, selecting, selected, toggle, disabled }) {
+function GeneratedImage({ item, rate, selecting, selected, toggle, disabled, onPreview }) {
   const [loaded, setLoaded] = useState(false);
   return (
     <article className="cs-generate-image-card group relative aspect-square" style={item.briefMeta?.aspect_ratio ? { aspectRatio: item.briefMeta.aspect_ratio.replace(":", " / ") } : undefined}>
       {!loaded && item.imageUrl && <div className="absolute inset-0 grid place-items-center"><Loader2 className="h-5 w-5 animate-spin text-[#6c3403]" /></div>}
       {!item.imageUrl && <div className="absolute inset-0 grid place-items-center text-xs text-stone-500">Preview unavailable</div>}
-      {item.imageUrl && <img
+      {item.imageUrl && <button type="button" className="absolute inset-0 h-full w-full cursor-zoom-in" aria-label="View full image" onClick={() => onPreview(item)} disabled={selecting}><img
         src={item.imageUrl}
         loading="lazy"
         alt={item.formatSlug || "Generated ad"}
         onLoad={() => setLoaded(true)}
         onError={() => setLoaded(true)}
         className={`h-full w-full object-contain transition-opacity duration-200 ${loaded ? "opacity-100" : "opacity-0"}`}
-      />}
-      {item.briefMeta?.aspect_ratio && <span className="absolute left-2 top-2 rounded bg-black/60 px-2 py-1 text-xs text-white">{item.briefMeta.aspect_ratio}</span>}
+      /></button>}
       {selecting && <label className={`cs-generate-image-select ${selected ? "is-selected" : ""}`}>
         <input type="checkbox" aria-label={`Select ${item.formatSlug || "image"} ${item.briefMeta?.aspect_ratio || ""} ${item.id}`} checked={selected} onChange={() => toggle(item.id)} disabled={disabled} />
       </label>}
       {!selecting && <div className="absolute bottom-3 right-3 flex items-center gap-2 opacity-90 transition-opacity group-hover:opacity-100">
-        <button type="button" onClick={() => rate(item.id, "up")} className={`cs-generate-rating ${item.myRating === "up" ? "is-active" : ""}`} aria-label="Thumbs up">
+        <button type="button" onClick={() => rate(item.id, "up")} className={`cs-generate-rating is-up ${item.myRating === "up" ? "is-active" : ""}`} aria-label="Thumbs up" aria-pressed={item.myRating === "up"}>
           <ThumbsUp className="h-3.5 w-3.5" />
         </button>
-        <button type="button" onClick={() => rate(item.id, "down")} className={`cs-generate-rating ${item.myRating === "down" ? "is-active" : ""}`} aria-label="Thumbs down">
+        <button type="button" onClick={() => rate(item.id, "down")} className={`cs-generate-rating is-down ${item.myRating === "down" ? "is-active" : ""}`} aria-label="Thumbs down" aria-pressed={item.myRating === "down"}>
           <ThumbsDown className="h-3.5 w-3.5" />
         </button>
       </div>}
@@ -817,7 +847,7 @@ SidebarLoading.propTypes = { label: PropTypes.string.isRequired };
 SidebarInput.propTypes = { label: PropTypes.string.isRequired, type: PropTypes.string, value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired, onChange: PropTypes.func.isRequired, placeholder: PropTypes.string };
 Field.propTypes = { label: PropTypes.string.isRequired, children: PropTypes.node.isRequired };
 GenerationGrid.propTypes = { items: PropTypes.array.isRequired, rate: PropTypes.func.isRequired, selecting: PropTypes.bool, selected: PropTypes.instanceOf(Set).isRequired, toggle: PropTypes.func.isRequired, disabled: PropTypes.bool };
-GeneratedImage.propTypes = { item: PropTypes.object.isRequired, rate: PropTypes.func.isRequired, selecting: PropTypes.bool, selected: PropTypes.bool, toggle: PropTypes.func.isRequired, disabled: PropTypes.bool };
+GeneratedImage.propTypes = { item: PropTypes.object.isRequired, rate: PropTypes.func.isRequired, selecting: PropTypes.bool, selected: PropTypes.bool, toggle: PropTypes.func.isRequired, disabled: PropTypes.bool, onPreview: PropTypes.func.isRequired };
 ResultSection.propTypes = { title: PropTypes.string.isRequired, children: PropTypes.node.isRequired };
 GenerationBatch.propTypes = { legacyWeekly: PropTypes.bool, productUnspecified: PropTypes.bool, createdAt: PropTypes.string.isRequired, isLatest: PropTypes.bool.isRequired, children: PropTypes.node.isRequired };
 HistoryControls.propTypes = { history: PropTypes.object.isRequired, disabled: PropTypes.bool };

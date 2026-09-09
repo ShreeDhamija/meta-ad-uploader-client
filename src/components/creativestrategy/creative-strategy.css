@@ -459,6 +459,7 @@
 
 .cs-generate-tabs-row {
   display: flex;
+  flex-shrink: 0;
   width: 100%;
   align-items: center;
   justify-content: flex-start;
@@ -522,16 +523,20 @@ html body #root .creative-strategy button.cs-generate-switcher__item.is-active {
   min-height: 0;
   flex: 1;
   grid-template-columns: 270px minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  overflow: hidden;
   gap: 22px;
   align-items: stretch;
 }
 
 .cs-generate-sidebar {
+  position: sticky;
+  top: 0;
   display: flex;
   min-height: 0;
   flex-direction: column;
-  overflow-y: auto;
-  padding: 16px;
+  overflow: hidden;
+  padding: 0;
   border: 1.5px solid rgba(108, 52, 3, 0.78);
   border-radius: 26px;
   background: var(--cs-cream);
@@ -617,8 +622,8 @@ html body #root .creative-strategy button.cs-generate-switcher__item.is-active {
 .cs-generate-canvas {
   min-width: 0;
   min-height: 0;
-  overflow-y: auto;
-  padding: 24px;
+  overflow: hidden;
+  padding: 0;
   border: 1px solid #e4e4e4;
   border-radius: 28px;
   background: #f7f7f7;
@@ -631,13 +636,37 @@ html body #root .creative-strategy button.cs-generate-switcher__item.is-active {
   gap: 18px;
 }
 
-.cs-generate-canvas.is-statics {
+.cs-generate-scroll {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.cs-generate-viewport > div {
+  display: block !important;
+  min-height: 100%;
+}
+
+.cs-generate-sidebar-content,
+.cs-generate-canvas-content {
   display: flex;
   flex-direction: column;
+  min-height: 100%;
+}
+
+.cs-generate-sidebar-content {
+  padding: 16px;
+}
+
+.cs-generate-canvas-content {
+  padding: 24px;
+}
+
+.cs-generate-canvas.is-statics .cs-generate-canvas-content {
   padding: 12px;
 }
 
-.cs-generate-canvas.is-statics > * {
+.cs-generate-canvas-content > * {
   flex-shrink: 0;
 }
 
@@ -711,10 +740,16 @@ html body #root .creative-strategy button.cs-generate-switcher__item.is-active {
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.18);
 }
 
-.cs-generate-rating:hover,
-.cs-generate-rating.is-active {
-  color: #3b170b;
-  background: rgba(255, 190, 133, 0.94);
+.cs-generate-rating.is-up:hover,
+.cs-generate-rating.is-up.is-active {
+  color: #fff;
+  background: rgba(22, 163, 74, 0.62);
+}
+
+.cs-generate-rating.is-down:hover,
+.cs-generate-rating.is-down.is-active {
+  color: #fff;
+  background: rgba(220, 38, 38, 0.62);
 }
 
 .cs-generate-result {
@@ -3030,11 +3065,12 @@ html body #root .creative-strategy button.cs-intel-ad-card.is-active {
 @media (max-width: 900px) {
   .cs-generate-layout {
     grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 0.8fr) minmax(0, 1.2fr);
   }
 
   .cs-generate-sidebar,
   .cs-generate-canvas {
-    min-height: 520px;
+    min-height: 0;
   }
 
   .cs-generate-switcher {

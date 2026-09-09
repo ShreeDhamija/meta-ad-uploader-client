@@ -120,9 +120,10 @@ export function useJobs() {
 // Fires onComplete exactly once when a tracked job finishes successfully — even
 // if the job completed while the view was unmounted (the view re-adopts it on
 // remount and reloads its data).
-export function useJobRunner({ kind, brandId, productId, enabled = true, onComplete, onFail }) {
+export function useJobRunner({ kind, brandId, productId, enabled = true, restoreFinished = true, onComplete, onFail }) {
   const { jobs, track } = useJobs();
   const firedRef = useRef(null);
+  const observedJobs = useRef(new Set());
   const cbRef = useRef({ onComplete, onFail });
   cbRef.current = { onComplete, onFail };
 
@@ -132,9 +133,10 @@ export function useJobRunner({ kind, brandId, productId, enabled = true, onCompl
       j.meta?.kind === kind &&
       (brandId == null || j.meta?.brandId === brandId) &&
       (productId == null || j.meta?.productId === productId));
+    for (const match of matches) if (ACTIVE(match.status)) observedJobs.current.add(match.id);
     matches.sort((a, b) => (b.startedAt || 0) - (a.startedAt || 0));
-    return matches[0] || null;
-  }, [jobs, kind, brandId, productId, enabled]);
+    return matches.find((match) => restoreFinished || observedJobs.current.has(match.id)) || null;
+  }, [jobs, kind, brandId, productId, enabled, restoreFinished]);
 
   useEffect(() => {
     if (!job) return;
@@ -146,7 +148,10 @@ export function useJobRunner({ kind, brandId, productId, enabled = true, onCompl
     }
   }, [job]);
 
-  const start = useCallback((jobId) => track(jobId, { kind, brandId, productId }), [track, kind, brandId, productId]);
+  const start = useCallback((jobId) => {
+    observedJobs.current.add(jobId);
+    track(jobId, { kind, brandId, productId });
+  }, [track, kind, brandId, productId]);
   return { job, start };
 }
 
