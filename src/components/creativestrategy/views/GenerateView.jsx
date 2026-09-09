@@ -23,6 +23,8 @@ const ASPECT = [
   { key: "1:1", label: "1:1" },
   { key: "4:5", label: "4:5" },
   { key: "9:16", label: "9:16" },
+  { key: "1:1+9:16", label: "1:1 + 9:16" },
+  { key: "4:5+9:16", label: "4:5 + 9:16" },
 ];
 const MODES = [
   { key: "statics", label: "Statics" },
@@ -169,7 +171,8 @@ export default function GenerateView({ ctx }) {
         formatSlug: generationMode === "manual" ? formatSlug || undefined : undefined,
         creativityMode,
         productionStyle,
-        aspectRatio: aspectRatio || undefined,
+        aspectRatio: aspectRatio.split("+")[0] || undefined,
+        includePortrait: aspectRatio.includes("+"),
         variationCount,
         userInputs: generationMode === "manual" && Object.keys(cleanedInputs).length ? cleanedInputs : undefined,
       });
@@ -242,6 +245,7 @@ export default function GenerateView({ ctx }) {
                 <SidebarNumber label="Variations" value={variationCount} min={1} max={8} onChange={setVariationCount} />
                 <SidebarSelect label="Creativity" value={creativityMode} onChange={setCreativityMode} options={CREATIVITY} />
                 <SidebarSelect label="Aspect Ratio" value={aspectRatio || "reference"} onChange={(value) => setAspectRatio(value === "reference" ? "" : value)} options={ASPECT} />
+                {aspectRatio.includes("+") && <p className="text-xs text-stone-500">Each variation produces a matching pair ({variationCount * 2} images total).</p>}
                 <SidebarSelect label="Production" value={productionStyle} onChange={setProductionStyle} options={PRODUCTION} />
 
                 {generationMode === "manual" && inputFields.length > 0 && (
@@ -601,15 +605,23 @@ function Field({ label, children }) {
 }
 
 function GenerationGrid({ items, rate }) {
+  const groups = new Map();
+  for (const item of items) {
+    const key = item.briefMeta?.pair_id || item.id;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(item);
+  }
   return (
-    <div className="cs-generate-gallery">
-      {items.map((item) => <div key={item.id || item.imageUrl}>
-        <GeneratedImage item={item} rate={rate} />
-        {item.briefMeta?.strategy && <div className="px-1 py-3 text-xs text-stone-600">
-          <p className="font-semibold text-stone-800">{item.briefMeta.strategy.concept_name}</p>
-          <p className="mt-1">{[item.briefMeta.strategy.persona_label, item.briefMeta.strategy.angle].filter(Boolean).join(" · ")}</p>
-          <p className="mt-1">{item.briefMeta.strategy.hypothesis}</p>
-        </div>}
+    <div className={`cs-generate-gallery ${items.some((item) => item.briefMeta?.pair_id) ? "has-pairs" : ""}`}>
+      {Array.from(groups, ([key, group]) => <div key={key} className={group.length > 1 ? "cs-generate-pair" : undefined}>
+        {group.sort((a, b) => Number(a.briefMeta?.aspect_ratio === "9:16") - Number(b.briefMeta?.aspect_ratio === "9:16")).map((item) => <div key={item.id}>
+          <GeneratedImage item={item} rate={rate} />
+          {item.briefMeta?.strategy && <div className="px-1 py-3 text-xs text-stone-600">
+            <p className="font-semibold text-stone-800">{item.briefMeta.strategy.concept_name}</p>
+            <p className="mt-1">{[item.briefMeta.strategy.persona_label, item.briefMeta.strategy.angle].filter(Boolean).join(" · ")}</p>
+            <p className="mt-1">{item.briefMeta.strategy.hypothesis}</p>
+          </div>}
+        </div>)}
       </div>)}
     </div>
   );
@@ -618,15 +630,16 @@ function GenerationGrid({ items, rate }) {
 function GeneratedImage({ item, rate }) {
   const [loaded, setLoaded] = useState(false);
   return (
-    <article className="cs-generate-image-card group relative aspect-square">
+    <article className="cs-generate-image-card group relative aspect-square" style={item.briefMeta?.aspect_ratio ? { aspectRatio: item.briefMeta.aspect_ratio.replace(":", " / ") } : undefined}>
       {!loaded && <div className="absolute inset-0 grid place-items-center"><Loader2 className="h-5 w-5 animate-spin text-[#6c3403]" /></div>}
       <img
         src={item.imageUrl}
         alt={item.formatSlug || "Generated ad"}
         onLoad={() => setLoaded(true)}
         onError={() => setLoaded(true)}
-        className={`h-full w-full object-cover transition-opacity duration-200 ${loaded ? "opacity-100" : "opacity-0"}`}
+        className={`h-full w-full object-contain transition-opacity duration-200 ${loaded ? "opacity-100" : "opacity-0"}`}
       />
+      {item.briefMeta?.aspect_ratio && <span className="absolute left-2 top-2 rounded bg-black/60 px-2 py-1 text-xs text-white">{item.briefMeta.aspect_ratio}</span>}
       <div className="absolute bottom-3 right-3 flex items-center gap-2 opacity-90 transition-opacity group-hover:opacity-100">
         <button type="button" onClick={() => rate(item.id, "up")} className={`cs-generate-rating ${item.myRating === "up" ? "is-active" : ""}`} aria-label="Thumbs up">
           <ThumbsUp className="h-3.5 w-3.5" />

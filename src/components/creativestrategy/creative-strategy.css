@@ -631,8 +631,17 @@ html body #root .creative-strategy button.cs-generate-switcher__item.is-active {
   gap: 18px;
 }
 
+.cs-generate-gallery.has-pairs,
 .cs-generate-gallery.is-gallery {
   grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.cs-generate-pair {
+  grid-column: span 2;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 6px;
 }
 
 .cs-generate-image-card {
@@ -2966,6 +2975,7 @@ html body #root .creative-strategy button.cs-intel-ad-card.is-active {
   }
 
   .cs-generate-gallery,
+  .cs-generate-gallery.has-pairs,
   .cs-generate-gallery.is-gallery {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -2992,7 +3002,12 @@ html body #root .creative-strategy button.cs-intel-ad-card.is-active {
 }
 
 @media (max-width: 620px) {
+  .cs-generate-pair {
+    grid-column: span 1;
+  }
+
   .cs-generate-gallery,
+  .cs-generate-gallery.has-pairs,
   .cs-generate-gallery.is-gallery {
     grid-template-columns: minmax(0, 1fr);
   }
