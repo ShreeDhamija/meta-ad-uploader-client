@@ -62,6 +62,7 @@ export default function CreativeStrategyLayout() {
   const [selectedProductId, setSelectedProductId] = useState(null);
   const [error, setError] = useState(null);
   const [headerActionsTarget, setHeaderActionsTarget] = useState(null);
+  const [headerStatusTarget, setHeaderStatusTarget] = useState(null);
 
   const normalizeMetaAccountId = (value) => String(value || "").replace(/^act_/, "");
   const accountFingerprint = useMemo(
@@ -176,6 +177,10 @@ export default function CreativeStrategyLayout() {
     (actions) => (headerActionsTarget ? createPortal(actions, headerActionsTarget) : null),
     [headerActionsTarget],
   );
+  const renderHeaderStatus = useCallback(
+    (status) => (headerStatusTarget ? createPortal(status, headerStatusTarget) : null),
+    [headerStatusTarget],
+  );
 
   const ctx = {
     brands: activeTab === "brands" || activeTab === "products" ? brands : accountsWithProducts,
@@ -192,6 +197,7 @@ export default function CreativeStrategyLayout() {
     reloadProducts: () => loadProducts(selectedBrandId),
     goTo: setActiveTab,
     renderHeaderActions,
+    renderHeaderStatus,
   };
 
   if (!isLoggedIn) return null;
@@ -333,6 +339,7 @@ export default function CreativeStrategyLayout() {
                 {DESCRIPTIONS[activeTab] && (
                   <p className="mt-1.5 truncate text-[14px] font-normal text-[var(--cs-muted)]">{DESCRIPTIONS[activeTab]}</p>
                 )}
+                <div ref={setHeaderStatusTarget} />
               </div>
               <div ref={setHeaderActionsTarget} className="flex shrink-0 flex-wrap items-center justify-end gap-3" />
             </header>

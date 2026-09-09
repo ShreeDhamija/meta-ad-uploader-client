@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import PropTypes from "prop-types";
 import {
-  CircleCheck, CircleX, ClipboardList, Loader2, MousePointerClick,
+  CircleCheck, CircleX, ClipboardList, Loader2, MousePointerClick, X,
 } from "lucide-react";
 import { creativeApi } from "@/lib/creativeApi";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
@@ -27,7 +27,7 @@ const STATUSES = [
 
 export default function WeeklyView({ ctx }) {
   const {
-    selectedBrandId, renderHeaderActions,
+    selectedBrandId, renderHeaderActions, renderHeaderStatus,
   } = ctx;
   const currentBrand = useRef(selectedBrandId);
   currentBrand.current = selectedBrandId;
@@ -43,6 +43,26 @@ export default function WeeklyView({ ctx }) {
   const [briefing, setBriefing] = useState(null);
   const [loading, setLoading] = useState(false);
   const [updating, setUpdating] = useState(null);
+  const [completionNotice, setCompletionNotice] = useState(null);
+  const seenRun = useRef(null);
+
+  useEffect(() => {
+    if (!selectedBrandId || !run?.id || run.status !== "completed" || run.summary?.status !== "completed") return;
+    if (seenRun.current === run.id) return;
+    seenRun.current = run.id;
+    const storageKey = `cs:weekly-seen-run:${selectedBrandId}`;
+    try {
+      if (window.localStorage.getItem(storageKey) === run.id) return;
+      window.localStorage.setItem(storageKey, run.id);
+    } catch { /* The in-memory ref still prevents repeats when storage is unavailable. */ }
+    setCompletionNotice({ id: run.id, count: run.summary.generated?.total ?? 0 });
+  }, [run, selectedBrandId]);
+
+  useEffect(() => {
+    if (!completionNotice) return undefined;
+    const timeout = window.setTimeout(() => setCompletionNotice(null), 10000);
+    return () => window.clearTimeout(timeout);
+  }, [completionNotice]);
 
   const load = useCallback(async (brandId, { silent = false } = {}) => {
     const request = ++loadRequest.current;
@@ -88,6 +108,7 @@ export default function WeeklyView({ ctx }) {
   const runStrategy = async () => {
     if (!selectedBrandId) return;
     setErr(null);
+    setCompletionNotice(null);
     try {
       const { jobId } = await creativeApi.runWeekly(selectedBrandId);
       startWeekly(jobId);
@@ -178,9 +199,16 @@ export default function WeeklyView({ ctx }) {
 
   return (
     <div className="space-y-5">
+      {completionNotice && !jobActive && renderHeaderStatus(
+        <div role="status" className="mt-2 flex items-center gap-1.5 text-sm text-emerald-600">
+          <CircleCheck className="h-4 w-4" />
+          <span>Completed · {completionNotice.count} concepts</span>
+          <button type="button" onClick={() => setCompletionNotice(null)} aria-label="Dismiss completion message" className="ml-1 rounded p-1 text-neutral-400 hover:text-neutral-600"><X className="h-3.5 w-3.5" /></button>
+        </div>
+      )}
       {renderHeaderActions(
         <div className="flex flex-wrap items-center gap-3">
-          <JobBadge job={weeklyJob} />
+          <JobBadge job={weeklyJob?.status === "completed" ? null : weeklyJob} />
           <div className="flex flex-col items-end gap-2">
           <button type="button" onClick={runStrategy} disabled={!selectedBrandId || jobActive} className="cs-primary-button">
             {jobActive && <Loader2 className="h-4 w-4 animate-spin" />}
