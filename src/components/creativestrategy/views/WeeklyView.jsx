@@ -27,13 +27,14 @@ const STATUSES = [
 
 export default function WeeklyView({ ctx }) {
   const {
-    selectedBrandId, selectedProductId, renderHeaderActions,
+    selectedBrandId, renderHeaderActions,
   } = ctx;
   const currentBrand = useRef(selectedBrandId);
   currentBrand.current = selectedBrandId;
   const loadRequest = useRef(0);
   const [ideas, setIdeas] = useState([]);
   const [run, setRun] = useState(null);
+  const [schedule, setSchedule] = useState(null);
   const [err, setErr] = useState(null);
   const [tier, setTier] = useState("all");
   const [status, setStatusFilter] = useState("pending");
@@ -52,6 +53,7 @@ export default function WeeklyView({ ctx }) {
       if (currentBrand.current !== brandId || request !== loadRequest.current) return;
       setIdeas(response.ideas || []);
       setRun(response.latestRun || null);
+      setSchedule(response.schedule || null);
     } catch (error) {
       if (currentBrand.current === brandId && request === loadRequest.current) setErr(error.message);
     } finally {
@@ -63,6 +65,7 @@ export default function WeeklyView({ ctx }) {
     setBriefs({});
     setIdeas([]);
     setRun(null);
+    setSchedule(null);
     setErr(null);
     if (selectedBrandId) load(selectedBrandId);
     else { setIdeas([]); setRun(null); }
@@ -71,6 +74,7 @@ export default function WeeklyView({ ctx }) {
   const { job: weeklyJob, start: startWeekly } = useJobRunner({
     kind: "weekly_strategy",
     brandId: selectedBrandId,
+    enabled: Boolean(selectedBrandId),
     onComplete: () => load(selectedBrandId),
   });
   const jobActive = weeklyJob && (weeklyJob.status == null || weeklyJob.status === "queued" || weeklyJob.status === "running");
@@ -120,7 +124,7 @@ export default function WeeklyView({ ctx }) {
     setErr(null);
     setBriefing(id);
     try {
-      const { brief } = await creativeApi.generateBrief(id, selectedProductId || undefined);
+      const { brief } = await creativeApi.generateBrief(id);
       if (currentBrand.current !== selectedBrandId) return;
       setBriefs((current) => ({ ...current, [id]: brief }));
     } catch (error) {
@@ -164,6 +168,10 @@ export default function WeeklyView({ ctx }) {
   const lastRunAt = run?.startedAt || run?.completedAt;
   const lastRunDate = lastRunAt ? new Date(lastRunAt) : null;
   const lastRunLabel = lastRunDate && !Number.isNaN(lastRunDate.getTime()) ? lastRunDate.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) : "Not run yet";
+  const nextRunAt = schedule?.nextRunAt;
+  const nextRunLabel = nextRunAt ? new Date(nextRunAt).toLocaleString("en-AU", {
+    timeZone: schedule.timeZone, dateStyle: "medium", timeStyle: "short",
+  }) : null;
   const filtersActive = Object.values(filters).some((value) => value !== "all");
   const weeklyPhase = weeklyJob?.progress?.phase;
 
@@ -178,7 +186,10 @@ export default function WeeklyView({ ctx }) {
             {jobActive && <Loader2 className="h-4 w-4 animate-spin" />}
             {jobActive ? "Running Strategy…" : "Run Strategy"}
           </button>
-          <p className="text-[11px] text-neutral-500">Last run: {lastRunAt ? <time dateTime={lastRunAt}>{lastRunLabel}</time> : lastRunLabel}</p>
+          {selectedBrandId && <div className="space-y-1 text-right text-[11px] text-neutral-500">
+            <p>Last run: {lastRunAt ? <time dateTime={lastRunAt}>{lastRunLabel}</time> : lastRunLabel}</p>
+            <p>Next run: {nextRunAt ? <><time dateTime={nextRunAt}>{nextRunLabel}</time> (Sydney time)</> : loading ? "Loading…" : schedule?.enabled === false ? "Not scheduled" : "Unavailable"}</p>
+          </div>}
           </div>
         </div>
       )}

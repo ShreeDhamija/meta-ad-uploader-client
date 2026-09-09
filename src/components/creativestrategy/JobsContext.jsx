@@ -120,20 +120,21 @@ export function useJobs() {
 // Fires onComplete exactly once when a tracked job finishes successfully — even
 // if the job completed while the view was unmounted (the view re-adopts it on
 // remount and reloads its data).
-export function useJobRunner({ kind, brandId, productId, onComplete, onFail }) {
+export function useJobRunner({ kind, brandId, productId, enabled = true, onComplete, onFail }) {
   const { jobs, track } = useJobs();
   const firedRef = useRef(null);
   const cbRef = useRef({ onComplete, onFail });
   cbRef.current = { onComplete, onFail };
 
   const job = useMemo(() => {
+    if (!enabled) return null;
     const matches = Object.values(jobs).filter((j) =>
       j.meta?.kind === kind &&
       (brandId == null || j.meta?.brandId === brandId) &&
       (productId == null || j.meta?.productId === productId));
     matches.sort((a, b) => (b.startedAt || 0) - (a.startedAt || 0));
     return matches[0] || null;
-  }, [jobs, kind, brandId, productId]);
+  }, [jobs, kind, brandId, productId, enabled]);
 
   useEffect(() => {
     if (!job) return;

@@ -170,7 +170,7 @@ export default function CreativeStrategyLayout() {
   const selectedBrand = brands.find((b) => b.id === selectedBrandId) || null;
   const selectedProduct = products.find((p) => p.id === selectedProductId) || null;
   const selectorsDisabled = activeTab === "brands";
-  const showProductSelector = activeTab !== "products";
+  const showProductSelector = activeTab !== "products" && activeTab !== "weekly";
   const selectorBrands = activeTab === "brands" || activeTab === "products" ? brands : accountsWithProducts;
   const renderHeaderActions = useCallback(
     (actions) => (headerActionsTarget ? createPortal(actions, headerActionsTarget) : null),
@@ -213,7 +213,7 @@ export default function CreativeStrategyLayout() {
       case "inspiration":
         return <InspirationView ctx={ctx} />;
       case "weekly":
-        return <WeeklyView ctx={ctx} />;
+        return <WeeklyView key={selectedBrandId || "no-account"} ctx={ctx} />;
       default: {
         const item = NAV.find((n) => n.key === activeTab);
         return <ComingSoon label={item?.label} phase={item?.phase} />;
