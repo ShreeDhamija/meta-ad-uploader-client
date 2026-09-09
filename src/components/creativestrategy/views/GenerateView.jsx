@@ -2,7 +2,8 @@
 // retaining their existing API flows.
 import { useEffect, useMemo, useRef, useState } from "react";
 import PropTypes from "prop-types";
-import { Box, ClipboardList, FileText, Flame, Loader2, Sparkles, ThumbsDown, ThumbsUp } from "lucide-react";
+import { Box, ClipboardList, Download, FileText, Flame, Loader2, Sparkles, ThumbsDown, ThumbsUp, Trash2 } from "lucide-react";
+import pLimit from "p-limit";
 import VisualInspiration from "./VisualInspiration";
 import { creativeApi } from "@/lib/creativeApi";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -95,6 +96,20 @@ export default function GenerateView({ ctx }) {
   const [generatedLoading, setGeneratedLoading] = useState(false);
   const [nextStaticOffset, setNextStaticOffset] = useState(null);
   const staticRequest = useRef(0);
+  const bulkSession = useRef(0);
+  const [bulkAction, setBulkAction] = useState(null);
+  const [selectedImages, setSelectedImages] = useState(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState(0);
+  const [bulkMessage, setBulkMessage] = useState("");
+
+  useEffect(() => {
+    setBulkAction(null);
+    setSelectedImages(new Set());
+    setBulkBusy(false);
+    setBulkMessage("");
+    return () => { bulkSession.current += 1; };
+  }, [selectedProductId, mode]);
 
   const [generationMode, setGenerationMode] = useState("manual");
   const [visualSelection, setVisualSelection] = useState(null);
@@ -156,6 +171,9 @@ export default function GenerateView({ ctx }) {
 
   const runStatics = async () => {
     if (!selectedProductId) return;
+    setBulkAction(null);
+    setSelectedImages(new Set());
+    setBulkMessage("");
     setErr(null);
     try {
       const cleanedInputs = {};
@@ -201,8 +219,83 @@ export default function GenerateView({ ctx }) {
     try { await creativeApi.rateGenerated(id, rating); } catch (error) { setErr(error.message); }
   };
 
+  const toggleImage = (id) => setSelectedImages((current) => {
+    const next = new Set(current);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
+
+  const selectAllImages = async (checked) => {
+    if (!checked) { setSelectedImages(new Set()); return; }
+    const session = bulkSession.current;
+    setBulkBusy(true);
+    setBulkMessage("Selecting all images…");
+    setErr(null);
+    try {
+      // Fetch every page so Select All includes older generations too.
+      const all = new Map(items.map((item) => [item.id, item]));
+      let offset = nextStaticOffset;
+      while (offset != null) {
+        const response = await creativeApi.getGenerated(selectedProductId, offset);
+        if (session !== bulkSession.current) return;
+        for (const item of response.items || []) all.set(item.id, item);
+        offset = response.nextOffset ?? null;
+      }
+      if (session !== bulkSession.current) return;
+      setItems(Array.from(all.values()));
+      setNextStaticOffset(null);
+      setSelectedImages(new Set(all.keys()));
+      setBulkMessage("");
+    } catch (error) {
+      if (session === bulkSession.current) { setErr(error.message); setBulkMessage(""); }
+    } finally {
+      if (session === bulkSession.current) setBulkBusy(false);
+    }
+  };
+
+  const runBulkAction = async () => {
+    const chosen = items.filter((item) => selectedImages.has(item.id));
+    if (!chosen.length || bulkBusy) return;
+    const session = bulkSession.current;
+    const isCurrent = () => session === bulkSession.current;
+    setBulkBusy(true);
+    setBulkProgress(0);
+    setBulkMessage("");
+    setErr(null);
+    try {
+      let failures;
+      if (bulkAction === "download") {
+        const { downloadGeneratedImages } = await import("../downloadGeneratedImages");
+        failures = await downloadGeneratedImages(chosen, (count) => { if (isCurrent()) setBulkProgress(count); }, isCurrent);
+      } else {
+        const limit = pLimit(4);
+        const results = await Promise.all(chosen.map((item) => limit(async () => {
+          try { await creativeApi.deleteGenerated(item.id); return { id: item.id }; }
+          catch (error) { return { id: item.id, error: error.message }; }
+          finally { if (isCurrent()) setBulkProgress((count) => count + 1); }
+        })));
+        failures = results.filter((result) => result.error);
+        if (isCurrent()) {
+          const deleted = new Set(results.filter((result) => !result.error).map((result) => result.id));
+          setItems((current) => current.filter((item) => !deleted.has(item.id)));
+          setNextStaticOffset((offset) => offset == null ? null : Math.max(0, offset - deleted.size));
+        }
+      }
+      if (!isCurrent()) return;
+      setSelectedImages(new Set(failures.map((failure) => failure.id)));
+      const completed = chosen.length - failures.length;
+      setBulkMessage(`${completed} image${completed === 1 ? "" : "s"} ${bulkAction === "delete" ? "deleted" : "downloaded"}.`);
+      if (failures.length) setErr(`${failures.length} image(s) failed and remain selected for retry. ${failures[0].error}`);
+      else setBulkAction(null);
+    } catch (error) {
+      if (isCurrent()) setErr(error.message);
+    } finally {
+      if (isCurrent()) setBulkBusy(false);
+    }
+  };
+
   const inputFields = selectedFormat?.requiresUserInput || [];
-  const imageItems = items.filter((item) => item.imageUrl);
+  const imageItems = items;
   const generationActive = job && (job.status == null || job.status === "queued" || job.status === "running");
 
   return (
@@ -225,6 +318,7 @@ export default function GenerateView({ ctx }) {
 
       {mode === "statics" && (
         <GenerateWorkspace
+          isStatics
           sidebar={(
             <>
               <div className="space-y-4">
@@ -273,7 +367,7 @@ export default function GenerateView({ ctx }) {
               <div className="mt-auto space-y-3 pt-5">
                 {visualSelection?.conceptReferenceIds.length > variationCount && <p className="text-xs text-amber-800">Increase variations to use all selected concept references.</p>}
                 <JobBadge job={job} />
-                <button type="button" onClick={runStatics} disabled={!selectedProductId || !visualSelection?.ready || visualSelection.productId !== selectedProductId || generationActive || visualSelection.conceptReferenceIds.length > variationCount} className="cs-primary-button w-full">
+                <button type="button" onClick={runStatics} disabled={bulkBusy || !selectedProductId || !visualSelection?.ready || visualSelection.productId !== selectedProductId || generationActive || visualSelection.conceptReferenceIds.length > variationCount} className="cs-primary-button w-full">
                   {generationMode === "strategist" ? "Plan & Generate Ads" : "Generate Ads"}
                 </button>
               </div>
@@ -290,13 +384,30 @@ export default function GenerateView({ ctx }) {
           ) : imageItems.length === 0 ? (
             <WorkspaceEmpty icon={Flame} title="No generated ads yet" hint="Choose your settings in the sidebar and generate the first variations." />
           ) : (
-            <GenerationGrid items={imageItems} rate={rate} />
+            <GenerationGrid items={imageItems} rate={rate} selecting={Boolean(bulkAction)} selected={selectedImages} toggle={toggleImage} disabled={bulkBusy} />
           )}
           {nextStaticOffset != null && !generationActive && (
-            <button type="button" onClick={() => load(selectedProductId, nextStaticOffset)} disabled={generatedLoading} className="cs-library-action mt-4">
+            <button type="button" onClick={() => load(selectedProductId, nextStaticOffset)} disabled={generatedLoading || bulkBusy} className="cs-library-action mt-4 self-start">
               {generatedLoading ? "Loading…" : "Load more statics"}
             </button>
           )}
+          {!generationActive && (imageItems.length > 0 || bulkMessage) && <div className="cs-generate-bulk-actions">
+            {bulkAction && <label className="mr-auto flex items-center gap-2 text-xs">
+              <input type="checkbox" className="h-4 w-4 accent-[#6c3403]" checked={nextStaticOffset == null && items.length > 0 && items.every((item) => selectedImages.has(item.id))} ref={(node) => { if (node) node.indeterminate = selectedImages.size > 0 && (nextStaticOffset != null || !items.every((item) => selectedImages.has(item.id))); }} onChange={(event) => selectAllImages(event.target.checked)} disabled={bulkBusy || generatedLoading} />
+              Select all <span className="text-stone-500">({selectedImages.size} selected)</span>
+            </label>}
+            <span role="status" className="text-xs text-stone-500">{bulkBusy && !bulkMessage ? `${bulkAction === "delete" ? "Deleting" : "Downloading"} ${bulkProgress}/${selectedImages.size}…` : bulkMessage}</span>
+            {bulkAction ? <>
+              <button type="button" className="cs-library-action" disabled={bulkBusy} onClick={() => { setBulkAction(null); setSelectedImages(new Set()); setBulkMessage(""); }}>Cancel</button>
+              <button type="button" className={`cs-library-action ${bulkAction === "delete" ? "is-archive" : ""}`} disabled={bulkBusy || generatedLoading || selectedImages.size === 0} onClick={runBulkAction}>
+                {bulkBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : bulkAction === "delete" ? <Trash2 className="h-4 w-4" /> : <Download className="h-4 w-4" />}
+                {bulkAction === "delete" ? "Delete" : "Download"} selected ({selectedImages.size})
+              </button>
+            </> : imageItems.length > 0 && <>
+              <button type="button" className="cs-library-action" disabled={generatedLoading} onClick={() => { setBulkAction("download"); setBulkMessage(""); }}><Download className="h-4 w-4" /> Download</button>
+              <button type="button" className="cs-library-action is-archive" disabled={generatedLoading} onClick={() => { setBulkAction("delete"); setBulkMessage(""); }}><Trash2 className="h-4 w-4" /> Delete</button>
+            </>}
+          </div>}
         </GenerateWorkspace>
       )}
 
@@ -513,11 +624,11 @@ function BriefPanel({ productId }) {
   );
 }
 
-function GenerateWorkspace({ sidebar, children }) {
+function GenerateWorkspace({ sidebar, children, isStatics = false }) {
   return (
     <div className="cs-generate-layout">
       <aside className="cs-generate-sidebar">{sidebar}</aside>
-      <section className="cs-generate-canvas">{children}</section>
+      <section className={`cs-generate-canvas ${isStatics ? "is-statics" : ""}`}>{children}</section>
     </div>
   );
 }
@@ -604,7 +715,7 @@ function Field({ label, children }) {
   );
 }
 
-function GenerationGrid({ items, rate }) {
+function GenerationGrid({ items, rate, selecting, selected, toggle, disabled }) {
   const groups = new Map();
   for (const item of items) {
     const key = item.briefMeta?.pair_id || item.id;
@@ -615,7 +726,7 @@ function GenerationGrid({ items, rate }) {
     <div className={`cs-generate-gallery ${items.some((item) => item.briefMeta?.pair_id) ? "has-pairs" : ""}`}>
       {Array.from(groups, ([key, group]) => <div key={key} className={group.length > 1 ? "cs-generate-pair" : undefined}>
         {group.sort((a, b) => Number(a.briefMeta?.aspect_ratio === "9:16") - Number(b.briefMeta?.aspect_ratio === "9:16")).map((item) => <div key={item.id}>
-          <GeneratedImage item={item} rate={rate} />
+          <GeneratedImage item={item} rate={rate} selecting={selecting} selected={selected.has(item.id)} toggle={toggle} disabled={disabled} />
           {item.briefMeta?.strategy && <div className="px-1 py-3 text-xs text-stone-600">
             <p className="font-semibold text-stone-800">{item.briefMeta.strategy.concept_name}</p>
             <p className="mt-1">{[item.briefMeta.strategy.persona_label, item.briefMeta.strategy.angle].filter(Boolean).join(" · ")}</p>
@@ -627,27 +738,32 @@ function GenerationGrid({ items, rate }) {
   );
 }
 
-function GeneratedImage({ item, rate }) {
+function GeneratedImage({ item, rate, selecting, selected, toggle, disabled }) {
   const [loaded, setLoaded] = useState(false);
   return (
     <article className="cs-generate-image-card group relative aspect-square" style={item.briefMeta?.aspect_ratio ? { aspectRatio: item.briefMeta.aspect_ratio.replace(":", " / ") } : undefined}>
-      {!loaded && <div className="absolute inset-0 grid place-items-center"><Loader2 className="h-5 w-5 animate-spin text-[#6c3403]" /></div>}
-      <img
+      {!loaded && item.imageUrl && <div className="absolute inset-0 grid place-items-center"><Loader2 className="h-5 w-5 animate-spin text-[#6c3403]" /></div>}
+      {!item.imageUrl && <div className="absolute inset-0 grid place-items-center text-xs text-stone-500">Preview unavailable</div>}
+      {item.imageUrl && <img
         src={item.imageUrl}
+        loading="lazy"
         alt={item.formatSlug || "Generated ad"}
         onLoad={() => setLoaded(true)}
         onError={() => setLoaded(true)}
         className={`h-full w-full object-contain transition-opacity duration-200 ${loaded ? "opacity-100" : "opacity-0"}`}
-      />
+      />}
       {item.briefMeta?.aspect_ratio && <span className="absolute left-2 top-2 rounded bg-black/60 px-2 py-1 text-xs text-white">{item.briefMeta.aspect_ratio}</span>}
-      <div className="absolute bottom-3 right-3 flex items-center gap-2 opacity-90 transition-opacity group-hover:opacity-100">
+      {selecting && <label className={`cs-generate-image-select ${selected ? "is-selected" : ""}`}>
+        <input type="checkbox" aria-label={`Select ${item.formatSlug || "image"} ${item.briefMeta?.aspect_ratio || ""} ${item.id}`} checked={selected} onChange={() => toggle(item.id)} disabled={disabled} />
+      </label>}
+      {!selecting && <div className="absolute bottom-3 right-3 flex items-center gap-2 opacity-90 transition-opacity group-hover:opacity-100">
         <button type="button" onClick={() => rate(item.id, "up")} className={`cs-generate-rating ${item.myRating === "up" ? "is-active" : ""}`} aria-label="Thumbs up">
           <ThumbsUp className="h-3.5 w-3.5" />
         </button>
         <button type="button" onClick={() => rate(item.id, "down")} className={`cs-generate-rating ${item.myRating === "down" ? "is-active" : ""}`} aria-label="Thumbs down">
           <ThumbsDown className="h-3.5 w-3.5" />
         </button>
-      </div>
+      </div>}
     </article>
   );
 }
@@ -692,7 +808,7 @@ function Tag({ children }) {
 }
 
 GenerateView.propTypes = { ctx: PropTypes.object.isRequired };
-GenerateWorkspace.propTypes = { sidebar: PropTypes.node.isRequired, children: PropTypes.node.isRequired };
+GenerateWorkspace.propTypes = { sidebar: PropTypes.node.isRequired, children: PropTypes.node.isRequired, isStatics: PropTypes.bool };
 WorkspaceEmpty.propTypes = { icon: PropTypes.elementType.isRequired, title: PropTypes.string.isRequired, hint: PropTypes.string.isRequired };
 GenerateLoading.propTypes = { label: PropTypes.string.isRequired };
 SidebarSelect.propTypes = { label: PropTypes.string.isRequired, value: PropTypes.string.isRequired, onChange: PropTypes.func.isRequired, options: PropTypes.array.isRequired };
@@ -700,8 +816,8 @@ SidebarNumber.propTypes = { label: PropTypes.string.isRequired, value: PropTypes
 SidebarLoading.propTypes = { label: PropTypes.string.isRequired };
 SidebarInput.propTypes = { label: PropTypes.string.isRequired, type: PropTypes.string, value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired, onChange: PropTypes.func.isRequired, placeholder: PropTypes.string };
 Field.propTypes = { label: PropTypes.string.isRequired, children: PropTypes.node.isRequired };
-GenerationGrid.propTypes = { items: PropTypes.array.isRequired, rate: PropTypes.func.isRequired };
-GeneratedImage.propTypes = { item: PropTypes.object.isRequired, rate: PropTypes.func.isRequired };
+GenerationGrid.propTypes = { items: PropTypes.array.isRequired, rate: PropTypes.func.isRequired, selecting: PropTypes.bool, selected: PropTypes.instanceOf(Set).isRequired, toggle: PropTypes.func.isRequired, disabled: PropTypes.bool };
+GeneratedImage.propTypes = { item: PropTypes.object.isRequired, rate: PropTypes.func.isRequired, selecting: PropTypes.bool, selected: PropTypes.bool, toggle: PropTypes.func.isRequired, disabled: PropTypes.bool };
 ResultSection.propTypes = { title: PropTypes.string.isRequired, children: PropTypes.node.isRequired };
 GenerationBatch.propTypes = { legacyWeekly: PropTypes.bool, productUnspecified: PropTypes.bool, createdAt: PropTypes.string.isRequired, isLatest: PropTypes.bool.isRequired, children: PropTypes.node.isRequired };
 HistoryControls.propTypes = { history: PropTypes.object.isRequired, disabled: PropTypes.bool };

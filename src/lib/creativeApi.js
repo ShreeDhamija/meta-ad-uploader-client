@@ -6,7 +6,7 @@
 const CREATIVE_API_URL =
   import.meta.env.VITE_CREATIVE_API_URL || "http://localhost:3001";
 
-async function request(path, { method = "GET", body } = {}) {
+async function request(path, { method = "GET", body, binary = false } = {}) {
   const headers = { "Content-Type": "application/json" };
   // Dev-only identity stub — hardcoded to the owner's Facebook user id so the
   // worker finds the matching Meta token in Firestore. In production the shared
@@ -21,6 +21,7 @@ async function request(path, { method = "GET", body } = {}) {
     credentials: "include",
     body: body ? JSON.stringify(body) : undefined,
   });
+  if (binary && res.ok) return res.blob();
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
   return data;
@@ -72,6 +73,7 @@ export const creativeApi = {
   getGenerated: (productId, offset = 0) => request(`/generate?productId=${encodeURIComponent(productId)}&offset=${offset}`),
   getGenerationHistory: (productId, kind, offset = 0) => request(`/generate/history?productId=${encodeURIComponent(productId)}&kind=${encodeURIComponent(kind)}&offset=${offset}`),
   rateGenerated: (id, rating) => request(`/generate/${encodeURIComponent(id)}/feedback`, { method: "POST", body: { rating } }),
+  downloadGenerated: (id) => request(`/generate/${encodeURIComponent(id)}/download`, { binary: true }),
   deleteGenerated: (id) => request(`/generate/${encodeURIComponent(id)}`, { method: "DELETE" }),
   getFormats: () => request("/generate/formats"),
   fillCopy: (body) => request("/generate/fill-copy", { method: "POST", body }),
