@@ -9,6 +9,7 @@ import { creativeApi } from "@/lib/creativeApi";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ErrorBanner } from "../ui";
 import { useJobRunner, JobBadge } from "../JobsContext";
 
@@ -335,6 +336,23 @@ export default function GenerateView({ ctx }) {
       {mode === "statics" && (
         <GenerateWorkspace
           isStatics
+          footer={!generationActive && (imageItems.length > 0 || bulkMessage) && <div className="cs-generate-bulk-actions">
+            {bulkAction && <label className="mr-auto flex items-center gap-2 text-xs">
+              <input type="checkbox" className="h-4 w-4 accent-[#6c3403]" checked={nextStaticOffset == null && items.length > 0 && items.every((item) => selectedImages.has(item.id))} ref={(node) => { if (node) node.indeterminate = selectedImages.size > 0 && (nextStaticOffset != null || !items.every((item) => selectedImages.has(item.id))); }} onChange={(event) => selectAllImages(event.target.checked)} disabled={bulkBusy || generatedLoading} />
+              Select all <span className="text-stone-500">({selectedImages.size} selected)</span>
+            </label>}
+            <span role="status" className="text-xs text-stone-500">{bulkBusy && !bulkMessage ? `${bulkAction === "delete" ? "Deleting" : "Downloading"} ${bulkProgress}/${selectedImages.size}…` : bulkMessage}</span>
+            {bulkAction ? <>
+              <button type="button" className="cs-library-action" disabled={bulkBusy} onClick={() => { setBulkAction(null); setSelectedImages(new Set()); setBulkMessage(""); }}>Cancel</button>
+              <button type="button" className={`cs-library-action ${bulkAction === "delete" ? "is-archive" : ""}`} disabled={bulkBusy || generatedLoading || selectedImages.size === 0} onClick={runBulkAction}>
+                {bulkBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : bulkAction === "delete" ? <Trash2 className="h-4 w-4" /> : <Download className="h-4 w-4" />}
+                {bulkAction === "delete" ? "Delete" : "Download"} selected ({selectedImages.size})
+              </button>
+            </> : imageItems.length > 0 && <>
+              <button type="button" className="cs-library-action" disabled={generatedLoading} onClick={() => { setBulkAction("download"); setBulkMessage(""); }}><Download className="h-4 w-4" /> Download</button>
+              <button type="button" className="cs-library-action is-archive" disabled={generatedLoading} onClick={() => { setBulkAction("delete"); setBulkMessage(""); }}><Trash2 className="h-4 w-4" /> Delete</button>
+            </>}
+          </div>}
           sidebar={(
             <>
               <div className="space-y-4">
@@ -407,23 +425,7 @@ export default function GenerateView({ ctx }) {
               {generatedLoading ? "Loading…" : "Load more statics"}
             </button>
           )}
-          {!generationActive && (imageItems.length > 0 || bulkMessage) && <div className="cs-generate-bulk-actions">
-            {bulkAction && <label className="mr-auto flex items-center gap-2 text-xs">
-              <input type="checkbox" className="h-4 w-4 accent-[#6c3403]" checked={nextStaticOffset == null && items.length > 0 && items.every((item) => selectedImages.has(item.id))} ref={(node) => { if (node) node.indeterminate = selectedImages.size > 0 && (nextStaticOffset != null || !items.every((item) => selectedImages.has(item.id))); }} onChange={(event) => selectAllImages(event.target.checked)} disabled={bulkBusy || generatedLoading} />
-              Select all <span className="text-stone-500">({selectedImages.size} selected)</span>
-            </label>}
-            <span role="status" className="text-xs text-stone-500">{bulkBusy && !bulkMessage ? `${bulkAction === "delete" ? "Deleting" : "Downloading"} ${bulkProgress}/${selectedImages.size}…` : bulkMessage}</span>
-            {bulkAction ? <>
-              <button type="button" className="cs-library-action" disabled={bulkBusy} onClick={() => { setBulkAction(null); setSelectedImages(new Set()); setBulkMessage(""); }}>Cancel</button>
-              <button type="button" className={`cs-library-action ${bulkAction === "delete" ? "is-archive" : ""}`} disabled={bulkBusy || generatedLoading || selectedImages.size === 0} onClick={runBulkAction}>
-                {bulkBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : bulkAction === "delete" ? <Trash2 className="h-4 w-4" /> : <Download className="h-4 w-4" />}
-                {bulkAction === "delete" ? "Delete" : "Download"} selected ({selectedImages.size})
-              </button>
-            </> : imageItems.length > 0 && <>
-              <button type="button" className="cs-library-action" disabled={generatedLoading} onClick={() => { setBulkAction("download"); setBulkMessage(""); }}><Download className="h-4 w-4" /> Download</button>
-              <button type="button" className="cs-library-action is-archive" disabled={generatedLoading} onClick={() => { setBulkAction("delete"); setBulkMessage(""); }}><Trash2 className="h-4 w-4" /> Delete</button>
-            </>}
-          </div>}
+
         </GenerateWorkspace>
       )}
 
@@ -640,7 +642,7 @@ function BriefPanel({ productId }) {
   );
 }
 
-function GenerateWorkspace({ sidebar, children, isStatics = false }) {
+function GenerateWorkspace({ sidebar, children, isStatics = false, footer }) {
   return (
     <div className="cs-generate-layout">
       <aside className="cs-generate-sidebar">
@@ -652,6 +654,7 @@ function GenerateWorkspace({ sidebar, children, isStatics = false }) {
         <ScrollArea className="cs-generate-scroll" viewportClassName="cs-generate-viewport">
           <div className="cs-generate-canvas-content">{children}</div>
         </ScrollArea>
+        {footer}
       </section>
     </div>
   );
@@ -784,7 +787,7 @@ function GeneratedImage({ item, rate, selecting, selected, toggle, disabled, onP
         className={`h-full w-full object-contain transition-opacity duration-200 ${loaded ? "opacity-100" : "opacity-0"}`}
       /></button>}
       {selecting && <label className={`cs-generate-image-select ${selected ? "is-selected" : ""}`}>
-        <input type="checkbox" aria-label={`Select ${item.formatSlug || "image"} ${item.briefMeta?.aspect_ratio || ""} ${item.id}`} checked={selected} onChange={() => toggle(item.id)} disabled={disabled} />
+        <Checkbox className="cs-generate-checkbox" aria-label={`Select ${item.formatSlug || "image"} ${item.briefMeta?.aspect_ratio || ""} ${item.id}`} checked={selected} onCheckedChange={() => toggle(item.id)} disabled={disabled} />
       </label>}
       {!selecting && <div className="absolute bottom-3 right-3 flex items-center gap-2 opacity-90 transition-opacity group-hover:opacity-100">
         <button type="button" onClick={() => rate(item.id, "up")} className={`cs-generate-rating is-up ${item.myRating === "up" ? "is-active" : ""}`} aria-label="Thumbs up" aria-pressed={item.myRating === "up"}>
@@ -838,7 +841,7 @@ function Tag({ children }) {
 }
 
 GenerateView.propTypes = { ctx: PropTypes.object.isRequired };
-GenerateWorkspace.propTypes = { sidebar: PropTypes.node.isRequired, children: PropTypes.node.isRequired, isStatics: PropTypes.bool };
+GenerateWorkspace.propTypes = { sidebar: PropTypes.node.isRequired, children: PropTypes.node.isRequired, isStatics: PropTypes.bool, footer: PropTypes.node };
 WorkspaceEmpty.propTypes = { icon: PropTypes.elementType.isRequired, title: PropTypes.string.isRequired, hint: PropTypes.string.isRequired };
 GenerateLoading.propTypes = { label: PropTypes.string.isRequired };
 SidebarSelect.propTypes = { label: PropTypes.string.isRequired, value: PropTypes.string.isRequired, onChange: PropTypes.func.isRequired, options: PropTypes.array.isRequired };
