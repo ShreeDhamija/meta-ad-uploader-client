@@ -30,7 +30,7 @@ const PixelSelect = memo(({
     const selected = pixels.find(p => p.id === value)
     const displayText = selected
         ? (selected.name || selected.id)
-        : (value ? value : "Select a pixel")
+        : (value ? value : "None")
 
     return (
         <Popover open={open} onOpenChange={setOpen}>
@@ -68,6 +68,13 @@ const PixelSelect = memo(({
                     <CommandInput placeholder={placeholder || "Search pixels..."} className="bg-transparent" wrapperClassName="bg-gray-50 border-gray-200 rounded-[20px]" />
                     <CommandList className="max-h-[300px] overflow-y-auto rounded-2xl custom-scrollbar">
                         <CommandGroup>
+                            <CommandItem
+                                value="None"
+                                onSelect={() => { onChange(null); setOpen(false); }}
+                                className={`px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150 hover:bg-gray-100 ${!value ? "bg-gray-100 font-semibold" : ""}`}
+                            >
+                                <span className="text-sm">None</span>
+                            </CommandItem>
                             {pixels.map((pixel) => (
                                 <CommandItem
                                     key={pixel.id}
