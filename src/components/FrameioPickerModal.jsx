@@ -71,24 +71,30 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
     try {
       let url, listKey;
       if (view.kind === "accounts") {
-        url = `${API_BASE_URL}/api/frameio/accounts`;
+        url = `${API_BASE_URL}/api/frameio/accounts?pageSize=${PAGE_SIZE}`;
+        if (after) url += `&after=${encodeURIComponent(after)}`;
         listKey = "accounts";
       } else if (view.kind === "workspaces") {
-        url = `${API_BASE_URL}/api/frameio/workspaces?accountId=${encodeURIComponent(view.accountId)}`;
+        url = `${API_BASE_URL}/api/frameio/workspaces?accountId=${encodeURIComponent(view.accountId)}&pageSize=${PAGE_SIZE}`;
+        if (after) url += `&after=${encodeURIComponent(after)}`;
         listKey = "workspaces";
       } else if (view.kind === "projects") {
-        url = `${API_BASE_URL}/api/frameio/projects?accountId=${encodeURIComponent(view.accountId)}&workspaceId=${encodeURIComponent(view.workspaceId)}&pageSize=${PAGE_SIZE}`;
+        url = `${API_BASE_URL}/api/frameio/projects?accountId=${encodeURIComponent(view.accountId)}&pageSize=${PAGE_SIZE}`;
+        if (view.workspaceId) url += `&workspaceId=${encodeURIComponent(view.workspaceId)}`;
         if (after) url += `&after=${encodeURIComponent(after)}`;
         listKey = "projects";
       } else if (view.kind === "project-root") {
         // Fetch project to discover its root folder, then list folder-children
         const projRes = await fetch(`${API_BASE_URL}/api/frameio/project?accountId=${encodeURIComponent(view.accountId)}&projectId=${encodeURIComponent(view.projectId)}`, { credentials: "include" });
         if (requestId !== latestRequestRef.current) return;
-        if (!projRes.ok) throw new Error(`Failed to load project (${projRes.status})`);
+        if (!projRes.ok) {
+          const failure = await projRes.json().catch(() => ({}));
+          throw new Error(`Failed to load project (${projRes.status})${failure.debugId ? ` — reference ${failure.debugId}` : ""}`);
+        }
         const projData = await projRes.json();
         if (requestId !== latestRequestRef.current) return;
         const rootFolderId = projData?.project?.root_folder_id || projData?.root_folder_id || projData?.data?.root_folder_id;
-        if (!rootFolderId) throw new Error("Project has no root folder");
+        if (!rootFolderId) throw new Error(`Project has no root folder${projData.debugId ? ` — reference ${projData.debugId}` : ""}`);
         // Replace current stack entry with a 'folder' entry pointing to root
         setStack(prev => {
           if (requestId !== latestRequestRef.current || prev.length === 0) return prev;
@@ -107,7 +113,10 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
 
       const res = await fetch(url, { credentials: "include" });
       if (requestId !== latestRequestRef.current) return;
-      if (!res.ok) throw new Error(`Request failed (${res.status})`);
+      if (!res.ok) {
+        const failure = await res.json().catch(() => ({}));
+        throw new Error(`Request failed (${res.status})${failure.debugId ? ` — reference ${failure.debugId}` : ""}`);
+      }
       const data = await res.json();
       if (requestId !== latestRequestRef.current) return;
 
@@ -119,7 +128,6 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
       setNextAfter(next);
     } catch (e) {
       if (requestId !== latestRequestRef.current) return;
-      console.error("Frame.io picker error:", e);
       setError(e.message || "Failed to load");
     } finally {
       if (requestId === latestRequestRef.current) {
@@ -291,6 +299,16 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
           </div>
 
           {/* List */}
+          {current.kind === "workspaces" && (
+            <Button
+              type="button"
+              variant="outline"
+              className="self-start rounded-full"
+              onClick={() => handleNavigate({ kind: "projects", accountId: current.accountId, name: "All projects" })}
+            >
+              All projects, including invited projects
+            </Button>
+          )}
           <ScrollArea
             key={[current.kind, current.accountId, current.workspaceId, current.projectId, current.folderId].filter(Boolean).join(":")}
             className="h-0 min-h-0 flex-1 overflow-hidden rounded-[20px] border border-[#E2E2E2] bg-[#F0F0F0]"
