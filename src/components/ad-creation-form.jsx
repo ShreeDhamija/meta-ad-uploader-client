@@ -1816,6 +1816,7 @@ export default function AdCreationForm({
 
   const liveVariantSnapshot = useMemo(
     () => ({
+      adName,
       headlines,
       descriptions,
       messages,
@@ -1856,6 +1857,7 @@ export default function AdCreationForm({
       pixelTrackingOverride,
     }),
     [
+      adName,
       headlines,
       descriptions,
       messages,
@@ -2143,6 +2145,7 @@ export default function AdCreationForm({
       return {
         id: variant.id,
         name: variant.name,
+        adName: snapshot.adNameFormulaV2?.rawInput || snapshot.adName || "",
         campaignNames,
         adSetNames,
         pageName: selectedPage?.name || snapshot.pageId || "—",
@@ -2197,6 +2200,10 @@ export default function AdCreationForm({
       };
 
       if (variantId === activeVariantId) {
+        if (field === "adName") {
+          setAdName(value);
+          setAdNameFormulaV2({ rawInput: value, overrideImportedPostName: true });
+        }
         if (field === "messages") setMessages((current) => updateIndexedValue(current));
         if (field === "headlines") setHeadlines((current) => updateIndexedValue(current));
         if (field === "descriptions") setDescriptions((current) => updateIndexedValue(current));
@@ -2215,8 +2222,11 @@ export default function AdCreationForm({
 
           const nextSnapshot = {
             ...currentSnapshot,
-            [field]: updateIndexedValue(currentSnapshot[field]),
+            [field]: field === "adName" ? value : updateIndexedValue(currentSnapshot[field]),
           };
+          if (field === "adName") {
+            nextSnapshot.adNameFormulaV2 = { rawInput: value, overrideImportedPostName: true };
+          }
           if (field === "link") {
             nextSnapshot.showCustomLink = true;
             if (index === 0) nextSnapshot.customLink = value;
@@ -2229,6 +2239,8 @@ export default function AdCreationForm({
     [
       activeVariantId,
       getVariantState,
+      setAdName,
+      setAdNameFormulaV2,
       setCustomLink,
       setDescriptions,
       setHeadlines,
@@ -6837,6 +6849,15 @@ export default function AdCreationForm({
         const adSetIdsToUse = [...dynamicAdSetIds, ...nonDynamicAdSetIds];
         const jobImportedPostAdNames = jobData.formData.importedPostAdNames || {};
         const resolvePostAdNameForJob = (post, postIndex) => {
+          if (jobData.formData.adNameFormulaV2?.overrideImportedPostName) {
+            return computeAdNameFromFormula(
+              { name: post.ad_name },
+              postIndex,
+              link[0],
+              jobData.formData.adNameFormulaV2,
+              null,
+            );
+          }
           const key = post?.ad_id || post?.post_id || post?.id || "";
           const template = jobImportedPostAdNames[key] !== undefined ? jobImportedPostAdNames[key] : post?.ad_name || "";
 
@@ -11943,10 +11964,11 @@ export default function AdCreationForm({
             <DialogDescription>Quickly compare targeting, copy, destinations, and assigned creative across every variant.</DialogDescription>
           </DialogHeader>
           <div className="min-h-0 flex-1 overflow-auto bg-gray-50/50">
-            <table className={cn("w-full border-separate border-spacing-0 text-left", hasPartnershipVariants ? "min-w-[1280px]" : "min-w-[1120px]")}>
+            <table className={cn("w-full border-separate border-spacing-0 text-left", hasPartnershipVariants ? "min-w-[1472px]" : "min-w-[1312px]")}>
               <thead className="sticky top-0 z-20 bg-gray-100/95 text-[10px] uppercase tracking-wide text-gray-500 backdrop-blur">
                 <tr>
                   <th className="sticky left-0 z-30 w-44 border-b border-r border-gray-200 bg-gray-100 px-[0.9rem] py-3 font-semibold">Variant</th>
+                  <th className="min-w-48 border-b border-gray-200 px-[0.9rem] py-3 font-semibold">Ad Name</th>
                   <th className="w-60 border-b border-gray-200 px-[0.9rem] py-3 font-semibold">Campaign / Ad set</th>
                   <th className="w-48 border-b border-gray-200 px-[0.9rem] py-3 font-semibold">Page / Instagram</th>
                   {hasPartnershipVariants && <th className="w-40 border-b border-gray-200 px-[0.9rem] py-3 font-semibold">Partnership</th>}
@@ -11971,6 +11993,16 @@ export default function AdCreationForm({
                       <p className="mt-1 text-[10px] text-gray-400">
                         {row.mediaItems.length} ad{row.mediaItems.length !== 1 ? "s" : ""}
                       </p>
+                    </td>
+                    <td className="border-b border-gray-200 bg-white px-[0.9rem] py-4">
+                      <div className="group/overview-value flex items-start gap-1">
+                        <p className="flex-1 whitespace-pre-wrap break-words text-xs leading-4 text-gray-800">{row.adName || "—"}</p>
+                        <OverviewInlineEditor
+                          value={row.adName}
+                          onSave={(value) => updateVariantOverviewValue(row.id, "adName", 0, value)}
+                          label="ad name"
+                        />
+                      </div>
                     </td>
                     <td className="border-b border-gray-200 bg-white px-[0.9rem] py-4">
                       <div className="space-y-3">

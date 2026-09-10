@@ -59,7 +59,7 @@ function VariantDot({ variantId, variants }) {
   return <span className="inline-block h-2 w-2 rounded-full shrink-0" style={{ background: color }} />;
 }
 
-function VariantAssignmentPopover({ assignedVariantId, variants, onAssignVariant, onAddVariant, triggerClassName = "", sideOffset = 6 }) {
+function VariantAssignmentPopover({ assignedVariantId, variants, onAssignVariant, onAddVariant, triggerClassName = "", sideOffset = 6, triggerLabel, disabled = false }) {
   const [open, setOpen] = useState(false);
   const activeVariantName = variants.find((variant) => variant.id === assignedVariantId)?.name || "Default";
 
@@ -86,11 +86,12 @@ function VariantAssignmentPopover({ assignedVariantId, variants, onAssignVariant
       <PopoverTrigger asChild>
         <button
           type="button"
+          disabled={disabled}
           className={`flex items-center gap-1.5 whitespace-nowrap rounded-xl border border-gray-200 bg-white px-2.5 py-1 text-xs text-gray-900 shadow-sm transition hover:bg-white ${triggerClassName}`.trim()}
           onClick={(e) => e.stopPropagation()}
         >
-          <VariantDot variantId={assignedVariantId} variants={variants} />
-          <span className="whitespace-nowrap">{activeVariantName}</span>
+          {assignedVariantId && <VariantDot variantId={assignedVariantId} variants={variants} />}
+          <span className="whitespace-nowrap">{triggerLabel || activeVariantName}</span>
           <ChevronDown className="h-3 w-3 shrink-0 text-gray-500" />
         </button>
       </PopoverTrigger>
@@ -486,6 +487,8 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
   variants,
   onAssignVariant,
   onAddVariant,
+  isAssignmentSelected = false,
+  assignmentLabel,
   isRemoving,
   disableSorting = false,
   isDrivePreviewActive = false,
@@ -543,10 +546,10 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
       onClick={isSelectable ? () => onSelect(fileId) : undefined}
     >
       {/* Selection background for placement customization - only show when NOT grouped */}
-      {isSelectable && (
+      {(isSelectable || isAssignmentSelected) && (
         <div
           className={`absolute rounded-2xl border-2 transition-all pointer-events-none ${
-            isSelected ? "bg-blue-100 border-blue-300" : "border-transparent bg-transparent"
+            isAssignmentSelected ? "bg-green-100 border-green-300" : isSelected ? "bg-blue-100 border-blue-300" : "border-transparent bg-transparent"
           }`}
           style={{
             zIndex: 0,
@@ -697,6 +700,7 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
                 variants={variants}
                 onAssignVariant={onAssignVariant}
                 onAddVariant={onAddVariant}
+                triggerLabel={assignmentLabel}
               />
             </div>
           )}
@@ -760,6 +764,24 @@ export default function MediaPreview({
   const [showDisableVariantsDialog, setShowDisableVariantsDialog] = useState(false);
   const [removingMediaIds, setRemovingMediaIds] = useState(new Set());
   const [activeDrivePreviewId, setActiveDrivePreviewId] = useState(null);
+  const [assignmentSelection, setAssignmentSelection] = useState(new Set());
+  const [isShiftHeld, setIsShiftHeld] = useState(false);
+
+  useEffect(() => {
+    const handleKey = (event) => {
+      setIsShiftHeld(event.shiftKey);
+      if (event.key === "Escape") setAssignmentSelection(new Set());
+    };
+    const handleBlur = () => setIsShiftHeld(false);
+    window.addEventListener("keydown", handleKey);
+    window.addEventListener("keyup", handleKey);
+    window.addEventListener("blur", handleBlur);
+    return () => {
+      window.removeEventListener("keydown", handleKey);
+      window.removeEventListener("keyup", handleKey);
+      window.removeEventListener("blur", handleBlur);
+    };
+  }, []);
 
   const sensors = useSensors(useSensor(PointerSensor));
   const isFlexLikeAdType = adType === "flexible" || adType === "multi_media";
@@ -979,6 +1001,83 @@ export default function MediaPreview({
   const showVariantButtonInPlacementRow = showVariantSetupButton && showPlacementCustomizationRow;
   const showVariantButtonInHeader = showVariantSetupButton && !showPlacementCustomizationRow;
   const variantSetupLabel = variants.length === 1 ? "Split Ad Data" : "Disable Split";
+
+  const assignmentTargets = useMemo(() => {
+    const targets = new Set();
+    if (variants.length < 2) return targets;
+    if (!isSingleGroupSplit) fileGroups.forEach((group) => targets.add(JSON.stringify(["group", group.id])));
+    if (!isSingleMediaSplit) {
+      if (!hideUngroupedVariantDropdowns && !(isFlexLikeAdType && fileGroups.length > 0)) {
+        ungroupedFiles.forEach((file) => targets.add(JSON.stringify(["file", getFileId(file)])));
+      }
+      importedPosts.forEach((post) => targets.add(JSON.stringify(["post", `post:${post.id}`])));
+      selectedIgOrganicPosts.forEach((post) => targets.add(JSON.stringify(["post", `igpost:${post.source_instagram_media_id}`])));
+    }
+    return targets;
+  }, [variants.length, fileGroups, isSingleGroupSplit, isSingleMediaSplit, hideUngroupedVariantDropdowns, isFlexLikeAdType, ungroupedFiles, importedPosts, selectedIgOrganicPosts]);
+
+  useEffect(() => {
+    setAssignmentSelection((current) => {
+      const next = new Set([...current].filter((key) => assignmentTargets.has(key)));
+      return next.size === current.size ? current : next;
+    });
+  }, [assignmentTargets]);
+
+  const assignmentLabel = isShiftHeld && assignmentSelection.size > 0 ? "Assigning" : undefined;
+  const assignmentSelectionProps = (type, id) => {
+    const key = JSON.stringify([type, id]);
+    if (!assignmentTargets.has(key)) return {};
+    return {
+      onPointerDownCapture: (event) => {
+        if (!event.shiftKey || event.button !== 0) return;
+        event.preventDefault();
+        event.stopPropagation();
+      },
+      onClickCapture: (event) => {
+        if (!event.shiftKey) return;
+        event.preventDefault();
+        event.stopPropagation();
+        setIsShiftHeld(true);
+        window.getSelection()?.removeAllRanges();
+        setAssignmentSelection((current) => {
+          const next = new Set(current);
+          if (next.has(key)) next.delete(key);
+          else next.add(key);
+          return next;
+        });
+      },
+    };
+  };
+
+  const assignSelectedToVariant = (variantId) => {
+    const selected = [...assignmentSelection].filter((key) => assignmentTargets.has(key)).map((key) => JSON.parse(key));
+    const updateAssignments = (type, setter) => {
+      const ids = selected.filter(([itemType]) => itemType === type).map(([, id]) => id);
+      if (!ids.length) return;
+      setter((current) => {
+        const next = { ...current };
+        ids.forEach((id) => {
+          if (variantId === "default") delete next[id];
+          else next[id] = variantId;
+        });
+        return next;
+      });
+    };
+    updateAssignments("file", setFileVariantMap);
+    updateAssignments("group", setGroupVariantMap);
+    updateAssignments("post", setPostVariantMap);
+    setAssignmentSelection(new Set());
+  };
+
+  const renderBulkVariantAssignment = () => variants.length > 1 && (
+    <VariantAssignmentPopover
+      variants={variants}
+      onAssignVariant={assignSelectedToVariant}
+      triggerLabel="Select variant for assignment"
+      disabled={assignmentSelection.size === 0 || isLaunchingMedia}
+      triggerClassName="py-2 disabled:opacity-50 disabled:cursor-not-allowed"
+    />
+  );
 
   const renderVariantSetupButton = () => (
     <TooltipProvider delayDuration={0}>
@@ -1720,8 +1819,11 @@ export default function MediaPreview({
             }
           `}</style>
           <Card
-            className="flex flex-col sticky top-4 w-full border border-gray-300 !bg-white rounded-3xl"
+            className={`flex flex-col sticky top-4 w-full border border-gray-300 !bg-white rounded-3xl ${isShiftHeld ? "select-none" : ""}`}
             style={{ height: "calc(100vh - 140px)" }}
+            onMouseDownCapture={(event) => {
+              if (event.shiftKey) event.preventDefault();
+            }}
             onDragOver={(e) => {
               e.preventDefault();
               e.stopPropagation();
@@ -1870,12 +1972,17 @@ export default function MediaPreview({
 
                     {showVariantButtonInPlacementRow && <div className="shrink-0">{renderVariantSetupButton()}</div>}
                   </div>
-                  {enablePlacementCustomization && (
-                    <span className="block text-xs leading-tight text-gray-500 mt-0">
-                      AI Auto grouping analyzes the actual file for images.
-                      <span className="block font-semibold text-black">For Videos it only analyzes file names.</span>
-                    </span>
-                  )}
+                  <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      {enablePlacementCustomization && (
+                        <span className="block text-xs leading-tight text-gray-500">
+                          AI Auto grouping analyzes the actual file for images.
+                          <span className="block font-semibold text-black">For Videos it only analyzes file names.</span>
+                        </span>
+                      )}
+                    </div>
+                    <div className="ml-auto shrink-0">{renderBulkVariantAssignment()}</div>
+                  </div>
                   {showVariantButtonInPlacementRow && renderSingleMediaSplitNote()}
                 </div>
               )}
@@ -1883,6 +1990,7 @@ export default function MediaPreview({
               {showVariantButtonInHeader && (
                 <>
                   <div className="mt-2 flex justify-end">{renderVariantSetupButton()}</div>
+                  <div className="mt-2 flex justify-end">{renderBulkVariantAssignment()}</div>
                   {renderSingleMediaSplitNote()}
                 </>
               )}
@@ -1907,6 +2015,7 @@ export default function MediaPreview({
                 >
                   <div className="space-y-4">
                     {fileGroups.map((group, groupIndex) => {
+                      const isAssignmentSelected = assignmentSelection.has(JSON.stringify(["group", group.id]));
                       const isGroupDimmed = !isSingleGroupSplit && (groupVariantMap[group.id] || "default") !== activeVariantId;
                       const groupFileIds = getGroupFileIds(group);
                       const placementCarouselCards = isPlacementCustomizedCarousel
@@ -1918,12 +2027,13 @@ export default function MediaPreview({
                       return (
                         <div
                           key={group.id || `group-${groupIndex}`}
+                          {...assignmentSelectionProps("group", group.id)}
                           className={`relative ${isLaunchingMedia && !isGroupDimmed ? "media-preview-launch-item" : ""}`}
                         >
                           {/* Shared group background */}
                           <div
-                            className={`absolute inset-0 -z-10 rounded-2xl border-2 transition-opacity ${isGroupDimmed ? "opacity-30" : "opacity-100"} ${
-                              groupIndex % 2 === 0 ? "bg-blue-100 border-blue-300" : "bg-orange-100 border-orange-300"
+                            className={`absolute inset-0 -z-10 rounded-2xl border-2 transition-opacity ${isGroupDimmed && !isAssignmentSelected ? "opacity-30" : "opacity-100"} ${
+                              isAssignmentSelected ? "bg-green-100 border-green-300" : groupIndex % 2 === 0 ? "bg-blue-100 border-blue-300" : "bg-orange-100 border-orange-300"
                             }`}
                             style={{ margin: "0px" }}
                           />
@@ -1944,13 +2054,14 @@ export default function MediaPreview({
                                 variants={variants}
                                 onAssignVariant={(variantId) => assignGroupToVariant(group.id, variantId)}
                                 onAddVariant={handleAddVariant}
+                                triggerLabel={assignmentLabel}
                               />
                             </div>
                           )}
                           {/* Group label */}
                           <div
-                            className={`absolute bottom-2 right-2 z-20 text-white text-xs px-2 py-1 rounded-xl font-semibold transition-opacity ${isGroupDimmed ? "opacity-30" : "opacity-100"} ${
-                              groupIndex % 2 === 0 ? "bg-blue-500" : "bg-orange-500"
+                            className={`absolute bottom-2 right-2 z-20 text-white text-xs px-2 py-1 rounded-xl font-semibold transition-opacity ${isGroupDimmed && !isAssignmentSelected ? "opacity-30" : "opacity-100"} ${
+                              isAssignmentSelected ? "bg-green-500" : groupIndex % 2 === 0 ? "bg-blue-500" : "bg-orange-500"
                             }`}
                           >
                             {isCarouselAd ? `Carousel Ad ${groupIndex + 1}` : `Group ${groupIndex + 1}`}
@@ -2120,7 +2231,7 @@ export default function MediaPreview({
                           !(isFlexLikeAdType && fileGroups.length > 0) &&
                           !isSingleMediaSplit;
                         return (
-                          <div key={fileId} className={isLaunchingMedia && !isDimmed ? "media-preview-launch-item" : ""}>
+                          <div key={fileId} {...assignmentSelectionProps("file", fileId)} className={isLaunchingMedia && !isDimmed ? "media-preview-launch-item" : ""}>
                             <SortableMediaItem
                               file={file}
                               index={index}
@@ -2135,6 +2246,8 @@ export default function MediaPreview({
                               adType={adType}
                               dimmed={isDimmed}
                               showVariantDropdown={showVariantDropdown}
+                              isAssignmentSelected={assignmentSelection.has(JSON.stringify(["file", fileId]))}
+                              assignmentLabel={assignmentLabel}
                               assignedVariantId={assignedVariantId}
                               variants={variants}
                               onAssignVariant={(variantId) => assignFileToVariant(fileId, variantId)}
@@ -2150,13 +2263,15 @@ export default function MediaPreview({
 
                       {importedPosts.map((post, index) => {
                         const postKey = `post:${post.id}`;
+                        const isAssignmentSelected = assignmentSelection.has(JSON.stringify(["post", postKey]));
                         const assignedVariantId = postVariantMap[postKey] || "default";
                         const isDimmed = !isSingleMediaSplit && assignedVariantId !== activeVariantId;
                         const showVariantDropdown = variants.length > 1 && !isSingleMediaSplit;
                         return (
                           <div
                             key={post.id}
-                            className={`relative group ${isLaunchingMedia && !isDimmed ? "media-preview-launch-item" : ""}`}
+                            {...assignmentSelectionProps("post", postKey)}
+                            className={`relative group ${isAssignmentSelected ? "rounded-xl bg-green-100 ring-4 ring-green-100 outline outline-2 outline-offset-4 outline-green-300" : ""} ${isLaunchingMedia && !isDimmed ? "media-preview-launch-item" : ""}`}
                             title={post.ad_name}
                           >
                             <div className="overflow-hidden rounded-xl shadow-lg border border-gray-200 relative">
@@ -2183,6 +2298,7 @@ export default function MediaPreview({
                                     variants={variants}
                                     onAssignVariant={(variantId) => assignPostToVariant(postKey, variantId)}
                                     onAddVariant={handleAddVariant}
+                                    triggerLabel={assignmentLabel}
                                   />
                                 </div>
                               )}
@@ -2200,13 +2316,15 @@ export default function MediaPreview({
 
                       {selectedIgOrganicPosts.map((post, index) => {
                         const postKey = `igpost:${post.source_instagram_media_id}`;
+                        const isAssignmentSelected = assignmentSelection.has(JSON.stringify(["post", postKey]));
                         const assignedVariantId = postVariantMap[postKey] || "default";
                         const isDimmed = !isSingleMediaSplit && assignedVariantId !== activeVariantId;
                         const showVariantDropdown = variants.length > 1 && !isSingleMediaSplit;
                         return (
                           <div
                             key={`ig-${post.source_instagram_media_id}`}
-                            className={`relative group ${isLaunchingMedia && !isDimmed ? "media-preview-launch-item" : ""}`}
+                            {...assignmentSelectionProps("post", postKey)}
+                            className={`relative group ${isAssignmentSelected ? "rounded-xl bg-green-100 ring-4 ring-green-100 outline outline-2 outline-offset-4 outline-green-300" : ""} ${isLaunchingMedia && !isDimmed ? "media-preview-launch-item" : ""}`}
                             title={post.ad_name}
                           >
                             <div className="overflow-hidden rounded-xl shadow-lg border border-gray-200 relative">
@@ -2241,6 +2359,7 @@ export default function MediaPreview({
                                     variants={variants}
                                     onAssignVariant={(variantId) => assignPostToVariant(postKey, variantId)}
                                     onAddVariant={handleAddVariant}
+                                    triggerLabel={assignmentLabel}
                                   />
                                 </div>
                               )}
