@@ -1028,6 +1028,7 @@ export default function MediaPreview({
     const key = JSON.stringify([type, id]);
     if (!assignmentTargets.has(key)) return {};
     return {
+      "data-variant-assignable": true,
       onPointerDownCapture: (event) => {
         if (!event.shiftKey || event.button !== 0) return;
         event.preventDefault();
@@ -1070,13 +1071,27 @@ export default function MediaPreview({
   };
 
   const renderBulkVariantAssignment = () => variants.length > 1 && (
-    <VariantAssignmentPopover
-      variants={variants}
-      onAssignVariant={assignSelectedToVariant}
-      triggerLabel="Select variant for assignment"
-      disabled={assignmentSelection.size === 0 || isLaunchingMedia}
-      triggerClassName="py-2 disabled:opacity-50 disabled:cursor-not-allowed"
-    />
+    <TooltipProvider delayDuration={0}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="inline-flex" tabIndex={assignmentSelection.size === 0 ? 0 : undefined}>
+            <VariantAssignmentPopover
+              variants={variants}
+              onAssignVariant={assignSelectedToVariant}
+              onAddVariant={handleAddVariant}
+              triggerLabel="Select variant for assignment"
+              disabled={assignmentSelection.size === 0 || isLaunchingMedia}
+              triggerClassName="py-2 disabled:opacity-50 disabled:pointer-events-none"
+            />
+          </span>
+        </TooltipTrigger>
+        {assignmentSelection.size === 0 && (
+          <TooltipContent>
+            Hold Shift and click the files or groups you want to assign, then select a variant.
+          </TooltipContent>
+        )}
+      </Tooltip>
+    </TooltipProvider>
   );
 
   const renderVariantSetupButton = () => (
@@ -1819,7 +1834,7 @@ export default function MediaPreview({
             }
           `}</style>
           <Card
-            className={`flex flex-col sticky top-4 w-full border border-gray-300 !bg-white rounded-3xl ${isShiftHeld ? "select-none" : ""}`}
+            className={`flex flex-col sticky top-4 w-full border border-gray-300 !bg-white rounded-3xl ${isShiftHeld ? "select-none [&_[data-variant-assignable]]:!cursor-pointer [&_[data-variant-assignable]_*]:!cursor-pointer" : ""}`}
             style={{ height: "calc(100vh - 140px)" }}
             onMouseDownCapture={(event) => {
               if (event.shiftKey) event.preventDefault();
