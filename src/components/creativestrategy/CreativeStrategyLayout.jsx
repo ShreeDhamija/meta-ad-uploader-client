@@ -9,7 +9,8 @@ import { useAuth } from "@/lib/AuthContext";
 import { creativeApi } from "@/lib/creativeApi";
 import { cn } from "@/lib/utils";
 import { BookOpen, Box, Flame, Heart, Layers, LogOut, MousePointerClick, SearchCheck, Zap } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Toaster } from "sonner";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import CostTracker from "./CostTracker";
@@ -50,7 +51,7 @@ const DESCRIPTIONS = {
 
 export default function CreativeStrategyLayout() {
   const navigate = useNavigate();
-  const { isLoggedIn, userName, profilePicUrl, handleLogout } = useAuth();
+  const { isLoggedIn, userId, userName, profilePicUrl, handleLogout } = useAuth();
   const { adAccounts, adAccountsLoading, refetchAdAccounts } = useAppData();
 
   const [activeTab, setActiveTab] = useState("brands");
@@ -63,6 +64,27 @@ export default function CreativeStrategyLayout() {
   const [error, setError] = useState(null);
   const [headerActionsTarget, setHeaderActionsTarget] = useState(null);
   const [headerStatusTarget, setHeaderStatusTarget] = useState(null);
+  const [restoredUser, setRestoredUser] = useState(null);
+  const [brandsLoaded, setBrandsLoaded] = useState(false);
+  const previousBrand = useRef(null);
+  const productRequest = useRef(0);
+
+  useEffect(() => {
+    if (!userId) return;
+    let saved = {};
+    try { saved = JSON.parse(localStorage.getItem(`cs-navigation:${userId}`) || "{}"); } catch { /* Use defaults. */ }
+    setActiveTab(NAV.some((item) => item.key === saved?.tab) ? saved.tab : "brands");
+    const brandId = typeof saved?.brandId === "string" ? saved.brandId : null;
+    previousBrand.current = brandId;
+    setSelectedBrandId(brandId);
+    setSelectedProductId(brandId && typeof saved?.productId === "string" ? saved.productId : null);
+    setRestoredUser(userId);
+  }, [userId]);
+
+  useEffect(() => {
+    if (!userId || restoredUser !== userId) return;
+    try { localStorage.setItem(`cs-navigation:${userId}`, JSON.stringify({ tab: activeTab, brandId: selectedBrandId, productId: selectedProductId })); } catch { /* Storage may be unavailable. */ }
+  }, [userId, restoredUser, activeTab, selectedBrandId, selectedProductId]);
 
   const normalizeMetaAccountId = (value) => String(value || "").replace(/^act_/, "");
   const accountFingerprint = useMemo(
@@ -105,17 +127,20 @@ export default function CreativeStrategyLayout() {
       try {
         if (!accounts.length) {
           setCreativeClients([]);
+          setBrandsLoaded(true);
           return [];
         }
         const payload = accounts.map(({ id, name }) => ({ id, name }));
         const response = await creativeApi.syncBrands(payload);
         setCreativeClients(response.clients || []);
+        setBrandsLoaded(true);
         return response.clients || [];
       } catch (syncError) {
         setError(`Could not reconcile Meta accounts (${syncError.message}) — showing existing Creative Strategy records`);
         try {
           const response = await creativeApi.listClients();
           setCreativeClients(response.clients || []);
+          setBrandsLoaded(true);
           return response.clients || [];
         } catch {
           setCreativeClients([]);
@@ -133,12 +158,18 @@ export default function CreativeStrategyLayout() {
     return loadBrands(refreshedAccounts || []);
   }, [loadBrands, refetchAdAccounts]);
   const loadProducts = (brandId) => {
+    const request = ++productRequest.current;
     setProductsLoading(true);
     return creativeApi
       .listProducts(brandId)
-      .then((r) => setProducts(r.products))
-      .catch((e) => setError(e.message))
-      .finally(() => setProductsLoading(false));
+      .then((r) => {
+        if (request !== productRequest.current) return;
+        const next = r.products || [];
+        setProducts(next);
+        setSelectedProductId((id) => next.some((product) => product.id === id) ? id : null);
+      })
+      .catch((e) => { if (request === productRequest.current) setError(e.message); })
+      .finally(() => { if (request === productRequest.current) setProductsLoading(false); });
   };
 
   useEffect(() => {
@@ -152,21 +183,24 @@ export default function CreativeStrategyLayout() {
     if (!isLoggedIn) navigate("/login", { replace: true });
   }, [isLoggedIn, navigate]);
   useEffect(() => {
-    if (selectedBrandId && !brands.some((brand) => brand.id === selectedBrandId)) {
+    if (brandsLoaded && !brandsLoading && restoredUser === userId && selectedBrandId && !brands.some((brand) => brand.id === selectedBrandId)) {
       setSelectedBrandId(null);
     }
-  }, [brands, selectedBrandId]);
+  }, [brands, brandsLoaded, brandsLoading, restoredUser, userId, selectedBrandId]);
   useEffect(() => {
     const allowsEmptyAccount = activeTab === "brands" || activeTab === "products";
-    if (!allowsEmptyAccount && selectedBrandId && !accountsWithProducts.some((account) => account.id === selectedBrandId)) {
+    if (brandsLoaded && !brandsLoading && restoredUser === userId && !allowsEmptyAccount && selectedBrandId && !accountsWithProducts.some((account) => account.id === selectedBrandId)) {
       setSelectedBrandId(null);
     }
-  }, [accountsWithProducts, activeTab, selectedBrandId]);
+  }, [accountsWithProducts, brandsLoaded, brandsLoading, restoredUser, userId, activeTab, selectedBrandId]);
   useEffect(() => {
+    if (!userId || restoredUser !== userId) return;
+    if (previousBrand.current !== selectedBrandId) setSelectedProductId(null);
+    previousBrand.current = selectedBrandId;
+    setProducts([]);
     if (selectedBrandId) loadProducts(selectedBrandId);
-    else setProducts([]);
-    setSelectedProductId(null);
-  }, [selectedBrandId]);
+    else { productRequest.current += 1; setProductsLoading(false); setSelectedProductId(null); }
+  }, [selectedBrandId, restoredUser, userId]);
 
   const selectedBrand = brands.find((b) => b.id === selectedBrandId) || null;
   const selectedProduct = products.find((p) => p.id === selectedProductId) || null;
@@ -183,6 +217,7 @@ export default function CreativeStrategyLayout() {
   );
 
   const ctx = {
+    userId,
     brands: activeTab === "brands" || activeTab === "products" ? brands : accountsWithProducts,
     brandsLoading,
     selectedBrand,
@@ -230,7 +265,8 @@ export default function CreativeStrategyLayout() {
   const active = NAV.find((n) => n.key === activeTab);
 
   return (
-    <JobsProvider>
+    <JobsProvider key={userId} userId={userId}>
+      <Toaster richColors position="bottom-left" closeButton />
       <div className="creative-strategy flex min-h-screen">
         {/* Sidebar */}
         <aside className="relative z-10 flex h-screen w-[290px] flex-col overflow-hidden px-4 py-6 max-lg:w-[80px] max-lg:min-w-[80px] max-lg:px-2">

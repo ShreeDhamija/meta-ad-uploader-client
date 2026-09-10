@@ -1401,6 +1401,13 @@ export default function AdCreationForm({
   const [isJobTrackerExpanded, setIsJobTrackerExpanded] = useState(true);
   const [completedJobs, setCompletedJobs] = useState([]);
   const [hasStartedAnyJob, setHasStartedAnyJob] = useState(false);
+  const jobListRef = useRef(null);
+
+  useEffect(() => {
+    const list = jobListRef.current;
+    if (list) list.scrollTop = list.scrollHeight;
+  }, [jobQueue.length, completedJobs.length, currentJob?.id, isJobTrackerExpanded, hasStartedAnyJob]);
+
   const [currentAbortController, setCurrentAbortController] = useState(null);
   const isInPromisePhase = useRef(false); // ADD THIS
   const currentJobIdRef = useRef(null); // ADD THIS
@@ -8559,7 +8566,7 @@ export default function AdCreationForm({
               </div>
 
               {/* Jobs List */}
-              <div className="flex-1 overflow-y-auto">
+              <div ref={jobListRef} className="flex-1 overflow-y-auto">
                 {/* Completed Jobs */}
 
                 {completedJobs.map((job) => {

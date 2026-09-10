@@ -716,7 +716,8 @@ html body #root .creative-strategy button.cs-generate-switcher__item.is-active {
   background: rgba(108, 52, 3, 0.08);
 }
 
-.cs-generate-image-select .cs-generate-checkbox {
+.cs-generate-image-select .cs-generate-checkbox,
+.cs-generate-bulk-actions .cs-generate-checkbox {
   width: 16px;
   height: 16px;
   border: 1px solid rgba(108, 52, 3, 0.5);
@@ -725,13 +726,49 @@ html body #root .creative-strategy button.cs-generate-switcher__item.is-active {
   color: #fff;
 }
 
-.cs-generate-image-select .cs-generate-checkbox[data-state="checked"] {
+.cs-generate-image-select .cs-generate-checkbox[data-state="checked"],
+.cs-generate-bulk-actions .cs-generate-checkbox[data-state="checked"],
+.cs-generate-bulk-actions .cs-generate-checkbox[data-state="indeterminate"] {
   background: #6c3403;
 }
 
 .cs-generate-checkbox svg {
   width: 12px;
   height: 12px;
+}
+
+.cs-image-preview-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 50%;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(6px);
+}
+
+.cs-image-preview-nav:hover {
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.cs-image-preview-nav.is-previous { left: 12px; }
+.cs-image-preview-nav.is-next { right: 12px; }
+
+.cs-compact-control.cs-job-trigger.has-error {
+  color: #b91c1c;
+  border-color: #fca5a5;
+  background: #fee2e2;
+}
+
+.cs-compact-control.cs-job-trigger.has-success {
+  color: #15803d;
+  border-color: #86efac;
+  background: #dcfce7;
 }
 
 .cs-generate-gallery.has-pairs,
