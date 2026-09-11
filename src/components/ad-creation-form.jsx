@@ -1802,7 +1802,7 @@ export default function AdCreationForm({
   // Extra ungrouped media or posts must keep their explicit variant assignments.
   const isSingleGroupSplit = useMemo(() => {
     if (!(isCarouselAd || enablePlacementCustomization || isFlexLikeAdType) || fileGroups.length !== 1 ||
-        importedPosts.length > 0 || selectedIgOrganicPosts.length > 0) return false;
+      importedPosts.length > 0 || selectedIgOrganicPosts.length > 0) return false;
     const mediaIds = [
       ...files.map(getFileId),
       ...driveFiles.map((file) => file.id),
@@ -5395,7 +5395,7 @@ export default function AdCreationForm({
     let aspectRatioMap = {};
     // Replace your existing code with this:
     if (enablePlacementCustomization) {
-      setProgressMessage("Analyzing video files...");
+      setProgressMessage("Analyzing files...");
 
       try {
         const allFiles = [...files, ...driveFiles, ...dropboxFiles, ...frameioFiles];
