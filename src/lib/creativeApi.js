@@ -6,7 +6,7 @@
 const CREATIVE_API_URL =
   import.meta.env.VITE_CREATIVE_API_URL || "http://localhost:3001";
 
-async function request(path, { method = "GET", body } = {}) {
+async function request(path, { method = "GET", body, binary = false } = {}) {
   const headers = { "Content-Type": "application/json" };
   // Dev-only identity stub — hardcoded to the owner's Facebook user id so the
   // worker finds the matching Meta token in Firestore. In production the shared
@@ -21,6 +21,7 @@ async function request(path, { method = "GET", body } = {}) {
     credentials: "include",
     body: body ? JSON.stringify(body) : undefined,
   });
+  if (binary && res.ok) return res.blob();
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
   return data;
@@ -65,11 +66,14 @@ export const creativeApi = {
   runLibrary: (productId) => request("/library/run", { method: "POST", body: { productId } }),
   getLibrary: (productId) => request(`/library?productId=${encodeURIComponent(productId)}`),
   setLibraryStatus: (id, status) => request(`/library/${encodeURIComponent(id)}/status`, { method: "POST", body: { status } }),
+  getVisualSources: (productId) => request(`/generate/visual-sources?productId=${encodeURIComponent(productId)}`),
   runGenerate: (body) => request("/generate/run", { method: "POST", body }),
   generateVideoScripts: (body) => request("/generate/scripts", { method: "POST", body }),
   generateConceptBrief: (body) => request("/generate/brief", { method: "POST", body }),
-  getGenerated: (productId) => request(`/generate?productId=${encodeURIComponent(productId)}`),
+  getGenerated: (productId, offset = 0) => request(`/generate?productId=${encodeURIComponent(productId)}&offset=${offset}`),
+  getGenerationHistory: (productId, kind, offset = 0) => request(`/generate/history?productId=${encodeURIComponent(productId)}&kind=${encodeURIComponent(kind)}&offset=${offset}`),
   rateGenerated: (id, rating) => request(`/generate/${encodeURIComponent(id)}/feedback`, { method: "POST", body: { rating } }),
+  downloadGenerated: (id) => request(`/generate/${encodeURIComponent(id)}/download`, { binary: true }),
   deleteGenerated: (id) => request(`/generate/${encodeURIComponent(id)}`, { method: "DELETE" }),
   getFormats: () => request("/generate/formats"),
   fillCopy: (body) => request("/generate/fill-copy", { method: "POST", body }),
@@ -83,6 +87,7 @@ export const creativeApi = {
   setIdeaStatus: (ideaId, status) => request(`/weekly/ideas/${encodeURIComponent(ideaId)}/status`, { method: "POST", body: { status } }),
   generateBrief: (ideaId, productId) =>
     request(`/weekly/ideas/${encodeURIComponent(ideaId)}/brief`, { method: "POST", body: { productId } }),
+  getJobHistory: (offset = 0) => request(`/jobs?offset=${offset}`),
   getJob: (id) => request(`/jobs/${id}`),
   getUsage: ({ window = "7d", groupBy = "provider", clientId } = {}) =>
     request(`/usage?window=${encodeURIComponent(window)}&groupBy=${encodeURIComponent(groupBy)}${clientId ? `&clientId=${encodeURIComponent(clientId)}` : ""}`),

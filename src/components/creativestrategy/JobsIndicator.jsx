@@ -1,68 +1,70 @@
-// Global running-jobs chip for the top context bar. Shows how many worker jobs
-// are in flight (from anywhere in the module) and a popover with each job's
-// live milestone — so progress is visible no matter which tab you're on.
+// Persistent database-backed history, shared by every creative-strategy view.
 import { useState, useRef, useEffect } from "react";
-import { Loader2, CheckCircle2, AlertTriangle, ChevronDown } from "lucide-react";
+import { Loader2, CheckCircle2, AlertTriangle, ChevronDown, History } from "lucide-react";
 import { useJobs, describeJob } from "./JobsContext";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
-const ACTIVE = (s) => s === "queued" || s === "running" || s == null;
+const ACTIVE = (status) => status === "queued" || status === "running" || status == null;
+const dateLabel = (value) => value ? new Date(value).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) : "Time unavailable";
+const startedTime = (job) => new Date(job.executionStartedAt || job.createdAt || job.startedAt || 0).getTime();
 
 export default function JobsIndicator() {
-  const { jobs } = useJobs();
+  const { jobs, historyLoading, historyError, nextOffset, loadMore, refreshHistory } = useJobs();
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
+  const trigger = useRef(null);
 
   useEffect(() => {
     if (!open) return;
-    const onClick = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-    document.addEventListener("mousedown", onClick);
-    return () => document.removeEventListener("mousedown", onClick);
+    const onClick = (event) => { if (ref.current && !ref.current.contains(event.target)) setOpen(false); };
+    const onKey = (event) => { if (event.key === "Escape") { setOpen(false); trigger.current?.focus(); } };
+    document.addEventListener("mousedown", onClick); document.addEventListener("keydown", onKey);
+    return () => { document.removeEventListener("mousedown", onClick); document.removeEventListener("keydown", onKey); };
   }, [open]);
 
-  const list = Object.values(jobs).sort((a, b) => (b.startedAt || 0) - (a.startedAt || 0));
-  const active = list.filter((j) => ACTIVE(j.status));
-  if (list.length === 0) return null;
-
-  return (
-    <div className="relative" ref={ref}>
-      <button onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1.5 rounded-2xl border border-neutral-200 bg-white shadow-xs px-3 py-2 text-sm hover:bg-neutral-50">
-        {active.length > 0
-          ? <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
-          : <CheckCircle2 className="w-4 h-4 text-emerald-600" />}
-        <span className="font-medium">{active.length > 0 ? `${active.length} running` : "idle"}</span>
-        <ChevronDown className={`w-3.5 h-3.5 text-neutral-400 transition-transform ${open ? "rotate-180" : ""}`} />
-      </button>
-
-      {open && (
-        <div className="absolute right-0 mt-2 w-80 rounded-2xl border border-neutral-200 bg-white shadow-lg p-3 z-20 space-y-2">
-          <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Jobs</p>
-          {list.map((j) => {
-            const d = describeJob(j);
-            const failed = j.status === "failed";
-            const done = j.status === "completed";
-            return (
-              <div key={j.id} className="flex items-start gap-2">
-                {done ? <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
-                  : failed ? <AlertTriangle className="w-4 h-4 text-red-600 mt-0.5 shrink-0" />
-                    : <Loader2 className="w-4 h-4 animate-spin text-blue-600 mt-0.5 shrink-0" />}
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-medium text-neutral-800 truncate">{d.title}</span>
-                    {d.pct != null && !done && !failed && <span className="text-xs text-neutral-400 tabular-nums">{d.pct}%</span>}
-                  </div>
-                  <div className={`text-xs truncate ${failed ? "text-red-600" : "text-neutral-500"}`}>{d.detail}</div>
-                  {d.pct != null && !done && !failed && (
-                    <div className="h-1 rounded-full bg-neutral-100 mt-1 overflow-hidden">
-                      <div className="h-full bg-blue-500 transition-all" style={{ width: `${d.pct}%` }} />
-                    </div>
-                  )}
+  const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const list = Object.values(jobs).filter((job) => startedTime(job) >= cutoff)
+    .sort((a, b) => Number(ACTIVE(b.status)) - Number(ACTIVE(a.status)) || startedTime(b) - startedTime(a));
+  const active = Object.values(jobs).filter((job) => ACTIVE(job.status));
+  return <div className="relative" ref={ref}>
+    <button ref={trigger} type="button" aria-expanded={open} aria-controls="cs-job-history" onClick={() => { setOpen((value) => !value); if (!open) refreshHistory(); }}
+      className="cs-compact-control flex items-center justify-center gap-2 px-4 text-xs hover:bg-neutral-50 max-md:px-3">
+      {active.length ? <Loader2 className="h-4 w-4 animate-spin text-blue-600" /> : <History className="h-4 w-4 text-[#854413]" />}
+      <span className="font-medium">{active.length ? `${active.length} running` : "Job history"}</span>
+      <ChevronDown className={`h-3.5 w-3.5 text-neutral-400 ${open ? "rotate-180" : ""}`} />
+    </button>
+    {open && <section id="cs-job-history" aria-label="Job history" className="absolute right-0 mt-2 w-[420px] max-w-[85vw] max-h-[520px] overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-lg p-4 z-50">
+      <div className="mb-3 flex h-5 items-center justify-between gap-3">
+        <h2 className="text-sm font-semibold text-stone-800">Job history</h2>
+        <span className="text-xs text-stone-500">Last 7 days</span>
+      </div>
+      <ScrollArea viewportClassName="!h-auto max-h-[min(454px,calc(100dvh-166px))]">
+      <div className="space-y-3 pr-3">
+        {historyError && <div className="text-xs text-red-700">{historyError} <button type="button" onClick={refreshHistory} className="underline">Retry</button></div>}
+        {list.map((job) => {
+          const description = describeJob(job);
+          const failed = job.status === "failed";
+          const done = job.status === "completed";
+          return <article key={job.id} className="rounded-xl bg-stone-50 p-3">
+            <div className="flex items-start gap-2">
+              {done ? <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0 text-emerald-600" /> : failed ? <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-red-600" /> : <Loader2 className="h-4 w-4 mt-0.5 shrink-0 animate-spin text-blue-600" />}
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-stone-800">{description.title}</p>
+                <div className="mt-1 flex min-w-0 items-center gap-1 text-xs text-stone-600">
+                  <span className="truncate" title={job.meta?.accountName}>{job.meta?.accountName || (job.meta?.brandId ? `Account ${job.meta.brandId.slice(0, 8)}` : "Account unavailable")}</span>
+                  {job.meta?.productId && <><span aria-hidden="true">·</span><span className="truncate text-stone-500" title={job.meta.productName}>{job.meta.productName || `Product ${job.meta.productId.slice(0, 8)}`}</span></>}
                 </div>
+                <p className={`mt-1 text-xs break-words ${failed ? "text-red-700" : "text-stone-600"}`}>{description.detail}</p>
+                <p className="mt-2 text-[11px] text-stone-400">{job.executionStartedAt ? `Started ${dateLabel(job.executionStartedAt)}` : "Not started yet"}</p>
+                {description.pct != null && !done && !failed && <div className="mt-2 h-1 rounded-full bg-stone-200 overflow-hidden"><div className="h-full bg-blue-500" style={{ width: `${description.pct}%` }} /></div>}
               </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
+            </div>
+          </article>;
+        })}
+        {!list.length && <p className="py-6 text-center text-xs text-stone-500">{historyLoading ? "Loading history…" : "No jobs in the last 7 days."}</p>}
+        {nextOffset != null && <button type="button" onClick={loadMore} disabled={historyLoading} className="cs-library-action w-full">{historyLoading ? "Loading…" : "Load more jobs"}</button>}
+      </div>
+      </ScrollArea>
+    </section>}
+  </div>;
 }

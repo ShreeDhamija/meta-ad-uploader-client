@@ -42,8 +42,8 @@ const DESCRIPTIONS = {
   products: "Create and manage products for the selected account.",
   intelligence: "Run Meta ad analysis and review analyzed creatives + the strategy audit.",
   research: "Run the 7-phase research agent → personas, brand deep dive, language bank.",
-  library: "Generate draft hooks, headlines, and primary text per persona.",
-  generate: "Generate static image ads from a creative format + brand/product context.",
+  library: "Generate draft hooks, headlines, and primary text from personas and analyzed ads.",
+  generate: "Generate static image ads, video scripts, and creative briefs from brand/product context.",
   inspiration: "Upload reference ads (image/video) and mine their structure for on-brand adaptation.",
   weekly: "Run the weekly creative strategist → tiered concept cards. Approve ideas to brief.",
 };
@@ -62,6 +62,7 @@ export default function CreativeStrategyLayout() {
   const [selectedProductId, setSelectedProductId] = useState(null);
   const [error, setError] = useState(null);
   const [headerActionsTarget, setHeaderActionsTarget] = useState(null);
+  const [headerStatusTarget, setHeaderStatusTarget] = useState(null);
 
   const normalizeMetaAccountId = (value) => String(value || "").replace(/^act_/, "");
   const accountFingerprint = useMemo(
@@ -170,11 +171,15 @@ export default function CreativeStrategyLayout() {
   const selectedBrand = brands.find((b) => b.id === selectedBrandId) || null;
   const selectedProduct = products.find((p) => p.id === selectedProductId) || null;
   const selectorsDisabled = activeTab === "brands";
-  const showProductSelector = activeTab !== "products";
+  const showProductSelector = activeTab !== "products" && activeTab !== "weekly";
   const selectorBrands = activeTab === "brands" || activeTab === "products" ? brands : accountsWithProducts;
   const renderHeaderActions = useCallback(
     (actions) => (headerActionsTarget ? createPortal(actions, headerActionsTarget) : null),
     [headerActionsTarget],
+  );
+  const renderHeaderStatus = useCallback(
+    (status) => (headerStatusTarget ? createPortal(status, headerStatusTarget) : null),
+    [headerStatusTarget],
   );
 
   const ctx = {
@@ -192,6 +197,7 @@ export default function CreativeStrategyLayout() {
     reloadProducts: () => loadProducts(selectedBrandId),
     goTo: setActiveTab,
     renderHeaderActions,
+    renderHeaderStatus,
   };
 
   if (!isLoggedIn) return null;
@@ -213,7 +219,7 @@ export default function CreativeStrategyLayout() {
       case "inspiration":
         return <InspirationView ctx={ctx} />;
       case "weekly":
-        return <WeeklyView ctx={ctx} />;
+        return <WeeklyView key={selectedBrandId || "no-account"} ctx={ctx} />;
       default: {
         const item = NAV.find((n) => n.key === activeTab);
         return <ComingSoon label={item?.label} phase={item?.phase} />;
@@ -268,7 +274,7 @@ export default function CreativeStrategyLayout() {
 
             {/* Footer profile */}
             <div className="relative z-10 mt-auto pt-4">
-              <div className="flex w-full items-center rounded-[20px] border border-neutral-200 bg-neutral-50 py-2 pl-3 pr-3 shadow-xs max-lg:justify-center max-lg:p-2">
+              <div className="cs-sidebar-profile flex w-full items-center rounded-[20px] border bg-neutral-50 py-2 pl-3 pr-3 max-lg:justify-center max-lg:p-2">
                 <div className="flex items-center gap-2 flex-grow max-lg:hidden">
                   <img src={profilePicUrl || "/placeholder.svg"} alt="Profile" className="h-8 w-8 rounded-full object-cover" />
                   <span className="max-w-[120px] truncate text-sm font-medium text-neutral-800">{userName}</span>
@@ -333,15 +339,16 @@ export default function CreativeStrategyLayout() {
                 {DESCRIPTIONS[activeTab] && (
                   <p className="mt-1.5 truncate text-[14px] font-normal text-[var(--cs-muted)]">{DESCRIPTIONS[activeTab]}</p>
                 )}
+                <div ref={setHeaderStatusTarget} />
               </div>
               <div ref={setHeaderActionsTarget} className="flex shrink-0 flex-wrap items-center justify-end gap-3" />
             </header>
 
-            <div className="flex-1 overflow-auto">
+            <div className={cn("min-h-0 flex-1", activeTab === "generate" ? "overflow-hidden" : "overflow-auto")}>
               <div
                 className={cn(
                   "w-full px-12 pb-12 pt-3 max-lg:px-7 max-lg:pb-7 max-lg:pt-3 max-md:px-5 max-md:pb-5 max-md:pt-3",
-                  activeTab === "generate" && "flex min-h-full flex-col pb-6 max-lg:pb-5",
+                  activeTab === "generate" && "flex h-full min-h-0 flex-col pb-6 max-lg:pb-5",
                 )}
               >
                 {error && <div className="mb-4 text-sm text-red-600">{error}</div>}

@@ -11,114 +11,100 @@ import PropTypes from "prop-types";
 import { Loader2, CheckCircle2, AlertTriangle } from "lucide-react";
 import { creativeApi } from "@/lib/creativeApi";
 
-const LS_KEY = "cs_tracked_jobs_v1";
 const POLL_MS = 2000;
-const KEEP_DONE_MS = 5 * 60 * 1000; // keep completed/failed jobs visible for 5 min
-
 const JobsContext = createContext(null);
+const ACTIVE = (status) => status === "queued" || status === "running" || status == null;
+const millis = (value) => value ? new Date(value).getTime() : 0;
 
-const ACTIVE = (s) => s === "queued" || s === "running" || s == null;
-
-function loadPersisted() {
-  try {
-    const raw = JSON.parse(localStorage.getItem(LS_KEY) || "{}");
-    const now = Date.now();
-    const out = {};
-    for (const [id, j] of Object.entries(raw)) {
-      // User-cancelled jobs should never be resurrected by persisted UI state.
-      if (j.error === "cancelled by user") continue;
-      // Drop stale finished jobs; keep anything still active or recently done.
-      if (!ACTIVE(j.status) && now - (j.finishedAt || 0) > KEEP_DONE_MS) continue;
-      out[id] = j;
-    }
-    return out;
-  } catch { return {}; }
+function normalizeJob(job) {
+  return { ...job, executionStartedAt: job.startedAt, startedAt: millis(job.createdAt), finishedAt: millis(job.completedAt),
+    meta: { kind: job.type, brandId: job.clientId, productId: job.productId,
+      accountName: job.accountName, productName: job.productName } };
 }
 
 export function JobsProvider({ children }) {
-  const [jobs, setJobs] = useState(loadPersisted);
+  // The database is the source of truth, including after a browser refresh.
+  const [jobs, setJobs] = useState({});
+  const [historyLoading, setHistoryLoading] = useState(true);
+  const [historyError, setHistoryError] = useState(null);
+  const [nextOffset, setNextOffset] = useState(null);
   const jobsRef = useRef(jobs);
+  const olderLoaded = useRef(false);
+  const loadingOlder = useRef(false);
   jobsRef.current = jobs;
 
-  // Persist on every change (active + recently-finished jobs).
-  useEffect(() => {
-    try { localStorage.setItem(LS_KEY, JSON.stringify(jobs)); } catch { /* quota — ignore */ }
-  }, [jobs]);
-
-  const upsert = useCallback((id, patch) => {
-    setJobs((prev) => ({ ...prev, [id]: { ...prev[id], id, ...patch } }));
-  }, []);
-
-  const track = useCallback((id, meta = {}) => {
-    if (!id) return;
-    setJobs((prev) => {
-      const existing = prev[id];
-      return {
-        ...prev,
-        [id]: existing
-          ? { ...existing, meta: { ...existing.meta, ...meta } }
-          : { id, status: "queued", progress: {}, meta, startedAt: Date.now() },
-      };
+  const mergeJobs = useCallback((rows) => {
+    setJobs((previous) => {
+      const next = { ...previous };
+      for (const row of rows) {
+        const current = next[row.id];
+        if (current?.updatedAt && millis(current.updatedAt) > millis(row.updatedAt)) continue;
+        next[row.id] = { ...current, ...normalizeJob(row) };
+      }
+      return next;
     });
   }, []);
 
-  const untrack = useCallback((id) => {
-    setJobs((prev) => { const n = { ...prev }; delete n[id]; return n; });
+  const refreshHistory = useCallback(async () => {
+    try {
+      const response = await creativeApi.getJobHistory();
+      mergeJobs([...(response.jobs || []), ...(response.active || [])]);
+      if (!olderLoaded.current) setNextOffset(response.nextOffset ?? null);
+      setHistoryError(null);
+    } catch (error) { setHistoryError(error.message); }
+    finally { setHistoryLoading(false); }
+  }, [mergeJobs]);
+
+  const loadMore = useCallback(async () => {
+    if (nextOffset == null || loadingOlder.current) return;
+    loadingOlder.current = true; setHistoryLoading(true);
+    try {
+      const response = await creativeApi.getJobHistory(nextOffset);
+      mergeJobs(response.jobs || []);
+      olderLoaded.current = true;
+      setNextOffset(response.nextOffset ?? null); setHistoryError(null);
+    } catch (error) { setHistoryError(error.message); }
+    finally { loadingOlder.current = false; setHistoryLoading(false); }
+  }, [nextOffset, mergeJobs]);
+
+  const track = useCallback((id, meta = {}) => {
+    if (!id) return;
+    setJobs((previous) => ({ ...previous, [id]: previous[id]
+      ? { ...previous[id], meta: { ...previous[id].meta, ...Object.fromEntries(Object.entries(meta).filter(([, value]) => value != null)) } }
+      : { id, status: "queued", progress: {}, meta, startedAt: Date.now() } }));
   }, []);
 
-  // Central poll loop: every POLL_MS, refresh all active tracked jobs.
+  useEffect(() => {
+    refreshHistory();
+    const interval = setInterval(refreshHistory, 10000);
+    return () => clearInterval(interval);
+  }, [refreshHistory]);
+
   useEffect(() => {
     let cancelled = false;
+    let polling = false;
     const tick = async () => {
-      const active = Object.values(jobsRef.current).filter((j) => ACTIVE(j.status));
-      await Promise.all(active.map(async (j) => {
-        try {
-          const { job } = await creativeApi.getJob(j.id);
-          if (cancelled || !job) return;
-          if (job.status === "failed" && job.error === "cancelled by user") {
-            untrack(j.id);
-            return;
-          }
-          const finished = job.status === "completed" || job.status === "failed";
-          const nextJobs = Array.isArray(job.progress?.nextJobs) ? job.progress.nextJobs : [];
-          for (const next of nextJobs) {
-            track(next.jobId, {
-              kind: next.type,
-              brandId: next.clientId || j.meta?.brandId,
-              productId: next.productId || j.meta?.productId,
-            });
-          }
-          upsert(j.id, {
-            type: job.type, status: job.status, progress: job.progress || {},
-            error: job.error || null, result: job.result || null, costCents: job.costCents,
-            ...(finished ? { finishedAt: Date.now() } : {}),
-          });
-        } catch { /* transient — retry next tick */ }
-      }));
+      if (polling) return;
+      polling = true;
+      try {
+        await Promise.all(Object.values(jobsRef.current).filter((job) => ACTIVE(job.status)).map(async (current) => {
+          try {
+            const { job } = await creativeApi.getJob(current.id);
+            if (cancelled || !job) return;
+            mergeJobs([job]);
+            for (const next of Array.isArray(job.progress?.nextJobs) ? job.progress.nextJobs : []) {
+              track(next.jobId, { kind: next.type, brandId: next.clientId || current.meta?.brandId, productId: next.productId || current.meta?.productId });
+            }
+          } catch { /* Retry transient polling failures. */ }
+        }));
+      } finally { polling = false; }
     };
     tick();
-    const iv = setInterval(tick, POLL_MS);
-    return () => { cancelled = true; clearInterval(iv); };
-  }, [track, upsert, untrack]);
+    const interval = setInterval(tick, POLL_MS);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [mergeJobs, track]);
 
-  // Auto-prune finished jobs after KEEP_DONE_MS so badges/indicator clear.
-  useEffect(() => {
-    const iv = setInterval(() => {
-      const now = Date.now();
-      setJobs((prev) => {
-        let changed = false;
-        const n = {};
-        for (const [id, j] of Object.entries(prev)) {
-          if (!ACTIVE(j.status) && now - (j.finishedAt || 0) > KEEP_DONE_MS) { changed = true; continue; }
-          n[id] = j;
-        }
-        return changed ? n : prev;
-      });
-    }, 30000);
-    return () => clearInterval(iv);
-  }, []);
-
-  const value = useMemo(() => ({ jobs, track, untrack }), [jobs, track, untrack]);
+  const value = useMemo(() => ({ jobs, track, historyLoading, historyError, nextOffset, loadMore, refreshHistory }), [jobs, track, historyLoading, historyError, nextOffset, loadMore, refreshHistory]);
   return <JobsContext.Provider value={value}>{children}</JobsContext.Provider>;
 }
 JobsProvider.propTypes = { children: PropTypes.node };
@@ -134,20 +120,23 @@ export function useJobs() {
 // Fires onComplete exactly once when a tracked job finishes successfully — even
 // if the job completed while the view was unmounted (the view re-adopts it on
 // remount and reloads its data).
-export function useJobRunner({ kind, brandId, productId, onComplete, onFail }) {
+export function useJobRunner({ kind, brandId, productId, enabled = true, restoreFinished = true, onComplete, onFail }) {
   const { jobs, track } = useJobs();
   const firedRef = useRef(null);
+  const observedJobs = useRef(new Set());
   const cbRef = useRef({ onComplete, onFail });
   cbRef.current = { onComplete, onFail };
 
   const job = useMemo(() => {
+    if (!enabled) return null;
     const matches = Object.values(jobs).filter((j) =>
       j.meta?.kind === kind &&
       (brandId == null || j.meta?.brandId === brandId) &&
       (productId == null || j.meta?.productId === productId));
+    for (const match of matches) if (ACTIVE(match.status)) observedJobs.current.add(match.id);
     matches.sort((a, b) => (b.startedAt || 0) - (a.startedAt || 0));
-    return matches[0] || null;
-  }, [jobs, kind, brandId, productId]);
+    return matches.find((match) => restoreFinished || observedJobs.current.has(match.id)) || null;
+  }, [jobs, kind, brandId, productId, enabled, restoreFinished]);
 
   useEffect(() => {
     if (!job) return;
@@ -159,7 +148,10 @@ export function useJobRunner({ kind, brandId, productId, onComplete, onFail }) {
     }
   }, [job]);
 
-  const start = useCallback((jobId) => track(jobId, { kind, brandId, productId }), [track, kind, brandId, productId]);
+  const start = useCallback((jobId) => {
+    observedJobs.current.add(jobId);
+    track(jobId, { kind, brandId, productId });
+  }, [track, kind, brandId, productId]);
   return { job, start };
 }
 
@@ -173,7 +165,8 @@ const PHASE_LABELS = {
   fetching_meta: "Fetching Meta ads", metrics: "Pulling metrics", analyze: "Analyzing creatives",
   audit: "Building strategy audit", ingest: "Indexing for search",
   // generate_ad
-  gathering_context: "Gathering brand context", generating: "Generating",
+  gathering_context: "Gathering brand context", planning_concepts: "Planning static concepts", generating: "Generating",
+  trending: "Refreshing trending creatives",
   // others
   running_strategist: "Running the strategist", mining_reddit: "Mining Reddit threads",
   building_briefing: "Building the strategy briefing", saving_concepts: "Saving concept cards",
@@ -181,8 +174,8 @@ const PHASE_LABELS = {
   analyzing_batch: "Analyzing",
 };
 const KIND_LABEL = {
-  research: "Research", analyze_ads: "Analysis",
-  generate_ad: "Generating ads", generate_library: "Generating library", weekly_strategy: "Weekly strategy",
+  research: "Product research", analyze_ads: "Ad analysis + trending",
+  generate_ad: "Static ad generation", generate_library: "Copy library generation", weekly_strategy: "Weekly strategy",
   ingest_context: "Ingestion", inspo_analyze: "Reference analysis", trending_creative: "Trending creative",
 };
 
@@ -193,7 +186,14 @@ export function describeJob(job) {
   const title = KIND_LABEL[type] || job.meta?.label || type || "Job";
   const p = job.progress || {};
   if (job.status === "queued" || job.status == null) return { title, detail: "queued", pct: 0 };
-  if (job.status === "completed") return { title, detail: "completed", pct: 100 };
+  if (job.status === "completed") {
+    const result = job.result || {};
+    const detail = type === "analyze_ads" ? `Completed · ${result.analyzed ?? 0} analyzed · ${result.metricsUpdated ?? 0} refreshed${result.failed ? ` · ${result.failed} failed` : ""}`
+      : type === "generate_ad" ? `Completed · ${result.saved ?? 0} ads saved`
+      : type === "weekly_strategy" ? `Completed · ${result.ideas_generated ?? 0} concepts`
+      : "Completed";
+    return { title, detail, pct: 100 };
+  }
   if (job.status === "failed") return { title, detail: job.error || "failed", pct: null };
 
   // running
