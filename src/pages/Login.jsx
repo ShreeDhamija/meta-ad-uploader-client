@@ -6,11 +6,17 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip"
+import { Building2, CirclePlus, Crown, Mail, Megaphone, Store, UserRound, UserRoundPlus } from "lucide-react"
 import { useIntercom } from "@/lib/useIntercom"
 import Doodle from "../assets/onboarding/doodle.webp?url"
 import MrAvatar from "../assets/onboarding/mr.webp?url"
 import Rocket from "../assets/rocket2.webp?url"
 import Check from "../assets/icons/check.svg"
+import ChatGptIcon from "../assets/icons/signup/chatgpt-6.svg"
+import GoogleIcon from "../assets/icons/signup/google.svg"
+import InstagramIcon from "../assets/icons/signup/instagram.svg"
+import RedditIcon from "../assets/icons/signup/reddit.svg"
+import TwitterIcon from "../assets/icons/signup/twitter.svg"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com'
 const IS_STAGING =
@@ -24,24 +30,36 @@ const IS_STAGING =
   ))
 
 const ROLE_OPTIONS = [
-    "Freelancer Marketing Specialist",
-    "Paid Ads Agency",
-    "Marketing at a Brand",
-    "Founder/CEO",
-    "Other",
+    { value: "Freelancer Marketing Specialist", icon: UserRound },
+    { value: "Paid Ads Agency", icon: Building2 },
+    { value: "Marketing at a Brand", icon: Store },
+    { value: "Founder/CEO", icon: Crown },
+    { value: "Other" },
 ]
 
 const SOURCE_OPTIONS = [
-    "Google",
-    "ChatGPT / LLM",
-    "Twitter / X",
-    "Instagram",
-    "Advertisement",
-    "Reddit",
-    "Referral",
-    "Joining a Team",
-    "Other",
+    { value: "Google", iconSrc: GoogleIcon },
+    { value: "ChatGPT / LLM", iconSrc: ChatGptIcon },
+    { value: "Twitter / X", iconSrc: TwitterIcon },
+    { value: "Instagram", iconSrc: InstagramIcon },
+    { value: "Advertisement", icon: Megaphone },
+    { value: "Reddit", iconSrc: RedditIcon },
+    { value: "Referral", icon: CirclePlus },
+    { value: "Joining a Team", icon: UserRoundPlus },
+    { value: "Other" },
 ]
+
+function renderSignupOptionLabel(option) {
+    const Icon = option?.icon
+
+    return (
+        <span className="flex min-w-0 items-center gap-2.5">
+            {option?.iconSrc && <img src={option.iconSrc} alt="" className="size-[18px] shrink-0 object-contain" />}
+            {Icon && <Icon aria-hidden="true" className="size-[18px] shrink-0 text-zinc-600" strokeWidth={1.8} />}
+            <span className="truncate">{option?.value}</span>
+        </span>
+    )
+}
 
 function TestimonialPanel() {
     return (
@@ -203,24 +221,39 @@ export default function Login() {
                                     <label className="text-sm font-semibold text-zinc-800">Work email</label>
                                     {isValidEmail && <img src={Check} alt="Valid" className="size-5" />}
                                 </div>
-                                <Input
-                                    type="email"
-                                    placeholder="Enter your Work Email"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    className="rounded-xl"
-                                />
+                                <div className="relative">
+                                    <Mail
+                                        aria-hidden="true"
+                                        className="pointer-events-none absolute left-3.5 top-1/2 size-[18px] -translate-y-1/2 text-zinc-500"
+                                        strokeWidth={1.8}
+                                    />
+                                    <Input
+                                        type="email"
+                                        placeholder="Enter your Work Email"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        className="h-[46px] rounded-[18px] pl-10 pr-3.5"
+                                    />
+                                </div>
                             </div>
 
                             <div className="space-y-2">
                                 <label className="text-sm font-semibold text-zinc-800">Job role</label>
                                 <Select value={jobRole} onValueChange={setJobRole}>
-                                    <SelectTrigger className="w-full rounded-xl bg-white">
-                                        <SelectValue placeholder="Select your job role" />
+                                    <SelectTrigger className="h-[46px] w-full rounded-[18px] bg-white px-3.5 py-0">
+                                        <SelectValue placeholder="Select your job role">
+                                            {jobRole && renderSignupOptionLabel(ROLE_OPTIONS.find((option) => option.value === jobRole))}
+                                        </SelectValue>
                                     </SelectTrigger>
-                                    <SelectContent className="rounded-xl bg-white">
-                                        {ROLE_OPTIONS.map((role) => (
-                                            <SelectItem key={role} value={role}>{role}</SelectItem>
+                                    <SelectContent className="rounded-[18px] bg-white p-0.5">
+                                        {ROLE_OPTIONS.map((option) => (
+                                            <SelectItem
+                                                key={option.value}
+                                                value={option.value}
+                                                className="cursor-pointer rounded-xl py-2 pl-2.5 pr-8 hover:bg-zinc-100 focus:bg-zinc-100"
+                                            >
+                                                {renderSignupOptionLabel(option)}
+                                            </SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
@@ -235,12 +268,20 @@ export default function Login() {
                                         if (value !== 'Joining a Team') setTeamCode("")
                                     }}
                                 >
-                                    <SelectTrigger className="w-full rounded-xl bg-white">
-                                        <SelectValue placeholder="Select a signup source" />
+                                    <SelectTrigger className="h-[46px] w-full rounded-[18px] bg-white px-3.5 py-0">
+                                        <SelectValue placeholder="Select a signup source">
+                                            {signupSource && renderSignupOptionLabel(SOURCE_OPTIONS.find((option) => option.value === signupSource))}
+                                        </SelectValue>
                                     </SelectTrigger>
-                                    <SelectContent className="rounded-xl bg-white">
-                                        {SOURCE_OPTIONS.map((source) => (
-                                            <SelectItem key={source} value={source}>{source}</SelectItem>
+                                    <SelectContent className="rounded-[18px] bg-white p-0.5">
+                                        {SOURCE_OPTIONS.map((option) => (
+                                            <SelectItem
+                                                key={option.value}
+                                                value={option.value}
+                                                className="cursor-pointer rounded-xl py-2 pl-2.5 pr-8 hover:bg-zinc-100 focus:bg-zinc-100"
+                                            >
+                                                {renderSignupOptionLabel(option)}
+                                            </SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
@@ -258,13 +299,20 @@ export default function Login() {
                                     >
                                         <div className="space-y-2">
                                             <label className="text-sm font-semibold text-zinc-800">Team code <span className="font-normal text-zinc-500">(optional)</span></label>
-                                            <Input
-                                                type="text"
-                                                placeholder="Enter your team code"
-                                                value={teamCode}
-                                                onChange={(e) => setTeamCode(e.target.value)}
-                                                className="rounded-xl"
-                                            />
+                                            <div className="relative">
+                                                <UserRoundPlus
+                                                    aria-hidden="true"
+                                                    className="pointer-events-none absolute left-3.5 top-1/2 size-[18px] -translate-y-1/2 text-zinc-500"
+                                                    strokeWidth={1.8}
+                                                />
+                                                <Input
+                                                    type="text"
+                                                    placeholder="Enter your team code"
+                                                    value={teamCode}
+                                                    onChange={(e) => setTeamCode(e.target.value)}
+                                                    className="h-[46px] rounded-[18px] pl-10 pr-3.5"
+                                                />
+                                            </div>
                                             <p className="text-xs leading-snug text-zinc-500">
                                                 Your code is in the invite email, or ask a team member for it.
                                             </p>
