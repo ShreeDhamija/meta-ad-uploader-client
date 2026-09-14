@@ -20,14 +20,14 @@ import TwitterIcon from "../assets/icons/signup/twitter.svg"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com'
 const IS_STAGING =
-  import.meta.env.VITE_ENV === 'staging' ||
-  import.meta.env.VITE_ENV === 'dev' ||
-  API_BASE_URL.includes('staging') ||
-  API_BASE_URL.includes('dev') ||
-  (typeof window !== 'undefined' && (
-    window.location.hostname.includes('staging.withblip.com') ||
-    window.location.hostname.includes('dev.withblip.com')
-  ))
+    import.meta.env.VITE_ENV === 'staging' ||
+    import.meta.env.VITE_ENV === 'dev' ||
+    API_BASE_URL.includes('staging') ||
+    API_BASE_URL.includes('dev') ||
+    (typeof window !== 'undefined' && (
+        window.location.hostname.includes('staging.withblip.com') ||
+        window.location.hostname.includes('dev.withblip.com')
+    ))
 
 const ROLE_OPTIONS = [
     { value: "Freelancer Marketing Specialist", icon: UserRound },
@@ -192,255 +192,255 @@ export default function Login() {
             <div className="relative flex min-h-0 flex-1 w-full overflow-hidden">
                 {/* Left half — form */}
                 <div className="flex h-full w-full items-center justify-center overflow-y-auto bg-white px-8 py-8 md:w-1/2">
-                <div className="w-full max-w-sm space-y-6">
-                    <div className="space-y-1">
-                        <img
-                            src="https://api.withblip.com/logo.webp"
-                            alt="Blip"
-                            className="w-[44px] h-[44px] rounded-md mb-2"
-                        />
-                        <h2 className="text-2xl font-bold tracking-tight">Welcome To Blip!</h2>
-                        <p className="text-sm font-semibold text-zinc-800">
-                            {isSignupPage ? 'Start your 7 day free trial' : ''}
-                        </p>
-                        <p className="text-sm text-zinc-600">
-                            {isSignupPage ? "You're so close to ditching Ads Manager forever" : 'Login to your account'}
+                    <div className="w-full max-w-sm space-y-6">
+                        <div className="space-y-1">
+                            <img
+                                src="https://api.withblip.com/logo.webp"
+                                alt="Blip"
+                                className="w-[44px] h-[44px] rounded-md mb-2"
+                            />
+                            <h2 className="text-2xl font-bold tracking-tight">Welcome To Blip!</h2>
+                            <p className="text-sm font-semibold text-zinc-800">
+                                {isSignupPage ? 'Start your 7 day free trial' : ''}
+                            </p>
+                            <p className="text-sm text-zinc-600">
+                                {isSignupPage ? "You're so close to ditching Ads Manager forever" : 'Login to your account'}
+                            </p>
+                        </div>
+
+                        {isSignupPage ? (
+                            <form
+                                className="space-y-4"
+                                onSubmit={(event) => {
+                                    event.preventDefault()
+                                    if (isSignupFormComplete) startSignupFlow()
+                                }}
+                            >
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-sm font-semibold text-zinc-800">Work email</label>
+                                        {isValidEmail && <img src={Check} alt="Valid" className="size-5" />}
+                                    </div>
+                                    <div className="relative">
+                                        <Mail
+                                            aria-hidden="true"
+                                            className="pointer-events-none absolute left-3.5 top-1/2 size-[18px] -translate-y-1/2 text-zinc-500"
+                                            strokeWidth={1.8}
+                                        />
+                                        <Input
+                                            type="email"
+                                            placeholder="Enter your Work Email"
+                                            value={email}
+                                            onChange={(e) => setEmail(e.target.value)}
+                                            className="h-[46px] rounded-[18px] pl-10 pr-3.5"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-sm font-semibold text-zinc-800">Job role</label>
+                                    <Select value={jobRole} onValueChange={setJobRole}>
+                                        <SelectTrigger className="h-[46px] w-full rounded-[18px] bg-white px-3.5 py-0">
+                                            <SelectValue placeholder="Select your job role">
+                                                {jobRole && renderSignupOptionLabel(ROLE_OPTIONS.find((option) => option.value === jobRole))}
+                                            </SelectValue>
+                                        </SelectTrigger>
+                                        <SelectContent className="rounded-[18px] bg-white p-0.5">
+                                            {ROLE_OPTIONS.map((option) => (
+                                                <SelectItem
+                                                    key={option.value}
+                                                    value={option.value}
+                                                    className="cursor-pointer rounded-xl py-2 pl-2.5 pr-8 hover:bg-zinc-100 focus:bg-zinc-100"
+                                                >
+                                                    {renderSignupOptionLabel(option)}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-sm font-semibold text-zinc-800">How did you hear about Blip?</label>
+                                    <Select
+                                        value={signupSource}
+                                        onValueChange={(value) => {
+                                            setSignupSource(value)
+                                            if (value !== 'Joining a Team') setTeamCode("")
+                                        }}
+                                    >
+                                        <SelectTrigger className="h-[46px] w-full rounded-[18px] bg-white px-3.5 py-0">
+                                            <SelectValue placeholder="Select a signup source">
+                                                {signupSource && renderSignupOptionLabel(SOURCE_OPTIONS.find((option) => option.value === signupSource))}
+                                            </SelectValue>
+                                        </SelectTrigger>
+                                        <SelectContent className="rounded-[18px] bg-white p-0.5">
+                                            {SOURCE_OPTIONS.map((option) => (
+                                                <SelectItem
+                                                    key={option.value}
+                                                    value={option.value}
+                                                    className="cursor-pointer rounded-xl py-2 pl-2.5 pr-8 hover:bg-zinc-100 focus:bg-zinc-100"
+                                                >
+                                                    {renderSignupOptionLabel(option)}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <AnimatePresence initial={false}>
+                                    {signupSource === 'Joining a Team' && (
+                                        <motion.div
+                                            key="team-code"
+                                            initial={{ opacity: 0, height: 0 }}
+                                            animate={{ opacity: 1, height: 'auto' }}
+                                            exit={{ opacity: 0, height: 0 }}
+                                            transition={{ duration: 0.25, ease: 'easeOut' }}
+                                            className="overflow-hidden"
+                                        >
+                                            <div className="space-y-2">
+                                                <label className="text-sm font-semibold text-zinc-800">Team code <span className="font-normal text-zinc-500">(optional)</span></label>
+                                                <div className="relative">
+                                                    <UserRoundPlus
+                                                        aria-hidden="true"
+                                                        className="pointer-events-none absolute left-3.5 top-1/2 size-[18px] -translate-y-1/2 text-zinc-500"
+                                                        strokeWidth={1.8}
+                                                    />
+                                                    <Input
+                                                        type="text"
+                                                        placeholder="Enter your team code"
+                                                        value={teamCode}
+                                                        onChange={(e) => setTeamCode(e.target.value)}
+                                                        className="h-[46px] rounded-[18px] pl-10 pr-3.5"
+                                                    />
+                                                </div>
+                                                <p className="text-xs leading-snug text-zinc-500">
+                                                    Your code is in the invite email, or ask the team admin for it. You can also do this in preferences later.
+                                                </p>
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+
+                                <div className="space-y-3 pt-1">
+                                    <TooltipProvider delayDuration={100}>
+                                        <Tooltip open={isSignupFormComplete ? false : undefined}>
+                                            <TooltipTrigger asChild>
+                                                <span className="block">
+                                                    <button
+                                                        type="submit"
+                                                        className="w-full flex items-center justify-center gap-2 text-white cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
+                                                        disabled={!isSignupFormComplete}
+                                                        style={{
+                                                            padding: '16px 46px',
+                                                            fontSize: '18px',
+                                                            lineHeight: 1,
+                                                            borderRadius: '20px',
+                                                            border: '2px solid #3f3e3e',
+                                                            background: 'linear-gradient(0deg, #414141 0%, #000 77.88%)',
+                                                            boxShadow: '0 2px 10px 0 rgba(0,0,0,0.25)',
+                                                            height: '56px',
+                                                            maxHeight: '56px',
+                                                            letterSpacing: '0.2px',
+                                                            fontWeight: 600,
+                                                        }}
+                                                    >
+                                                        <img src={Rocket} alt="" className="size-8" />
+                                                        Start Launching Ads
+                                                    </button>
+                                                </span>
+                                            </TooltipTrigger>
+                                            {!isSignupFormComplete && (
+                                                <TooltipContent side="top">
+                                                    Please complete all signup fields to continue
+                                                </TooltipContent>
+                                            )}
+                                        </Tooltip>
+                                    </TooltipProvider>
+                                </div>
+                            </form>
+                        ) : (
+                            <div className="space-y-4">
+                                {IS_STAGING && (
+                                    <>
+                                        <form onSubmit={handleManualLogin} className="space-y-4">
+                                            <Input
+                                                type="text"
+                                                placeholder="Username"
+                                                value={manualUsername}
+                                                onChange={(e) => setManualUsername(e.target.value)}
+                                                className="rounded-xl"
+                                                required
+                                            />
+                                            <Input
+                                                type="password"
+                                                placeholder="Password"
+                                                value={manualPassword}
+                                                onChange={(e) => setManualPassword(e.target.value)}
+                                                className="rounded-xl"
+                                                required
+                                            />
+                                            {manualLoginError && (
+                                                <p className="text-sm text-red-500 text-center">{manualLoginError}</p>
+                                            )}
+                                            <Button
+                                                type="submit"
+                                                disabled={isLoggingIn || !manualUsername || !manualPassword}
+                                                className="w-full bg-zinc-800 hover:bg-zinc-900 text-white rounded-xl h-[40px] disabled:opacity-50 disabled:cursor-not-allowed"
+                                            >
+                                                {isLoggingIn ? 'Logging in...' : 'Login'}
+                                            </Button>
+                                        </form>
+
+                                        <div className="flex items-center gap-4">
+                                            <div className="flex-1 h-px bg-zinc-200" />
+                                            <span className="text-sm text-muted-foreground">or</span>
+                                            <div className="flex-1 h-px bg-zinc-200" />
+                                        </div>
+                                    </>
+                                )}
+
+                                <Button
+                                    onClick={handleLoginFacebook}
+                                    className="w-full bg-[#1877F2] hover:bg-[#0866FF] text-white rounded-2xl shadow-md flex items-center justify-center gap-2 h-[44px]"
+                                >
+                                    <img
+                                        src="https://api.withblip.com/facebooklogo.png"
+                                        alt="Facebook"
+                                        className="w-5 h-5"
+                                    />
+                                    Login with Facebook
+                                </Button>
+                            </div>
+                        )}
+
+                        {isSignupPage ? (
+                            <p className="text-sm text-zinc-600">
+                                Already have an account?{" "}
+                                <button
+                                    onClick={() => navigate('/login')}
+                                    className="font-bold underline text-blue-600 hover:text-blue-800"
+                                >
+                                    Head to Login
+                                </button>
+                            </p>
+                        ) : (
+                            <p className="text-sm text-zinc-600">
+                                New user?{" "}
+                                <button
+                                    onClick={() => navigate('/signup')}
+                                    className="font-bold underline text-blue-600 hover:text-blue-800"
+                                >
+                                    Head to Sign Up Page
+                                </button>
+                            </p>
+                        )}
+
+                        <p className="text-xs text-zinc-500 max-w-[350px]">
+                            By clicking continue, you agree to our{" "}
+                            <a href="https://app.withblip.com/terms-of-service" className="underline">Terms of Service</a> &{" "}
+                            <a href="https://app.withblip.com/privacy-policy" className="underline">Privacy Policy</a>.
                         </p>
                     </div>
-
-                    {isSignupPage ? (
-                        <form
-                            className="space-y-4"
-                            onSubmit={(event) => {
-                                event.preventDefault()
-                                if (isSignupFormComplete) startSignupFlow()
-                            }}
-                        >
-                            <div className="space-y-2">
-                                <div className="flex items-center justify-between">
-                                    <label className="text-sm font-semibold text-zinc-800">Work email</label>
-                                    {isValidEmail && <img src={Check} alt="Valid" className="size-5" />}
-                                </div>
-                                <div className="relative">
-                                    <Mail
-                                        aria-hidden="true"
-                                        className="pointer-events-none absolute left-3.5 top-1/2 size-[18px] -translate-y-1/2 text-zinc-500"
-                                        strokeWidth={1.8}
-                                    />
-                                    <Input
-                                        type="email"
-                                        placeholder="Enter your Work Email"
-                                        value={email}
-                                        onChange={(e) => setEmail(e.target.value)}
-                                        className="h-[46px] rounded-[18px] pl-10 pr-3.5"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-sm font-semibold text-zinc-800">Job role</label>
-                                <Select value={jobRole} onValueChange={setJobRole}>
-                                    <SelectTrigger className="h-[46px] w-full rounded-[18px] bg-white px-3.5 py-0">
-                                        <SelectValue placeholder="Select your job role">
-                                            {jobRole && renderSignupOptionLabel(ROLE_OPTIONS.find((option) => option.value === jobRole))}
-                                        </SelectValue>
-                                    </SelectTrigger>
-                                    <SelectContent className="rounded-[18px] bg-white p-0.5">
-                                        {ROLE_OPTIONS.map((option) => (
-                                            <SelectItem
-                                                key={option.value}
-                                                value={option.value}
-                                                className="cursor-pointer rounded-xl py-2 pl-2.5 pr-8 hover:bg-zinc-100 focus:bg-zinc-100"
-                                            >
-                                                {renderSignupOptionLabel(option)}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-sm font-semibold text-zinc-800">How did you hear about Blip?</label>
-                                <Select
-                                    value={signupSource}
-                                    onValueChange={(value) => {
-                                        setSignupSource(value)
-                                        if (value !== 'Joining a Team') setTeamCode("")
-                                    }}
-                                >
-                                    <SelectTrigger className="h-[46px] w-full rounded-[18px] bg-white px-3.5 py-0">
-                                        <SelectValue placeholder="Select a signup source">
-                                            {signupSource && renderSignupOptionLabel(SOURCE_OPTIONS.find((option) => option.value === signupSource))}
-                                        </SelectValue>
-                                    </SelectTrigger>
-                                    <SelectContent className="rounded-[18px] bg-white p-0.5">
-                                        {SOURCE_OPTIONS.map((option) => (
-                                            <SelectItem
-                                                key={option.value}
-                                                value={option.value}
-                                                className="cursor-pointer rounded-xl py-2 pl-2.5 pr-8 hover:bg-zinc-100 focus:bg-zinc-100"
-                                            >
-                                                {renderSignupOptionLabel(option)}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            <AnimatePresence initial={false}>
-                                {signupSource === 'Joining a Team' && (
-                                    <motion.div
-                                        key="team-code"
-                                        initial={{ opacity: 0, height: 0 }}
-                                        animate={{ opacity: 1, height: 'auto' }}
-                                        exit={{ opacity: 0, height: 0 }}
-                                        transition={{ duration: 0.25, ease: 'easeOut' }}
-                                        className="overflow-hidden"
-                                    >
-                                        <div className="space-y-2">
-                                            <label className="text-sm font-semibold text-zinc-800">Team code <span className="font-normal text-zinc-500">(optional)</span></label>
-                                            <div className="relative">
-                                                <UserRoundPlus
-                                                    aria-hidden="true"
-                                                    className="pointer-events-none absolute left-3.5 top-1/2 size-[18px] -translate-y-1/2 text-zinc-500"
-                                                    strokeWidth={1.8}
-                                                />
-                                                <Input
-                                                    type="text"
-                                                    placeholder="Enter your team code"
-                                                    value={teamCode}
-                                                    onChange={(e) => setTeamCode(e.target.value)}
-                                                    className="h-[46px] rounded-[18px] pl-10 pr-3.5"
-                                                />
-                                            </div>
-                                            <p className="text-xs leading-snug text-zinc-500">
-                                                Your code is in the invite email, or ask a team member for it.
-                                            </p>
-                                        </div>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-
-                            <div className="space-y-3 pt-1">
-                                <TooltipProvider delayDuration={100}>
-                                    <Tooltip open={isSignupFormComplete ? false : undefined}>
-                                        <TooltipTrigger asChild>
-                                            <span className="block">
-                                                <button
-                                                    type="submit"
-                                                    className="w-full flex items-center justify-center gap-2 text-white cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
-                                                    disabled={!isSignupFormComplete}
-                                                    style={{
-                                                        padding: '16px 46px',
-                                                        fontSize: '18px',
-                                                        lineHeight: 1,
-                                                        borderRadius: '20px',
-                                                        border: '2px solid #3f3e3e',
-                                                        background: 'linear-gradient(0deg, #414141 0%, #000 77.88%)',
-                                                        boxShadow: '0 2px 10px 0 rgba(0,0,0,0.25)',
-                                                        height: '56px',
-                                                        maxHeight: '56px',
-                                                        letterSpacing: '0.2px',
-                                                        fontWeight: 600,
-                                                    }}
-                                                >
-                                                    <img src={Rocket} alt="" className="size-8" />
-                                                    Start Launching Ads
-                                                </button>
-                                            </span>
-                                        </TooltipTrigger>
-                                        {!isSignupFormComplete && (
-                                            <TooltipContent side="top">
-                                                Please complete all signup fields to continue
-                                            </TooltipContent>
-                                        )}
-                                    </Tooltip>
-                                </TooltipProvider>
-                            </div>
-                        </form>
-                    ) : (
-                        <div className="space-y-4">
-                            {IS_STAGING && (
-                                <>
-                                    <form onSubmit={handleManualLogin} className="space-y-4">
-                                        <Input
-                                            type="text"
-                                            placeholder="Username"
-                                            value={manualUsername}
-                                            onChange={(e) => setManualUsername(e.target.value)}
-                                            className="rounded-xl"
-                                            required
-                                        />
-                                        <Input
-                                            type="password"
-                                            placeholder="Password"
-                                            value={manualPassword}
-                                            onChange={(e) => setManualPassword(e.target.value)}
-                                            className="rounded-xl"
-                                            required
-                                        />
-                                        {manualLoginError && (
-                                            <p className="text-sm text-red-500 text-center">{manualLoginError}</p>
-                                        )}
-                                        <Button
-                                            type="submit"
-                                            disabled={isLoggingIn || !manualUsername || !manualPassword}
-                                            className="w-full bg-zinc-800 hover:bg-zinc-900 text-white rounded-xl h-[40px] disabled:opacity-50 disabled:cursor-not-allowed"
-                                        >
-                                            {isLoggingIn ? 'Logging in...' : 'Login'}
-                                        </Button>
-                                    </form>
-
-                                    <div className="flex items-center gap-4">
-                                        <div className="flex-1 h-px bg-zinc-200" />
-                                        <span className="text-sm text-muted-foreground">or</span>
-                                        <div className="flex-1 h-px bg-zinc-200" />
-                                    </div>
-                                </>
-                            )}
-
-                            <Button
-                                onClick={handleLoginFacebook}
-                                className="w-full bg-[#1877F2] hover:bg-[#0866FF] text-white rounded-2xl shadow-md flex items-center justify-center gap-2 h-[44px]"
-                            >
-                                <img
-                                    src="https://api.withblip.com/facebooklogo.png"
-                                    alt="Facebook"
-                                    className="w-5 h-5"
-                                />
-                                Login with Facebook
-                            </Button>
-                        </div>
-                    )}
-
-                    {isSignupPage ? (
-                        <p className="text-sm text-zinc-600">
-                            Already have an account?{" "}
-                            <button
-                                onClick={() => navigate('/login')}
-                                className="font-bold underline text-blue-600 hover:text-blue-800"
-                            >
-                                Head to Login
-                            </button>
-                        </p>
-                    ) : (
-                        <p className="text-sm text-zinc-600">
-                            New user?{" "}
-                            <button
-                                onClick={() => navigate('/signup')}
-                                className="font-bold underline text-blue-600 hover:text-blue-800"
-                            >
-                                Head to Sign Up Page
-                            </button>
-                        </p>
-                    )}
-
-                    <p className="text-xs text-zinc-500 max-w-[350px]">
-                        By clicking continue, you agree to our{" "}
-                        <a href="https://app.withblip.com/terms-of-service" className="underline">Terms of Service</a> &{" "}
-                        <a href="https://app.withblip.com/privacy-policy" className="underline">Privacy Policy</a>.
-                    </p>
-                </div>
                 </div>
 
                 {/* Right half — testimonial */}
@@ -448,73 +448,73 @@ export default function Login() {
 
                 {/* Popup overlay */}
                 <AnimatePresence>
-                {popupStep && (
-                    <>
-                        <motion.div
-                            key="backdrop"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            transition={{ duration: 0.18 }}
-                            className="absolute inset-0 bg-black/30 z-40"
-                            onClick={closePopup}
-                        />
-                        <motion.div
-                            key="popup"
-                            initial={{ opacity: 0, y: 8 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: 8 }}
-                            transition={{ duration: 0.2, ease: "easeOut" }}
-                            className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none"
-                        >
+                    {popupStep && (
+                        <>
                             <motion.div
-                                className="pointer-events-auto bg-white shadow-xl flex flex-col"
-                                style={{
-                                    width: 405,
-                                    minHeight: 420,
-                                    borderRadius: 40,
-                                    border: '1px solid rgba(0,0,0,0.1)',
-                                }}
+                                key="backdrop"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                transition={{ duration: 0.18 }}
+                                className="absolute inset-0 bg-black/30 z-40"
+                                onClick={closePopup}
+                            />
+                            <motion.div
+                                key="popup"
+                                initial={{ opacity: 0, y: 8 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: 8 }}
+                                transition={{ duration: 0.2, ease: "easeOut" }}
+                                className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none"
                             >
-                                <div className="flex-1 px-6 pt-6 overflow-hidden relative">
-                                    <img
-                                        src="https://api.withblip.com/logo.webp"
-                                        alt="Blip"
-                                        className="w-9 h-9 rounded-md mb-3"
-                                    />
-                                    <div className="font-bold text-zinc-900">This one&apos;s important!</div>
-                                    <p className="text-sm text-zinc-700 mt-2">
-                                        1. Facebook will ask you to grant Blip a few permissions so it can access your data safely.
-                                    </p>
-                                    <p className="text-sm text-zinc-700 mt-3">
-                                        2. Make sure to approve all the pages and business managers you&apos;d like to use in Blip — otherwise they won&apos;t show up in the app!
-                                    </p>
-                                    <p className="text-sm text-zinc-700 mt-3">
-                                        3. You can always add or remove pages and ad accounts later as well.
-                                    </p>
-                                    {initError && (
-                                        <p className="text-xs text-red-500 mt-2">{initError}</p>
-                                    )}
-                                </div>
-
-                                <div className="px-6 pb-6 pt-4 flex justify-end">
-                                    <Button
-                                        onClick={handleSignupFacebookLogin}
-                                        disabled={isInitializing}
-                                        className="w-full bg-[#1877F2] hover:bg-[#0866FF] text-white rounded-2xl shadow-md flex items-center justify-center gap-2 h-[44px] disabled:opacity-60"
-                                    >
+                                <motion.div
+                                    className="pointer-events-auto bg-white shadow-xl flex flex-col"
+                                    style={{
+                                        width: 405,
+                                        minHeight: 420,
+                                        borderRadius: 40,
+                                        border: '1px solid rgba(0,0,0,0.1)',
+                                    }}
+                                >
+                                    <div className="flex-1 px-6 pt-6 overflow-hidden relative">
                                         <img
-                                            src="https://api.withblip.com/facebooklogo.png"
-                                            alt="Facebook"
-                                            className="w-5 h-5"
+                                            src="https://api.withblip.com/logo.webp"
+                                            alt="Blip"
+                                            className="w-9 h-9 rounded-md mb-3"
                                         />
-                                        {isInitializing ? 'Redirecting...' : 'Login with Facebook'}
-                                    </Button>
-                                </div>
+                                        <div className="font-bold text-zinc-900">This one&apos;s important!</div>
+                                        <p className="text-sm text-zinc-700 mt-2">
+                                            1. Facebook will ask you to grant Blip a few permissions so it can access your data safely.
+                                        </p>
+                                        <p className="text-sm text-zinc-700 mt-3">
+                                            2. Make sure to approve all the pages and business managers you&apos;d like to use in Blip — otherwise they won&apos;t show up in the app!
+                                        </p>
+                                        <p className="text-sm text-zinc-700 mt-3">
+                                            3. You can always add or remove pages and ad accounts later as well.
+                                        </p>
+                                        {initError && (
+                                            <p className="text-xs text-red-500 mt-2">{initError}</p>
+                                        )}
+                                    </div>
+
+                                    <div className="px-6 pb-6 pt-4 flex justify-end">
+                                        <Button
+                                            onClick={handleSignupFacebookLogin}
+                                            disabled={isInitializing}
+                                            className="w-full bg-[#1877F2] hover:bg-[#0866FF] text-white rounded-2xl shadow-md flex items-center justify-center gap-2 h-[44px] disabled:opacity-60"
+                                        >
+                                            <img
+                                                src="https://api.withblip.com/facebooklogo.png"
+                                                alt="Facebook"
+                                                className="w-5 h-5"
+                                            />
+                                            {isInitializing ? 'Redirecting...' : 'Login with Facebook'}
+                                        </Button>
+                                    </div>
+                                </motion.div>
                             </motion.div>
-                        </motion.div>
-                    </>
-                )}
+                        </>
+                    )}
                 </AnimatePresence>
             </div>
         </div>
