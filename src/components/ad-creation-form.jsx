@@ -2615,12 +2615,30 @@ export default function AdCreationForm({
     selectedIgOrganicPosts,
   ]);
 
-  // Add this helper function
-  // Whatever your uploadChunkWithRetry looks like, add signal:
-  async function uploadChunkWithRetry(url, chunk, contentType, partNumber, maxRetries = 3, signal = null) {
+  function waitForUploadRetry(delay, signal) {
+    return new Promise((resolve, reject) => {
+      const cancel = () => {
+        clearTimeout(timer);
+        signal?.removeEventListener("abort", cancel);
+        reject(new DOMException("Cancelled", "AbortError"));
+      };
+      const timer = setTimeout(() => {
+        signal?.removeEventListener("abort", cancel);
+        resolve();
+      }, delay);
+      signal?.addEventListener("abort", cancel, { once: true });
+      if (signal?.aborted) cancel();
+    });
+  }
+
+  async function uploadChunkWithRetry(getUrl, chunk, contentType, partNumber, maxRetries = 6, signal = null) {
+    let rejectedUrl = null;
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       if (signal?.aborted) throw new DOMException("Cancelled", "AbortError");
+      let url;
       try {
+        url = await getUrl(partNumber, rejectedUrl);
+        rejectedUrl = null;
         return await axios.put(url, chunk, {
           headers: { "Content-Type": contentType },
           signal, // This makes axios reject immediately on abort
@@ -2629,8 +2647,13 @@ export default function AdCreationForm({
         if (axios.isCancel(error) || error.name === "AbortError" || signal?.aborted) {
           throw new DOMException("Cancelled", "AbortError");
         }
-        if (attempt === maxRetries) throw error;
-        await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
+        const status = error.response?.status;
+        // Renew rejected S3 credentials, keeping the same upload ID and part.
+        if (status === 403 && url) rejectedUrl = url;
+        const retryable = !status || [403, 408, 429].includes(status) || status >= 500;
+        if (!retryable || attempt === maxRetries) throw error;
+        const delay = Math.min(1000 * 2 ** (attempt - 1), 30000) + Math.random() * 1000;
+        await waitForUploadRetry(delay, signal);
       }
     }
   }
@@ -2696,55 +2719,87 @@ export default function AdCreationForm({
           region,
         };
 
-        const urlsResponse = await axios.post(`${API_BASE_URL}/auth/s3/get-upload-urls`, urlsPayload, { withCredentials: true, signal });
-
-        const presignedUrls = urlsResponse.data.parts;
-
-        if (!presignedUrls || !Array.isArray(presignedUrls)) {
-          console.error("❌ Invalid presigned URLs response:", urlsResponse.data);
-          throw new Error("Invalid presigned URLs response");
-        }
-
-        let uploadedChunksCount = 0;
-        const chunkConcurrency = uploadAttempt > 1 ? 1 : 5;
-        const limit = pLimit(chunkConcurrency);
-
-        const uploadPromises = presignedUrls.map((part, index) => {
-          const { partNumber, url } = part;
-          const start = (partNumber - 1) * CHUNK_SIZE;
-          const end = start + CHUNK_SIZE;
-          const chunk = file.slice(start, end);
-
-          return limit(async () => {
-            try {
-              const uploadResponse = await uploadChunkWithRetry(url, chunk, file.type, partNumber, 3, signal);
-              // Only call progress callback on first attempt to avoid double-counting
-              if (onChunkUploaded && uploadAttempt === 1) {
-                uploadedChunksCount++;
-                onChunkUploaded();
+        const chunkController = new AbortController();
+        const cancelChunks = () => chunkController.abort();
+        signal?.addEventListener("abort", cancelChunks, { once: true });
+        if (signal?.aborted) cancelChunks();
+        let completedParts;
+        try {
+          let partUrls = new Map();
+          let urlsFetchedAt = 0;
+          let refreshPromise = null;
+          const getPartUrl = async (partNumber, rejectedUrl) => {
+            // The server signs URLs for 10 minutes. Refresh before queued parts
+            // reach that deadline; concurrent workers share one refresh request.
+            if (!partUrls.size || Date.now() - urlsFetchedAt >= 8 * 60 * 1000 ||
+                (rejectedUrl && partUrls.get(partNumber) === rejectedUrl)) {
+              if (!refreshPromise) {
+                refreshPromise = (async () => {
+                  const requestedAt = Date.now();
+                  const response = await axios.post(`${API_BASE_URL}/auth/s3/get-upload-urls`, urlsPayload, {
+                    withCredentials: true,
+                    signal: chunkController.signal,
+                  });
+                  const parts = response.data.parts;
+                  if (!Array.isArray(parts) || parts.length !== totalChunks ||
+                      parts.some((part, index) => part.partNumber !== index + 1 || !part.url)) {
+                    throw new Error("Invalid presigned URLs response");
+                  }
+                  partUrls = new Map(parts.map((part) => [part.partNumber, part.url]));
+                  urlsFetchedAt = requestedAt;
+                })().finally(() => { refreshPromise = null; });
               }
-
-              const etag = uploadResponse.headers.etag;
-              if (!etag) {
-                console.error(`❌ No ETag received for chunk ${partNumber}`);
-                throw new Error(`No ETag received for part ${partNumber}`);
-              }
-
-              const cleanEtag = etag.replace(/"/g, "");
-              return { PartNumber: partNumber, ETag: cleanEtag };
-            } catch (chunkError) {
-              console.error(`❌ Error uploading chunk ${partNumber}:`, {
-                error: chunkError.message,
-                status: chunkError.response?.status,
-                statusText: chunkError.response?.statusText,
-                responseData: chunkError.response?.data,
-              });
-              throw chunkError;
+              await refreshPromise;
             }
-          });
-        });
+            return partUrls.get(partNumber);
+          };
 
-        const completedParts = await Promise.all(uploadPromises);
+          const chunkConcurrency = uploadAttempt > 1 ? 1 : 5;
+          const limit = pLimit(chunkConcurrency);
+
+          const uploadPromises = Array.from({ length: totalChunks }, (_, index) => {
+            const partNumber = index + 1;
+            const start = (partNumber - 1) * CHUNK_SIZE;
+            const end = start + CHUNK_SIZE;
+            const chunk = file.slice(start, end);
+
+            return limit(async () => {
+              try {
+                const uploadResponse = await uploadChunkWithRetry(getPartUrl, chunk, file.type, partNumber, 6, chunkController.signal);
+
+                const etag = uploadResponse.headers.etag;
+                if (!etag) {
+                  console.error(`❌ No ETag received for chunk ${partNumber}`);
+                  throw new Error(`No ETag received for part ${partNumber}`);
+                }
+
+                const cleanEtag = etag.replace(/"/g, "");
+                // Only count a successfully uploaded part once on the first attempt.
+                if (onChunkUploaded && uploadAttempt === 1) onChunkUploaded();
+                return { PartNumber: partNumber, ETag: cleanEtag };
+              } catch (chunkError) {
+                console.error(`❌ Error uploading chunk ${partNumber}:`, {
+                  error: chunkError.message,
+                  status: chunkError.response?.status,
+                  statusText: chunkError.response?.statusText,
+                  responseData: chunkError.response?.data,
+                });
+                throw chunkError;
+              }
+            });
+          });
+
+          try {
+            completedParts = await Promise.all(uploadPromises);
+          } catch (error) {
+            // Stop active PUTs and drain queued work before aborting the S3 upload.
+            chunkController.abort();
+            await Promise.allSettled(uploadPromises);
+            throw error;
+          }
+        } finally {
+          signal?.removeEventListener("abort", cancelChunks);
+        }
 
         const completePayload = {
           key: s3Key,
@@ -2759,12 +2814,13 @@ export default function AdCreationForm({
             completeResponse = await axios.post(`${API_BASE_URL}/auth/s3/complete-upload`, completePayload, { withCredentials: true, signal });
             break;
           } catch (error) {
+            if (axios.isCancel(error) || error.name === "AbortError" || signal?.aborted) throw error;
             if (attempt === 5) {
               throw error;
             }
             const delay = 2000 * Math.pow(2, attempt - 1);
 
-            await new Promise((resolve) => setTimeout(resolve, delay));
+            await waitForUploadRetry(delay, signal);
           }
         }
 
@@ -2807,7 +2863,7 @@ export default function AdCreationForm({
         if (uploadAttempt < maxUploadRetries) {
           const delay = 3000 * uploadAttempt;
 
-          await new Promise((resolve) => setTimeout(resolve, delay));
+          await waitForUploadRetry(delay, signal);
         }
       }
     };
