@@ -15,7 +15,7 @@ const NAMED_AUDIT_KEYS = new Set([
   "messaging_themes", "persona_ad_mapping", "visual_openers", "visual_hook_trends", "messaging_trends",
   "patterns", "top_hooks", "top_ad_grades", "angles_not_yet_tested", "untapped_angles",
   "untapped_angles_by_persona", "prioritized_gaps", "concept_seed_list", "concept_seeds",
-  "first_test_recommendations", "creative_strategy_summary",
+  "first_test_recommendations", "creative_strategy_summary", "analysis_coverage",
 ]);
 
 const money = (n) => `$${Math.round(n || 0).toLocaleString()}`;
@@ -74,8 +74,12 @@ export default function IntelligenceView({ ctx }) {
   const a = audit || {};
   // ── Executive KPIs (computed from ads) ──
   const totalSpend = ads.reduce((s, x) => s + (x.spend || 0), 0);
+  const analyzedAds = ads.filter(x => x.primaryAngle && x.mediaDescription);
+  const spendingAds = ads.filter(x => x.spend > 0);
+  const analyzedSpending = analyzedAds.filter(x => x.spend > 0);
+  const spendCoverage = totalSpend > 0 ? analyzedSpending.reduce((s, x) => s + x.spend, 0) / totalSpend : 0;
   const kpis = [
-    ["Ads analyzed", ads.length],
+    ["Ads analyzed", analyzedAds.length],
     ["Total spend", money(totalSpend)],
     ["Avg ROAS", (() => { const v = mean(ads.map((x) => x.roas).filter((x) => x > 0)); return v ? `${v.toFixed(2)}x` : "—"; })()],
     ["Avg hook rate", (() => { const v = mean(ads.map((x) => x.hookRate).filter((x) => x > 0)); return v ? `${(v * 100).toFixed(0)}%` : "—"; })()],
@@ -89,7 +93,7 @@ export default function IntelligenceView({ ctx }) {
   const recent = [...ads].filter((x) => x.createdTime && new Date(x.createdTime).getTime() >= recentCutoff)
     .sort((x, y) => new Date(y.createdTime) - new Date(x.createdTime));
   const fatigued = ads.filter((x) => (x.frequency || 0) >= 3 && (x.spend || 0) > 100).sort((x, y) => (y.frequency || 0) - (x.frequency || 0)).slice(0, 5);
-  const failedDownloads = ads.filter((x) => !x.storagePath);
+  const failedDownloads = analyzedAds.filter((x) => !x.storagePath);
   const patterns = Array.isArray(a.patterns) ? [...a.patterns].sort((x, y) =>
     ((y.spend_pct || 0) * 0.6 + (y.ad_count || 0) * 4) - ((x.spend_pct || 0) * 0.6 + (x.ad_count || 0) * 4)) : [];
 
@@ -140,7 +144,14 @@ export default function IntelligenceView({ ctx }) {
           </div>
         ) : <ProgressiveSection title="Performance overview" description="Meta spend, efficiency, hook rate, and winners." active={adWorkActive || loading} cards={4} />}
 
-      <FailedDownloadsBanner ads={failedDownloads} total={ads.length} />
+      {spendingAds.length > 0 && (
+        <div className="rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-xs text-neutral-600" role="status">
+          Creative analysis covers {analyzedSpending.length} of {spendingAds.length} spending ads ({Math.round(spendCoverage * 100)}% of spend). Performance metrics include all saved ads. New and rising ads are analyzed alongside top spenders on each refresh.
+          {a.analysis_coverage?.sampled_ads != null && <> Strategy insights use up to {a.analysis_coverage.sampled_ads} analyzed ads.</>}
+          {a.analysis_coverage?.stale_sections?.length > 0 && <p className="mt-1">Some insight sections are from the previous analysis while their refresh is incomplete.</p>}
+        </div>
+      )}
+      <FailedDownloadsBanner ads={failedDownloads} total={analyzedAds.length} />
       {patterns.length > 0 ? <StrategicPatterns patterns={patterns} /> : <ProgressiveSection title="Strategic patterns by spend" active={auditWorkActive} />}
       {topHooks.length > 0 ? <TopHooksSection hooks={topHooks} /> : <ProgressiveSection title="Top hooks" active={adWorkActive} cards={2} />}
       {Array.isArray(a.messaging_themes) && a.messaging_themes.length > 0
