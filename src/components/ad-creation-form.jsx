@@ -122,6 +122,9 @@ const PRE_JOB_RESIZE_TIMEOUT_MS = 2 * 60 * 1000;
 const DUPLICATE_AD_SET_TIMEOUT_MS = 90 * 1000;
 const META_UNSUPPORTED_TEXT_SEPARATOR_PATTERN = /[\u2028\u2029]/;
 const META_UNSUPPORTED_TEXT_SEPARATOR_GLOBAL_PATTERN = /[\u2028\u2029]/g;
+const DOMAIN_LINK_PATTERN = /^(?:https?:\/\/)?(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}(?::\d{1,5})?(?:[/?#]\S*)?$/i;
+
+const isValidDomainLink = (value) => DOMAIN_LINK_PATTERN.test(value.trim());
 
 function sanitizeMetaAdTextOptions(values) {
   const hasUnsupportedSeparator = values.some((value) => typeof value === "string" && META_UNSUPPORTED_TEXT_SEPARATOR_PATTERN.test(value));
@@ -1380,6 +1383,7 @@ export default function AdCreationForm({
   const draftSaveAbortControllerRef = useRef(null);
   const [draftsModalOpen, setDraftsModalOpen] = useState(false);
   const [isPagesLoading, setIsPagesLoading] = useState(false);
+  const [delayedInvalidLink, setDelayedInvalidLink] = useState("");
   // const [isPostSelectorOpen, setIsPostSelectorOpen] = useState(false)
   const [linkCustomStates, setLinkCustomStates] = useState({}); // Track which carousel links are custom
   const [instantExperiences, setInstantExperiences] = useState([]);
@@ -4859,14 +4863,26 @@ export default function AdCreationForm({
     isCatalogueAd && getCatalogueMediaCount() > 0 && [...headlines, ...descriptions].some((value) => /\{\{[^}]+\}\}/.test(value || ""));
   const requiresDestinationValue =
     importedPosts.length === 0 && !isDuplicationMode && !isCatalogueAd && !isProfileDestinationEngagement && !areAllAdSetsOnAd;
+  const destinationLinkValue = showCustomLink ? customLink : link[0] || "";
+  const isDestinationLinkInvalid =
+    requiresDestinationValue && !showPhoneNumberField && destinationType !== "instant_experience" &&
+    destinationLinkValue.trim().length > 0 && !isValidDomainLink(destinationLinkValue);
   const isMissingDestinationValue =
     requiresDestinationValue &&
     (showPhoneNumberField
       ? !phoneNumber.trim()
       : destinationType === "instant_experience"
         ? !instantExperienceId || instantExperiencesLoading || !instantExperiences.some((experience) => experience.id === instantExperienceId)
-        : (!showCustomLink && !link[0]) || (showCustomLink && !customLink.trim()));
+        : !destinationLinkValue.trim() || isDestinationLinkInvalid);
   const hasAdNameFormulaConfigured = Boolean(adNameFormulaV2?.rawInput?.trim());
+
+  useEffect(() => {
+    setDelayedInvalidLink("");
+    if (!isDestinationLinkInvalid) return;
+
+    const timeoutId = setTimeout(() => setDelayedInvalidLink(destinationLinkValue), 500);
+    return () => clearTimeout(timeoutId);
+  }, [destinationLinkValue, isDestinationLinkInvalid]);
 
   useEffect(() => {
     if (supportsInstantExperience || destinationType !== "instant_experience") return;
@@ -11383,9 +11399,14 @@ export default function AdCreationForm({
                 </div>
               )}
 
-            {isMissingDestinationValue && (
+            {isMissingDestinationValue && !isDestinationLinkInvalid && (
               <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
                 {showPhoneNumberField ? "Please provide a phone number" : "Please provide a link URL"}
+              </div>
+            )}
+            {isDestinationLinkInvalid && delayedInvalidLink === destinationLinkValue && (
+              <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                {destinationLinkValue} is not a valid URL
               </div>
             )}
             {enablePlacementCustomization && !isCarouselAd && !isFlexLikeAdType && selectedFiles && selectedFiles.size > 1 && (
