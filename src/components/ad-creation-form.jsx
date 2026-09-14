@@ -1408,7 +1408,7 @@ export default function AdCreationForm({
   const jobListRef = useRef(null);
 
   useEffect(() => {
-    const list = jobListRef.current;
+    const list = jobListRef.current?.querySelector("[data-radix-scroll-area-viewport]");
     if (list) list.scrollTop = list.scrollHeight;
   }, [jobQueue.length, completedJobs.length, currentJob?.id, isJobTrackerExpanded, hasStartedAnyJob]);
 
@@ -8659,7 +8659,7 @@ export default function AdCreationForm({
               </div>
 
               {/* Jobs List */}
-              <div ref={jobListRef} className="flex-1 overflow-y-auto">
+              <ScrollArea ref={jobListRef} className="flex-1 min-h-0" viewportClassName="max-h-[516px]">
                 {/* Completed Jobs */}
 
                 {completedJobs.map((job) => {
@@ -8977,7 +8977,7 @@ export default function AdCreationForm({
                     </button>
                   </div>
                 ))}
-              </div>
+              </ScrollArea>
             </div>
           )}
         </div>

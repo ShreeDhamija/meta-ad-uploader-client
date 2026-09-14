@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Command, CommandList, CommandItem, CommandGroup } from "@/components/ui/command"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -859,7 +860,7 @@ export default function ReorderAdNameParts({
         {showSlashDropdown && (
           <div
             ref={slashDropdownRef}
-            className="absolute z-50 w-64"
+            className="absolute z-50 w-[276px]"
             style={{
               top: `${slashDropdownPos.top}px`,
               left: `${slashDropdownPos.left}px`,
@@ -869,26 +870,28 @@ export default function ReorderAdNameParts({
               ref={commandInputRef}
               className="rounded-xl border shadow-md bg-white outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0 [&_*]:outline-none"
             >
-              <CommandList className="outline-none focus:outline-none focus-visible:outline-none">
-                <CommandGroup heading="Pick Variable">
-                  {visibleVariables.map((variable) => (
-                    <CommandItem
-                      key={variable.id}
-                      onSelect={() => handleVariableSelect(variable)}
-                      className="cursor-pointer rounded-lg mx-1 aria-selected:bg-gray-100 focus:outline-none focus:ring-0"
-                      onMouseDown={(e) => e.preventDefault()}
-                    >
-                      <span className="flex items-center">
-                        <span>{variable.label}</span>
-                        {variable.note && (
-                          <span className="text-gray-400 text-xs ml-1">
-                            {variable.note}
-                          </span>
-                        )}
-                      </span>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
+              <CommandList className="max-h-none overflow-hidden outline-none focus:outline-none focus-visible:outline-none">
+                <ScrollArea viewportClassName="max-h-64">
+                  <CommandGroup heading="Pick Variable">
+                    {visibleVariables.map((variable) => (
+                      <CommandItem
+                        key={variable.id}
+                        onSelect={() => handleVariableSelect(variable)}
+                        className="cursor-pointer rounded-lg mx-1 aria-selected:bg-gray-100 focus:outline-none focus:ring-0"
+                        onMouseDown={(e) => e.preventDefault()}
+                      >
+                        <span className="flex items-center">
+                          <span>{variable.label}</span>
+                          {variable.note && (
+                            <span className="text-gray-400 text-xs ml-1">
+                              {variable.note}
+                            </span>
+                          )}
+                        </span>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </ScrollArea>
               </CommandList>
             </Command>
           </div>
