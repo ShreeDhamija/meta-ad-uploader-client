@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip"
-import { Building2, CirclePlus, Crown, Mail, Megaphone, Store, UserRound, UserRoundPlus } from "lucide-react"
+import { Building2, CirclePlus, Crown, Mail, Megaphone, Newspaper, Store, UserRound, UserRoundPlus } from "lucide-react"
 import { useIntercom } from "@/lib/useIntercom"
 import Doodle from "../assets/onboarding/doodle.webp?url"
 import MrAvatar from "../assets/onboarding/mr.webp?url"
@@ -42,6 +42,7 @@ const SOURCE_OPTIONS = [
     { value: "ChatGPT / LLM", iconSrc: ChatGptIcon },
     { value: "Twitter / X", iconSrc: TwitterIcon },
     { value: "Instagram", iconSrc: InstagramIcon },
+    { value: "Newsletter", icon: Newspaper },
     { value: "Advertisement", icon: Megaphone },
     { value: "Reddit", iconSrc: RedditIcon },
     { value: "Referral", icon: CirclePlus },
