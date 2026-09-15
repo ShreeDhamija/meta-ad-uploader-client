@@ -1658,6 +1658,8 @@ export default function AdCreationForm({
   const S3_UPLOAD_THRESHOLD = 1 * 1024 * 1024; // 40 MB
   const [leadgenForms, setLeadgenForms] = useState([]);
   const [loadingForms, setLoadingForms] = useState(false);
+  const [leadFormOpen, setLeadFormOpen] = useState(false);
+  const [leadFormSearch, setLeadFormSearch] = useState("");
 
   // Partnership Ads State
   const [openPartnerSelector, setOpenPartnerSelector] = useState(false);
@@ -10889,36 +10891,64 @@ export default function AdCreationForm({
                       </button>
                     </div>
 
-                    <Select
-                      disabled={!isLoggedIn || loadingForms || leadgenForms.length === 0}
-                      value={selectedForm || ""}
-                      onValueChange={(value) => setSelectedForm(value || null)}
-                    >
-                      <SelectTrigger id="leadgen-form" className={formFieldChrome}>
-                        <SelectValue
-                          placeholder={loadingForms ? "Loading forms..." : leadgenForms.length === 0 ? "No forms available" : "Select a form"}
-                        />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white shadow-lg rounded-xl max-h-full p-0 pr-2">
-                        {leadgenForms.map((form) => (
-                          <SelectItem
-                            key={form.id}
-                            value={form.id}
-                            className={cn(
-                              "w-full text-left",
-                              "px-4 py-2 m-1 rounded-xl",
-                              "transition-colors duration-150",
-                              "hover:bg-gray-100 hover:rounded-xl",
-                              "data-[state=selected]:!bg-gray-100 data-[state=selected]:rounded-xl",
-                              "data-[highlighted]:!bg-gray-100 data-[highlighted]:rounded-xl",
-                              selectedForm === form.id && "!bg-gray-100 font-semibold rounded-xl",
-                            )}
-                          >
-                            {form.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Popover open={leadFormOpen} onOpenChange={setLeadFormOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          id="leadgen-form"
+                          disabled={!isLoggedIn || loadingForms || leadgenForms.length === 0}
+                          variant="outline"
+                          role="combobox"
+                          className={cn(formDropdownTriggerChrome, "w-full justify-between px-3 text-sm font-normal")}
+                        >
+                          <span className={cn("truncate", !selectedForm && "text-muted-foreground")}>
+                            {loadingForms ? "Loading forms..." : leadgenForms.length === 0 ? "No forms available" : leadgenForms.find((form) => form.id === selectedForm)?.name || "Select a form"}
+                          </span>
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        className="min-w-[--radix-popover-trigger-width] w-auto !max-w-none p-0 bg-white shadow-lg rounded-2xl"
+                        align="start"
+                        sideOffset={4}
+                        side="bottom"
+                        avoidCollisions={false}
+                        style={{ minWidth: "var(--radix-popover-trigger-width)", width: "auto" }}
+                      >
+                        <Command filter={() => 1} loop={false} value="">
+                          <CommandInput
+                            placeholder="Search forms..."
+                            value={leadFormSearch}
+                            onValueChange={setLeadFormSearch}
+                            className="bg-transparent"
+                            wrapperClassName="bg-gray-50 border-gray-200 rounded-[20px]"
+                          />
+                          <CommandList className="max-h-none overflow-hidden rounded-2xl" selectOnFocus={false}>
+                            <ScrollArea viewportClassName="max-h-[350px]">
+                              <CommandGroup>
+                                {leadgenForms.filter((form) => form.name?.toLowerCase().includes(leadFormSearch.toLowerCase())).map((form) => (
+                                  <CommandItem
+                                    key={form.id}
+                                    value={form.id}
+                                    onSelect={() => {
+                                      setSelectedForm(form.id);
+                                      setLeadFormOpen(false);
+                                      setLeadFormSearch("");
+                                    }}
+                                    className={cn(
+                                      "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150 hover:bg-gray-100",
+                                      selectedForm === form.id && "bg-gray-100 font-semibold",
+                                    )}
+                                    data-selected={form.id === selectedForm}
+                                  >
+                                    {form.name}
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </ScrollArea>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                   </div>
                 )}
 
