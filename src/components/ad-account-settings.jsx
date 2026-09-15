@@ -127,6 +127,23 @@ export default function AdAccountSettings({
     [campaigns, selectedCampaign]
   );
 
+  useEffect(() => {
+    if (campaigns.length === 0) return;
+    const campaignIds = new Set(campaigns.map((campaign) => campaign.id));
+    const validCampaigns = selectedCampaign.filter((id) => campaignIds.has(id));
+    if (validCampaigns.length === selectedCampaign.length) return;
+    setSelectedCampaign(validCampaigns);
+    setSelectedAdSets([]);
+    setAdSets([]);
+    setCampaignObjective(validCampaigns.map((id) => campaigns.find((campaign) => campaign.id === id)?.objective).filter(Boolean));
+  }, [campaigns, selectedCampaign, setAdSets, setCampaignObjective, setSelectedAdSets, setSelectedCampaign]);
+
+  useEffect(() => {
+    if (adSets.length === 0 && selectedCampaign.length > 0) return;
+    const adSetIds = new Set(adSets.map((adSet) => adSet.id));
+    setSelectedAdSets((prev) => prev.every((id) => adSetIds.has(id)) ? prev : prev.filter((id) => adSetIds.has(id)));
+  }, [adSets, selectedCampaign.length, setSelectedAdSets]);
+
   const selectedDuplicateCampaignData = useMemo(
     () => campaigns.find((campaign) => campaign.id === duplicateCampaign) || null,
     [campaigns, duplicateCampaign]
@@ -246,13 +263,14 @@ export default function AdAccountSettings({
 
   const handleCampaignChange = useCallback(async (campaignId) => {
     // Toggle campaign selection
-    const isSelected = selectedCampaign.includes(campaignId);
+    const currentCampaigns = selectedCampaign.filter((id) => campaigns.some((campaign) => campaign.id === id));
+    const isSelected = currentCampaigns.includes(campaignId);
     let newSelectedCampaigns;
 
     if (isSelected) {
-      newSelectedCampaigns = selectedCampaign.filter(id => id !== campaignId);
+      newSelectedCampaigns = currentCampaigns.filter(id => id !== campaignId);
     } else {
-      newSelectedCampaigns = [...selectedCampaign, campaignId];
+      newSelectedCampaigns = [...currentCampaigns, campaignId];
     }
 
     setSelectedCampaign(newSelectedCampaigns);
@@ -684,18 +702,18 @@ export default function AdAccountSettings({
                       <span
                         className="block truncate flex-1 text-left"
                         title={
-                          selectedCampaign.length === 1
-                            ? campaigns.find((c) => c.id === selectedCampaign[0])?.name || selectedCampaign[0]
+                          selectedCampaignData.length === 1
+                            ? selectedCampaignData[0].name
                             : undefined
                         }
                       >
                         {selectedAdAccount && campaigns.length === 0
                           ? "No campaigns exist in this ad account. Try selecting a different account."
-                          : selectedCampaign.length === 0
+                          : selectedCampaignData.length === 0
                             ? "Select campaigns"
-                            : selectedCampaign.length === 1
-                              ? campaigns.find((c) => c.id === selectedCampaign[0])?.name || selectedCampaign[0]
-                              : `${selectedCampaign.length} campaigns selected`}
+                            : selectedCampaignData.length === 1
+                              ? selectedCampaignData[0].name || selectedCampaignData[0].id
+                              : `${selectedCampaignData.length} campaigns selected`}
                       </span>
                     )}
                   </div>

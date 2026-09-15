@@ -441,10 +441,8 @@ export default function ReorderAdNameParts({
     if (onFormulaChange) onFormulaChange(newValue)
   }, [onFormulaChange, validateDateFormats, validateVariableNames])
 
-  // ── Detect cursor inside a category-only {{CategoryName}} ──
-  // Returns dropdown config if cursor is inside a {{CategoryName}} block,
-  // or null otherwise. This is how clicking inside a category-only variable
-  // in the input triggers a value picker.
+  // ── Detect cursor inside a custom variable {{CategoryName[:Value]}} ──
+  // Clicking anywhere inside its braces opens the value picker.
 
   const detectInlineCategory = useCallback((cursorPos) => {
     if (!customVariables.length) return null
@@ -465,10 +463,8 @@ export default function ReorderAdNameParts({
 
     const content = inputValue.substring(lastOpen + 2, cursorPos + closeAfter).trim()
 
-    // Must be category-only (no colon) and match a known custom variable
-    if (content.includes(":")) return null
-
-    const matchingCat = customVariables.find(c => c.name === content)
+    const categoryName = content.split(":")[0].trim()
+    const matchingCat = customVariables.find(c => c.name === categoryName)
     if (!matchingCat) return null
 
     const position = getCursorPosition(input, lastOpen)
