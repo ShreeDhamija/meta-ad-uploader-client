@@ -242,7 +242,6 @@ export default function Home() {
     const [launchPaused, setLaunchPaused] = useState(false); // <-- New state
     const [discloseAiMedia, setDiscloseAiMedia] = useState(false);
     const [pixelTrackingOverride, setPixelTrackingOverride] = useState({ ...EMPTY_PIXEL_TRACKING_OVERRIDE });
-    const launchPausedDefaultAppliedRef = useRef(false);
     const [isCarouselAd, setIsCarouselAd] = useState(false);
     const [adType, setAdType] = useState('regular'); // 'regular' | 'carousel' | 'flexible'
     const [enablePlacementCustomization, setEnablePlacementCustomization] = useState(false);
@@ -252,7 +251,7 @@ export default function Home() {
     const [importedFiles, setImportedFiles] = useState([]);
     const [videoThumbs, setVideoThumbs] = useState({})
     const { adAccounts, setAdAccounts, pages, setPages, pagesLoading, adAccountsLoading, refetchAdAccounts } = useAppData()
-    const { settings: adAccountSettings, documentExists, refetchCopyTemplates } = useAdAccountSettings(selectedAdAccount)
+    const { settings: adAccountSettings, loading: adAccountSettingsLoading, documentExists, refetchCopyTemplates } = useAdAccountSettings(selectedAdAccount)
     const [hasAnyAdAccountSettings, setHasAnyAdAccountSettings] = useState(false);
     const [selectedShopDestination, setSelectedShopDestination] = useState("")
     const [selectedShopDestinationType, setSelectedShopDestinationType] = useState("")
@@ -521,17 +520,9 @@ export default function Home() {
     ])
 
     useEffect(() => {
-        if (subscriptionLoading) return;
-        if (launchPausedDefaultAppliedRef.current) return;
-        if (
-            subscriptionData.teamId === 'team_1779097238802_0p8jy2tcn'
-            || String(userId) === '10242641224983476'
-            || String(userId) === '10236978990363167'
-        ) {
-            setLaunchPaused(true);
-        }
-        launchPausedDefaultAppliedRef.current = true;
-    }, [subscriptionLoading, subscriptionData.teamId, userId])
+        if (!selectedAdAccount || adAccountSettingsLoading) return;
+        setLaunchPaused(adAccountSettings.defaultAdStatus === "PAUSED");
+    }, [selectedAdAccount, adAccountSettingsLoading, adAccountSettings.defaultAdStatus])
 
     useEffect(() => {
 
