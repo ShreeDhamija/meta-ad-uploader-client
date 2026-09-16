@@ -11,7 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Check, ChevronsUpDown, RefreshCcw, X, Loader, AlertTriangle, Ban, Pencil, CirclePoundSterling, CalendarClock, Crosshair } from "lucide-react"
+import { Check, ChevronsUpDown, RefreshCcw, X, Loader, AlertTriangle, Ban, Pencil, CircleDollarSign, CalendarClock, Crosshair } from "lucide-react"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { useAuth } from "@/lib/AuthContext"
 import { Input } from "@/components/ui/input"
@@ -39,7 +39,7 @@ const dropdownContentStyle = {
   maxWidth: DROPDOWN_MAX_WIDTH,
 };
 
-function SettingsMultiSelect({ label, options, value, onChange, placeholder, flags = false, allLabel }) {
+function SettingsMultiSelect({ label, options, value, onChange, placeholder, flags = false, allLabel, checkboxes = false }) {
   const [open, setOpen] = useState(false);
   const allSelected = Boolean(allLabel) && (value.length === 0 || options.every((option) => value.includes(option.value)));
   const selectedValues = allSelected ? [] : value;
@@ -52,7 +52,7 @@ function SettingsMultiSelect({ label, options, value, onChange, placeholder, fla
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button type="button" variant="outline" role="combobox" aria-label={label} aria-expanded={open}
-            className="h-11 w-full justify-between rounded-xl bg-white py-2 hover:!bg-white text-left font-normal">
+            className="h-11 w-full justify-between rounded-2xl bg-white py-2 hover:!bg-white text-left font-normal">
             <span className="truncate">{allSelected ? allLabel : selected.length ? selected.join(", ") : placeholder}</span>
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0" />
           </Button>
@@ -71,7 +71,6 @@ function SettingsMultiSelect({ label, options, value, onChange, placeholder, fla
                     "py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
                     allSelected ? "bg-gray-100 hover:!bg-gray-100 font-semibold" : "hover:!bg-gray-200",
                   )} onSelect={() => onChange([])}>
-                    <Check className={cn("mr-2 h-4 w-4 shrink-0", allSelected ? "opacity-100" : "opacity-0")} />
                     <span>{allLabel}</span>
                   </CommandItem>}
                   {options.map((option) => (
@@ -80,7 +79,14 @@ function SettingsMultiSelect({ label, options, value, onChange, placeholder, fla
                       selectedValues.includes(option.value) ? "bg-gray-100 hover:!bg-gray-100 font-semibold" : "hover:!bg-gray-200",
                     )}
                       onSelect={() => onChange(selectedValues.includes(option.value) ? selectedValues.filter((id) => id !== option.value) : [...selectedValues, option.value])}>
-                      {!flags && <Check className={cn("mr-2 h-4 w-4 shrink-0", selectedValues.includes(option.value) ? "opacity-100" : "opacity-0")} />}
+                      {checkboxes && <Checkbox
+                        checked={selectedValues.includes(option.value)}
+                        onCheckedChange={(checked) => onChange(checked ? [...selectedValues, option.value] : selectedValues.filter((id) => id !== option.value))}
+                        onClick={(event) => event.stopPropagation()}
+                        tabIndex={-1}
+                        aria-label={option.label}
+                        className="h-4 w-4 rounded-[6px] border-gray-300 bg-white p-0 data-[state=checked]:bg-black data-[state=checked]:text-white"
+                      />}
                       <span className={flags ? "flex-1" : undefined}>{flag(option.value)}{option.label}</span>
                       {flags && <Check className={cn("ml-auto h-4 w-4 shrink-0", selectedValues.includes(option.value) ? "opacity-100" : "opacity-0")} />}
                     </CommandItem>
@@ -166,7 +172,7 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
           {error && <div role="alert" className="text-sm text-red-600">{error} <button type="button" className="underline" onClick={() => setReload(reload + 1)}>Retry</button></div>}
           {defaults && <>
             <section className="space-y-2">
-              <h4 className="flex items-center gap-2 text-sm font-semibold"><CirclePoundSterling className="h-4 w-4 shrink-0" aria-hidden="true" />Budget</h4>
+              <h4 className="flex items-center gap-2 text-sm font-semibold"><CircleDollarSign className="h-4 w-4 shrink-0" aria-hidden="true" />Budget</h4>
               <Label htmlFor="new-adset-budget">{defaults.budget.mode === "lifetime" ? "Lifetime" : "Daily"} budget ({defaults.budget.currency}){defaults.budget.level === "campaign" ? " · Set on campaign" : ""}</Label>
               <Input id="new-adset-budget" type="number" min={defaults.budget.decimals ? "0.01" : "1"} step={defaults.budget.decimals ? "0.01" : "1"}
                 value={field("budgetAmount", defaults.budget.amount)} disabled={defaults.budget.level === "campaign"}
@@ -191,13 +197,11 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
                 <div className="space-y-2"><Label htmlFor="new-adset-age-min">Minimum age</Label><Input id="new-adset-age-min" type="number" min={advantageAudience ? 18 : 13} max={advantageAudience ? 25 : 65} step="1" value={minAge} onChange={(event) => update("ageMin", event.target.value)} onBlur={() => validateAge("ageMin")} /></div>
                 <div className="space-y-2"><Label htmlFor="new-adset-age-max">Maximum age</Label><Input id="new-adset-age-max" type="number" min={advantageAudience ? 65 : 13} max="65" step="1" value={maxAge} onChange={(event) => update("ageMax", event.target.value)} onBlur={() => validateAge("ageMax")} /></div>
               </div>
-              <p className="text-xs text-gray-500">65 includes everyone aged 65 and above.</p>
-              {advantageAudience && <p className="text-xs text-gray-500">Advantage+ audience: minimum age 18–25; maximum age fixed at 65.</p>}
               {ageInvalid && <p role="alert" className="text-xs text-red-600">{ageError}</p>}
               <SettingsMultiSelect label="Gender" options={[{ value: 1, label: "Men" }, { value: 2, label: "Women" }]} value={field("genders", targeting.genders || [])} onChange={(next) => update("genders", next.length === 2 ? [] : next)} placeholder="Both" allLabel="Both" />
               <SettingsMultiSelect label="Countries" options={countryOptions} value={field("countries", targeting.geo_locations?.countries || [])} onChange={(next) => update("countries", next)} placeholder="No country selection" flags />
               {Object.keys(targeting.geo_locations || {}).some((key) => !["countries", "location_types"].includes(key)) && <p className="text-xs text-gray-500">Other source locations, such as cities, regions, and country groups, are also retained.</p>}
-              <SettingsMultiSelect label="Excluded audiences" options={audiences} value={field("excludedAudienceIds", (targeting.excluded_custom_audiences || []).map((audience) => audience.id))} onChange={(next) => update("excludedAudienceIds", next)} placeholder="No excluded audiences" />
+              <SettingsMultiSelect label="Excluded audiences" options={audiences} value={field("excludedAudienceIds", (targeting.excluded_custom_audiences || []).map((audience) => audience.id))} onChange={(next) => update("excludedAudienceIds", next)} placeholder="No excluded audiences" checkboxes />
             </section>
             <button type="button" className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-black" onClick={() => { onChange(null); setReload(reload + 1); }}><RefreshCcw className="h-3.5 w-3.5" />Reset</button>
           </>}
@@ -1161,7 +1165,7 @@ transition-all duration-150 hover:!bg-black
                   aria-expanded={openAdSet}
                   disabled={isAdSetSelectionBlockedByCampaignCreation || !isLoggedIn || selectedCampaign.length === 0 || isLoadingAdSetsLocal || (selectedCampaign.length > 0 && adSets.length === 0)}
                   className={cn(
-                    "h-11 w-full justify-between border border-gray-300 rounded-2xl py-2 bg-white shadow group-data-[state=open]:border-blue-500 transition-colors duration-150 hover:bg-white",
+                    "w-full justify-between border border-gray-300 rounded-2xl py-4.5 bg-white shadow group-data-[state=open]:border-blue-500 transition-colors duration-150 hover:bg-white",
                     isAdSetSelectionBlockedByCampaignCreation && "cursor-not-allowed bg-gray-50 text-gray-400 hover:bg-gray-50"
                   )}
                 >
