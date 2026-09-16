@@ -182,10 +182,13 @@ function formatAdSetEndTime(endTime) {
   }).format(date);
 }
 
-function getAdSetTimingIssue({ selectedAdSets = [], duplicateAdSet, adSets = [], adScheduleEndTime }) {
+function getAdSetTimingIssue({ selectedAdSets = [], duplicateAdSet, adSets = [], adScheduleEndTime, newAdSetSettings }) {
   const selectedIds = duplicateAdSet ? [duplicateAdSet] : selectedAdSets;
   const selectedAdSetsWithEndTime = selectedIds
     .map((id) => adSets.find((adSet) => adSet.id === id))
+    .map((adSet) => duplicateAdSet && newAdSetSettings?.sourceAdSetId === duplicateAdSet
+      ? { ...adSet, end_time: newAdSetSettings.changes?.endTime ?? newAdSetSettings.defaults?.endTime ?? adSet?.end_time }
+      : adSet)
     .filter((adSet) => adSet?.end_time)
     .map((adSet) => ({
       adSet,
@@ -198,7 +201,7 @@ function getAdSetTimingIssue({ selectedAdSets = [], duplicateAdSet, adSets = [],
   if (endedAdSet) {
     return {
       type: "ended",
-      message: `Ad set end date is ${formatAdSetEndTime(endedAdSet.adSet.end_time)}, it has already ended. Select a different ad set`,
+      message: `Ad set end date is ${formatAdSetEndTime(endedAdSet.adSet.end_time)}, it has already ended. ${duplicateAdSet ? "Choose a new end date in Edit settings" : "Select a different ad set"}`,
     };
   }
 
@@ -1224,7 +1227,9 @@ export default function AdCreationForm({
   selectedForm,
   setSelectedForm,
   newAdSetName,
+  newAdSetSettings,
   setNewAdSetName,
+  setNewAdSetSettings,
   launchPaused,
   setLaunchPaused,
   discloseAiMedia,
@@ -1839,6 +1844,7 @@ export default function AdCreationForm({
       adSets,
       duplicateAdSet,
       newAdSetName,
+      newAdSetSettings,
       pageId,
       instagramAccountId,
       selectedShopDestination,
@@ -1880,6 +1886,7 @@ export default function AdCreationForm({
       adSets,
       duplicateAdSet,
       newAdSetName,
+      newAdSetSettings,
       pageId,
       instagramAccountId,
       selectedShopDestination,
@@ -2338,6 +2345,7 @@ export default function AdCreationForm({
         selectedAdSets: [...(variantState.selectedAdSets || [])],
         duplicateAdSet: variantState.duplicateAdSet || "",
         newAdSetName: variantState.newAdSetName || "",
+        newAdSetSettings: variantState.newAdSetSettings ? JSON.parse(JSON.stringify(variantState.newAdSetSettings)) : null,
         pageId: variantState.pageId || "",
         instagramAccountId: variantState.instagramAccountId || "",
         selectedAdAccount: variantState.selectedAdAccount || "",
@@ -2448,6 +2456,7 @@ export default function AdCreationForm({
       setSelectedAdSets(d.selectedAdSets || []);
       setDuplicateAdSet(d.duplicateAdSet || "");
       setNewAdSetName(d.newAdSetName || "");
+      setNewAdSetSettings(d.newAdSetSettings || null);
       setPageId(d.pageId || "");
       setInstagramAccountId(d.instagramAccountId || "");
 
@@ -2526,6 +2535,7 @@ export default function AdCreationForm({
       setLink,
       setMessages,
       setNewAdSetName,
+      setNewAdSetSettings,
       setPageId,
       setPartnerFbPageId,
       setPartnerIgAccountId,
@@ -4801,10 +4811,10 @@ export default function AdCreationForm({
     headlines,
   ]);
 
-  const duplicateAdSetRequest = async (adSetId, campaignId, adAccountId, adSetName, signal = null) => {
+  const duplicateAdSetRequest = async (adSetId, campaignId, adAccountId, adSetName, signal = null, settings = null) => {
     const response = await axios.post(
       `${API_BASE_URL}/auth/duplicate-adset`,
-      { adSetId, campaignId, adAccountId, newAdSetName: adSetName ?? newAdSetName },
+      { adSetId, campaignId, adAccountId, newAdSetName: adSetName ?? newAdSetName, ...(settings ? { settings } : {}) },
       { withCredentials: true, signal, timeout: DUPLICATE_AD_SET_TIMEOUT_MS },
     );
     return response.data.copied_adset_id;
@@ -5347,6 +5357,7 @@ export default function AdCreationForm({
       selectedAdSets,
       duplicateAdSet,
       newAdSetName,
+      newAdSetSettings,
       pageId,
       instagramAccountId,
       selectedAdAccount,
@@ -5443,6 +5454,11 @@ export default function AdCreationForm({
     if (duplicateAdSet && (!newAdSetName || newAdSetName.trim() === "")) {
       toast.error("Please enter a name for the new ad set");
       throw new Error("Please enter a name for the new ad set");
+    }
+
+    if (duplicateAdSet && newAdSetSettings && (newAdSetSettings.sourceAdSetId !== duplicateAdSet ||
+      newAdSetSettings.campaignId !== selectedCampaign[0] || newAdSetSettings.adAccountId !== selectedAdAccount)) {
+      throw new Error("The edited ad set settings belong to another selection. Reopen Edit settings and try again.");
     }
 
     // Resize any local image whose width or height exceeds Meta's 9000px limit
@@ -5759,7 +5775,12 @@ export default function AdCreationForm({
     if (duplicateAdSet) {
       try {
         throwIfCancelled();
-        const newAdSetId = await duplicateAdSetRequest(duplicateAdSet, selectedCampaign[0], selectedAdAccount, newAdSetName.trim(), signal);
+        const changes = newAdSetSettings?.changes;
+        const settings = changes && Object.keys(changes).length ? {
+          ...changes,
+          ...(changes.budgetAmount !== undefined ? { budgetMode: newAdSetSettings.defaults.budget.mode } : {}),
+        } : null;
+        const newAdSetId = await duplicateAdSetRequest(duplicateAdSet, selectedCampaign[0], selectedAdAccount, newAdSetName.trim(), signal, settings);
         finalAdSetIds = [newAdSetId];
         jobData.formData.selectedAdSets = [newAdSetId];
         onAdSetCreated?.({
@@ -5767,6 +5788,7 @@ export default function AdCreationForm({
           sourceAdSetId: duplicateAdSet,
           name: newAdSetName.trim(),
           campaignId: selectedCampaign[0],
+          endTime: newAdSetSettings ? (newAdSetSettings.changes?.endTime ?? newAdSetSettings.defaults?.endTime) : undefined,
         });
       } catch (error) {
         if (signal.aborted || error?.name === "AbortError" || axios.isCancel(error)) {

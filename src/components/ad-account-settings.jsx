@@ -15,6 +15,7 @@ import { Check, ChevronsUpDown, RefreshCcw, X, Loader, AlertTriangle, Ban, Penci
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { useAuth } from "@/lib/AuthContext"
 import { Input } from "@/components/ui/input"
+import ScheduleDateTimePicker from "@/components/ui/ScheduleDateTimePicker"
 import CogIcon from '@/assets/icons/cog.svg?react';
 import AdAccountIcon from '@/assets/icons/adaccount.svg?react';
 import CampaignIcon from '@/assets/icons/folder.svg?react';
@@ -26,6 +27,9 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 import { useAppData } from "@/lib/AppContext"
 
 
+// Country IDs and display names from the supplied Meta targeting-search response.
+const META_COUNTRIES = [{"value":"AD","label":"Andorra"},{"value":"AE","label":"United Arab Emirates"},{"value":"AF","label":"Afghanistan"},{"value":"AG","label":"Antigua"},{"value":"AI","label":"Anguilla"},{"value":"AL","label":"Albania"},{"value":"AM","label":"Armenia"},{"value":"AN","label":"Netherlands Antilles"},{"value":"AO","label":"Angola"},{"value":"AQ","label":"Antarctica"},{"value":"AR","label":"Argentina"},{"value":"AS","label":"American Samoa"},{"value":"AT","label":"Austria"},{"value":"AU","label":"Australia"},{"value":"AW","label":"Aruba"},{"value":"AX","label":"Åland Islands"},{"value":"AZ","label":"Azerbaijan"},{"value":"BA","label":"Bosnia and Herzegovina"},{"value":"BB","label":"Barbados"},{"value":"BD","label":"Bangladesh"},{"value":"BE","label":"Belgium"},{"value":"BF","label":"Burkina Faso"},{"value":"BG","label":"Bulgaria"},{"value":"BH","label":"Bahrain"},{"value":"BI","label":"Burundi"},{"value":"BJ","label":"Benin"},{"value":"BL","label":"Saint Barthélemy"},{"value":"BM","label":"Bermuda"},{"value":"BN","label":"Brunei"},{"value":"BO","label":"Bolivia"},{"value":"BQ","label":"Bonaire, Sint Eustatius and Saba"},{"value":"BR","label":"Brazil"},{"value":"BS","label":"The Bahamas"},{"value":"BT","label":"Bhutan"},{"value":"BV","label":"Bouvet Island"},{"value":"BW","label":"Botswana"},{"value":"BY","label":"Belarus"},{"value":"BZ","label":"Belize"},{"value":"CA","label":"Canada"},{"value":"CC","label":"Cocos (Keeling) Islands"},{"value":"CD","label":"Democratic Republic of the Congo"},{"value":"CF","label":"Central African Republic"},{"value":"CG","label":"Republic of the Congo"},{"value":"CH","label":"Switzerland"},{"value":"CI","label":"Côte d'Ivoire"},{"value":"CK","label":"Cook Islands"},{"value":"CL","label":"Chile"},{"value":"CM","label":"Cameroon"},{"value":"CN","label":"China"},{"value":"CO","label":"Colombia"},{"value":"CR","label":"Costa Rica"},{"value":"CV","label":"Cape Verde"},{"value":"CW","label":"Curaçao"},{"value":"CX","label":"Christmas Island"},{"value":"CY","label":"Cyprus"},{"value":"CZ","label":"Czech Republic"},{"value":"DE","label":"Germany"},{"value":"DJ","label":"Djibouti"},{"value":"DK","label":"Denmark"},{"value":"DM","label":"Dominica"},{"value":"DO","label":"Dominican Republic"},{"value":"DZ","label":"Algeria"},{"value":"EC","label":"Ecuador"},{"value":"EE","label":"Estonia"},{"value":"EG","label":"Egypt"},{"value":"EH","label":"Western Sahara"},{"value":"ER","label":"Eritrea"},{"value":"ES","label":"Spain"},{"value":"ET","label":"Ethiopia"},{"value":"FI","label":"Finland"},{"value":"FJ","label":"Fiji"},{"value":"FK","label":"Falkland Islands"},{"value":"FM","label":"Federated States of Micronesia"},{"value":"FO","label":"Faroe Islands"},{"value":"FR","label":"France"},{"value":"GA","label":"Gabon"},{"value":"GB","label":"United Kingdom"},{"value":"GD","label":"Grenada"},{"value":"GE","label":"Georgia"},{"value":"GF","label":"French Guiana"},{"value":"GG","label":"Guernsey"},{"value":"GH","label":"Ghana"},{"value":"GI","label":"Gibraltar"},{"value":"GL","label":"Greenland"},{"value":"GM","label":"The Gambia"},{"value":"GN","label":"Guinea"},{"value":"GP","label":"Guadeloupe"},{"value":"GQ","label":"Equatorial Guinea"},{"value":"GR","label":"Greece"},{"value":"GS","label":"South Georgia and the South Sandwich Islands"},{"value":"GT","label":"Guatemala"},{"value":"GU","label":"Guam"},{"value":"GW","label":"Guinea-Bissau"},{"value":"GY","label":"Guyana"},{"value":"HK","label":"Hong Kong"},{"value":"HM","label":"Heard Island and McDonald Islands"},{"value":"HN","label":"Honduras"},{"value":"HR","label":"Croatia"},{"value":"HT","label":"Haiti"},{"value":"HU","label":"Hungary"},{"value":"ID","label":"Indonesia"},{"value":"IE","label":"Ireland"},{"value":"IL","label":"Israel"},{"value":"IM","label":"Isle of Man"},{"value":"IN","label":"India"},{"value":"IO","label":"British Indian Ocean Territory"},{"value":"IQ","label":"Iraq"},{"value":"IS","label":"Iceland"},{"value":"IT","label":"Italy"},{"value":"JE","label":"Jersey"},{"value":"JM","label":"Jamaica"},{"value":"JO","label":"Jordan"},{"value":"JP","label":"Japan"},{"value":"KE","label":"Kenya"},{"value":"KG","label":"Kyrgyzstan"},{"value":"KH","label":"Cambodia"},{"value":"KI","label":"Kiribati"},{"value":"KM","label":"Comoros"},{"value":"KN","label":"Saint Kitts and Nevis"},{"value":"KR","label":"South Korea"},{"value":"KW","label":"Kuwait"},{"value":"KY","label":"Cayman Islands"},{"value":"KZ","label":"Kazakhstan"},{"value":"LA","label":"Laos"},{"value":"LB","label":"Lebanon"},{"value":"LC","label":"St. Lucia"},{"value":"LI","label":"Liechtenstein"},{"value":"LK","label":"Sri Lanka"},{"value":"LR","label":"Liberia"},{"value":"LS","label":"Lesotho"},{"value":"LT","label":"Lithuania"},{"value":"LU","label":"Luxembourg"},{"value":"LV","label":"Latvia"},{"value":"LY","label":"Libya"},{"value":"MA","label":"Morocco"},{"value":"MC","label":"Monaco"},{"value":"MD","label":"Moldova"},{"value":"ME","label":"Montenegro"},{"value":"MF","label":"Saint Martin"},{"value":"MG","label":"Madagascar"},{"value":"MH","label":"Marshall Islands"},{"value":"MK","label":"Macedonia"},{"value":"ML","label":"Mali"},{"value":"MM","label":"Myanmar (Burma)"},{"value":"MN","label":"Mongolia"},{"value":"MO","label":"Macau"},{"value":"MP","label":"Northern Mariana Islands"},{"value":"MQ","label":"Martinique"},{"value":"MR","label":"Mauritania"},{"value":"MS","label":"Montserrat"},{"value":"MT","label":"Malta"},{"value":"MU","label":"Mauritius"},{"value":"MV","label":"Maldives"},{"value":"MW","label":"Malawi"},{"value":"MX","label":"Mexico"},{"value":"MY","label":"Malaysia"},{"value":"MZ","label":"Mozambique"},{"value":"NA","label":"Namibia"},{"value":"NC","label":"New Caledonia"},{"value":"NE","label":"Niger"},{"value":"NF","label":"Norfolk Island"},{"value":"NG","label":"Nigeria"},{"value":"NI","label":"Nicaragua"},{"value":"NL","label":"Netherlands"},{"value":"NO","label":"Norway"},{"value":"NP","label":"Nepal"},{"value":"NR","label":"Nauru"},{"value":"NU","label":"Niue"},{"value":"NZ","label":"New Zealand"},{"value":"OM","label":"Oman"},{"value":"PA","label":"Panama"},{"value":"PE","label":"Peru"},{"value":"PF","label":"French Polynesia"},{"value":"PG","label":"Papua New Guinea"},{"value":"PH","label":"Philippines"},{"value":"PK","label":"Pakistan"},{"value":"PL","label":"Poland"},{"value":"PM","label":"Saint Pierre and Miquelon"},{"value":"PN","label":"Pitcairn"},{"value":"PR","label":"Puerto Rico"},{"value":"PS","label":"Palestine"},{"value":"PT","label":"Portugal"},{"value":"PW","label":"Palau"},{"value":"PY","label":"Paraguay"},{"value":"QA","label":"Qatar"},{"value":"RE","label":"Réunion"},{"value":"RO","label":"Romania"},{"value":"RS","label":"Serbia"},{"value":"RU","label":"Russia"},{"value":"RW","label":"Rwanda"},{"value":"SA","label":"Saudi Arabia"},{"value":"SB","label":"Solomon Islands"},{"value":"SC","label":"Seychelles"},{"value":"SE","label":"Sweden"},{"value":"SG","label":"Singapore"},{"value":"SH","label":"Saint Helena"},{"value":"SI","label":"Slovenia"},{"value":"SJ","label":"Svalbard and Jan Mayen"},{"value":"SK","label":"Slovakia"},{"value":"SL","label":"Sierra Leone"},{"value":"SM","label":"San Marino"},{"value":"SN","label":"Senegal"},{"value":"SO","label":"Somalia"},{"value":"SR","label":"Suriname"},{"value":"SS","label":"South Sudan"},{"value":"ST","label":"São Tomé and Príncipe"},{"value":"SV","label":"El Salvador"},{"value":"SX","label":"Sint Maarten"},{"value":"SY","label":"Syria"},{"value":"SZ","label":"Eswatini"},{"value":"TC","label":"Turks and Caicos Islands"},{"value":"TD","label":"Chad"},{"value":"TF","label":"French Southern Territories"},{"value":"TG","label":"Togo"},{"value":"TH","label":"Thailand"},{"value":"TJ","label":"Tajikistan"},{"value":"TK","label":"Tokelau"},{"value":"TL","label":"Timor-Leste"},{"value":"TM","label":"Turkmenistan"},{"value":"TN","label":"Tunisia"},{"value":"TO","label":"Tonga"},{"value":"TR","label":"Türkiye"},{"value":"TT","label":"Trinidad and Tobago"},{"value":"TV","label":"Tuvalu"},{"value":"TW","label":"Taiwan"},{"value":"TZ","label":"Tanzania"},{"value":"UA","label":"Ukraine"},{"value":"UG","label":"Uganda"},{"value":"UM","label":"United States Minor Outlying Islands"},{"value":"US","label":"United States"},{"value":"UY","label":"Uruguay"},{"value":"UZ","label":"Uzbekistan"},{"value":"VA","label":"Vatican City"},{"value":"VC","label":"Saint Vincent and the Grenadines"},{"value":"VE","label":"Venezuela"},{"value":"VG","label":"British Virgin Islands"},{"value":"VI","label":"US Virgin Islands"},{"value":"VN","label":"Vietnam"},{"value":"VU","label":"Vanuatu"},{"value":"WF","label":"Wallis and Futuna"},{"value":"WS","label":"Samoa"},{"value":"XK","label":"Kosovo"},{"value":"YE","label":"Yemen"},{"value":"YT","label":"Mayotte"},{"value":"ZA","label":"South Africa"},{"value":"ZM","label":"Zambia"},{"value":"ZW","label":"Zimbabwe"}];
+
 // Add constant
 const ADVANTAGE_PLUS_TYPES = ["AUTOMATED_SHOPPING_ADS", "SMART_APP_PROMOTION"];
 const DROPDOWN_MAX_WIDTH = "min(calc(100vw - 2rem), 850px)";
@@ -34,6 +38,139 @@ const dropdownContentStyle = {
   width: "max-content",
   maxWidth: DROPDOWN_MAX_WIDTH,
 };
+
+function SettingsMultiSelect({ label, options, value, onChange, placeholder, flags = false }) {
+  const [open, setOpen] = useState(false);
+  const flag = (code) => flags && /^[A-Z]{2}$/.test(code)
+    ? String.fromCodePoint(...[...code].map((letter) => 127397 + letter.charCodeAt(0))) + " " : "";
+  const selected = value.map((id) => options.find((option) => option.value === id)?.label || "Unavailable audience");
+  return (
+    <div className="space-y-2">
+      <Label>{label}</Label>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button type="button" variant="outline" role="combobox" aria-label={label} aria-expanded={open}
+            className="w-full justify-between rounded-xl bg-white text-left font-normal">
+            <span className="truncate">{selected.length ? selected.join(", ") : placeholder}</span>
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent align="start" className="p-0" style={{ width: "var(--radix-popover-trigger-width)", minWidth: 240 }}>
+          <Command>
+            <CommandInput placeholder={`Search ${label.toLowerCase()}...`} />
+            <CommandList>
+              <CommandEmpty>No results found.</CommandEmpty>
+              <CommandGroup>
+                {options.map((option) => (
+                  <CommandItem key={option.value} value={`${option.label} ${option.value}`}
+                    onSelect={() => onChange(value.includes(option.value) ? value.filter((id) => id !== option.value) : [...value, option.value])}>
+                    <Check className={cn("mr-2 h-4 w-4 shrink-0", value.includes(option.value) ? "opacity-100" : "opacity-0")} />
+                    <span>{flag(option.value)}{option.label}</span>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
+
+function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onChange, disabled }) {
+  const [expanded, setExpanded] = useState(Boolean(value));
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [reload, setReload] = useState(0);
+  const defaults = value?.defaults;
+  useEffect(() => {
+    if (!expanded || defaults || disabled) return;
+    const controller = new AbortController();
+    setLoading(true);
+    setError("");
+    const params = new URLSearchParams({ adSetId, campaignId, adAccountId });
+    fetch(`${API_BASE_URL}/auth/adset-copy-settings?${params}`, { credentials: "include", signal: controller.signal })
+      .then(async (response) => {
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Could not load ad set settings.");
+        if (!controller.signal.aborted) onChange({ sourceAdSetId: adSetId, campaignId, adAccountId, defaults: data, changes: {} });
+      })
+      .catch((err) => { if (!controller.signal.aborted) setError(err.message); })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    return () => controller.abort();
+  }, [expanded, defaults, disabled, adSetId, campaignId, adAccountId, onChange, reload]);
+
+  const changes = value?.changes || {};
+  const targeting = defaults?.targeting || {};
+  const field = (key, fallback) => changes[key] ?? fallback;
+  const update = (key, next) => onChange({ ...value, changes: { ...changes, [key]: next } });
+  const audiences = [...new Map([...(targeting.excluded_custom_audiences || []), ...(defaults?.audiences || [])]
+    .map((audience) => [audience.id, { value: audience.id, label: audience.name || "Unavailable audience" }])).values()];
+  const countryOptions = [...META_COUNTRIES];
+  for (const code of targeting.geo_locations?.countries || []) {
+    if (!countryOptions.some((option) => option.value === code)) {
+      let name = "Unavailable country";
+      try { name = new Intl.DisplayNames(["en"], { type: "region" }).of(code); } catch { /* Keep an existing country removable. */ }
+      countryOptions.push({ value: code, label: name });
+    }
+  }
+  const minAge = field("ageMin", targeting.age_min ?? targeting.age_range?.[0] ?? 18);
+  const maxAge = field("ageMax", targeting.age_max ?? targeting.age_range?.[1] ?? 65);
+  const ageInvalid = [minAge, maxAge].some((age) => age === "" || !Number.isInteger(Number(age)) || age < 13 || age > 65) || Number(minAge) > Number(maxAge);
+  const startTime = field("startTime", defaults?.startTime || "");
+  const endTime = field("endTime", defaults?.endTime || "");
+  return (
+    <div className="mt-2">
+      <button type="button" disabled={disabled} aria-expanded={expanded} onClick={() => setExpanded(!expanded)}
+        className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 hover:text-black disabled:opacity-50">
+        <CogIcon className="h-3.5 w-3.5" /> Edit settings
+        {Object.keys(changes).length > 0 && <span className="text-xs text-gray-400">(edited)</span>}
+      </button>
+      {expanded && (
+        <div className="mt-3 space-y-5 rounded-2xl border border-gray-200 bg-white p-4">
+          {loading && !defaults && <p role="status" className="flex items-center gap-2 text-sm text-gray-500"><Loader className="h-4 w-4 animate-spin" />Loading ad set settings...</p>}
+          {error && <div role="alert" className="text-sm text-red-600">{error} <button type="button" className="underline" onClick={() => setReload(reload + 1)}>Retry</button></div>}
+          {defaults && <>
+            <section className="space-y-2">
+              <h4 className="text-sm font-semibold">Budget</h4>
+              <Label htmlFor="new-adset-budget">{defaults.budget.mode === "lifetime" ? "Lifetime" : "Daily"} budget ({defaults.budget.currency}){defaults.budget.level === "campaign" ? " · Set on campaign" : ""}</Label>
+              <Input id="new-adset-budget" type="number" min={defaults.budget.decimals ? "0.01" : "1"} step={defaults.budget.decimals ? "0.01" : "1"}
+                value={field("budgetAmount", defaults.budget.amount)} disabled={defaults.budget.level === "campaign"}
+                onChange={(event) => update("budgetAmount", event.target.value)} className="rounded-xl" />
+              {defaults.budget.level === "campaign" && <p className="text-xs text-gray-500">Shared by the campaign’s ad sets. Edit this budget in Ads Manager.</p>}
+            </section>
+            <section className="space-y-3 border-t pt-4">
+              <h4 className="text-sm font-semibold">Schedule</h4>
+              <p className="text-xs text-gray-500">Times shown in {Intl.DateTimeFormat().resolvedOptions().timeZone}. {defaults.timezone && `Ad account: ${defaults.timezone}.`}</p>
+              <ScheduleDateTimePicker label="Start time" value={startTime || null} onChange={(time) => update("startTime", time)} onClear={() => update("startTime", "")} />
+              {(!startTime || Date.parse(startTime) <= Date.now()) && <p className="text-xs text-gray-500">The new ad set will start when launched unless you choose a future start time.</p>}
+              <ScheduleDateTimePicker label={defaults.budget.mode === "lifetime" ? "End time (required)" : "End time (optional)"} value={endTime || null}
+                minDateTime={startTime && Date.parse(startTime) > Date.now() ? startTime : null}
+                onChange={(time) => update("endTime", time)} onClear={() => update("endTime", "")} />
+              {endTime && Date.parse(endTime) <= Date.now() && <p className="text-xs text-amber-700">The source ad set has ended. Choose a new end time{defaults.budget.mode === "daily" ? " or clear it for ongoing delivery" : ""}.</p>}
+              {defaults.hasRecurringSchedule && <p className="text-xs text-gray-500">The source’s recurring delivery hours will be retained.</p>}
+            </section>
+            <section className="space-y-3 border-t pt-4">
+              <h4 className="text-sm font-semibold">Targeting</h4>
+              {defaults.specialAdCategories.filter((category) => category !== "NONE").length > 0 && <p className="text-xs text-amber-700">This campaign has special ad categories. Meta may restrict age, gender, and location targeting.</p>}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2"><Label htmlFor="new-adset-age-min">Minimum age</Label><Input id="new-adset-age-min" type="number" min="13" max="65" step="1" value={minAge} onChange={(event) => update("ageMin", event.target.value)} /></div>
+                <div className="space-y-2"><Label htmlFor="new-adset-age-max">Maximum age</Label><Input id="new-adset-age-max" type="number" min="13" max="65" step="1" value={maxAge} onChange={(event) => update("ageMax", event.target.value)} /></div>
+              </div>
+              <p className="text-xs text-gray-500">65 includes everyone aged 65 and above.</p>
+              {ageInvalid && <p role="alert" className="text-xs text-red-600">Use whole ages from 13 to 65, with minimum age no higher than maximum age.</p>}
+              <SettingsMultiSelect label="Gender" options={[{ value: 1, label: "Men" }, { value: 2, label: "Women" }]} value={field("genders", targeting.genders || [])} onChange={(next) => update("genders", next)} placeholder="All genders" />
+              <SettingsMultiSelect label="Countries" options={countryOptions} value={field("countries", targeting.geo_locations?.countries || [])} onChange={(next) => update("countries", next)} placeholder="No country selection" flags />
+              {Object.keys(targeting.geo_locations || {}).some((key) => !["countries", "location_types"].includes(key)) && <p className="text-xs text-gray-500">Other source locations, such as cities, regions, and country groups, are also retained.</p>}
+              <SettingsMultiSelect label="Excluded audiences" options={audiences} value={field("excludedAudienceIds", (targeting.excluded_custom_audiences || []).map((audience) => audience.id))} onChange={(next) => update("excludedAudienceIds", next)} placeholder="No excluded audiences" />
+            </section>
+            <button type="button" className="text-xs text-gray-500 underline" onClick={() => { onChange(null); setReload(reload + 1); }}>Reset and reload source settings</button>
+          </>}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function AdAccountSettings({
 
@@ -61,6 +198,8 @@ export default function AdAccountSettings({
   setCampaignObjective,
   newAdSetName,
   setNewAdSetName,
+  newAdSetSettings,
+  setNewAdSetSettings,
   showDuplicateCampaignBlock,
   setShowDuplicateCampaignBlock,
   duplicateCampaign,
@@ -1215,7 +1354,7 @@ transition-all duration-150 hover:!bg-black
                     <CopyIcon className="w-4 h-4" />
                     Select an ad set shell to duplicate
                   </Label>
-                  <Label className="text-gray-500 text-[12px] font-regular">We’ll retain all targeting settings and replace the creative</Label>
+                  <Label className="text-gray-500 text-[12px] font-regular">We’ll copy the ad set settings. You can edit them below.</Label>
 
                   <Popover open={openDuplicateAdSet} onOpenChange={setOpenDuplicateAdSet}>
                     <PopoverTrigger asChild>
@@ -1347,6 +1486,12 @@ transition-all duration-150 hover:!bg-black
                           disabled={!isLoggedIn}
                         />
                       </div>
+                      <NewAdSetSettingsEditor
+                        key={`${activeVariantId}:${selectedAdAccount}:${selectedCampaign[0]}:${duplicateAdSet}`}
+                        adSetId={duplicateAdSet} campaignId={selectedCampaign[0]} adAccountId={selectedAdAccount}
+                        value={newAdSetSettings?.sourceAdSetId === duplicateAdSet && newAdSetSettings?.campaignId === selectedCampaign[0] && newAdSetSettings?.adAccountId === selectedAdAccount ? newAdSetSettings : null}
+                        onChange={setNewAdSetSettings} disabled={!isLoggedIn || !selectedCampaign[0]}
+                      />
                       {variants && variants.length > 1 && (
                         <div className="flex items-start gap-1 p-2 bg-orange-50 border border-orange-200 rounded-xl mt-2">
                           <AlertTriangle className="w-4 h-4 text-orange-500 shrink-0 mt-0.5" />

@@ -198,10 +198,19 @@ export default function Home() {
     const [showDuplicateBlock, setShowDuplicateBlock] = useState(cachedState?.showDuplicateBlock || false)
     const [duplicateAdSet, setDuplicateAdSet] = useState(cachedState?.duplicateAdSet || "")
     const [newAdSetName, setNewAdSetName] = useState(cachedState?.newAdSetName || "")
+    const [newAdSetSettings, setNewAdSetSettings] = useState(cachedState?.newAdSetSettings || null)
     const [campaignObjective, setCampaignObjective] = useState(cachedState?.campaignObjective || [])
     const [showDuplicateCampaignBlock, setShowDuplicateCampaignBlock] = useState(cachedState?.showDuplicateCampaignBlock || false)
     const [duplicateCampaign, setDuplicateCampaign] = useState(cachedState?.duplicateCampaign || "")
     const [newCampaignName, setNewCampaignName] = useState(cachedState?.newCampaignName || "")
+
+    // A draft belongs to one source, destination campaign, and account.
+    useEffect(() => {
+        if (newAdSetSettings && (newAdSetSettings.sourceAdSetId !== duplicateAdSet ||
+            newAdSetSettings.campaignId !== selectedCampaign[0] || newAdSetSettings.adAccountId !== selectedAdAccount)) {
+            setNewAdSetSettings(null);
+        }
+    }, [duplicateAdSet, selectedCampaign, selectedAdAccount, newAdSetSettings]);
 
     // Ad creation form
     const [adName, setAdName] = useState("Default Ad Name With Blip")
@@ -557,6 +566,7 @@ export default function Home() {
             showDuplicateBlock,
             duplicateAdSet,
             newAdSetName,
+            newAdSetSettings,
             campaignObjective,
             showDuplicateCampaignBlock,
             duplicateCampaign,
@@ -574,6 +584,7 @@ export default function Home() {
         showDuplicateBlock,
         duplicateAdSet,
         newAdSetName,
+        newAdSetSettings,
         campaignObjective,
         showDuplicateCampaignBlock,
         duplicateCampaign,
@@ -824,6 +835,7 @@ export default function Home() {
         adSets: cloneSnapshotValue(adSets),
         duplicateAdSet,
         newAdSetName,
+        newAdSetSettings,
         showDuplicateBlock,
         duplicateCampaign,
         newCampaignName,
@@ -871,6 +883,7 @@ export default function Home() {
         adSets,
         duplicateAdSet,
         newAdSetName,
+        newAdSetSettings,
         showDuplicateBlock,
         duplicateCampaign,
         newCampaignName,
@@ -929,6 +942,7 @@ export default function Home() {
         }
         setDuplicateAdSet(snapshot.duplicateAdSet || "");
         setNewAdSetName(snapshot.newAdSetName || "");
+        setNewAdSetSettings(cloneSnapshotValue(snapshot.newAdSetSettings) || null);
         setShowDuplicateBlock(Boolean(snapshot.showDuplicateBlock));
         setDuplicateCampaign(snapshot.duplicateCampaign || "");
         setNewCampaignName(snapshot.newCampaignName || "");
@@ -2008,7 +2022,7 @@ export default function Home() {
         });
     }, []);
 
-    const handleLocalAdSetCreated = useCallback(({ newAdSetId, sourceAdSetId, name, campaignId }) => {
+    const handleLocalAdSetCreated = useCallback(({ newAdSetId, sourceAdSetId, name, campaignId, endTime }) => {
         if (!newAdSetId) {
             return;
         }
@@ -2023,6 +2037,7 @@ export default function Home() {
 
             const createdAdSet = {
                 ...(sourceAdSet || {}),
+                ...(endTime !== undefined ? { end_time: endTime || null } : {}),
                 id: newAdSetId,
                 name: name || sourceAdSet?.name || newAdSetId,
                 campaignId: campaignId || sourceAdSet?.campaignId,
@@ -2092,6 +2107,8 @@ export default function Home() {
                             setCampaignObjective={setCampaignObjective}
                             newAdSetName={newAdSetName}
                             setNewAdSetName={setNewAdSetName}
+                            newAdSetSettings={newAdSetSettings}
+                            setNewAdSetSettings={setNewAdSetSettings}
                             showDuplicateCampaignBlock={showDuplicateCampaignBlock}
                             setShowDuplicateCampaignBlock={setShowDuplicateCampaignBlock}
                             duplicateCampaign={duplicateCampaign}
@@ -2201,6 +2218,8 @@ export default function Home() {
                             setSelectedForm={setSelectedForm}
                             newAdSetName={newAdSetName}
                             setNewAdSetName={setNewAdSetName}
+                            newAdSetSettings={newAdSetSettings}
+                            setNewAdSetSettings={setNewAdSetSettings}
                             launchPaused={launchPaused}
                             setLaunchPaused={setLaunchPaused}
                             discloseAiMedia={discloseAiMedia}
