@@ -11,7 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Check, ChevronsUpDown, RefreshCcw, X, Loader, AlertTriangle, Ban, Pencil, CircleDollarSign, CalendarClock, Crosshair } from "lucide-react"
+import { Check, ChevronsUpDown, RefreshCcw, X, CircleX, Loader, AlertTriangle, Ban, Pencil, CircleDollarSign, CalendarClock, Crosshair } from "lucide-react"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { useAuth } from "@/lib/AuthContext"
 import { Input } from "@/components/ui/input"
@@ -68,14 +68,14 @@ function SettingsMultiSelect({ label, options, value, onChange, placeholder, fla
               <ScrollArea viewportClassName="max-h-[500px] [&>div]:!block">
                 <CommandGroup>
                   {allLabel && <CommandItem value={allLabel} className={cn(
-                    "py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
+                    "py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150",
                     allSelected ? "bg-gray-100 hover:!bg-gray-100 font-semibold" : "hover:!bg-gray-200",
                   )} onSelect={() => onChange([])}>
                     <span>{allLabel}</span>
                   </CommandItem>}
                   {options.map((option) => (
                     <CommandItem key={option.value} value={`${option.label} ${option.value}`} className={cn(
-                      "py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
+                      "py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150",
                       selectedValues.includes(option.value) ? "bg-gray-100 hover:!bg-gray-100 font-semibold" : "hover:!bg-gray-200",
                     )}
                       onSelect={() => onChange(selectedValues.includes(option.value) ? selectedValues.filter((id) => id !== option.value) : [...selectedValues, option.value])}>
@@ -162,8 +162,10 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
   return (
     <div className="mt-2">
       <button type="button" disabled={disabled} aria-expanded={expanded} onClick={() => setExpanded(!expanded)}
+        title={expanded ? "Hide setup — your changes are kept" : "Edit setup"}
         className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 hover:text-black disabled:opacity-50">
         <CogIcon className="h-3.5 w-3.5" /> Edit setup
+        {expanded && <CircleX className="h-3.5 w-3.5" aria-hidden="true" />}
 
       </button>
       {expanded && (
