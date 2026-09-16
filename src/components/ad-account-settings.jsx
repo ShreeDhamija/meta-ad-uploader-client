@@ -52,7 +52,7 @@ function SettingsMultiSelect({ label, options, value, onChange, placeholder, fla
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button type="button" variant="outline" role="combobox" aria-label={label} aria-expanded={open}
-            className="w-full justify-between rounded-xl bg-white hover:!bg-white text-left font-normal">
+            className="h-11 w-full justify-between rounded-xl bg-white py-2 hover:!bg-white text-left font-normal">
             <span className="truncate">{allSelected ? allLabel : selected.length ? selected.join(", ") : placeholder}</span>
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0" />
           </Button>
@@ -80,8 +80,9 @@ function SettingsMultiSelect({ label, options, value, onChange, placeholder, fla
                       selectedValues.includes(option.value) ? "bg-gray-100 hover:!bg-gray-100 font-semibold" : "hover:!bg-gray-200",
                     )}
                       onSelect={() => onChange(selectedValues.includes(option.value) ? selectedValues.filter((id) => id !== option.value) : [...selectedValues, option.value])}>
-                      <Check className={cn("mr-2 h-4 w-4 shrink-0", selectedValues.includes(option.value) ? "opacity-100" : "opacity-0")} />
-                      <span>{flag(option.value)}{option.label}</span>
+                      {!flags && <Check className={cn("mr-2 h-4 w-4 shrink-0", selectedValues.includes(option.value) ? "opacity-100" : "opacity-0")} />}
+                      <span className={flags ? "flex-1" : undefined}>{flag(option.value)}{option.label}</span>
+                      {flags && <Check className={cn("ml-auto h-4 w-4 shrink-0", selectedValues.includes(option.value) ? "opacity-100" : "opacity-0")} />}
                     </CommandItem>
                   ))}
                 </CommandGroup>
@@ -133,7 +134,23 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
   }
   const minAge = field("ageMin", targeting.age_min ?? targeting.age_range?.[0] ?? 18);
   const maxAge = field("ageMax", targeting.age_max ?? targeting.age_range?.[1] ?? 65);
-  const ageInvalid = [minAge, maxAge].some((age) => age === "" || !Number.isInteger(Number(age)) || age < 13 || age > 65) || Number(minAge) > Number(maxAge);
+  const advantageAudience = Number(targeting.targeting_automation?.advantage_audience) === 1;
+  const ageError = advantageAudience
+    ? "Advantage+ audience requires a minimum age from 18 to 25 and a maximum age of 65."
+    : "Use whole ages from 13 to 65, with minimum age no higher than maximum age.";
+  const ageInvalid = [minAge, maxAge].some((age) => age === "" || !Number.isInteger(Number(age)) || age < 13 || age > 65) || Number(minAge) > Number(maxAge)
+    || (advantageAudience && (Number(minAge) < 18 || Number(minAge) > 25 || Number(maxAge) !== 65));
+  // Validate on blur so typing a two-digit age is not blocked by its first digit.
+  const validateAge = (key) => {
+    const age = Number(key === "ageMin" ? minAge : maxAge);
+    const lower = advantageAudience ? (key === "ageMin" ? 18 : 65) : 13;
+    const upper = advantageAudience && key === "ageMin" ? 25 : 65;
+    if (!Number.isInteger(age) || age < lower || age > upper || Number(minAge) > Number(maxAge)) {
+      toast.error(ageError);
+      const sourceAge = Number(key === "ageMin" ? targeting.age_min ?? 18 : targeting.age_max ?? 65);
+      update(key, String(Math.min(upper, Math.max(lower, sourceAge))));
+    }
+  };
   const startTime = field("startTime", defaults?.startTime || "");
   const endTime = field("endTime", defaults?.endTime || "");
   return (
@@ -153,7 +170,7 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
               <Label htmlFor="new-adset-budget">{defaults.budget.mode === "lifetime" ? "Lifetime" : "Daily"} budget ({defaults.budget.currency}){defaults.budget.level === "campaign" ? " · Set on campaign" : ""}</Label>
               <Input id="new-adset-budget" type="number" min={defaults.budget.decimals ? "0.01" : "1"} step={defaults.budget.decimals ? "0.01" : "1"}
                 value={field("budgetAmount", defaults.budget.amount)} disabled={defaults.budget.level === "campaign"}
-                onChange={(event) => update("budgetAmount", event.target.value)} className="rounded-xl" />
+                onChange={(event) => update("budgetAmount", event.target.value)} className="border-gray-400 rounded-2xl" />
               {defaults.budget.level === "campaign" && <p className="text-xs text-gray-500">Shared by the campaign’s ad sets. Edit this budget in Ads Manager.</p>}
             </section>
             <section className="space-y-3 border-t pt-4">
@@ -171,11 +188,12 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
               <h4 className="flex items-center gap-2 text-sm font-semibold"><Crosshair className="h-4 w-4 shrink-0" aria-hidden="true" />Targeting</h4>
               {defaults.specialAdCategories.filter((category) => category !== "NONE").length > 0 && <p className="text-xs text-amber-700">This campaign has special ad categories. Meta may restrict age, gender, and location targeting.</p>}
               <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2"><Label htmlFor="new-adset-age-min">Minimum age</Label><Input id="new-adset-age-min" type="number" min="13" max="65" step="1" value={minAge} onChange={(event) => update("ageMin", event.target.value)} /></div>
-                <div className="space-y-2"><Label htmlFor="new-adset-age-max">Maximum age</Label><Input id="new-adset-age-max" type="number" min="13" max="65" step="1" value={maxAge} onChange={(event) => update("ageMax", event.target.value)} /></div>
+                <div className="space-y-2"><Label htmlFor="new-adset-age-min">Minimum age</Label><Input id="new-adset-age-min" type="number" min={advantageAudience ? 18 : 13} max={advantageAudience ? 25 : 65} step="1" value={minAge} onChange={(event) => update("ageMin", event.target.value)} onBlur={() => validateAge("ageMin")} /></div>
+                <div className="space-y-2"><Label htmlFor="new-adset-age-max">Maximum age</Label><Input id="new-adset-age-max" type="number" min={advantageAudience ? 65 : 13} max="65" step="1" value={maxAge} onChange={(event) => update("ageMax", event.target.value)} onBlur={() => validateAge("ageMax")} /></div>
               </div>
               <p className="text-xs text-gray-500">65 includes everyone aged 65 and above.</p>
-              {ageInvalid && <p role="alert" className="text-xs text-red-600">Use whole ages from 13 to 65, with minimum age no higher than maximum age.</p>}
+              {advantageAudience && <p className="text-xs text-gray-500">Advantage+ audience: minimum age 18–25; maximum age fixed at 65.</p>}
+              {ageInvalid && <p role="alert" className="text-xs text-red-600">{ageError}</p>}
               <SettingsMultiSelect label="Gender" options={[{ value: 1, label: "Men" }, { value: 2, label: "Women" }]} value={field("genders", targeting.genders || [])} onChange={(next) => update("genders", next.length === 2 ? [] : next)} placeholder="Both" allLabel="Both" />
               <SettingsMultiSelect label="Countries" options={countryOptions} value={field("countries", targeting.geo_locations?.countries || [])} onChange={(next) => update("countries", next)} placeholder="No country selection" flags />
               {Object.keys(targeting.geo_locations || {}).some((key) => !["countries", "location_types"].includes(key)) && <p className="text-xs text-gray-500">Other source locations, such as cities, regions, and country groups, are also retained.</p>}
@@ -1143,7 +1161,7 @@ transition-all duration-150 hover:!bg-black
                   aria-expanded={openAdSet}
                   disabled={isAdSetSelectionBlockedByCampaignCreation || !isLoggedIn || selectedCampaign.length === 0 || isLoadingAdSetsLocal || (selectedCampaign.length > 0 && adSets.length === 0)}
                   className={cn(
-                    "w-full justify-between border border-gray-300 rounded-2xl py-4.5 bg-white shadow group-data-[state=open]:border-blue-500 transition-colors duration-150 hover:bg-white",
+                    "h-11 w-full justify-between border border-gray-300 rounded-2xl py-2 bg-white shadow group-data-[state=open]:border-blue-500 transition-colors duration-150 hover:bg-white",
                     isAdSetSelectionBlockedByCampaignCreation && "cursor-not-allowed bg-gray-50 text-gray-400 hover:bg-gray-50"
                   )}
                 >
@@ -1380,7 +1398,7 @@ transition-all duration-150 hover:!bg-black
                         role="combobox"
                         aria-expanded={openDuplicateAdSet}
                         disabled={!isLoggedIn || adSets.length === 0}
-                        className="w-full justify-between border border-gray-400 rounded-2xl bg-white shadow overflow-hidden whitespace-nowrap hover:!bg-white"
+                        className="h-11 w-full justify-between border border-gray-300 rounded-2xl py-2 bg-white shadow group-data-[state=open]:border-blue-500 transition-colors duration-150 hover:bg-white"
                       >
                         <div className="w-full overflow-hidden">
                           <span
