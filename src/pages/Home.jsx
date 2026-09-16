@@ -300,24 +300,33 @@ export default function Home() {
             .map((post) => post.video_id || post.placement_primary_video_id)
             .filter(Boolean)
             .map(String))];
-        let videoTitles = {};
+        const imageHashes = [...new Set(importedPosts.flatMap((post) => {
+            if (post.placement_media_type === 'image') return post.placement_image_hashes || [post.placement_primary_image_hash];
+            return !post.video_id && post.image_hash ? [post.image_hash] : [];
+        }).filter(Boolean).map(String))];
 
-        if (videoIds.length > 0) {
+        const fetchMediaNames = async (path, payload, resultKey, hasMedia) => {
+            if (!hasMedia) return {};
             try {
-                const response = await fetch(`${API_BASE_URL}/auth/video-titles`, {
+                const response = await fetch(`${API_BASE_URL}/auth/${path}`, {
                     method: 'POST',
                     credentials: 'include',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ videoIds }),
+                    body: JSON.stringify(payload),
                 });
-                if (!response.ok) throw new Error('Failed to fetch video titles');
+                if (!response.ok) throw new Error('Failed to fetch media names');
                 const data = await response.json();
-                videoTitles = data.titles || {};
+                return data[resultKey] || {};
             } catch (error) {
-                console.warn('Failed to load imported video titles:', error);
-                toast.warning('Could not load some video file names. Ad names will be used instead.');
+                console.warn(`Failed to load imported media names (${path}):`, error);
+                toast.warning('Could not load some media file names. Ad names will be used instead.');
+                return {};
             }
-        }
+        };
+        const [videoTitles, imageNames] = await Promise.all([
+            fetchMediaNames('video-titles', { videoIds }, 'titles', videoIds.length > 0),
+            fetchMediaNames('image-names', { adAccountId: selectedAdAccount, imageHashes }, 'names', imageHashes.length > 0),
+        ]);
 
         const derived = [];
         let skippedCount = 0;
@@ -326,10 +335,11 @@ export default function Home() {
                 const templateKey = `placement:${post.placement_customized_creative_id}:${post.ad_id || post.id}`;
                 const previewUrl = post.placement_preview_url || post.image_url;
                 const videoTitle = post.placement_primary_video_id ? videoTitles[String(post.placement_primary_video_id)] : null;
+                const imageName = post.placement_primary_image_hash ? imageNames[String(post.placement_primary_image_hash)] : null;
                 derived.push({
                     type: post.placement_media_type,
                     ...(post.placement_media_type === 'video' ? { id: templateKey, thumbnail_url: previewUrl } : { hash: templateKey, url: previewUrl }),
-                    name: videoTitle || post.ad_name,
+                    name: videoTitle || imageName || post.ad_name,
                     previewUrl,
                     isPlacementCustomizedTemplate: true,
                     sourcePlacementCreativeId: post.placement_customized_creative_id,
@@ -343,7 +353,7 @@ export default function Home() {
                     thumbnail_url: post.image_url,
                 });
             } else if (post.image_hash) {
-                derived.push({ type: 'image', hash: post.image_hash, name: post.ad_name, previewUrl: post.image_url, url: post.image_url });
+                derived.push({ type: 'image', hash: post.image_hash, name: imageNames[String(post.image_hash)] || post.ad_name, previewUrl: post.image_url, url: post.image_url });
             } else {
                 skippedCount += 1;
             }
@@ -364,7 +374,7 @@ export default function Home() {
         setImportedFiles(derived);
         setImportedPosts([]);
         setEditAdCreativeMode(true);
-    }, [importedPosts]);
+    }, [importedPosts, selectedAdAccount]);
 
     // Exit back to the ad duplication view: restore the full original import
     // (including the ads that couldn't be edited) and drop the derived media.
