@@ -161,13 +161,25 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
   const endTime = field("endTime", defaults?.endTime || "");
   return (
     <div className="mt-2">
-      <button type="button" disabled={disabled} aria-expanded={expanded} onClick={() => setExpanded(!expanded)}
-        title={expanded ? "Hide setup — your changes are kept" : "Edit setup"}
-        className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 hover:text-black disabled:opacity-50">
-        <CogIcon className="h-3.5 w-3.5" /> Edit setup
-        {expanded && <CircleX className="h-3.5 w-3.5" aria-hidden="true" />}
-
-      </button>
+      <div className="flex items-center justify-between gap-3">
+        <button type="button" disabled={disabled} aria-expanded={expanded} onClick={() => setExpanded(!expanded)}
+          title={expanded ? "Hide setup — your changes are kept" : "Edit setup"}
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 hover:text-black disabled:opacity-50">
+          <CogIcon className="h-3.5 w-3.5" /> Edit setup
+        </button>
+        {expanded && <div className="flex items-center gap-3">
+          <button type="button" disabled={disabled}
+            className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-red-600 disabled:opacity-50"
+            onClick={() => { onChange(null); setExpanded(false); }}>
+            <CircleX className="h-3.5 w-3.5" aria-hidden="true" />Discard
+          </button>
+          <button type="button" disabled={disabled || !defaults}
+            className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-black disabled:opacity-50"
+            onClick={() => onChange({ ...value, changes: {} })}>
+            <RefreshCcw className="h-3.5 w-3.5" aria-hidden="true" />Reset
+          </button>
+        </div>}
+      </div>
       {expanded && (
         <div className="mt-3 space-y-5 rounded-2xl border border-gray-200 bg-white p-4">
           {loading && !defaults && <p role="status" className="flex items-center gap-2 text-sm text-gray-500"><Loader className="h-4 w-4 animate-spin" />Loading ad set settings...</p>}
@@ -205,7 +217,6 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
               {Object.keys(targeting.geo_locations || {}).some((key) => !["countries", "location_types"].includes(key)) && <p className="text-xs text-gray-500">Other source locations, such as cities, regions, and country groups, are also retained.</p>}
               <SettingsMultiSelect label="Excluded audiences" options={audiences} value={field("excludedAudienceIds", (targeting.excluded_custom_audiences || []).map((audience) => audience.id))} onChange={(next) => update("excludedAudienceIds", next)} placeholder="No excluded audiences" checkboxes />
             </section>
-            <button type="button" className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-black" onClick={() => { onChange(null); setReload(reload + 1); }}><RefreshCcw className="h-3.5 w-3.5" />Reset</button>
           </>}
         </div>
       )}
