@@ -201,7 +201,7 @@ function getAdSetTimingIssue({ selectedAdSets = [], duplicateAdSet, adSets = [],
   if (endedAdSet) {
     return {
       type: "ended",
-      message: `Ad set end date is ${formatAdSetEndTime(endedAdSet.adSet.end_time)}, it has already ended. ${duplicateAdSet ? "Choose a new end date in Edit settings" : "Select a different ad set"}`,
+      message: `Ad set end date is ${formatAdSetEndTime(endedAdSet.adSet.end_time)}, it has already ended. ${duplicateAdSet ? "Choose a new end date in Edit setup" : "Select a different ad set"}`,
     };
   }
 
@@ -5458,7 +5458,7 @@ export default function AdCreationForm({
 
     if (duplicateAdSet && newAdSetSettings && (newAdSetSettings.sourceAdSetId !== duplicateAdSet ||
       newAdSetSettings.campaignId !== selectedCampaign[0] || newAdSetSettings.adAccountId !== selectedAdAccount)) {
-      throw new Error("The edited ad set settings belong to another selection. Reopen Edit settings and try again.");
+      throw new Error("The edited ad set settings belong to another selection. Reopen Edit setup and try again.");
     }
 
     // Resize any local image whose width or height exceeds Meta's 9000px limit

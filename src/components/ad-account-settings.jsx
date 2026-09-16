@@ -39,8 +39,10 @@ const dropdownContentStyle = {
   maxWidth: DROPDOWN_MAX_WIDTH,
 };
 
-function SettingsMultiSelect({ label, options, value, onChange, placeholder, flags = false }) {
+function SettingsMultiSelect({ label, options, value, onChange, placeholder, flags = false, allLabel }) {
   const [open, setOpen] = useState(false);
+  const allSelected = Boolean(allLabel) && (value.length === 0 || options.every((option) => value.includes(option.value)));
+  const selectedValues = allSelected ? [] : value;
   const flag = (code) => flags && /^[A-Z]{2}$/.test(code)
     ? String.fromCodePoint(...[...code].map((letter) => 127397 + letter.charCodeAt(0))) + " " : "";
   const selected = value.map((id) => options.find((option) => option.value === id)?.label || "Unavailable audience");
@@ -50,21 +52,25 @@ function SettingsMultiSelect({ label, options, value, onChange, placeholder, fla
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button type="button" variant="outline" role="combobox" aria-label={label} aria-expanded={open}
-            className="w-full justify-between rounded-xl bg-white text-left font-normal">
-            <span className="truncate">{selected.length ? selected.join(", ") : placeholder}</span>
+            className="w-full justify-between rounded-2xl !bg-white hover:!bg-white text-left font-normal">
+            <span className="truncate">{allSelected ? allLabel : selected.length ? selected.join(", ") : placeholder}</span>
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent align="start" className="p-0" style={{ width: "var(--radix-popover-trigger-width)", minWidth: 240 }}>
-          <Command>
+        <PopoverContent align="start" className="overflow-hidden rounded-2xl border-gray-200 !bg-white p-0" style={{ width: "var(--radix-popover-trigger-width)", minWidth: 240 }}>
+          <Command className="rounded-2xl !bg-white">
             <CommandInput placeholder={`Search ${label.toLowerCase()}...`} />
             <CommandList>
               <CommandEmpty>No results found.</CommandEmpty>
               <CommandGroup>
+                {allLabel && <CommandItem value={allLabel} className="rounded-xl" onSelect={() => onChange([])}>
+                  <Check className={cn("mr-2 h-4 w-4 shrink-0", allSelected ? "opacity-100" : "opacity-0")} />
+                  <span>{allLabel}</span>
+                </CommandItem>}
                 {options.map((option) => (
-                  <CommandItem key={option.value} value={`${option.label} ${option.value}`}
-                    onSelect={() => onChange(value.includes(option.value) ? value.filter((id) => id !== option.value) : [...value, option.value])}>
-                    <Check className={cn("mr-2 h-4 w-4 shrink-0", value.includes(option.value) ? "opacity-100" : "opacity-0")} />
+                  <CommandItem key={option.value} value={`${option.label} ${option.value}`} className="rounded-xl"
+                    onSelect={() => onChange(selectedValues.includes(option.value) ? selectedValues.filter((id) => id !== option.value) : [...selectedValues, option.value])}>
+                    <Check className={cn("mr-2 h-4 w-4 shrink-0", selectedValues.includes(option.value) ? "opacity-100" : "opacity-0")} />
                     <span>{flag(option.value)}{option.label}</span>
                   </CommandItem>
                 ))}
@@ -123,7 +129,7 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
     <div className="mt-2">
       <button type="button" disabled={disabled} aria-expanded={expanded} onClick={() => setExpanded(!expanded)}
         className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 hover:text-black disabled:opacity-50">
-        <CogIcon className="h-3.5 w-3.5" /> Edit settings
+        <CogIcon className="h-3.5 w-3.5" /> Edit setup
         {Object.keys(changes).length > 0 && <span className="text-xs text-gray-400">(edited)</span>}
       </button>
       {expanded && (
@@ -159,12 +165,12 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
               </div>
               <p className="text-xs text-gray-500">65 includes everyone aged 65 and above.</p>
               {ageInvalid && <p role="alert" className="text-xs text-red-600">Use whole ages from 13 to 65, with minimum age no higher than maximum age.</p>}
-              <SettingsMultiSelect label="Gender" options={[{ value: 1, label: "Men" }, { value: 2, label: "Women" }]} value={field("genders", targeting.genders || [])} onChange={(next) => update("genders", next)} placeholder="All genders" />
+              <SettingsMultiSelect label="Gender" options={[{ value: 1, label: "Men" }, { value: 2, label: "Women" }]} value={field("genders", targeting.genders || [])} onChange={(next) => update("genders", next.length === 2 ? [] : next)} placeholder="Both" allLabel="Both" />
               <SettingsMultiSelect label="Countries" options={countryOptions} value={field("countries", targeting.geo_locations?.countries || [])} onChange={(next) => update("countries", next)} placeholder="No country selection" flags />
               {Object.keys(targeting.geo_locations || {}).some((key) => !["countries", "location_types"].includes(key)) && <p className="text-xs text-gray-500">Other source locations, such as cities, regions, and country groups, are also retained.</p>}
               <SettingsMultiSelect label="Excluded audiences" options={audiences} value={field("excludedAudienceIds", (targeting.excluded_custom_audiences || []).map((audience) => audience.id))} onChange={(next) => update("excludedAudienceIds", next)} placeholder="No excluded audiences" />
             </section>
-            <button type="button" className="text-xs text-gray-500 underline" onClick={() => { onChange(null); setReload(reload + 1); }}>Reset and reload source settings</button>
+            <button type="button" className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-black" onClick={() => { onChange(null); setReload(reload + 1); }}><RefreshCcw className="h-3.5 w-3.5" />Reset</button>
           </>}
         </div>
       )}
