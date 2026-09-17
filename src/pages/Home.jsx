@@ -197,6 +197,7 @@ export default function Home() {
     const [selectedAdSets, setSelectedAdSets] = useState(cachedState?.selectedAdSets || [])
     const [showDuplicateBlock, setShowDuplicateBlock] = useState(cachedState?.showDuplicateBlock || false)
     const [duplicateAdSet, setDuplicateAdSet] = useState(cachedState?.duplicateAdSet || "")
+    const [shareNewAdSet, setShareNewAdSet] = useState(cachedState?.shareNewAdSet ?? true);
     const [newAdSetName, setNewAdSetName] = useState(cachedState?.newAdSetName || "")
     const [newAdSetSettings, setNewAdSetSettings] = useState(cachedState?.newAdSetSettings || null)
     const [campaignObjective, setCampaignObjective] = useState(cachedState?.campaignObjective || [])
@@ -557,6 +558,7 @@ export default function Home() {
             showDuplicateBlock,
             duplicateAdSet,
             newAdSetName,
+            shareNewAdSet,
             newAdSetSettings,
             campaignObjective,
             showDuplicateCampaignBlock,
@@ -575,6 +577,7 @@ export default function Home() {
         showDuplicateBlock,
         duplicateAdSet,
         newAdSetName,
+        shareNewAdSet,
         newAdSetSettings,
         campaignObjective,
         showDuplicateCampaignBlock,
@@ -1038,12 +1041,18 @@ export default function Home() {
     }, [activeVariantId, captureCurrentSnapshot, hydrateFromSnapshot, variants]);
 
     const getVariantSnapshot = useCallback((variantId) => {
-        if (variantId === activeVariantId) {
-            return captureCurrentSnapshot();
-        }
+        const current = captureCurrentSnapshot();
+        const snapshot = variantId === activeVariantId ? current : variants.find((variant) => variant.id === variantId)?.snapshot || null;
+        const defaultSnapshot = activeVariantId === "default" ? current : variants.find((variant) => variant.id === "default")?.snapshot;
+        if (!shareNewAdSet || variants.length <= 1 || !snapshot?.duplicateAdSet) return snapshot;
+        return {
+            ...snapshot,
+            newAdSetName: defaultSnapshot?.newAdSetName || "",
+            newAdSetSettings: defaultSnapshot?.newAdSetSettings || null,
+        };
+    }, [activeVariantId, captureCurrentSnapshot, variants, shareNewAdSet]);
 
-        return variants.find((variant) => variant.id === variantId)?.snapshot || null;
-    }, [activeVariantId, captureCurrentSnapshot, variants]);
+    const effectiveAdSetVariant = getVariantSnapshot(activeVariantId);
 
     const isFormFieldModified = useCallback((fieldKeys) => {
         if (activeVariantId === "default") return false;
@@ -1130,6 +1139,7 @@ export default function Home() {
                 useExistingPosts,
                 usePostID,
                 editAdCreativeMode,
+                shareNewAdSet,
             },
             mediaLayout: {
                 items: mediaItems,
@@ -1167,6 +1177,7 @@ export default function Home() {
         useExistingPosts,
         usePostID,
         variants,
+        shareNewAdSet,
     ]);
 
     const saveCurrentDraft = useCallback(async (name, draftOptions = {}) => {
@@ -1447,6 +1458,8 @@ export default function Home() {
         })));
         setActiveVariantId("default");
 
+        // Older drafts retain their original per-variant duplication behavior.
+        setShareNewAdSet(state.configuration?.shareNewAdSet ?? false);
         setAdType(state.configuration?.adType || "regular");
         setIsCarouselAd(Boolean(state.configuration?.isCarouselAd));
         setEnablePlacementCustomization(Boolean(state.configuration?.enablePlacementCustomization));
@@ -2096,9 +2109,11 @@ export default function Home() {
                             setDuplicateAdSet={setDuplicateAdSet}
                             campaignObjective={campaignObjective}
                             setCampaignObjective={setCampaignObjective}
-                            newAdSetName={newAdSetName}
+                            newAdSetName={effectiveAdSetVariant?.newAdSetName || ""}
+                            shareNewAdSet={shareNewAdSet}
+                            setShareNewAdSet={setShareNewAdSet}
                             setNewAdSetName={setNewAdSetName}
-                            newAdSetSettings={newAdSetSettings}
+                            newAdSetSettings={effectiveAdSetVariant?.newAdSetSettings || null}
                             setNewAdSetSettings={setNewAdSetSettings}
                             showDuplicateCampaignBlock={showDuplicateCampaignBlock}
                             setShowDuplicateCampaignBlock={setShowDuplicateCampaignBlock}
@@ -2207,9 +2222,10 @@ export default function Home() {
                             setProductExtensionProductCatalogId={setProductExtensionProductCatalogId}
                             selectedForm={selectedForm}
                             setSelectedForm={setSelectedForm}
-                            newAdSetName={newAdSetName}
+                            newAdSetName={effectiveAdSetVariant?.newAdSetName || ""}
+                            shareNewAdSet={shareNewAdSet}
                             setNewAdSetName={setNewAdSetName}
-                            newAdSetSettings={newAdSetSettings}
+                            newAdSetSettings={effectiveAdSetVariant?.newAdSetSettings || null}
                             setNewAdSetSettings={setNewAdSetSettings}
                             launchPaused={launchPaused}
                             setLaunchPaused={setLaunchPaused}

@@ -160,7 +160,7 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
   const startTime = field("startTime", defaults?.startTime || "");
   const endTime = field("endTime", defaults?.endTime || "");
   return (
-    <div className="mt-2">
+    <fieldset disabled={disabled} className="mt-2 min-w-0">
       <div className="flex items-center justify-between gap-3">
         <button type="button" disabled={disabled} aria-expanded={expanded} onClick={() => setExpanded(!expanded)}
           title={expanded ? "Hide setup — your changes are kept" : "Edit setup"}
@@ -220,7 +220,7 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
           </>}
         </div>
       )}
-    </div>
+    </fieldset>
   );
 }
 
@@ -248,6 +248,8 @@ export default function AdAccountSettings({
   setDuplicateAdSet,
   campaignObjective,
   setCampaignObjective,
+  shareNewAdSet = true,
+  setShareNewAdSet,
   newAdSetName,
   setNewAdSetName,
   newAdSetSettings,
@@ -274,6 +276,8 @@ export default function AdAccountSettings({
   activeVariantId = 'default'
 
 }) {
+  const isSplitAdDataEnabled = variants.length > 1;
+  const sharedAdSetLocked = shareNewAdSet && isSplitAdDataEnabled && activeVariantId !== "default";
   const renderDiffMark = (fieldKeys) => (
     isFormFieldModified?.(fieldKeys) ? <span className="text-red-500 font-semibold">*</span> : null
   );
@@ -1531,25 +1535,38 @@ transition-all duration-150 hover:!bg-black
                         </Label>
                         <Input
                           id="newAdSetName"
+                          aria-invalid={(newAdSetName || "").length > 400}
+                          aria-describedby={(newAdSetName || "").length > 400 ? "new-ad-set-name-error" : undefined}
                           value={newAdSetName}
                           onChange={(e) => setNewAdSetName(e.target.value)}
                           placeholder="Enter new ad set name..."
-                          className="border border-gray-400 rounded-2xl bg-white shadow"
-                          disabled={!isLoggedIn}
+                          className={`border border-gray-400 rounded-2xl bg-white shadow ${(newAdSetName || "").length > 400 ? "!border-red-500" : ""}`}
+                          disabled={!isLoggedIn || sharedAdSetLocked}
                         />
+                        {(newAdSetName || "").length > 400 && (
+                          <p id="new-ad-set-name-error" className="text-xs text-red-600">New ad set names must be 400 characters or fewer.</p>
+                        )}
+                        {sharedAdSetLocked && <p className="text-xs text-gray-500">Name and setup are shared. Edit them in Default.</p>}
                       </div>
                       <NewAdSetSettingsEditor
                         key={`${activeVariantId}:${selectedAdAccount}:${selectedCampaign[0]}:${duplicateAdSet}`}
                         adSetId={duplicateAdSet} campaignId={selectedCampaign[0]} adAccountId={selectedAdAccount}
                         value={newAdSetSettings?.sourceAdSetId === duplicateAdSet && newAdSetSettings?.campaignId === selectedCampaign[0] && newAdSetSettings?.adAccountId === selectedAdAccount ? newAdSetSettings : null}
-                        onChange={setNewAdSetSettings} disabled={!isLoggedIn || !selectedCampaign[0]}
+                        onChange={setNewAdSetSettings} disabled={!isLoggedIn || !selectedCampaign[0] || sharedAdSetLocked}
                       />
-                      {variants && variants.length > 1 && (
-                        <div className="flex items-start gap-1 p-2 bg-orange-50 border border-orange-200 rounded-xl mt-2">
-                          <AlertTriangle className="w-4 h-4 text-orange-500 shrink-0 mt-0.5" />
-                          <span className="text-xs text-orange-700">
-                            Each variant will create its own new ad set. To launch all variants into one new ad set, create that ad set in a standalone launch first, then launch the remaining variants into it.
-                          </span>
+                      {isSplitAdDataEnabled && (
+                        <div className="space-y-1.5 mt-3">
+                          <div className="flex items-center justify-between gap-3">
+                            <Label htmlFor="share-new-ad-set" className="text-sm">Use one new ad set</Label>
+                            <Switch id="share-new-ad-set" checked={shareNewAdSet}
+                              onCheckedChange={setShareNewAdSet} disabled={!isLoggedIn}
+                              aria-describedby="share-new-ad-set-help" />
+                          </div>
+                          <p id="share-new-ad-set-help" className="text-xs text-gray-500">
+                            You’re seeing this because Split Ad Data is enabled. {shareNewAdSet
+                              ? "New-ad-set variants share Default’s name and setup. Select the same campaign and source ad set in each. Variants using existing ad sets stay unchanged."
+                              : "Each new-ad-set variant creates its own ad set, using its own name and setup."}
+                          </p>
                         </div>
                       )}
                     </>

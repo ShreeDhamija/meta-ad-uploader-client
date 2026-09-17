@@ -172,6 +172,79 @@ function withTimeout(promise, timeoutMs, timeoutMessage, signal) {
   });
 }
 
+async function prepareSharedAdSetJobs({ jobs, defaultSnapshot, enabled, duplicate }) {
+  const newAdSetJobs = jobs.filter((job) => job.formData.duplicateAdSet);
+  if (!enabled || newAdSetJobs.length === 0) return { jobs, createdAdSet: null };
+
+  // Take a private copy before the first await. Default need not have an ad job.
+  const defaults = structuredClone(defaultSnapshot || {});
+  const campaignId = defaults.selectedCampaign?.[0];
+  if (!defaults.duplicateAdSet || !campaignId || !defaults.selectedAdAccount) {
+    throw new Error("Configure the new ad set in Default, or turn off ‘Use one new ad set’.");
+  }
+  if ((defaults.newAdSetName || "").length > 400) throw new Error("The new ad set name in Default must be 400 characters or fewer.");
+  const name = (defaults.newAdSetName || "").trim();
+  if (!name) throw new Error("Enter the new ad set name in Default.");
+  const settings = defaults.newAdSetSettings;
+  if (settings && (settings.sourceAdSetId !== defaults.duplicateAdSet ||
+    settings.campaignId !== campaignId || settings.adAccountId !== defaults.selectedAdAccount)) {
+    throw new Error("Default’s edited ad set settings belong to another selection. Reopen Edit setup.");
+  }
+  for (const job of newAdSetJobs) {
+    const form = job.formData;
+    if (form.selectedAdAccount !== defaults.selectedAdAccount ||
+      form.selectedCampaign?.length !== 1 || form.selectedCampaign[0] !== campaignId ||
+      form.duplicateAdSet !== defaults.duplicateAdSet) {
+      throw new Error(`${job.variantName}: select the same campaign and source ad set as Default, or turn off ‘Use one new ad set’.`);
+    }
+  }
+  const source = defaults.adSets?.find((adSet) => adSet.id === defaults.duplicateAdSet);
+  if (!source) throw new Error("Refresh Default’s ad sets and select the source ad set again.");
+
+  const changes = settings?.changes;
+  const overrides = changes && Object.keys(changes).length ? {
+    ...changes,
+    ...(changes.budgetAmount !== undefined ? { budgetMode: settings.defaults?.budget?.mode } : {}),
+  } : null;
+  const endTime = changes?.endTime ?? settings?.defaults?.endTime ?? source.end_time;
+  const startTime = changes?.startTime ?? settings?.defaults?.startTime ?? source.start_time;
+  const newAdSetId = await duplicate(defaults.duplicateAdSet, campaignId, defaults.selectedAdAccount, name, null, overrides);
+  if (typeof newAdSetId !== "string" || !newAdSetId.trim()) {
+    throw new Error("No new ad set ID was returned. Check Ads Manager before trying again.");
+  }
+  const createdAdSet = {
+    ...source,
+    id: newAdSetId,
+    name,
+    campaignId,
+    ...(endTime !== undefined ? { end_time: endTime || null } : {}),
+    ...(startTime !== undefined ? { start_time: startTime || null } : {}),
+    totalAds: 0,
+    spend: 0,
+  };
+  return {
+    createdAdSet,
+    sourceAdSetId: defaults.duplicateAdSet,
+    jobs: jobs.map((job) => {
+      if (!job.formData.duplicateAdSet) return job;
+      const form = job.formData;
+      return {
+        ...job,
+        formData: {
+          ...form,
+          selectedAdSets: [newAdSetId],
+          duplicateAdSet: "",
+          newAdSetName: "",
+          newAdSetSettings: null,
+          adSetDisplayName: name,
+          adSets: [...(form.adSets || []).filter((adSet) => adSet.id !== newAdSetId), structuredClone(createdAdSet)],
+          adNameFormulaV2: form.adNameFormulaV2 ? { ...form.adNameFormulaV2, adSetNameContext: name } : null,
+        },
+      };
+    }),
+  };
+}
+
 function formatAdSetEndTime(endTime) {
   const date = new Date(endTime);
   if (Number.isNaN(date.getTime())) return endTime;
@@ -1227,6 +1300,7 @@ export default function AdCreationForm({
   selectedForm,
   setSelectedForm,
   newAdSetName,
+  shareNewAdSet = true,
   newAdSetSettings,
   setNewAdSetName,
   setNewAdSetSettings,
@@ -1376,6 +1450,8 @@ export default function AdCreationForm({
   const [isLinkPagesOpen, setIsLinkPagesOpen] = useState(false);
   const [publishPending, setPublishPending] = useState(false);
   const [isQueueingJobs, setIsQueueingJobs] = useState(false);
+  const queueingJobsRef = useRef(false);
+  const [isPreparingSharedAdSet, setIsPreparingSharedAdSet] = useState(false);
   const [draftMenuOpen, setDraftMenuOpen] = useState(false);
   const [draftName, setDraftName] = useState("");
   const [savingDraft, setSavingDraft] = useState(false);
@@ -1914,10 +1990,16 @@ export default function AdCreationForm({
 
   const getVariantState = useCallback(
     (variantId) => {
-      if (variantId === activeVariantId) return liveVariantSnapshot;
-      return variants.find((variant) => variant.id === variantId)?.snapshot || null;
+      const snapshot = variantId === activeVariantId ? liveVariantSnapshot : variants.find((variant) => variant.id === variantId)?.snapshot || null;
+      const defaultSnapshot = activeVariantId === "default" ? liveVariantSnapshot : variants.find((variant) => variant.id === "default")?.snapshot;
+      if (!shareNewAdSet || variants.length <= 1 || !snapshot?.duplicateAdSet) return snapshot;
+      return {
+        ...snapshot,
+        newAdSetName: defaultSnapshot?.newAdSetName || "",
+        newAdSetSettings: defaultSnapshot?.newAdSetSettings || null,
+      };
     },
-    [activeVariantId, liveVariantSnapshot, variants],
+    [activeVariantId, liveVariantSnapshot, variants, shareNewAdSet],
   );
 
   const hasMediaInFormData = useCallback(
@@ -5303,6 +5385,11 @@ export default function AdCreationForm({
     [duplicateIndices],
   );
 
+  const hasOverlongHeadlines = !isCarouselAd && (isProfileDestinationEngagement
+    ? headlines.slice(0, profileHeadlineLimit)
+    : headlines
+  ).some((value) => value.length > 255);
+
   const duplicateFileNameWarnings = useMemo(() => {
     const mediaFileEntries = buildMediaFileEntries({
       files,
@@ -5451,6 +5538,10 @@ export default function AdCreationForm({
       toast.error("Please select a shop destination for shop ads");
       throw new Error("Please select a shop destination for shop ads");
     }
+    if (duplicateAdSet && (newAdSetName || "").length > 400) {
+      throw new Error("New ad set names must be 400 characters or fewer.");
+    }
+
     if (duplicateAdSet && (!newAdSetName || newAdSetName.trim() === "")) {
       toast.error("Please enter a name for the new ad set");
       throw new Error("Please enter a name for the new ad set");
@@ -8417,7 +8508,7 @@ export default function AdCreationForm({
   const handleQueueJob = async (e) => {
     e.preventDefault();
 
-    if (isQueueingJobs) {
+    if (queueingJobsRef.current) {
       return;
     }
 
@@ -8452,6 +8543,11 @@ export default function AdCreationForm({
         return;
       }
 
+      if (job.formData.duplicateAdSet && (job.formData.newAdSetName || "").length > 400) {
+        toast.error(`${variant.name}: new ad set names must be 400 characters or fewer.`);
+        return;
+      }
+
       if (!job.formData.selectedAdAccount) {
         toast.error(`${variant.name}: please select an ad account`);
         return;
@@ -8482,10 +8578,32 @@ export default function AdCreationForm({
       showVariantLabel: shouldShowVariantLabel,
     }));
 
+    // All form/media snapshots above are captured before any network request.
+    const prepareSharedAdSet = shareNewAdSet && variants.length > 1 && queuedJobs.some((job) => job.formData.duplicateAdSet);
+    const defaultSnapshot = getVariantState("default");
+    queueingJobsRef.current = true;
     setIsQueueingJobs(true);
+    setIsPreparingSharedAdSet(prepareSharedAdSet);
 
     try {
-      setJobQueue((prev) => [...prev, ...queuedJobs]);
+      const prepared = await prepareSharedAdSetJobs({
+        jobs: queuedJobs,
+        defaultSnapshot,
+        enabled: prepareSharedAdSet,
+        duplicate: duplicateAdSetRequest,
+      });
+      // Each shared job now targets an existing ID and has duplicateAdSet="".
+      // handleCreateAd therefore uses its existing-ad-set path, including retries.
+      setJobQueue((prev) => [...prev, ...prepared.jobs]);
+      if (prepared.createdAdSet) {
+        onAdSetCreated?.({
+          newAdSetId: prepared.createdAdSet.id,
+          sourceAdSetId: prepared.sourceAdSetId,
+          name: prepared.createdAdSet.name,
+          campaignId: prepared.createdAdSet.campaignId,
+          endTime: prepared.createdAdSet.end_time,
+        });
+      }
 
       if (!preserveMedia) {
         try {
@@ -8496,8 +8614,13 @@ export default function AdCreationForm({
 
         clearQueuedMedia();
       }
+    } catch (error) {
+      const apiError = error.response?.data?.error;
+      toast.error(typeof apiError === "string" ? apiError : apiError?.message || error.message || "Unable to prepare the shared ad set.");
     } finally {
+      queueingJobsRef.current = false;
       setIsQueueingJobs(false);
+      setIsPreparingSharedAdSet(false);
     }
   };
 
@@ -8560,7 +8683,11 @@ export default function AdCreationForm({
       selectedFiles.size > 0 ||
       (shouldShowLeadFormSelector && !selectedForm) ||
       (!isCarouselAd && hasDuplicates);
-  const publishDisabled = hasPublishBlockingIssueBeforePage || isAdSetMissing || isPageMissing || Boolean(adSetTimingIssue);
+  const hasOverlongAdSetName = variantsToValidate.some((variant) => {
+    const snapshot = getVariantState(variant.id);
+    return snapshot?.duplicateAdSet && (snapshot.newAdSetName || "").length > 400;
+  });
+  const publishDisabled = hasOverlongAdSetName || hasOverlongHeadlines || hasPublishBlockingIssueBeforePage || isAdSetMissing || isPageMissing || Boolean(adSetTimingIssue);
 
   const showImportedPostMode = isDuplicationMode && importedPosts.length > 0;
   const importedSafeIndex = showImportedPostMode ? Math.min(activeImportedPostIndex, importedPosts.length - 1) : 0;
@@ -8637,6 +8764,15 @@ export default function AdCreationForm({
 
   return (
     <Card className=" !bg-white border border-gray-300 max-w-[calc(100vw-1rem)] shadow-[0_2px_4px_rgba(0,0,0,0.08)] rounded-3xl">
+      <Dialog open={isPreparingSharedAdSet}>
+        <DialogContent hideClose className="rounded-2xl" overlayClassName="bg-black/20"
+          onEscapeKeyDown={(event) => event.preventDefault()} onInteractOutside={(event) => event.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Loader className="h-4 w-4 animate-spin" />Creating shared ad set…</DialogTitle>
+            <DialogDescription>Your variants will be queued together once the new ad set is ready.</DialogDescription>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
       {hasStartedAnyJob && (
         <div className="fixed bottom-4 right-4 z-50">
           {/* Collapsed State */}
@@ -10106,7 +10242,7 @@ export default function AdCreationForm({
                                   }}
                                   minRows={1}
                                   maxRows={10}
-                                  className={`${formTextareaChrome} ${duplicateIndices.headlines.has(index) ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]" : ""
+                                  className={`${formTextareaChrome} ${(duplicateIndices.headlines.has(index) || (!isCarouselAd && value.length > 255)) ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]" : ""
                                     }`}
                                   style={{
                                     scrollbarWidth: "thin",
@@ -10129,7 +10265,7 @@ export default function AdCreationForm({
                                   }}
                                   minRows={1}
                                   maxRows={10}
-                                  className={`${formTextareaChrome} ${duplicateIndices.headlines.has(index) ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]" : ""
+                                  className={`${formTextareaChrome} ${(duplicateIndices.headlines.has(index) || (!isCarouselAd && value.length > 255)) ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]" : ""
                                     }`}
                                   style={{
                                     scrollbarWidth: "thin",
@@ -10138,6 +10274,9 @@ export default function AdCreationForm({
                                   placeholder={isCarouselAd ? `Description for card ${index + 1}` : "Enter headline"}
                                   disabled={!isLoggedIn}
                                 />
+                              )}
+                              {!isCarouselAd && value.length > 255 && (
+                                <p className="text-xs text-red-500 mt-1">Headlines must be 255 characters or fewer.</p>
                               )}
                               {duplicateIndices.headlines.has(index) && (
                                 <p className="text-xs text-red-500 mt-1">Duplicate values can cause errors when making ads</p>
@@ -11463,6 +11602,18 @@ export default function AdCreationForm({
                 </span>
               </div>
             ))}
+
+            {hasOverlongAdSetName && (
+              <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                New ad set names must be 400 characters or fewer. Shorten the name in the affected variant, or in Default when using one new ad set.
+              </div>
+            )}
+
+            {hasOverlongHeadlines && (
+              <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                Headlines must be 255 characters or fewer. Please shorten them before publishing.
+              </div>
+            )}
 
             {!isCarouselAd && hasDuplicates && (
               <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
