@@ -10116,6 +10116,7 @@ export default function AdCreationForm({
                           {messages.slice(0, !isCarouselAd && isProfileDestinationEngagement ? profilePrimaryTextLimit : messages.length).map((value, index) => (
                             <div key={index} className={`flex items-start gap-2 ${isCarouselAd && applyTextToAllCards && index > 0 ? "hidden" : ""}`}>
                               <div className="flex flex-col w-full">
+                                {isCarouselAd && <span className="mb-1 text-xs text-gray-500">{applyTextToAllCards ? "All cards" : `Card ${index + 1}`}</span>}
                                 {isCatalogueAd ? (
                                   <CatalogueVariableField
                                     value={value}
@@ -10234,6 +10235,7 @@ export default function AdCreationForm({
                             className={`flex items-center gap-2 ${isCarouselAd && applyHeadlinesToAllCards && index > 0 ? "hidden" : ""}`}
                           >
                             <div className="flex flex-col w-full">
+                              {isCarouselAd && <span className="mb-1 text-xs text-gray-500">{applyHeadlinesToAllCards ? "All cards" : `Card ${index + 1}`}</span>}
                               {isCatalogueAd ? (
                                 <CatalogueVariableField
                                   value={value}

@@ -1878,7 +1878,7 @@ export default function MediaPreview({
                         {isCarouselAd ? "Group Cards" : "Group Ads"}
                       </Button>
 
-                      {!isFlexLikeAdType && (
+                      {!isFlexLikeAdType && (!isCarouselAd || enablePlacementCustomization) && (
                         <Button
                           variant="outline"
                           size="sm"
