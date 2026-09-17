@@ -43,6 +43,13 @@ const EMPTY_PIXEL_TRACKING_OVERRIDE = {
     offlineDatasetId: null,
 };
 
+// Normalize display/upload names without changing provider IDs, URLs or group keys.
+function normalizeImportedFileNames(files) {
+    return files.map((file) => typeof file.name === "string" && file.name.includes("/")
+        ? { ...file, name: file.name.replace(/\//g, ":") }
+        : file);
+}
+
 // Check if user has active access
 
 
@@ -197,11 +204,21 @@ export default function Home() {
     const [selectedAdSets, setSelectedAdSets] = useState(cachedState?.selectedAdSets || [])
     const [showDuplicateBlock, setShowDuplicateBlock] = useState(cachedState?.showDuplicateBlock || false)
     const [duplicateAdSet, setDuplicateAdSet] = useState(cachedState?.duplicateAdSet || "")
+    const [shareNewAdSet, setShareNewAdSet] = useState(cachedState?.shareNewAdSet ?? true);
     const [newAdSetName, setNewAdSetName] = useState(cachedState?.newAdSetName || "")
+    const [newAdSetSettings, setNewAdSetSettings] = useState(cachedState?.newAdSetSettings || null)
     const [campaignObjective, setCampaignObjective] = useState(cachedState?.campaignObjective || [])
     const [showDuplicateCampaignBlock, setShowDuplicateCampaignBlock] = useState(cachedState?.showDuplicateCampaignBlock || false)
     const [duplicateCampaign, setDuplicateCampaign] = useState(cachedState?.duplicateCampaign || "")
     const [newCampaignName, setNewCampaignName] = useState(cachedState?.newCampaignName || "")
+
+    // A draft belongs to one source, destination campaign, and account.
+    useEffect(() => {
+        if (newAdSetSettings && (newAdSetSettings.sourceAdSetId !== duplicateAdSet ||
+            newAdSetSettings.campaignId !== selectedCampaign[0] || newAdSetSettings.adAccountId !== selectedAdAccount)) {
+            setNewAdSetSettings(null);
+        }
+    }, [duplicateAdSet, selectedCampaign, selectedAdAccount, newAdSetSettings]);
 
     // Ad creation form
     const [adName, setAdName] = useState("Default Ad Name With Blip")
@@ -227,13 +244,18 @@ export default function Home() {
         dateType: "MonthYYYY",
         customTexts: {} // Add this for consistency
     });
-    const [driveFiles, setDriveFiles] = useState([])
-    const [dropboxFiles, setDropboxFiles] = useState([]);
+    const [driveFiles, setDriveFilesState] = useState([]);
+    const [dropboxFiles, setDropboxFilesState] = useState([]);
+    const setDriveFiles = useCallback((update) => {
+        setDriveFilesState((previous) => normalizeImportedFileNames(typeof update === "function" ? update(previous) : update));
+    }, []);
+    const setDropboxFiles = useCallback((update) => {
+        setDropboxFilesState((previous) => normalizeImportedFileNames(typeof update === "function" ? update(previous) : update));
+    }, []);
     const [frameioFiles, setFrameioFiles] = useState([]);
     const [launchPaused, setLaunchPaused] = useState(false); // <-- New state
     const [discloseAiMedia, setDiscloseAiMedia] = useState(false);
     const [pixelTrackingOverride, setPixelTrackingOverride] = useState({ ...EMPTY_PIXEL_TRACKING_OVERRIDE });
-    const launchPausedDefaultAppliedRef = useRef(false);
     const [isCarouselAd, setIsCarouselAd] = useState(false);
     const [adType, setAdType] = useState('regular'); // 'regular' | 'carousel' | 'flexible'
     const [enablePlacementCustomization, setEnablePlacementCustomization] = useState(false);
@@ -243,7 +265,7 @@ export default function Home() {
     const [importedFiles, setImportedFiles] = useState([]);
     const [videoThumbs, setVideoThumbs] = useState({})
     const { adAccounts, setAdAccounts, pages, setPages, pagesLoading, adAccountsLoading, refetchAdAccounts } = useAppData()
-    const { settings: adAccountSettings, documentExists, refetchCopyTemplates } = useAdAccountSettings(selectedAdAccount)
+    const { settings: adAccountSettings, loading: adAccountSettingsLoading, documentExists, refetchCopyTemplates } = useAdAccountSettings(selectedAdAccount)
     const [hasAnyAdAccountSettings, setHasAnyAdAccountSettings] = useState(false);
     const [selectedShopDestination, setSelectedShopDestination] = useState("")
     const [selectedShopDestinationType, setSelectedShopDestinationType] = useState("")
@@ -300,24 +322,33 @@ export default function Home() {
             .map((post) => post.video_id || post.placement_primary_video_id)
             .filter(Boolean)
             .map(String))];
-        let videoTitles = {};
+        const imageHashes = [...new Set(importedPosts.flatMap((post) => {
+            if (post.placement_media_type === 'image') return post.placement_image_hashes || [post.placement_primary_image_hash];
+            return !post.video_id && post.image_hash ? [post.image_hash] : [];
+        }).filter(Boolean).map(String))];
 
-        if (videoIds.length > 0) {
+        const fetchMediaNames = async (path, payload, resultKey, hasMedia) => {
+            if (!hasMedia) return {};
             try {
-                const response = await fetch(`${API_BASE_URL}/auth/video-titles`, {
+                const response = await fetch(`${API_BASE_URL}/auth/${path}`, {
                     method: 'POST',
                     credentials: 'include',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ videoIds }),
+                    body: JSON.stringify(payload),
                 });
-                if (!response.ok) throw new Error('Failed to fetch video titles');
+                if (!response.ok) throw new Error('Failed to fetch media names');
                 const data = await response.json();
-                videoTitles = data.titles || {};
+                return data[resultKey] || {};
             } catch (error) {
-                console.warn('Failed to load imported video titles:', error);
-                toast.warning('Could not load some video file names. Ad names will be used instead.');
+                console.warn(`Failed to load imported media names (${path}):`, error);
+                toast.warning('Could not load some media file names. Ad names will be used instead.');
+                return {};
             }
-        }
+        };
+        const [videoTitles, imageNames] = await Promise.all([
+            fetchMediaNames('video-titles', { videoIds }, 'titles', videoIds.length > 0),
+            fetchMediaNames('image-names', { adAccountId: selectedAdAccount, imageHashes }, 'names', imageHashes.length > 0),
+        ]);
 
         const derived = [];
         let skippedCount = 0;
@@ -326,10 +357,11 @@ export default function Home() {
                 const templateKey = `placement:${post.placement_customized_creative_id}:${post.ad_id || post.id}`;
                 const previewUrl = post.placement_preview_url || post.image_url;
                 const videoTitle = post.placement_primary_video_id ? videoTitles[String(post.placement_primary_video_id)] : null;
+                const imageName = post.placement_primary_image_hash ? imageNames[String(post.placement_primary_image_hash)] : null;
                 derived.push({
                     type: post.placement_media_type,
                     ...(post.placement_media_type === 'video' ? { id: templateKey, thumbnail_url: previewUrl } : { hash: templateKey, url: previewUrl }),
-                    name: videoTitle || post.ad_name,
+                    name: videoTitle || imageName || post.ad_name,
                     previewUrl,
                     isPlacementCustomizedTemplate: true,
                     sourcePlacementCreativeId: post.placement_customized_creative_id,
@@ -343,7 +375,7 @@ export default function Home() {
                     thumbnail_url: post.image_url,
                 });
             } else if (post.image_hash) {
-                derived.push({ type: 'image', hash: post.image_hash, name: post.ad_name, previewUrl: post.image_url, url: post.image_url });
+                derived.push({ type: 'image', hash: post.image_hash, name: imageNames[String(post.image_hash)] || post.ad_name, previewUrl: post.image_url, url: post.image_url });
             } else {
                 skippedCount += 1;
             }
@@ -364,7 +396,7 @@ export default function Home() {
         setImportedFiles(derived);
         setImportedPosts([]);
         setEditAdCreativeMode(true);
-    }, [importedPosts]);
+    }, [importedPosts, selectedAdAccount]);
 
     // Exit back to the ad duplication view: restore the full original import
     // (including the ads that couldn't be edited) and drop the derived media.
@@ -502,17 +534,9 @@ export default function Home() {
     ])
 
     useEffect(() => {
-        if (subscriptionLoading) return;
-        if (launchPausedDefaultAppliedRef.current) return;
-        if (
-            subscriptionData.teamId === 'team_1779097238802_0p8jy2tcn'
-            || String(userId) === '10242641224983476'
-            || String(userId) === '10236978990363167'
-        ) {
-            setLaunchPaused(true);
-        }
-        launchPausedDefaultAppliedRef.current = true;
-    }, [subscriptionLoading, subscriptionData.teamId, userId])
+        if (!selectedAdAccount || adAccountSettingsLoading) return;
+        setLaunchPaused(adAccountSettings.defaultAdStatus === "PAUSED");
+    }, [selectedAdAccount, adAccountSettingsLoading, adAccountSettings.defaultAdStatus])
 
     useEffect(() => {
 
@@ -547,6 +571,8 @@ export default function Home() {
             showDuplicateBlock,
             duplicateAdSet,
             newAdSetName,
+            shareNewAdSet,
+            newAdSetSettings,
             campaignObjective,
             showDuplicateCampaignBlock,
             duplicateCampaign,
@@ -564,6 +590,8 @@ export default function Home() {
         showDuplicateBlock,
         duplicateAdSet,
         newAdSetName,
+        shareNewAdSet,
+        newAdSetSettings,
         campaignObjective,
         showDuplicateCampaignBlock,
         duplicateCampaign,
@@ -814,6 +842,7 @@ export default function Home() {
         adSets: cloneSnapshotValue(adSets),
         duplicateAdSet,
         newAdSetName,
+        newAdSetSettings,
         showDuplicateBlock,
         duplicateCampaign,
         newCampaignName,
@@ -861,6 +890,7 @@ export default function Home() {
         adSets,
         duplicateAdSet,
         newAdSetName,
+        newAdSetSettings,
         showDuplicateBlock,
         duplicateCampaign,
         newCampaignName,
@@ -919,6 +949,7 @@ export default function Home() {
         }
         setDuplicateAdSet(snapshot.duplicateAdSet || "");
         setNewAdSetName(snapshot.newAdSetName || "");
+        setNewAdSetSettings(cloneSnapshotValue(snapshot.newAdSetSettings) || null);
         setShowDuplicateBlock(Boolean(snapshot.showDuplicateBlock));
         setDuplicateCampaign(snapshot.duplicateCampaign || "");
         setNewCampaignName(snapshot.newCampaignName || "");
@@ -1023,12 +1054,47 @@ export default function Home() {
     }, [activeVariantId, captureCurrentSnapshot, hydrateFromSnapshot, variants]);
 
     const getVariantSnapshot = useCallback((variantId) => {
-        if (variantId === activeVariantId) {
-            return captureCurrentSnapshot();
-        }
+        const current = captureCurrentSnapshot();
+        const snapshot = variantId === activeVariantId ? current : variants.find((variant) => variant.id === variantId)?.snapshot || null;
+        const defaultSnapshot = activeVariantId === "default" ? current : variants.find((variant) => variant.id === "default")?.snapshot;
+        if (!shareNewAdSet || variants.length <= 1 || !(snapshot?.showDuplicateBlock ?? Boolean(snapshot?.duplicateAdSet))) return snapshot;
+        const sourceAdSet = defaultSnapshot?.adSets?.find((adSet) => adSet.id === defaultSnapshot?.duplicateAdSet);
+        return {
+            ...snapshot,
+            duplicateAdSet: defaultSnapshot?.duplicateAdSet || "",
+            adSets: sourceAdSet
+                ? [...(snapshot.adSets || []).filter((adSet) => adSet.id !== sourceAdSet.id), sourceAdSet]
+                : snapshot.adSets,
+            newAdSetName: defaultSnapshot?.newAdSetName || "",
+            newAdSetSettings: defaultSnapshot?.newAdSetSettings || null,
+        };
+    }, [activeVariantId, captureCurrentSnapshot, variants, shareNewAdSet]);
 
-        return variants.find((variant) => variant.id === variantId)?.snapshot || null;
-    }, [activeVariantId, captureCurrentSnapshot, variants]);
+    const effectiveAdSetVariant = getVariantSnapshot(activeVariantId);
+
+    // Keep actual selections aligned as well as the displayed/published values,
+    // so switching back to separate ad sets does not revive an old source.
+    const defaultDuplicateAdSet = activeVariantId === "default"
+        ? duplicateAdSet
+        : variants.find((variant) => variant.id === "default")?.snapshot?.duplicateAdSet || "";
+    useEffect(() => {
+        if (!shareNewAdSet || variants.length <= 1) return;
+        if (activeVariantId !== "default" && showDuplicateBlock && duplicateAdSet !== defaultDuplicateAdSet) {
+            setDuplicateAdSet(defaultDuplicateAdSet);
+        }
+        setVariants((previous) => {
+            let changed = false;
+            const next = previous.map((variant) => {
+                const snapshot = variant.snapshot;
+                if (variant.id === "default" || variant.id === activeVariantId || !snapshot ||
+                    !(snapshot.showDuplicateBlock ?? Boolean(snapshot.duplicateAdSet)) || snapshot.duplicateAdSet === defaultDuplicateAdSet) return variant;
+                changed = true;
+                return { ...variant, snapshot: { ...snapshot, duplicateAdSet: defaultDuplicateAdSet, newAdSetSettings: null } };
+            });
+            return changed ? next : previous;
+        });
+    }, [shareNewAdSet, variants.length, activeVariantId, showDuplicateBlock, duplicateAdSet, defaultDuplicateAdSet]);
+
 
     const isFormFieldModified = useCallback((fieldKeys) => {
         if (activeVariantId === "default") return false;
@@ -1115,6 +1181,7 @@ export default function Home() {
                 useExistingPosts,
                 usePostID,
                 editAdCreativeMode,
+                shareNewAdSet,
             },
             mediaLayout: {
                 items: mediaItems,
@@ -1152,6 +1219,7 @@ export default function Home() {
         useExistingPosts,
         usePostID,
         variants,
+        shareNewAdSet,
     ]);
 
     const saveCurrentDraft = useCallback(async (name, draftOptions = {}) => {
@@ -1432,6 +1500,8 @@ export default function Home() {
         })));
         setActiveVariantId("default");
 
+        // Older drafts retain their original per-variant duplication behavior.
+        setShareNewAdSet(state.configuration?.shareNewAdSet ?? false);
         setAdType(state.configuration?.adType || "regular");
         setIsCarouselAd(Boolean(state.configuration?.isCarouselAd));
         setEnablePlacementCustomization(Boolean(state.configuration?.enablePlacementCustomization));
@@ -1464,7 +1534,7 @@ export default function Home() {
             return media ? { ...post, previewUrl: media.previewUrl || media.url } : post;
         }));
         setSelectedFiles(new Set());
-    }, [hydrateFromSnapshot, selectedAdAccount]);
+    }, [hydrateFromSnapshot, selectedAdAccount, setDriveFiles, setDropboxFiles]);
 
     const handleAddVariant = useCallback(() => {
         const usedLetters = new Set(
@@ -1998,7 +2068,7 @@ export default function Home() {
         });
     }, []);
 
-    const handleLocalAdSetCreated = useCallback(({ newAdSetId, sourceAdSetId, name, campaignId }) => {
+    const handleLocalAdSetCreated = useCallback(({ newAdSetId, sourceAdSetId, name, campaignId, endTime }) => {
         if (!newAdSetId) {
             return;
         }
@@ -2013,6 +2083,7 @@ export default function Home() {
 
             const createdAdSet = {
                 ...(sourceAdSet || {}),
+                ...(endTime !== undefined ? { end_time: endTime || null } : {}),
                 id: newAdSetId,
                 name: name || sourceAdSet?.name || newAdSetId,
                 campaignId: campaignId || sourceAdSet?.campaignId,
@@ -2070,18 +2141,22 @@ export default function Home() {
                             setCampaigns={setCampaigns}
                             selectedCampaign={selectedCampaign}
                             setSelectedCampaign={setSelectedCampaign}
-                            adSets={adSets}
+                            adSets={effectiveAdSetVariant?.adSets || adSets}
                             setAdSets={setAdSets}
                             selectedAdSets={selectedAdSets}
                             setSelectedAdSets={setSelectedAdSets}
                             showDuplicateBlock={showDuplicateBlock}
                             setShowDuplicateBlock={setShowDuplicateBlock}
-                            duplicateAdSet={duplicateAdSet}
+                            duplicateAdSet={effectiveAdSetVariant?.duplicateAdSet || ""}
                             setDuplicateAdSet={setDuplicateAdSet}
                             campaignObjective={campaignObjective}
                             setCampaignObjective={setCampaignObjective}
-                            newAdSetName={newAdSetName}
+                            newAdSetName={effectiveAdSetVariant?.newAdSetName || ""}
+                            shareNewAdSet={shareNewAdSet}
+                            setShareNewAdSet={setShareNewAdSet}
                             setNewAdSetName={setNewAdSetName}
+                            newAdSetSettings={effectiveAdSetVariant?.newAdSetSettings || null}
+                            setNewAdSetSettings={setNewAdSetSettings}
                             showDuplicateCampaignBlock={showDuplicateCampaignBlock}
                             setShowDuplicateCampaignBlock={setShowDuplicateCampaignBlock}
                             duplicateCampaign={duplicateCampaign}
@@ -2159,14 +2234,15 @@ export default function Home() {
                             setVideoThumbs={setVideoThumbs}
                             selectedAdSets={selectedAdSets}
                             setSelectedAdSets={setSelectedAdSets}
-                            duplicateAdSet={duplicateAdSet}
+                            duplicateAdSet={effectiveAdSetVariant?.duplicateAdSet || ""}
                             setDuplicateAdSet={setDuplicateAdSet}
+                            showDuplicateBlock={showDuplicateBlock}
                             campaigns={campaigns}
                             selectedCampaign={selectedCampaign}
                             setSelectedCampaign={setSelectedCampaign}
                             selectedAdAccount={selectedAdAccount}
                             setSelectedAdAccount={setSelectedAdAccount}
-                            adSets={adSets}
+                            adSets={effectiveAdSetVariant?.adSets || adSets}
                             copyTemplates={adAccountSettings.copyTemplates || {}}
                             defaultTemplateName={adAccountSettings.defaultTemplateName || ""}
                             selectedTemplate={selectedTemplate}
@@ -2189,8 +2265,11 @@ export default function Home() {
                             setProductExtensionProductCatalogId={setProductExtensionProductCatalogId}
                             selectedForm={selectedForm}
                             setSelectedForm={setSelectedForm}
-                            newAdSetName={newAdSetName}
+                            newAdSetName={effectiveAdSetVariant?.newAdSetName || ""}
+                            shareNewAdSet={shareNewAdSet}
                             setNewAdSetName={setNewAdSetName}
+                            newAdSetSettings={effectiveAdSetVariant?.newAdSetSettings || null}
+                            setNewAdSetSettings={setNewAdSetSettings}
                             launchPaused={launchPaused}
                             setLaunchPaused={setLaunchPaused}
                             discloseAiMedia={discloseAiMedia}
@@ -2286,8 +2365,8 @@ export default function Home() {
                                 fileGroups={fileGroups}
                                 setFileGroups={setFileGroups}
                                 selectedAdSets={selectedAdSets}
-                                adSets={adSets}
-                                duplicateAdSet={duplicateAdSet}
+                                adSets={effectiveAdSetVariant?.adSets || adSets}
+                                duplicateAdSet={effectiveAdSetVariant?.duplicateAdSet || ""}
                                 selectedFiles={selectedFiles}
                                 setSelectedFiles={setSelectedFiles}
                                 selectedIgOrganicPosts={selectedIgOrganicPosts}

@@ -10,11 +10,18 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import PropTypes from "prop-types";
 import { Loader2, CheckCircle2, AlertTriangle } from "lucide-react";
 import { creativeApi } from "@/lib/creativeApi";
+import { toast } from "sonner";
 
 const POLL_MS = 2000;
 const JobsContext = createContext(null);
 const ACTIVE = (status) => status === "queued" || status === "running" || status == null;
 const millis = (value) => value ? new Date(value).getTime() : 0;
+
+export function jobOutcome(job) {
+  if (job.status === "failed") return "failed";
+  if (job.status !== "completed") return null;
+  return (Array.isArray(job.result?.errors) && job.result.errors.length) || job.result?.failed > 0 ? "failed" : "completed";
+}
 
 function normalizeJob(job) {
   return { ...job, executionStartedAt: job.startedAt, startedAt: millis(job.createdAt), finishedAt: millis(job.completedAt),
@@ -22,7 +29,7 @@ function normalizeJob(job) {
       accountName: job.accountName, productName: job.productName } };
 }
 
-export function JobsProvider({ children }) {
+export function JobsProvider({ children, userId }) {
   // The database is the source of truth, including after a browser refresh.
   const [jobs, setJobs] = useState({});
   const [historyLoading, setHistoryLoading] = useState(true);
@@ -31,7 +38,39 @@ export function JobsProvider({ children }) {
   const jobsRef = useRef(jobs);
   const olderLoaded = useRef(false);
   const loadingOlder = useRef(false);
+  const previousStatuses = useRef({});
+  const [readResults, setReadResults] = useState(() => {
+    try { return new Set(JSON.parse(localStorage.getItem(`cs-read-jobs:${userId}`) || "[]")); } catch { return new Set(); }
+  });
   jobsRef.current = jobs;
+
+  const resultKey = (job) => `${job.id}:${jobOutcome(job)}`;
+  const unreadResults = Object.values(jobs).filter((job) =>
+    jobOutcome(job) && !readResults.has(resultKey(job)));
+  const unreadStatus = unreadResults.some((job) => jobOutcome(job) === "failed") ? "failed" : unreadResults.length ? "completed" : null;
+  const markResultsRead = useCallback(() => {
+    setReadResults((current) => {
+      const next = new Set(current);
+      for (const job of Object.values(jobs)) {
+        if (jobOutcome(job)) next.add(`${job.id}:${jobOutcome(job)}`);
+      }
+      if (next.size === current.size) return current;
+      try { localStorage.setItem(`cs-read-jobs:${userId}`, JSON.stringify([...next])); } catch { /* Keep session state. */ }
+      return next;
+    });
+  }, [jobs, userId]);
+
+  useEffect(() => {
+    for (const job of Object.values(jobs)) {
+      const previous = previousStatuses.current[job.id];
+      if (previous && ACTIVE(previous) && (job.status === "failed" || job.status === "completed")) {
+        const description = describeJob(job);
+        if (jobOutcome(job) === "failed") toast.error(description.title, { description: description.detail, id: `job:${job.id}` });
+        else toast.success(description.title, { description: description.detail, id: `job:${job.id}` });
+      }
+      previousStatuses.current[job.id] = job.status || "queued";
+    }
+  }, [jobs]);
 
   const mergeJobs = useCallback((rows) => {
     setJobs((previous) => {
@@ -104,10 +143,10 @@ export function JobsProvider({ children }) {
     return () => { cancelled = true; clearInterval(interval); };
   }, [mergeJobs, track]);
 
-  const value = useMemo(() => ({ jobs, track, historyLoading, historyError, nextOffset, loadMore, refreshHistory }), [jobs, track, historyLoading, historyError, nextOffset, loadMore, refreshHistory]);
+  const value = useMemo(() => ({ jobs, track, historyLoading, historyError, nextOffset, loadMore, refreshHistory, unreadStatus, markResultsRead }), [jobs, track, historyLoading, historyError, nextOffset, loadMore, refreshHistory, unreadStatus, markResultsRead]);
   return <JobsContext.Provider value={value}>{children}</JobsContext.Provider>;
 }
-JobsProvider.propTypes = { children: PropTypes.node };
+JobsProvider.propTypes = { children: PropTypes.node, userId: PropTypes.string };
 
 export function useJobs() {
   const ctx = useContext(JobsContext);
@@ -192,7 +231,8 @@ export function describeJob(job) {
       : type === "generate_ad" ? `Completed · ${result.saved ?? 0} ads saved`
       : type === "weekly_strategy" ? `Completed · ${result.ideas_generated ?? 0} concepts`
       : "Completed";
-    return { title, detail, pct: 100 };
+    const errors = Array.isArray(result.errors) ? result.errors.join("; ") : "";
+    return { title, detail: errors ? `${detail} · ${errors}` : detail, pct: 100 };
   }
   if (job.status === "failed") return { title, detail: job.error || "failed", pct: null };
 

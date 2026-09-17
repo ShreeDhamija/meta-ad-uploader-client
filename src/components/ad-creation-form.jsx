@@ -96,7 +96,7 @@ const NOOP = () => { };
 const META_AD_CREATION_ACTION_REQUIRED = "META_AD_CREATION_ACTION_REQUIRED";
 const META_ACTION_REQUIRED_MESSAGE = "Meta requires you to take certain steps to continue ad creation";
 const TEMPLATE_LINK_SYNC_USER_ID = "929470643071391";
-const PIXEL_TRACKING_FORM_ALLOWED_USER_IDS = ["10236978990363167", "10234447959963619", "10162737276661695", "10165258246808665", "10163704737102804"];
+const PIXEL_TRACKING_FORM_ALLOWED_USER_IDS = ["10236978990363167", "10234447959963619", "10162737276661695", "10165258246808665", "10163704737102804", "28883613861256118"];
 const INSTANT_EXPERIENCE_USER_IDS = ["10236978990363167", "2901368380250453"];
 const LOWERCASE_FILE_NAME_FORMULA_USER_IDS = ["27431350269900471"];
 const AD_SET_NAME_VARIABLE_TEAM_IDS = ["team_1777190523537_hmh1srk8j", "team_1787061148847_j1tmrxprb"];
@@ -122,6 +122,9 @@ const PRE_JOB_RESIZE_TIMEOUT_MS = 2 * 60 * 1000;
 const DUPLICATE_AD_SET_TIMEOUT_MS = 90 * 1000;
 const META_UNSUPPORTED_TEXT_SEPARATOR_PATTERN = /[\u2028\u2029]/;
 const META_UNSUPPORTED_TEXT_SEPARATOR_GLOBAL_PATTERN = /[\u2028\u2029]/g;
+const DOMAIN_LINK_PATTERN = /^(?:https?:\/\/)?(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}(?::\d{1,5})?(?:[/?#]\S*)?$/i;
+
+const isValidDomainLink = (value) => DOMAIN_LINK_PATTERN.test(value.trim());
 
 function sanitizeMetaAdTextOptions(values) {
   const hasUnsupportedSeparator = values.some((value) => typeof value === "string" && META_UNSUPPORTED_TEXT_SEPARATOR_PATTERN.test(value));
@@ -169,6 +172,90 @@ function withTimeout(promise, timeoutMs, timeoutMessage, signal) {
   });
 }
 
+async function duplicateAdSetRequest(adSetId, campaignId, adAccountId, adSetName, signal = null, settings = null) {
+  const response = await axios.post(
+    `${API_BASE_URL}/auth/duplicate-adset`,
+    { adSetId, campaignId, adAccountId, newAdSetName: adSetName, ...(settings ? { settings } : {}) },
+    { withCredentials: true, signal, timeout: DUPLICATE_AD_SET_TIMEOUT_MS },
+  );
+  return response.data.copied_adset_id;
+}
+
+async function prepareSharedAdSetJobs({ jobs, defaultSnapshot, enabled, duplicate, signal }) {
+  const newAdSetJobs = jobs.filter((job) => job.formData.duplicateAdSet);
+  if (!enabled || newAdSetJobs.length === 0) return { jobs, createdAdSet: null };
+
+  // Take a private copy before the first await. Default need not have an ad job.
+  const defaults = structuredClone(defaultSnapshot || {});
+  const campaignId = defaults.selectedCampaign?.[0];
+  if (!defaults.duplicateAdSet || !campaignId || !defaults.selectedAdAccount) {
+    throw new Error("Configure the new ad set in Default, or choose ‘Create new ad set in each variant’ in Default.");
+  }
+  if ((defaults.newAdSetName || "").length > 400) throw new Error("The new ad set name in Default must be 400 characters or fewer.");
+  const name = (defaults.newAdSetName || "").trim();
+  if (!name) throw new Error("Enter the new ad set name in Default.");
+  const settings = defaults.newAdSetSettings;
+  if (settings && (settings.sourceAdSetId !== defaults.duplicateAdSet ||
+    settings.campaignId !== campaignId || settings.adAccountId !== defaults.selectedAdAccount)) {
+    throw new Error("Default’s edited ad set settings belong to another selection. Reopen Edit setup.");
+  }
+  for (const job of newAdSetJobs) {
+    const form = job.formData;
+    if (form.selectedAdAccount !== defaults.selectedAdAccount ||
+      form.selectedCampaign?.length !== 1 || form.selectedCampaign[0] !== campaignId ||
+      form.duplicateAdSet !== defaults.duplicateAdSet) {
+      throw new Error(`${job.variantName}: select the same campaign and source ad set as Default, or choose ‘Create new ad set in each variant’ in Default.`);
+    }
+  }
+  const source = defaults.adSets?.find((adSet) => adSet.id === defaults.duplicateAdSet);
+  if (!source) throw new Error("Refresh Default’s ad sets and select the source ad set again.");
+
+  const changes = settings?.changes;
+  const overrides = changes && Object.keys(changes).length ? {
+    ...changes,
+    ...(changes.budgetAmount !== undefined ? { budgetMode: settings.defaults?.budget?.mode } : {}),
+  } : null;
+  const endTime = changes?.endTime ?? settings?.defaults?.endTime ?? source.end_time;
+  const startTime = changes?.startTime ?? settings?.defaults?.startTime ?? source.start_time;
+  if (signal?.aborted) throw new DOMException("Shared ad set creation cancelled.", "AbortError");
+  const newAdSetId = await duplicate(defaults.duplicateAdSet, campaignId, defaults.selectedAdAccount, name, signal, overrides);
+  if (signal?.aborted) throw new DOMException("Shared ad set creation cancelled.", "AbortError");
+  if (typeof newAdSetId !== "string" || !newAdSetId.trim()) {
+    throw new Error("No new ad set ID was returned. Check Ads Manager before trying again.");
+  }
+  const createdAdSet = {
+    ...source,
+    id: newAdSetId,
+    name,
+    campaignId,
+    ...(endTime !== undefined ? { end_time: endTime || null } : {}),
+    ...(startTime !== undefined ? { start_time: startTime || null } : {}),
+    totalAds: 0,
+    spend: 0,
+  };
+  return {
+    createdAdSet,
+    sourceAdSetId: defaults.duplicateAdSet,
+    jobs: jobs.map((job) => {
+      if (!job.formData.duplicateAdSet) return job;
+      const form = job.formData;
+      return {
+        ...job,
+        formData: {
+          ...form,
+          selectedAdSets: [newAdSetId],
+          duplicateAdSet: "",
+          newAdSetName: "",
+          newAdSetSettings: null,
+          adSetDisplayName: name,
+          adSets: [...(form.adSets || []).filter((adSet) => adSet.id !== newAdSetId), structuredClone(createdAdSet)],
+          adNameFormulaV2: form.adNameFormulaV2 ? { ...form.adNameFormulaV2, adSetNameContext: name } : null,
+        },
+      };
+    }),
+  };
+}
+
 function formatAdSetEndTime(endTime) {
   const date = new Date(endTime);
   if (Number.isNaN(date.getTime())) return endTime;
@@ -179,10 +266,13 @@ function formatAdSetEndTime(endTime) {
   }).format(date);
 }
 
-function getAdSetTimingIssue({ selectedAdSets = [], duplicateAdSet, adSets = [], adScheduleEndTime }) {
+function getAdSetTimingIssue({ selectedAdSets = [], duplicateAdSet, adSets = [], adScheduleEndTime, newAdSetSettings }) {
   const selectedIds = duplicateAdSet ? [duplicateAdSet] : selectedAdSets;
   const selectedAdSetsWithEndTime = selectedIds
     .map((id) => adSets.find((adSet) => adSet.id === id))
+    .map((adSet) => duplicateAdSet && newAdSetSettings?.sourceAdSetId === duplicateAdSet
+      ? { ...adSet, end_time: newAdSetSettings.changes?.endTime ?? newAdSetSettings.defaults?.endTime ?? adSet?.end_time }
+      : adSet)
     .filter((adSet) => adSet?.end_time)
     .map((adSet) => ({
       adSet,
@@ -195,7 +285,7 @@ function getAdSetTimingIssue({ selectedAdSets = [], duplicateAdSet, adSets = [],
   if (endedAdSet) {
     return {
       type: "ended",
-      message: `Ad set end date is ${formatAdSetEndTime(endedAdSet.adSet.end_time)}, it has already ended. Select a different ad set`,
+      message: `Ad set end date is ${formatAdSetEndTime(endedAdSet.adSet.end_time)}, it has already ended. ${duplicateAdSet ? "Choose a new end date in Edit setup" : "Select a different ad set"}`,
     };
   }
 
@@ -1192,6 +1282,7 @@ export default function AdCreationForm({
   setSelectedAdSets,
   duplicateAdSet,
   setDuplicateAdSet,
+  showDuplicateBlock,
   campaigns,
   selectedCampaign,
   setSelectedCampaign,
@@ -1221,7 +1312,10 @@ export default function AdCreationForm({
   selectedForm,
   setSelectedForm,
   newAdSetName,
+  shareNewAdSet = true,
+  newAdSetSettings,
   setNewAdSetName,
+  setNewAdSetSettings,
   launchPaused,
   setLaunchPaused,
   discloseAiMedia,
@@ -1368,6 +1462,7 @@ export default function AdCreationForm({
   const [isLinkPagesOpen, setIsLinkPagesOpen] = useState(false);
   const [publishPending, setPublishPending] = useState(false);
   const [isQueueingJobs, setIsQueueingJobs] = useState(false);
+  const queueingJobsRef = useRef(false);
   const [draftMenuOpen, setDraftMenuOpen] = useState(false);
   const [draftName, setDraftName] = useState("");
   const [savingDraft, setSavingDraft] = useState(false);
@@ -1380,6 +1475,7 @@ export default function AdCreationForm({
   const draftSaveAbortControllerRef = useRef(null);
   const [draftsModalOpen, setDraftsModalOpen] = useState(false);
   const [isPagesLoading, setIsPagesLoading] = useState(false);
+  const [delayedInvalidLink, setDelayedInvalidLink] = useState("");
   // const [isPostSelectorOpen, setIsPostSelectorOpen] = useState(false)
   const [linkCustomStates, setLinkCustomStates] = useState({}); // Track which carousel links are custom
   const [instantExperiences, setInstantExperiences] = useState([]);
@@ -1401,6 +1497,13 @@ export default function AdCreationForm({
   const [isJobTrackerExpanded, setIsJobTrackerExpanded] = useState(true);
   const [completedJobs, setCompletedJobs] = useState([]);
   const [hasStartedAnyJob, setHasStartedAnyJob] = useState(false);
+  const jobListRef = useRef(null);
+
+  useEffect(() => {
+    const list = jobListRef.current?.querySelector("[data-radix-scroll-area-viewport]");
+    if (list) list.scrollTop = list.scrollHeight;
+  }, [jobQueue.length, completedJobs.length, currentJob?.id, isJobTrackerExpanded, hasStartedAnyJob]);
+
   const [currentAbortController, setCurrentAbortController] = useState(null);
   const isInPromisePhase = useRef(false); // ADD THIS
   const currentJobIdRef = useRef(null); // ADD THIS
@@ -1647,6 +1750,8 @@ export default function AdCreationForm({
   const S3_UPLOAD_THRESHOLD = 1 * 1024 * 1024; // 40 MB
   const [leadgenForms, setLeadgenForms] = useState([]);
   const [loadingForms, setLoadingForms] = useState(false);
+  const [leadFormOpen, setLeadFormOpen] = useState(false);
+  const [leadFormSearch, setLeadFormSearch] = useState("");
 
   // Partnership Ads State
   const [openPartnerSelector, setOpenPartnerSelector] = useState(false);
@@ -1795,7 +1900,7 @@ export default function AdCreationForm({
   // Extra ungrouped media or posts must keep their explicit variant assignments.
   const isSingleGroupSplit = useMemo(() => {
     if (!(isCarouselAd || enablePlacementCustomization || isFlexLikeAdType) || fileGroups.length !== 1 ||
-        importedPosts.length > 0 || selectedIgOrganicPosts.length > 0) return false;
+      importedPosts.length > 0 || selectedIgOrganicPosts.length > 0) return false;
     const mediaIds = [
       ...files.map(getFileId),
       ...driveFiles.map((file) => file.id),
@@ -1809,6 +1914,7 @@ export default function AdCreationForm({
 
   const liveVariantSnapshot = useMemo(
     () => ({
+      adName,
       headlines,
       descriptions,
       messages,
@@ -1824,7 +1930,9 @@ export default function AdCreationForm({
       selectedAdSets,
       adSets,
       duplicateAdSet,
+      showDuplicateBlock,
       newAdSetName,
+      newAdSetSettings,
       pageId,
       instagramAccountId,
       selectedShopDestination,
@@ -1849,6 +1957,7 @@ export default function AdCreationForm({
       pixelTrackingOverride,
     }),
     [
+      adName,
       headlines,
       descriptions,
       messages,
@@ -1864,7 +1973,9 @@ export default function AdCreationForm({
       selectedAdSets,
       adSets,
       duplicateAdSet,
+      showDuplicateBlock,
       newAdSetName,
+      newAdSetSettings,
       pageId,
       instagramAccountId,
       selectedShopDestination,
@@ -1892,10 +2003,21 @@ export default function AdCreationForm({
 
   const getVariantState = useCallback(
     (variantId) => {
-      if (variantId === activeVariantId) return liveVariantSnapshot;
-      return variants.find((variant) => variant.id === variantId)?.snapshot || null;
+      const snapshot = variantId === activeVariantId ? liveVariantSnapshot : variants.find((variant) => variant.id === variantId)?.snapshot || null;
+      const defaultSnapshot = activeVariantId === "default" ? liveVariantSnapshot : variants.find((variant) => variant.id === "default")?.snapshot;
+      if (!shareNewAdSet || variants.length <= 1 || !(snapshot?.showDuplicateBlock ?? Boolean(snapshot?.duplicateAdSet))) return snapshot;
+      const sourceAdSet = defaultSnapshot?.adSets?.find((adSet) => adSet.id === defaultSnapshot?.duplicateAdSet);
+      return {
+        ...snapshot,
+        duplicateAdSet: defaultSnapshot?.duplicateAdSet || "",
+        adSets: sourceAdSet
+          ? [...(snapshot.adSets || []).filter((adSet) => adSet.id !== sourceAdSet.id), sourceAdSet]
+          : snapshot.adSets,
+        newAdSetName: defaultSnapshot?.newAdSetName || "",
+        newAdSetSettings: defaultSnapshot?.newAdSetSettings || null,
+      };
     },
-    [activeVariantId, liveVariantSnapshot, variants],
+    [activeVariantId, liveVariantSnapshot, variants, shareNewAdSet],
   );
 
   const hasMediaInFormData = useCallback(
@@ -2136,6 +2258,7 @@ export default function AdCreationForm({
       return {
         id: variant.id,
         name: variant.name,
+        adName: snapshot.adNameFormulaV2?.rawInput || snapshot.adName || "",
         campaignNames,
         adSetNames,
         pageName: selectedPage?.name || snapshot.pageId || "—",
@@ -2190,6 +2313,10 @@ export default function AdCreationForm({
       };
 
       if (variantId === activeVariantId) {
+        if (field === "adName") {
+          setAdName(value);
+          setAdNameFormulaV2({ rawInput: value, overrideImportedPostName: true });
+        }
         if (field === "messages") setMessages((current) => updateIndexedValue(current));
         if (field === "headlines") setHeadlines((current) => updateIndexedValue(current));
         if (field === "descriptions") setDescriptions((current) => updateIndexedValue(current));
@@ -2208,8 +2335,11 @@ export default function AdCreationForm({
 
           const nextSnapshot = {
             ...currentSnapshot,
-            [field]: updateIndexedValue(currentSnapshot[field]),
+            [field]: field === "adName" ? value : updateIndexedValue(currentSnapshot[field]),
           };
+          if (field === "adName") {
+            nextSnapshot.adNameFormulaV2 = { rawInput: value, overrideImportedPostName: true };
+          }
           if (field === "link") {
             nextSnapshot.showCustomLink = true;
             if (index === 0) nextSnapshot.customLink = value;
@@ -2222,6 +2352,8 @@ export default function AdCreationForm({
     [
       activeVariantId,
       getVariantState,
+      setAdName,
+      setAdNameFormulaV2,
       setCustomLink,
       setDescriptions,
       setHeadlines,
@@ -2313,6 +2445,7 @@ export default function AdCreationForm({
         selectedAdSets: [...(variantState.selectedAdSets || [])],
         duplicateAdSet: variantState.duplicateAdSet || "",
         newAdSetName: variantState.newAdSetName || "",
+        newAdSetSettings: variantState.newAdSetSettings ? JSON.parse(JSON.stringify(variantState.newAdSetSettings)) : null,
         pageId: variantState.pageId || "",
         instagramAccountId: variantState.instagramAccountId || "",
         selectedAdAccount: variantState.selectedAdAccount || "",
@@ -2400,7 +2533,7 @@ export default function AdCreationForm({
   const addCompletedJob = useCallback((completedJob) => {
     setCompletedJobs((prev) => {
       const updated = [...prev, completedJob];
-      return updated.map((j, i) => (i < updated.length - 3 ? { ...j, formData: null } : j));
+      return updated.map((j, i) => (i < updated.length - 3 ? { ...j, formData: null, sharedAdSetJob: null } : j));
     });
   }, []);
 
@@ -2423,6 +2556,7 @@ export default function AdCreationForm({
       setSelectedAdSets(d.selectedAdSets || []);
       setDuplicateAdSet(d.duplicateAdSet || "");
       setNewAdSetName(d.newAdSetName || "");
+      setNewAdSetSettings(d.newAdSetSettings || null);
       setPageId(d.pageId || "");
       setInstagramAccountId(d.instagramAccountId || "");
 
@@ -2501,6 +2635,7 @@ export default function AdCreationForm({
       setLink,
       setMessages,
       setNewAdSetName,
+      setNewAdSetSettings,
       setPageId,
       setPartnerFbPageId,
       setPartnerIgAccountId,
@@ -2592,12 +2727,30 @@ export default function AdCreationForm({
     selectedIgOrganicPosts,
   ]);
 
-  // Add this helper function
-  // Whatever your uploadChunkWithRetry looks like, add signal:
-  async function uploadChunkWithRetry(url, chunk, contentType, partNumber, maxRetries = 3, signal = null) {
+  function waitForUploadRetry(delay, signal) {
+    return new Promise((resolve, reject) => {
+      const cancel = () => {
+        clearTimeout(timer);
+        signal?.removeEventListener("abort", cancel);
+        reject(new DOMException("Cancelled", "AbortError"));
+      };
+      const timer = setTimeout(() => {
+        signal?.removeEventListener("abort", cancel);
+        resolve();
+      }, delay);
+      signal?.addEventListener("abort", cancel, { once: true });
+      if (signal?.aborted) cancel();
+    });
+  }
+
+  async function uploadChunkWithRetry(getUrl, chunk, contentType, partNumber, maxRetries = 6, signal = null) {
+    let rejectedUrl = null;
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       if (signal?.aborted) throw new DOMException("Cancelled", "AbortError");
+      let url;
       try {
+        url = await getUrl(partNumber, rejectedUrl);
+        rejectedUrl = null;
         return await axios.put(url, chunk, {
           headers: { "Content-Type": contentType },
           signal, // This makes axios reject immediately on abort
@@ -2606,8 +2759,13 @@ export default function AdCreationForm({
         if (axios.isCancel(error) || error.name === "AbortError" || signal?.aborted) {
           throw new DOMException("Cancelled", "AbortError");
         }
-        if (attempt === maxRetries) throw error;
-        await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
+        const status = error.response?.status;
+        // Renew rejected S3 credentials, keeping the same upload ID and part.
+        if (status === 403 && url) rejectedUrl = url;
+        const retryable = !status || [403, 408, 429].includes(status) || status >= 500;
+        if (!retryable || attempt === maxRetries) throw error;
+        const delay = Math.min(1000 * 2 ** (attempt - 1), 30000) + Math.random() * 1000;
+        await waitForUploadRetry(delay, signal);
       }
     }
   }
@@ -2673,55 +2831,87 @@ export default function AdCreationForm({
           region,
         };
 
-        const urlsResponse = await axios.post(`${API_BASE_URL}/auth/s3/get-upload-urls`, urlsPayload, { withCredentials: true, signal });
-
-        const presignedUrls = urlsResponse.data.parts;
-
-        if (!presignedUrls || !Array.isArray(presignedUrls)) {
-          console.error("❌ Invalid presigned URLs response:", urlsResponse.data);
-          throw new Error("Invalid presigned URLs response");
-        }
-
-        let uploadedChunksCount = 0;
-        const chunkConcurrency = uploadAttempt > 1 ? 1 : 5;
-        const limit = pLimit(chunkConcurrency);
-
-        const uploadPromises = presignedUrls.map((part, index) => {
-          const { partNumber, url } = part;
-          const start = (partNumber - 1) * CHUNK_SIZE;
-          const end = start + CHUNK_SIZE;
-          const chunk = file.slice(start, end);
-
-          return limit(async () => {
-            try {
-              const uploadResponse = await uploadChunkWithRetry(url, chunk, file.type, partNumber, 3, signal);
-              // Only call progress callback on first attempt to avoid double-counting
-              if (onChunkUploaded && uploadAttempt === 1) {
-                uploadedChunksCount++;
-                onChunkUploaded();
+        const chunkController = new AbortController();
+        const cancelChunks = () => chunkController.abort();
+        signal?.addEventListener("abort", cancelChunks, { once: true });
+        if (signal?.aborted) cancelChunks();
+        let completedParts;
+        try {
+          let partUrls = new Map();
+          let urlsFetchedAt = 0;
+          let refreshPromise = null;
+          const getPartUrl = async (partNumber, rejectedUrl) => {
+            // The server signs URLs for 10 minutes. Refresh before queued parts
+            // reach that deadline; concurrent workers share one refresh request.
+            if (!partUrls.size || Date.now() - urlsFetchedAt >= 8 * 60 * 1000 ||
+                (rejectedUrl && partUrls.get(partNumber) === rejectedUrl)) {
+              if (!refreshPromise) {
+                refreshPromise = (async () => {
+                  const requestedAt = Date.now();
+                  const response = await axios.post(`${API_BASE_URL}/auth/s3/get-upload-urls`, urlsPayload, {
+                    withCredentials: true,
+                    signal: chunkController.signal,
+                  });
+                  const parts = response.data.parts;
+                  if (!Array.isArray(parts) || parts.length !== totalChunks ||
+                      parts.some((part, index) => part.partNumber !== index + 1 || !part.url)) {
+                    throw new Error("Invalid presigned URLs response");
+                  }
+                  partUrls = new Map(parts.map((part) => [part.partNumber, part.url]));
+                  urlsFetchedAt = requestedAt;
+                })().finally(() => { refreshPromise = null; });
               }
-
-              const etag = uploadResponse.headers.etag;
-              if (!etag) {
-                console.error(`❌ No ETag received for chunk ${partNumber}`);
-                throw new Error(`No ETag received for part ${partNumber}`);
-              }
-
-              const cleanEtag = etag.replace(/"/g, "");
-              return { PartNumber: partNumber, ETag: cleanEtag };
-            } catch (chunkError) {
-              console.error(`❌ Error uploading chunk ${partNumber}:`, {
-                error: chunkError.message,
-                status: chunkError.response?.status,
-                statusText: chunkError.response?.statusText,
-                responseData: chunkError.response?.data,
-              });
-              throw chunkError;
+              await refreshPromise;
             }
-          });
-        });
+            return partUrls.get(partNumber);
+          };
 
-        const completedParts = await Promise.all(uploadPromises);
+          const chunkConcurrency = uploadAttempt > 1 ? 1 : 5;
+          const limit = pLimit(chunkConcurrency);
+
+          const uploadPromises = Array.from({ length: totalChunks }, (_, index) => {
+            const partNumber = index + 1;
+            const start = (partNumber - 1) * CHUNK_SIZE;
+            const end = start + CHUNK_SIZE;
+            const chunk = file.slice(start, end);
+
+            return limit(async () => {
+              try {
+                const uploadResponse = await uploadChunkWithRetry(getPartUrl, chunk, file.type, partNumber, 6, chunkController.signal);
+
+                const etag = uploadResponse.headers.etag;
+                if (!etag) {
+                  console.error(`❌ No ETag received for chunk ${partNumber}`);
+                  throw new Error(`No ETag received for part ${partNumber}`);
+                }
+
+                const cleanEtag = etag.replace(/"/g, "");
+                // Only count a successfully uploaded part once on the first attempt.
+                if (onChunkUploaded && uploadAttempt === 1) onChunkUploaded();
+                return { PartNumber: partNumber, ETag: cleanEtag };
+              } catch (chunkError) {
+                console.error(`❌ Error uploading chunk ${partNumber}:`, {
+                  error: chunkError.message,
+                  status: chunkError.response?.status,
+                  statusText: chunkError.response?.statusText,
+                  responseData: chunkError.response?.data,
+                });
+                throw chunkError;
+              }
+            });
+          });
+
+          try {
+            completedParts = await Promise.all(uploadPromises);
+          } catch (error) {
+            // Stop active PUTs and drain queued work before aborting the S3 upload.
+            chunkController.abort();
+            await Promise.allSettled(uploadPromises);
+            throw error;
+          }
+        } finally {
+          signal?.removeEventListener("abort", cancelChunks);
+        }
 
         const completePayload = {
           key: s3Key,
@@ -2736,12 +2926,13 @@ export default function AdCreationForm({
             completeResponse = await axios.post(`${API_BASE_URL}/auth/s3/complete-upload`, completePayload, { withCredentials: true, signal });
             break;
           } catch (error) {
+            if (axios.isCancel(error) || error.name === "AbortError" || signal?.aborted) throw error;
             if (attempt === 5) {
               throw error;
             }
             const delay = 2000 * Math.pow(2, attempt - 1);
 
-            await new Promise((resolve) => setTimeout(resolve, delay));
+            await waitForUploadRetry(delay, signal);
           }
         }
 
@@ -2784,7 +2975,7 @@ export default function AdCreationForm({
         if (uploadAttempt < maxUploadRetries) {
           const delay = 3000 * uploadAttempt;
 
-          await new Promise((resolve) => setTimeout(resolve, delay));
+          await waitForUploadRetry(delay, signal);
         }
       }
     };
@@ -3042,7 +3233,7 @@ export default function AdCreationForm({
 
   // This useEffect now only handles the UI updates for the progress bar.
   useEffect(() => {
-    if (currentJob) {
+    if (currentJob && currentJob.kind !== "shared-ad-set") {
       setProgress(trackedProgress);
       setProgressMessage(trackedMessage);
     }
@@ -3070,6 +3261,67 @@ export default function AdCreationForm({
     setShowCompletedView(false);
     setJobId(null);
     setIsCancelling(false); // Reset for new job
+
+    if (jobToProcess.kind === "shared-ad-set") {
+      const controller = new AbortController();
+      setCurrentAbortController(controller);
+      currentJobIdRef.current = null;
+      setIsCreatingAds(false);
+      setProgressMessage(`Creating the shared ad set. ${jobToProcess.jobs.length} variant jobs will follow.`);
+      prepareSharedAdSetJobs({
+        jobs: jobToProcess.jobs,
+        defaultSnapshot: jobToProcess.defaultSnapshot,
+        enabled: true,
+        duplicate: duplicateAdSetRequest,
+        signal: controller.signal,
+      }).then((prepared) => {
+        // Replace only this preparation job. Other publish batches keep their order.
+        // Every inserted job has a concrete ID and duplicateAdSet="".
+        setJobQueue((previous) => previous.flatMap((job) => job.id === jobToProcess.id ? prepared.jobs : [job]));
+        addCompletedJob({
+          id: jobToProcess.id,
+          kind: "shared-ad-set",
+          status: "success",
+          completedAt: Date.now(),
+          message: `Created ad set “${prepared.createdAdSet.name}”.`,
+          selectedAdSets: [prepared.createdAdSet.id],
+          selectedAdAccount: jobToProcess.defaultSnapshot.selectedAdAccount,
+        });
+        try {
+          onAdSetCreated?.({
+            newAdSetId: prepared.createdAdSet.id,
+            sourceAdSetId: prepared.sourceAdSetId,
+            name: prepared.createdAdSet.name,
+            campaignId: prepared.createdAdSet.campaignId,
+            endTime: prepared.createdAdSet.end_time,
+          });
+        } catch (error) {
+          console.warn("Could not refresh the local ad set list:", error);
+        }
+      }).catch((error) => {
+        const cancelled = controller.signal.aborted || error.name === "AbortError" || axios.isCancel(error);
+        const apiError = error.response?.data?.error;
+        const detail = typeof apiError === "string" ? apiError : apiError?.message || error.message || "Unknown error";
+        addCompletedJob({
+          id: jobToProcess.id,
+          kind: "shared-ad-set",
+          status: cancelled ? "cancelled" : "error",
+          completedAt: Date.now(),
+          message: cancelled
+            ? "Shared ad set creation cancelled. No variant ads were launched. The ad set may already exist in Ads Manager."
+            : `Could not create shared ad set: ${detail}. No variant ads were launched.`,
+          sharedAdSetJob: jobToProcess,
+        });
+        setJobQueue((previous) => previous.filter((job) => job.id !== jobToProcess.id));
+      }).finally(() => {
+        setShowCompletedView(true);
+        setCurrentJob(null);
+        setIsProcessingQueue(false);
+        setCurrentAbortController(null);
+        setIsCancelling(false);
+      });
+      return;
+    }
 
     handleCreateAd(jobToProcess).catch((err) => {
       // Don't treat cancellation as a critical error
@@ -3103,10 +3355,10 @@ export default function AdCreationForm({
       setIsProcessingQueue(false);
       setIsCancelling(false); // <-- HERE
     });
-  }, [jobQueue, isProcessingQueue, resetProgress]);
+  }, [jobQueue, isProcessingQueue, resetProgress, addCompletedJob, onAdSetCreated]);
 
   useEffect(() => {
-    if (!isProcessingQueue || !currentJob) {
+    if (!isProcessingQueue || !currentJob || currentJob.kind === "shared-ad-set") {
       return; // Do nothing if a job isn't active
     }
 
@@ -4720,14 +4972,7 @@ export default function AdCreationForm({
     headlines,
   ]);
 
-  const duplicateAdSetRequest = async (adSetId, campaignId, adAccountId, adSetName, signal = null) => {
-    const response = await axios.post(
-      `${API_BASE_URL}/auth/duplicate-adset`,
-      { adSetId, campaignId, adAccountId, newAdSetName: adSetName ?? newAdSetName },
-      { withCredentials: true, signal, timeout: DUPLICATE_AD_SET_TIMEOUT_MS },
-    );
-    return response.data.copied_adset_id;
-  };
+
 
   const hasShopAutomaticAdSets = useMemo(() => {
     if (duplicateAdSet) {
@@ -4840,14 +5085,26 @@ export default function AdCreationForm({
     isCatalogueAd && getCatalogueMediaCount() > 0 && [...headlines, ...descriptions].some((value) => /\{\{[^}]+\}\}/.test(value || ""));
   const requiresDestinationValue =
     importedPosts.length === 0 && !isDuplicationMode && !isCatalogueAd && !isProfileDestinationEngagement && !areAllAdSetsOnAd;
+  const destinationLinkValue = showCustomLink ? customLink : link[0] || "";
+  const isDestinationLinkInvalid =
+    requiresDestinationValue && !showPhoneNumberField && destinationType !== "instant_experience" &&
+    destinationLinkValue.trim().length > 0 && !isValidDomainLink(destinationLinkValue);
   const isMissingDestinationValue =
     requiresDestinationValue &&
     (showPhoneNumberField
       ? !phoneNumber.trim()
       : destinationType === "instant_experience"
         ? !instantExperienceId || instantExperiencesLoading || !instantExperiences.some((experience) => experience.id === instantExperienceId)
-        : (!showCustomLink && !link[0]) || (showCustomLink && !customLink.trim()));
+        : !destinationLinkValue.trim() || isDestinationLinkInvalid);
   const hasAdNameFormulaConfigured = Boolean(adNameFormulaV2?.rawInput?.trim());
+
+  useEffect(() => {
+    setDelayedInvalidLink("");
+    if (!isDestinationLinkInvalid) return;
+
+    const timeoutId = setTimeout(() => setDelayedInvalidLink(destinationLinkValue), 500);
+    return () => clearTimeout(timeoutId);
+  }, [destinationLinkValue, isDestinationLinkInvalid]);
 
   useEffect(() => {
     if (supportsInstantExperience || destinationType !== "instant_experience") return;
@@ -5200,6 +5457,11 @@ export default function AdCreationForm({
     [duplicateIndices],
   );
 
+  const hasOverlongHeadlines = !isCarouselAd && (isProfileDestinationEngagement
+    ? headlines.slice(0, profileHeadlineLimit)
+    : headlines
+  ).some((value) => value.length > 255);
+
   const duplicateFileNameWarnings = useMemo(() => {
     const mediaFileEntries = buildMediaFileEntries({
       files,
@@ -5254,6 +5516,7 @@ export default function AdCreationForm({
       selectedAdSets,
       duplicateAdSet,
       newAdSetName,
+      newAdSetSettings,
       pageId,
       instagramAccountId,
       selectedAdAccount,
@@ -5347,9 +5610,18 @@ export default function AdCreationForm({
       toast.error("Please select a shop destination for shop ads");
       throw new Error("Please select a shop destination for shop ads");
     }
+    if (duplicateAdSet && (newAdSetName || "").length > 400) {
+      throw new Error("New ad set names must be 400 characters or fewer.");
+    }
+
     if (duplicateAdSet && (!newAdSetName || newAdSetName.trim() === "")) {
       toast.error("Please enter a name for the new ad set");
       throw new Error("Please enter a name for the new ad set");
+    }
+
+    if (duplicateAdSet && newAdSetSettings && (newAdSetSettings.sourceAdSetId !== duplicateAdSet ||
+      newAdSetSettings.campaignId !== selectedCampaign[0] || newAdSetSettings.adAccountId !== selectedAdAccount)) {
+      throw new Error("The edited ad set settings belong to another selection. Reopen Edit setup and try again.");
     }
 
     // Resize any local image whose width or height exceeds Meta's 9000px limit
@@ -5376,7 +5648,7 @@ export default function AdCreationForm({
     let aspectRatioMap = {};
     // Replace your existing code with this:
     if (enablePlacementCustomization) {
-      setProgressMessage("Analyzing video files...");
+      setProgressMessage("Analyzing files...");
 
       try {
         const allFiles = [...files, ...driveFiles, ...dropboxFiles, ...frameioFiles];
@@ -5666,7 +5938,12 @@ export default function AdCreationForm({
     if (duplicateAdSet) {
       try {
         throwIfCancelled();
-        const newAdSetId = await duplicateAdSetRequest(duplicateAdSet, selectedCampaign[0], selectedAdAccount, newAdSetName.trim(), signal);
+        const changes = newAdSetSettings?.changes;
+        const settings = changes && Object.keys(changes).length ? {
+          ...changes,
+          ...(changes.budgetAmount !== undefined ? { budgetMode: newAdSetSettings.defaults.budget.mode } : {}),
+        } : null;
+        const newAdSetId = await duplicateAdSetRequest(duplicateAdSet, selectedCampaign[0], selectedAdAccount, newAdSetName.trim(), signal, settings);
         finalAdSetIds = [newAdSetId];
         jobData.formData.selectedAdSets = [newAdSetId];
         onAdSetCreated?.({
@@ -5674,6 +5951,7 @@ export default function AdCreationForm({
           sourceAdSetId: duplicateAdSet,
           name: newAdSetName.trim(),
           campaignId: selectedCampaign[0],
+          endTime: newAdSetSettings ? (newAdSetSettings.changes?.endTime ?? newAdSetSettings.defaults?.endTime) : undefined,
         });
       } catch (error) {
         if (signal.aborted || error?.name === "AbortError" || axios.isCancel(error)) {
@@ -6830,6 +7108,15 @@ export default function AdCreationForm({
         const adSetIdsToUse = [...dynamicAdSetIds, ...nonDynamicAdSetIds];
         const jobImportedPostAdNames = jobData.formData.importedPostAdNames || {};
         const resolvePostAdNameForJob = (post, postIndex) => {
+          if (jobData.formData.adNameFormulaV2?.overrideImportedPostName) {
+            return computeAdNameFromFormula(
+              { name: post.ad_name },
+              postIndex,
+              link[0],
+              jobData.formData.adNameFormulaV2,
+              null,
+            );
+          }
           const key = post?.ad_id || post?.post_id || post?.id || "";
           const template = jobImportedPostAdNames[key] !== undefined ? jobImportedPostAdNames[key] : post?.ad_name || "";
 
@@ -8293,7 +8580,7 @@ export default function AdCreationForm({
   const handleQueueJob = async (e) => {
     e.preventDefault();
 
-    if (isQueueingJobs) {
+    if (queueingJobsRef.current) {
       return;
     }
 
@@ -8328,6 +8615,11 @@ export default function AdCreationForm({
         return;
       }
 
+      if (job.formData.duplicateAdSet && (job.formData.newAdSetName || "").length > 400) {
+        toast.error(`${variant.name}: new ad set names must be 400 characters or fewer.`);
+        return;
+      }
+
       if (!job.formData.selectedAdAccount) {
         toast.error(`${variant.name}: please select an ad account`);
         return;
@@ -8358,10 +8650,25 @@ export default function AdCreationForm({
       showVariantLabel: shouldShowVariantLabel,
     }));
 
+    // All form/media snapshots above are captured before any network request.
+    const prepareSharedAdSet = shareNewAdSet && variants.length > 1 && queuedJobs.some((job) => job.formData.duplicateAdSet);
+    const defaultSnapshot = getVariantState("default");
+    queueingJobsRef.current = true;
     setIsQueueingJobs(true);
 
     try {
-      setJobQueue((prev) => [...prev, ...queuedJobs]);
+      // A preparation entry holds the captured batch until its shared target is
+      // ready. It uses the same queue, cancellation and error UI as ad jobs.
+      const jobsToQueue = prepareSharedAdSet ? [{
+        id: uuidv4(),
+        kind: "shared-ad-set",
+        createdAt: Date.now(),
+        jobs: queuedJobs,
+        defaultSnapshot: structuredClone(defaultSnapshot),
+      }] : queuedJobs;
+      setJobQueue((previous) => [...previous, ...jobsToQueue]);
+      setHasStartedAnyJob(true);
+      setIsJobTrackerExpanded(true);
 
       if (!preserveMedia) {
         try {
@@ -8372,7 +8679,11 @@ export default function AdCreationForm({
 
         clearQueuedMedia();
       }
+    } catch (error) {
+      const apiError = error.response?.data?.error;
+      toast.error(typeof apiError === "string" ? apiError : apiError?.message || error.message || "Unable to prepare the shared ad set.");
     } finally {
+      queueingJobsRef.current = false;
       setIsQueueingJobs(false);
     }
   };
@@ -8387,6 +8698,9 @@ export default function AdCreationForm({
   const hasConfiguredFormSplits = populatedVariantSummaries.some((variant) => variant.id !== "default");
   const shouldScrollVariantPicker = variants.length > 5;
   const formatQueuedJobLabel = (job, prefix) => {
+    if (job.kind === "shared-ad-set") {
+      return `${prefix === "Posting" ? "Creating" : prefix + ": create"} shared ad set “${job.defaultSnapshot.newAdSetName || "New ad set"}” · ${job.jobs.length} variants`;
+    }
     const summary = `${job.adCount} ad${job.adCount !== 1 ? "s" : ""} to ${job.formData.adSetDisplayName}`;
     return job.showVariantLabel && job.variantName ? `${prefix} ${job.variantName}: ${summary}` : `${prefix} ${summary}`;
   };
@@ -8436,7 +8750,11 @@ export default function AdCreationForm({
       selectedFiles.size > 0 ||
       (shouldShowLeadFormSelector && !selectedForm) ||
       (!isCarouselAd && hasDuplicates);
-  const publishDisabled = hasPublishBlockingIssueBeforePage || isAdSetMissing || isPageMissing || Boolean(adSetTimingIssue);
+  const hasOverlongAdSetName = variantsToValidate.some((variant) => {
+    const snapshot = getVariantState(variant.id);
+    return snapshot?.duplicateAdSet && (snapshot.newAdSetName || "").length > 400;
+  });
+  const publishDisabled = hasOverlongAdSetName || hasOverlongHeadlines || hasPublishBlockingIssueBeforePage || isAdSetMissing || isPageMissing || Boolean(adSetTimingIssue);
 
   const showImportedPostMode = isDuplicationMode && importedPosts.length > 0;
   const importedSafeIndex = showImportedPostMode ? Math.min(activeImportedPostIndex, importedPosts.length - 1) : 0;
@@ -8559,7 +8877,7 @@ export default function AdCreationForm({
               </div>
 
               {/* Jobs List */}
-              <div className="flex-1 overflow-y-auto">
+              <ScrollArea ref={jobListRef} className="flex-1 min-h-0" viewportClassName="max-h-[516px]">
                 {/* Completed Jobs */}
 
                 {completedJobs.map((job) => {
@@ -8650,7 +8968,7 @@ export default function AdCreationForm({
                                   className="max-w-[320px] rounded-xl border border-gray-200 bg-white p-3 text-xs text-gray-900 shadow-lg"
                                 >
                                   <div className="space-y-2">
-                                    <p className="font-semibold">View Ads Created</p>
+                                    <p className="font-semibold">{job.kind === "shared-ad-set" ? "View Shared Ad Set" : "View Ads Created"}</p>
                                     {successfulAdNames.length > 0 ? (
                                       <ul className="ml-3 list-disc space-y-1">
                                         {successfulAdNames.map((name, index) => (
@@ -8658,12 +8976,24 @@ export default function AdCreationForm({
                                         ))}
                                       </ul>
                                     ) : (
-                                      <p className="text-gray-500">Ad names unavailable</p>
+                                      <p className="text-gray-500">{job.kind === "shared-ad-set" ? "Open the shared ad set in Ads Manager." : "Ad names unavailable"}</p>
                                     )}
                                   </div>
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
+                          )}
+
+                          {job.sharedAdSetJob && (
+                            <button type="button" title="Retry shared ad set and variant batch"
+                              className="text-gray-500 hover:text-blue-500 transition-colors p-1"
+                              onClick={() => {
+                                setJobQueue((previous) => [...previous, { ...job.sharedAdSetJob, id: uuidv4() }]);
+                                setCompletedJobs((previous) => previous.filter((entry) => entry.id !== job.id));
+                                setIsJobTrackerExpanded(true);
+                              }}>
+                              <RotateCcw className="h-4 w-4" />
+                            </button>
                           )}
 
                           {(job.status === "error" || job.status === "partial-success") && job.formData && (
@@ -8877,7 +9207,7 @@ export default function AdCreationForm({
                     </button>
                   </div>
                 ))}
-              </div>
+              </ScrollArea>
             </div>
           )}
         </div>
@@ -9856,6 +10186,7 @@ export default function AdCreationForm({
                           {messages.slice(0, !isCarouselAd && isProfileDestinationEngagement ? profilePrimaryTextLimit : messages.length).map((value, index) => (
                             <div key={index} className={`flex items-start gap-2 ${isCarouselAd && applyTextToAllCards && index > 0 ? "hidden" : ""}`}>
                               <div className="flex flex-col w-full">
+                                {isCarouselAd && <span className="mb-1 text-xs text-gray-500">{applyTextToAllCards ? "All cards" : `Card ${index + 1}`}</span>}
                                 {isCatalogueAd ? (
                                   <CatalogueVariableField
                                     value={value}
@@ -9974,6 +10305,7 @@ export default function AdCreationForm({
                             className={`flex items-center gap-2 ${isCarouselAd && applyHeadlinesToAllCards && index > 0 ? "hidden" : ""}`}
                           >
                             <div className="flex flex-col w-full">
+                              {isCarouselAd && <span className="mb-1 text-xs text-gray-500">{applyHeadlinesToAllCards ? "All cards" : `Card ${index + 1}`}</span>}
                               {isCatalogueAd ? (
                                 <CatalogueVariableField
                                   value={value}
@@ -9982,7 +10314,7 @@ export default function AdCreationForm({
                                   }}
                                   minRows={1}
                                   maxRows={10}
-                                  className={`${formTextareaChrome} ${duplicateIndices.headlines.has(index) ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]" : ""
+                                  className={`${formTextareaChrome} ${(duplicateIndices.headlines.has(index) || (!isCarouselAd && value.length > 255)) ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]" : ""
                                     }`}
                                   style={{
                                     scrollbarWidth: "thin",
@@ -10005,7 +10337,7 @@ export default function AdCreationForm({
                                   }}
                                   minRows={1}
                                   maxRows={10}
-                                  className={`${formTextareaChrome} ${duplicateIndices.headlines.has(index) ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]" : ""
+                                  className={`${formTextareaChrome} ${(duplicateIndices.headlines.has(index) || (!isCarouselAd && value.length > 255)) ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]" : ""
                                     }`}
                                   style={{
                                     scrollbarWidth: "thin",
@@ -10014,6 +10346,9 @@ export default function AdCreationForm({
                                   placeholder={isCarouselAd ? `Description for card ${index + 1}` : "Enter headline"}
                                   disabled={!isLoggedIn}
                                 />
+                              )}
+                              {!isCarouselAd && value.length > 255 && (
+                                <p className="text-xs text-red-500 mt-1">Headlines must be 255 characters or fewer.</p>
                               )}
                               {duplicateIndices.headlines.has(index) && (
                                 <p className="text-xs text-red-500 mt-1">Duplicate values can cause errors when making ads</p>
@@ -10789,36 +11124,64 @@ export default function AdCreationForm({
                       </button>
                     </div>
 
-                    <Select
-                      disabled={!isLoggedIn || loadingForms || leadgenForms.length === 0}
-                      value={selectedForm || ""}
-                      onValueChange={(value) => setSelectedForm(value || null)}
-                    >
-                      <SelectTrigger id="leadgen-form" className={formFieldChrome}>
-                        <SelectValue
-                          placeholder={loadingForms ? "Loading forms..." : leadgenForms.length === 0 ? "No forms available" : "Select a form"}
-                        />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white shadow-lg rounded-xl max-h-full p-0 pr-2">
-                        {leadgenForms.map((form) => (
-                          <SelectItem
-                            key={form.id}
-                            value={form.id}
-                            className={cn(
-                              "w-full text-left",
-                              "px-4 py-2 m-1 rounded-xl",
-                              "transition-colors duration-150",
-                              "hover:bg-gray-100 hover:rounded-xl",
-                              "data-[state=selected]:!bg-gray-100 data-[state=selected]:rounded-xl",
-                              "data-[highlighted]:!bg-gray-100 data-[highlighted]:rounded-xl",
-                              selectedForm === form.id && "!bg-gray-100 font-semibold rounded-xl",
-                            )}
-                          >
-                            {form.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Popover open={leadFormOpen} onOpenChange={setLeadFormOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          id="leadgen-form"
+                          disabled={!isLoggedIn || loadingForms || leadgenForms.length === 0}
+                          variant="outline"
+                          role="combobox"
+                          className={cn(formDropdownTriggerChrome, "w-full justify-between px-3 text-sm font-normal")}
+                        >
+                          <span className={cn("truncate", !selectedForm && "text-muted-foreground")}>
+                            {loadingForms ? "Loading forms..." : leadgenForms.length === 0 ? "No forms available" : leadgenForms.find((form) => form.id === selectedForm)?.name || "Select a form"}
+                          </span>
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        className="min-w-[--radix-popover-trigger-width] w-auto !max-w-none p-0 bg-white shadow-lg rounded-2xl"
+                        align="start"
+                        sideOffset={4}
+                        side="bottom"
+                        avoidCollisions={false}
+                        style={{ minWidth: "var(--radix-popover-trigger-width)", width: "auto" }}
+                      >
+                        <Command filter={() => 1} loop={false} value="">
+                          <CommandInput
+                            placeholder="Search forms..."
+                            value={leadFormSearch}
+                            onValueChange={setLeadFormSearch}
+                            className="bg-transparent"
+                            wrapperClassName="bg-gray-50 border-gray-200 rounded-[20px]"
+                          />
+                          <CommandList className="max-h-none overflow-hidden rounded-2xl" selectOnFocus={false}>
+                            <ScrollArea viewportClassName="max-h-[350px]">
+                              <CommandGroup>
+                                {leadgenForms.filter((form) => form.name?.toLowerCase().includes(leadFormSearch.toLowerCase())).map((form) => (
+                                  <CommandItem
+                                    key={form.id}
+                                    value={form.id}
+                                    onSelect={() => {
+                                      setSelectedForm(form.id);
+                                      setLeadFormOpen(false);
+                                      setLeadFormSearch("");
+                                    }}
+                                    className={cn(
+                                      "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150 hover:bg-gray-100",
+                                      selectedForm === form.id && "bg-gray-100 font-semibold",
+                                    )}
+                                    data-selected={form.id === selectedForm}
+                                  >
+                                    {form.name}
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </ScrollArea>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                   </div>
                 )}
 
@@ -11312,6 +11675,18 @@ export default function AdCreationForm({
               </div>
             ))}
 
+            {hasOverlongAdSetName && (
+              <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                New ad set names must be 400 characters or fewer. Shorten the name in the affected variant, or in Default when using one new ad set.
+              </div>
+            )}
+
+            {hasOverlongHeadlines && (
+              <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                Headlines must be 255 characters or fewer. Please shorten them before publishing.
+              </div>
+            )}
+
             {!isCarouselAd && hasDuplicates && (
               <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
                 Duplicate values found in your text fields — this can lead to errors when making ads. Please remove duplicates before publishing.
@@ -11355,9 +11730,14 @@ export default function AdCreationForm({
                 </div>
               )}
 
-            {isMissingDestinationValue && (
+            {isMissingDestinationValue && !isDestinationLinkInvalid && (
               <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
                 {showPhoneNumberField ? "Please provide a phone number" : "Please provide a link URL"}
+              </div>
+            )}
+            {isDestinationLinkInvalid && delayedInvalidLink === destinationLinkValue && (
+              <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                {destinationLinkValue} is not a valid URL
               </div>
             )}
             {enablePlacementCustomization && !isCarouselAd && !isFlexLikeAdType && selectedFiles && selectedFiles.size > 1 && (
@@ -11936,10 +12316,11 @@ export default function AdCreationForm({
             <DialogDescription>Quickly compare targeting, copy, destinations, and assigned creative across every variant.</DialogDescription>
           </DialogHeader>
           <div className="min-h-0 flex-1 overflow-auto bg-gray-50/50">
-            <table className={cn("w-full border-separate border-spacing-0 text-left", hasPartnershipVariants ? "min-w-[1280px]" : "min-w-[1120px]")}>
+            <table className={cn("w-full border-separate border-spacing-0 text-left", hasPartnershipVariants ? "min-w-[1472px]" : "min-w-[1312px]")}>
               <thead className="sticky top-0 z-20 bg-gray-100/95 text-[10px] uppercase tracking-wide text-gray-500 backdrop-blur">
                 <tr>
                   <th className="sticky left-0 z-30 w-44 border-b border-r border-gray-200 bg-gray-100 px-[0.9rem] py-3 font-semibold">Variant</th>
+                  <th className="min-w-48 border-b border-gray-200 px-[0.9rem] py-3 font-semibold">Ad Name</th>
                   <th className="w-60 border-b border-gray-200 px-[0.9rem] py-3 font-semibold">Campaign / Ad set</th>
                   <th className="w-48 border-b border-gray-200 px-[0.9rem] py-3 font-semibold">Page / Instagram</th>
                   {hasPartnershipVariants && <th className="w-40 border-b border-gray-200 px-[0.9rem] py-3 font-semibold">Partnership</th>}
@@ -11964,6 +12345,16 @@ export default function AdCreationForm({
                       <p className="mt-1 text-[10px] text-gray-400">
                         {row.mediaItems.length} ad{row.mediaItems.length !== 1 ? "s" : ""}
                       </p>
+                    </td>
+                    <td className="border-b border-gray-200 bg-white px-[0.9rem] py-4">
+                      <div className="group/overview-value flex items-start gap-1">
+                        <p className="flex-1 whitespace-pre-wrap break-words text-xs leading-4 text-gray-800">{row.adName || "—"}</p>
+                        <OverviewInlineEditor
+                          value={row.adName}
+                          onSave={(value) => updateVariantOverviewValue(row.id, "adName", 0, value)}
+                          label="ad name"
+                        />
+                      </div>
                     </td>
                     <td className="border-b border-gray-200 bg-white px-[0.9rem] py-4">
                       <div className="space-y-3">

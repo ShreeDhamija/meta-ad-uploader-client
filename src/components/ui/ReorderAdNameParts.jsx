@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Command, CommandList, CommandItem, CommandGroup } from "@/components/ui/command"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -440,10 +441,8 @@ export default function ReorderAdNameParts({
     if (onFormulaChange) onFormulaChange(newValue)
   }, [onFormulaChange, validateDateFormats, validateVariableNames])
 
-  // ── Detect cursor inside a category-only {{CategoryName}} ──
-  // Returns dropdown config if cursor is inside a {{CategoryName}} block,
-  // or null otherwise. This is how clicking inside a category-only variable
-  // in the input triggers a value picker.
+  // ── Detect cursor inside a custom variable {{CategoryName[:Value]}} ──
+  // Clicking anywhere inside its braces opens the value picker.
 
   const detectInlineCategory = useCallback((cursorPos) => {
     if (!customVariables.length) return null
@@ -464,10 +463,8 @@ export default function ReorderAdNameParts({
 
     const content = inputValue.substring(lastOpen + 2, cursorPos + closeAfter).trim()
 
-    // Must be category-only (no colon) and match a known custom variable
-    if (content.includes(":")) return null
-
-    const matchingCat = customVariables.find(c => c.name === content)
+    const categoryName = content.split(":")[0].trim()
+    const matchingCat = customVariables.find(c => c.name === categoryName)
     if (!matchingCat) return null
 
     const position = getCursorPosition(input, lastOpen)
@@ -859,7 +856,7 @@ export default function ReorderAdNameParts({
         {showSlashDropdown && (
           <div
             ref={slashDropdownRef}
-            className="absolute z-50 w-64"
+            className="absolute z-50 w-[276px]"
             style={{
               top: `${slashDropdownPos.top}px`,
               left: `${slashDropdownPos.left}px`,
@@ -869,26 +866,28 @@ export default function ReorderAdNameParts({
               ref={commandInputRef}
               className="rounded-xl border shadow-md bg-white outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0 [&_*]:outline-none"
             >
-              <CommandList className="outline-none focus:outline-none focus-visible:outline-none">
-                <CommandGroup heading="Pick Variable">
-                  {visibleVariables.map((variable) => (
-                    <CommandItem
-                      key={variable.id}
-                      onSelect={() => handleVariableSelect(variable)}
-                      className="cursor-pointer rounded-lg mx-1 aria-selected:bg-gray-100 focus:outline-none focus:ring-0"
-                      onMouseDown={(e) => e.preventDefault()}
-                    >
-                      <span className="flex items-center">
-                        <span>{variable.label}</span>
-                        {variable.note && (
-                          <span className="text-gray-400 text-xs ml-1">
-                            {variable.note}
-                          </span>
-                        )}
-                      </span>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
+              <CommandList className="max-h-none overflow-hidden outline-none focus:outline-none focus-visible:outline-none">
+                <ScrollArea viewportClassName="max-h-64">
+                  <CommandGroup heading="Pick Variable">
+                    {visibleVariables.map((variable) => (
+                      <CommandItem
+                        key={variable.id}
+                        onSelect={() => handleVariableSelect(variable)}
+                        className="cursor-pointer rounded-lg mx-1 aria-selected:bg-gray-100 focus:outline-none focus:ring-0"
+                        onMouseDown={(e) => e.preventDefault()}
+                      >
+                        <span className="flex items-center">
+                          <span>{variable.label}</span>
+                          {variable.note && (
+                            <span className="text-gray-400 text-xs ml-1">
+                              {variable.note}
+                            </span>
+                          )}
+                        </span>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </ScrollArea>
               </CommandList>
             </Command>
           </div>

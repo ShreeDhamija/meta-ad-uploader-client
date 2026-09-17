@@ -487,6 +487,22 @@ function PostSelectorInline({
         })
     }
 
+    const toggleAllDisplayedAds = (checked) => {
+        setSelectedAdIds(prev => {
+            const next = new Set(prev)
+            displayedAdsetAds.forEach(ad => {
+                if (checked) {
+                    next.add(ad.id)
+                    importedAdsRef.current.set(ad.id, ad)
+                } else {
+                    next.delete(ad.id)
+                    importedAdsRef.current.delete(ad.id)
+                }
+            })
+            return next
+        })
+    }
+
     useEffect(() => {
         if (isLoading || isSearching) return
         onImport(Array.from(importedAdsRef.current.values()))
@@ -1061,6 +1077,18 @@ function PostSelectorInline({
                             </div>
                         )}
                     </div>
+
+                    {viewMode === 'adset' && displayedAdsetAds.length > 0 && !isLoading && (
+                        <label className="flex items-center gap-2 px-3 py-2 text-sm font-medium cursor-pointer">
+                            <Checkbox
+                                checked={displayedAdsetAds.every(ad => selectedAdIds.has(ad.id))
+                                    ? true
+                                    : displayedAdsetAds.some(ad => selectedAdIds.has(ad.id)) ? 'indeterminate' : false}
+                                onCheckedChange={toggleAllDisplayedAds}
+                            />
+                            Select all
+                        </label>
+                    )}
 
                     {ads.length > 0 && (
                         <ScrollArea className="h-[550px] outline-none focus:outline-none">

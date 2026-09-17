@@ -2,7 +2,7 @@
 // retaining their existing API flows.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import PropTypes from "prop-types";
-import { Box, ClipboardList, Download, FileText, Flame, Loader2, Sparkles, ThumbsDown, ThumbsUp, Trash2 } from "lucide-react";
+import { Box, ChevronLeft, ChevronRight, ClipboardList, Download, FileText, Flame, Loader2, Sparkles, ThumbsDown, ThumbsUp, Trash2 } from "lucide-react";
 import pLimit from "p-limit";
 import VisualInspiration from "./VisualInspiration";
 import { creativeApi } from "@/lib/creativeApi";
@@ -11,7 +11,8 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ErrorBanner } from "../ui";
-import { useJobRunner, JobBadge } from "../JobsContext";
+import { useJobRunner } from "../JobsContext";
+import { toast } from "sonner";
 
 const CREATIVITY = [
   { key: "inspired", label: "Inspired (fresh concept)" },
@@ -91,11 +92,21 @@ function useGenerationHistory(productId, kind) {
 
 export default function GenerateView({ ctx }) {
   const { selectedProductId } = ctx;
-  const [mode, setMode] = useState("statics");
+  const [mode, setMode] = useState(() => {
+    try {
+      const saved = localStorage.getItem(`cs-generate-mode:${ctx.userId}`);
+      return MODES.some((item) => item.key === saved) ? saved : "statics";
+    } catch { return "statics"; }
+  });
+  useEffect(() => {
+    if (!ctx.userId) return;
+    try { localStorage.setItem(`cs-generate-mode:${ctx.userId}`, mode); } catch { /* Keep session state. */ }
+  }, [ctx.userId, mode]);
   const [formats, setFormats] = useState([]);
   const [formatsLoading, setFormatsLoading] = useState(true);
   const [items, setItems] = useState([]);
   const [err, setErr] = useState(null);
+  useEffect(() => { if (err) toast.error(err); }, [err]);
   const [generatedLoading, setGeneratedLoading] = useState(false);
   const [nextStaticOffset, setNextStaticOffset] = useState(null);
   const staticRequest = useRef(0);
@@ -116,7 +127,6 @@ export default function GenerateView({ ctx }) {
 
   const [generationMode, setGenerationMode] = useState("manual");
   const [visualSelection, setVisualSelection] = useState(null);
-  const [dismissedJobId, setDismissedJobId] = useState(null);
 
   const [formatSlug, setFormatSlug] = useState("");
   const [creativityMode, setCreativityMode] = useState("inspired");
@@ -175,11 +185,8 @@ export default function GenerateView({ ctx }) {
     onComplete: () => load(selectedProductId),
   });
 
-  const visualJob = useRef(null);
-  visualJob.current = job;
   const handleVisualChange = useCallback((selection) => {
     setVisualSelection(selection);
-    if (visualJob.current?.status === "failed") setDismissedJobId(visualJob.current.id);
     setVariationCount((count) => Math.max(count, selection.conceptReferenceIds.length));
     setErr(null);
   }, []);
@@ -338,7 +345,7 @@ export default function GenerateView({ ctx }) {
           isStatics
           footer={!generationActive && (imageItems.length > 0 || bulkMessage) && <div className="cs-generate-bulk-actions">
             {bulkAction && <label className="mr-auto flex items-center gap-2 text-xs">
-              <input type="checkbox" className="h-4 w-4 accent-[#6c3403]" checked={nextStaticOffset == null && items.length > 0 && items.every((item) => selectedImages.has(item.id))} ref={(node) => { if (node) node.indeterminate = selectedImages.size > 0 && (nextStaticOffset != null || !items.every((item) => selectedImages.has(item.id))); }} onChange={(event) => selectAllImages(event.target.checked)} disabled={bulkBusy || generatedLoading} />
+              <Checkbox className="cs-generate-checkbox" checked={nextStaticOffset == null && items.length > 0 && items.every((item) => selectedImages.has(item.id)) ? true : selectedImages.size > 0 ? "indeterminate" : false} onCheckedChange={(checked) => selectAllImages(checked === true)} disabled={bulkBusy || generatedLoading} />
               Select all <span className="text-stone-500">({selectedImages.size} selected)</span>
             </label>}
             <span role="status" className="text-xs text-stone-500">{bulkBusy && !bulkMessage ? `${bulkAction === "delete" ? "Deleting" : "Downloading"} ${bulkProgress}/${selectedImages.size}…` : bulkMessage}</span>
@@ -400,7 +407,6 @@ export default function GenerateView({ ctx }) {
               </div>
               <div className="mt-auto space-y-3 pt-5">
                 {visualSelection?.conceptReferenceIds.length > variationCount && <p className="text-xs text-amber-800">Increase variations to use all selected concept references.</p>}
-                <JobBadge job={job?.id === dismissedJobId ? null : job} />
                 <button type="button" onClick={runStatics} disabled={bulkBusy || !selectedProductId || !visualSelection?.ready || visualSelection.productId !== selectedProductId || generationActive || visualSelection.conceptReferenceIds.length > variationCount} className="cs-primary-button w-full">
                   {generationMode === "strategist" ? "Plan & Generate Ads" : "Generate Ads"}
                 </button>
@@ -408,7 +414,6 @@ export default function GenerateView({ ctx }) {
             </>
           )}
         >
-          <ErrorBanner message={err} />
           {!selectedProductId ? (
             <WorkspaceEmpty icon={Box} title="Select a product" hint="Choose a brand and product above to configure and generate static ads." />
           ) : formatsLoading || (generatedLoading && imageItems.length === 0) ? (
@@ -750,6 +755,14 @@ function GenerationGrid({ items, rate, selecting, selected, toggle, disabled }) 
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(item);
   }
+  // Match the visual group order, including square/portrait pairs.
+  const previewItems = Array.from(groups.values()).flatMap((group) => [...group].sort((a, b) => Number(a.briefMeta?.aspect_ratio === "9:16") - Number(b.briefMeta?.aspect_ratio === "9:16"))).filter((item) => item.imageUrl);
+  const navigatePreview = (direction) => {
+    setPreview((current) => {
+      const index = previewItems.findIndex((item) => item.id === current?.id);
+      return previewItems[(index + direction + previewItems.length) % previewItems.length] || current;
+    });
+  };
   return (
     <><div className={`cs-generate-gallery ${items.some((item) => item.briefMeta?.pair_id) ? "has-pairs" : ""}`}>
       {Array.from(groups, ([key, group]) => <div key={key} className={group.length > 1 ? "cs-generate-pair" : undefined}>
@@ -764,9 +777,15 @@ function GenerationGrid({ items, rate, selecting, selected, toggle, disabled }) 
       </div>)}
     </div>
     <Dialog open={Boolean(preview)} onOpenChange={(open) => { if (!open) setPreview(null); }}>
-      <DialogContent hideClose disableSlide aria-describedby={undefined} overlayClassName="bg-black/80" className="w-auto max-w-[95vw] gap-0 border-0 bg-transparent p-0 shadow-none outline-none">
+      <DialogContent hideClose disableSlide aria-describedby={undefined} onKeyDown={(event) => {
+        if (event.key === "ArrowLeft" || event.key === "ArrowRight") { event.preventDefault(); navigatePreview(event.key === "ArrowLeft" ? -1 : 1); }
+      }} overlayClassName="bg-black/80" className="w-auto max-w-[95vw] gap-0 border-0 bg-transparent p-0 shadow-none outline-none">
         <DialogTitle className="sr-only">Generated image preview</DialogTitle>
         {preview && <img src={preview.imageUrl} alt={preview.formatSlug || "Generated ad"} className="block max-h-[90dvh] max-w-[95vw] object-contain" />}
+        {previewItems.length > 1 && <>
+          <button type="button" aria-label="Previous image" className="cs-image-preview-nav is-previous" onClick={() => navigatePreview(-1)}><ChevronLeft size={24} /></button>
+          <button type="button" aria-label="Next image" className="cs-image-preview-nav is-next" onClick={() => navigatePreview(1)}><ChevronRight size={24} /></button>
+        </>}
       </DialogContent>
     </Dialog></>
   );

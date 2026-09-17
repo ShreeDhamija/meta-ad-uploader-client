@@ -1319,7 +1319,7 @@ export default function MediaPreview({
                       setGroupVariantMap({});
                       setPostVariantMap({});
                     }}
-                    className="bg-red-500 hover:bg-red-600 text-white rounded-xl mt-0"
+                    className="min-w-[100px] bg-red-500 hover:bg-red-600 text-white rounded-xl mt-0"
                   >
                     Clear All
                   </Button>

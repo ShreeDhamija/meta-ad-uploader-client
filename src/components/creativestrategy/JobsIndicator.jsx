@@ -1,7 +1,7 @@
 // Persistent database-backed history, shared by every creative-strategy view.
 import { useState, useRef, useEffect } from "react";
 import { Loader2, CheckCircle2, AlertTriangle, ChevronDown, History } from "lucide-react";
-import { useJobs, describeJob } from "./JobsContext";
+import { useJobs, describeJob, jobOutcome } from "./JobsContext";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 const ACTIVE = (status) => status === "queued" || status === "running" || status == null;
@@ -9,10 +9,12 @@ const dateLabel = (value) => value ? new Date(value).toLocaleString(undefined, {
 const startedTime = (job) => new Date(job.executionStartedAt || job.createdAt || job.startedAt || 0).getTime();
 
 export default function JobsIndicator() {
-  const { jobs, historyLoading, historyError, nextOffset, loadMore, refreshHistory } = useJobs();
+  const { jobs, historyLoading, historyError, nextOffset, loadMore, refreshHistory, unreadStatus, markResultsRead } = useJobs();
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const trigger = useRef(null);
+
+  useEffect(() => { if (open) markResultsRead(); }, [open, markResultsRead]);
 
   useEffect(() => {
     if (!open) return;
@@ -28,9 +30,9 @@ export default function JobsIndicator() {
   const active = Object.values(jobs).filter((job) => ACTIVE(job.status));
   return <div className="relative" ref={ref}>
     <button ref={trigger} type="button" aria-expanded={open} aria-controls="cs-job-history" onClick={() => { setOpen((value) => !value); if (!open) refreshHistory(); }}
-      className="cs-compact-control flex items-center justify-center gap-2 px-4 text-xs hover:bg-neutral-50 max-md:px-3">
-      {active.length ? <Loader2 className="h-4 w-4 animate-spin text-blue-600" /> : <History className="h-4 w-4 text-[#854413]" />}
-      <span className="font-medium">{active.length ? `${active.length} running` : "Job history"}</span>
+      className={`cs-compact-control cs-job-trigger ${unreadStatus === "failed" ? "has-error" : unreadStatus === "completed" ? "has-success" : ""} flex items-center justify-center gap-2 px-4 text-xs max-md:px-3`}>
+      {unreadStatus === "failed" ? <AlertTriangle className="h-4 w-4" /> : unreadStatus === "completed" ? <CheckCircle2 className="h-4 w-4" /> : active.length ? <Loader2 className="h-4 w-4 animate-spin text-blue-600" /> : <History className="h-4 w-4 text-[#854413]" />}
+      <span className="font-medium">{unreadStatus === "failed" ? "Job error" : unreadStatus === "completed" ? "Job success" : active.length ? `${active.length} running` : "Job history"}</span>
       <ChevronDown className={`h-3.5 w-3.5 text-neutral-400 ${open ? "rotate-180" : ""}`} />
     </button>
     {open && <section id="cs-job-history" aria-label="Job history" className="absolute right-0 mt-2 w-[420px] max-w-[85vw] max-h-[520px] overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-lg p-4 z-50">
@@ -43,8 +45,8 @@ export default function JobsIndicator() {
         {historyError && <div className="text-xs text-red-700">{historyError} <button type="button" onClick={refreshHistory} className="underline">Retry</button></div>}
         {list.map((job) => {
           const description = describeJob(job);
-          const failed = job.status === "failed";
-          const done = job.status === "completed";
+          const failed = jobOutcome(job) === "failed";
+          const done = jobOutcome(job) === "completed";
           return <article key={job.id} className="rounded-xl bg-stone-50 p-3">
             <div className="flex items-start gap-2">
               {done ? <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0 text-emerald-600" /> : failed ? <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-red-600" /> : <Loader2 className="h-4 w-4 mt-0.5 shrink-0 animate-spin text-blue-600" />}

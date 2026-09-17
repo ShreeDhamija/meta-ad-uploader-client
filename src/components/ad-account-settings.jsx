@@ -1,7 +1,9 @@
 "use client"
 
-import { useState, useMemo, useCallback, useEffect } from "react"
+import { useState, useMemo, useCallback, useEffect, useRef } from "react"
 import { toast } from "sonner"
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -11,10 +13,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Check, ChevronsUpDown, RefreshCcw, X, Loader, AlertTriangle, Ban, Pencil } from "lucide-react"
+import { Check, ChevronsUpDown, RefreshCcw, X, CircleX, Loader, AlertTriangle, Ban, Pencil, CircleDollarSign, CalendarClock, Crosshair } from "lucide-react"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { useAuth } from "@/lib/AuthContext"
 import { Input } from "@/components/ui/input"
+import ScheduleDateTimePicker from "@/components/ui/ScheduleDateTimePicker"
 import CogIcon from '@/assets/icons/cog.svg?react';
 import AdAccountIcon from '@/assets/icons/adaccount.svg?react';
 import CampaignIcon from '@/assets/icons/folder.svg?react';
@@ -26,6 +29,9 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 import { useAppData } from "@/lib/AppContext"
 
 
+// Country IDs and display names from the supplied Meta targeting-search response.
+const META_COUNTRIES = [{ "value": "AD", "label": "Andorra" }, { "value": "AE", "label": "United Arab Emirates" }, { "value": "AF", "label": "Afghanistan" }, { "value": "AG", "label": "Antigua" }, { "value": "AI", "label": "Anguilla" }, { "value": "AL", "label": "Albania" }, { "value": "AM", "label": "Armenia" }, { "value": "AN", "label": "Netherlands Antilles" }, { "value": "AO", "label": "Angola" }, { "value": "AQ", "label": "Antarctica" }, { "value": "AR", "label": "Argentina" }, { "value": "AS", "label": "American Samoa" }, { "value": "AT", "label": "Austria" }, { "value": "AU", "label": "Australia" }, { "value": "AW", "label": "Aruba" }, { "value": "AX", "label": "Åland Islands" }, { "value": "AZ", "label": "Azerbaijan" }, { "value": "BA", "label": "Bosnia and Herzegovina" }, { "value": "BB", "label": "Barbados" }, { "value": "BD", "label": "Bangladesh" }, { "value": "BE", "label": "Belgium" }, { "value": "BF", "label": "Burkina Faso" }, { "value": "BG", "label": "Bulgaria" }, { "value": "BH", "label": "Bahrain" }, { "value": "BI", "label": "Burundi" }, { "value": "BJ", "label": "Benin" }, { "value": "BL", "label": "Saint Barthélemy" }, { "value": "BM", "label": "Bermuda" }, { "value": "BN", "label": "Brunei" }, { "value": "BO", "label": "Bolivia" }, { "value": "BQ", "label": "Bonaire, Sint Eustatius and Saba" }, { "value": "BR", "label": "Brazil" }, { "value": "BS", "label": "The Bahamas" }, { "value": "BT", "label": "Bhutan" }, { "value": "BV", "label": "Bouvet Island" }, { "value": "BW", "label": "Botswana" }, { "value": "BY", "label": "Belarus" }, { "value": "BZ", "label": "Belize" }, { "value": "CA", "label": "Canada" }, { "value": "CC", "label": "Cocos (Keeling) Islands" }, { "value": "CD", "label": "Democratic Republic of the Congo" }, { "value": "CF", "label": "Central African Republic" }, { "value": "CG", "label": "Republic of the Congo" }, { "value": "CH", "label": "Switzerland" }, { "value": "CI", "label": "Côte d'Ivoire" }, { "value": "CK", "label": "Cook Islands" }, { "value": "CL", "label": "Chile" }, { "value": "CM", "label": "Cameroon" }, { "value": "CN", "label": "China" }, { "value": "CO", "label": "Colombia" }, { "value": "CR", "label": "Costa Rica" }, { "value": "CV", "label": "Cape Verde" }, { "value": "CW", "label": "Curaçao" }, { "value": "CX", "label": "Christmas Island" }, { "value": "CY", "label": "Cyprus" }, { "value": "CZ", "label": "Czech Republic" }, { "value": "DE", "label": "Germany" }, { "value": "DJ", "label": "Djibouti" }, { "value": "DK", "label": "Denmark" }, { "value": "DM", "label": "Dominica" }, { "value": "DO", "label": "Dominican Republic" }, { "value": "DZ", "label": "Algeria" }, { "value": "EC", "label": "Ecuador" }, { "value": "EE", "label": "Estonia" }, { "value": "EG", "label": "Egypt" }, { "value": "EH", "label": "Western Sahara" }, { "value": "ER", "label": "Eritrea" }, { "value": "ES", "label": "Spain" }, { "value": "ET", "label": "Ethiopia" }, { "value": "FI", "label": "Finland" }, { "value": "FJ", "label": "Fiji" }, { "value": "FK", "label": "Falkland Islands" }, { "value": "FM", "label": "Federated States of Micronesia" }, { "value": "FO", "label": "Faroe Islands" }, { "value": "FR", "label": "France" }, { "value": "GA", "label": "Gabon" }, { "value": "GB", "label": "United Kingdom" }, { "value": "GD", "label": "Grenada" }, { "value": "GE", "label": "Georgia" }, { "value": "GF", "label": "French Guiana" }, { "value": "GG", "label": "Guernsey" }, { "value": "GH", "label": "Ghana" }, { "value": "GI", "label": "Gibraltar" }, { "value": "GL", "label": "Greenland" }, { "value": "GM", "label": "The Gambia" }, { "value": "GN", "label": "Guinea" }, { "value": "GP", "label": "Guadeloupe" }, { "value": "GQ", "label": "Equatorial Guinea" }, { "value": "GR", "label": "Greece" }, { "value": "GS", "label": "South Georgia and the South Sandwich Islands" }, { "value": "GT", "label": "Guatemala" }, { "value": "GU", "label": "Guam" }, { "value": "GW", "label": "Guinea-Bissau" }, { "value": "GY", "label": "Guyana" }, { "value": "HK", "label": "Hong Kong" }, { "value": "HM", "label": "Heard Island and McDonald Islands" }, { "value": "HN", "label": "Honduras" }, { "value": "HR", "label": "Croatia" }, { "value": "HT", "label": "Haiti" }, { "value": "HU", "label": "Hungary" }, { "value": "ID", "label": "Indonesia" }, { "value": "IE", "label": "Ireland" }, { "value": "IL", "label": "Israel" }, { "value": "IM", "label": "Isle of Man" }, { "value": "IN", "label": "India" }, { "value": "IO", "label": "British Indian Ocean Territory" }, { "value": "IQ", "label": "Iraq" }, { "value": "IS", "label": "Iceland" }, { "value": "IT", "label": "Italy" }, { "value": "JE", "label": "Jersey" }, { "value": "JM", "label": "Jamaica" }, { "value": "JO", "label": "Jordan" }, { "value": "JP", "label": "Japan" }, { "value": "KE", "label": "Kenya" }, { "value": "KG", "label": "Kyrgyzstan" }, { "value": "KH", "label": "Cambodia" }, { "value": "KI", "label": "Kiribati" }, { "value": "KM", "label": "Comoros" }, { "value": "KN", "label": "Saint Kitts and Nevis" }, { "value": "KR", "label": "South Korea" }, { "value": "KW", "label": "Kuwait" }, { "value": "KY", "label": "Cayman Islands" }, { "value": "KZ", "label": "Kazakhstan" }, { "value": "LA", "label": "Laos" }, { "value": "LB", "label": "Lebanon" }, { "value": "LC", "label": "St. Lucia" }, { "value": "LI", "label": "Liechtenstein" }, { "value": "LK", "label": "Sri Lanka" }, { "value": "LR", "label": "Liberia" }, { "value": "LS", "label": "Lesotho" }, { "value": "LT", "label": "Lithuania" }, { "value": "LU", "label": "Luxembourg" }, { "value": "LV", "label": "Latvia" }, { "value": "LY", "label": "Libya" }, { "value": "MA", "label": "Morocco" }, { "value": "MC", "label": "Monaco" }, { "value": "MD", "label": "Moldova" }, { "value": "ME", "label": "Montenegro" }, { "value": "MF", "label": "Saint Martin" }, { "value": "MG", "label": "Madagascar" }, { "value": "MH", "label": "Marshall Islands" }, { "value": "MK", "label": "Macedonia" }, { "value": "ML", "label": "Mali" }, { "value": "MM", "label": "Myanmar (Burma)" }, { "value": "MN", "label": "Mongolia" }, { "value": "MO", "label": "Macau" }, { "value": "MP", "label": "Northern Mariana Islands" }, { "value": "MQ", "label": "Martinique" }, { "value": "MR", "label": "Mauritania" }, { "value": "MS", "label": "Montserrat" }, { "value": "MT", "label": "Malta" }, { "value": "MU", "label": "Mauritius" }, { "value": "MV", "label": "Maldives" }, { "value": "MW", "label": "Malawi" }, { "value": "MX", "label": "Mexico" }, { "value": "MY", "label": "Malaysia" }, { "value": "MZ", "label": "Mozambique" }, { "value": "NA", "label": "Namibia" }, { "value": "NC", "label": "New Caledonia" }, { "value": "NE", "label": "Niger" }, { "value": "NF", "label": "Norfolk Island" }, { "value": "NG", "label": "Nigeria" }, { "value": "NI", "label": "Nicaragua" }, { "value": "NL", "label": "Netherlands" }, { "value": "NO", "label": "Norway" }, { "value": "NP", "label": "Nepal" }, { "value": "NR", "label": "Nauru" }, { "value": "NU", "label": "Niue" }, { "value": "NZ", "label": "New Zealand" }, { "value": "OM", "label": "Oman" }, { "value": "PA", "label": "Panama" }, { "value": "PE", "label": "Peru" }, { "value": "PF", "label": "French Polynesia" }, { "value": "PG", "label": "Papua New Guinea" }, { "value": "PH", "label": "Philippines" }, { "value": "PK", "label": "Pakistan" }, { "value": "PL", "label": "Poland" }, { "value": "PM", "label": "Saint Pierre and Miquelon" }, { "value": "PN", "label": "Pitcairn" }, { "value": "PR", "label": "Puerto Rico" }, { "value": "PS", "label": "Palestine" }, { "value": "PT", "label": "Portugal" }, { "value": "PW", "label": "Palau" }, { "value": "PY", "label": "Paraguay" }, { "value": "QA", "label": "Qatar" }, { "value": "RE", "label": "Réunion" }, { "value": "RO", "label": "Romania" }, { "value": "RS", "label": "Serbia" }, { "value": "RU", "label": "Russia" }, { "value": "RW", "label": "Rwanda" }, { "value": "SA", "label": "Saudi Arabia" }, { "value": "SB", "label": "Solomon Islands" }, { "value": "SC", "label": "Seychelles" }, { "value": "SE", "label": "Sweden" }, { "value": "SG", "label": "Singapore" }, { "value": "SH", "label": "Saint Helena" }, { "value": "SI", "label": "Slovenia" }, { "value": "SJ", "label": "Svalbard and Jan Mayen" }, { "value": "SK", "label": "Slovakia" }, { "value": "SL", "label": "Sierra Leone" }, { "value": "SM", "label": "San Marino" }, { "value": "SN", "label": "Senegal" }, { "value": "SO", "label": "Somalia" }, { "value": "SR", "label": "Suriname" }, { "value": "SS", "label": "South Sudan" }, { "value": "ST", "label": "São Tomé and Príncipe" }, { "value": "SV", "label": "El Salvador" }, { "value": "SX", "label": "Sint Maarten" }, { "value": "SY", "label": "Syria" }, { "value": "SZ", "label": "Eswatini" }, { "value": "TC", "label": "Turks and Caicos Islands" }, { "value": "TD", "label": "Chad" }, { "value": "TF", "label": "French Southern Territories" }, { "value": "TG", "label": "Togo" }, { "value": "TH", "label": "Thailand" }, { "value": "TJ", "label": "Tajikistan" }, { "value": "TK", "label": "Tokelau" }, { "value": "TL", "label": "Timor-Leste" }, { "value": "TM", "label": "Turkmenistan" }, { "value": "TN", "label": "Tunisia" }, { "value": "TO", "label": "Tonga" }, { "value": "TR", "label": "Türkiye" }, { "value": "TT", "label": "Trinidad and Tobago" }, { "value": "TV", "label": "Tuvalu" }, { "value": "TW", "label": "Taiwan" }, { "value": "TZ", "label": "Tanzania" }, { "value": "UA", "label": "Ukraine" }, { "value": "UG", "label": "Uganda" }, { "value": "UM", "label": "United States Minor Outlying Islands" }, { "value": "US", "label": "United States" }, { "value": "UY", "label": "Uruguay" }, { "value": "UZ", "label": "Uzbekistan" }, { "value": "VA", "label": "Vatican City" }, { "value": "VC", "label": "Saint Vincent and the Grenadines" }, { "value": "VE", "label": "Venezuela" }, { "value": "VG", "label": "British Virgin Islands" }, { "value": "VI", "label": "US Virgin Islands" }, { "value": "VN", "label": "Vietnam" }, { "value": "VU", "label": "Vanuatu" }, { "value": "WF", "label": "Wallis and Futuna" }, { "value": "WS", "label": "Samoa" }, { "value": "XK", "label": "Kosovo" }, { "value": "YE", "label": "Yemen" }, { "value": "YT", "label": "Mayotte" }, { "value": "ZA", "label": "South Africa" }, { "value": "ZM", "label": "Zambia" }, { "value": "ZW", "label": "Zimbabwe" }];
+
 // Add constant
 const ADVANTAGE_PLUS_TYPES = ["AUTOMATED_SHOPPING_ADS", "SMART_APP_PROMOTION"];
 const DROPDOWN_MAX_WIDTH = "min(calc(100vw - 2rem), 850px)";
@@ -34,6 +40,202 @@ const dropdownContentStyle = {
   width: "max-content",
   maxWidth: DROPDOWN_MAX_WIDTH,
 };
+
+function SettingsMultiSelect({ label, options, value, onChange, placeholder, flags = false, allLabel, checkboxes = false }) {
+  const [open, setOpen] = useState(false);
+  const allSelected = Boolean(allLabel) && (value.length === 0 || options.every((option) => value.includes(option.value)));
+  const selectedValues = allSelected ? [] : value;
+  const flag = (code) => flags && /^[A-Z]{2}$/.test(code)
+    ? String.fromCodePoint(...[...code].map((letter) => 127397 + letter.charCodeAt(0))) + " " : "";
+  const selected = value.map((id) => options.find((option) => option.value === id)?.label || "Unavailable audience");
+  return (
+    <div className="space-y-2">
+      <Label>{label}</Label>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button type="button" variant="outline" role="combobox" aria-label={label} aria-expanded={open}
+            className="h-11 w-full justify-between rounded-2xl bg-white py-2 hover:!bg-white text-left font-normal">
+            <span className="truncate">{allSelected ? allLabel : selected.length ? selected.join(", ") : placeholder}</span>
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent
+          className="w-auto max-w-[min(calc(100vw-2rem),850px)] p-0 bg-white shadow-lg rounded-2xl"
+          align="start" sideOffset={4} side="bottom" avoidCollisions={false} style={dropdownContentStyle}>
+          <Command loop={false} className="rounded-2xl bg-white">
+            <CommandInput placeholder={`Search ${label.toLowerCase()}...`}
+              className="bg-transparent" wrapperClassName="bg-gray-50 border-gray-200 rounded-[20px]" />
+            <CommandList className="max-h-none overflow-hidden rounded-2xl px-2" selectOnFocus={false}>
+              <CommandEmpty>No results found.</CommandEmpty>
+              <ScrollArea viewportClassName="max-h-[500px] [&>div]:!block">
+                <CommandGroup>
+                  {allLabel && <CommandItem value={allLabel} className={cn(
+                    "py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150",
+                    allSelected ? "bg-gray-100 hover:!bg-gray-100 font-semibold" : "hover:!bg-gray-200",
+                  )} onSelect={() => onChange([])}>
+                    <span>{allLabel}</span>
+                  </CommandItem>}
+                  {options.map((option) => (
+                    <CommandItem key={option.value} value={`${option.label} ${option.value}`} className={cn(
+                      "py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150",
+                      selectedValues.includes(option.value) ? "bg-gray-100 hover:!bg-gray-100 font-semibold" : "hover:!bg-gray-200",
+                    )}
+                      onSelect={() => onChange(selectedValues.includes(option.value) ? selectedValues.filter((id) => id !== option.value) : [...selectedValues, option.value])}>
+                      {checkboxes && <Checkbox
+                        checked={selectedValues.includes(option.value)}
+                        onCheckedChange={(checked) => onChange(checked ? [...selectedValues, option.value] : selectedValues.filter((id) => id !== option.value))}
+                        onClick={(event) => event.stopPropagation()}
+                        tabIndex={-1}
+                        aria-label={option.label}
+                        className="h-4 w-4 rounded-[6px] border-gray-300 bg-white p-0 data-[state=checked]:bg-black data-[state=checked]:text-white"
+                      />}
+                      <span className={flags ? "flex-1" : undefined}>{flag(option.value)}{option.label}</span>
+                      {flags && <Check className={cn("ml-auto h-4 w-4 shrink-0", selectedValues.includes(option.value) ? "opacity-100" : "opacity-0")} />}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </ScrollArea>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
+
+function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onChange, disabled }) {
+  const [expanded, setExpanded] = useState(Boolean(value));
+  const reduceMotion = useReducedMotion();
+  const settingsRequestRef = useRef(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [reload, setReload] = useState(0);
+  const defaults = value?.defaults;
+  useEffect(() => {
+    if (!expanded || defaults || disabled) return;
+    const controller = new AbortController();
+    settingsRequestRef.current = controller;
+    setLoading(true);
+    setError("");
+    const params = new URLSearchParams({ adSetId, campaignId, adAccountId });
+    fetch(`${API_BASE_URL}/auth/adset-copy-settings?${params}`, { credentials: "include", signal: controller.signal })
+      .then(async (response) => {
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Could not load ad set settings.");
+        if (!controller.signal.aborted) onChange({ sourceAdSetId: adSetId, campaignId, adAccountId, defaults: data, changes: {} });
+      })
+      .catch((err) => { if (!controller.signal.aborted) setError(err.message); })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    return () => {
+      controller.abort();
+      if (settingsRequestRef.current === controller) settingsRequestRef.current = null;
+    };
+  }, [expanded, defaults, disabled, adSetId, campaignId, adAccountId, onChange, reload]);
+
+  const changes = value?.changes || {};
+  const targeting = defaults?.targeting || {};
+  const field = (key, fallback) => changes[key] ?? fallback;
+  const update = (key, next) => onChange({ ...value, changes: { ...changes, [key]: next } });
+  const audiences = [...new Map([...(targeting.excluded_custom_audiences || []), ...(defaults?.audiences || [])]
+    .map((audience) => [audience.id, { value: audience.id, label: audience.name || "Unavailable audience" }])).values()];
+  const countryOptions = [...META_COUNTRIES];
+  for (const code of targeting.geo_locations?.countries || []) {
+    if (!countryOptions.some((option) => option.value === code)) {
+      let name = "Unavailable country";
+      try { name = new Intl.DisplayNames(["en"], { type: "region" }).of(code); } catch { /* Keep an existing country removable. */ }
+      countryOptions.push({ value: code, label: name });
+    }
+  }
+  const minAge = field("ageMin", targeting.age_min ?? targeting.age_range?.[0] ?? 18);
+  const maxAge = field("ageMax", targeting.age_max ?? targeting.age_range?.[1] ?? 65);
+  const advantageAudience = Number(targeting.targeting_automation?.advantage_audience) === 1;
+  const ageError = advantageAudience
+    ? "Advantage+ audience requires a minimum age from 18 to 25 and a maximum age of 65."
+    : "Use whole ages from 13 to 65, with minimum age no higher than maximum age.";
+  const ageInvalid = [minAge, maxAge].some((age) => age === "" || !Number.isInteger(Number(age)) || age < 13 || age > 65) || Number(minAge) > Number(maxAge)
+    || (advantageAudience && (Number(minAge) < 18 || Number(minAge) > 25 || Number(maxAge) !== 65));
+  // Validate on blur so typing a two-digit age is not blocked by its first digit.
+  const validateAge = (key) => {
+    const age = Number(key === "ageMin" ? minAge : maxAge);
+    const lower = advantageAudience ? (key === "ageMin" ? 18 : 65) : 13;
+    const upper = advantageAudience && key === "ageMin" ? 25 : 65;
+    if (!Number.isInteger(age) || age < lower || age > upper || Number(minAge) > Number(maxAge)) {
+      toast.error(ageError);
+      const sourceAge = Number(key === "ageMin" ? targeting.age_min ?? 18 : targeting.age_max ?? 65);
+      update(key, String(Math.min(upper, Math.max(lower, sourceAge))));
+    }
+  };
+  const startTime = field("startTime", defaults?.startTime || "");
+  const endTime = field("endTime", defaults?.endTime || "");
+  return (
+    <fieldset disabled={disabled} className="mt-2 min-w-0">
+      <div className="flex items-center justify-between gap-3">
+        <button type="button" disabled={disabled} aria-expanded={expanded} onClick={() => setExpanded(true)}
+          title="Edit setup"
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 hover:text-black disabled:opacity-50">
+          <CogIcon className="h-3.5 w-3.5" /> Edit setup
+        </button>
+        {expanded && <div className="flex items-center gap-3">
+          <button type="button" disabled={disabled}
+            className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-red-600 disabled:opacity-50"
+            onClick={() => { settingsRequestRef.current?.abort(); onChange(null); setExpanded(false); setError(""); setLoading(false); }}>
+            <CircleX className="h-3.5 w-3.5" aria-hidden="true" />Discard
+          </button>
+          <button type="button" disabled={disabled || !defaults}
+            className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-black disabled:opacity-50"
+            onClick={() => onChange({ ...value, changes: {} })}>
+            <RefreshCcw className="h-3.5 w-3.5" aria-hidden="true" />Reset
+          </button>
+        </div>}
+      </div>
+      <AnimatePresence initial={false}>
+        {expanded && (
+          <motion.div key="ad-set-setup" initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }} transition={{ duration: reduceMotion ? 0 : 0.18, ease: "easeInOut" }} className="overflow-hidden">
+            <div className="mt-3 space-y-5 rounded-2xl border border-gray-200 bg-white p-4">
+              {loading && !defaults && <p role="status" className="flex items-center gap-2 text-sm text-gray-500"><Loader className="h-4 w-4 animate-spin" />Loading ad set settings...</p>}
+              {error && <div role="alert" className="text-sm text-red-600">{error} <button type="button" className="underline" onClick={() => setReload(reload + 1)}>Retry</button></div>}
+              {defaults && <>
+                <section className="space-y-2">
+                  <h4 className="flex items-center gap-2 text-sm font-semibold"><CircleDollarSign className="h-4 w-4 shrink-0" aria-hidden="true" />Budget</h4>
+                  <Label htmlFor="new-adset-budget">{defaults.budget.mode === "lifetime" ? "Lifetime" : "Daily"} budget ({defaults.budget.currency}){defaults.budget.level === "campaign" ? " · Set on campaign" : ""}</Label>
+                  <Input id="new-adset-budget" type="number" min={defaults.budget.decimals ? "0.01" : "1"} step={defaults.budget.decimals ? "0.01" : "1"}
+                    value={field("budgetAmount", defaults.budget.amount)} disabled={defaults.budget.level === "campaign"}
+                    onChange={(event) => update("budgetAmount", event.target.value)} className="border-gray-400 rounded-2xl" />
+                  {defaults.budget.level === "campaign" && <p className="text-xs text-gray-500">Shared by the campaign’s ad sets. Edit this budget in Ads Manager.</p>}
+                </section>
+                <section className="space-y-3 border-t pt-4">
+                  <h4 className="flex items-center gap-2 text-sm font-semibold"><CalendarClock className="h-4 w-4 shrink-0" aria-hidden="true" />Schedule</h4>
+                  <p className="text-xs text-gray-500">Times shown in {Intl.DateTimeFormat().resolvedOptions().timeZone}. {defaults.timezone && `Ad account: ${defaults.timezone}.`}</p>
+                  <ScheduleDateTimePicker label="Start time" value={startTime || null} onChange={(time) => update("startTime", time)} onClear={() => update("startTime", "")} />
+                  {(!startTime || Date.parse(startTime) <= Date.now()) && <p className="text-xs text-gray-500">The new ad set will start when launched unless you choose a future start time.</p>}
+                  <ScheduleDateTimePicker label={defaults.budget.mode === "lifetime" ? "End time (required)" : "End time (optional)"} value={endTime || null}
+                    minDateTime={startTime && Date.parse(startTime) > Date.now() ? startTime : null}
+                    onChange={(time) => update("endTime", time)} onClear={() => update("endTime", "")} />
+                  {endTime && Date.parse(endTime) <= Date.now() && <p className="text-xs text-amber-700">The source ad set has ended. Choose a new end time{defaults.budget.mode === "daily" ? " or clear it for ongoing delivery" : ""}.</p>}
+                  {defaults.hasRecurringSchedule && <p className="text-xs text-gray-500">The source’s recurring delivery hours will be retained.</p>}
+                </section>
+                <section className="space-y-3 border-t pt-4">
+                  <h4 className="flex items-center gap-2 text-sm font-semibold"><Crosshair className="h-4 w-4 shrink-0" aria-hidden="true" />Targeting</h4>
+                  {defaults.specialAdCategories.filter((category) => category !== "NONE").length > 0 && <p className="text-xs text-amber-700">This campaign has special ad categories. Meta may restrict age, gender, and location targeting.</p>}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2"><Label htmlFor="new-adset-age-min">Minimum age</Label><Input id="new-adset-age-min" type="number" min={advantageAudience ? 18 : 13} max={advantageAudience ? 25 : 65} step="1" value={minAge} onChange={(event) => update("ageMin", event.target.value)} onBlur={() => validateAge("ageMin")} /></div>
+                    <div className="space-y-2"><Label htmlFor="new-adset-age-max">Maximum age</Label><Input id="new-adset-age-max" type="number" min={advantageAudience ? 65 : 13} max="65" step="1" value={maxAge} onChange={(event) => update("ageMax", event.target.value)} onBlur={() => validateAge("ageMax")} /></div>
+                  </div>
+                  {ageInvalid && <p role="alert" className="text-xs text-red-600">{ageError}</p>}
+                  <SettingsMultiSelect label="Gender" options={[{ value: 1, label: "Men" }, { value: 2, label: "Women" }]} value={field("genders", targeting.genders || [])} onChange={(next) => update("genders", next.length === 2 ? [] : next)} placeholder="Both" allLabel="Both" />
+                  <SettingsMultiSelect label="Countries" options={countryOptions} value={field("countries", targeting.geo_locations?.countries || [])} onChange={(next) => update("countries", next)} placeholder="No country selection" flags />
+                  {Object.keys(targeting.geo_locations || {}).some((key) => !["countries", "location_types"].includes(key)) && <p className="text-xs text-gray-500">Other source locations, such as cities, regions, and country groups, are also retained.</p>}
+                  <SettingsMultiSelect label="Excluded audiences" options={audiences} value={field("excludedAudienceIds", (targeting.excluded_custom_audiences || []).map((audience) => audience.id))} onChange={(next) => update("excludedAudienceIds", next)} placeholder="No excluded audiences" checkboxes />
+                </section>
+              </>}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </fieldset>
+  );
+}
 
 export default function AdAccountSettings({
 
@@ -59,8 +261,12 @@ export default function AdAccountSettings({
   setDuplicateAdSet,
   campaignObjective,
   setCampaignObjective,
+  shareNewAdSet = true,
+  setShareNewAdSet,
   newAdSetName,
   setNewAdSetName,
+  newAdSetSettings,
+  setNewAdSetSettings,
   showDuplicateCampaignBlock,
   setShowDuplicateCampaignBlock,
   duplicateCampaign,
@@ -83,6 +289,8 @@ export default function AdAccountSettings({
   activeVariantId = 'default'
 
 }) {
+  const isSplitAdDataEnabled = variants.length > 1;
+  const sharedAdSetLocked = shareNewAdSet && isSplitAdDataEnabled && showDuplicateBlock && activeVariantId !== "default";
   const renderDiffMark = (fieldKeys) => (
     isFormFieldModified?.(fieldKeys) ? <span className="text-red-500 font-semibold">*</span> : null
   );
@@ -126,6 +334,23 @@ export default function AdAccountSettings({
     campaigns.filter(c => selectedCampaign.includes(c.id)),
     [campaigns, selectedCampaign]
   );
+
+  useEffect(() => {
+    if (campaigns.length === 0) return;
+    const campaignIds = new Set(campaigns.map((campaign) => campaign.id));
+    const validCampaigns = selectedCampaign.filter((id) => campaignIds.has(id));
+    if (validCampaigns.length === selectedCampaign.length) return;
+    setSelectedCampaign(validCampaigns);
+    setSelectedAdSets([]);
+    setAdSets([]);
+    setCampaignObjective(validCampaigns.map((id) => campaigns.find((campaign) => campaign.id === id)?.objective).filter(Boolean));
+  }, [campaigns, selectedCampaign, setAdSets, setCampaignObjective, setSelectedAdSets, setSelectedCampaign]);
+
+  useEffect(() => {
+    if (adSets.length === 0 && selectedCampaign.length > 0) return;
+    const adSetIds = new Set(adSets.map((adSet) => adSet.id));
+    setSelectedAdSets((prev) => prev.every((id) => adSetIds.has(id)) ? prev : prev.filter((id) => adSetIds.has(id)));
+  }, [adSets, selectedCampaign.length, setSelectedAdSets]);
 
   const selectedDuplicateCampaignData = useMemo(
     () => campaigns.find((campaign) => campaign.id === duplicateCampaign) || null,
@@ -246,13 +471,14 @@ export default function AdAccountSettings({
 
   const handleCampaignChange = useCallback(async (campaignId) => {
     // Toggle campaign selection
-    const isSelected = selectedCampaign.includes(campaignId);
+    const currentCampaigns = selectedCampaign.filter((id) => campaigns.some((campaign) => campaign.id === id));
+    const isSelected = currentCampaigns.includes(campaignId);
     let newSelectedCampaigns;
 
     if (isSelected) {
-      newSelectedCampaigns = selectedCampaign.filter(id => id !== campaignId);
+      newSelectedCampaigns = currentCampaigns.filter(id => id !== campaignId);
     } else {
-      newSelectedCampaigns = [...selectedCampaign, campaignId];
+      newSelectedCampaigns = [...currentCampaigns, campaignId];
     }
 
     setSelectedCampaign(newSelectedCampaigns);
@@ -684,18 +910,18 @@ export default function AdAccountSettings({
                       <span
                         className="block truncate flex-1 text-left"
                         title={
-                          selectedCampaign.length === 1
-                            ? campaigns.find((c) => c.id === selectedCampaign[0])?.name || selectedCampaign[0]
+                          selectedCampaignData.length === 1
+                            ? selectedCampaignData[0].name
                             : undefined
                         }
                       >
                         {selectedAdAccount && campaigns.length === 0
                           ? "No campaigns exist in this ad account. Try selecting a different account."
-                          : selectedCampaign.length === 0
+                          : selectedCampaignData.length === 0
                             ? "Select campaigns"
-                            : selectedCampaign.length === 1
-                              ? campaigns.find((c) => c.id === selectedCampaign[0])?.name || selectedCampaign[0]
-                              : `${selectedCampaign.length} campaigns selected`}
+                            : selectedCampaignData.length === 1
+                              ? selectedCampaignData[0].name || selectedCampaignData[0].id
+                              : `${selectedCampaignData.length} campaigns selected`}
                       </span>
                     )}
                   </div>
@@ -1197,16 +1423,18 @@ transition-all duration-150 hover:!bg-black
                     <CopyIcon className="w-4 h-4" />
                     Select an ad set shell to duplicate
                   </Label>
-                  <Label className="text-gray-500 text-[12px] font-regular">We’ll retain all targeting settings and replace the creative</Label>
+                  <Label className="text-gray-500 text-[12px] font-regular">
+                    {sharedAdSetLocked ? "The source ad set is shared. Change it in Default." : "We’ll copy the ad set settings. You can edit them below."}
+                  </Label>
 
-                  <Popover open={openDuplicateAdSet} onOpenChange={setOpenDuplicateAdSet}>
+                  <Popover open={!sharedAdSetLocked && openDuplicateAdSet} onOpenChange={(open) => setOpenDuplicateAdSet(sharedAdSetLocked ? false : open)}>
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline"
                         role="combobox"
                         aria-expanded={openDuplicateAdSet}
-                        disabled={!isLoggedIn || adSets.length === 0}
-                        className="w-full justify-between border border-gray-400 rounded-2xl bg-white shadow overflow-hidden whitespace-nowrap hover:!bg-white"
+                        disabled={!isLoggedIn || adSets.length === 0 || sharedAdSetLocked}
+                        className="h-11 w-full justify-between border border-gray-300 rounded-2xl py-2 bg-white shadow group-data-[state=open]:border-blue-500 transition-colors duration-150 hover:bg-white"
                       >
                         <div className="w-full overflow-hidden">
                           <span
@@ -1279,6 +1507,7 @@ transition-all duration-150 hover:!bg-black
                                               key={adset.id}
                                               value={adset.name || adset.id}
                                               onSelect={() => {
+                                                if (sharedAdSetLocked) return;
                                                 setDuplicateAdSet(adset.id)
                                                 setNewAdSetName(`${adset.name || adset.id}_Copy`)
                                                 setOpenDuplicateAdSet(false)
@@ -1322,19 +1551,56 @@ transition-all duration-150 hover:!bg-black
                         </Label>
                         <Input
                           id="newAdSetName"
+                          aria-invalid={(newAdSetName || "").length > 400}
+                          aria-describedby={(newAdSetName || "").length > 400 ? "new-ad-set-name-error" : undefined}
                           value={newAdSetName}
                           onChange={(e) => setNewAdSetName(e.target.value)}
                           placeholder="Enter new ad set name..."
-                          className="border border-gray-400 rounded-2xl bg-white shadow"
-                          disabled={!isLoggedIn}
+                          className={`border border-gray-400 rounded-2xl bg-white shadow ${(newAdSetName || "").length > 400 ? "!border-red-500" : ""}`}
+                          disabled={!isLoggedIn || sharedAdSetLocked}
                         />
+                        {(newAdSetName || "").length > 400 && (
+                          <p id="new-ad-set-name-error" className="text-xs text-red-600">New ad set names must be 400 characters or fewer.</p>
+                        )}
+                        {sharedAdSetLocked && <p className="text-xs text-gray-500">Name and setup are shared. Edit them in Default.</p>}
                       </div>
-                      {variants && variants.length > 1 && (
-                        <div className="flex items-start gap-1 p-2 bg-orange-50 border border-orange-200 rounded-xl mt-2">
-                          <AlertTriangle className="w-4 h-4 text-orange-500 shrink-0 mt-0.5" />
-                          <span className="text-xs text-orange-700">
-                            Each variant will create its own new ad set. To launch all variants into one new ad set, create that ad set in a standalone launch first, then launch the remaining variants into it.
-                          </span>
+                      <NewAdSetSettingsEditor
+                        key={`${activeVariantId}:${selectedAdAccount}:${selectedCampaign[0]}:${duplicateAdSet}`}
+                        adSetId={duplicateAdSet} campaignId={selectedCampaign[0]} adAccountId={selectedAdAccount}
+                        value={newAdSetSettings?.sourceAdSetId === duplicateAdSet && newAdSetSettings?.campaignId === selectedCampaign[0] && newAdSetSettings?.adAccountId === selectedAdAccount ? newAdSetSettings : null}
+                        onChange={setNewAdSetSettings} disabled={!isLoggedIn || !selectedCampaign[0] || sharedAdSetLocked}
+                      />
+                      {isSplitAdDataEnabled && (
+                        <div className="space-y-1.5 mt-3">
+                          <TooltipProvider delayDuration={0}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className={activeVariantId !== "default" ? "cursor-not-allowed" : ""}
+                                  tabIndex={activeVariantId !== "default" ? 0 : undefined}>
+                                  <RadioGroup orientation="horizontal" value={shareNewAdSet ? "shared" : "separate"}
+                                    onValueChange={(value) => { if (activeVariantId === "default") setShareNewAdSet(value === "shared"); }}
+                                    disabled={!isLoggedIn || activeVariantId !== "default"}
+                                    aria-label="New ad set launch mode" aria-describedby="share-new-ad-set-help"
+                                    className={`flex flex-nowrap items-start gap-4 ${activeVariantId !== "default" ? "pointer-events-none opacity-50" : ""}`}>
+                                    <div className="flex flex-1 items-start gap-2">
+                                      <RadioGroupItem id="shared-new-ad-set" value="shared" className="mt-0.5 shrink-0" />
+                                      <Label htmlFor="shared-new-ad-set" className="text-xs leading-5 font-normal">Launch all in 1 new ad set</Label>
+                                    </div>
+                                    <div className="flex flex-1 items-start gap-2">
+                                      <RadioGroupItem id="separate-new-ad-sets" value="separate" className="mt-0.5 shrink-0" />
+                                      <Label htmlFor="separate-new-ad-sets" className="text-xs leading-5 font-normal">Create new ad set in each variant</Label>
+                                    </div>
+                                  </RadioGroup>
+                                </div>
+                              </TooltipTrigger>
+                              {activeVariantId !== "default" && <TooltipContent>Change this value in Default first.</TooltipContent>}
+                            </Tooltip>
+                          </TooltipProvider>
+                          <p id="share-new-ad-set-help" className="text-xs text-gray-500">
+                            You’re seeing this because Split Ad Data is enabled. {shareNewAdSet
+                              ? "All variants will launch in 1 new ad set."
+                              : "Each new variant creates its own ad set, using its own name and setup."}
+                          </p>
                         </div>
                       )}
                     </>

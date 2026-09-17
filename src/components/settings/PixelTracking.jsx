@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, memo } from "react"
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
 import { Command, CommandInput, CommandList, CommandItem, CommandGroup } from "@/components/ui/command"
 import { Button } from "@/components/ui/button"
-import { ChevronsUpDown, Loader, Target } from "lucide-react"
+import { AlertTriangle, ChevronsUpDown, Loader, Target } from "lucide-react"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
@@ -30,7 +30,7 @@ const PixelSelect = memo(({
     const selected = pixels.find(p => p.id === value)
     const displayText = selected
         ? (selected.name || selected.id)
-        : (value ? value : "Select a pixel")
+        : (value ? value : "None")
 
     return (
         <Popover open={open} onOpenChange={setOpen}>
@@ -68,6 +68,13 @@ const PixelSelect = memo(({
                     <CommandInput placeholder={placeholder || "Search pixels..."} className="bg-transparent" wrapperClassName="bg-gray-50 border-gray-200 rounded-[20px]" />
                     <CommandList className="max-h-[300px] overflow-y-auto rounded-2xl custom-scrollbar">
                         <CommandGroup>
+                            <CommandItem
+                                value="None"
+                                onSelect={() => { onChange(null); setOpen(false); }}
+                                className={`px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150 hover:bg-gray-100 ${!value ? "bg-gray-100 font-semibold" : ""}`}
+                            >
+                                <span className="text-sm">None</span>
+                            </CommandItem>
                             {pixels.map((pixel) => (
                                 <CommandItem
                                     key={pixel.id}
@@ -167,6 +174,14 @@ function PixelTracking({
                             onChange={(id) => handleChange(row.key, id)}
                             loading={loading}
                         />
+                        {row.key === "offlineDatasetId" && !loading && pixels.find(pixel => pixel.id === pixelTracking?.offlineDatasetId)?.is_consolidated_container === false && (
+                            <div className="flex items-start gap-1 p-2 bg-orange-50 border border-orange-200 rounded-xl mt-2">
+                                <AlertTriangle className="w-4 h-4 text-orange-500 shrink-0 mt-0.5" />
+                                <span className="text-xs text-orange-700">
+                                    Offline events might not be set up for this pixel. Selecting None may prevent errors during ad creation.
+                                </span>
+                            </div>
+                        )}
                     </div>
                 ))}
             </div>

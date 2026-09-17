@@ -11,6 +11,7 @@ export default function useAdAccountSettings(adAccountId) {
         defaultAdName: "",
         displayLink: "",
         multiAdvertiserAds: false,
+        defaultAdStatus: "ACTIVE",
     });
 
     const [prevId, setPrevId] = useState(adAccountId);
@@ -24,6 +25,7 @@ export default function useAdAccountSettings(adAccountId) {
             defaultAdName: "",
             displayLink: "",
             multiAdvertiserAds: false,
+            defaultAdStatus: "ACTIVE",
             analyticsMode: null,
             conversionEvent: null,
             targetCPA: null,
@@ -90,6 +92,7 @@ export default function useAdAccountSettings(adAccountId) {
                         analyticsMode: null,
                         conversionEvent: null,
                         multiAdvertiserAds: false,
+                        defaultAdStatus: "ACTIVE",
                         customVariables: [],
                         pixelTracking: { websitePixelId: null, offlineDatasetId: null },
                     });
@@ -136,6 +139,7 @@ export default function useAdAccountSettings(adAccountId) {
                         analyticsMode: s.analyticsMode || null,
                         conversionEvent: s.conversionEvent || null,
                         multiAdvertiserAds: s.multiAdvertiserAds ?? false,
+                        defaultAdStatus: s.defaultAdStatus === "PAUSED" ? "PAUSED" : "ACTIVE",
                         customVariables: Array.isArray(s.customVariables) ? s.customVariables : [],
                         pixelTracking: s.pixelTracking || { websitePixelId: null, offlineDatasetId: null },
 
