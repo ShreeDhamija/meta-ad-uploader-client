@@ -189,49 +189,49 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
         </div>}
       </div>
       <AnimatePresence initial={false}>
-      {expanded && (
-        <motion.div key="ad-set-setup" initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }}
-          exit={{ height: 0, opacity: 0 }} transition={{ duration: reduceMotion ? 0 : 0.18, ease: "easeInOut" }} className="overflow-hidden">
-        <div className="mt-3 space-y-5 rounded-2xl border border-gray-200 bg-white p-4">
-          {loading && !defaults && <p role="status" className="flex items-center gap-2 text-sm text-gray-500"><Loader className="h-4 w-4 animate-spin" />Loading ad set settings...</p>}
-          {error && <div role="alert" className="text-sm text-red-600">{error} <button type="button" className="underline" onClick={() => setReload(reload + 1)}>Retry</button></div>}
-          {defaults && <>
-            <section className="space-y-2">
-              <h4 className="flex items-center gap-2 text-sm font-semibold"><CircleDollarSign className="h-4 w-4 shrink-0" aria-hidden="true" />Budget</h4>
-              <Label htmlFor="new-adset-budget">{defaults.budget.mode === "lifetime" ? "Lifetime" : "Daily"} budget ({defaults.budget.currency}){defaults.budget.level === "campaign" ? " · Set on campaign" : ""}</Label>
-              <Input id="new-adset-budget" type="number" min={defaults.budget.decimals ? "0.01" : "1"} step={defaults.budget.decimals ? "0.01" : "1"}
-                value={field("budgetAmount", defaults.budget.amount)} disabled={defaults.budget.level === "campaign"}
-                onChange={(event) => update("budgetAmount", event.target.value)} className="border-gray-400 rounded-2xl" />
-              {defaults.budget.level === "campaign" && <p className="text-xs text-gray-500">Shared by the campaign’s ad sets. Edit this budget in Ads Manager.</p>}
-            </section>
-            <section className="space-y-3 border-t pt-4">
-              <h4 className="flex items-center gap-2 text-sm font-semibold"><CalendarClock className="h-4 w-4 shrink-0" aria-hidden="true" />Schedule</h4>
-              <p className="text-xs text-gray-500">Times shown in {Intl.DateTimeFormat().resolvedOptions().timeZone}. {defaults.timezone && `Ad account: ${defaults.timezone}.`}</p>
-              <ScheduleDateTimePicker label="Start time" value={startTime || null} onChange={(time) => update("startTime", time)} onClear={() => update("startTime", "")} />
-              {(!startTime || Date.parse(startTime) <= Date.now()) && <p className="text-xs text-gray-500">The new ad set will start when launched unless you choose a future start time.</p>}
-              <ScheduleDateTimePicker label={defaults.budget.mode === "lifetime" ? "End time (required)" : "End time (optional)"} value={endTime || null}
-                minDateTime={startTime && Date.parse(startTime) > Date.now() ? startTime : null}
-                onChange={(time) => update("endTime", time)} onClear={() => update("endTime", "")} />
-              {endTime && Date.parse(endTime) <= Date.now() && <p className="text-xs text-amber-700">The source ad set has ended. Choose a new end time{defaults.budget.mode === "daily" ? " or clear it for ongoing delivery" : ""}.</p>}
-              {defaults.hasRecurringSchedule && <p className="text-xs text-gray-500">The source’s recurring delivery hours will be retained.</p>}
-            </section>
-            <section className="space-y-3 border-t pt-4">
-              <h4 className="flex items-center gap-2 text-sm font-semibold"><Crosshair className="h-4 w-4 shrink-0" aria-hidden="true" />Targeting</h4>
-              {defaults.specialAdCategories.filter((category) => category !== "NONE").length > 0 && <p className="text-xs text-amber-700">This campaign has special ad categories. Meta may restrict age, gender, and location targeting.</p>}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2"><Label htmlFor="new-adset-age-min">Minimum age</Label><Input id="new-adset-age-min" type="number" min={advantageAudience ? 18 : 13} max={advantageAudience ? 25 : 65} step="1" value={minAge} onChange={(event) => update("ageMin", event.target.value)} onBlur={() => validateAge("ageMin")} /></div>
-                <div className="space-y-2"><Label htmlFor="new-adset-age-max">Maximum age</Label><Input id="new-adset-age-max" type="number" min={advantageAudience ? 65 : 13} max="65" step="1" value={maxAge} onChange={(event) => update("ageMax", event.target.value)} onBlur={() => validateAge("ageMax")} /></div>
-              </div>
-              {ageInvalid && <p role="alert" className="text-xs text-red-600">{ageError}</p>}
-              <SettingsMultiSelect label="Gender" options={[{ value: 1, label: "Men" }, { value: 2, label: "Women" }]} value={field("genders", targeting.genders || [])} onChange={(next) => update("genders", next.length === 2 ? [] : next)} placeholder="Both" allLabel="Both" />
-              <SettingsMultiSelect label="Countries" options={countryOptions} value={field("countries", targeting.geo_locations?.countries || [])} onChange={(next) => update("countries", next)} placeholder="No country selection" flags />
-              {Object.keys(targeting.geo_locations || {}).some((key) => !["countries", "location_types"].includes(key)) && <p className="text-xs text-gray-500">Other source locations, such as cities, regions, and country groups, are also retained.</p>}
-              <SettingsMultiSelect label="Excluded audiences" options={audiences} value={field("excludedAudienceIds", (targeting.excluded_custom_audiences || []).map((audience) => audience.id))} onChange={(next) => update("excludedAudienceIds", next)} placeholder="No excluded audiences" checkboxes />
-            </section>
-          </>}
-        </div>
-        </motion.div>
-      )}
+        {expanded && (
+          <motion.div key="ad-set-setup" initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }} transition={{ duration: reduceMotion ? 0 : 0.18, ease: "easeInOut" }} className="overflow-hidden">
+            <div className="mt-3 space-y-5 rounded-2xl border border-gray-200 bg-white p-4">
+              {loading && !defaults && <p role="status" className="flex items-center gap-2 text-sm text-gray-500"><Loader className="h-4 w-4 animate-spin" />Loading ad set settings...</p>}
+              {error && <div role="alert" className="text-sm text-red-600">{error} <button type="button" className="underline" onClick={() => setReload(reload + 1)}>Retry</button></div>}
+              {defaults && <>
+                <section className="space-y-2">
+                  <h4 className="flex items-center gap-2 text-sm font-semibold"><CircleDollarSign className="h-4 w-4 shrink-0" aria-hidden="true" />Budget</h4>
+                  <Label htmlFor="new-adset-budget">{defaults.budget.mode === "lifetime" ? "Lifetime" : "Daily"} budget ({defaults.budget.currency}){defaults.budget.level === "campaign" ? " · Set on campaign" : ""}</Label>
+                  <Input id="new-adset-budget" type="number" min={defaults.budget.decimals ? "0.01" : "1"} step={defaults.budget.decimals ? "0.01" : "1"}
+                    value={field("budgetAmount", defaults.budget.amount)} disabled={defaults.budget.level === "campaign"}
+                    onChange={(event) => update("budgetAmount", event.target.value)} className="border-gray-400 rounded-2xl" />
+                  {defaults.budget.level === "campaign" && <p className="text-xs text-gray-500">Shared by the campaign’s ad sets. Edit this budget in Ads Manager.</p>}
+                </section>
+                <section className="space-y-3 border-t pt-4">
+                  <h4 className="flex items-center gap-2 text-sm font-semibold"><CalendarClock className="h-4 w-4 shrink-0" aria-hidden="true" />Schedule</h4>
+                  <p className="text-xs text-gray-500">Times shown in {Intl.DateTimeFormat().resolvedOptions().timeZone}. {defaults.timezone && `Ad account: ${defaults.timezone}.`}</p>
+                  <ScheduleDateTimePicker label="Start time" value={startTime || null} onChange={(time) => update("startTime", time)} onClear={() => update("startTime", "")} />
+                  {(!startTime || Date.parse(startTime) <= Date.now()) && <p className="text-xs text-gray-500">The new ad set will start when launched unless you choose a future start time.</p>}
+                  <ScheduleDateTimePicker label={defaults.budget.mode === "lifetime" ? "End time (required)" : "End time (optional)"} value={endTime || null}
+                    minDateTime={startTime && Date.parse(startTime) > Date.now() ? startTime : null}
+                    onChange={(time) => update("endTime", time)} onClear={() => update("endTime", "")} />
+                  {endTime && Date.parse(endTime) <= Date.now() && <p className="text-xs text-amber-700">The source ad set has ended. Choose a new end time{defaults.budget.mode === "daily" ? " or clear it for ongoing delivery" : ""}.</p>}
+                  {defaults.hasRecurringSchedule && <p className="text-xs text-gray-500">The source’s recurring delivery hours will be retained.</p>}
+                </section>
+                <section className="space-y-3 border-t pt-4">
+                  <h4 className="flex items-center gap-2 text-sm font-semibold"><Crosshair className="h-4 w-4 shrink-0" aria-hidden="true" />Targeting</h4>
+                  {defaults.specialAdCategories.filter((category) => category !== "NONE").length > 0 && <p className="text-xs text-amber-700">This campaign has special ad categories. Meta may restrict age, gender, and location targeting.</p>}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2"><Label htmlFor="new-adset-age-min">Minimum age</Label><Input id="new-adset-age-min" type="number" min={advantageAudience ? 18 : 13} max={advantageAudience ? 25 : 65} step="1" value={minAge} onChange={(event) => update("ageMin", event.target.value)} onBlur={() => validateAge("ageMin")} /></div>
+                    <div className="space-y-2"><Label htmlFor="new-adset-age-max">Maximum age</Label><Input id="new-adset-age-max" type="number" min={advantageAudience ? 65 : 13} max="65" step="1" value={maxAge} onChange={(event) => update("ageMax", event.target.value)} onBlur={() => validateAge("ageMax")} /></div>
+                  </div>
+                  {ageInvalid && <p role="alert" className="text-xs text-red-600">{ageError}</p>}
+                  <SettingsMultiSelect label="Gender" options={[{ value: 1, label: "Men" }, { value: 2, label: "Women" }]} value={field("genders", targeting.genders || [])} onChange={(next) => update("genders", next.length === 2 ? [] : next)} placeholder="Both" allLabel="Both" />
+                  <SettingsMultiSelect label="Countries" options={countryOptions} value={field("countries", targeting.geo_locations?.countries || [])} onChange={(next) => update("countries", next)} placeholder="No country selection" flags />
+                  {Object.keys(targeting.geo_locations || {}).some((key) => !["countries", "location_types"].includes(key)) && <p className="text-xs text-gray-500">Other source locations, such as cities, regions, and country groups, are also retained.</p>}
+                  <SettingsMultiSelect label="Excluded audiences" options={audiences} value={field("excludedAudienceIds", (targeting.excluded_custom_audiences || []).map((audience) => audience.id))} onChange={(next) => update("excludedAudienceIds", next)} placeholder="No excluded audiences" checkboxes />
+                </section>
+              </>}
+            </div>
+          </motion.div>
+        )}
       </AnimatePresence>
     </fieldset>
   );
@@ -290,7 +290,7 @@ export default function AdAccountSettings({
 
 }) {
   const isSplitAdDataEnabled = variants.length > 1;
-  const sharedAdSetLocked = shareNewAdSet && isSplitAdDataEnabled && activeVariantId !== "default";
+  const sharedAdSetLocked = shareNewAdSet && isSplitAdDataEnabled && showDuplicateBlock && activeVariantId !== "default";
   const renderDiffMark = (fieldKeys) => (
     isFormFieldModified?.(fieldKeys) ? <span className="text-red-500 font-semibold">*</span> : null
   );
@@ -1423,15 +1423,17 @@ transition-all duration-150 hover:!bg-black
                     <CopyIcon className="w-4 h-4" />
                     Select an ad set shell to duplicate
                   </Label>
-                  <Label className="text-gray-500 text-[12px] font-regular">We’ll copy the ad set settings. You can edit them below.</Label>
+                  <Label className="text-gray-500 text-[12px] font-regular">
+                    {sharedAdSetLocked ? "The source ad set is shared. Change it in Default." : "We’ll copy the ad set settings. You can edit them below."}
+                  </Label>
 
-                  <Popover open={openDuplicateAdSet} onOpenChange={setOpenDuplicateAdSet}>
+                  <Popover open={!sharedAdSetLocked && openDuplicateAdSet} onOpenChange={(open) => setOpenDuplicateAdSet(sharedAdSetLocked ? false : open)}>
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline"
                         role="combobox"
                         aria-expanded={openDuplicateAdSet}
-                        disabled={!isLoggedIn || adSets.length === 0}
+                        disabled={!isLoggedIn || adSets.length === 0 || sharedAdSetLocked}
                         className="h-11 w-full justify-between border border-gray-300 rounded-2xl py-2 bg-white shadow group-data-[state=open]:border-blue-500 transition-colors duration-150 hover:bg-white"
                       >
                         <div className="w-full overflow-hidden">
@@ -1505,6 +1507,7 @@ transition-all duration-150 hover:!bg-black
                                               key={adset.id}
                                               value={adset.name || adset.id}
                                               onSelect={() => {
+                                                if (sharedAdSetLocked) return;
                                                 setDuplicateAdSet(adset.id)
                                                 setNewAdSetName(`${adset.name || adset.id}_Copy`)
                                                 setOpenDuplicateAdSet(false)
@@ -1595,7 +1598,7 @@ transition-all duration-150 hover:!bg-black
                           </TooltipProvider>
                           <p id="share-new-ad-set-help" className="text-xs text-gray-500">
                             You’re seeing this because Split Ad Data is enabled. {shareNewAdSet
-                              ? "All new variants will launch in the 1 new ad set from the Default variant. Select the same campaign and source ad set in each. Variants using existing ad sets stay unchanged."
+                              ? "All variants will launch in 1 new ad set."
                               : "Each new variant creates its own ad set, using its own name and setup."}
                           </p>
                         </div>

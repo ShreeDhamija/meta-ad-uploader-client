@@ -1057,15 +1057,44 @@ export default function Home() {
         const current = captureCurrentSnapshot();
         const snapshot = variantId === activeVariantId ? current : variants.find((variant) => variant.id === variantId)?.snapshot || null;
         const defaultSnapshot = activeVariantId === "default" ? current : variants.find((variant) => variant.id === "default")?.snapshot;
-        if (!shareNewAdSet || variants.length <= 1 || !snapshot?.duplicateAdSet) return snapshot;
+        if (!shareNewAdSet || variants.length <= 1 || !(snapshot?.showDuplicateBlock ?? Boolean(snapshot?.duplicateAdSet))) return snapshot;
+        const sourceAdSet = defaultSnapshot?.adSets?.find((adSet) => adSet.id === defaultSnapshot?.duplicateAdSet);
         return {
             ...snapshot,
+            duplicateAdSet: defaultSnapshot?.duplicateAdSet || "",
+            adSets: sourceAdSet
+                ? [...(snapshot.adSets || []).filter((adSet) => adSet.id !== sourceAdSet.id), sourceAdSet]
+                : snapshot.adSets,
             newAdSetName: defaultSnapshot?.newAdSetName || "",
             newAdSetSettings: defaultSnapshot?.newAdSetSettings || null,
         };
     }, [activeVariantId, captureCurrentSnapshot, variants, shareNewAdSet]);
 
     const effectiveAdSetVariant = getVariantSnapshot(activeVariantId);
+
+    // Keep actual selections aligned as well as the displayed/published values,
+    // so switching back to separate ad sets does not revive an old source.
+    const defaultDuplicateAdSet = activeVariantId === "default"
+        ? duplicateAdSet
+        : variants.find((variant) => variant.id === "default")?.snapshot?.duplicateAdSet || "";
+    useEffect(() => {
+        if (!shareNewAdSet || variants.length <= 1) return;
+        if (activeVariantId !== "default" && showDuplicateBlock && duplicateAdSet !== defaultDuplicateAdSet) {
+            setDuplicateAdSet(defaultDuplicateAdSet);
+        }
+        setVariants((previous) => {
+            let changed = false;
+            const next = previous.map((variant) => {
+                const snapshot = variant.snapshot;
+                if (variant.id === "default" || variant.id === activeVariantId || !snapshot ||
+                    !(snapshot.showDuplicateBlock ?? Boolean(snapshot.duplicateAdSet)) || snapshot.duplicateAdSet === defaultDuplicateAdSet) return variant;
+                changed = true;
+                return { ...variant, snapshot: { ...snapshot, duplicateAdSet: defaultDuplicateAdSet, newAdSetSettings: null } };
+            });
+            return changed ? next : previous;
+        });
+    }, [shareNewAdSet, variants.length, activeVariantId, showDuplicateBlock, duplicateAdSet, defaultDuplicateAdSet]);
+
 
     const isFormFieldModified = useCallback((fieldKeys) => {
         if (activeVariantId === "default") return false;
@@ -2112,13 +2141,13 @@ export default function Home() {
                             setCampaigns={setCampaigns}
                             selectedCampaign={selectedCampaign}
                             setSelectedCampaign={setSelectedCampaign}
-                            adSets={adSets}
+                            adSets={effectiveAdSetVariant?.adSets || adSets}
                             setAdSets={setAdSets}
                             selectedAdSets={selectedAdSets}
                             setSelectedAdSets={setSelectedAdSets}
                             showDuplicateBlock={showDuplicateBlock}
                             setShowDuplicateBlock={setShowDuplicateBlock}
-                            duplicateAdSet={duplicateAdSet}
+                            duplicateAdSet={effectiveAdSetVariant?.duplicateAdSet || ""}
                             setDuplicateAdSet={setDuplicateAdSet}
                             campaignObjective={campaignObjective}
                             setCampaignObjective={setCampaignObjective}
@@ -2205,14 +2234,15 @@ export default function Home() {
                             setVideoThumbs={setVideoThumbs}
                             selectedAdSets={selectedAdSets}
                             setSelectedAdSets={setSelectedAdSets}
-                            duplicateAdSet={duplicateAdSet}
+                            duplicateAdSet={effectiveAdSetVariant?.duplicateAdSet || ""}
                             setDuplicateAdSet={setDuplicateAdSet}
+                            showDuplicateBlock={showDuplicateBlock}
                             campaigns={campaigns}
                             selectedCampaign={selectedCampaign}
                             setSelectedCampaign={setSelectedCampaign}
                             selectedAdAccount={selectedAdAccount}
                             setSelectedAdAccount={setSelectedAdAccount}
-                            adSets={adSets}
+                            adSets={effectiveAdSetVariant?.adSets || adSets}
                             copyTemplates={adAccountSettings.copyTemplates || {}}
                             defaultTemplateName={adAccountSettings.defaultTemplateName || ""}
                             selectedTemplate={selectedTemplate}
@@ -2335,8 +2365,8 @@ export default function Home() {
                                 fileGroups={fileGroups}
                                 setFileGroups={setFileGroups}
                                 selectedAdSets={selectedAdSets}
-                                adSets={adSets}
-                                duplicateAdSet={duplicateAdSet}
+                                adSets={effectiveAdSetVariant?.adSets || adSets}
+                                duplicateAdSet={effectiveAdSetVariant?.duplicateAdSet || ""}
                                 selectedFiles={selectedFiles}
                                 setSelectedFiles={setSelectedFiles}
                                 selectedIgOrganicPosts={selectedIgOrganicPosts}

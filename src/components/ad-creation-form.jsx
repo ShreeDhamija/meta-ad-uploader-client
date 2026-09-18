@@ -1282,6 +1282,7 @@ export default function AdCreationForm({
   setSelectedAdSets,
   duplicateAdSet,
   setDuplicateAdSet,
+  showDuplicateBlock,
   campaigns,
   selectedCampaign,
   setSelectedCampaign,
@@ -1929,6 +1930,7 @@ export default function AdCreationForm({
       selectedAdSets,
       adSets,
       duplicateAdSet,
+      showDuplicateBlock,
       newAdSetName,
       newAdSetSettings,
       pageId,
@@ -1971,6 +1973,7 @@ export default function AdCreationForm({
       selectedAdSets,
       adSets,
       duplicateAdSet,
+      showDuplicateBlock,
       newAdSetName,
       newAdSetSettings,
       pageId,
@@ -2002,9 +2005,14 @@ export default function AdCreationForm({
     (variantId) => {
       const snapshot = variantId === activeVariantId ? liveVariantSnapshot : variants.find((variant) => variant.id === variantId)?.snapshot || null;
       const defaultSnapshot = activeVariantId === "default" ? liveVariantSnapshot : variants.find((variant) => variant.id === "default")?.snapshot;
-      if (!shareNewAdSet || variants.length <= 1 || !snapshot?.duplicateAdSet) return snapshot;
+      if (!shareNewAdSet || variants.length <= 1 || !(snapshot?.showDuplicateBlock ?? Boolean(snapshot?.duplicateAdSet))) return snapshot;
+      const sourceAdSet = defaultSnapshot?.adSets?.find((adSet) => adSet.id === defaultSnapshot?.duplicateAdSet);
       return {
         ...snapshot,
+        duplicateAdSet: defaultSnapshot?.duplicateAdSet || "",
+        adSets: sourceAdSet
+          ? [...(snapshot.adSets || []).filter((adSet) => adSet.id !== sourceAdSet.id), sourceAdSet]
+          : snapshot.adSets,
         newAdSetName: defaultSnapshot?.newAdSetName || "",
         newAdSetSettings: defaultSnapshot?.newAdSetSettings || null,
       };
@@ -9082,15 +9090,13 @@ export default function AdCreationForm({
                         <UploadIcon className="w-6 h-6" />
                       </div>
                       <p className="flex-1 text-sm font-medium text-gray-700 break-all">{formatQueuedJobLabel(currentJob, "Posting")}</p>
-                      {currentJob.kind === "shared-ad-set"
-                        ? <Loader className="h-4 w-4 animate-spin text-blue-600" />
-                        : <span className="text-sm font-semibold text-gray-900">{Math.round(progress || trackedProgress)}%</span>}
+                      <span className="text-sm font-semibold text-gray-900">{Math.round(progress || trackedProgress)}%</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="flex-1 bg-gray-200 rounded-full h-2">
                         <div
-                          className={`bg-blue-600 h-2 rounded-full transition-all duration-300 ${currentJob.kind === "shared-ad-set" ? "animate-pulse" : ""}`}
-                          style={{ width: currentJob.kind === "shared-ad-set" ? "35%" : `${progress || trackedProgress}%` }}
+                          className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                          style={{ width: `${progress || trackedProgress}%` }}
                         />
                       </div>
                       <button
