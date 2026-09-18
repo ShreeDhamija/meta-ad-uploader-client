@@ -1,7 +1,9 @@
 "use client"
 
-import { useState, useMemo, useCallback, useEffect } from "react"
+import { useState, useMemo, useCallback, useEffect, useRef } from "react"
 import { toast } from "sonner"
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -103,6 +105,8 @@ function SettingsMultiSelect({ label, options, value, onChange, placeholder, fla
 
 function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onChange, disabled }) {
   const [expanded, setExpanded] = useState(Boolean(value));
+  const reduceMotion = useReducedMotion();
+  const settingsRequestRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [reload, setReload] = useState(0);
@@ -110,6 +114,7 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
   useEffect(() => {
     if (!expanded || defaults || disabled) return;
     const controller = new AbortController();
+    settingsRequestRef.current = controller;
     setLoading(true);
     setError("");
     const params = new URLSearchParams({ adSetId, campaignId, adAccountId });
@@ -121,7 +126,10 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
       })
       .catch((err) => { if (!controller.signal.aborted) setError(err.message); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
-    return () => controller.abort();
+    return () => {
+      controller.abort();
+      if (settingsRequestRef.current === controller) settingsRequestRef.current = null;
+    };
   }, [expanded, defaults, disabled, adSetId, campaignId, adAccountId, onChange, reload]);
 
   const changes = value?.changes || {};
@@ -162,15 +170,15 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
   return (
     <fieldset disabled={disabled} className="mt-2 min-w-0">
       <div className="flex items-center justify-between gap-3">
-        <button type="button" disabled={disabled} aria-expanded={expanded} onClick={() => setExpanded(!expanded)}
-          title={expanded ? "Hide setup — your changes are kept" : "Edit setup"}
+        <button type="button" disabled={disabled} aria-expanded={expanded} onClick={() => setExpanded(true)}
+          title="Edit setup"
           className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 hover:text-black disabled:opacity-50">
           <CogIcon className="h-3.5 w-3.5" /> Edit setup
         </button>
         {expanded && <div className="flex items-center gap-3">
           <button type="button" disabled={disabled}
             className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-red-600 disabled:opacity-50"
-            onClick={() => { onChange(null); setExpanded(false); }}>
+            onClick={() => { settingsRequestRef.current?.abort(); onChange(null); setExpanded(false); setError(""); setLoading(false); }}>
             <CircleX className="h-3.5 w-3.5" aria-hidden="true" />Discard
           </button>
           <button type="button" disabled={disabled || !defaults}
@@ -180,7 +188,10 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
           </button>
         </div>}
       </div>
+      <AnimatePresence initial={false}>
       {expanded && (
+        <motion.div key="ad-set-setup" initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }} transition={{ duration: reduceMotion ? 0 : 0.18, ease: "easeInOut" }} className="overflow-hidden">
         <div className="mt-3 space-y-5 rounded-2xl border border-gray-200 bg-white p-4">
           {loading && !defaults && <p role="status" className="flex items-center gap-2 text-sm text-gray-500"><Loader className="h-4 w-4 animate-spin" />Loading ad set settings...</p>}
           {error && <div role="alert" className="text-sm text-red-600">{error} <button type="button" className="underline" onClick={() => setReload(reload + 1)}>Retry</button></div>}
@@ -219,7 +230,9 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
             </section>
           </>}
         </div>
+        </motion.div>
       )}
+      </AnimatePresence>
     </fieldset>
   );
 }
@@ -1556,16 +1569,34 @@ transition-all duration-150 hover:!bg-black
                       />
                       {isSplitAdDataEnabled && (
                         <div className="space-y-1.5 mt-3">
-                          <div className="flex items-center justify-between gap-3">
-                            <Label htmlFor="share-new-ad-set" className="text-sm">Use one new ad set</Label>
-                            <Switch id="share-new-ad-set" checked={shareNewAdSet}
-                              onCheckedChange={setShareNewAdSet} disabled={!isLoggedIn}
-                              aria-describedby="share-new-ad-set-help" />
-                          </div>
+                          <TooltipProvider delayDuration={0}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className={activeVariantId !== "default" ? "cursor-not-allowed" : ""}
+                                  tabIndex={activeVariantId !== "default" ? 0 : undefined}>
+                                  <RadioGroup orientation="horizontal" value={shareNewAdSet ? "shared" : "separate"}
+                                    onValueChange={(value) => { if (activeVariantId === "default") setShareNewAdSet(value === "shared"); }}
+                                    disabled={!isLoggedIn || activeVariantId !== "default"}
+                                    aria-label="New ad set launch mode" aria-describedby="share-new-ad-set-help"
+                                    className={`flex flex-nowrap items-start gap-4 ${activeVariantId !== "default" ? "pointer-events-none opacity-50" : ""}`}>
+                                    <div className="flex flex-1 items-start gap-2">
+                                      <RadioGroupItem id="shared-new-ad-set" value="shared" className="mt-0.5 shrink-0" />
+                                      <Label htmlFor="shared-new-ad-set" className="text-xs leading-5 font-normal">Launch all in 1 new ad set</Label>
+                                    </div>
+                                    <div className="flex flex-1 items-start gap-2">
+                                      <RadioGroupItem id="separate-new-ad-sets" value="separate" className="mt-0.5 shrink-0" />
+                                      <Label htmlFor="separate-new-ad-sets" className="text-xs leading-5 font-normal">Create new ad set in each variant</Label>
+                                    </div>
+                                  </RadioGroup>
+                                </div>
+                              </TooltipTrigger>
+                              {activeVariantId !== "default" && <TooltipContent>Change this value in Default first.</TooltipContent>}
+                            </Tooltip>
+                          </TooltipProvider>
                           <p id="share-new-ad-set-help" className="text-xs text-gray-500">
                             You’re seeing this because Split Ad Data is enabled. {shareNewAdSet
-                              ? "New-ad-set variants share Default’s name and setup. Select the same campaign and source ad set in each. Variants using existing ad sets stay unchanged."
-                              : "Each new-ad-set variant creates its own ad set, using its own name and setup."}
+                              ? "All new variants will launch in the 1 new ad set from the Default variant. Select the same campaign and source ad set in each. Variants using existing ad sets stay unchanged."
+                              : "Each new variant creates its own ad set, using its own name and setup."}
                           </p>
                         </div>
                       )}

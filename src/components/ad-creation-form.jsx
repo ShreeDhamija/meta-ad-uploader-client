@@ -172,7 +172,16 @@ function withTimeout(promise, timeoutMs, timeoutMessage, signal) {
   });
 }
 
-async function prepareSharedAdSetJobs({ jobs, defaultSnapshot, enabled, duplicate }) {
+async function duplicateAdSetRequest(adSetId, campaignId, adAccountId, adSetName, signal = null, settings = null) {
+  const response = await axios.post(
+    `${API_BASE_URL}/auth/duplicate-adset`,
+    { adSetId, campaignId, adAccountId, newAdSetName: adSetName, ...(settings ? { settings } : {}) },
+    { withCredentials: true, signal, timeout: DUPLICATE_AD_SET_TIMEOUT_MS },
+  );
+  return response.data.copied_adset_id;
+}
+
+async function prepareSharedAdSetJobs({ jobs, defaultSnapshot, enabled, duplicate, signal }) {
   const newAdSetJobs = jobs.filter((job) => job.formData.duplicateAdSet);
   if (!enabled || newAdSetJobs.length === 0) return { jobs, createdAdSet: null };
 
@@ -180,7 +189,7 @@ async function prepareSharedAdSetJobs({ jobs, defaultSnapshot, enabled, duplicat
   const defaults = structuredClone(defaultSnapshot || {});
   const campaignId = defaults.selectedCampaign?.[0];
   if (!defaults.duplicateAdSet || !campaignId || !defaults.selectedAdAccount) {
-    throw new Error("Configure the new ad set in Default, or turn off ‘Use one new ad set’.");
+    throw new Error("Configure the new ad set in Default, or choose ‘Create new ad set in each variant’ in Default.");
   }
   if ((defaults.newAdSetName || "").length > 400) throw new Error("The new ad set name in Default must be 400 characters or fewer.");
   const name = (defaults.newAdSetName || "").trim();
@@ -195,7 +204,7 @@ async function prepareSharedAdSetJobs({ jobs, defaultSnapshot, enabled, duplicat
     if (form.selectedAdAccount !== defaults.selectedAdAccount ||
       form.selectedCampaign?.length !== 1 || form.selectedCampaign[0] !== campaignId ||
       form.duplicateAdSet !== defaults.duplicateAdSet) {
-      throw new Error(`${job.variantName}: select the same campaign and source ad set as Default, or turn off ‘Use one new ad set’.`);
+      throw new Error(`${job.variantName}: select the same campaign and source ad set as Default, or choose ‘Create new ad set in each variant’ in Default.`);
     }
   }
   const source = defaults.adSets?.find((adSet) => adSet.id === defaults.duplicateAdSet);
@@ -208,7 +217,9 @@ async function prepareSharedAdSetJobs({ jobs, defaultSnapshot, enabled, duplicat
   } : null;
   const endTime = changes?.endTime ?? settings?.defaults?.endTime ?? source.end_time;
   const startTime = changes?.startTime ?? settings?.defaults?.startTime ?? source.start_time;
-  const newAdSetId = await duplicate(defaults.duplicateAdSet, campaignId, defaults.selectedAdAccount, name, null, overrides);
+  if (signal?.aborted) throw new DOMException("Shared ad set creation cancelled.", "AbortError");
+  const newAdSetId = await duplicate(defaults.duplicateAdSet, campaignId, defaults.selectedAdAccount, name, signal, overrides);
+  if (signal?.aborted) throw new DOMException("Shared ad set creation cancelled.", "AbortError");
   if (typeof newAdSetId !== "string" || !newAdSetId.trim()) {
     throw new Error("No new ad set ID was returned. Check Ads Manager before trying again.");
   }
@@ -1451,7 +1462,6 @@ export default function AdCreationForm({
   const [publishPending, setPublishPending] = useState(false);
   const [isQueueingJobs, setIsQueueingJobs] = useState(false);
   const queueingJobsRef = useRef(false);
-  const [isPreparingSharedAdSet, setIsPreparingSharedAdSet] = useState(false);
   const [draftMenuOpen, setDraftMenuOpen] = useState(false);
   const [draftName, setDraftName] = useState("");
   const [savingDraft, setSavingDraft] = useState(false);
@@ -2515,7 +2525,7 @@ export default function AdCreationForm({
   const addCompletedJob = useCallback((completedJob) => {
     setCompletedJobs((prev) => {
       const updated = [...prev, completedJob];
-      return updated.map((j, i) => (i < updated.length - 3 ? { ...j, formData: null } : j));
+      return updated.map((j, i) => (i < updated.length - 3 ? { ...j, formData: null, sharedAdSetJob: null } : j));
     });
   }, []);
 
@@ -3215,7 +3225,7 @@ export default function AdCreationForm({
 
   // This useEffect now only handles the UI updates for the progress bar.
   useEffect(() => {
-    if (currentJob) {
+    if (currentJob && currentJob.kind !== "shared-ad-set") {
       setProgress(trackedProgress);
       setProgressMessage(trackedMessage);
     }
@@ -3243,6 +3253,67 @@ export default function AdCreationForm({
     setShowCompletedView(false);
     setJobId(null);
     setIsCancelling(false); // Reset for new job
+
+    if (jobToProcess.kind === "shared-ad-set") {
+      const controller = new AbortController();
+      setCurrentAbortController(controller);
+      currentJobIdRef.current = null;
+      setIsCreatingAds(false);
+      setProgressMessage(`Creating the shared ad set. ${jobToProcess.jobs.length} variant jobs will follow.`);
+      prepareSharedAdSetJobs({
+        jobs: jobToProcess.jobs,
+        defaultSnapshot: jobToProcess.defaultSnapshot,
+        enabled: true,
+        duplicate: duplicateAdSetRequest,
+        signal: controller.signal,
+      }).then((prepared) => {
+        // Replace only this preparation job. Other publish batches keep their order.
+        // Every inserted job has a concrete ID and duplicateAdSet="".
+        setJobQueue((previous) => previous.flatMap((job) => job.id === jobToProcess.id ? prepared.jobs : [job]));
+        addCompletedJob({
+          id: jobToProcess.id,
+          kind: "shared-ad-set",
+          status: "success",
+          completedAt: Date.now(),
+          message: `Created ad set “${prepared.createdAdSet.name}”. ${prepared.jobs.length} variant jobs queued.`,
+          selectedAdSets: [prepared.createdAdSet.id],
+          selectedAdAccount: jobToProcess.defaultSnapshot.selectedAdAccount,
+        });
+        try {
+          onAdSetCreated?.({
+            newAdSetId: prepared.createdAdSet.id,
+            sourceAdSetId: prepared.sourceAdSetId,
+            name: prepared.createdAdSet.name,
+            campaignId: prepared.createdAdSet.campaignId,
+            endTime: prepared.createdAdSet.end_time,
+          });
+        } catch (error) {
+          console.warn("Could not refresh the local ad set list:", error);
+        }
+      }).catch((error) => {
+        const cancelled = controller.signal.aborted || error.name === "AbortError" || axios.isCancel(error);
+        const apiError = error.response?.data?.error;
+        const detail = typeof apiError === "string" ? apiError : apiError?.message || error.message || "Unknown error";
+        addCompletedJob({
+          id: jobToProcess.id,
+          kind: "shared-ad-set",
+          status: cancelled ? "cancelled" : "error",
+          completedAt: Date.now(),
+          message: cancelled
+            ? "Shared ad set creation cancelled. No variant ads were launched. The ad set may already exist in Ads Manager."
+            : `Could not create shared ad set: ${detail}. No variant ads were launched.`,
+          sharedAdSetJob: jobToProcess,
+        });
+        setJobQueue((previous) => previous.filter((job) => job.id !== jobToProcess.id));
+      }).finally(() => {
+        setShowCompletedView(true);
+        setCurrentJob(null);
+        setIsProcessingQueue(false);
+        setCurrentAbortController(null);
+        setIsCancelling(false);
+      });
+      return;
+    }
 
     handleCreateAd(jobToProcess).catch((err) => {
       // Don't treat cancellation as a critical error
@@ -3276,10 +3347,10 @@ export default function AdCreationForm({
       setIsProcessingQueue(false);
       setIsCancelling(false); // <-- HERE
     });
-  }, [jobQueue, isProcessingQueue, resetProgress]);
+  }, [jobQueue, isProcessingQueue, resetProgress, addCompletedJob, onAdSetCreated]);
 
   useEffect(() => {
-    if (!isProcessingQueue || !currentJob) {
+    if (!isProcessingQueue || !currentJob || currentJob.kind === "shared-ad-set") {
       return; // Do nothing if a job isn't active
     }
 
@@ -4893,14 +4964,7 @@ export default function AdCreationForm({
     headlines,
   ]);
 
-  const duplicateAdSetRequest = async (adSetId, campaignId, adAccountId, adSetName, signal = null, settings = null) => {
-    const response = await axios.post(
-      `${API_BASE_URL}/auth/duplicate-adset`,
-      { adSetId, campaignId, adAccountId, newAdSetName: adSetName ?? newAdSetName, ...(settings ? { settings } : {}) },
-      { withCredentials: true, signal, timeout: DUPLICATE_AD_SET_TIMEOUT_MS },
-    );
-    return response.data.copied_adset_id;
-  };
+
 
   const hasShopAutomaticAdSets = useMemo(() => {
     if (duplicateAdSet) {
@@ -8583,27 +8647,20 @@ export default function AdCreationForm({
     const defaultSnapshot = getVariantState("default");
     queueingJobsRef.current = true;
     setIsQueueingJobs(true);
-    setIsPreparingSharedAdSet(prepareSharedAdSet);
 
     try {
-      const prepared = await prepareSharedAdSetJobs({
+      // A preparation entry holds the captured batch until its shared target is
+      // ready. It uses the same queue, cancellation and error UI as ad jobs.
+      const jobsToQueue = prepareSharedAdSet ? [{
+        id: uuidv4(),
+        kind: "shared-ad-set",
+        createdAt: Date.now(),
         jobs: queuedJobs,
-        defaultSnapshot,
-        enabled: prepareSharedAdSet,
-        duplicate: duplicateAdSetRequest,
-      });
-      // Each shared job now targets an existing ID and has duplicateAdSet="".
-      // handleCreateAd therefore uses its existing-ad-set path, including retries.
-      setJobQueue((prev) => [...prev, ...prepared.jobs]);
-      if (prepared.createdAdSet) {
-        onAdSetCreated?.({
-          newAdSetId: prepared.createdAdSet.id,
-          sourceAdSetId: prepared.sourceAdSetId,
-          name: prepared.createdAdSet.name,
-          campaignId: prepared.createdAdSet.campaignId,
-          endTime: prepared.createdAdSet.end_time,
-        });
-      }
+        defaultSnapshot: structuredClone(defaultSnapshot),
+      }] : queuedJobs;
+      setJobQueue((previous) => [...previous, ...jobsToQueue]);
+      setHasStartedAnyJob(true);
+      setIsJobTrackerExpanded(true);
 
       if (!preserveMedia) {
         try {
@@ -8620,7 +8677,6 @@ export default function AdCreationForm({
     } finally {
       queueingJobsRef.current = false;
       setIsQueueingJobs(false);
-      setIsPreparingSharedAdSet(false);
     }
   };
 
@@ -8634,6 +8690,9 @@ export default function AdCreationForm({
   const hasConfiguredFormSplits = populatedVariantSummaries.some((variant) => variant.id !== "default");
   const shouldScrollVariantPicker = variants.length > 5;
   const formatQueuedJobLabel = (job, prefix) => {
+    if (job.kind === "shared-ad-set") {
+      return `${prefix === "Posting" ? "Creating" : prefix + ": create"} shared ad set “${job.defaultSnapshot.newAdSetName || "New ad set"}” · ${job.jobs.length} variants`;
+    }
     const summary = `${job.adCount} ad${job.adCount !== 1 ? "s" : ""} to ${job.formData.adSetDisplayName}`;
     return job.showVariantLabel && job.variantName ? `${prefix} ${job.variantName}: ${summary}` : `${prefix} ${summary}`;
   };
@@ -8764,15 +8823,6 @@ export default function AdCreationForm({
 
   return (
     <Card className=" !bg-white border border-gray-300 max-w-[calc(100vw-1rem)] shadow-[0_2px_4px_rgba(0,0,0,0.08)] rounded-3xl">
-      <Dialog open={isPreparingSharedAdSet}>
-        <DialogContent hideClose className="rounded-2xl" overlayClassName="bg-black/20"
-          onEscapeKeyDown={(event) => event.preventDefault()} onInteractOutside={(event) => event.preventDefault()}>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><Loader className="h-4 w-4 animate-spin" />Creating shared ad set…</DialogTitle>
-            <DialogDescription>Your variants will be queued together once the new ad set is ready.</DialogDescription>
-          </DialogHeader>
-        </DialogContent>
-      </Dialog>
       {hasStartedAnyJob && (
         <div className="fixed bottom-4 right-4 z-50">
           {/* Collapsed State */}
@@ -8910,7 +8960,7 @@ export default function AdCreationForm({
                                   className="max-w-[320px] rounded-xl border border-gray-200 bg-white p-3 text-xs text-gray-900 shadow-lg"
                                 >
                                   <div className="space-y-2">
-                                    <p className="font-semibold">View Ads Created</p>
+                                    <p className="font-semibold">{job.kind === "shared-ad-set" ? "View Shared Ad Set" : "View Ads Created"}</p>
                                     {successfulAdNames.length > 0 ? (
                                       <ul className="ml-3 list-disc space-y-1">
                                         {successfulAdNames.map((name, index) => (
@@ -8918,12 +8968,24 @@ export default function AdCreationForm({
                                         ))}
                                       </ul>
                                     ) : (
-                                      <p className="text-gray-500">Ad names unavailable</p>
+                                      <p className="text-gray-500">{job.kind === "shared-ad-set" ? "Open the shared ad set in Ads Manager." : "Ad names unavailable"}</p>
                                     )}
                                   </div>
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
+                          )}
+
+                          {job.sharedAdSetJob && (
+                            <button type="button" title="Retry shared ad set and variant batch"
+                              className="text-gray-500 hover:text-blue-500 transition-colors p-1"
+                              onClick={() => {
+                                setJobQueue((previous) => [...previous, { ...job.sharedAdSetJob, id: uuidv4() }]);
+                                setCompletedJobs((previous) => previous.filter((entry) => entry.id !== job.id));
+                                setIsJobTrackerExpanded(true);
+                              }}>
+                              <RotateCcw className="h-4 w-4" />
+                            </button>
                           )}
 
                           {(job.status === "error" || job.status === "partial-success") && job.formData && (
@@ -9020,13 +9082,15 @@ export default function AdCreationForm({
                         <UploadIcon className="w-6 h-6" />
                       </div>
                       <p className="flex-1 text-sm font-medium text-gray-700 break-all">{formatQueuedJobLabel(currentJob, "Posting")}</p>
-                      <span className="text-sm font-semibold text-gray-900">{Math.round(progress || trackedProgress)}%</span>
+                      {currentJob.kind === "shared-ad-set"
+                        ? <Loader className="h-4 w-4 animate-spin text-blue-600" />
+                        : <span className="text-sm font-semibold text-gray-900">{Math.round(progress || trackedProgress)}%</span>}
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="flex-1 bg-gray-200 rounded-full h-2">
                         <div
-                          className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                          style={{ width: `${progress || trackedProgress}%` }}
+                          className={`bg-blue-600 h-2 rounded-full transition-all duration-300 ${currentJob.kind === "shared-ad-set" ? "animate-pulse" : ""}`}
+                          style={{ width: currentJob.kind === "shared-ad-set" ? "35%" : `${progress || trackedProgress}%` }}
                         />
                       </div>
                       <button

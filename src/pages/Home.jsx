@@ -43,6 +43,13 @@ const EMPTY_PIXEL_TRACKING_OVERRIDE = {
     offlineDatasetId: null,
 };
 
+// Normalize display/upload names without changing provider IDs, URLs or group keys.
+function normalizeImportedFileNames(files) {
+    return files.map((file) => typeof file.name === "string" && file.name.includes("/")
+        ? { ...file, name: file.name.replace(/\//g, ":") }
+        : file);
+}
+
 // Check if user has active access
 
 
@@ -237,8 +244,14 @@ export default function Home() {
         dateType: "MonthYYYY",
         customTexts: {} // Add this for consistency
     });
-    const [driveFiles, setDriveFiles] = useState([])
-    const [dropboxFiles, setDropboxFiles] = useState([]);
+    const [driveFiles, setDriveFilesState] = useState([]);
+    const [dropboxFiles, setDropboxFilesState] = useState([]);
+    const setDriveFiles = useCallback((update) => {
+        setDriveFilesState((previous) => normalizeImportedFileNames(typeof update === "function" ? update(previous) : update));
+    }, []);
+    const setDropboxFiles = useCallback((update) => {
+        setDropboxFilesState((previous) => normalizeImportedFileNames(typeof update === "function" ? update(previous) : update));
+    }, []);
     const [frameioFiles, setFrameioFiles] = useState([]);
     const [launchPaused, setLaunchPaused] = useState(false); // <-- New state
     const [discloseAiMedia, setDiscloseAiMedia] = useState(false);
@@ -1492,7 +1505,7 @@ export default function Home() {
             return media ? { ...post, previewUrl: media.previewUrl || media.url } : post;
         }));
         setSelectedFiles(new Set());
-    }, [hydrateFromSnapshot, selectedAdAccount]);
+    }, [hydrateFromSnapshot, selectedAdAccount, setDriveFiles, setDropboxFiles]);
 
     const handleAddVariant = useCallback(() => {
         const usedLetters = new Set(

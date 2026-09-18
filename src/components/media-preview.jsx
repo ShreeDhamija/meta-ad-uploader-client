@@ -1079,7 +1079,7 @@ export default function MediaPreview({
               variants={variants}
               onAssignVariant={assignSelectedToVariant}
               onAddVariant={handleAddVariant}
-              triggerLabel="Select variant for assignment"
+              triggerLabel="Select variant"
               disabled={assignmentSelection.size === 0 || isLaunchingMedia}
               triggerClassName="py-2 disabled:opacity-50 disabled:pointer-events-none"
             />
