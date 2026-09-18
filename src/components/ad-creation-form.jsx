@@ -3283,7 +3283,7 @@ export default function AdCreationForm({
           kind: "shared-ad-set",
           status: "success",
           completedAt: Date.now(),
-          message: `Created ad set “${prepared.createdAdSet.name}”. ${prepared.jobs.length} variant jobs queued.`,
+          message: `Created ad set “${prepared.createdAdSet.name}”.`,
           selectedAdSets: [prepared.createdAdSet.id],
           selectedAdAccount: jobToProcess.defaultSnapshot.selectedAdAccount,
         });
