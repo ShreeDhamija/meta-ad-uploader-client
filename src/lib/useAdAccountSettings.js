@@ -46,6 +46,7 @@ export default function useAdAccountSettings(adAccountId) {
                 setSettings(prev => ({
                     ...prev,
                     copyTemplates: data.settings.copyTemplates || {},
+                    templateLinkSync: data.settings.templateLinkSync || { enabled: false, pairs: [] },
                     defaultTemplateName: data.settings.defaultTemplateName || "",
                 }));
             }
@@ -58,9 +59,11 @@ export default function useAdAccountSettings(adAccountId) {
     useEffect(() => {
         if (!adAccountId) return;
         setLoading(true);
+        const controller = new AbortController();
         const fetchAdAccountSettings = async () => {
             try {
                 const res = await fetch(`${API_BASE_URL}/settings/ad-account?adAccountId=${adAccountId}`, {
+                    signal: controller.signal,
                     credentials: "include",
                 });
                 const data = await res.json();
@@ -77,6 +80,7 @@ export default function useAdAccountSettings(adAccountId) {
                         defaultAdName: "",
                         defaultLinkName: "",
                         links: [],
+                        templateLinkSync: { enabled: false, pairs: [] },
                         defaultCTA: "LEARN_MORE",
                         displayLink: "",
                         defaultUTMs: [],
@@ -117,6 +121,7 @@ export default function useAdAccountSettings(adAccountId) {
                         defaultInstagram: s.defaultInstagram || null,
                         defaultAdName: s.defaultAdName || "",
                         links: links,
+                        templateLinkSync: s.templateLinkSync || { enabled: false, pairs: [] },
                         defaultCTA: s.defaultCTA || "LEARN_MORE",
                         defaultUTMs: Array.isArray(s.defaultUTMs) ? s.defaultUTMs : [],
                         displayLink: s.displayLink || "",
@@ -146,16 +151,18 @@ export default function useAdAccountSettings(adAccountId) {
                     });
                 }
             } catch (err) {
+                if (controller.signal.aborted) return;
                 console.error("Failed to fetch ad account settings:", err);
                 setDocumentExists(false);
                 setIsFirstEverSave(false);
 
             } finally {
-                setLoading(false);
+                if (!controller.signal.aborted) setLoading(false);
             }
         };
 
         fetchAdAccountSettings();
+        return () => controller.abort();
     }, [adAccountId]);
 
     return {

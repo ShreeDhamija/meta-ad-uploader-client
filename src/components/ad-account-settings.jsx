@@ -10,11 +10,11 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Popover, PopoverContent, PopoverTrigger, PopoverAnchor } from "@/components/ui/popover"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
-import { Check, ChevronsUpDown, RefreshCcw, X, CircleX, Loader, AlertTriangle, Ban, Pencil, CircleDollarSign, CalendarClock, Crosshair } from "lucide-react"
+import { Search, Check, ChevronsUpDown, RefreshCcw, X, CircleX, Loader, AlertTriangle, Ban, Pencil, CircleDollarSign, CalendarClock, Crosshair } from "lucide-react"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { useAuth } from "@/lib/AuthContext"
 import { Input } from "@/components/ui/input"
@@ -113,6 +113,8 @@ function InterestPicker({ label = "Interests", value, onChange, disabled }) {
   const [error, setError] = useState("");
   const [searched, setSearched] = useState(false);
   const requestRef = useRef(null);
+  const searchRowRef = useRef(null);
+  const resultsRef = useRef(null);
   useEffect(() => () => requestRef.current?.abort(), []);
   useEffect(() => {
     if (!open || disabled) { requestRef.current?.abort(); setLoading(false); }
@@ -122,6 +124,7 @@ function InterestPicker({ label = "Interests", value, onChange, disabled }) {
     requestRef.current?.abort();
     const controller = new AbortController();
     requestRef.current = controller;
+    setOpen(true);
     setLoading(true);
     setError("");
     setSearched(true);
@@ -146,23 +149,33 @@ function InterestPicker({ label = "Interests", value, onChange, disabled }) {
   return <div className="space-y-2">
     <Label>{label}</Label>
     <Popover open={open && !disabled} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button type="button" variant="outline" disabled={disabled} role="combobox" aria-label={label} aria-expanded={open}
-          className="h-11 w-full justify-between rounded-2xl bg-white py-2 hover:!bg-white text-left font-normal">
-          <span className="truncate">{value.length ? `${value.length} interest${value.length === 1 ? "" : "s"} selected` : "Search interests"}</span>
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-auto p-0 bg-white shadow-lg rounded-2xl" style={{ minWidth: "var(--radix-popover-trigger-width)", width: "max(var(--radix-popover-trigger-width), min(480px, calc(100vw - 2rem)))", maxWidth: "calc(100vw - 2rem)" }} align="start" sideOffset={4}>
-        <Command shouldFilter={false} loop={false} className="rounded-2xl bg-white">
-          <div className="mx-2 mt-2 mb-1 flex items-center gap-1">
-            <CommandInput value={query} onValueChange={(next) => {
-              requestRef.current?.abort(); setLoading(false); setQuery(next); setResults([]); setError(""); setSearched(false);
-            }} maxLength={100} placeholder="Search interests..."
-              onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); event.stopPropagation(); search(); } }}
-              className="h-full bg-transparent" wrapperClassName="mx-0 mt-0 mb-0 h-11 min-w-0 flex-1 bg-gray-50 border-gray-200 rounded-[20px]" />
-            <Button type="button" size="sm" disabled={disabled || loading || query.trim().length < 2} onClick={search} onKeyDown={(event) => event.stopPropagation()} className="h-11 shrink-0 rounded-xl">Search</Button>
+      <PopoverAnchor asChild>
+        <div ref={searchRowRef} className="flex items-center gap-1">
+          <div className="relative min-w-0 flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" aria-hidden="true" />
+            <Input value={query} disabled={disabled} maxLength={100} placeholder="Search interests..." aria-label={`Search ${label.toLowerCase()}`}
+              aria-expanded={open && !disabled} aria-haspopup="listbox"
+              onFocus={() => { if (searched || value.length) setOpen(true); }}
+              onChange={(event) => {
+                requestRef.current?.abort(); setLoading(false); setQuery(event.target.value); setResults([]); setError(""); setSearched(false); setOpen(false);
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") { event.preventDefault(); event.stopPropagation(); search(); }
+                if (event.key === "Escape") { event.preventDefault(); setOpen(false); }
+                if (event.key === "ArrowDown" && (searched || value.length)) {
+                  event.preventDefault(); setOpen(true); requestAnimationFrame(() => resultsRef.current?.focus());
+                }
+              }}
+              className="h-11 rounded-[20px] border-gray-200 bg-gray-50 pl-9" />
           </div>
+          <Button type="button" size="sm" disabled={disabled || loading || query.trim().length < 2} onClick={search}
+            className="h-11 shrink-0 rounded-[20px] px-4">Search</Button>
+        </div>
+      </PopoverAnchor>
+      <PopoverContent className="w-auto p-0 bg-white shadow-lg rounded-2xl" style={{ minWidth: "var(--radix-popover-trigger-width)", width: "max(var(--radix-popover-trigger-width), min(480px, calc(100vw - 2rem)))", maxWidth: "calc(100vw - 2rem)" }} align="start" side="bottom" sideOffset={4}
+        onOpenAutoFocus={(event) => event.preventDefault()} onCloseAutoFocus={(event) => event.preventDefault()}
+        onInteractOutside={(event) => { if (searchRowRef.current?.contains(event.target)) event.preventDefault(); }}>
+        <Command ref={resultsRef} tabIndex={-1} shouldFilter={false} loop={false} className="rounded-2xl bg-white">
           <CommandList className="max-h-none overflow-hidden rounded-2xl px-2" selectOnFocus={false}>
             {loading ? <p role="status" className="p-3 text-sm text-gray-500">Searching...</p>
               : error ? <p role="alert" className="p-3 text-sm text-red-600">{error}</p>
@@ -224,6 +237,14 @@ export function getAdSetAdvancedSettingsError(settings) {
     if (min > Number(defaults.budget.amount) || max > Number(defaults.budget.amount)) return "Spend limits cannot exceed the campaign budget.";
     if (min && max && min >= max) return "Minimum spend must be lower than the maximum spend limit.";
   }
+  const available = defaults.minimumSpendAvailability;
+  const minimum = changes.spendLimits?.min ?? defaults.spendLimits?.min;
+  if (available && minimum?.value !== "" && minimum?.value != null) {
+    const exceeds = minimum.unit === "percentage"
+      ? Number(minimum.value) > available.maxPercentage
+      : Number(minimum.value) > Number(available.remainingAmount);
+    if (exceeds) return `Minimum spend exceeds the campaign's remaining minimum-spend allocation. Use at most ${available.maxPercentage}% or ${defaults.budget.currency} ${available.remainingAmount}, or clear the minimum.`;
+  }
   return null;
 }
 
@@ -238,7 +259,7 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
   const [reload, setReload] = useState(0);
   const defaults = value?.defaults;
   useEffect(() => {
-    if (!expanded || (defaults && Object.prototype.hasOwnProperty.call(defaults, "spendLimits") && defaults.interestsResolved) || disabled) return;
+    if (!expanded || (defaults && Object.prototype.hasOwnProperty.call(defaults, "spendLimits") && Object.prototype.hasOwnProperty.call(defaults, "minimumSpendAvailability") && defaults.interestsResolved) || disabled) return;
     const controller = new AbortController();
     settingsRequestRef.current = controller;
     setLoading(true);
@@ -248,7 +269,7 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
       .then(async (response) => {
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || "Could not load ad set settings.");
-        if (!controller.signal.aborted) onChange({ sourceAdSetId: adSetId, campaignId, adAccountId, defaults: { ...data, spendLimits: data.spendLimits ?? null, interestsResolved: true }, changes: latestSettingsRef.current?.changes || {} });
+        if (!controller.signal.aborted) onChange({ sourceAdSetId: adSetId, campaignId, adAccountId, defaults: { ...data, spendLimits: data.spendLimits ?? null, minimumSpendAvailability: data.minimumSpendAvailability ?? null, interestsResolved: true }, changes: latestSettingsRef.current?.changes || {} });
       })
       .catch((err) => { if (!controller.signal.aborted) setError(err.message); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
@@ -416,6 +437,10 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
                         </div>
                       </div>;
                     })}
+                    {defaults.minimumSpendAvailability && <p className="text-xs text-gray-500">
+                      Available for this ad set’s minimum: {defaults.minimumSpendAvailability.maxPercentage}% or {defaults.budget.currency} {defaults.minimumSpendAvailability.remainingAmount}.
+                      {defaults.minimumSpendAvailability.missingAbsoluteAmounts > 0 && " Some existing absolute minimums were not returned; Meta will validate the final limit."}
+                    </p>}
                     <p className="text-xs text-gray-500">Leave empty for no limit. Switching units converts using the current campaign budget. Percentages must be whole numbers.</p>
                   </div>}
                   {advancedError && <p role="alert" className="text-xs text-red-600">{advancedError}</p>}

@@ -1,5 +1,8 @@
 "use client";
 
+import SavedLinkSelector from "./settings/SavedLinkSelector";
+import { validTemplateLinkPairs, templateForLink, sortTemplates } from "./settings/templateLinkUtils";
+import useSortPreference from "./settings/useSortPreference";
 import { getAdSetAdvancedSettingsError } from "@/components/ad-account-settings";
 import DesktopIcon from "@/assets/Desktop.webp";
 import DropboxIcon from "@/assets/Dropbox.png";
@@ -96,7 +99,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || "https://api.withblip.com";
 const NOOP = () => { };
 const META_AD_CREATION_ACTION_REQUIRED = "META_AD_CREATION_ACTION_REQUIRED";
 const META_ACTION_REQUIRED_MESSAGE = "Meta requires you to take certain steps to continue ad creation";
-const TEMPLATE_LINK_SYNC_USER_ID = "929470643071391";
+const LEGACY_TEMPLATE_AD_NAME_USER_ID = "929470643071391";
 const PIXEL_TRACKING_FORM_ALLOWED_USER_IDS = ["10236978990363167", "10234447959963619", "10162737276661695", "10165258246808665", "10163704737102804", "28883613861256118"];
 const INSTANT_EXPERIENCE_USER_IDS = ["10236978990363167", "2901368380250453"];
 const LOWERCASE_FILE_NAME_FORMULA_USER_IDS = ["27431350269900471"];
@@ -214,7 +217,7 @@ async function prepareSharedAdSetJobs({ jobs, defaultSnapshot, enabled, duplicat
   if (!source) throw new Error("Refresh Default’s ad sets and select the source ad set again.");
 
   const changes = settings?.changes;
-  const overrides = changes && Object.keys(changes).length ? {
+  const overrides = changes && (Object.keys(changes).length || (settings.defaults?.minimumSpendAvailability && settings.defaults?.spendLimits?.min?.value)) ? {
     ...changes,
     ...(changes.budgetAmount !== undefined ? { budgetMode: settings.defaults?.budget?.mode } : {}),
   } : null;
@@ -1784,7 +1787,7 @@ export default function AdCreationForm({
   const [showSaveNewDialog, setShowSaveNewDialog] = useState(false);
   const [templateDropdownOpen, setTemplateDropdownOpen] = useState(false);
   const [templateSearch, setTemplateSearch] = useState("");
-  const [sortMode, setSortMode] = useState(() => localStorage.getItem("templateSortMode") || "default");
+  const [sortMode, setSortMode] = useSortPreference("templateSortMode", "default");
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [bulkDeleteMode, setBulkDeleteMode] = useState(false);
   const [selectedForDelete, setSelectedForDelete] = useState(new Set());
@@ -3172,27 +3175,13 @@ export default function AdCreationForm({
     setCtaSearch("");
   };
 
-  const availableLinks = adAccountSettings?.links || [];
+  const availableLinks = useMemo(() => adAccountSettings?.links || [], [adAccountSettings?.links]);
   const defaultLink = availableLinks.find((l) => l.isDefault) || availableLinks[0];
-  const isTemplateLinkSyncUser = String(userId || "") === TEMPLATE_LINK_SYNC_USER_ID;
+  const usesLegacyTemplateAdName = String(userId || "") === LEGACY_TEMPLATE_AD_NAME_USER_ID;
 
-  useEffect(() => {
-    if (!isTemplateLinkSyncUser || !selectedTemplate || !defaultTemplateName || availableLinks.length === 0) return;
-
-    const defaultUrl = defaultLink?.url || "";
-    const syncedUrl =
-      selectedTemplate === defaultTemplateName ? defaultUrl : availableLinks.find((linkObj) => linkObj?.url && linkObj.url !== defaultUrl)?.url;
-    if (!syncedUrl) return;
-
-    setShowCustomLink(false);
-    setCustomLink("");
-    setLink((prevLinks) => {
-      const currentLinks = Array.isArray(prevLinks) && prevLinks.length > 1 ? prevLinks : [prevLinks?.[0] || ""];
-      const nextLinks = currentLinks.length > 1 ? currentLinks.map(() => syncedUrl) : [syncedUrl];
-      return JSON.stringify(currentLinks) === JSON.stringify(nextLinks) ? prevLinks : nextLinks;
-    });
-    setLinkCustomStates({});
-  }, [availableLinks, defaultLink, defaultTemplateName, isTemplateLinkSyncUser, selectedTemplate, setCustomLink, setLink, setShowCustomLink]);
+  const templateLinkPairs = useMemo(() => adAccountSettings?.templateLinkSync?.enabled
+    ? validTemplateLinkPairs(adAccountSettings.templateLinkSync, copyTemplates, availableLinks)
+    : [], [adAccountSettings?.templateLinkSync, copyTemplates, availableLinks]);
 
   const filteredPages = useMemo(
     () => pages.filter((page) => page.name.toLowerCase().includes(pageSearchValue.toLowerCase())),
@@ -3495,7 +3484,7 @@ export default function AdCreationForm({
   }, [status, isProcessingQueue, currentJob]);
 
   const handleTemplateSelect = useCallback(
-    (templateName) => {
+    (templateName, { syncLink = true } = {}) => {
       const template = copyTemplates[templateName];
       if (!template) return;
 
@@ -3508,9 +3497,24 @@ export default function AdCreationForm({
       setHeadlines([...(template.headlines || [""])]);
       setDescriptions([...(template.descriptions || [""])]);
       setAddDescriptions((template.descriptions || []).some((description) => description !== ""));
+      const pairedUrl = syncLink && destinationType !== "instant_experience" && templateLinkPairs.find(pair => pair.templateName === templateName)?.url;
+      if (pairedUrl) {
+        setLink(previous => (previous.length > 1 ? previous.map(() => pairedUrl) : [pairedUrl]));
+        setShowCustomLink(false);
+        setCustomLink("");
+        setLinkCustomStates({});
+      }
     },
-    [copyTemplates, setDescriptions, setHeadlines, setMessages, setSelectedTemplate],
+    [copyTemplates, setDescriptions, setHeadlines, setMessages, setSelectedTemplate, templateLinkPairs, destinationType, setLink, setShowCustomLink, setCustomLink],
   );
+
+  const handleSavedLinkSelect = useCallback((url, cardIndex = null) => {
+    setLink(previous => cardIndex === null ? [url] : previous.map((current, index) => index === cardIndex ? url : current));
+    const matchingTemplate = templateForLink(templateLinkPairs, url, selectedTemplate);
+    if (matchingTemplate && matchingTemplate !== selectedTemplate) {
+      handleTemplateSelect(matchingTemplate, { syncLink: false });
+    }
+  }, [setLink, templateLinkPairs, selectedTemplate, handleTemplateSelect]);
 
   useEffect(() => {
     if (!isCarouselAd) return;
@@ -4899,7 +4903,7 @@ export default function AdCreationForm({
         });
       const templateNameForFormula = formulaToUse.selectedTemplate || selectedTemplate;
       const templateHashReplacement =
-        isTemplateLinkSyncUser && templateNameForFormula && defaultTemplateName
+        usesLegacyTemplateAdName && templateNameForFormula && defaultTemplateName
           ? templateNameForFormula === defaultTemplateName
             ? "33"
             : "21"
@@ -4923,7 +4927,7 @@ export default function AdCreationForm({
       computeAdName,
       defaultTemplateName,
       duplicateAdSet,
-      isTemplateLinkSyncUser,
+      usesLegacyTemplateAdName,
       newAdSetName,
       selectedAdSets,
       selectedTemplate,
@@ -5382,29 +5386,7 @@ export default function AdCreationForm({
   };
 
   const sortedFilteredTemplates = useMemo(() => {
-    let entries = Object.entries(copyTemplates);
-
-    if (templateSearch.trim()) {
-      const query = templateSearch.toLowerCase();
-      entries = entries.filter(([name]) => name.toLowerCase().includes(query));
-    }
-
-    entries.sort(([a, aData], [b, bData]) => {
-      if (a === defaultTemplateName) return -1;
-      if (b === defaultTemplateName) return 1;
-
-      if (sortMode === "most_used") {
-        return (bData?.usageCount || 0) - (aData?.usageCount || 0);
-      }
-      if (sortMode === "oldest") return 0;
-      return a.localeCompare(b);
-    });
-
-    if (sortMode === "oldest") {
-      const defaultEntry = entries.find(([name]) => name === defaultTemplateName);
-      const rest = entries.filter(([name]) => name !== defaultTemplateName);
-      entries = defaultEntry ? [defaultEntry, ...rest.reverse()] : rest.reverse();
-    }
+    const entries = sortTemplates(copyTemplates, sortMode, defaultTemplateName).filter(([name]) => name.toLowerCase().includes(templateSearch.toLowerCase().trim()));
 
     return entries;
   }, [copyTemplates, defaultTemplateName, templateSearch, sortMode]);
@@ -5961,7 +5943,7 @@ export default function AdCreationForm({
       try {
         throwIfCancelled();
         const changes = newAdSetSettings?.changes;
-        const settings = changes && Object.keys(changes).length ? {
+        const settings = changes && (Object.keys(changes).length || (newAdSetSettings.defaults?.minimumSpendAvailability && newAdSetSettings.defaults?.spendLimits?.min?.value)) ? {
           ...changes,
           ...(changes.budgetAmount !== undefined ? { budgetMode: newAdSetSettings.defaults.budget.mode } : {}),
         } : null;
@@ -10060,6 +10042,7 @@ export default function AdCreationForm({
                                             { value: "default", label: "Recently Made" },
                                             { value: "oldest", label: "Oldest First" },
                                             { value: "most_used", label: "Most Used" },
+                                            { value: "alphabetical", label: "Alphabetical (A–Z)" },
                                           ].map((option) => (
                                             <button
                                               key={option.value}
@@ -10068,7 +10051,6 @@ export default function AdCreationForm({
                                               onClick={(e) => {
                                                 e.stopPropagation();
                                                 setSortMode(option.value);
-                                                localStorage.setItem("templateSortMode", option.value);
                                                 setShowSortMenu(false);
                                               }}
                                             >
@@ -10759,33 +10741,7 @@ export default function AdCreationForm({
                       // Single link mode (normal ads or carousel with "apply to all")
                       <div className="space-y-3">
                         {!showCustomLink && availableLinks.length > 0 && (
-                          <Select
-                            value={link[0] || ""}
-                            onValueChange={(value) => setLink([value])}
-                            disabled={!isLoggedIn || availableLinks.length === 0}
-                          >
-                            <SelectTrigger className={cn("w-full", formFieldChrome)}>
-                              <SelectValue placeholder="Select a link" />
-                            </SelectTrigger>
-
-                            <SelectContent className="bg-white shadow-lg rounded-xl w-auto">
-                              {availableLinks.map((linkObj, index) => (
-                                <SelectItem
-                                  key={index}
-                                  value={linkObj.url}
-                                  className="cursor-pointer px-3 py-2 hover:bg-gray-100 rounded-xl mx-2 my-1 ml-4"
-                                >
-                                  <div className="flex items-center justify-between w-full">
-                                    <span className="truncate max-w-[650px]">{linkObj.url}</span>
-
-                                    {linkObj.isDefault && (
-                                      <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-lg flex-shrink-0">Default</span>
-                                    )}
-                                  </div>
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <SavedLinkSelector links={availableLinks} value={link[0] || ""} onValueChange={handleSavedLinkSelect} disabled={!isLoggedIn} className={formFieldChrome} />
                         )}
 
                         <div className="flex items-center space-x-2">
@@ -10798,7 +10754,7 @@ export default function AdCreationForm({
                                   value={customLink}
                                   onChange={(e) => {
                                     setCustomLink(e.target.value);
-                                    setLink([e.target.value]);
+                                    handleSavedLinkSelect(e.target.value);
                                   }}
                                   className={cn("w-full", formInputChrome)}
                                   placeholder="https://example.com"
@@ -10819,7 +10775,7 @@ export default function AdCreationForm({
                                     if (!checked) {
                                       setCustomLink("");
                                       const dropdownValue = defaultLink?.url || "";
-                                      setLink([dropdownValue]);
+                                      handleSavedLinkSelect(dropdownValue);
                                     }
                                   }}
                                   className="border-gray-300 w-4 h-4 rounded-md"
@@ -10840,35 +10796,7 @@ export default function AdCreationForm({
                             <Label className="text-sm font-medium">Card {index + 1} Link</Label>
 
                             {(!linkCustomStates || !linkCustomStates[index]) && (
-                              <Select
-                                value={value || ""}
-                                onValueChange={(newValue) => {
-                                  const newLinks = [...link];
-                                  newLinks[index] = newValue;
-                                  setLink(newLinks);
-                                }}
-                                disabled={!isLoggedIn || availableLinks.length === 0}
-                              >
-                                <SelectTrigger className={formFieldChrome}>
-                                  <SelectValue placeholder="Select a link" />
-                                </SelectTrigger>
-                                <SelectContent className="bg-white shadow-lg rounded-xl">
-                                  {availableLinks.map((linkObj, linkIndex) => (
-                                    <SelectItem
-                                      key={linkIndex}
-                                      value={linkObj.url}
-                                      className="cursor-pointer px-4 py-3 hover:bg-gray-100 rounded-xl mx-2 my-1"
-                                    >
-                                      <div className="flex items-center justify-between w-full">
-                                        <span className="truncate max-w-[250px]">{linkObj.url}</span>
-                                        {linkObj.isDefault && (
-                                          <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded">Default</span>
-                                        )}
-                                      </div>
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                              <SavedLinkSelector links={availableLinks} value={value || ""} onValueChange={url => handleSavedLinkSelect(url, index)} disabled={!isLoggedIn || availableLinks.length === 0} className={formFieldChrome} />
                             )}
 
                             <div className="flex items-center justify-between">
@@ -10883,9 +10811,7 @@ export default function AdCreationForm({
 
                                     if (!checked) {
                                       // Reset to dropdown value
-                                      const newLinks = [...link];
-                                      newLinks[index] = defaultLink?.url || "";
-                                      setLink(newLinks);
+                                      handleSavedLinkSelect(defaultLink?.url || "", index);
                                     }
                                   }}
                                   className="border-gray-300 w-4 h-4 rounded-md"
@@ -10919,9 +10845,7 @@ export default function AdCreationForm({
                                 type="text"
                                 value={value}
                                 onChange={(e) => {
-                                  const newLinks = [...link];
-                                  newLinks[index] = e.target.value;
-                                  setLink(newLinks);
+                                  handleSavedLinkSelect(e.target.value, index);
                                 }}
                                 className={formInputChrome}
                                 placeholder="https://example.com"

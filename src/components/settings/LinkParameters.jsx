@@ -14,6 +14,9 @@ import { toast } from "sonner";
 import { Download, CirclePlus, Settings2, Loader } from "lucide-react";
 import { RotateLoader } from "react-spinners";
 import { Checkbox } from "@/components/ui/checkbox"
+import { LinkLabel, LinkSortMenu } from "./SavedLinkSelector";
+import { sortLinks } from "./templateLinkUtils";
+import useSortPreference from "./useSortPreference";
 import LinkIcon from '@/assets/icons/link.svg?react';
 
 // Move constants outside component
@@ -69,6 +72,10 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
     // Link Management States
     const [showAddForm, setShowAddForm] = useState(false)
     const [newLinkUrl, setNewLinkUrl] = useState("")
+    const [newLinkTitle, setNewLinkTitle] = useState("")
+    const [linkSearch, setLinkSearch] = useState("")
+    const [linkSortMode, setLinkSortMode] = useSortPreference("linkSortMode", "created")
+    const filteredLinks = sortLinks(links, linkSortMode).filter(link => `${link.title || ""} ${link.url}`.toLowerCase().includes(linkSearch.toLowerCase().trim()))
     const [linkDropdownOpen, setLinkDropdownOpen] = useState(false)
     const [rawUtmString, setRawUtmString] = useState("");
     const [selectedLinkIndex, setSelectedLinkIndex] = useState(null)
@@ -142,6 +149,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
         }
         const newLink = {
             url: linkUrl,
+            createdAt: new Date().toISOString(),
             isDefault: links.length === 0
         };
         setLinks(prev => [...prev, newLink]);
@@ -155,6 +163,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
             if (!links.some(link => link.url === linkUrl)) {
                 newLinks.push({
                     url: linkUrl,
+                    createdAt: new Date().toISOString(),
                     isDefault: links.length === 0 && newLinks.length === 0
                 });
             }
@@ -180,13 +189,16 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
         }
         const newLink = {
             url: newLinkUrl.trim(),
+            title: newLinkTitle.trim(),
+            createdAt: new Date().toISOString(),
             isDefault: links.length === 0
         };
         setLinks(prev => [...prev, newLink]);
         setSelectedLinkIndex(links.length);
         setNewLinkUrl("");
+        setNewLinkTitle("");
         setShowAddForm(false);
-    }, [newLinkUrl, links, setLinks]);
+    }, [newLinkUrl, newLinkTitle, links, setLinks]);
 
 
 
@@ -409,19 +421,17 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                 </div>
 
                 {links.length > 0 && <div className="flex gap-2 items-center">
-                    <Popover open={linkDropdownOpen} onOpenChange={setLinkDropdownOpen}>
+                    <Popover open={linkDropdownOpen} onOpenChange={open => { setLinkDropdownOpen(open); setLinkSearch(""); }}>
                         <PopoverTrigger asChild>
                             <Button
                                 variant="outline"
                                 role="combobox"
-                                className="flex-1 justify-between rounded-2xl border border-gray-300 bg-white shadow hover:bg-white px-3 py-4.5"
+                                className="min-w-0 flex-1 justify-between rounded-2xl border border-gray-300 bg-white shadow hover:bg-white px-3 py-4.5"
                                 disabled={links.length === 0}
                             >
                                 {selectedLink ? (
-                                    <div className="flex items-center justify-between w-full">
-                                        <span className="text-sm truncate max-w-[350px]">
-                                            {selectedLink.url}
-                                        </span>
+                                    <div className="flex min-w-0 items-center justify-between w-full">
+                                        <LinkLabel link={selectedLink} />
                                         {selectedLink.isDefault && (
                                             <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-lg">
                                                 Default
@@ -435,28 +445,28 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                             </Button>
                         </PopoverTrigger>
                         <PopoverContent
-                            className="min-w-[--radix-popover-trigger-width] w-auto !max-w-none p-0 bg-white shadow-lg rounded-2xl"
+                            className="w-[var(--radix-popover-trigger-width)] max-w-[calc(100vw-2rem)] p-0 bg-white shadow-lg rounded-2xl"
                             align="start"
                             sideOffset={5}
                             style={{
                                 minWidth: "var(--radix-popover-trigger-width)",
-                                width: "auto",
+                                width: "var(--radix-popover-trigger-width)",
                             }}
                         >
-                            <Command>
+                            <Command shouldFilter={false}>
+                                <div className="flex items-center pr-2"><CommandInput wrapperClassName="min-w-0 flex-1" placeholder="Search links or titles..." value={linkSearch} onValueChange={setLinkSearch} /><LinkSortMenu mode={linkSortMode} onChange={setLinkSortMode} /></div>
                                 <CommandList className="max-h-[500px] overflow-y-auto p-1">
-                                    {links.map((link, index) => (
+                                    {filteredLinks.length === 0 && <p className="p-4 text-center text-sm text-gray-500">No links found.</p>}
+                                    {filteredLinks.map((link) => (
                                         <CommandItem
                                             key={link.url}
                                             value={link.url}
-                                            onSelect={() => handleLinkSelect(index)}
+                                            onSelect={() => handleLinkSelect(links.indexOf(link))}
                                             className="cursor-pointer px-3 py-2 hover:bg-gray-100 rounded-xl m-1 group relative"
                                         >
                                             <div className="flex items-center justify-between w-full pr-6">
                                                 <div className="flex items-center min-w-0 flex-1">
-                                                    <span className="text-sm truncate max-w-[500px]" title={link.url}>
-                                                        {link.url}
-                                                    </span>
+                                                    <LinkLabel link={link} />
                                                     {link.isDefault && (
                                                         <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-lg whitespace-nowrap flex-shrink-0">
                                                             Default
@@ -493,6 +503,8 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                     </Button>
                 </div>}
 
+                {selectedLink && !showAddForm && <Input aria-label="Selected link title (optional)" placeholder="Link title (optional)" value={selectedLink.title || ""} onChange={event => { const title = event.target.value; setLinks(previous => previous.map(item => item.url === selectedLink.url ? { ...item, title } : item)); }} className="rounded-2xl border-gray-300 bg-white shadow" />}
+
                 {showAddForm ? (
                     <div className="border border-gray-200 rounded-2xl p-3 bg-white space-y-3">
                         <div className="space-y-2">
@@ -502,6 +514,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                                 onChange={(e) => setNewLinkUrl(e.target.value)}
                                 className="rounded-2xl border-gray-300 py-4.5 bg-white shadow"
                             />
+                            <Input aria-label="Link title (optional)" placeholder="Link title (optional)" value={newLinkTitle} onChange={event => setNewLinkTitle(event.target.value)} className="rounded-2xl border-gray-300 bg-white shadow" />
                         </div>
                         <div className="flex gap-2">
                             <Button
@@ -515,6 +528,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                                 onClick={() => {
                                     setShowAddForm(false);
                                     setNewLinkUrl("");
+                                    setNewLinkTitle("");
                                 }}
                                 variant="outline"
                                 className="rounded-[14px]"

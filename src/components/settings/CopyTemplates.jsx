@@ -1,5 +1,7 @@
 "use client"
 
+import { sortTemplates } from "./templateLinkUtils";
+import useSortPreference from "./useSortPreference";
 import React, { useEffect, useReducer, useState, useRef, useCallback, useMemo } from "react"
 import { useBlocker } from "react-router";
 import { Input } from "@/components/ui/input"
@@ -149,7 +151,7 @@ function reducer(state, action) {
   }
 }
 
-export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSettings, onTemplateUpdate }) {
+export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSettings, onTemplateUpdate, onTemplateRename, onTemplatesDelete }) {
   const [state, dispatch] = useReducer(reducer, initialState)
   const justSavedRef = useRef(false)
   const fileInputRef = useRef(null)
@@ -162,7 +164,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
   const [isProcessing, setIsProcessing] = useState(false)
   const [templateDropdownOpen, setTemplateDropdownOpen] = useState(false)
   const [templateSearch, setTemplateSearch] = useState("")
-  const [sortMode, setSortMode] = useState(() => localStorage.getItem("templateSortMode") || "default")
+  const [sortMode, setSortMode] = useSortPreference("templateSortMode", "default")
   const [showSortMenu, setShowSortMenu] = useState(false)
   const [bulkDeleteMode, setBulkDeleteMode] = useState(false)
   const [selectedForDelete, setSelectedForDelete] = useState(new Set())
@@ -591,6 +593,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
       // If we're renaming, delete the old template
       if (isRenaming) {
         await deleteCopyTemplate(selectedAdAccount, editingTemplate)
+        onTemplateRename?.(editingTemplate, templateName)
       }
 
       onTemplateUpdate();
@@ -687,6 +690,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
     setIsProcessing(true)
     try {
       await deleteCopyTemplate(selectedAdAccount, templateName)
+      onTemplatesDelete?.([templateName])
 
       onTemplateUpdate();
       setAdSettings((prev) => {
@@ -712,7 +716,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
     } finally {
       setIsProcessing(false)
     }
-  }, [selectedAdAccount, setAdSettings, filterFilledDescriptions, filterFilledTexts])
+  }, [selectedAdAccount, setAdSettings, onTemplateUpdate, onTemplatesDelete])
 
   const handleBulkDelete = useCallback(async () => {
     if (selectedForDelete.size === 0) return
@@ -721,6 +725,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
     setIsProcessing(true)
     try {
       await deleteCopyTemplates(selectedAdAccount, namesToDelete)
+      onTemplatesDelete?.(namesToDelete)
 
       onTemplateUpdate();
       setAdSettings((prev) => {
@@ -752,7 +757,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
     } finally {
       setIsProcessing(false)
     }
-  }, [selectedAdAccount, selectedForDelete, onTemplateUpdate, setAdSettings])
+  }, [selectedAdAccount, selectedForDelete, onTemplateUpdate, onTemplatesDelete, setAdSettings])
 
   const toggleDeleteSelection = useCallback((name) => {
     setSelectedForDelete((prev) => {
@@ -764,30 +769,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
   }, [])
 
   const availableTemplates = useMemo(() => {
-    let entries = Object.entries(templates)
-
-    // Filter by search
-    if (templateSearch.trim()) {
-      const query = templateSearch.toLowerCase()
-      entries = entries.filter(([name]) => name.toLowerCase().includes(query))
-    }
-
-    // Sort — default template always pinned at top
-    entries.sort(([a, aData], [b, bData]) => {
-      if (a === defaultName) return -1
-      if (b === defaultName) return 1
-
-      if (sortMode === "most_used") {
-        return (bData?.usageCount || 0) - (aData?.usageCount || 0)
-      }
-      return 0
-    })
-
-    if (sortMode === "oldest") {
-      const defaultEntry = entries.find(([name]) => name === defaultName)
-      const rest = entries.filter(([name]) => name !== defaultName)
-      entries = defaultEntry ? [defaultEntry, ...rest.reverse()] : rest.reverse()
-    }
+    const entries = sortTemplates(templates, sortMode, defaultName).filter(([name]) => name.toLowerCase().includes(templateSearch.toLowerCase().trim()));
 
     return entries
   }, [templates, defaultName, templateSearch, sortMode])
@@ -1090,6 +1072,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                                 { value: "default", label: "Recently Made" },
                                 { value: "oldest", label: "Oldest First" },
                                 { value: "most_used", label: "Most Used" },
+                                { value: "alphabetical", label: "Alphabetical (A–Z)" },
                               ].map((option) => (
                                 <button
                                   key={option.value}
@@ -1098,7 +1081,6 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                                   onClick={(e) => {
                                     e.stopPropagation()
                                     setSortMode(option.value)
-                                    localStorage.setItem("templateSortMode", option.value)
                                     setShowSortMenu(false)
                                   }}
                                 >

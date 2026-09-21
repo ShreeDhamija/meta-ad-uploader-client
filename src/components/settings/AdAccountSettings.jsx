@@ -9,6 +9,8 @@ import { ChevronsUpDown, Loader, CirclePlus, Info, RefreshCw, ChevronDown, Circl
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import { useAppData } from "@/lib/AppContext"
 import { useAuth } from "@/lib/AuthContext"
+import TemplateLinkSync from "./TemplateLinkSync"
+import { EMPTY_TEMPLATE_LINK_SYNC, validTemplateLinkPairs } from "./templateLinkUtils"
 import CopyTemplates from "./CopyTemplates"
 import PageSelectors from "./PageSelectors"
 import LinkParameters from "./LinkParameters"
@@ -115,6 +117,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
     refetch: refetchSync,
   } = useTeamSync()
 
+  const [templateLinkSync, setTemplateLinkSync] = useState(EMPTY_TEMPLATE_LINK_SYNC)
   const [links, setLinks] = useState([]) // Array of {url, isDefault}
   // const [utmPairs, setUtmPairs] = useState(DEFAULT_UTM_PAIRS)
   const [utmPairs, setUtmPairs] = useState([])
@@ -228,6 +231,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
       selectedPage?.id !== initialSettings.defaultPage?.id ||
       selectedInstagram?.id !== initialSettings.defaultInstagram?.id ||
       JSON.stringify(links) !== JSON.stringify(initialSettings.links) ||
+      JSON.stringify(templateLinkSync) !== JSON.stringify(initialSettings.templateLinkSync) ||
       defaultCTA !== initialSettings.defaultCTA ||
       !areUtmPairsEqual(utmPairs, initialSettings.defaultUTMs) ||
       JSON.stringify(enhancements) !== JSON.stringify(initialSettings.creativeEnhancements) ||
@@ -241,6 +245,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
     selectedPage,
     selectedInstagram,
     links,
+    templateLinkSync,
     defaultCTA,
     utmPairs,
     enhancements,
@@ -269,6 +274,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
       defaultPage: adSettings.defaultPage || null,
       defaultInstagram: adSettings.defaultInstagram || null,
       links: adSettings.links || [],
+      templateLinkSync: adSettings.templateLinkSync || EMPTY_TEMPLATE_LINK_SYNC,
       defaultCTA: adSettings.defaultCTA || "LEARN_MORE",
       defaultUTMs: utms,
       creativeEnhancements: adSettings.creativeEnhancements || DEFAULT_ENHANCEMENTS,
@@ -293,6 +299,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
       setSelectedPage(null);
       setSelectedInstagram(null);
       setLinks([]);
+      setTemplateLinkSync(EMPTY_TEMPLATE_LINK_SYNC);
       setUtmPairs([]);
       setDefaultCTA("LEARN_MORE");
       setEnhancements(DEFAULT_ENHANCEMENTS);
@@ -326,6 +333,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
     setSelectedPage(initialSettings.defaultPage);
     setSelectedInstagram(initialSettings.defaultInstagram);
     setLinks(initialSettings.links);
+    setTemplateLinkSync(initialSettings.templateLinkSync || EMPTY_TEMPLATE_LINK_SYNC);
     setUtmPairs(initialSettings.defaultUTMs);
     setDefaultCTA(initialSettings.defaultCTA);
     setEnhancements(initialSettings.creativeEnhancements);
@@ -366,6 +374,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
       defaultPage: selectedPage,
       defaultInstagram: selectedInstagram,
       links: links,
+      templateLinkSync: { ...templateLinkSync, pairs: validTemplateLinkPairs(templateLinkSync, adSettings.copyTemplates, links) },
       defaultCTA,
       defaultUTMs: utmPairs, // <--- Direct state reference
       creativeEnhancements: enhancements,
@@ -404,6 +413,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
         defaultPage: selectedPage,
         defaultInstagram: selectedInstagram,
         links: links,
+        templateLinkSync: { ...templateLinkSync, pairs: validTemplateLinkPairs(templateLinkSync, adSettings.copyTemplates, links) },
         defaultCTA,
         defaultUTMs: utmPairs, // <--- Direct state reference
         creativeEnhancements: enhancements,
@@ -417,6 +427,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
 
       };
 
+      setTemplateLinkSync(newInitialSettings.templateLinkSync);
       setInitialSettings(newInitialSettings);
       setIsDirty(false);
 
@@ -433,6 +444,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
     selectedPage,
     selectedInstagram,
     links,
+    templateLinkSync,
     defaultCTA,
     utmPairs,
     enhancements,
@@ -440,6 +452,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
     multiAdvertiserAds,
     defaultAdStatus,
     isFirstEverSave,
+    adSettings.copyTemplates,
     customVariables,
     displayLink,
     pixelTracking
@@ -494,6 +507,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
         selectedPage,
         selectedInstagram,
         links,
+        templateLinkSync,
         utmPairs,
         defaultCTA,
         enhancements,
@@ -521,20 +535,19 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
         // Ignore parse errors
       }
     }
-  }, [selectedAdAccount, hasChanges, selectedPage, selectedInstagram, links, utmPairs, defaultCTA, enhancements, adNameFormulaV2, multiAdvertiserAds, defaultAdStatus, customVariables, displayLink, pixelTracking]);
+  }, [selectedAdAccount, hasChanges, selectedPage, selectedInstagram, links, templateLinkSync, utmPairs, defaultCTA, enhancements, adNameFormulaV2, multiAdvertiserAds, defaultAdStatus, customVariables, displayLink, pixelTracking]);
 
 
 
   // Effect for loading initial settings (with cache restoration)
   useEffect(() => {
-    if (!selectedAdAccount || !adSettings) return;
+    if (!selectedAdAccount || !adSettings || loading) return;
 
     const initial = calculateInitialSettings(adSettings);
     console.log("adSettings.adNameFormulaV2:", adSettings.adNameFormulaV2);
 
     if (skipFormResetRef.current) {
       skipFormResetRef.current = false;
-      setInitialSettings(initial);
       return;
     }
 
@@ -558,6 +571,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
           setSelectedPage(draft.selectedPage);
           setSelectedInstagram(draft.selectedInstagram);
           setLinks(draft.links);
+          setTemplateLinkSync(draft.templateLinkSync || initial.templateLinkSync);
           setUtmPairs(draft.utmPairs);
           setDefaultCTA(draft.defaultCTA);
           setEnhancements(draft.enhancements);
@@ -580,6 +594,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
     setSelectedPage(initial.defaultPage);
     setSelectedInstagram(initial.defaultInstagram);
     setLinks(initial.links);
+    setTemplateLinkSync(initial.templateLinkSync);
     setUtmPairs(initial.defaultUTMs);
     setDefaultCTA(initial.defaultCTA);
     setEnhancements(initial.creativeEnhancements);
@@ -591,8 +606,16 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
     setDisplayLink(initial.displayLink || "");
     setPixelTracking(initial.pixelTracking || DEFAULT_PIXEL_TRACKING);
 
-  }, [adSettings, selectedAdAccount, calculateInitialSettings]);
+  }, [adSettings, selectedAdAccount, calculateInitialSettings, loading]);
 
+
+  const handleTemplateRename = (oldName, newName) => {
+    setTemplateLinkSync(previous => ({ ...previous, pairs: previous.pairs.map(pair => pair.templateName === oldName ? { ...pair, templateName: newName } : pair) }));
+  };
+
+  const handleTemplatesDelete = (names) => {
+    setTemplateLinkSync(previous => ({ ...previous, pairs: previous.pairs.filter(pair => !names.includes(pair.templateName)) }));
+  };
 
   // Add this effect after the existing useEffect hooks
 
@@ -813,7 +836,21 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
             adSettings={adSettings}
             setAdSettings={setAdSettings}
             onTemplateUpdate={handleTemplateUpdate}
+            onTemplateRename={handleTemplateRename}
+            onTemplatesDelete={handleTemplatesDelete}
 
+          />
+
+          <TemplateLinkSync value={templateLinkSync} onChange={setTemplateLinkSync} templates={adSettings.copyTemplates || {}} links={links} />
+
+          <LinkParameters
+            links={links}
+            setLinks={setLinks}
+            utmPairs={utmPairs}
+            setUtmPairs={setUtmPairs}
+            selectedAdAccount={selectedAdAccount}
+            displayLink={displayLink}
+            setDisplayLink={setDisplayLink}
           />
 
           {/* Ad Naming Convention */}
@@ -865,16 +902,6 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
               showAdSetNameVariable={showAdSetNameVariable}
             />
           </div>
-
-          <LinkParameters
-            links={links}
-            setLinks={setLinks}
-            utmPairs={utmPairs}
-            setUtmPairs={setUtmPairs}
-            selectedAdAccount={selectedAdAccount}
-            displayLink={displayLink}
-            setDisplayLink={setDisplayLink}
-          />
 
           <DefaultCTA defaultCTA={defaultCTA} setDefaultCTA={setDefaultCTA} />
 
