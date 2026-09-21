@@ -105,12 +105,26 @@ function SettingsMultiSelect({ label, options, value, onChange, placeholder, fla
   );
 }
 
-function InterestPicker({ label = "Interests", value, onChange, disabled }) {
+const DETAILED_TARGETING_FIELDS = ["interests", "behaviors", "work_employers", "work_positions", "education_schools", "education_majors", "family_statuses", "life_events", "industries", "income", "generation", "home_ownership", "home_type", "home_value", "household_composition", "moms", "net_worth", "office_type", "politics", "ethnic_affinity", "education_statuses", "relationship_statuses", "college_years", "interested_in"];
+const GEO_TARGETING_FIELDS = ["countries", "regions", "cities", "zips", "geo_markets", "electoral_districts", "neighborhoods", "subcities", "subneighborhoods", "metro_areas", "large_geo_areas", "medium_geo_areas", "small_geo_areas"];
+const TARGETING_CATEGORIES = { interest: "Interest", behavior: "Behavior", demographic: "Demographic", location: "Location", locale: "Language", employer: "Employer", job_title: "Job title", school: "School", education_major: "Education major", custom_audience: "Custom audience", lookalike: "Lookalike" };
+const detailedCategory = (field) => ({ interests: "interest", behaviors: "behavior", work_employers: "employer", work_positions: "job_title", education_schools: "school", education_majors: "education_major" })[field] || "demographic";
+const targetingOption = (field, value, placement, category, name) => {
+  const id = String(value?.id ?? value?.key ?? value);
+  return { ...(typeof value === "object" ? value : {}), key: `${category}:${field}:${id}`, category, id,
+    name: name || value?.name || `Saved ${TARGETING_CATEGORIES[category]?.toLowerCase() || "selection"}`,
+    targeting: { placement, field, value } };
+};
+
+const targetingIdentity = ({ targeting: { placement, field, value } }) => `${placement}:${field}:${value?.id ?? value?.key ?? value}`;
+
+function TargetingPicker({ label = "Search targeting", adAccountId, value, onToggle, disabled }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [warnings, setWarnings] = useState([]);
   const [searched, setSearched] = useState(false);
   const requestRef = useRef(null);
   const searchRowRef = useRef(null);
@@ -120,31 +134,28 @@ function InterestPicker({ label = "Interests", value, onChange, disabled }) {
     if (!open || disabled) { requestRef.current?.abort(); setLoading(false); }
   }, [open, disabled]);
   const search = async () => {
-    if (disabled || loading || query.trim().length < 2) return;
+    if (disabled || loading || query.replace(/\s/gu, "").length < 3) return;
     requestRef.current?.abort();
     const controller = new AbortController();
     requestRef.current = controller;
     setOpen(true);
     setLoading(true);
     setError("");
+    setWarnings([]);
     setSearched(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/adset-interest-search?${new URLSearchParams({ q: query.trim() })}`, { credentials: "include", signal: controller.signal });
+      const response = await fetch(`${API_BASE_URL}/api/meta/ad-accounts/${encodeURIComponent(adAccountId)}/targeting-search?${new URLSearchParams({ q: query.trim(), limit: "25" })}`, { credentials: "include", signal: controller.signal });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Could not search interests.");
-      if (!controller.signal.aborted) setResults(data.data || []);
+      if (!response.ok) throw new Error(data.error || "Could not search targeting.");
+      if (!controller.signal.aborted) { setResults(data.data || []); setWarnings(data.warnings || []); }
     } catch (err) {
       if (!controller.signal.aborted) setError(err.message);
     } finally {
       if (!controller.signal.aborted) setLoading(false);
     }
   };
-  const displayedInterests = [...new Map([...value, ...results].map((interest) => [interest.id, interest])).values()];
-  const toggle = (interest) => {
-    if (value.some(({ id }) => id === interest.id)) onChange(value.filter(({ id }) => id !== interest.id));
-    else if (value.length >= 1000) toast.error("Select up to 1,000 interests in each group.");
-    else onChange([...value, interest]);
-  };
+  const displayedOptions = [...new Map([...value, ...results].map((option) => [targetingIdentity(option), option])).values()];
+  const toggle = onToggle;
   const audienceSize = (size) => size == null ? "Not provided" : Number(size).toLocaleString();
   return <div className="space-y-2">
     <Label>{label}</Label>
@@ -153,11 +164,11 @@ function InterestPicker({ label = "Interests", value, onChange, disabled }) {
         <div ref={searchRowRef} className="flex items-center gap-1">
           <div className="relative min-w-0 flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" aria-hidden="true" />
-            <Input value={query} disabled={disabled} maxLength={100} placeholder="Search interests..." aria-label={`Search ${label.toLowerCase()}`}
+            <Input value={query} disabled={disabled} maxLength={100} placeholder="Search interests, behaviors, locations..." aria-label={`Search ${label.toLowerCase()}`}
               aria-expanded={open && !disabled} aria-haspopup="listbox"
               onFocus={() => { if (searched || value.length) setOpen(true); }}
               onChange={(event) => {
-                requestRef.current?.abort(); setLoading(false); setQuery(event.target.value); setResults([]); setError(""); setSearched(false); setOpen(false);
+                requestRef.current?.abort(); setLoading(false); setQuery(event.target.value); setResults([]); setError(""); setWarnings([]); setSearched(false); setOpen(false);
               }}
               onKeyDown={(event) => {
                 if (event.key === "Enter") { event.preventDefault(); event.stopPropagation(); search(); }
@@ -168,7 +179,7 @@ function InterestPicker({ label = "Interests", value, onChange, disabled }) {
               }}
               className="h-11 rounded-[20px] border-gray-200 bg-gray-50 pl-9" />
           </div>
-          <Button type="button" size="sm" disabled={disabled || loading || query.trim().length < 2} onClick={search}
+          <Button type="button" size="sm" disabled={disabled || loading || query.replace(/\s/gu, "").length < 3} onClick={search}
             className="h-11 shrink-0 rounded-[20px] px-4">Search</Button>
         </div>
       </PopoverAnchor>
@@ -179,20 +190,23 @@ function InterestPicker({ label = "Interests", value, onChange, disabled }) {
           <CommandList className="max-h-none overflow-hidden rounded-2xl px-2" selectOnFocus={false}>
             {loading ? <p role="status" className="p-3 text-sm text-gray-500">Searching...</p>
               : error ? <p role="alert" className="p-3 text-sm text-red-600">{error}</p>
-                : (!searched || !results.length) && <p className="p-3 text-sm text-gray-500">{searched ? "No interests found." : "Type at least 2 characters, then press Enter or Search."}</p>}
+                : (!searched || !results.length) && <p className="p-3 text-sm text-gray-500">{searched ? "No targeting options found." : "Type at least 3 characters, then press Enter or Search."}</p>}
+            {warnings.length > 0 && <p role="status" className="px-3 pb-2 text-xs text-amber-700">Some results may be missing: {warnings.map(({ source, message }) => `${TARGETING_CATEGORIES[source] || source}: ${message}`).join("; ")}</p>}
             <ScrollArea viewportClassName="max-h-[380px] [&>div]:!block">
               <CommandGroup>
-                {displayedInterests.map((interest) => {
-                  const selected = value.some(({ id }) => id === interest.id);
-                  return <CommandItem key={interest.id} value={interest.id} onSelect={() => toggle(interest)}
+                {displayedOptions.map((interest) => {
+                  const selected = value.some((option) => targetingIdentity(option) === targetingIdentity(interest));
+                  return <CommandItem key={interest.key} value={interest.key} onSelect={() => toggle(interest)}
                     className={cn("items-start py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150", selected ? "bg-gray-100 hover:!bg-gray-100" : "hover:!bg-gray-200")}>
                     <Checkbox checked={selected} onCheckedChange={() => toggle(interest)} onClick={(event) => event.stopPropagation()} tabIndex={-1} aria-label={interest.name}
                       className="mt-0.5 h-4 w-4 shrink-0 rounded-[6px] border-gray-300 bg-white p-0 data-[state=checked]:bg-black data-[state=checked]:text-white" />
                     <div className="min-w-0 space-y-1">
-                      <p className="font-medium">{interest.name || "Unavailable interest"}</p>
+                      <p className="font-medium">{interest.name}</p>
+                      <p className="text-xs text-gray-600">{TARGETING_CATEGORIES[interest.category]}{interest.path?.length ? ` · ${interest.path.join(" › ")}` : ""}</p>
                       {interest.description?.trim() && <p className="text-xs text-gray-500 line-clamp-2" title={interest.description}>{interest.description}</p>}
-                      <p className="text-xs text-gray-600">Topic: {interest.topic || "Not provided"}</p>
-                      <p className="text-xs text-gray-600">Audience: {audienceSize(interest.audience_size_lower_bound)} – {audienceSize(interest.audience_size_upper_bound)}</p>
+                      {interest.topic && <p className="text-xs text-gray-600">Topic: {interest.topic}</p>}
+                      {(interest.audience_size_lower_bound != null || interest.audience_size_upper_bound != null) && <p className="text-xs text-gray-600">Audience: {audienceSize(interest.audience_size_lower_bound)} – {audienceSize(interest.audience_size_upper_bound)}</p>}
+                      {interest.deliveryStatus && <p className="text-xs text-gray-500">{interest.deliveryStatus}</p>}
                     </div>
                   </CommandItem>;
                 })}
@@ -202,10 +216,10 @@ function InterestPicker({ label = "Interests", value, onChange, disabled }) {
         </Command>
       </PopoverContent>
     </Popover>
-    {value.length > 0 && <div className="flex flex-wrap gap-1.5">{value.map((interest) => <button key={interest.id} type="button" disabled={disabled}
-      onClick={() => toggle(interest)} aria-label={`Remove ${interest.name || "interest"}`}
+    {value.length > 0 && <div className="flex flex-wrap gap-1.5">{value.map((interest) => <button key={interest.key} type="button" disabled={disabled}
+      onClick={() => toggle(interest)} aria-label={`Remove ${interest.name}`}
       className="inline-flex max-w-full items-center gap-1 rounded-lg bg-gray-100 px-2 py-1 text-xs text-gray-700 hover:bg-gray-200 disabled:opacity-50">
-      <span className="truncate">{interest.name || "Unavailable interest"}</span><X className="h-3 w-3 shrink-0" />
+      <span className="truncate">{interest.name}</span><X className="h-3 w-3 shrink-0" />
     </button>)}</div>}
   </div>;
 }
@@ -250,6 +264,7 @@ export function getAdSetAdvancedSettingsError(settings) {
 
 function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onChange, disabled }) {
   const [expanded, setExpanded] = useState(Boolean(value));
+  const [selectedTargetingGroup, setSelectedTargetingGroup] = useState(null);
   const reduceMotion = useReducedMotion();
   const settingsRequestRef = useRef(null);
   const latestSettingsRef = useRef(value);
@@ -283,7 +298,7 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
   const targeting = defaults?.targeting || {};
   const field = (key, fallback) => changes[key] ?? fallback;
   const update = (key, next) => onChange({ ...value, changes: { ...changes, [key]: next } });
-  const audiences = [...new Map([...(targeting.excluded_custom_audiences || []), ...(targeting.custom_audiences || []), ...(targeting.flexible_spec || []).flatMap((group) => group.custom_audiences || []), ...(defaults?.audiences || [])]
+  const audiences = [...new Map([...(targeting.excluded_custom_audiences || []), ...(targeting.custom_audiences || []), ...(targeting.flexible_spec || []).flatMap((group) => group.custom_audiences || []), ...(defaults?.audiences || []), ...Object.values(value?.targetingLabels || {}).filter((option) => ["custom_audience", "lookalike"].includes(option.category))]
     .map((audience) => [audience.id, { value: audience.id, label: audience.name || "Unavailable audience" }])).values()];
   const countryOptions = [...META_COUNTRIES];
   for (const code of targeting.geo_locations?.countries || []) {
@@ -333,12 +348,11 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
     onChange({ ...value, changes: { ...changes, spendLimits: converted, spendLimitBudgetMode: defaults.budget.mode } });
   };
 
-  const updateGroup = (index, key, next) => update("targetingGroups", { ...changes.targetingGroups, [index]: { ...changes.targetingGroups?.[index], [key]: next } });
   const includedAudienceIds = [...new Set([
     ...field("includedAudienceIds", (targeting.custom_audiences || []).map(({ id }) => id)),
     ...(targeting.flexible_spec || []).flatMap((group, index) => changes.targetingGroups?.[index]?.includedAudienceIds ?? (group.custom_audiences || []).map(({ id }) => id)),
   ])];
-  const updateIncludedAudiences = (next) => {
+  const updateIncludedAudiences = (next, targetingLabels = value?.targetingLabels) => {
     const added = next.filter((id) => !includedAudienceIds.includes(id));
     const rootIds = field("includedAudienceIds", (targeting.custom_audiences || []).map(({ id }) => id));
     const groupIds = (targeting.flexible_spec || []).map((group, index) => changes.targetingGroups?.[index]?.includedAudienceIds ?? (group.custom_audiences || []).map(({ id }) => id));
@@ -357,7 +371,63 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
       if (JSON.stringify(groupNext) !== JSON.stringify(ids)) nextChanges.targetingGroups[index] = { ...nextChanges.targetingGroups[index], includedAudienceIds: groupNext };
     });
     if (!Object.keys(nextChanges.targetingGroups).length) delete nextChanges.targetingGroups;
-    onChange({ ...value, changes: nextChanges });
+    onChange({ ...value, targetingLabels, changes: nextChanges });
+  };
+  const targetingGroupIndexes = [...new Set([...(targeting.flexible_spec || []).map((_, index) => String(index)), ...Object.keys(changes.targetingGroups || {})])].sort((a, b) => Number(a) - Number(b));
+  const detailedValues = (index) => {
+    const source = index === "root" ? targeting : targeting.flexible_spec?.[Number(index)] || {};
+    const edit = index === "root" ? changes : changes.targetingGroups?.[index] || {};
+    return { ...source, ...(edit.interests !== undefined ? { interests: edit.interests } : {}), ...edit.detailedTargeting };
+  };
+  const hasRootTargeting = DETAILED_TARGETING_FIELDS.some((field) => detailedValues("root")[field]?.length);
+  const groupChoices = [...(hasRootTargeting || !targetingGroupIndexes.length ? ["root"] : []), ...targetingGroupIndexes];
+  const activeTargetingGroup = groupChoices.includes(selectedTargetingGroup) ? selectedTargetingGroup : groupChoices[0];
+  const resolvedOption = (option) => ({ ...option, ...value?.targetingLabels?.[option.key], targeting: option.targeting });
+  const selectedTargeting = DETAILED_TARGETING_FIELDS.flatMap((field) => (detailedValues(activeTargetingGroup)[field] || []).map((item) =>
+    resolvedOption(targetingOption(field, item, "detailed_targeting", detailedCategory(field)))));
+  for (const fieldName of GEO_TARGETING_FIELDS) {
+    const items = fieldName === "countries" ? field("countries", targeting.geo_locations?.countries || []) : changes.locations?.[fieldName] ?? targeting.geo_locations?.[fieldName] ?? [];
+    for (const item of items) selectedTargeting.push(resolvedOption(targetingOption(fieldName, item, "geo_locations", "location", fieldName === "countries" ? countryOptions.find(({ value }) => value === item)?.label : undefined)));
+  }
+  for (const item of changes.locales ?? targeting.locales ?? []) selectedTargeting.push(resolvedOption(targetingOption("locales", item, "locales", "locale")));
+  for (const id of includedAudienceIds) {
+    const known = Object.values(value?.targetingLabels || {}).find((item) => ["custom_audience", "lookalike"].includes(item.category) && item.id === id);
+    selectedTargeting.push(known || targetingOption("custom_audiences", { id }, "custom_audience", "custom_audience", audiences.find(({ value }) => value === id)?.label));
+  }
+  const toggleTargeting = (option) => {
+    const { placement, field: fieldName, value: item } = option.targeting;
+    const targetingLabels = { ...value?.targetingLabels, [option.key]: option };
+    if (placement === "custom_audience") {
+      updateIncludedAudiences(includedAudienceIds.includes(option.id) ? includedAudienceIds.filter((id) => id !== option.id) : [...includedAudienceIds, option.id], targetingLabels);
+      return;
+    }
+    const nextChanges = { ...changes };
+    const identity = (entry) => String(entry?.id ?? entry?.key ?? entry);
+    const toggle = (items) => items.some((entry) => identity(entry) === identity(item)) ? items.filter((entry) => identity(entry) !== identity(item)) : [...items, item];
+    if (placement === "detailed_targeting") {
+      const next = toggle(detailedValues(activeTargetingGroup)[fieldName] || []);
+      if (next.length > 1000) { toast.error("Select up to 1,000 values per targeting field."); return; }
+      if (activeTargetingGroup === "root") {
+        nextChanges.detailedTargeting = { ...changes.detailedTargeting, [fieldName]: next };
+        if (fieldName === "interests") delete nextChanges.interests;
+      } else {
+        const edit = { ...changes.targetingGroups?.[activeTargetingGroup] };
+        edit.detailedTargeting = { ...edit.detailedTargeting, [fieldName]: next };
+        if (fieldName === "interests") delete edit.interests;
+        nextChanges.targetingGroups = { ...changes.targetingGroups, [activeTargetingGroup]: edit };
+      }
+    } else if (placement === "locales") nextChanges.locales = toggle(changes.locales ?? targeting.locales ?? []);
+    else if (placement === "geo_locations") {
+      if (fieldName === "countries") nextChanges.countries = toggle(field("countries", targeting.geo_locations?.countries || []));
+      else nextChanges.locations = { ...changes.locations, [fieldName]: toggle(changes.locations?.[fieldName] ?? targeting.geo_locations?.[fieldName] ?? []) };
+    }
+    onChange({ ...value, targetingLabels, changes: nextChanges });
+  };
+  const addTargetingGroup = () => {
+    const index = targetingGroupIndexes.length ? Number(targetingGroupIndexes.at(-1)) + 1 : 0;
+    if (index + (hasRootTargeting ? 1 : 0) >= 25) { toast.error("Use at most 25 targeting groups."); return; }
+    onChange({ ...value, changes: { ...changes, ...(hasRootTargeting ? { groupRootTargeting: true } : {}), targetingGroups: { ...changes.targetingGroups, [index]: { detailedTargeting: {} } } } });
+    setSelectedTargetingGroup(String(index));
   };
   const startTime = field("startTime", defaults?.startTime || "");
   const endTime = field("endTime", defaults?.endTime || "");
@@ -377,7 +447,7 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
           </button>
           <button type="button" disabled={disabled || !defaults}
             className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-black disabled:opacity-50"
-            onClick={() => onChange({ ...value, changes: {} })}>
+            onClick={() => { setSelectedTargetingGroup(null); onChange({ ...value, targetingLabels: {}, changes: {} }); }}>
             <RefreshCcw className="h-3.5 w-3.5" aria-hidden="true" />Reset
           </button>
         </div>}
@@ -467,16 +537,19 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
                   {ageInvalid && <p role="alert" className="text-xs text-red-600">{ageError}</p>}
                   <SettingsMultiSelect label="Gender" options={[{ value: 1, label: "Men" }, { value: 2, label: "Women" }]} value={field("genders", targeting.genders || [])} onChange={(next) => update("genders", next.length === 2 ? [] : next)} placeholder="Both" allLabel="Both" />
                   <SettingsMultiSelect label="Countries" options={countryOptions} value={field("countries", targeting.geo_locations?.countries || [])} onChange={(next) => update("countries", next)} placeholder="No country selection" flags />
-                  {Object.keys(targeting.geo_locations || {}).some((key) => !["countries", "location_types"].includes(key)) && <p className="text-xs text-gray-500">Other source locations, such as cities, regions, and country groups, are also retained.</p>}
+                  {Object.keys(targeting.geo_locations || {}).some((key) => !["countries", "location_types"].includes(key)) && <p className="text-xs text-gray-500">Other source locations are retained. Use targeting search below to edit supported locations.</p>}
                   <SettingsMultiSelect label="Included audiences" options={audiences} value={includedAudienceIds} onChange={updateIncludedAudiences} placeholder="No included audiences" checkboxes />
                   <SettingsMultiSelect label="Excluded audiences" options={audiences} value={field("excludedAudienceIds", (targeting.excluded_custom_audiences || []).map((audience) => audience.id))} onChange={(next) => update("excludedAudienceIds", next)} placeholder="No excluded audiences" checkboxes />
                   {defaults.interestDetailsUnavailable && <p className="text-xs text-gray-500">Some interest details could not be loaded. Existing selections are still shown and can be removed.</p>}
-                  {(targeting.interests?.length > 0 || !targeting.flexible_spec?.length) && <InterestPicker value={field("interests", targeting.interests || [])} onChange={(next) => update("interests", next)} disabled={disabled} />}
-                  {(targeting.flexible_spec || []).map((group, index) => <div key={index} className="space-y-3">
-                    <p className="text-xs font-medium text-gray-600">Targeting group {index + 1}{index > 0 ? " · AND" : ""}</p>
-                    <InterestPicker value={changes.targetingGroups?.[index]?.interests ?? group.interests ?? []} onChange={(next) => updateGroup(index, "interests", next)} disabled={disabled} />
-                    <p className="text-xs text-gray-500">Match any selection within this group.{Object.keys(group).some((key) => !["interests", "custom_audiences"].includes(key)) ? " Other source targeting rules in this group are retained." : ""}</p>
-                  </div>)}
+                  <div className="flex items-center justify-between gap-2">
+                    {groupChoices.length > 1 ? <Select value={activeTargetingGroup} onValueChange={setSelectedTargetingGroup} disabled={disabled}>
+                      <SelectTrigger aria-label="Detailed targeting group" className="h-9 w-auto min-w-0 rounded-xl bg-white py-2"><SelectValue /></SelectTrigger>
+                      <SelectContent className="rounded-2xl bg-white shadow-lg">{groupChoices.map((index, order) => <SelectItem key={index} value={index} className="rounded-xl">{`Group ${order + 1}${order ? " · AND" : ""}`}</SelectItem>)}</SelectContent>
+                    </Select> : <Label>Detailed targeting</Label>}
+                    <button type="button" className="text-xs text-gray-600 underline" onClick={addTargetingGroup}>Narrow further (AND)</button>
+                  </div>
+                  <TargetingPicker adAccountId={adAccountId} value={selectedTargeting} onToggle={toggleTargeting} disabled={disabled} />
+                  <p className="text-xs text-gray-500">Detailed targeting selections within a group are alternatives; separate groups must also match. Locations and languages apply across groups. Existing audiences retain their source grouping.</p>
 
                 </section>
               </>}

@@ -71,9 +71,9 @@ export default function TemplateLinkSync({ value, onChange, templates, links }) 
   const complete = pairs.every(pair => pair.templateName && pair.url);
   const updatePair = (index, field, next) => setPairs(previous => previous.map((pair, i) => i === index ? { ...pair, [field]: next } : pair));
   return <div className="flex flex-col items-center justify-center">
-    <span aria-hidden="true" className="h-6 border-l border-dotted border-gray-300" />
+    <svg aria-hidden="true" className="h-6 w-0.5 text-gray-400" viewBox="0 0 2 24"><line x1="1" y1="0" x2="1" y2="24" stroke="currentColor" strokeWidth="2" strokeDasharray="4 6" /></svg>
     <Button type="button" variant="outline" size="sm" className={`h-8 rounded-xl bg-white text-xs shadow-xs ${active ? 'border-green-200 text-green-600 hover:bg-green-50 hover:text-green-700' : 'border-blue-100 text-blue-600 hover:bg-blue-50 hover:text-blue-700'}`} onClick={() => { setPairs(validPairs.length ? validPairs.map(pair => ({ ...pair })) : [{ templateName: "", url: "" }]); setOpen(true); }}><Link2 className="mr-1.5 h-3.5 w-3.5" />Sync templates and links</Button>
-    <span aria-hidden="true" className="h-6 border-l border-dotted border-gray-300" />
+    <svg aria-hidden="true" className="h-6 w-0.5 text-gray-400" viewBox="0 0 2 24"><line x1="1" y1="0" x2="1" y2="24" stroke="currentColor" strokeWidth="2" strokeDasharray="4 6" /></svg>
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent disableSlide className="max-w-2xl rounded-3xl bg-white sm:rounded-3xl data-[state=open]:animate-none data-[state=closed]:animate-none" overlayClassName="bg-black/30">
         <DialogHeader><DialogTitle>Sync templates and links</DialogTitle><DialogDescription>Pair each template with one link. Changing either selection in the ad form will select its match.</DialogDescription></DialogHeader>
