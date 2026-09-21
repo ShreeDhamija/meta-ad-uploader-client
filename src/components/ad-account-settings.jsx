@@ -212,11 +212,15 @@ export function getAdSetAdvancedSettingsError(settings) {
     if (changes.spendLimitBudgetMode !== defaults.budget.mode) return "The campaign budget type changed. Reopen Edit setup.";
     const limits = { ...defaults.spendLimits, ...changes.spendLimits };
     for (const limit of Object.values(changes.spendLimits)) {
-      if (limit.unit !== "currency") return "New spend limits must use the account currency.";
-      if (limit.value !== "" && !validAmount(limit.value, defaults.budget.decimals)) return `Enter a positive ${defaults.budget.currency} spend limit with at most ${defaults.budget.decimals} decimal places, or leave it empty for no limit.`;
+      if (!["currency", "percentage"].includes(limit.unit)) return "Select a valid spend-limit unit.";
+      if (limit.value === "") continue;
+      if (limit.unit === "percentage") {
+        if (!/^\d+$/.test(String(limit.value)) || Number(limit.value) < 1 || Number(limit.value) > 100) return "Spend percentages must be whole numbers from 1 to 100, or empty for no limit.";
+      } else if (!validAmount(limit.value, defaults.budget.decimals)) return `Enter a positive ${defaults.budget.currency} spend limit with at most ${defaults.budget.decimals} decimal places, or leave it empty for no limit.`;
     }
-    const min = limits.min?.unit === "currency" ? Number(limits.min.value) : 0;
-    const max = limits.max?.unit === "currency" ? Number(limits.max.value) : 0;
+    const toCurrency = (limit) => limit?.unit === "percentage" ? Number(limit.value) * Number(defaults.budget.amount) / 100 : Number(limit?.value || 0);
+    const min = toCurrency(limits.min);
+    const max = toCurrency(limits.max);
     if (min > Number(defaults.budget.amount) || max > Number(defaults.budget.amount)) return "Spend limits cannot exceed the campaign budget.";
     if (min && max && min >= max) return "Minimum spend must be lower than the maximum spend limit.";
   }
@@ -288,13 +292,24 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
     }
   };
   const advancedError = getAdSetAdvancedSettingsError(value);
-  const updateSpendLimit = (side, limit) => {
-    const nextChanges = { ...changes, spendLimits: { ...changes.spendLimits } };
-    if (limit.unit === "percentage") delete nextChanges.spendLimits[side];
-    else nextChanges.spendLimits[side] = limit;
-    if (Object.keys(nextChanges.spendLimits).length) nextChanges.spendLimitBudgetMode = defaults.budget.mode;
-    else { delete nextChanges.spendLimits; delete nextChanges.spendLimitBudgetMode; }
-    onChange({ ...value, changes: nextChanges });
+  const spendLimits = { ...defaults?.spendLimits, ...changes.spendLimits };
+  const spendUnits = [...new Set(Object.values(spendLimits).filter((limit) => limit.value !== "").map((limit) => limit.unit))];
+  const spendUnit = spendUnits.length > 1 ? "mixed" : spendUnits[0] || Object.values(changes.spendLimits || {})[0]?.unit || "currency";
+  const updateSpendLimit = (side, limit) => onChange({ ...value, changes: {
+    ...changes, spendLimits: { ...changes.spendLimits, [side]: limit }, spendLimitBudgetMode: defaults.budget.mode,
+  } });
+  const changeSpendUnit = (unit) => {
+    const converted = Object.fromEntries(["min", "max"].map((side) => {
+      const limit = spendLimits[side];
+      let amount = limit?.value || "";
+      if (amount !== "" && limit.unit !== unit) {
+        const campaignBudget = Number(defaults.budget.amount);
+        const convertedAmount = unit === "percentage" ? Number(amount) / campaignBudget * 100 : Number(amount) / 100 * campaignBudget;
+        amount = String(Number(convertedAmount.toFixed(unit === "percentage" ? 2 : defaults.budget.decimals)));
+      }
+      return [side, { unit, value: amount }];
+    }));
+    onChange({ ...value, changes: { ...changes, spendLimits: converted, spendLimitBudgetMode: defaults.budget.mode } });
   };
 
   const updateGroup = (index, key, next) => update("targetingGroups", { ...changes.targetingGroups, [index]: { ...changes.targetingGroups?.[index], [key]: next } });
@@ -373,34 +388,35 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
                     {!defaults.bidControl.editable && <p className="text-xs text-gray-500">This control cannot be edited with the current campaign and optimization setup.</p>}
                   </div>}
                   {defaults.budget.level === "campaign" && defaults.spendLimits && <div className="space-y-3 pt-2">
-                    <p className="text-sm font-medium">{defaults.budget.mode === "daily" ? "Daily" : "Lifetime"} ad set spend limits</p>
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm font-medium">{defaults.budget.mode === "daily" ? "Daily" : "Lifetime"} ad set spend limits</p>
+                      <Select value={spendUnit} disabled={disabled} onValueChange={changeSpendUnit}>
+                        <SelectTrigger aria-label="Ad set spend limits unit" className="h-9 w-24 shrink-0 rounded-xl bg-white py-2"><SelectValue /></SelectTrigger>
+                        <SelectContent className="rounded-2xl bg-white shadow-lg">
+                          <SelectItem value="currency" className="rounded-xl">{defaults.budget.currency}</SelectItem>
+                          <SelectItem value="percentage" className="rounded-xl">%</SelectItem>
+                          {spendUnit === "mixed" && <SelectItem value="mixed" disabled className="rounded-xl">Mixed</SelectItem>}
+                        </SelectContent>
+                      </Select>
+                    </div>
                     {[["min", "Minimum spend target"], ["max", "Maximum spend limit"]].map(([side, label]) => {
-                      const sourceLimit = defaults.spendLimits[side];
-                      const limit = changes.spendLimits?.[side] || sourceLimit;
+                      const limit = spendLimits[side];
+                      const unit = spendUnit === "mixed" ? limit.unit : spendUnit;
                       return <div key={side} className="space-y-2">
-                        <Label htmlFor={`new-adset-spend-${side}`}>{label}</Label>
+                        <Label htmlFor={`new-adset-spend-${side}`}>{label}{spendUnit === "mixed" ? ` (${unit === "percentage" ? "%" : defaults.budget.currency})` : ""}</Label>
                         <div className="flex items-center gap-2">
-                          <Select value={limit.unit} disabled={disabled} onValueChange={(unit) => updateSpendLimit(side, { unit, value: "" })}>
-                            <SelectTrigger aria-label={`${label} unit`} className="h-11 w-24 shrink-0 rounded-2xl bg-white py-2"><SelectValue /></SelectTrigger>
-                            <SelectContent className="rounded-2xl bg-white shadow-lg">
-                              <SelectItem value="currency" className="rounded-xl">{defaults.budget.currency}</SelectItem>
-                              <SelectItem value="percentage" disabled={sourceLimit.unit !== "percentage"} className="rounded-xl">Existing %</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <Input id={`new-adset-spend-${side}`} type={limit.unit === "percentage" ? "text" : "number"}
-                            readOnly={limit.unit === "percentage"} value={limit.unit === "percentage" ? "Copied unchanged" : limit.value}
-                            min={defaults.budget.decimals ? "0.01" : "1"} step={defaults.budget.decimals ? "0.01" : "1"}
+                          <Input id={`new-adset-spend-${side}`} type="text" inputMode={unit === "percentage" ? "numeric" : "decimal"} value={limit.value}
                             placeholder="No limit" className="min-w-0 rounded-2xl border-gray-400"
-                            onChange={(event) => updateSpendLimit(side, { unit: "currency", value: event.target.value })}
+                            onChange={(event) => updateSpendLimit(side, { unit, value: event.target.value })}
                             onBlur={() => { if (advancedError) toast.error(advancedError); }} />
                           {limit.value !== "" && <button type="button" aria-label={`Clear ${label.toLowerCase()}`} title="Clear limit"
-                            className="shrink-0 text-gray-500 hover:text-black" onClick={() => updateSpendLimit(side, { unit: "currency", value: "" })}>
+                            className="shrink-0 text-gray-500 hover:text-black" onClick={() => updateSpendLimit(side, { unit, value: "" })}>
                             <CircleX className="h-4 w-4" />
                           </button>}
                         </div>
                       </div>;
                     })}
-                    <p className="text-xs text-gray-500">Leave empty for no limit. Minimum spend is a target, not a guarantee.</p>
+                    <p className="text-xs text-gray-500">Leave empty for no limit. Switching units converts using the current campaign budget. Percentages must be whole numbers.</p>
                   </div>}
                   {advancedError && <p role="alert" className="text-xs text-red-600">{advancedError}</p>}
 
