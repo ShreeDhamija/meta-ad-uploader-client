@@ -1,5 +1,6 @@
 "use client";
 
+import { getAdSetAdvancedSettingsError } from "@/components/ad-account-settings";
 import DesktopIcon from "@/assets/Desktop.webp";
 import DropboxIcon from "@/assets/Dropbox.png";
 import CsvFileIcon from "@/assets/csv-file.png";
@@ -187,6 +188,8 @@ async function prepareSharedAdSetJobs({ jobs, defaultSnapshot, enabled, duplicat
 
   // Take a private copy before the first await. Default need not have an ad job.
   const defaults = structuredClone(defaultSnapshot || {});
+  const setupIssue = getAdSetSetupIssue(defaults);
+  if (setupIssue) throw new Error(setupIssue.message);
   const campaignId = defaults.selectedCampaign?.[0];
   if (!defaults.duplicateAdSet || !campaignId || !defaults.selectedAdAccount) {
     throw new Error("Configure the new ad set in Default, or choose ‘Create new ad set in each variant’ in Default.");
@@ -266,7 +269,24 @@ function formatAdSetEndTime(endTime) {
   }).format(date);
 }
 
+function getAdSetSetupIssue({ duplicateAdSet, newAdSetSettings } = {}) {
+  if (!duplicateAdSet || newAdSetSettings?.sourceAdSetId !== duplicateAdSet) return null;
+  const advancedError = getAdSetAdvancedSettingsError(newAdSetSettings);
+  if (advancedError) return { type: "setup", message: advancedError };
+  const targeting = newAdSetSettings.defaults?.targeting;
+  if (Number(targeting?.targeting_automation?.advantage_audience) !== 1) return null;
+  const changes = newAdSetSettings.changes || {};
+  const minAge = Number(changes.ageMin ?? targeting.age_min ?? targeting.age_range?.[0] ?? 18);
+  const maxAge = Number(changes.ageMax ?? targeting.age_max ?? targeting.age_range?.[1] ?? 65);
+  if (minAge > 25) return { type: "age", message: "This ad set uses Advantage+ audience. Lower the minimum age to 25 or below in Edit setup to publish." };
+  if (!Number.isInteger(minAge) || minAge < 18) return { type: "age", message: "Set the minimum age to a whole number from 18 to 25 in Edit setup to publish." };
+  if (maxAge !== 65) return { type: "age", message: "This ad set uses Advantage+ audience. Set the maximum age to 65 in Edit setup to publish." };
+  return null;
+}
+
 function getAdSetTimingIssue({ selectedAdSets = [], duplicateAdSet, adSets = [], adScheduleEndTime, newAdSetSettings }) {
+  const setupIssue = getAdSetSetupIssue({ duplicateAdSet, newAdSetSettings });
+  if (setupIssue) return setupIssue;
   const selectedIds = duplicateAdSet ? [duplicateAdSet] : selectedAdSets;
   const selectedAdSetsWithEndTime = selectedIds
     .map((id) => adSets.find((adSet) => adSet.id === id))
@@ -5483,6 +5503,8 @@ export default function AdCreationForm({
   }, [adType, isFlexLikeAdType, driveFiles, dropboxFiles, fileGroupsAsArrays, files, frameioFiles, importedFiles, isCarouselAd]);
 
   const handleCreateAd = async (jobData) => {
+    const setupIssue = getAdSetSetupIssue(jobData.formData);
+    if (setupIssue) throw new Error(setupIssue.message);
     const abortController = new AbortController();
     const signal = abortController.signal;
     setCurrentAbortController(abortController);

@@ -13,10 +13,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Check, ChevronsUpDown, RefreshCcw, X, CircleX, Loader, AlertTriangle, Ban, Pencil, CircleDollarSign, CalendarClock, Crosshair } from "lucide-react"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { useAuth } from "@/lib/AuthContext"
 import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import ScheduleDateTimePicker from "@/components/ui/ScheduleDateTimePicker"
 import CogIcon from '@/assets/icons/cog.svg?react';
 import AdAccountIcon from '@/assets/icons/adaccount.svg?react';
@@ -103,16 +105,125 @@ function SettingsMultiSelect({ label, options, value, onChange, placeholder, fla
   );
 }
 
+function InterestPicker({ label = "Interests", value, onChange, disabled }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  useEffect(() => {
+    setResults([]);
+    setError("");
+    setLoading(false);
+    if (!open || disabled || query.trim().length < 2) return;
+    const controller = new AbortController();
+    setLoading(true);
+    const timer = setTimeout(async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/auth/adset-interest-search?${new URLSearchParams({ q: query.trim() })}`, { credentials: "include", signal: controller.signal });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Could not search interests.");
+        if (!controller.signal.aborted) setResults(data.data || []);
+      } catch (err) {
+        if (!controller.signal.aborted) setError(err.message);
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
+      }
+    }, 300);
+    return () => { clearTimeout(timer); controller.abort(); };
+  }, [query, open, disabled]);
+  const toggle = (interest) => {
+    if (value.some(({ id }) => id === interest.id)) onChange(value.filter(({ id }) => id !== interest.id));
+    else if (value.length >= 1000) toast.error("Select up to 1,000 interests in each group.");
+    else onChange([...value, { id: interest.id, name: interest.name }]);
+  };
+  const audienceSize = (size) => size == null ? "Not provided" : Number(size).toLocaleString();
+  return <div className="space-y-2">
+    <Label>{label}</Label>
+    <Popover open={open && !disabled} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button type="button" variant="outline" disabled={disabled} role="combobox" aria-label={label} aria-expanded={open}
+          className="h-11 w-full justify-between rounded-2xl bg-white py-2 hover:!bg-white text-left font-normal">
+          <span className="truncate">{value.length ? `${value.length} interest${value.length === 1 ? "" : "s"} selected` : "Search interests"}</span>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[min(calc(100vw-2rem),480px)] p-0 bg-white shadow-lg rounded-2xl" align="start" sideOffset={4}>
+        <Command shouldFilter={false} loop={false} className="rounded-2xl bg-white">
+          <CommandInput value={query} onValueChange={setQuery} maxLength={100} placeholder="Search interests..."
+            className="bg-transparent" wrapperClassName="bg-gray-50 border-gray-200 rounded-[20px]" />
+          <CommandList className="max-h-none overflow-hidden rounded-2xl px-2" selectOnFocus={false}>
+            {loading ? <p role="status" className="p-3 text-sm text-gray-500">Searching...</p>
+              : error ? <p role="alert" className="p-3 text-sm text-red-600">{error}</p>
+                : !results.length && <p className="p-3 text-sm text-gray-500">{query.trim().length < 2 ? "Type at least 2 characters." : "No interests found."}</p>}
+            <ScrollArea viewportClassName="max-h-[380px] [&>div]:!block">
+              <CommandGroup>
+                {results.map((interest) => {
+                  const selected = value.some(({ id }) => id === interest.id);
+                  return <CommandItem key={interest.id} value={interest.id} onSelect={() => toggle(interest)}
+                    className={cn("items-start py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150", selected ? "bg-gray-100 hover:!bg-gray-100" : "hover:!bg-gray-200")}>
+                    <Checkbox checked={selected} onCheckedChange={() => toggle(interest)} onClick={(event) => event.stopPropagation()} tabIndex={-1} aria-label={interest.name}
+                      className="mt-0.5 h-4 w-4 shrink-0 rounded-[6px] border-gray-300 bg-white p-0 data-[state=checked]:bg-black data-[state=checked]:text-white" />
+                    <div className="min-w-0 space-y-1">
+                      <p className="font-medium">{interest.name}</p>
+                      <p className="text-xs text-gray-500 line-clamp-2" title={interest.description || undefined}>{interest.description || "No description provided"}</p>
+                      <p className="text-xs text-gray-600">Topic: {interest.topic || "Not provided"}</p>
+                      <p className="text-xs text-gray-600">Audience: {audienceSize(interest.audience_size_lower_bound)} – {audienceSize(interest.audience_size_upper_bound)}</p>
+                    </div>
+                  </CommandItem>;
+                })}
+              </CommandGroup>
+            </ScrollArea>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+    {value.length > 0 && <div className="flex flex-wrap gap-1.5">{value.map((interest) => <button key={interest.id} type="button" disabled={disabled}
+      onClick={() => toggle(interest)} aria-label={`Remove ${interest.name || "interest"}`}
+      className="inline-flex max-w-full items-center gap-1 rounded-lg bg-gray-100 px-2 py-1 text-xs text-gray-700 hover:bg-gray-200 disabled:opacity-50">
+      <span className="truncate">{interest.name || "Unavailable interest"}</span><X className="h-3 w-3 shrink-0" />
+    </button>)}</div>}
+  </div>;
+}
+
+export function getAdSetAdvancedSettingsError(settings) {
+  const { defaults, changes = {} } = settings || {};
+  if (!defaults) return null;
+  const validAmount = (value, decimals) => new RegExp(`^\\d+${decimals ? `(?:\\.\\d{1,${decimals}})?` : ""}$`).test(String(value)) && Number(value) > 0 && Number.isSafeInteger(Math.round(Number(value) * 10 ** decimals));
+  if (changes.bidValue !== undefined) {
+    const control = defaults.bidControl;
+    if (!control?.editable || changes.bidStrategy !== control.strategy) return "The bidding setup changed. Reopen Edit setup before publishing.";
+    if (!validAmount(changes.bidValue, control.roas ? 4 : defaults.budget.decimals)) return `Enter a valid ${control.label.toLowerCase()} in Edit setup to publish.`;
+    if (control.roas && (Number(changes.bidValue) < 0.01 || Number(changes.bidValue) > 1000)) return "Target ROAS must be between 0.01 and 1000.";
+  }
+  if (changes.spendLimits) {
+    if (defaults.budget.level !== "campaign") return "Ad set spend limits require a campaign budget.";
+    if (changes.spendLimitBudgetMode !== defaults.budget.mode) return "The campaign budget type changed. Reopen Edit setup.";
+    const limits = { ...defaults.spendLimits, ...changes.spendLimits };
+    for (const limit of Object.values(changes.spendLimits)) {
+      if (limit.unit !== "currency") return "New spend limits must use the account currency.";
+      if (limit.value !== "" && !validAmount(limit.value, defaults.budget.decimals)) return `Enter a positive ${defaults.budget.currency} spend limit with at most ${defaults.budget.decimals} decimal places, or leave it empty for no limit.`;
+    }
+    const min = limits.min?.unit === "currency" ? Number(limits.min.value) : 0;
+    const max = limits.max?.unit === "currency" ? Number(limits.max.value) : 0;
+    if (min > Number(defaults.budget.amount) || max > Number(defaults.budget.amount)) return "Spend limits cannot exceed the campaign budget.";
+    if (min && max && min >= max) return "Minimum spend must be lower than the maximum spend limit.";
+  }
+  return null;
+}
+
 function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onChange, disabled }) {
   const [expanded, setExpanded] = useState(Boolean(value));
   const reduceMotion = useReducedMotion();
   const settingsRequestRef = useRef(null);
+  const latestSettingsRef = useRef(value);
+  latestSettingsRef.current = value;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [reload, setReload] = useState(0);
   const defaults = value?.defaults;
   useEffect(() => {
-    if (!expanded || defaults || disabled) return;
+    if (!expanded || (defaults && Object.prototype.hasOwnProperty.call(defaults, "spendLimits")) || disabled) return;
     const controller = new AbortController();
     settingsRequestRef.current = controller;
     setLoading(true);
@@ -122,7 +233,7 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
       .then(async (response) => {
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || "Could not load ad set settings.");
-        if (!controller.signal.aborted) onChange({ sourceAdSetId: adSetId, campaignId, adAccountId, defaults: data, changes: {} });
+        if (!controller.signal.aborted) onChange({ sourceAdSetId: adSetId, campaignId, adAccountId, defaults: { ...data, spendLimits: data.spendLimits ?? null }, changes: latestSettingsRef.current?.changes || {} });
       })
       .catch((err) => { if (!controller.signal.aborted) setError(err.message); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
@@ -136,7 +247,7 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
   const targeting = defaults?.targeting || {};
   const field = (key, fallback) => changes[key] ?? fallback;
   const update = (key, next) => onChange({ ...value, changes: { ...changes, [key]: next } });
-  const audiences = [...new Map([...(targeting.excluded_custom_audiences || []), ...(defaults?.audiences || [])]
+  const audiences = [...new Map([...(targeting.excluded_custom_audiences || []), ...(targeting.custom_audiences || []), ...(targeting.flexible_spec || []).flatMap((group) => group.custom_audiences || []), ...(defaults?.audiences || [])]
     .map((audience) => [audience.id, { value: audience.id, label: audience.name || "Unavailable audience" }])).values()];
   const countryOptions = [...META_COUNTRIES];
   for (const code of targeting.geo_locations?.countries || []) {
@@ -165,6 +276,17 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
       update(key, String(Math.min(upper, Math.max(lower, sourceAge))));
     }
   };
+  const advancedError = getAdSetAdvancedSettingsError(value);
+  const updateSpendLimit = (side, limit) => {
+    const nextChanges = { ...changes, spendLimits: { ...changes.spendLimits } };
+    if (limit.unit === "percentage") delete nextChanges.spendLimits[side];
+    else nextChanges.spendLimits[side] = limit;
+    if (Object.keys(nextChanges.spendLimits).length) nextChanges.spendLimitBudgetMode = defaults.budget.mode;
+    else { delete nextChanges.spendLimits; delete nextChanges.spendLimitBudgetMode; }
+    onChange({ ...value, changes: nextChanges });
+  };
+
+  const updateGroup = (index, key, next) => update("targetingGroups", { ...changes.targetingGroups, [index]: { ...changes.targetingGroups?.[index], [key]: next } });
   const startTime = field("startTime", defaults?.startTime || "");
   const endTime = field("endTime", defaults?.endTime || "");
   return (
@@ -193,7 +315,7 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
           <motion.div key="ad-set-setup" initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }} transition={{ duration: reduceMotion ? 0 : 0.18, ease: "easeInOut" }} className="overflow-hidden">
             <div className="mt-3 space-y-5 rounded-2xl border border-gray-200 bg-white p-4">
-              {loading && !defaults && <p role="status" className="flex items-center gap-2 text-sm text-gray-500"><Loader className="h-4 w-4 animate-spin" />Loading ad set settings...</p>}
+              {loading && <p role="status" className="flex items-center gap-2 text-sm text-gray-500"><Loader className="h-4 w-4 animate-spin" />Loading ad set settings...</p>}
               {error && <div role="alert" className="text-sm text-red-600">{error} <button type="button" className="underline" onClick={() => setReload(reload + 1)}>Retry</button></div>}
               {defaults && <>
                 <section className="space-y-2">
@@ -203,6 +325,47 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
                     value={field("budgetAmount", defaults.budget.amount)} disabled={defaults.budget.level === "campaign"}
                     onChange={(event) => update("budgetAmount", event.target.value)} className="border-gray-400 rounded-2xl" />
                   {defaults.budget.level === "campaign" && <p className="text-xs text-gray-500">Shared by the campaign’s ad sets. Edit this budget in Ads Manager.</p>}
+                  {defaults.bidControl && <div className="space-y-2 pt-2">
+                    <Label htmlFor="new-adset-bid">{defaults.bidControl.label} ({defaults.bidControl.roas ? "×" : defaults.budget.currency})</Label>
+                    <Input id="new-adset-bid" type="number" min={defaults.bidControl.roas || defaults.budget.decimals ? "0.01" : "1"}
+                      max={defaults.bidControl.roas ? 1000 : undefined} step={defaults.bidControl.roas ? "0.0001" : defaults.budget.decimals ? "0.01" : "1"}
+                      value={field("bidValue", defaults.bidControl.value)} disabled={!defaults.bidControl.editable}
+                      onChange={(event) => onChange({ ...value, changes: { ...changes, bidValue: event.target.value, bidStrategy: defaults.bidControl.strategy } })}
+                      onBlur={() => { if (advancedError) toast.error(advancedError); }} className="border-gray-400 rounded-2xl" />
+                    {!defaults.bidControl.editable && <p className="text-xs text-gray-500">This control cannot be edited with the current campaign and optimization setup.</p>}
+                  </div>}
+                  {defaults.budget.level === "campaign" && defaults.spendLimits && <div className="space-y-3 pt-2">
+                    <p className="text-sm font-medium">{defaults.budget.mode === "daily" ? "Daily" : "Lifetime"} ad set spend limits</p>
+                    {[["min", "Minimum spend target"], ["max", "Maximum spend limit"]].map(([side, label]) => {
+                      const sourceLimit = defaults.spendLimits[side];
+                      const limit = changes.spendLimits?.[side] || sourceLimit;
+                      return <div key={side} className="space-y-2">
+                        <Label htmlFor={`new-adset-spend-${side}`}>{label}</Label>
+                        <div className="flex items-center gap-2">
+                          <Select value={limit.unit} disabled={disabled} onValueChange={(unit) => updateSpendLimit(side, { unit, value: "" })}>
+                            <SelectTrigger aria-label={`${label} unit`} className="h-11 w-24 shrink-0 rounded-2xl bg-white py-2"><SelectValue /></SelectTrigger>
+                            <SelectContent className="rounded-2xl bg-white shadow-lg">
+                              <SelectItem value="currency" className="rounded-xl">{defaults.budget.currency}</SelectItem>
+                              <SelectItem value="percentage" disabled={sourceLimit.unit !== "percentage"} className="rounded-xl">Existing %</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Input id={`new-adset-spend-${side}`} type={limit.unit === "percentage" ? "text" : "number"}
+                            readOnly={limit.unit === "percentage"} value={limit.unit === "percentage" ? "Copied unchanged" : limit.value}
+                            min={defaults.budget.decimals ? "0.01" : "1"} step={defaults.budget.decimals ? "0.01" : "1"}
+                            placeholder="No limit" className="min-w-0 rounded-2xl border-gray-400"
+                            onChange={(event) => updateSpendLimit(side, { unit: "currency", value: event.target.value })}
+                            onBlur={() => { if (advancedError) toast.error(advancedError); }} />
+                          {limit.value !== "" && <button type="button" aria-label={`Clear ${label.toLowerCase()}`} title="Clear limit"
+                            className="shrink-0 text-gray-500 hover:text-black" onClick={() => updateSpendLimit(side, { unit: "currency", value: "" })}>
+                            <CircleX className="h-4 w-4" />
+                          </button>}
+                        </div>
+                      </div>;
+                    })}
+                    <p className="text-xs text-gray-500">Leave empty for no limit. Minimum spend is a target, not a guarantee.</p>
+                  </div>}
+                  {advancedError && <p role="alert" className="text-xs text-red-600">{advancedError}</p>}
+
                 </section>
                 <section className="space-y-3 border-t pt-4">
                   <h4 className="flex items-center gap-2 text-sm font-semibold"><CalendarClock className="h-4 w-4 shrink-0" aria-hidden="true" />Schedule</h4>
@@ -226,7 +389,18 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
                   <SettingsMultiSelect label="Gender" options={[{ value: 1, label: "Men" }, { value: 2, label: "Women" }]} value={field("genders", targeting.genders || [])} onChange={(next) => update("genders", next.length === 2 ? [] : next)} placeholder="Both" allLabel="Both" />
                   <SettingsMultiSelect label="Countries" options={countryOptions} value={field("countries", targeting.geo_locations?.countries || [])} onChange={(next) => update("countries", next)} placeholder="No country selection" flags />
                   {Object.keys(targeting.geo_locations || {}).some((key) => !["countries", "location_types"].includes(key)) && <p className="text-xs text-gray-500">Other source locations, such as cities, regions, and country groups, are also retained.</p>}
+                  <SettingsMultiSelect label="Included audiences" options={audiences} value={field("includedAudienceIds", (targeting.custom_audiences || []).map((audience) => audience.id))} onChange={(next) => update("includedAudienceIds", next)} placeholder="No included audiences" checkboxes />
                   <SettingsMultiSelect label="Excluded audiences" options={audiences} value={field("excludedAudienceIds", (targeting.excluded_custom_audiences || []).map((audience) => audience.id))} onChange={(next) => update("excludedAudienceIds", next)} placeholder="No excluded audiences" checkboxes />
+                  {(targeting.interests?.length > 0 || !targeting.flexible_spec?.length) && <InterestPicker value={field("interests", targeting.interests || [])} onChange={(next) => update("interests", next)} disabled={disabled} />}
+                  {(targeting.flexible_spec || []).map((group, index) => <div key={index} className="space-y-3 rounded-2xl border border-gray-200 p-3">
+                    <p className="text-xs font-medium text-gray-600">Targeting group {index + 1}{index > 0 ? " · AND" : ""}</p>
+                    <SettingsMultiSelect label="Included audiences in this group" options={audiences}
+                      value={changes.targetingGroups?.[index]?.includedAudienceIds ?? (group.custom_audiences || []).map((audience) => audience.id)}
+                      onChange={(next) => updateGroup(index, "includedAudienceIds", next)} placeholder="No included audiences" checkboxes />
+                    <InterestPicker value={changes.targetingGroups?.[index]?.interests ?? group.interests ?? []} onChange={(next) => updateGroup(index, "interests", next)} disabled={disabled} />
+                    <p className="text-xs text-gray-500">Match any selection within this group.{Object.keys(group).some((key) => !["interests", "custom_audiences"].includes(key)) ? " Other source targeting rules in this group are retained." : ""}</p>
+                  </div>)}
+
                 </section>
               </>}
             </div>
@@ -312,6 +486,19 @@ export default function AdAccountSettings({
   const [isLoadingCampaigns, setIsLoadingCampaigns] = useState(false);
   const [isLoadingAdSetsLocal, setIsLoadingAdSetsLocal] = useState(false);
   const [isLoadingEditCreative, setIsLoadingEditCreative] = useState(false);
+  const [campaignCopyErrors, setCampaignCopyErrors] = useState(null);
+  const [showCampaignCopyErrors, setShowCampaignCopyErrors] = useState(false);
+  const visibleCampaignCopyErrors = campaignCopyErrors?.adAccountId === selectedAdAccount && selectedCampaign.includes(campaignCopyErrors.campaignId)
+    ? campaignCopyErrors.failures : [];
+  const groupedCampaignCopyErrors = useMemo(() => {
+    const groups = new Map();
+    for (const failure of campaignCopyErrors?.failures || []) {
+      const message = failure.error?.trim() || "Failed to copy ad set";
+      if (!groups.has(message)) groups.set(message, []);
+      groups.get(message).push(failure);
+    }
+    return [...groups.entries()];
+  }, [campaignCopyErrors]);
   const { refetchAdAccounts } = useAppData()
 
   const handleEditCreativeClick = useCallback(async () => {
@@ -633,6 +820,8 @@ export default function AdAccountSettings({
       return;
     }
 
+    setCampaignCopyErrors(null);
+    setShowCampaignCopyErrors(false);
     setIsLoading(true);
     try {
       const response = await fetch(`${API_BASE_URL}/auth/duplicate-campaign`, {
@@ -651,7 +840,12 @@ export default function AdAccountSettings({
       const data = await response.json();
 
       if (response.ok) {
-        toast.success("Campaign duplicated successfully!");
+        if (data.failed_adsets?.length) {
+          setCampaignCopyErrors({ adAccountId: selectedAdAccount, campaignId: data.copied_campaign_id, failures: data.failed_adsets });
+          toast.warning("Campaign created, but some ad sets could not be copied.");
+        } else {
+          toast.success("Campaign duplicated successfully!");
+        }
 
         // Reset the duplicate campaign block
         setShowDuplicateCampaignBlock(false);
@@ -1163,6 +1357,38 @@ transition-all duration-150 hover:!bg-black
             )}
 
           </div>
+
+          {visibleCampaignCopyErrors.length > 0 && <>
+            <div role="alert" className="flex items-center gap-2 text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+              <span className="min-w-0 flex-1">
+                {visibleCampaignCopyErrors.length} ad {visibleCampaignCopyErrors.length === 1 ? "set didn’t" : "sets didn’t"} get copied due to errors.{" "}
+                <button type="button" className="underline underline-offset-2" onClick={() => setShowCampaignCopyErrors(true)}>View errors</button>
+              </span>
+              <button type="button" aria-label="Dismiss campaign copy errors" className="shrink-0 hover:text-red-800"
+                onClick={() => { setCampaignCopyErrors(null); setShowCampaignCopyErrors(false); }}>
+                <CircleX className="h-3.5 w-3.5" aria-hidden="true" />
+              </button>
+            </div>
+            <Dialog open={showCampaignCopyErrors} onOpenChange={setShowCampaignCopyErrors}>
+              <DialogContent disableSlide overlayClassName="bg-black/35"
+                className="w-[min(36rem,calc(100vw-2rem))] max-h-[85vh] overflow-y-auto rounded-[28px] border-gray-200 bg-white p-6 shadow-xl sm:rounded-[28px]">
+                <DialogHeader className="pr-6">
+                  <DialogTitle>Ad sets that couldn’t be copied</DialogTitle>
+                  <DialogDescription>The campaign was created. These ad sets could not be added to it.</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  {groupedCampaignCopyErrors.map(([message, failures]) => (
+                    <div key={message} className="space-y-3 rounded-2xl border border-gray-200 p-4">
+                      <ul className="space-y-1 text-sm font-medium text-gray-900">
+                        {failures.map((failure) => <li key={failure.id} className="break-words">{failure.name || failure.id}</li>)}
+                      </ul>
+                      <p className="whitespace-pre-wrap break-words text-sm text-red-600">{message}</p>
+                    </div>
+                  ))}
+                </div>
+              </DialogContent>
+            </Dialog>
+          </>}
 
           <div className="space-y-2 ">
             <div className="flex items-center justify-between">
