@@ -155,18 +155,18 @@ function InterestPicker({ label = "Interests", value, onChange, disabled }) {
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0 bg-white shadow-lg rounded-2xl" style={{ minWidth: "var(--radix-popover-trigger-width)", width: "max(var(--radix-popover-trigger-width), min(480px, calc(100vw - 2rem)))", maxWidth: "calc(100vw - 2rem)" }} align="start" sideOffset={4}>
         <Command shouldFilter={false} loop={false} className="rounded-2xl bg-white">
-          <div className="flex items-center gap-2 pr-2">
+          <div className="mx-2 mt-2 mb-1 flex items-center gap-1">
             <CommandInput value={query} onValueChange={(next) => {
               requestRef.current?.abort(); setLoading(false); setQuery(next); setResults([]); setError(""); setSearched(false);
             }} maxLength={100} placeholder="Search interests..."
               onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); event.stopPropagation(); search(); } }}
-              className="bg-transparent" wrapperClassName="min-w-0 flex-1 bg-gray-50 border-gray-200 rounded-[20px]" />
-            <Button type="button" size="sm" disabled={disabled || loading || query.trim().length < 2} onClick={search} onKeyDown={(event) => event.stopPropagation()} className="shrink-0 rounded-xl">Search</Button>
+              className="h-full bg-transparent" wrapperClassName="mx-0 mt-0 mb-0 h-11 min-w-0 flex-1 bg-gray-50 border-gray-200 rounded-[20px]" />
+            <Button type="button" size="sm" disabled={disabled || loading || query.trim().length < 2} onClick={search} onKeyDown={(event) => event.stopPropagation()} className="h-11 shrink-0 rounded-xl">Search</Button>
           </div>
           <CommandList className="max-h-none overflow-hidden rounded-2xl px-2" selectOnFocus={false}>
             {loading ? <p role="status" className="p-3 text-sm text-gray-500">Searching...</p>
               : error ? <p role="alert" className="p-3 text-sm text-red-600">{error}</p>
-                : <p className="p-3 text-sm text-gray-500">{searched ? (!results.length ? "No interests found." : "Search results and selected interests") : "Type at least 2 characters, then press Enter or Search."}</p>}
+                : (!searched || !results.length) && <p className="p-3 text-sm text-gray-500">{searched ? "No interests found." : "Type at least 2 characters, then press Enter or Search."}</p>}
             <ScrollArea viewportClassName="max-h-[380px] [&>div]:!block">
               <CommandGroup>
                 {displayedInterests.map((interest) => {
