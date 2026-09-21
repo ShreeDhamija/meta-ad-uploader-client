@@ -17,7 +17,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { useTikTokVideoUpload } from "@/hooks/useTikTokVideoUpload";
+import { useTikTokVideoUpload, isTikTokImageFile } from "@/hooks/useTikTokVideoUpload";
 import { useAppData } from "@/lib/AppContext";
 import { readCache, writeCache } from "@/lib/dataCache";
 import { deleteTikTokCopyTemplate, saveTikTokSettings } from "@/lib/saveTikTokSettings";
@@ -731,9 +731,10 @@ export default function TikTokAdCreationForm({
     if (advertiserId) setSelectedAdvertiser(advertiserId);
   }, [advertiserId]);
 
-  // Video upload hook
+  // Media upload hook — videos and images take separate pipelines
   const {
     uploadVideo: uploadVideoToTikTok,
+    uploadImage: uploadImageToTikTok,
     uploading: videoUploading,
     uploadProgress: videoUploadProgress,
   } = useTikTokVideoUpload(selectedAdvertiser);
@@ -1948,10 +1949,11 @@ export default function TikTokAdCreationForm({
       // Calculate total chunks to track upload progress across parallel uploads
       const totalChunks = itemsToUpload.reduce((sum, item) => {
         if (adType === "SPARK" || item.type === "library") return sum;
-        if (item.type === "local") {
+        if (item.type === "local" && !isTikTokImageFile(item.file)) {
           return sum + Math.ceil((item.file.size || 0) / (10 * 1024 * 1024));
         }
-        return sum + 1; // Google Drive / Dropbox are counted as 1 step
+        // Local images, Google Drive and Dropbox each report a single step
+        return sum + 1;
       }, 0);
 
       if (totalChunks > 0) {
@@ -1973,28 +1975,19 @@ export default function TikTokAdCreationForm({
             if (signal.aborted) throw new DOMException("Job cancelled.", "AbortError");
 
             let videoId = null;
+            let imageId = null;
             let currentS3Url = null;
 
             try {
               if (item.type === "local") {
-                const isImage = !!(item.file?.type?.startsWith("image/") || /\.(png|jpg|jpeg|gif|webp|bmp)($|\?)/i.test(item.file?.name || ""));
-
-                if (isImage) {
-                  const uploadParams = new URLSearchParams({ advertiserId: selectedAdvertiser });
-                  const bodyFormData = new FormData();
-                  bodyFormData.append("image", item.file);
-
-                  const uploadRes = await fetch(`${API_BASE_URL}/api/tiktok/upload-image?${uploadParams}`, {
-                    method: "POST",
-                    credentials: "include",
-                    body: bodyFormData,
-                    signal,
-                  });
-                  const uploadData = await uploadRes.json();
-                  if (!uploadRes.ok || !uploadData.success) {
-                    throw new Error(uploadData.error || `Image upload failed for "${item.file.name}"`);
+                if (isTikTokImageFile(item.file)) {
+                  // Images skip S3 entirely — the server posts them straight to
+                  // TikTok's image endpoint and hands back an image_id.
+                  const uploadResult = await uploadImageToTikTok(item.file, signal);
+                  if (!uploadResult?.imageId) {
+                    throw new Error(`Image upload failed for "${item.file.name}"`);
                   }
-                  videoId = uploadData.imageId || uploadData.image_id;
+                  imageId = uploadResult.imageId;
                   currentS3Url = null;
                   handleChunkUploaded();
                 } else {
@@ -2036,10 +2029,17 @@ export default function TikTokAdCreationForm({
                   signal,
                 });
                 const uploadData = await uploadRes.json();
-                if (!uploadRes.ok || !uploadData.success || !uploadData.videoId) {
+                // The server classifies the file and answers with whichever id applies:
+                // an image upload returns imageId, a video upload returns videoId.
+                if (!uploadRes.ok || !uploadData.success || !(uploadData.imageId || uploadData.videoId)) {
                   throw new Error(uploadData.error || `Upload failed for "${item.file.name}"`);
                 }
-                videoId = uploadData.videoId;
+                if (uploadData.imageId) {
+                  imageId = uploadData.imageId;
+                } else {
+                  videoId = uploadData.videoId;
+                }
+                // Images are handed straight to TikTok, so there is no S3 object to clean up.
                 currentS3Url = uploadData.s3Url || null;
                 handleChunkUploaded();
               } else if (item.type === "library") {
@@ -2049,6 +2049,7 @@ export default function TikTokAdCreationForm({
               return {
                 item,
                 videoId,
+                imageId,
                 s3Url: currentS3Url,
                 success: true,
               };
@@ -2083,6 +2084,7 @@ export default function TikTokAdCreationForm({
             uploadedItems.push({
               item: res.item,
               videoId: res.videoId,
+              imageId: res.imageId,
               s3Url: res.s3Url,
             });
           } else {
@@ -2105,6 +2107,7 @@ export default function TikTokAdCreationForm({
           uploadedItems.push({
             item,
             videoId,
+            imageId: null,
             s3Url: null,
           });
         });
@@ -2171,13 +2174,9 @@ export default function TikTokAdCreationForm({
       const adGroupsMap = {};
 
       for (let idx = 0; idx < uploadedItems.length; idx++) {
-        const { item, videoId, s3Url } = uploadedItems[idx];
+        const { item, videoId, imageId, s3Url } = uploadedItems[idx];
 
-        const isImage = !!(
-          item.file?.type?.startsWith("image/") ||
-          item.file?.mimeType?.startsWith("image/") ||
-          /\.(png|jpg|jpeg|gif|webp|bmp)($|\?)/i.test(item.file?.name || "")
-        );
+        const isImage = !!imageId || isTikTokImageFile(item.file);
 
         const currentIdentityId = adType === "SPARK" ? item.file.identityId : isCustomized ? undefined : selectedIdentity;
         const currentIdentityType =
@@ -2362,7 +2361,9 @@ export default function TikTokAdCreationForm({
 
           const creative = {
             adFormat: isImage ? "SINGLE_IMAGE" : "SINGLE_VIDEO",
-            ...(isImage ? { image_ids: videoId } : { video_id: videoId }),
+            // image_ids is an array on TikTok's /ad/create/ — a SINGLE_IMAGE ad takes
+            // exactly one entry, and never a video_id alongside it.
+            ...(isImage ? { image_ids: [imageId] } : { video_id: videoId }),
             ad_text: finalCaptions[0] || "",
             ad_texts: finalCaptions,
             call_to_action: creativeCTAs,

@@ -5,15 +5,38 @@ import pLimit from "p-limit";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "https://api.withblip.com";
 
+const IMAGE_EXTENSION_PATTERN = /\.(png|jpe?g|gif|webp|bmp)($|\?)/i;
+
 /**
- * Hook for uploading videos to TikTok via the backend upload pipeline.
+ * Classify a File (or Drive/Dropbox file descriptor) as an image.
+ * Mirrors TikTokImageService.isImageFile() on the server so both ends agree
+ * on which pipeline a given file belongs in.
  *
- * Supports two modes:
- *  - uploadVideo(file, signal)   — local File object, uses chunked S3 direct upload
- *  - uploadVideoFromUrl(url)     — remote URL, asks the server to download & forward it
+ * @param {{ type?: string, mimeType?: string, name?: string }} file
+ * @returns {boolean}
+ */
+export function isTikTokImageFile(file) {
+  if (!file) return false;
+  const mime = file.type || file.mimeType || file.mimetype || "";
+  if (mime.startsWith("image/")) return true;
+  return IMAGE_EXTENSION_PATTERN.test(file.name || file.fileName || "");
+}
+
+/**
+ * Hook for uploading media to TikTok via the backend upload pipeline.
+ *
+ * Videos and images take deliberately different routes:
+ *  - uploadVideo(file, signal)     — local File, chunked S3 multipart, then TikTok fetches by URL
+ *  - uploadVideoFromUrl(url)       — remote URL, server forwards it to TikTok
+ *  - uploadImage(file, signal)     — local File posted straight to the server's image endpoint;
+ *                                    images are small, so there is no S3 staging step
+ *  - uploadImageFromUrl(url)       — remote URL, server hands it to TikTok's image endpoint
+ *
+ * Video calls resolve to a `videoId`; image calls resolve to an `imageId`. They are
+ * different TikTok asset namespaces and must never be interchanged.
  *
  * @param {string} advertiserId  TikTok advertiser account ID
- * @returns {{ uploadVideo, uploadVideoFromUrl, uploading, uploadProgress }}
+ * @returns {{ uploadVideo, uploadVideoFromUrl, uploadImage, uploadImageFromUrl, uploading, uploadProgress }}
  */
 export function useTikTokVideoUpload(advertiserId) {
   const [uploading, setUploading] = useState(false);
@@ -301,5 +324,100 @@ export function useTikTokVideoUpload(advertiserId) {
     }
   };
 
-  return { uploadVideo, uploadVideoFromUrl, uploading, uploadProgress };
+  /**
+   * Upload a local image File to TikTok's asset library.
+   *
+   * Unlike videos there is no S3 multipart step — the file goes straight to the
+   * server, which forwards it to TikTok and returns the image_id.
+   *
+   * @param {File} file
+   * @param {AbortSignal} [signal]
+   * @param {Function} [onProgress]
+   * @returns {Promise<{ imageId: string, fileName: string, data: object }>}
+   */
+  const uploadImage = async (file, signal = null, onProgress = null) => {
+    if (!advertiserId) {
+      toast.error("No advertiser selected");
+      return null;
+    }
+    if (!file) {
+      toast.error("No file provided");
+      return null;
+    }
+
+    setUploading(true);
+    setUploadProgress(0);
+
+    try {
+      const body = new FormData();
+      body.append("image", file);
+
+      const response = await fetch(`${API_BASE_URL}/api/tiktok/upload-image?advertiserId=${encodeURIComponent(advertiserId)}`, {
+        method: "POST",
+        credentials: "include",
+        body,
+        signal,
+      });
+
+      const data = await response.json();
+      if (!response.ok || !data.success || !data.imageId) {
+        throw new Error(data.error || `Image upload failed for "${file.name}"`);
+      }
+
+      setUploadProgress(100);
+      if (onProgress) onProgress(100);
+      return { imageId: data.imageId, fileName: data.fileName || file.name, data: data.data };
+    } catch (err) {
+      setUploadProgress(0);
+      if (err.name === "AbortError" || axios.isCancel(err) || signal?.aborted) {
+        throw new DOMException("Upload aborted", "AbortError");
+      }
+      throw err;
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  /**
+   * Ask the server to hand an already-hosted image URL to TikTok.
+   *
+   * @param {string} imageUrl   Publicly accessible image URL
+   * @param {string} [fileName]
+   * @returns {Promise<{ imageId: string, fileName: string, data: object } | null>}
+   */
+  const uploadImageFromUrl = async (imageUrl, fileName = "image.jpg") => {
+    if (!advertiserId) {
+      toast.error("No advertiser selected");
+      return null;
+    }
+    if (!imageUrl) {
+      toast.error("No URL provided");
+      return null;
+    }
+
+    setUploading(true);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/tiktok/upload-image-url?advertiserId=${encodeURIComponent(advertiserId)}`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageUrl, fileName }),
+      });
+
+      const data = await response.json();
+      if (!response.ok || !data.success || !data.imageId) {
+        throw new Error(data.error || "Image URL upload failed");
+      }
+
+      return { imageId: data.imageId, fileName: data.fileName || fileName, data: data.data };
+    } catch (err) {
+      toast.error(err.message || "Image URL upload failed");
+      return null;
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return { uploadVideo, uploadVideoFromUrl, uploadImage, uploadImageFromUrl, uploading, uploadProgress };
 }
