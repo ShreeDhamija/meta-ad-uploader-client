@@ -111,31 +111,36 @@ function InterestPicker({ label = "Interests", value, onChange, disabled }) {
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [searched, setSearched] = useState(false);
+  const requestRef = useRef(null);
+  useEffect(() => () => requestRef.current?.abort(), []);
   useEffect(() => {
-    setResults([]);
-    setError("");
-    setLoading(false);
-    if (!open || disabled || query.trim().length < 2) return;
+    if (!open || disabled) { requestRef.current?.abort(); setLoading(false); }
+  }, [open, disabled]);
+  const search = async () => {
+    if (disabled || loading || query.trim().length < 2) return;
+    requestRef.current?.abort();
     const controller = new AbortController();
+    requestRef.current = controller;
     setLoading(true);
-    const timer = setTimeout(async () => {
-      try {
-        const response = await fetch(`${API_BASE_URL}/auth/adset-interest-search?${new URLSearchParams({ q: query.trim() })}`, { credentials: "include", signal: controller.signal });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || "Could not search interests.");
-        if (!controller.signal.aborted) setResults(data.data || []);
-      } catch (err) {
-        if (!controller.signal.aborted) setError(err.message);
-      } finally {
-        if (!controller.signal.aborted) setLoading(false);
-      }
-    }, 300);
-    return () => { clearTimeout(timer); controller.abort(); };
-  }, [query, open, disabled]);
+    setError("");
+    setSearched(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/adset-interest-search?${new URLSearchParams({ q: query.trim() })}`, { credentials: "include", signal: controller.signal });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Could not search interests.");
+      if (!controller.signal.aborted) setResults(data.data || []);
+    } catch (err) {
+      if (!controller.signal.aborted) setError(err.message);
+    } finally {
+      if (!controller.signal.aborted) setLoading(false);
+    }
+  };
+  const displayedInterests = [...new Map([...value, ...results].map((interest) => [interest.id, interest])).values()];
   const toggle = (interest) => {
     if (value.some(({ id }) => id === interest.id)) onChange(value.filter(({ id }) => id !== interest.id));
     else if (value.length >= 1000) toast.error("Select up to 1,000 interests in each group.");
-    else onChange([...value, { id: interest.id, name: interest.name }]);
+    else onChange([...value, interest]);
   };
   const audienceSize = (size) => size == null ? "Not provided" : Number(size).toLocaleString();
   return <div className="space-y-2">
@@ -148,25 +153,31 @@ function InterestPicker({ label = "Interests", value, onChange, disabled }) {
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[min(calc(100vw-2rem),480px)] p-0 bg-white shadow-lg rounded-2xl" align="start" sideOffset={4}>
+      <PopoverContent className="w-auto p-0 bg-white shadow-lg rounded-2xl" style={{ minWidth: "var(--radix-popover-trigger-width)", width: "max(var(--radix-popover-trigger-width), min(480px, calc(100vw - 2rem)))", maxWidth: "calc(100vw - 2rem)" }} align="start" sideOffset={4}>
         <Command shouldFilter={false} loop={false} className="rounded-2xl bg-white">
-          <CommandInput value={query} onValueChange={setQuery} maxLength={100} placeholder="Search interests..."
-            className="bg-transparent" wrapperClassName="bg-gray-50 border-gray-200 rounded-[20px]" />
+          <div className="flex items-center gap-2 pr-2">
+            <CommandInput value={query} onValueChange={(next) => {
+              requestRef.current?.abort(); setLoading(false); setQuery(next); setResults([]); setError(""); setSearched(false);
+            }} maxLength={100} placeholder="Search interests..."
+              onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); event.stopPropagation(); search(); } }}
+              className="bg-transparent" wrapperClassName="min-w-0 flex-1 bg-gray-50 border-gray-200 rounded-[20px]" />
+            <Button type="button" size="sm" disabled={disabled || loading || query.trim().length < 2} onClick={search} onKeyDown={(event) => event.stopPropagation()} className="shrink-0 rounded-xl">Search</Button>
+          </div>
           <CommandList className="max-h-none overflow-hidden rounded-2xl px-2" selectOnFocus={false}>
             {loading ? <p role="status" className="p-3 text-sm text-gray-500">Searching...</p>
               : error ? <p role="alert" className="p-3 text-sm text-red-600">{error}</p>
-                : !results.length && <p className="p-3 text-sm text-gray-500">{query.trim().length < 2 ? "Type at least 2 characters." : "No interests found."}</p>}
+                : <p className="p-3 text-sm text-gray-500">{searched ? (!results.length ? "No interests found." : "Search results and selected interests") : "Type at least 2 characters, then press Enter or Search."}</p>}
             <ScrollArea viewportClassName="max-h-[380px] [&>div]:!block">
               <CommandGroup>
-                {results.map((interest) => {
+                {displayedInterests.map((interest) => {
                   const selected = value.some(({ id }) => id === interest.id);
                   return <CommandItem key={interest.id} value={interest.id} onSelect={() => toggle(interest)}
                     className={cn("items-start py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150", selected ? "bg-gray-100 hover:!bg-gray-100" : "hover:!bg-gray-200")}>
                     <Checkbox checked={selected} onCheckedChange={() => toggle(interest)} onClick={(event) => event.stopPropagation()} tabIndex={-1} aria-label={interest.name}
                       className="mt-0.5 h-4 w-4 shrink-0 rounded-[6px] border-gray-300 bg-white p-0 data-[state=checked]:bg-black data-[state=checked]:text-white" />
                     <div className="min-w-0 space-y-1">
-                      <p className="font-medium">{interest.name}</p>
-                      <p className="text-xs text-gray-500 line-clamp-2" title={interest.description || undefined}>{interest.description || "No description provided"}</p>
+                      <p className="font-medium">{interest.name || "Unavailable interest"}</p>
+                      {interest.description?.trim() && <p className="text-xs text-gray-500 line-clamp-2" title={interest.description}>{interest.description}</p>}
                       <p className="text-xs text-gray-600">Topic: {interest.topic || "Not provided"}</p>
                       <p className="text-xs text-gray-600">Audience: {audienceSize(interest.audience_size_lower_bound)} – {audienceSize(interest.audience_size_upper_bound)}</p>
                     </div>
@@ -223,7 +234,7 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
   const [reload, setReload] = useState(0);
   const defaults = value?.defaults;
   useEffect(() => {
-    if (!expanded || (defaults && Object.prototype.hasOwnProperty.call(defaults, "spendLimits")) || disabled) return;
+    if (!expanded || (defaults && Object.prototype.hasOwnProperty.call(defaults, "spendLimits") && defaults.interestsResolved) || disabled) return;
     const controller = new AbortController();
     settingsRequestRef.current = controller;
     setLoading(true);
@@ -233,7 +244,7 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
       .then(async (response) => {
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || "Could not load ad set settings.");
-        if (!controller.signal.aborted) onChange({ sourceAdSetId: adSetId, campaignId, adAccountId, defaults: { ...data, spendLimits: data.spendLimits ?? null }, changes: latestSettingsRef.current?.changes || {} });
+        if (!controller.signal.aborted) onChange({ sourceAdSetId: adSetId, campaignId, adAccountId, defaults: { ...data, spendLimits: data.spendLimits ?? null, interestsResolved: true }, changes: latestSettingsRef.current?.changes || {} });
       })
       .catch((err) => { if (!controller.signal.aborted) setError(err.message); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
@@ -287,6 +298,31 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
   };
 
   const updateGroup = (index, key, next) => update("targetingGroups", { ...changes.targetingGroups, [index]: { ...changes.targetingGroups?.[index], [key]: next } });
+  const includedAudienceIds = [...new Set([
+    ...field("includedAudienceIds", (targeting.custom_audiences || []).map(({ id }) => id)),
+    ...(targeting.flexible_spec || []).flatMap((group, index) => changes.targetingGroups?.[index]?.includedAudienceIds ?? (group.custom_audiences || []).map(({ id }) => id)),
+  ])];
+  const updateIncludedAudiences = (next) => {
+    const added = next.filter((id) => !includedAudienceIds.includes(id));
+    const rootIds = field("includedAudienceIds", (targeting.custom_audiences || []).map(({ id }) => id));
+    const groupIds = (targeting.flexible_spec || []).map((group, index) => changes.targetingGroups?.[index]?.includedAudienceIds ?? (group.custom_audiences || []).map(({ id }) => id));
+    const sourceRootIds = (targeting.custom_audiences || []).map(({ id }) => id);
+    const sourceGroupIds = (targeting.flexible_spec || []).map((group) => (group.custom_audiences || []).map(({ id }) => id));
+    const destination = sourceRootIds.length || rootIds.length ? -1 : sourceGroupIds.findIndex((ids) => ids.length);
+    const additionsFor = (index) => added.filter((id) => {
+      const originalGroup = sourceGroupIds.findIndex((ids) => ids.includes(id));
+      return (sourceRootIds.includes(id) ? -1 : originalGroup !== -1 ? originalGroup : destination) === index;
+    });
+    const nextChanges = { ...changes, targetingGroups: { ...changes.targetingGroups } };
+    const rootNext = [...rootIds.filter((id) => next.includes(id)), ...additionsFor(-1)];
+    if (JSON.stringify(rootNext) !== JSON.stringify(rootIds)) nextChanges.includedAudienceIds = rootNext;
+    groupIds.forEach((ids, index) => {
+      const groupNext = [...ids.filter((id) => next.includes(id)), ...additionsFor(index)];
+      if (JSON.stringify(groupNext) !== JSON.stringify(ids)) nextChanges.targetingGroups[index] = { ...nextChanges.targetingGroups[index], includedAudienceIds: groupNext };
+    });
+    if (!Object.keys(nextChanges.targetingGroups).length) delete nextChanges.targetingGroups;
+    onChange({ ...value, changes: nextChanges });
+  };
   const startTime = field("startTime", defaults?.startTime || "");
   const endTime = field("endTime", defaults?.endTime || "");
   return (
@@ -327,8 +363,7 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
                   {defaults.budget.level === "campaign" && <p className="text-xs text-gray-500">Shared by the campaign’s ad sets. Edit this budget in Ads Manager.</p>}
                   {defaults.bidControl && <div className="space-y-2 pt-2">
                     <Label htmlFor="new-adset-bid">{defaults.bidControl.label} ({defaults.bidControl.roas ? "×" : defaults.budget.currency})</Label>
-                    <Input id="new-adset-bid" type="number" min={defaults.bidControl.roas || defaults.budget.decimals ? "0.01" : "1"}
-                      max={defaults.bidControl.roas ? 1000 : undefined} step={defaults.bidControl.roas ? "0.0001" : defaults.budget.decimals ? "0.01" : "1"}
+                    <Input id="new-adset-bid" type="text" inputMode="decimal"
                       value={field("bidValue", defaults.bidControl.value)} disabled={!defaults.bidControl.editable}
                       onChange={(event) => onChange({ ...value, changes: { ...changes, bidValue: event.target.value, bidStrategy: defaults.bidControl.strategy } })}
                       onBlur={() => { if (advancedError) toast.error(advancedError); }} className="border-gray-400 rounded-2xl" />
@@ -389,14 +424,12 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
                   <SettingsMultiSelect label="Gender" options={[{ value: 1, label: "Men" }, { value: 2, label: "Women" }]} value={field("genders", targeting.genders || [])} onChange={(next) => update("genders", next.length === 2 ? [] : next)} placeholder="Both" allLabel="Both" />
                   <SettingsMultiSelect label="Countries" options={countryOptions} value={field("countries", targeting.geo_locations?.countries || [])} onChange={(next) => update("countries", next)} placeholder="No country selection" flags />
                   {Object.keys(targeting.geo_locations || {}).some((key) => !["countries", "location_types"].includes(key)) && <p className="text-xs text-gray-500">Other source locations, such as cities, regions, and country groups, are also retained.</p>}
-                  <SettingsMultiSelect label="Included audiences" options={audiences} value={field("includedAudienceIds", (targeting.custom_audiences || []).map((audience) => audience.id))} onChange={(next) => update("includedAudienceIds", next)} placeholder="No included audiences" checkboxes />
+                  <SettingsMultiSelect label="Included audiences" options={audiences} value={includedAudienceIds} onChange={updateIncludedAudiences} placeholder="No included audiences" checkboxes />
                   <SettingsMultiSelect label="Excluded audiences" options={audiences} value={field("excludedAudienceIds", (targeting.excluded_custom_audiences || []).map((audience) => audience.id))} onChange={(next) => update("excludedAudienceIds", next)} placeholder="No excluded audiences" checkboxes />
+                  {defaults.interestDetailsUnavailable && <p className="text-xs text-gray-500">Some interest details could not be loaded. Existing selections are still shown and can be removed.</p>}
                   {(targeting.interests?.length > 0 || !targeting.flexible_spec?.length) && <InterestPicker value={field("interests", targeting.interests || [])} onChange={(next) => update("interests", next)} disabled={disabled} />}
-                  {(targeting.flexible_spec || []).map((group, index) => <div key={index} className="space-y-3 rounded-2xl border border-gray-200 p-3">
+                  {(targeting.flexible_spec || []).map((group, index) => <div key={index} className="space-y-3">
                     <p className="text-xs font-medium text-gray-600">Targeting group {index + 1}{index > 0 ? " · AND" : ""}</p>
-                    <SettingsMultiSelect label="Included audiences in this group" options={audiences}
-                      value={changes.targetingGroups?.[index]?.includedAudienceIds ?? (group.custom_audiences || []).map((audience) => audience.id)}
-                      onChange={(next) => updateGroup(index, "includedAudienceIds", next)} placeholder="No included audiences" checkboxes />
                     <InterestPicker value={changes.targetingGroups?.[index]?.interests ?? group.interests ?? []} onChange={(next) => updateGroup(index, "interests", next)} disabled={disabled} />
                     <p className="text-xs text-gray-500">Match any selection within this group.{Object.keys(group).some((key) => !["interests", "custom_audiences"].includes(key)) ? " Other source targeting rules in this group are retained." : ""}</p>
                   </div>)}
