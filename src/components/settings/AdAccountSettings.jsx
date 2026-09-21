@@ -9,8 +9,7 @@ import { ChevronsUpDown, Loader, CirclePlus, Info, RefreshCw, ChevronDown, Circl
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import { useAppData } from "@/lib/AppContext"
 import { useAuth } from "@/lib/AuthContext"
-import TemplateLinkSync from "./TemplateLinkSync"
-import { EMPTY_TEMPLATE_LINK_SYNC, validTemplateLinkPairs } from "./templateLinkUtils"
+import TemplateLinkSync, { EMPTY_TEMPLATE_LINK_SYNC, validTemplateLinkPairs } from "./TemplateLinkSync"
 import CopyTemplates from "./CopyTemplates"
 import PageSelectors from "./PageSelectors"
 import LinkParameters from "./LinkParameters"
@@ -831,27 +830,29 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
             onLinkMorePages={() => setIsReauthOpen(true)}
           />
 
-          <CopyTemplates
-            selectedAdAccount={selectedAdAccount}
-            adSettings={adSettings}
-            setAdSettings={setAdSettings}
-            onTemplateUpdate={handleTemplateUpdate}
-            onTemplateRename={handleTemplateRename}
-            onTemplatesDelete={handleTemplatesDelete}
+          <div>
+            <CopyTemplates
+              selectedAdAccount={selectedAdAccount}
+              adSettings={adSettings}
+              setAdSettings={setAdSettings}
+              onTemplateUpdate={handleTemplateUpdate}
+              onTemplateRename={handleTemplateRename}
+              onTemplatesDelete={handleTemplatesDelete}
 
-          />
+            />
 
-          <TemplateLinkSync value={templateLinkSync} onChange={setTemplateLinkSync} templates={adSettings.copyTemplates || {}} links={links} />
+            <TemplateLinkSync value={templateLinkSync} onChange={setTemplateLinkSync} templates={adSettings.copyTemplates || {}} links={links} />
 
-          <LinkParameters
-            links={links}
-            setLinks={setLinks}
-            utmPairs={utmPairs}
-            setUtmPairs={setUtmPairs}
-            selectedAdAccount={selectedAdAccount}
-            displayLink={displayLink}
-            setDisplayLink={setDisplayLink}
-          />
+            <LinkParameters
+              links={links}
+              setLinks={setLinks}
+              utmPairs={utmPairs}
+              setUtmPairs={setUtmPairs}
+              selectedAdAccount={selectedAdAccount}
+              displayLink={displayLink}
+              setDisplayLink={setDisplayLink}
+            />
+          </div>
 
           {/* Ad Naming Convention */}
           <div className="bg-[#f7f7f7] rounded-2xl p-4 space-y-3">

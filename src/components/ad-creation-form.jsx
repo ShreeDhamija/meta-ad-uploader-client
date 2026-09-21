@@ -1,8 +1,7 @@
 "use client";
 
-import SavedLinkSelector from "./settings/SavedLinkSelector";
-import { validTemplateLinkPairs, templateForLink, sortTemplates } from "./settings/templateLinkUtils";
-import useSortPreference from "./settings/useSortPreference";
+import { SavedLinkSelector, useSortPreference } from "./settings/LinkParameters";
+import { validTemplateLinkPairs, templateForLink, sortTemplates } from "./settings/TemplateLinkSync";
 import { getAdSetAdvancedSettingsError } from "@/components/ad-account-settings";
 import DesktopIcon from "@/assets/Desktop.webp";
 import DropboxIcon from "@/assets/Dropbox.png";

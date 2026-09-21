@@ -1,7 +1,7 @@
 "use client"
 
-import { sortTemplates } from "./templateLinkUtils";
-import useSortPreference from "./useSortPreference";
+import { sortTemplates } from "./TemplateLinkSync";
+import { useSortPreference } from "./LinkParameters";
 import React, { useEffect, useReducer, useState, useRef, useCallback, useMemo } from "react"
 import { useBlocker } from "react-router";
 import { Input } from "@/components/ui/input"
