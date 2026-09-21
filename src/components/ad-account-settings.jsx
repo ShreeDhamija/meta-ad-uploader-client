@@ -356,11 +356,14 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
               {defaults && <>
                 <section className="space-y-2">
                   <h4 className="flex items-center gap-2 text-sm font-semibold"><CircleDollarSign className="h-4 w-4 shrink-0" aria-hidden="true" />Budget</h4>
-                  <Label htmlFor="new-adset-budget">{defaults.budget.mode === "lifetime" ? "Lifetime" : "Daily"} budget ({defaults.budget.currency}){defaults.budget.level === "campaign" ? " · Set on campaign" : ""}</Label>
-                  <Input id="new-adset-budget" type="number" min={defaults.budget.decimals ? "0.01" : "1"} step={defaults.budget.decimals ? "0.01" : "1"}
-                    value={field("budgetAmount", defaults.budget.amount)} disabled={defaults.budget.level === "campaign"}
-                    onChange={(event) => update("budgetAmount", event.target.value)} className="border-gray-400 rounded-2xl" />
-                  {defaults.budget.level === "campaign" && <p className="text-xs text-gray-500">Shared by the campaign’s ad sets. Edit this budget in Ads Manager.</p>}
+                  {defaults.budget.level === "campaign" ? (
+                    <p className="text-sm font-medium">{defaults.budget.mode === "lifetime" ? "Lifetime" : "Daily"} budget is set on campaign level</p>
+                  ) : <>
+                    <Label htmlFor="new-adset-budget">{defaults.budget.mode === "lifetime" ? "Lifetime" : "Daily"} budget ({defaults.budget.currency})</Label>
+                    <Input id="new-adset-budget" type="number" min={defaults.budget.decimals ? "0.01" : "1"} step={defaults.budget.decimals ? "0.01" : "1"}
+                      value={field("budgetAmount", defaults.budget.amount)}
+                      onChange={(event) => update("budgetAmount", event.target.value)} className="border-gray-400 rounded-2xl" />
+                  </>}
                   {defaults.bidControl && <div className="space-y-2 pt-2">
                     <Label htmlFor="new-adset-bid">{defaults.bidControl.label} ({defaults.bidControl.roas ? "×" : defaults.budget.currency})</Label>
                     <Input id="new-adset-bid" type="text" inputMode="decimal"
