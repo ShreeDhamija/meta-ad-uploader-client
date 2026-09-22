@@ -127,14 +127,16 @@ function TargetingPicker({ label = "Search targeting", adAccountId, value, onTog
   const [warnings, setWarnings] = useState([]);
   const [searched, setSearched] = useState(false);
   const requestRef = useRef(null);
+  const debounceRef = useRef(null);
   const searchRowRef = useRef(null);
   const resultsRef = useRef(null);
   useEffect(() => () => requestRef.current?.abort(), []);
   useEffect(() => {
     if (!open || disabled) { requestRef.current?.abort(); setLoading(false); }
   }, [open, disabled]);
-  const search = async () => {
-    if (disabled || loading || query.replace(/\s/gu, "").length < 3) return;
+  const search = useCallback(async () => {
+    clearTimeout(debounceRef.current);
+    if (disabled || query.replace(/\s/gu, "").length < 3) return;
     requestRef.current?.abort();
     const controller = new AbortController();
     requestRef.current = controller;
@@ -153,13 +155,17 @@ function TargetingPicker({ label = "Search targeting", adAccountId, value, onTog
     } finally {
       if (!controller.signal.aborted) setLoading(false);
     }
-  };
+  }, [adAccountId, disabled, query]);
+  useEffect(() => {
+    if (!disabled && query.replace(/\s/gu, "").length >= 3) debounceRef.current = setTimeout(search, 400);
+    return () => clearTimeout(debounceRef.current);
+  }, [search, disabled, query]);
   const displayedOptions = [...new Map([...value, ...results].map((option) => [targetingIdentity(option), option])).values()];
   const toggle = onToggle;
   const audienceSize = (size) => size == null ? "Not provided" : Number(size).toLocaleString();
   return <div className="space-y-2">
     <Label>{label}</Label>
-    <Popover open={open && !disabled} onOpenChange={setOpen}>
+    <Popover open={open && !disabled} onOpenChange={(next) => { setOpen(next); if (!next) clearTimeout(debounceRef.current); }}>
       <PopoverAnchor asChild>
         <div ref={searchRowRef} className="flex items-center gap-1">
           <div className="relative min-w-0 flex-1">
@@ -172,7 +178,7 @@ function TargetingPicker({ label = "Search targeting", adAccountId, value, onTog
               }}
               onKeyDown={(event) => {
                 if (event.key === "Enter") { event.preventDefault(); event.stopPropagation(); search(); }
-                if (event.key === "Escape") { event.preventDefault(); setOpen(false); }
+                if (event.key === "Escape") { event.preventDefault(); clearTimeout(debounceRef.current); setOpen(false); }
                 if (event.key === "ArrowDown" && (searched || value.length)) {
                   event.preventDefault(); setOpen(true); requestAnimationFrame(() => resultsRef.current?.focus());
                 }
@@ -190,7 +196,7 @@ function TargetingPicker({ label = "Search targeting", adAccountId, value, onTog
           <CommandList className="max-h-none overflow-hidden rounded-2xl px-2" selectOnFocus={false}>
             {loading ? <p role="status" className="p-3 text-sm text-gray-500">Searching...</p>
               : error ? <p role="alert" className="p-3 text-sm text-red-600">{error}</p>
-                : (!searched || !results.length) && <p className="p-3 text-sm text-gray-500">{searched ? "No targeting options found." : "Type at least 3 characters, then press Enter or Search."}</p>}
+                : (!searched || !results.length) && <p className="p-3 text-sm text-gray-500">{searched ? "No targeting options found." : "Type at least 3 characters to search."}</p>}
             {warnings.length > 0 && <p role="status" className="px-3 pb-2 text-xs text-amber-700">Some results may be missing: {warnings.map(({ source, message }) => `${TARGETING_CATEGORIES[source] || source}: ${message}`).join("; ")}</p>}
             <ScrollArea viewportClassName="max-h-[380px] [&>div]:!block">
               <CommandGroup>
@@ -264,7 +270,6 @@ export function getAdSetAdvancedSettingsError(settings) {
 
 function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onChange, disabled }) {
   const [expanded, setExpanded] = useState(Boolean(value));
-  const [selectedTargetingGroup, setSelectedTargetingGroup] = useState(null);
   const reduceMotion = useReducedMotion();
   const settingsRequestRef = useRef(null);
   const latestSettingsRef = useRef(value);
@@ -379,12 +384,13 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
     const edit = index === "root" ? changes : changes.targetingGroups?.[index] || {};
     return { ...source, ...(edit.interests !== undefined ? { interests: edit.interests } : {}), ...edit.detailedTargeting };
   };
-  const hasRootTargeting = DETAILED_TARGETING_FIELDS.some((field) => detailedValues("root")[field]?.length);
-  const groupChoices = [...(hasRootTargeting || !targetingGroupIndexes.length ? ["root"] : []), ...targetingGroupIndexes];
-  const activeTargetingGroup = groupChoices.includes(selectedTargetingGroup) ? selectedTargetingGroup : groupChoices[0];
+  const targetingGroups = ["root", ...targetingGroupIndexes];
+  const hasDetailedValues = (index) => DETAILED_TARGETING_FIELDS.some((field) => detailedValues(index)[field]?.length);
+  const defaultTargetingGroup = targetingGroups.find(hasDetailedValues) || targetingGroupIndexes[0] || "root";
   const resolvedOption = (option) => ({ ...option, ...value?.targetingLabels?.[option.key], targeting: option.targeting });
-  const selectedTargeting = DETAILED_TARGETING_FIELDS.flatMap((field) => (detailedValues(activeTargetingGroup)[field] || []).map((item) =>
-    resolvedOption(targetingOption(field, item, "detailed_targeting", detailedCategory(field)))));
+  const selectedTargeting = [...new Map(targetingGroups.flatMap((index) => DETAILED_TARGETING_FIELDS.flatMap((field) =>
+    (detailedValues(index)[field] || []).map((item) => resolvedOption(targetingOption(field, item, "detailed_targeting", detailedCategory(field))))))
+    .map((option) => [targetingIdentity(option), option])).values()];
   for (const fieldName of GEO_TARGETING_FIELDS) {
     const items = fieldName === "countries" ? field("countries", targeting.geo_locations?.countries || []) : changes.locations?.[fieldName] ?? targeting.geo_locations?.[fieldName] ?? [];
     for (const item of items) selectedTargeting.push(resolvedOption(targetingOption(fieldName, item, "geo_locations", "location", fieldName === "countries" ? countryOptions.find(({ value }) => value === item)?.label : undefined)));
@@ -405,16 +411,20 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
     const identity = (entry) => String(entry?.id ?? entry?.key ?? entry);
     const toggle = (items) => items.some((entry) => identity(entry) === identity(item)) ? items.filter((entry) => identity(entry) !== identity(item)) : [...items, item];
     if (placement === "detailed_targeting") {
-      const next = toggle(detailedValues(activeTargetingGroup)[fieldName] || []);
-      if (next.length > 1000) { toast.error("Select up to 1,000 values per targeting field."); return; }
-      if (activeTargetingGroup === "root") {
-        nextChanges.detailedTargeting = { ...changes.detailedTargeting, [fieldName]: next };
-        if (fieldName === "interests") delete nextChanges.interests;
-      } else {
-        const edit = { ...changes.targetingGroups?.[activeTargetingGroup] };
-        edit.detailedTargeting = { ...edit.detailedTargeting, [fieldName]: next };
-        if (fieldName === "interests") delete edit.interests;
-        nextChanges.targetingGroups = { ...changes.targetingGroups, [activeTargetingGroup]: edit };
+      const containingGroups = targetingGroups.filter((index) => (detailedValues(index)[fieldName] || []).some((entry) => identity(entry) === identity(item)));
+      // Preserve source AND groups; new alternatives go into the first detailed-targeting group.
+      for (const index of containingGroups.length ? containingGroups : [defaultTargetingGroup]) {
+        const next = toggle(detailedValues(index)[fieldName] || []);
+        if (next.length > 1000) { toast.error("Select up to 1,000 values per targeting field."); return; }
+        if (index === "root") {
+          nextChanges.detailedTargeting = { ...changes.detailedTargeting, [fieldName]: next };
+          if (fieldName === "interests") delete nextChanges.interests;
+        } else {
+          const edit = { ...changes.targetingGroups?.[index] };
+          edit.detailedTargeting = { ...edit.detailedTargeting, [fieldName]: next };
+          if (fieldName === "interests") delete edit.interests;
+          nextChanges.targetingGroups = { ...nextChanges.targetingGroups, [index]: edit };
+        }
       }
     } else if (placement === "locales") nextChanges.locales = toggle(changes.locales ?? targeting.locales ?? []);
     else if (placement === "geo_locations") {
@@ -422,12 +432,6 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
       else nextChanges.locations = { ...changes.locations, [fieldName]: toggle(changes.locations?.[fieldName] ?? targeting.geo_locations?.[fieldName] ?? []) };
     }
     onChange({ ...value, targetingLabels, changes: nextChanges });
-  };
-  const addTargetingGroup = () => {
-    const index = targetingGroupIndexes.length ? Number(targetingGroupIndexes.at(-1)) + 1 : 0;
-    if (index + (hasRootTargeting ? 1 : 0) >= 25) { toast.error("Use at most 25 targeting groups."); return; }
-    onChange({ ...value, changes: { ...changes, ...(hasRootTargeting ? { groupRootTargeting: true } : {}), targetingGroups: { ...changes.targetingGroups, [index]: { detailedTargeting: {} } } } });
-    setSelectedTargetingGroup(String(index));
   };
   const startTime = field("startTime", defaults?.startTime || "");
   const endTime = field("endTime", defaults?.endTime || "");
@@ -447,7 +451,7 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
           </button>
           <button type="button" disabled={disabled || !defaults}
             className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-black disabled:opacity-50"
-            onClick={() => { setSelectedTargetingGroup(null); onChange({ ...value, targetingLabels: {}, changes: {} }); }}>
+            onClick={() => onChange({ ...value, targetingLabels: {}, changes: {} })}>
             <RefreshCcw className="h-3.5 w-3.5" aria-hidden="true" />Reset
           </button>
         </div>}
@@ -460,7 +464,24 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
               {loading && <p role="status" className="flex items-center gap-2 text-sm text-gray-500"><Loader className="h-4 w-4 animate-spin" />Loading ad set settings...</p>}
               {error && <div role="alert" className="text-sm text-red-600">{error} <button type="button" className="underline" onClick={() => setReload(reload + 1)}>Retry</button></div>}
               {defaults && <>
-                <section className="space-y-2">
+                <section className="space-y-3">
+                  <h4 className="flex items-center gap-2 text-sm font-semibold"><Crosshair className="h-4 w-4 shrink-0" aria-hidden="true" />Targeting</h4>
+                  {defaults.specialAdCategories.filter((category) => category !== "NONE").length > 0 && <p className="text-xs text-amber-700">This campaign has special ad categories. Meta may restrict age, gender, and location targeting.</p>}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2"><Label htmlFor="new-adset-age-min">Minimum age</Label><Input id="new-adset-age-min" type="number" min={advantageAudience ? 18 : 13} max={advantageAudience ? 25 : 65} step="1" value={minAge} onChange={(event) => update("ageMin", event.target.value)} onBlur={() => validateAge("ageMin")} /></div>
+                    <div className="space-y-2"><Label htmlFor="new-adset-age-max">Maximum age</Label><Input id="new-adset-age-max" type="number" min={advantageAudience ? 65 : 13} max="65" step="1" value={maxAge} onChange={(event) => update("ageMax", event.target.value)} onBlur={() => validateAge("ageMax")} /></div>
+                  </div>
+                  {ageInvalid && <p role="alert" className="text-xs text-red-600">{ageError}</p>}
+                  <SettingsMultiSelect label="Gender" options={[{ value: 1, label: "Men" }, { value: 2, label: "Women" }]} value={field("genders", targeting.genders || [])} onChange={(next) => update("genders", next.length === 2 ? [] : next)} placeholder="Both" allLabel="Both" />
+                  <SettingsMultiSelect label="Countries" options={countryOptions} value={field("countries", targeting.geo_locations?.countries || [])} onChange={(next) => update("countries", next)} placeholder="No country selection" flags />
+                  {Object.keys(targeting.geo_locations || {}).some((key) => !["countries", "location_types"].includes(key)) && <p className="text-xs text-gray-500">Other source locations are retained. Use targeting search below to edit supported locations.</p>}
+                  <SettingsMultiSelect label="Included audiences" options={audiences} value={includedAudienceIds} onChange={updateIncludedAudiences} placeholder="No included audiences" checkboxes />
+                  <SettingsMultiSelect label="Excluded audiences" options={audiences} value={field("excludedAudienceIds", (targeting.excluded_custom_audiences || []).map((audience) => audience.id))} onChange={(next) => update("excludedAudienceIds", next)} placeholder="No excluded audiences" checkboxes />
+                  {defaults.interestDetailsUnavailable && <p className="text-xs text-gray-500">Some interest details could not be loaded. Existing selections are still shown and can be removed.</p>}
+                  <TargetingPicker adAccountId={adAccountId} value={selectedTargeting} onToggle={toggleTargeting} disabled={disabled} />
+
+                </section>
+                <section className="space-y-2 border-t pt-4">
                   <h4 className="flex items-center gap-2 text-sm font-semibold"><CircleDollarSign className="h-4 w-4 shrink-0" aria-hidden="true" />Budget</h4>
                   {defaults.budget.level === "campaign" ? (
                     <p className="text-sm font-medium">{defaults.budget.mode === "lifetime" ? "Lifetime" : "Daily"} budget is set on campaign level</p>
@@ -526,31 +547,6 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
                     onChange={(time) => update("endTime", time)} onClear={() => update("endTime", "")} />
                   {endTime && Date.parse(endTime) <= Date.now() && <p className="text-xs text-amber-700">The source ad set has ended. Choose a new end time{defaults.budget.mode === "daily" ? " or clear it for ongoing delivery" : ""}.</p>}
                   {defaults.hasRecurringSchedule && <p className="text-xs text-gray-500">The source’s recurring delivery hours will be retained.</p>}
-                </section>
-                <section className="space-y-3 border-t pt-4">
-                  <h4 className="flex items-center gap-2 text-sm font-semibold"><Crosshair className="h-4 w-4 shrink-0" aria-hidden="true" />Targeting</h4>
-                  {defaults.specialAdCategories.filter((category) => category !== "NONE").length > 0 && <p className="text-xs text-amber-700">This campaign has special ad categories. Meta may restrict age, gender, and location targeting.</p>}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-2"><Label htmlFor="new-adset-age-min">Minimum age</Label><Input id="new-adset-age-min" type="number" min={advantageAudience ? 18 : 13} max={advantageAudience ? 25 : 65} step="1" value={minAge} onChange={(event) => update("ageMin", event.target.value)} onBlur={() => validateAge("ageMin")} /></div>
-                    <div className="space-y-2"><Label htmlFor="new-adset-age-max">Maximum age</Label><Input id="new-adset-age-max" type="number" min={advantageAudience ? 65 : 13} max="65" step="1" value={maxAge} onChange={(event) => update("ageMax", event.target.value)} onBlur={() => validateAge("ageMax")} /></div>
-                  </div>
-                  {ageInvalid && <p role="alert" className="text-xs text-red-600">{ageError}</p>}
-                  <SettingsMultiSelect label="Gender" options={[{ value: 1, label: "Men" }, { value: 2, label: "Women" }]} value={field("genders", targeting.genders || [])} onChange={(next) => update("genders", next.length === 2 ? [] : next)} placeholder="Both" allLabel="Both" />
-                  <SettingsMultiSelect label="Countries" options={countryOptions} value={field("countries", targeting.geo_locations?.countries || [])} onChange={(next) => update("countries", next)} placeholder="No country selection" flags />
-                  {Object.keys(targeting.geo_locations || {}).some((key) => !["countries", "location_types"].includes(key)) && <p className="text-xs text-gray-500">Other source locations are retained. Use targeting search below to edit supported locations.</p>}
-                  <SettingsMultiSelect label="Included audiences" options={audiences} value={includedAudienceIds} onChange={updateIncludedAudiences} placeholder="No included audiences" checkboxes />
-                  <SettingsMultiSelect label="Excluded audiences" options={audiences} value={field("excludedAudienceIds", (targeting.excluded_custom_audiences || []).map((audience) => audience.id))} onChange={(next) => update("excludedAudienceIds", next)} placeholder="No excluded audiences" checkboxes />
-                  {defaults.interestDetailsUnavailable && <p className="text-xs text-gray-500">Some interest details could not be loaded. Existing selections are still shown and can be removed.</p>}
-                  <div className="flex items-center justify-between gap-2">
-                    {groupChoices.length > 1 ? <Select value={activeTargetingGroup} onValueChange={setSelectedTargetingGroup} disabled={disabled}>
-                      <SelectTrigger aria-label="Detailed targeting group" className="h-9 w-auto min-w-0 rounded-xl bg-white py-2"><SelectValue /></SelectTrigger>
-                      <SelectContent className="rounded-2xl bg-white shadow-lg">{groupChoices.map((index, order) => <SelectItem key={index} value={index} className="rounded-xl">{`Group ${order + 1}${order ? " · AND" : ""}`}</SelectItem>)}</SelectContent>
-                    </Select> : <Label>Detailed targeting</Label>}
-                    <button type="button" className="text-xs text-gray-600 underline" onClick={addTargetingGroup}>Narrow further (AND)</button>
-                  </div>
-                  <TargetingPicker adAccountId={adAccountId} value={selectedTargeting} onToggle={toggleTargeting} disabled={disabled} />
-                  <p className="text-xs text-gray-500">Detailed targeting selections within a group are alternatives; separate groups must also match. Locations and languages apply across groups. Existing audiences retain their source grouping.</p>
-
                 </section>
               </>}
             </div>
