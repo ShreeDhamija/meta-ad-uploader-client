@@ -14,7 +14,7 @@ import { Popover, PopoverContent, PopoverTrigger, PopoverAnchor } from "@/compon
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
-import { Search, Check, ChevronsUpDown, RefreshCcw, X, CircleX, Loader, AlertTriangle, Ban, Pencil, CircleDollarSign, CalendarClock, Crosshair } from "lucide-react"
+import { Search, Check, ChevronsUpDown, RefreshCcw, X, CircleX, Loader, AlertTriangle, Ban, Pencil, CircleDollarSign, CalendarClock, Crosshair, Minus, CirclePlus } from "lucide-react"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { useAuth } from "@/lib/AuthContext"
 import { Input } from "@/components/ui/input"
@@ -118,7 +118,7 @@ const targetingOption = (field, value, placement, category, name) => {
 
 const targetingIdentity = ({ targeting: { placement, field, value } }) => `${placement}:${field}:${value?.id ?? value?.key ?? value}`;
 
-function TargetingPicker({ label = "Search targeting", adAccountId, value, onToggle, disabled }) {
+function TargetingPicker({ label = "Search targeting", adAccountId, value, searchSelections, onToggle, disabled }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
@@ -160,7 +160,7 @@ function TargetingPicker({ label = "Search targeting", adAccountId, value, onTog
     if (!disabled && query.replace(/\s/gu, "").length >= 3) debounceRef.current = setTimeout(search, 400);
     return () => clearTimeout(debounceRef.current);
   }, [search, disabled, query]);
-  const displayedOptions = [...new Map([...value, ...results].map((option) => [targetingIdentity(option), option])).values()];
+  const displayedOptions = results;
   const toggle = onToggle;
   const audienceSize = (size) => size == null ? "Not provided" : Number(size).toLocaleString();
   return <div className="space-y-2">
@@ -172,28 +172,26 @@ function TargetingPicker({ label = "Search targeting", adAccountId, value, onTog
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" aria-hidden="true" />
             <Input value={query} disabled={disabled} maxLength={100} placeholder="Search interests, behaviors, locations..." aria-label={`Search ${label.toLowerCase()}`}
               aria-expanded={open && !disabled} aria-haspopup="listbox"
-              onFocus={() => { if (searched || value.length) setOpen(true); }}
+              onFocus={() => { if (searched) setOpen(true); }}
               onChange={(event) => {
                 requestRef.current?.abort(); setLoading(false); setQuery(event.target.value); setResults([]); setError(""); setWarnings([]); setSearched(false); setOpen(false);
               }}
               onKeyDown={(event) => {
                 if (event.key === "Enter") { event.preventDefault(); event.stopPropagation(); search(); }
                 if (event.key === "Escape") { event.preventDefault(); clearTimeout(debounceRef.current); setOpen(false); }
-                if (event.key === "ArrowDown" && (searched || value.length)) {
+                if (event.key === "ArrowDown" && searched) {
                   event.preventDefault(); setOpen(true); requestAnimationFrame(() => resultsRef.current?.focus());
                 }
               }}
               className="h-11 rounded-[20px] border-gray-200 bg-gray-50 pl-9" />
           </div>
-          <Button type="button" size="sm" disabled={disabled || loading || query.replace(/\s/gu, "").length < 3} onClick={search}
-            className="h-11 shrink-0 rounded-[20px] px-4">Search</Button>
         </div>
       </PopoverAnchor>
-      <PopoverContent className="w-auto p-0 bg-white shadow-lg rounded-2xl" style={{ minWidth: "var(--radix-popover-trigger-width)", width: "max(var(--radix-popover-trigger-width), min(480px, calc(100vw - 2rem)))", maxWidth: "calc(100vw - 2rem)" }} align="start" side="bottom" sideOffset={4}
+      <PopoverContent className="w-auto p-0 bg-white shadow-lg rounded-[20px]" style={{ minWidth: "var(--radix-popover-trigger-width)", width: "max(var(--radix-popover-trigger-width), min(480px, calc(100vw - 2rem)))", maxWidth: "calc(100vw - 2rem)" }} align="start" side="bottom" sideOffset={4}
         onOpenAutoFocus={(event) => event.preventDefault()} onCloseAutoFocus={(event) => event.preventDefault()}
         onInteractOutside={(event) => { if (searchRowRef.current?.contains(event.target)) event.preventDefault(); }}>
-        <Command ref={resultsRef} tabIndex={-1} shouldFilter={false} loop={false} className="rounded-2xl bg-white">
-          <CommandList className="max-h-none overflow-hidden rounded-2xl px-2" selectOnFocus={false}>
+        <Command ref={resultsRef} tabIndex={-1} shouldFilter={false} loop={false} className="rounded-[20px] bg-white">
+          <CommandList className="max-h-none overflow-hidden rounded-[20px] p-2" selectOnFocus={false}>
             {loading ? <p role="status" className="p-3 text-sm text-gray-500">Searching...</p>
               : error ? <p role="alert" className="p-3 text-sm text-red-600">{error}</p>
                 : (!searched || !results.length) && <p className="p-3 text-sm text-gray-500">{searched ? "No targeting options found." : "Type at least 3 characters to search."}</p>}
@@ -222,7 +220,7 @@ function TargetingPicker({ label = "Search targeting", adAccountId, value, onTog
         </Command>
       </PopoverContent>
     </Popover>
-    {value.length > 0 && <div className="flex flex-wrap gap-1.5">{value.map((interest) => <button key={interest.key} type="button" disabled={disabled}
+    {searchSelections.length > 0 && <div className="flex flex-wrap gap-1.5">{searchSelections.map((interest) => <button key={interest.key} type="button" disabled={disabled}
       onClick={() => toggle(interest)} aria-label={`Remove ${interest.name}`}
       className="inline-flex max-w-full items-center gap-1 rounded-lg bg-gray-100 px-2 py-1 text-xs text-gray-700 hover:bg-gray-200 disabled:opacity-50">
       <span className="truncate">{interest.name}</span><X className="h-3 w-3 shrink-0" />
@@ -266,6 +264,26 @@ export function getAdSetAdvancedSettingsError(settings) {
     if (exceeds) return `Minimum spend exceeds the campaign's remaining minimum-spend allocation. Use at most ${available.maxPercentage}% or ${defaults.budget.currency} ${available.remainingAmount}, or clear the minimum.`;
   }
   return null;
+}
+
+function AdSetSetupSection({ title, icon: Icon, className, spacing = "space-y-3", children }) {
+  const [collapsed, setCollapsed] = useState(false);
+  const reduceMotion = useReducedMotion();
+  return <section className={className}>
+    <div className="flex items-center justify-between gap-2">
+      <h4 className="flex items-center gap-2 text-sm font-semibold"><Icon className="h-4 w-4 shrink-0" aria-hidden="true" />{title}</h4>
+      <button type="button" aria-label={`${collapsed ? "Expand" : "Minimize"} ${title.toLowerCase()}`} aria-expanded={!collapsed}
+        onClick={() => setCollapsed((current) => !current)} className="rounded-full p-1 text-gray-500 hover:text-black">
+        {collapsed ? <CirclePlus className="h-4 w-4" aria-hidden="true" /> : <Minus className="h-4 w-4" aria-hidden="true" />}
+      </button>
+    </div>
+    <AnimatePresence initial={false}>
+      {!collapsed && <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }}
+        exit={{ height: 0, opacity: 0 }} transition={{ duration: reduceMotion ? 0 : 0.18, ease: "easeInOut" }} className="overflow-hidden">
+        <div className={cn("pt-2", spacing)}>{children}</div>
+      </motion.div>}
+    </AnimatePresence>
+  </section>;
 }
 
 function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onChange, disabled }) {
@@ -464,8 +482,7 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
               {loading && <p role="status" className="flex items-center gap-2 text-sm text-gray-500"><Loader className="h-4 w-4 animate-spin" />Loading ad set settings...</p>}
               {error && <div role="alert" className="text-sm text-red-600">{error} <button type="button" className="underline" onClick={() => setReload(reload + 1)}>Retry</button></div>}
               {defaults && <>
-                <section className="space-y-3">
-                  <h4 className="flex items-center gap-2 text-sm font-semibold"><Crosshair className="h-4 w-4 shrink-0" aria-hidden="true" />Targeting</h4>
+                <AdSetSetupSection title="Targeting" icon={Crosshair}>
                   {defaults.specialAdCategories.filter((category) => category !== "NONE").length > 0 && <p className="text-xs text-amber-700">This campaign has special ad categories. Meta may restrict age, gender, and location targeting.</p>}
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-2"><Label htmlFor="new-adset-age-min">Minimum age</Label><Input id="new-adset-age-min" type="number" min={advantageAudience ? 18 : 13} max={advantageAudience ? 25 : 65} step="1" value={minAge} onChange={(event) => update("ageMin", event.target.value)} onBlur={() => validateAge("ageMin")} /></div>
@@ -478,11 +495,12 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
                   <SettingsMultiSelect label="Included audiences" options={audiences} value={includedAudienceIds} onChange={updateIncludedAudiences} placeholder="No included audiences" checkboxes />
                   <SettingsMultiSelect label="Excluded audiences" options={audiences} value={field("excludedAudienceIds", (targeting.excluded_custom_audiences || []).map((audience) => audience.id))} onChange={(next) => update("excludedAudienceIds", next)} placeholder="No excluded audiences" checkboxes />
                   {defaults.interestDetailsUnavailable && <p className="text-xs text-gray-500">Some interest details could not be loaded. Existing selections are still shown and can be removed.</p>}
-                  <TargetingPicker adAccountId={adAccountId} value={selectedTargeting} onToggle={toggleTargeting} disabled={disabled} />
+                  <TargetingPicker adAccountId={adAccountId} value={selectedTargeting}
+                    searchSelections={selectedTargeting.filter((option) => Object.values(value?.targetingLabels || {}).some((result) => targetingIdentity(result) === targetingIdentity(option)))}
+                    onToggle={toggleTargeting} disabled={disabled} />
 
-                </section>
-                <section className="space-y-2 border-t pt-4">
-                  <h4 className="flex items-center gap-2 text-sm font-semibold"><CircleDollarSign className="h-4 w-4 shrink-0" aria-hidden="true" />Budget</h4>
+                </AdSetSetupSection>
+                <AdSetSetupSection title="Budget" icon={CircleDollarSign} className="border-t pt-4" spacing="space-y-2">
                   {defaults.budget.level === "campaign" ? (
                     <p className="text-sm font-medium">{defaults.budget.mode === "lifetime" ? "Lifetime" : "Daily"} budget is set on campaign level</p>
                   ) : <>
@@ -536,9 +554,8 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
                   </div>}
                   {advancedError && <p role="alert" className="text-xs text-red-600">{advancedError}</p>}
 
-                </section>
-                <section className="space-y-3 border-t pt-4">
-                  <h4 className="flex items-center gap-2 text-sm font-semibold"><CalendarClock className="h-4 w-4 shrink-0" aria-hidden="true" />Schedule</h4>
+                </AdSetSetupSection>
+                <AdSetSetupSection title="Schedule" icon={CalendarClock} className="border-t pt-4">
                   <p className="text-xs text-gray-500">Times shown in {Intl.DateTimeFormat().resolvedOptions().timeZone}. {defaults.timezone && `Ad account: ${defaults.timezone}.`}</p>
                   <ScheduleDateTimePicker label="Start time" value={startTime || null} onChange={(time) => update("startTime", time)} onClear={() => update("startTime", "")} />
                   {(!startTime || Date.parse(startTime) <= Date.now()) && <p className="text-xs text-gray-500">The new ad set will start when launched unless you choose a future start time.</p>}
@@ -547,7 +564,7 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
                     onChange={(time) => update("endTime", time)} onClear={() => update("endTime", "")} />
                   {endTime && Date.parse(endTime) <= Date.now() && <p className="text-xs text-amber-700">The source ad set has ended. Choose a new end time{defaults.budget.mode === "daily" ? " or clear it for ongoing delivery" : ""}.</p>}
                   {defaults.hasRecurringSchedule && <p className="text-xs text-gray-500">The source’s recurring delivery hours will be retained.</p>}
-                </section>
+                </AdSetSetupSection>
               </>}
             </div>
           </motion.div>
