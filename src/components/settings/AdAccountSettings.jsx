@@ -608,6 +608,25 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
   }, [adSettings, selectedAdAccount, calculateInitialSettings, loading]);
 
 
+  const handleSaveTemplateLinkSync = async (nextSync) => {
+    if (!selectedAdAccount) throw new Error("Select an ad account first.");
+    const savedSync = { ...nextSync, pairs: validTemplateLinkPairs(nextSync, adSettings.copyTemplates, links) };
+    if (savedSync.enabled && savedSync.pairs.length === 0) {
+      throw new Error("Add a complete template and link pairing first.");
+    }
+    // A newly added link must be saved with its pairing so it is available on Home.
+    // Other pending account settings remain in the existing Save Changes flow.
+    const savedFields = savedSync.enabled
+      ? { templateLinkSync: savedSync, links }
+      : { templateLinkSync: savedSync };
+    await saveSettings({ adAccountId: selectedAdAccount, adAccountSettings: savedFields });
+    setTemplateLinkSync(savedSync);
+    setInitialSettings(previous => ({ ...previous, ...savedFields }));
+    skipFormResetRef.current = true;
+    setAdSettings(previous => ({ ...previous, ...savedFields }));
+    toast.success(savedSync.enabled ? "Template and link sync saved" : "Link sync disabled");
+  };
+
   const handleTemplateRename = (oldName, newName) => {
     setTemplateLinkSync(previous => ({ ...previous, pairs: previous.pairs.map(pair => pair.templateName === oldName ? { ...pair, templateName: newName } : pair) }));
   };
@@ -841,7 +860,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
 
             />
 
-            <TemplateLinkSync value={templateLinkSync} onChange={setTemplateLinkSync} templates={adSettings.copyTemplates || {}} links={links} />
+            <TemplateLinkSync value={templateLinkSync} onChange={handleSaveTemplateLinkSync} templates={adSettings.copyTemplates || {}} links={links} />
 
             <LinkParameters
               links={links}

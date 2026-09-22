@@ -447,9 +447,9 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                                     </Button>
                                 </PopoverTrigger>
 
-                                <Input
+                                <LinkTitleInput
                                     aria-label="Selected link title (optional)"
-                                    placeholder="Link title (optional)"
+                                    placeholder="Title (Optional)"
                                     value={selectedLink?.title || ""}
                                     onChange={event => {
                                         const title = event.target.value;
@@ -479,7 +479,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                             }}
                         >
                             <Command shouldFilter={false}>
-                                <div className="flex items-center pr-2"><CommandInput wrapperClassName="min-w-0 flex-1" placeholder="Search links or titles..." value={linkSearch} onValueChange={setLinkSearch} /><LinkSortMenu mode={linkSortMode} onChange={setLinkSortMode} /></div>
+                                <div className="flex items-center pr-2"><CommandInput wrapperClassName="min-w-0 flex-1 border-gray-200 bg-gray-50" placeholder="Search links or titles..." value={linkSearch} onValueChange={setLinkSearch} /><LinkSortMenu mode={linkSortMode} onChange={setLinkSortMode} /></div>
                                 <CommandList className="max-h-[500px] overflow-y-auto p-1">
                                     {filteredLinks.length === 0 && <p className="p-4 text-center text-sm text-gray-500">No links found.</p>}
                                     {filteredLinks.map((link) => (
@@ -527,7 +527,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                                 onChange={(e) => setNewLinkUrl(e.target.value)}
                                 className="h-9 min-w-0 rounded-2xl border-gray-300 py-2 bg-white shadow"
                             />
-                            <Input aria-label="Link title (optional)" placeholder="Link title (optional)" value={newLinkTitle} onChange={event => setNewLinkTitle(event.target.value)} className="h-9 min-w-0 rounded-2xl border-gray-300 py-2 bg-white shadow" />
+                            <LinkTitleInput aria-label="Link title (optional)" placeholder="Title (Optional)" value={newLinkTitle} onChange={event => setNewLinkTitle(event.target.value)} className="h-9 min-w-0 rounded-2xl border-gray-300 py-2 bg-white shadow" />
                         </div>
                         <div className="flex gap-2">
                             <Button
@@ -976,7 +976,7 @@ export function SavedLinkSelector({ links, value, onValueChange, disabled, class
     </Button></PopoverTrigger>
     <PopoverContent align="start" className="z-[60] w-[var(--radix-popover-trigger-width)] min-w-[250px] max-w-[calc(100vw-2rem)] rounded-2xl bg-white p-0 shadow-lg">
       <Command shouldFilter={false} className="rounded-2xl">
-        <div className="flex items-center pr-2"><CommandInput wrapperClassName="min-w-0 flex-1" placeholder="Search links or titles..." value={query} onValueChange={setQuery} /><LinkSortMenu mode={mode} onChange={setMode} /></div>
+        <div className="flex items-center pr-2"><CommandInput wrapperClassName="min-w-0 flex-1 border-gray-200 bg-gray-50" placeholder="Search links or titles..." value={query} onValueChange={setQuery} /><LinkSortMenu mode={mode} onChange={setMode} /></div>
         <CommandList className="p-1"><CommandEmpty>No links found.</CommandEmpty>
           {filtered.map(link => <CommandItem key={link.url} value={link.url} onSelect={() => { onValueChange(link.url); setOpen(false); }} className="m-1 cursor-pointer rounded-xl px-3 py-2 data-[selected=true]:bg-gray-100">
             <LinkLabel link={link} />
@@ -987,4 +987,11 @@ export function SavedLinkSelector({ links, value, onValueChange, disabled, class
       </Command>
     </PopoverContent>
   </Popover>;
+}
+
+function LinkTitleInput({ value, ...props }) {
+  return <TooltipProvider delayDuration={250}><Tooltip>
+    <TooltipTrigger asChild><Input {...props} value={value} /></TooltipTrigger>
+    {value?.trim() && <TooltipContent className="z-[100] max-w-sm break-words rounded-xl bg-zinc-800 px-3 py-2 text-white">{value}</TooltipContent>}
+  </Tooltip></TooltipProvider>;
 }
