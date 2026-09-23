@@ -1510,7 +1510,8 @@ export default function AdCreationForm({
   const [jobId, setJobId] = useState(null);
   const [progress, setProgress] = useState(0);
   const [progressMessage, setProgressMessage] = useState("");
-  const { progress: trackedProgress, message: trackedMessage, status, metaData, resetProgress } = useAdCreationProgress(jobId, isCreatingAds);
+  const { progress: trackedProgress, message: trackedMessage, resetProgress } = useAdCreationProgress(jobId, isCreatingAds);
+  const [settledJob, setSettledJob] = useState(null);
   const [showCompletedView, setShowCompletedView] = useState(false);
   // Add these new states at the top of AdCreationForm
   const [jobQueue, setJobQueue] = useState([]);
@@ -1527,7 +1528,6 @@ export default function AdCreationForm({
   }, [jobQueue.length, completedJobs.length, currentJob?.id, isJobTrackerExpanded, hasStartedAnyJob]);
 
   const [currentAbortController, setCurrentAbortController] = useState(null);
-  const isInPromisePhase = useRef(false); // ADD THIS
   const currentJobIdRef = useRef(null); // ADD THIS
   const [isCancelling, setIsCancelling] = useState(false);
   const pendingDraftMediaCleanupRef = useRef(new Map());
@@ -3084,6 +3084,7 @@ export default function AdCreationForm({
             fileName: file.name,
             mimeType: file.mimeType || getMimeFromName(file.name),
           }),
+          signal,
         });
 
         const data = await res.json();
@@ -3256,6 +3257,7 @@ export default function AdCreationForm({
 
     // ✅ Call the reset function to clear the previous job's state.
     resetProgress();
+    setSettledJob(null);
     setLiveProgress({ completed: 0, succeeded: 0, failed: 0, total: 0, errors: [] });
 
     const jobToProcess = jobQueue[0];
@@ -3331,7 +3333,13 @@ export default function AdCreationForm({
       return;
     }
 
-    handleCreateAd(jobToProcess).catch((err) => {
+    handleCreateAd(jobToProcess).finally(() => {
+      // Finish cleanup before publishing a result that can start the next job.
+      setCurrentAbortController(null);
+      currentJobIdRef.current = null;
+    }).then((result) => {
+      setSettledJob({ ...result, id: jobToProcess.id });
+    }).catch((err) => {
       // Don't treat cancellation as a critical error
       if (err.name === "AbortError" || axios.isCancel(err)) {
         const cancelledJob = {
@@ -3370,13 +3378,14 @@ export default function AdCreationForm({
       return; // Do nothing if a job isn't active
     }
 
-    // Guard clause to ignore stale status after a reset.
-    if (status === "idle") {
+    // SSE is for progress. Advance only after this job's requests and cleanup
+    // have settled, even if its final SSE event arrived early or never arrived.
+    if (settledJob?.id !== currentJob.id) {
       return;
     }
+    const { status, message: trackedMessage, metaData } = settledJob;
 
-    // Only act on the final states reported by the SSE hook
-    if (status === "complete" || status === "partial-success" || status === "error" || status === "job-not-found" || status === "cancelled") {
+    if (status === "complete" || status === "partial-success" || status === "error" || status === "cancelled") {
       if (status === "complete") {
         // Fix: Handle multiple adsets properly
         const selectedAdSetIds = currentJob.formData.selectedAdSets;
@@ -3423,21 +3432,7 @@ export default function AdCreationForm({
         };
         addCompletedJob(completedJob);
         toast.warning(trackedMessage);
-      } else if (status === "job-not-found") {
-        const failedJob = {
-          id: currentJob.id,
-          message: `Job timed out. Refresh page to try again`,
-          completedAt: Date.now(),
-          status: "retry",
-          jobData: currentJob,
-          formData: currentJob.formData,
-        };
-        addCompletedJob(failedJob);
       } else if (status === "cancelled") {
-        if (isInPromisePhase.current) {
-          return; // Let the promise phase handle it
-        }
-
         const cancelledJob = {
           id: currentJob.id,
           message: trackedMessage || "Job cancelled. Some Ads might still have been made.",
@@ -3480,7 +3475,7 @@ export default function AdCreationForm({
       setIsProcessingQueue(false);
       setIsCancelling(false);
     }
-  }, [status, isProcessingQueue, currentJob]);
+  }, [settledJob, isProcessingQueue, currentJob]);
 
   const handleTemplateSelect = useCallback(
     (templateName, { syncLink = true } = {}) => {
@@ -5667,7 +5662,12 @@ export default function AdCreationForm({
             setProgressMessage(`Analyzing videos: ${Math.min(i + BATCH_SIZE, videoFiles.length)}/${videoFiles.length}`);
             const batchPromises = batch.map(async (file) => {
               try {
-                const aspectRatio = await getVideoAspectRatio(file);
+                const aspectRatio = await withTimeout(
+                  getVideoAspectRatio(file),
+                  PRE_JOB_RESIZE_TIMEOUT_MS,
+                  `Video analysis took too long for ${file.name}.`,
+                  signal,
+                );
                 if (aspectRatio) {
                   // const key = file.id || file.name;
                   const key = getFileId(file);
@@ -5675,6 +5675,7 @@ export default function AdCreationForm({
                 }
                 return null;
               } catch (error) {
+                throwIfCancelled();
                 console.error(`Failed to get aspect ratio for ${file.name}:`, error);
                 const key = getFileId(file); // ← Use getFileId here too
                 return { key, aspectRatio: 16 / 9 }; // Default fallback
@@ -5698,6 +5699,7 @@ export default function AdCreationForm({
           }
         }
       } catch (error) {
+        throwIfCancelled();
         console.error("Error getting video aspect ratios:", error);
         // Continue anyway with defaults
       }
@@ -8104,7 +8106,6 @@ export default function AdCreationForm({
       }
 
       setLiveProgress({ completed: 0, succeeded: 0, failed: 0, total: promises.length, errors: [] });
-      isInPromisePhase.current = true; // ADD THIS
 
       try {
         setJobId(frontendJobId);
@@ -8304,33 +8305,14 @@ export default function AdCreationForm({
           console.warn("Failed to update progress tracker");
         }
 
-        if (signal.aborted) {
-          const cancelledJob = {
-            id: jobData.id,
-            message: jobMessage,
-            completedAt: Date.now(),
-            status: jobStatus, // 'cancelled', 'partial-success', or 'complete'
-            successCount,
-            failureCount,
-            totalCount,
-            errorMessages,
-            successfulAdNames,
-            selectedAdSets: selectedAdSets,
-            selectedAdAccount: selectedAdAccount,
-            formData: jobData.formData,
-          };
-          addCompletedJob(cancelledJob);
-
-          // Clean up the queue directly since useEffect might not trigger
-          setShowCompletedView(true);
-          setJobQueue((prev) => prev.slice(1));
-          setCurrentJob(null);
-          setIsProcessingQueue(false);
-          setIsCancelling(false);
-        }
-        isInPromisePhase.current = false; // ADD THIS
+        return {
+          status: jobStatus,
+          message: jobMessage,
+          metaData: { successCount, failureCount, totalCount, errorMessages, successfulAdNames },
+        };
       } catch (error) {
         console.error("Unexpected error:", error);
+        throw error;
       }
     } catch (error) {
       // If user cancelled, don't treat as an error
@@ -8364,8 +8346,6 @@ export default function AdCreationForm({
       throw new Error(errorMessage);
     } finally {
       setIsLoading(false);
-      setCurrentAbortController(null);
-      currentJobIdRef.current = null; // ADD
     }
   };
 
