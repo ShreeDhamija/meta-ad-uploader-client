@@ -1,5 +1,8 @@
 "use client";
 
+import { SavedLinkSelector, useSortPreference } from "./settings/LinkParameters";
+import { validTemplateLinkPairs, templateForLink, sortTemplates } from "./settings/TemplateLinkSync";
+import { getAdSetAdvancedSettingsError } from "@/components/ad-account-settings";
 import DesktopIcon from "@/assets/Desktop.webp";
 import DropboxIcon from "@/assets/Dropbox.png";
 import CsvFileIcon from "@/assets/csv-file.png";
@@ -95,7 +98,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || "https://api.withblip.com";
 const NOOP = () => { };
 const META_AD_CREATION_ACTION_REQUIRED = "META_AD_CREATION_ACTION_REQUIRED";
 const META_ACTION_REQUIRED_MESSAGE = "Meta requires you to take certain steps to continue ad creation";
-const TEMPLATE_LINK_SYNC_USER_ID = "929470643071391";
+const LEGACY_TEMPLATE_AD_NAME_USER_ID = "929470643071391";
 const PIXEL_TRACKING_FORM_ALLOWED_USER_IDS = ["10236978990363167", "10234447959963619", "10162737276661695", "10165258246808665", "10163704737102804", "28883613861256118"];
 const INSTANT_EXPERIENCE_USER_IDS = ["10236978990363167", "2901368380250453"];
 const LOWERCASE_FILE_NAME_FORMULA_USER_IDS = ["27431350269900471"];
@@ -187,6 +190,8 @@ async function prepareSharedAdSetJobs({ jobs, defaultSnapshot, enabled, duplicat
 
   // Take a private copy before the first await. Default need not have an ad job.
   const defaults = structuredClone(defaultSnapshot || {});
+  const setupIssue = getAdSetSetupIssue(defaults);
+  if (setupIssue) throw new Error(setupIssue.message);
   const campaignId = defaults.selectedCampaign?.[0];
   if (!defaults.duplicateAdSet || !campaignId || !defaults.selectedAdAccount) {
     throw new Error("Configure the new ad set in Default, or choose ‘Create new ad set in each variant’ in Default.");
@@ -211,7 +216,7 @@ async function prepareSharedAdSetJobs({ jobs, defaultSnapshot, enabled, duplicat
   if (!source) throw new Error("Refresh Default’s ad sets and select the source ad set again.");
 
   const changes = settings?.changes;
-  const overrides = changes && Object.keys(changes).length ? {
+  const overrides = changes && (Object.keys(changes).length || (settings.defaults?.minimumSpendAvailability && settings.defaults?.spendLimits?.min?.value)) ? {
     ...changes,
     ...(changes.budgetAmount !== undefined ? { budgetMode: settings.defaults?.budget?.mode } : {}),
   } : null;
@@ -266,7 +271,24 @@ function formatAdSetEndTime(endTime) {
   }).format(date);
 }
 
+function getAdSetSetupIssue({ duplicateAdSet, newAdSetSettings } = {}) {
+  if (!duplicateAdSet || newAdSetSettings?.sourceAdSetId !== duplicateAdSet) return null;
+  const advancedError = getAdSetAdvancedSettingsError(newAdSetSettings);
+  if (advancedError) return { type: "setup", message: advancedError };
+  const targeting = newAdSetSettings.defaults?.targeting;
+  if (Number(targeting?.targeting_automation?.advantage_audience) !== 1) return null;
+  const changes = newAdSetSettings.changes || {};
+  const minAge = Number(changes.ageMin ?? targeting.age_min ?? targeting.age_range?.[0] ?? 18);
+  const maxAge = Number(changes.ageMax ?? targeting.age_max ?? targeting.age_range?.[1] ?? 65);
+  if (minAge > 25) return { type: "age", message: "This ad set uses Advantage+ audience. Lower the minimum age to 25 or below in Edit setup to publish." };
+  if (!Number.isInteger(minAge) || minAge < 18) return { type: "age", message: "Set the minimum age to a whole number from 18 to 25 in Edit setup to publish." };
+  if (maxAge !== 65) return { type: "age", message: "This ad set uses Advantage+ audience. Set the maximum age to 65 in Edit setup to publish." };
+  return null;
+}
+
 function getAdSetTimingIssue({ selectedAdSets = [], duplicateAdSet, adSets = [], adScheduleEndTime, newAdSetSettings }) {
+  const setupIssue = getAdSetSetupIssue({ duplicateAdSet, newAdSetSettings });
+  if (setupIssue) return setupIssue;
   const selectedIds = duplicateAdSet ? [duplicateAdSet] : selectedAdSets;
   const selectedAdSetsWithEndTime = selectedIds
     .map((id) => adSets.find((adSet) => adSet.id === id))
@@ -1488,7 +1510,8 @@ export default function AdCreationForm({
   const [jobId, setJobId] = useState(null);
   const [progress, setProgress] = useState(0);
   const [progressMessage, setProgressMessage] = useState("");
-  const { progress: trackedProgress, message: trackedMessage, status, metaData, resetProgress } = useAdCreationProgress(jobId, isCreatingAds);
+  const { progress: trackedProgress, message: trackedMessage, resetProgress } = useAdCreationProgress(jobId, isCreatingAds);
+  const [settledJob, setSettledJob] = useState(null);
   const [showCompletedView, setShowCompletedView] = useState(false);
   // Add these new states at the top of AdCreationForm
   const [jobQueue, setJobQueue] = useState([]);
@@ -1505,7 +1528,6 @@ export default function AdCreationForm({
   }, [jobQueue.length, completedJobs.length, currentJob?.id, isJobTrackerExpanded, hasStartedAnyJob]);
 
   const [currentAbortController, setCurrentAbortController] = useState(null);
-  const isInPromisePhase = useRef(false); // ADD THIS
   const currentJobIdRef = useRef(null); // ADD THIS
   const [isCancelling, setIsCancelling] = useState(false);
   const pendingDraftMediaCleanupRef = useRef(new Map());
@@ -1764,7 +1786,7 @@ export default function AdCreationForm({
   const [showSaveNewDialog, setShowSaveNewDialog] = useState(false);
   const [templateDropdownOpen, setTemplateDropdownOpen] = useState(false);
   const [templateSearch, setTemplateSearch] = useState("");
-  const [sortMode, setSortMode] = useState(() => localStorage.getItem("templateSortMode") || "default");
+  const [sortMode, setSortMode] = useSortPreference("templateSortMode", "default");
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [bulkDeleteMode, setBulkDeleteMode] = useState(false);
   const [selectedForDelete, setSelectedForDelete] = useState(new Set());
@@ -3062,6 +3084,7 @@ export default function AdCreationForm({
             fileName: file.name,
             mimeType: file.mimeType || getMimeFromName(file.name),
           }),
+          signal,
         });
 
         const data = await res.json();
@@ -3152,27 +3175,13 @@ export default function AdCreationForm({
     setCtaSearch("");
   };
 
-  const availableLinks = adAccountSettings?.links || [];
+  const availableLinks = useMemo(() => adAccountSettings?.links || [], [adAccountSettings?.links]);
   const defaultLink = availableLinks.find((l) => l.isDefault) || availableLinks[0];
-  const isTemplateLinkSyncUser = String(userId || "") === TEMPLATE_LINK_SYNC_USER_ID;
+  const usesLegacyTemplateAdName = String(userId || "") === LEGACY_TEMPLATE_AD_NAME_USER_ID;
 
-  useEffect(() => {
-    if (!isTemplateLinkSyncUser || !selectedTemplate || !defaultTemplateName || availableLinks.length === 0) return;
-
-    const defaultUrl = defaultLink?.url || "";
-    const syncedUrl =
-      selectedTemplate === defaultTemplateName ? defaultUrl : availableLinks.find((linkObj) => linkObj?.url && linkObj.url !== defaultUrl)?.url;
-    if (!syncedUrl) return;
-
-    setShowCustomLink(false);
-    setCustomLink("");
-    setLink((prevLinks) => {
-      const currentLinks = Array.isArray(prevLinks) && prevLinks.length > 1 ? prevLinks : [prevLinks?.[0] || ""];
-      const nextLinks = currentLinks.length > 1 ? currentLinks.map(() => syncedUrl) : [syncedUrl];
-      return JSON.stringify(currentLinks) === JSON.stringify(nextLinks) ? prevLinks : nextLinks;
-    });
-    setLinkCustomStates({});
-  }, [availableLinks, defaultLink, defaultTemplateName, isTemplateLinkSyncUser, selectedTemplate, setCustomLink, setLink, setShowCustomLink]);
+  const templateLinkPairs = useMemo(() => adAccountSettings?.templateLinkSync?.enabled
+    ? validTemplateLinkPairs(adAccountSettings.templateLinkSync, copyTemplates, availableLinks)
+    : [], [adAccountSettings?.templateLinkSync, copyTemplates, availableLinks]);
 
   const filteredPages = useMemo(
     () => pages.filter((page) => page.name.toLowerCase().includes(pageSearchValue.toLowerCase())),
@@ -3248,6 +3257,7 @@ export default function AdCreationForm({
 
     // ✅ Call the reset function to clear the previous job's state.
     resetProgress();
+    setSettledJob(null);
     setLiveProgress({ completed: 0, succeeded: 0, failed: 0, total: 0, errors: [] });
 
     const jobToProcess = jobQueue[0];
@@ -3323,7 +3333,13 @@ export default function AdCreationForm({
       return;
     }
 
-    handleCreateAd(jobToProcess).catch((err) => {
+    handleCreateAd(jobToProcess).finally(() => {
+      // Finish cleanup before publishing a result that can start the next job.
+      setCurrentAbortController(null);
+      currentJobIdRef.current = null;
+    }).then((result) => {
+      setSettledJob({ ...result, id: jobToProcess.id });
+    }).catch((err) => {
       // Don't treat cancellation as a critical error
       if (err.name === "AbortError" || axios.isCancel(err)) {
         const cancelledJob = {
@@ -3362,13 +3378,14 @@ export default function AdCreationForm({
       return; // Do nothing if a job isn't active
     }
 
-    // Guard clause to ignore stale status after a reset.
-    if (status === "idle") {
+    // SSE is for progress. Advance only after this job's requests and cleanup
+    // have settled, even if its final SSE event arrived early or never arrived.
+    if (settledJob?.id !== currentJob.id) {
       return;
     }
+    const { status, message: trackedMessage, metaData } = settledJob;
 
-    // Only act on the final states reported by the SSE hook
-    if (status === "complete" || status === "partial-success" || status === "error" || status === "job-not-found" || status === "cancelled") {
+    if (status === "complete" || status === "partial-success" || status === "error" || status === "cancelled") {
       if (status === "complete") {
         // Fix: Handle multiple adsets properly
         const selectedAdSetIds = currentJob.formData.selectedAdSets;
@@ -3415,21 +3432,7 @@ export default function AdCreationForm({
         };
         addCompletedJob(completedJob);
         toast.warning(trackedMessage);
-      } else if (status === "job-not-found") {
-        const failedJob = {
-          id: currentJob.id,
-          message: `Job timed out. Refresh page to try again`,
-          completedAt: Date.now(),
-          status: "retry",
-          jobData: currentJob,
-          formData: currentJob.formData,
-        };
-        addCompletedJob(failedJob);
       } else if (status === "cancelled") {
-        if (isInPromisePhase.current) {
-          return; // Let the promise phase handle it
-        }
-
         const cancelledJob = {
           id: currentJob.id,
           message: trackedMessage || "Job cancelled. Some Ads might still have been made.",
@@ -3472,10 +3475,10 @@ export default function AdCreationForm({
       setIsProcessingQueue(false);
       setIsCancelling(false);
     }
-  }, [status, isProcessingQueue, currentJob]);
+  }, [settledJob, isProcessingQueue, currentJob]);
 
   const handleTemplateSelect = useCallback(
-    (templateName) => {
+    (templateName, { syncLink = true } = {}) => {
       const template = copyTemplates[templateName];
       if (!template) return;
 
@@ -3488,9 +3491,24 @@ export default function AdCreationForm({
       setHeadlines([...(template.headlines || [""])]);
       setDescriptions([...(template.descriptions || [""])]);
       setAddDescriptions((template.descriptions || []).some((description) => description !== ""));
+      const pairedUrl = syncLink && destinationType !== "instant_experience" && templateLinkPairs.find(pair => pair.templateName === templateName)?.url;
+      if (pairedUrl) {
+        setLink(previous => (previous.length > 1 ? previous.map(() => pairedUrl) : [pairedUrl]));
+        setShowCustomLink(false);
+        setCustomLink("");
+        setLinkCustomStates({});
+      }
     },
-    [copyTemplates, setDescriptions, setHeadlines, setMessages, setSelectedTemplate],
+    [copyTemplates, setDescriptions, setHeadlines, setMessages, setSelectedTemplate, templateLinkPairs, destinationType, setLink, setShowCustomLink, setCustomLink],
   );
+
+  const handleSavedLinkSelect = useCallback((url, cardIndex = null) => {
+    setLink(previous => cardIndex === null ? [url] : previous.map((current, index) => index === cardIndex ? url : current));
+    const matchingTemplate = templateForLink(templateLinkPairs, url, selectedTemplate);
+    if (matchingTemplate && matchingTemplate !== selectedTemplate) {
+      handleTemplateSelect(matchingTemplate, { syncLink: false });
+    }
+  }, [setLink, templateLinkPairs, selectedTemplate, handleTemplateSelect]);
 
   useEffect(() => {
     if (!isCarouselAd) return;
@@ -4879,7 +4897,7 @@ export default function AdCreationForm({
         });
       const templateNameForFormula = formulaToUse.selectedTemplate || selectedTemplate;
       const templateHashReplacement =
-        isTemplateLinkSyncUser && templateNameForFormula && defaultTemplateName
+        usesLegacyTemplateAdName && templateNameForFormula && defaultTemplateName
           ? templateNameForFormula === defaultTemplateName
             ? "33"
             : "21"
@@ -4903,7 +4921,7 @@ export default function AdCreationForm({
       computeAdName,
       defaultTemplateName,
       duplicateAdSet,
-      isTemplateLinkSyncUser,
+      usesLegacyTemplateAdName,
       newAdSetName,
       selectedAdSets,
       selectedTemplate,
@@ -5362,29 +5380,7 @@ export default function AdCreationForm({
   };
 
   const sortedFilteredTemplates = useMemo(() => {
-    let entries = Object.entries(copyTemplates);
-
-    if (templateSearch.trim()) {
-      const query = templateSearch.toLowerCase();
-      entries = entries.filter(([name]) => name.toLowerCase().includes(query));
-    }
-
-    entries.sort(([a, aData], [b, bData]) => {
-      if (a === defaultTemplateName) return -1;
-      if (b === defaultTemplateName) return 1;
-
-      if (sortMode === "most_used") {
-        return (bData?.usageCount || 0) - (aData?.usageCount || 0);
-      }
-      if (sortMode === "oldest") return 0;
-      return a.localeCompare(b);
-    });
-
-    if (sortMode === "oldest") {
-      const defaultEntry = entries.find(([name]) => name === defaultTemplateName);
-      const rest = entries.filter(([name]) => name !== defaultTemplateName);
-      entries = defaultEntry ? [defaultEntry, ...rest.reverse()] : rest.reverse();
-    }
+    const entries = sortTemplates(copyTemplates, sortMode, defaultTemplateName).filter(([name]) => name.toLowerCase().includes(templateSearch.toLowerCase().trim()));
 
     return entries;
   }, [copyTemplates, defaultTemplateName, templateSearch, sortMode]);
@@ -5483,6 +5479,8 @@ export default function AdCreationForm({
   }, [adType, isFlexLikeAdType, driveFiles, dropboxFiles, fileGroupsAsArrays, files, frameioFiles, importedFiles, isCarouselAd]);
 
   const handleCreateAd = async (jobData) => {
+    const setupIssue = getAdSetSetupIssue(jobData.formData);
+    if (setupIssue) throw new Error(setupIssue.message);
     const abortController = new AbortController();
     const signal = abortController.signal;
     setCurrentAbortController(abortController);
@@ -5664,7 +5662,12 @@ export default function AdCreationForm({
             setProgressMessage(`Analyzing videos: ${Math.min(i + BATCH_SIZE, videoFiles.length)}/${videoFiles.length}`);
             const batchPromises = batch.map(async (file) => {
               try {
-                const aspectRatio = await getVideoAspectRatio(file);
+                const aspectRatio = await withTimeout(
+                  getVideoAspectRatio(file),
+                  PRE_JOB_RESIZE_TIMEOUT_MS,
+                  `Video analysis took too long for ${file.name}.`,
+                  signal,
+                );
                 if (aspectRatio) {
                   // const key = file.id || file.name;
                   const key = getFileId(file);
@@ -5672,6 +5675,7 @@ export default function AdCreationForm({
                 }
                 return null;
               } catch (error) {
+                throwIfCancelled();
                 console.error(`Failed to get aspect ratio for ${file.name}:`, error);
                 const key = getFileId(file); // ← Use getFileId here too
                 return { key, aspectRatio: 16 / 9 }; // Default fallback
@@ -5695,6 +5699,7 @@ export default function AdCreationForm({
           }
         }
       } catch (error) {
+        throwIfCancelled();
         console.error("Error getting video aspect ratios:", error);
         // Continue anyway with defaults
       }
@@ -5939,7 +5944,7 @@ export default function AdCreationForm({
       try {
         throwIfCancelled();
         const changes = newAdSetSettings?.changes;
-        const settings = changes && Object.keys(changes).length ? {
+        const settings = changes && (Object.keys(changes).length || (newAdSetSettings.defaults?.minimumSpendAvailability && newAdSetSettings.defaults?.spendLimits?.min?.value)) ? {
           ...changes,
           ...(changes.budgetAmount !== undefined ? { budgetMode: newAdSetSettings.defaults.budget.mode } : {}),
         } : null;
@@ -8101,7 +8106,6 @@ export default function AdCreationForm({
       }
 
       setLiveProgress({ completed: 0, succeeded: 0, failed: 0, total: promises.length, errors: [] });
-      isInPromisePhase.current = true; // ADD THIS
 
       try {
         setJobId(frontendJobId);
@@ -8301,33 +8305,14 @@ export default function AdCreationForm({
           console.warn("Failed to update progress tracker");
         }
 
-        if (signal.aborted) {
-          const cancelledJob = {
-            id: jobData.id,
-            message: jobMessage,
-            completedAt: Date.now(),
-            status: jobStatus, // 'cancelled', 'partial-success', or 'complete'
-            successCount,
-            failureCount,
-            totalCount,
-            errorMessages,
-            successfulAdNames,
-            selectedAdSets: selectedAdSets,
-            selectedAdAccount: selectedAdAccount,
-            formData: jobData.formData,
-          };
-          addCompletedJob(cancelledJob);
-
-          // Clean up the queue directly since useEffect might not trigger
-          setShowCompletedView(true);
-          setJobQueue((prev) => prev.slice(1));
-          setCurrentJob(null);
-          setIsProcessingQueue(false);
-          setIsCancelling(false);
-        }
-        isInPromisePhase.current = false; // ADD THIS
+        return {
+          status: jobStatus,
+          message: jobMessage,
+          metaData: { successCount, failureCount, totalCount, errorMessages, successfulAdNames },
+        };
       } catch (error) {
         console.error("Unexpected error:", error);
+        throw error;
       }
     } catch (error) {
       // If user cancelled, don't treat as an error
@@ -8361,8 +8346,6 @@ export default function AdCreationForm({
       throw new Error(errorMessage);
     } finally {
       setIsLoading(false);
-      setCurrentAbortController(null);
-      currentJobIdRef.current = null; // ADD
     }
   };
 
@@ -10038,6 +10021,7 @@ export default function AdCreationForm({
                                             { value: "default", label: "Recently Made" },
                                             { value: "oldest", label: "Oldest First" },
                                             { value: "most_used", label: "Most Used" },
+                                            { value: "alphabetical", label: "Alphabetical (A–Z)" },
                                           ].map((option) => (
                                             <button
                                               key={option.value}
@@ -10046,7 +10030,6 @@ export default function AdCreationForm({
                                               onClick={(e) => {
                                                 e.stopPropagation();
                                                 setSortMode(option.value);
-                                                localStorage.setItem("templateSortMode", option.value);
                                                 setShowSortMenu(false);
                                               }}
                                             >
@@ -10737,33 +10720,7 @@ export default function AdCreationForm({
                       // Single link mode (normal ads or carousel with "apply to all")
                       <div className="space-y-3">
                         {!showCustomLink && availableLinks.length > 0 && (
-                          <Select
-                            value={link[0] || ""}
-                            onValueChange={(value) => setLink([value])}
-                            disabled={!isLoggedIn || availableLinks.length === 0}
-                          >
-                            <SelectTrigger className={cn("w-full", formFieldChrome)}>
-                              <SelectValue placeholder="Select a link" />
-                            </SelectTrigger>
-
-                            <SelectContent className="bg-white shadow-lg rounded-xl w-auto">
-                              {availableLinks.map((linkObj, index) => (
-                                <SelectItem
-                                  key={index}
-                                  value={linkObj.url}
-                                  className="cursor-pointer px-3 py-2 hover:bg-gray-100 rounded-xl mx-2 my-1 ml-4"
-                                >
-                                  <div className="flex items-center justify-between w-full">
-                                    <span className="truncate max-w-[650px]">{linkObj.url}</span>
-
-                                    {linkObj.isDefault && (
-                                      <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-lg flex-shrink-0">Default</span>
-                                    )}
-                                  </div>
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <SavedLinkSelector links={availableLinks} value={link[0] || ""} onValueChange={handleSavedLinkSelect} disabled={!isLoggedIn} className={formFieldChrome} />
                         )}
 
                         <div className="flex items-center space-x-2">
@@ -10776,7 +10733,7 @@ export default function AdCreationForm({
                                   value={customLink}
                                   onChange={(e) => {
                                     setCustomLink(e.target.value);
-                                    setLink([e.target.value]);
+                                    handleSavedLinkSelect(e.target.value);
                                   }}
                                   className={cn("w-full", formInputChrome)}
                                   placeholder="https://example.com"
@@ -10797,7 +10754,7 @@ export default function AdCreationForm({
                                     if (!checked) {
                                       setCustomLink("");
                                       const dropdownValue = defaultLink?.url || "";
-                                      setLink([dropdownValue]);
+                                      handleSavedLinkSelect(dropdownValue);
                                     }
                                   }}
                                   className="border-gray-300 w-4 h-4 rounded-md"
@@ -10818,35 +10775,7 @@ export default function AdCreationForm({
                             <Label className="text-sm font-medium">Card {index + 1} Link</Label>
 
                             {(!linkCustomStates || !linkCustomStates[index]) && (
-                              <Select
-                                value={value || ""}
-                                onValueChange={(newValue) => {
-                                  const newLinks = [...link];
-                                  newLinks[index] = newValue;
-                                  setLink(newLinks);
-                                }}
-                                disabled={!isLoggedIn || availableLinks.length === 0}
-                              >
-                                <SelectTrigger className={formFieldChrome}>
-                                  <SelectValue placeholder="Select a link" />
-                                </SelectTrigger>
-                                <SelectContent className="bg-white shadow-lg rounded-xl">
-                                  {availableLinks.map((linkObj, linkIndex) => (
-                                    <SelectItem
-                                      key={linkIndex}
-                                      value={linkObj.url}
-                                      className="cursor-pointer px-4 py-3 hover:bg-gray-100 rounded-xl mx-2 my-1"
-                                    >
-                                      <div className="flex items-center justify-between w-full">
-                                        <span className="truncate max-w-[250px]">{linkObj.url}</span>
-                                        {linkObj.isDefault && (
-                                          <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded">Default</span>
-                                        )}
-                                      </div>
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                              <SavedLinkSelector links={availableLinks} value={value || ""} onValueChange={url => handleSavedLinkSelect(url, index)} disabled={!isLoggedIn || availableLinks.length === 0} className={formFieldChrome} />
                             )}
 
                             <div className="flex items-center justify-between">
@@ -10861,9 +10790,7 @@ export default function AdCreationForm({
 
                                     if (!checked) {
                                       // Reset to dropdown value
-                                      const newLinks = [...link];
-                                      newLinks[index] = defaultLink?.url || "";
-                                      setLink(newLinks);
+                                      handleSavedLinkSelect(defaultLink?.url || "", index);
                                     }
                                   }}
                                   className="border-gray-300 w-4 h-4 rounded-md"
@@ -10897,9 +10824,7 @@ export default function AdCreationForm({
                                 type="text"
                                 value={value}
                                 onChange={(e) => {
-                                  const newLinks = [...link];
-                                  newLinks[index] = e.target.value;
-                                  setLink(newLinks);
+                                  handleSavedLinkSelect(e.target.value, index);
                                 }}
                                 className={formInputChrome}
                                 placeholder="https://example.com"

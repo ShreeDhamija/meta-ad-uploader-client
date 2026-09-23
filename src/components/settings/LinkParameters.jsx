@@ -2,18 +2,21 @@ import { useState, useCallback, useMemo, memo, useEffect, useRef } from "react"
 import { createPortal } from "react-dom"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Trash2, Plus, ChevronDown, X } from "lucide-react"
-import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
+import { Trash2, Plus, ChevronDown, X, ArrowUpDown, Check } from "lucide-react"
+import { Popover, PopoverTrigger, PopoverContent, PopoverAnchor } from "@/components/ui/popover"
 import {
     Command,
     CommandInput,
     CommandItem,
     CommandList,
+    CommandEmpty,
 } from "@/components/ui/command"
 import { toast } from "sonner";
 import { Download, CirclePlus, Settings2, Loader } from "lucide-react";
 import { RotateLoader } from "react-spinners";
 import { Checkbox } from "@/components/ui/checkbox"
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import LinkIcon from '@/assets/icons/link.svg?react';
 
 // Move constants outside component
@@ -69,6 +72,10 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
     // Link Management States
     const [showAddForm, setShowAddForm] = useState(false)
     const [newLinkUrl, setNewLinkUrl] = useState("")
+    const [newLinkTitle, setNewLinkTitle] = useState("")
+    const [linkSearch, setLinkSearch] = useState("")
+    const [linkSortMode, setLinkSortMode] = useSortPreference("linkSortMode", "created")
+    const filteredLinks = sortLinks(links, linkSortMode).filter(link => `${link.title || ""} ${link.url}`.toLowerCase().includes(linkSearch.toLowerCase().trim()))
     const [linkDropdownOpen, setLinkDropdownOpen] = useState(false)
     const [rawUtmString, setRawUtmString] = useState("");
     const [selectedLinkIndex, setSelectedLinkIndex] = useState(null)
@@ -142,6 +149,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
         }
         const newLink = {
             url: linkUrl,
+            createdAt: new Date().toISOString(),
             isDefault: links.length === 0
         };
         setLinks(prev => [...prev, newLink]);
@@ -155,6 +163,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
             if (!links.some(link => link.url === linkUrl)) {
                 newLinks.push({
                     url: linkUrl,
+                    createdAt: new Date().toISOString(),
                     isDefault: links.length === 0 && newLinks.length === 0
                 });
             }
@@ -180,13 +189,16 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
         }
         const newLink = {
             url: newLinkUrl.trim(),
+            title: newLinkTitle.trim(),
+            createdAt: new Date().toISOString(),
             isDefault: links.length === 0
         };
         setLinks(prev => [...prev, newLink]);
         setSelectedLinkIndex(links.length);
         setNewLinkUrl("");
+        setNewLinkTitle("");
         setShowAddForm(false);
-    }, [newLinkUrl, links, setLinks]);
+    }, [newLinkUrl, newLinkTitle, links, setLinks]);
 
 
 
@@ -408,55 +420,78 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                     </p>
                 </div>
 
-                {links.length > 0 && <div className="flex gap-2 items-center">
-                    <Popover open={linkDropdownOpen} onOpenChange={setLinkDropdownOpen}>
-                        <PopoverTrigger asChild>
-                            <Button
-                                variant="outline"
-                                role="combobox"
-                                className="flex-1 justify-between rounded-2xl border border-gray-300 bg-white shadow hover:bg-white px-3 py-4.5"
-                                disabled={links.length === 0}
-                            >
-                                {selectedLink ? (
-                                    <div className="flex items-center justify-between w-full">
-                                        <span className="text-sm truncate max-w-[350px]">
-                                            {selectedLink.url}
-                                        </span>
-                                        {selectedLink.isDefault && (
-                                            <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-lg">
-                                                Default
-                                            </span>
+                {links.length > 0 && (
+                    <Popover open={linkDropdownOpen} onOpenChange={open => { setLinkDropdownOpen(open); setLinkSearch(""); }}>
+                        <PopoverAnchor asChild>
+                            <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,140px)_auto] gap-2 items-center">
+                                <PopoverTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        role="combobox"
+                                        className="h-9 min-w-0 justify-between rounded-2xl border border-gray-300 bg-white shadow hover:bg-white px-3 py-2"
+                                        disabled={links.length === 0}
+                                    >
+                                        {selectedLink ? (
+                                            <div className="flex min-w-0 items-center justify-between w-full">
+                                                <LinkLabel link={selectedLink} showTitle={false} />
+                                                {selectedLink.isDefault && (
+                                                    <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-lg">
+                                                        Default
+                                                    </span>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            "No links available"
                                         )}
-                                    </div>
-                                ) : (
-                                    "No links available"
-                                )}
-                                <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                            </Button>
-                        </PopoverTrigger>
+                                        <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                    </Button>
+                                </PopoverTrigger>
+
+                                <LinkTitleInput
+                                    aria-label="Selected link title (optional)"
+                                    placeholder="Title (Optional)"
+                                    value={selectedLink?.title || ""}
+                                    onChange={event => {
+                                        const title = event.target.value;
+                                        setLinks(previous => previous.map(item => item.url === selectedLink?.url ? { ...item, title } : item));
+                                    }}
+                                    className="h-9 min-w-0 rounded-2xl border-gray-300 py-2 bg-white shadow"
+                                />
+
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="rounded-xl px-3 whitespace-nowrap"
+                                    disabled={!selectedLink || selectedLink.isDefault}
+                                    onClick={handleSetAsDefault}
+                                >
+                                    Set as Default
+                                </Button>
+                            </div>
+                        </PopoverAnchor>
                         <PopoverContent
-                            className="min-w-[--radix-popover-trigger-width] w-auto !max-w-none p-0 bg-white shadow-lg rounded-2xl"
+                            className="w-[var(--radix-popover-trigger-width)] max-w-[calc(100vw-2rem)] p-0 bg-white shadow-lg rounded-2xl"
                             align="start"
                             sideOffset={5}
                             style={{
                                 minWidth: "var(--radix-popover-trigger-width)",
-                                width: "auto",
+                                width: "var(--radix-popover-trigger-width)",
                             }}
                         >
-                            <Command>
+                            <Command shouldFilter={false}>
+                                <div className="flex items-center pr-2"><CommandInput wrapperClassName="min-w-0 flex-1 border-gray-200 bg-gray-50" placeholder="Search links or titles..." value={linkSearch} onValueChange={setLinkSearch} /><LinkSortMenu mode={linkSortMode} onChange={setLinkSortMode} /></div>
                                 <CommandList className="max-h-[500px] overflow-y-auto p-1">
-                                    {links.map((link, index) => (
+                                    {filteredLinks.length === 0 && <p className="p-4 text-center text-sm text-gray-500">No links found.</p>}
+                                    {filteredLinks.map((link) => (
                                         <CommandItem
                                             key={link.url}
                                             value={link.url}
-                                            onSelect={() => handleLinkSelect(index)}
+                                            onSelect={() => handleLinkSelect(links.indexOf(link))}
                                             className="cursor-pointer px-3 py-2 hover:bg-gray-100 rounded-xl m-1 group relative"
                                         >
                                             <div className="flex items-center justify-between w-full pr-6">
                                                 <div className="flex items-center min-w-0 flex-1">
-                                                    <span className="text-sm truncate max-w-[500px]" title={link.url}>
-                                                        {link.url}
-                                                    </span>
+                                                    <LinkLabel link={link} />
                                                     {link.isDefault && (
                                                         <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-lg whitespace-nowrap flex-shrink-0">
                                                             Default
@@ -481,27 +516,18 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                             </Command>
                         </PopoverContent>
                     </Popover>
-
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        className="rounded-xl px-3 whitespace-nowrap"
-                        disabled={!selectedLink || selectedLink.isDefault}
-                        onClick={handleSetAsDefault}
-                    >
-                        Set as Default
-                    </Button>
-                </div>}
+                )}
 
                 {showAddForm ? (
                     <div className="border border-gray-200 rounded-2xl p-3 bg-white space-y-3">
-                        <div className="space-y-2">
+                        <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,140px)] gap-2">
                             <Input
                                 placeholder="Enter Link URL"
                                 value={newLinkUrl}
                                 onChange={(e) => setNewLinkUrl(e.target.value)}
-                                className="rounded-2xl border-gray-300 py-4.5 bg-white shadow"
+                                className="h-9 min-w-0 rounded-2xl border-gray-300 py-2 bg-white shadow"
                             />
+                            <LinkTitleInput aria-label="Link title (optional)" placeholder="Title (Optional)" value={newLinkTitle} onChange={event => setNewLinkTitle(event.target.value)} className="h-9 min-w-0 rounded-2xl border-gray-300 py-2 bg-white shadow" />
                         </div>
                         <div className="flex gap-2">
                             <Button
@@ -515,6 +541,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                                 onClick={() => {
                                     setShowAddForm(false);
                                     setNewLinkUrl("");
+                                    setNewLinkTitle("");
                                 }}
                                 variant="outline"
                                 className="rounded-[14px]"
@@ -874,3 +901,97 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
 }
 
 export default memo(LinkParameters)
+
+
+// Shared saved-link dropdowns and sort preferences used in settings and the ad form.
+export const compareNames = (a, b) => a.localeCompare(b, undefined, { sensitivity: "base", numeric: true });
+
+export function sortLinks(links, mode = "created") {
+  // Legacy links have no timestamp; their saved array order is their creation order.
+  const entries = [...(links || [])];
+  if (mode === "alphabetical") return entries.sort((a, b) => compareNames(a.title?.trim() || a.url, b.title?.trim() || b.url) || compareNames(a.url, b.url));
+  const createdTime = link => {
+    const raw = link.createdAt;
+    if (typeof raw === "number") return raw;
+    if (raw?.seconds || raw?._seconds) return (raw.seconds || raw._seconds) * 1000;
+    return Date.parse(raw) || 0;
+  };
+  entries.sort((a, b) => createdTime(a) - createdTime(b));
+  return mode === "newest" ? entries.reverse() : entries;
+}
+
+export function useSortPreference(key, fallback) {
+  const read = useCallback(() => {
+    try { return localStorage.getItem(key) || fallback; } catch { return fallback; }
+  }, [key, fallback]);
+  const [value, setValue] = useState(read);
+  useEffect(() => {
+    const refresh = () => setValue(read());
+    window.addEventListener("storage", refresh);
+    window.addEventListener("settings-sort-changed", refresh);
+    return () => {
+      window.removeEventListener("storage", refresh);
+      window.removeEventListener("settings-sort-changed", refresh);
+    };
+  }, [read]);
+  const update = useCallback(next => {
+    setValue(next);
+    try { localStorage.setItem(key, next); } catch { /* Preference still works for this session. */ }
+    window.dispatchEvent(new Event("settings-sort-changed"));
+  }, [key]);
+  return [value, update];
+}
+
+export function LinkLabel({ link, showTitle = true }) {
+  return <TooltipProvider delayDuration={250}><Tooltip>
+    <TooltipTrigger asChild>
+      <span className="flex min-w-0 flex-1 items-center gap-2 text-left">
+        {showTitle && link.title?.trim() && <span className="max-w-[50%] shrink-0 truncate font-semibold text-zinc-900">{link.title.trim()}</span>}
+        <span className="truncate font-normal text-gray-600">{link.url}</span>
+      </span>
+    </TooltipTrigger>
+    <TooltipContent className="z-[100] max-w-sm break-all rounded-xl bg-zinc-800 px-3 py-2 text-white">{link.title?.trim() ? `[${link.title.trim()} - ${link.url}]` : link.url}</TooltipContent>
+  </Tooltip></TooltipProvider>;
+}
+
+export function LinkSortMenu({ mode, onChange }) {
+  return <DropdownMenu><DropdownMenuTrigger asChild>
+    <Button type="button" variant="ghost" size="icon" aria-label="Sort links" className="h-8 w-8 shrink-0 rounded-xl"><ArrowUpDown className="h-3.5 w-3.5 text-gray-500" /></Button>
+  </DropdownMenuTrigger><DropdownMenuContent align="end" className="z-[100] rounded-xl bg-white">
+    {[['alphabetical', 'Alphabetical (A–Z)'], ['created', 'Date created (oldest first)'], ['newest', 'Date created (newest first)']].map(([value, label]) =>
+      <DropdownMenuItem key={value} onSelect={() => onChange(value)} className="gap-3 rounded-lg">{label}{mode === value && <Check className="ml-auto h-3.5 w-3.5 text-blue-500" />}</DropdownMenuItem>)}
+  </DropdownMenuContent></DropdownMenu>;
+}
+
+export function SavedLinkSelector({ links, value, onValueChange, disabled, className = "", label = "Select a link" }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [mode, setMode] = useSortPreference("linkSortMode", "created");
+  const selected = links.find(link => link.url === value);
+  const filtered = sortLinks(links, mode).filter(link => `${link.title || ""} ${link.url}`.toLowerCase().includes(query.toLowerCase().trim()));
+  return <Popover open={open} onOpenChange={next => { setOpen(next); setQuery(""); }}>
+    <PopoverTrigger asChild><Button type="button" variant="outline" role="combobox" aria-expanded={open} aria-label={label} disabled={disabled} className={`w-full min-w-0 justify-between rounded-2xl border-gray-300 bg-white shadow hover:bg-white ${className}`}>
+      {selected ? <LinkLabel link={selected} /> : <span className="truncate font-normal">{value || label}</span>}
+      <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+    </Button></PopoverTrigger>
+    <PopoverContent align="start" className="z-[60] w-[var(--radix-popover-trigger-width)] min-w-[250px] max-w-[calc(100vw-2rem)] rounded-2xl bg-white p-0 shadow-lg">
+      <Command shouldFilter={false} className="rounded-2xl">
+        <div className="flex items-center pr-2"><CommandInput wrapperClassName="min-w-0 flex-1 border-gray-200 bg-gray-50" placeholder="Search links or titles..." value={query} onValueChange={setQuery} /><LinkSortMenu mode={mode} onChange={setMode} /></div>
+        <CommandList className="p-1"><CommandEmpty>No links found.</CommandEmpty>
+          {filtered.map(link => <CommandItem key={link.url} value={link.url} onSelect={() => { onValueChange(link.url); setOpen(false); }} className="m-1 cursor-pointer rounded-xl px-3 py-2 data-[selected=true]:bg-gray-100">
+            <LinkLabel link={link} />
+            {link.isDefault && <span className="shrink-0 rounded-lg bg-blue-100 px-2 py-0.5 text-xs text-blue-800">Default</span>}
+            {value === link.url && <Check className="h-4 w-4 shrink-0 text-blue-500" />}
+          </CommandItem>)}
+        </CommandList>
+      </Command>
+    </PopoverContent>
+  </Popover>;
+}
+
+function LinkTitleInput({ value, ...props }) {
+  return <TooltipProvider delayDuration={250}><Tooltip>
+    <TooltipTrigger asChild><Input {...props} value={value} /></TooltipTrigger>
+    {value?.trim() && <TooltipContent className="z-[100] max-w-sm break-words rounded-xl bg-zinc-800 px-3 py-2 text-white">{value}</TooltipContent>}
+  </Tooltip></TooltipProvider>;
+}
