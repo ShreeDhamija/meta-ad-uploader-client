@@ -4388,6 +4388,7 @@ export default function TikTokAdCreationForm({
         const postIdentityType = videoObj.user_info?.identity_type || "BC_AUTH_TT";
         const newPost = {
           id: itemId,
+          item_type: videoObj.item_type || "VIDEO",
           image_url: videoObj.poster_url || videoObj.cover_image_url || "",
           preview_url: videoObj.preview_url || "",
           previewUrl: videoObj.preview_url || "",
@@ -4490,6 +4491,7 @@ export default function TikTokAdCreationForm({
 
       const updatedPost = {
         id: itemId,
+        item_type: videoObj.item_type || "VIDEO",
         image_url: posterUrl,
         preview_url: videoObj.preview_url || "",
         previewUrl: videoObj.preview_url || "",
