@@ -331,7 +331,7 @@ function TikTokPostSelectorInline({
                       {post.ad_name}
                     </p>
                     <span className="inline-block mt-1 px-1.5 py-0.5 text-[10px] font-medium rounded-md bg-gray-100 text-gray-600">
-                      {post.item_type === "CAROUSEL" ? "Photo" : "Video"}
+                      {post.item_type === "CAROUSEL" ? "Carousel" : "Video"}
                     </span>
                   </div>
                 </label>
