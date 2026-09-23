@@ -38,7 +38,7 @@ const formatDate = (timeVal) => {
 function TikTokPostSelectorInline({
   advertiserId,
   identityId,
-  identityType = "TT_ACCOUNT",
+  identityType = "TT_USER",
   identityObj = null,
   onImport,
   importedPosts = [],
@@ -113,7 +113,9 @@ function TikTokPostSelectorInline({
 
       const formattedList = list.map(item => {
         const itemId = item.item_id || item.item_info?.item_id;
-        const posterUrl = item.video_info?.poster_url || item.video_info?.preview_url || item.thumbnail_url || "";
+        const itemType = item.item_type || "VIDEO";
+        // Photo posts have no video_info — use the first image of the carousel as the cover
+        const posterUrl = item.video_info?.poster_url || item.video_info?.preview_url || item.carousel_info?.image_info?.[0]?.image_url || item.thumbnail_url || "";
         const caption = item.text || item.caption || item.item_info?.text || (item.recommendation_level ? `Recommendation: ${item.recommendation_level} (${item.item_id || item.item_info?.item_id})` : `Recommended Video (${item.item_id || item.item_info?.item_id})`);
         const tiktokName = item.user_info?.tiktok_name || identityObj?.display_name || "Organic Video";
         const authEndTime = item.auth_info?.auth_end_time || null;
@@ -124,6 +126,7 @@ function TikTokPostSelectorInline({
 
         return {
           id: itemId,
+          item_type: itemType,
           image_url: posterUrl,
           preview_url: item.video_info?.preview_url || "",
           previewUrl: item.video_info?.preview_url || "",
@@ -327,6 +330,9 @@ function TikTokPostSelectorInline({
                     <p className="text-xs font-semibold text-gray-800 line-clamp-2 leading-relaxed" title={post.ad_name}>
                       {post.ad_name}
                     </p>
+                    <span className="inline-block mt-1 px-1.5 py-0.5 text-[10px] font-medium rounded-md bg-gray-100 text-gray-600">
+                      {post.item_type === "CAROUSEL" ? "Photo" : "Video"}
+                    </span>
                   </div>
                 </label>
               )

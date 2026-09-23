@@ -1916,6 +1916,7 @@ export default function TikTokAdCreationForm({
             identityId: post.identity_id,
             identityType: post.identity_type,
             identityAuthorizedBcId: post.identity_authorized_bc_id || "",
+            itemType: post.item_type || "VIDEO",
           },
         });
       });
@@ -2360,8 +2361,11 @@ export default function TikTokAdCreationForm({
           const creatives = [];
           const useMultipleTextsNative = isSmartForThisCampaign;
 
+          // Spark Ads on a TikTok photo post use the carousel ad format
+          const isSparkPhotoPost = adType === "SPARK" && item.file.itemType === "CAROUSEL";
+
           const creative = {
-            adFormat: isImage ? "SINGLE_IMAGE" : "SINGLE_VIDEO",
+            adFormat: isSparkPhotoPost ? "CAROUSEL_ADS" : isImage ? "SINGLE_IMAGE" : "SINGLE_VIDEO",
             ...(isImage ? { image_ids: videoId } : { video_id: videoId }),
             ad_text: finalCaptions[0] || "",
             ad_texts: finalCaptions,
