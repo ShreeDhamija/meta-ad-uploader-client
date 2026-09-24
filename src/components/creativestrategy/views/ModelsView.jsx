@@ -6,7 +6,7 @@ import ModelSelection from "../ModelSelection";
 import { defaultSelection } from "../model-selection";
 import "../models.css";
 
-const GROUPS = { copy: "Copy", strategy: "Strategy", analysis: "Analysis", images: "Images", research: "Research", utility: "Utilities", uploader: "Uploader & analytics" };
+const GROUPS = { copy: "Copy", strategy: "Strategy", analysis: "Analysis", images: "Images", research: "Research", utility: "Utilities" };
 const TEST_NAMES = { "copy.generate.hook": "Hooks", "copy.generate.headline": "Headlines", "copy.generate.primary_text": "Primary text", "image.generate": "Image prompt" };
 const money = value => `$${Number(value || 0).toFixed(4)}`;
 const running = exp => ["queued", "running"].includes(exp?.status);
