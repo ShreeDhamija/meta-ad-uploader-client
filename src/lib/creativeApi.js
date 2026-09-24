@@ -28,6 +28,16 @@ async function request(path, { method = "GET", body, binary = false } = {}) {
 }
 
 export const creativeApi = {
+  getModels: () => request("/models"),
+  saveModelProfile: (selections, expectedRevision) => request("/models/profile", { method: "PUT", body: { selections, expectedRevision } }),
+  getModelRevisions: () => request("/models/revisions"),
+  listModelTests: () => request("/models/experiments"),
+  quoteModelTest: (body) => request("/models/experiments/quote", { method: "POST", body }),
+  startModelTest: (id) => request(`/models/experiments/${encodeURIComponent(id)}/start`, { method: "POST" }),
+  getModelTest: (id) => request(`/models/experiments/${encodeURIComponent(id)}`),
+  cancelModelTest: (id) => request(`/models/experiments/${encodeURIComponent(id)}/cancel`, { method: "POST" }),
+  acceptModelTest: (id, variantId) => request(`/models/experiments/${encodeURIComponent(id)}/accept`, { method: "POST", body: { variantId } }),
+  rateModelTest: (id, variantId, rating, notes) => request(`/models/experiments/${encodeURIComponent(id)}/rating`, { method: "POST", body: { variantId, rating, notes } }),
   me: () => request("/me"),
   listClients: () => request("/clients"),
   syncBrands: (accounts) => request("/clients/sync", {

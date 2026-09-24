@@ -86,6 +86,7 @@ export default function CostTracker({ clientId }) {
           <div className="text-xs text-neutral-400 mb-3 tabular-nums">
             {(data?.totals?.inputTokens ?? 0).toLocaleString()} in · {(data?.totals?.outputTokens ?? 0).toLocaleString()} out tokens
           </div>
+          {data?.totals?.unknownCostCalls > 0 && <p className="text-xs text-amber-700 mb-3">{data.totals.unknownCostCalls} calls have incomplete cost data; the total shows known charges.</p>}
 
           <div className="flex items-center gap-2 mb-2">
             <span className="text-xs text-neutral-500">Breakdown by</span>

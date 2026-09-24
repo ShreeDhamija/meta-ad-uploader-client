@@ -8,7 +8,7 @@ import { useAppData } from "@/lib/AppContext";
 import { useAuth } from "@/lib/AuthContext";
 import { creativeApi } from "@/lib/creativeApi";
 import { cn } from "@/lib/utils";
-import { BookOpen, Box, Flame, Heart, Layers, LogOut, MousePointerClick, SearchCheck, Zap } from "lucide-react";
+import { BookOpen, Box, Flame, FlaskConical, Heart, Layers, LogOut, MousePointerClick, SearchCheck, Zap } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Toaster } from "sonner";
 import { createPortal } from "react-dom";
@@ -26,6 +26,7 @@ import LibraryView from "./views/LibraryView";
 import ProductsView from "./views/ProductsView";
 import ResearchView from "./views/ResearchView";
 import WeeklyView from "./views/WeeklyView";
+import ModelsView from "./views/ModelsView";
 
 const NAV = [
   { key: "brands", label: "Accounts", icon: Layers },
@@ -36,9 +37,11 @@ const NAV = [
   { key: "inspiration", label: "Inspiration", icon: Heart },
   { key: "weekly", label: "Weekly Strategy", icon: MousePointerClick },
   { key: "research", label: "Research", icon: SearchCheck },
+  { key: "models", label: "AI Models", icon: FlaskConical },
 ];
 
 const DESCRIPTIONS = {
+  models: "Choose your preferred models and compare results on the same input.",
   brands: "View and manage connected Meta ad accounts.",
   products: "Create and manage products for the selected account.",
   intelligence: "Run Meta ad analysis and review analyzed creatives + the strategy audit.",
@@ -255,6 +258,8 @@ export default function CreativeStrategyLayout() {
         return <InspirationView ctx={ctx} />;
       case "weekly":
         return <WeeklyView key={selectedBrandId || "no-account"} ctx={ctx} />;
+      case "models":
+        return <ModelsView ctx={ctx} />;
       default: {
         const item = NAV.find((n) => n.key === activeTab);
         return <ComingSoon label={item?.label} phase={item?.phase} />;

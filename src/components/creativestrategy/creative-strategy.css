@@ -3288,3 +3288,6 @@ html body #root .creative-strategy button.cs-intel-ad-card.is-active {
 .cs-visual-scraper-row input { min-width: 0; flex: 1; border: 1px solid #dfcbbc; border-radius: 999px; padding: 12px 16px; background: white; font-size: 13px; }
 .cs-visual-scraper-row button { border-radius: 999px; flex-shrink: 0; padding: 10px 18px; }
 @media (max-width: 480px) { .cs-visual-scraper-row { flex-direction: column; } .cs-visual-tabs button { font-size: 11px; } }
+
+.cs-intel-funnel-bar .is-unclassified { background: #a3a3a3; }
+.cs-intel-funnel-segment.is-unclassified { background: #f0f0f0; }

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import PropTypes from "prop-types";
 import { AlertTriangle, ChevronDown, ChevronRight, Loader2, Plus, Zap } from "lucide-react";
+import { matchInsightAds, funnelBuckets } from "../insight-metrics";
 import { creativeApi } from "@/lib/creativeApi";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
@@ -147,7 +148,8 @@ export default function IntelligenceView({ ctx }) {
       {spendingAds.length > 0 && (
         <div className="rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-xs text-neutral-600" role="status">
           Creative analysis covers {analyzedSpending.length} of {spendingAds.length} spending ads ({Math.round(spendCoverage * 100)}% of spend). Performance metrics include all saved ads. New and rising ads are analyzed alongside top spenders on each refresh.
-          {a.analysis_coverage?.sampled_ads != null && <> Strategy insights use up to {a.analysis_coverage.sampled_ads} analyzed ads.</>}
+          {a.analysis_coverage?.sampled_ads != null && <> Strategy insights use {a.analysis_coverage.sampled_ads} analyzed ads{a.analysis_coverage.sample_method === "spend_and_evidence_diversity" ? ", selected for spend and distinct creative evidence" : ""}.</>}
+          {a.analysis_coverage?.cluster_coverage?.persona_ad_mapping?.unassigned_ads > 0 && <p className="mt-1">{a.analysis_coverage.cluster_coverage.persona_ad_mapping.unassigned_ads} sampled ads could not be assigned to a supported persona.</p>}
           {a.analysis_coverage?.stale_sections?.length > 0 && <p className="mt-1">Some insight sections are from the previous analysis while their refresh is incomplete.</p>}
         </div>
       )}
@@ -444,12 +446,11 @@ TopHooksSection.propTypes = { hooks: PropTypes.array.isRequired };
 function MessagingThemesSection({ themes, ads }) {
   const [expanded, setExpanded] = useState(null);
   if (!Array.isArray(themes) || !themes.length) return null;
-  const byName = new Map(ads.map((ad) => [ad.adName, ad]));
   const enriched = themes.map((theme) => {
-    const matchedAds = (theme.ad_names || []).map((name) => byName.get(name)).filter(Boolean);
+    const matchedAds = matchInsightAds(theme, ads);
     const spend = matchedAds.reduce((sum, ad) => sum + (ad.spend || 0), 0);
     const purchases = matchedAds.reduce((sum, ad) => sum + (ad.purchases || 0), 0);
-    const repAd = byName.get(theme.representative_ad_name) || [...matchedAds].sort((x, y) => (y.spend || 0) - (x.spend || 0))[0];
+    const repAd = matchedAds.find(ad => ad.adId === theme.representative_ad_id) || matchedAds.find(ad => ad.adName === theme.representative_ad_name) || [...matchedAds].sort((x, y) => (y.spend || 0) - (x.spend || 0))[0];
     return { ...theme, matchedAds, spend, purchases, cpa: purchases > 0 ? spend / purchases : null, repAd };
   }).sort((x, y) => y.spend - x.spend);
   return <InsightSection title="Messaging themes" tone="orange">
@@ -471,19 +472,14 @@ function MessagingThemesSection({ themes, ads }) {
 MessagingThemesSection.propTypes = { themes: PropTypes.any, ads: PropTypes.array.isRequired };
 
 function FunnelBalanceSection({ ads }) {
-  const stages = ["TOF", "MOF", "BOF"];
-  const buckets = Object.fromEntries(stages.map((stage) => [stage, { spend: 0, count: 0, purchases: 0 }]));
-  ads.forEach((ad) => {
-    const stage = String(ad.funnelPosition || "").toUpperCase();
-    if (!buckets[stage]) return;
-    buckets[stage].spend += ad.spend || 0; buckets[stage].count += 1; buckets[stage].purchases += ad.purchases || 0;
-  });
+  const buckets = funnelBuckets(ads);
+  const stages = Object.keys(buckets);
   const total = stages.reduce((sum, stage) => sum + buckets[stage].spend, 0);
   if (!total) return null;
   const activeStages = stages.filter((stage) => buckets[stage].spend > 0);
-  const colors = { TOF: "is-tof", MOF: "is-mof", BOF: "is-bof" };
+  const colors = { TOF: "is-tof", MOF: "is-mof", BOF: "is-bof", Unclassified: "is-unclassified" };
   return <InsightSection title="Funnel balance">
-    <p className="mb-3 text-xs text-neutral-400">Share of current spend across prospecting, consideration, and conversion ads.</p>
+    <p className="mb-3 text-xs text-neutral-400">Estimated stages from current CPM and frequency relative to this account, with CPA as a consistency check. This does not measure Meta targeting. Missing or conflicting signals remain unclassified; percentages include all spending ads.</p>
     <div className="cs-intel-funnel-bar">{activeStages.map((stage) => <div key={stage} className={colors[stage]} style={{ width: `${(buckets[stage].spend / total) * 100}%` }} />)}</div>
     <div className="cs-intel-funnel-breakdown">{activeStages.map((stage) => {
       const bucket = buckets[stage]; const cpa = bucket.purchases > 0 ? bucket.spend / bucket.purchases : null;
@@ -496,15 +492,15 @@ FunnelBalanceSection.propTypes = { ads: PropTypes.array.isRequired };
 function PersonaPerformanceSection({ mappings, ads }) {
   const [expanded, setExpanded] = useState(null);
   if (!Array.isArray(mappings) || !mappings.length) return null;
-  const byName = new Map(ads.map((ad) => [ad.adName, ad]));
   const enriched = mappings.map((mapping) => {
-    const matchedAds = (mapping.ad_names || []).map((name) => byName.get(name)).filter(Boolean);
+    const matchedAds = matchInsightAds(mapping, ads);
     const spend = matchedAds.reduce((sum, ad) => sum + (ad.spend || 0), 0);
     const purchases = matchedAds.reduce((sum, ad) => sum + (ad.purchases || 0), 0);
     return { ...mapping, matchedAds, spend, cpa: purchases > 0 ? spend / purchases : null };
   }).sort((x, y) => y.spend - x.spend);
-  const total = enriched.reduce((sum, item) => sum + item.spend, 0);
-  return <InsightSection title="Customer personas" tone="dark"><div className="space-y-2">{enriched.map((persona, index) => {
+  const coveredAds = new Map(enriched.flatMap(item => item.matchedAds.map(ad => [ad.adId, ad])));
+  const total = [...coveredAds.values()].reduce((sum, ad) => sum + (ad.spend || 0), 0);
+  return <InsightSection title="Customer personas" tone="dark"><p className="mb-3 text-xs text-neutral-400">Personas are inferred from ad content. Share is of mapped ad spend; ads may support more than one persona, so shares can exceed 100% combined.</p><div className="space-y-2">{enriched.map((persona, index) => {
     const open = expanded === index; const share = total > 0 ? (persona.spend / total) * 100 : 0;
     const title = persona.persona_short_title || persona.matched_research_persona || persona.persona || `Persona ${index + 1}`;
     return <div key={`${title}-${index}`} className="overflow-hidden rounded-xl border border-neutral-200 bg-white"><button type="button" onClick={() => setExpanded(open ? null : index)} className="flex w-full gap-3 p-3 text-left">

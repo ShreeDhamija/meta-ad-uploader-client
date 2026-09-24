@@ -13,6 +13,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ErrorBanner } from "../ui";
 import { useJobRunner } from "../JobsContext";
 import { toast } from "sonner";
+import ModelSelection from "../ModelSelection";
+import "../models.css";
 
 const CREATIVITY = [
   { key: "inspired", label: "Inspired (fresh concept)" },
@@ -92,6 +94,13 @@ function useGenerationHistory(productId, kind) {
 
 export default function GenerateView({ ctx }) {
   const { selectedProductId } = ctx;
+  const [modelCatalog, setModelCatalog] = useState(null);
+  const [imageSelection, setImageSelection] = useState(null);
+  useEffect(() => {
+    let active = true;
+    creativeApi.getModels().then(data => { if (active) { setModelCatalog(data); setImageSelection(data.resolved.selections["image.generate"]); } }).catch(error => toast.error(error.message));
+    return () => { active = false; };
+  }, []);
   const [mode, setMode] = useState(() => {
     try {
       const saved = localStorage.getItem(`cs-generate-mode:${ctx.userId}`);
@@ -204,6 +213,7 @@ export default function GenerateView({ ctx }) {
       }
       const { jobId } = await creativeApi.runGenerate({
         productId: selectedProductId,
+        ...(imageSelection ? { aiSelections: { "image.generate": imageSelection } } : {}),
         generationMode,
         brandExampleAdIds: visualSelection?.brandExampleAdIds,
         productAssetIds: visualSelection?.productAssetIds,
@@ -378,6 +388,7 @@ export default function GenerateView({ ctx }) {
                   />
                 ))}
                 <SidebarNumber label="Variations" value={variationCount} min={1} max={8} onChange={setVariationCount} />
+                {modelCatalog && <ModelSelection catalog={modelCatalog} operationId="image.generate" value={imageSelection} onChange={setImageSelection} label="Image model" disabled={generationActive} />}
                 <SidebarSelect label="Creativity" value={creativityMode} onChange={setCreativityMode} options={CREATIVITY} />
                 <SidebarSelect label="Aspect Ratio" value={aspectRatio || "reference"} onChange={(value) => setAspectRatio(value === "reference" ? "" : value)} options={ASPECT} />
                 {aspectRatio.includes("+") && <p className="text-xs text-stone-500">Each variation produces a matching pair ({variationCount * 2} images total).</p>}
