@@ -2,8 +2,7 @@
 // …) run on the backend and never stop when the user switches tabs — but the
 // per-view pollers used to unmount and lose their progress display. This
 // provider lifts polling above the view switch: it tracks job ids centrally,
-// polls them every 2s, persists active ones to localStorage (so progress
-// survives a tab switch AND a full refresh), and exposes friendly milestone
+// polls them every 2s, restores history from the database, and exposes milestone
 // labels per job type. No SSE — just resilient polling.
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
@@ -11,6 +10,7 @@ import PropTypes from "prop-types";
 import { Loader2, CheckCircle2, AlertTriangle } from "lucide-react";
 import { creativeApi } from "@/lib/creativeApi";
 import { toast } from "sonner";
+import { isCurrentSessionResult } from "./job-notifications";
 
 const POLL_MS = 2000;
 const JobsContext = createContext(null);
@@ -39,6 +39,8 @@ export function JobsProvider({ children, userId }) {
   const olderLoaded = useRef(false);
   const loadingOlder = useRef(false);
   const previousStatuses = useRef({});
+  const sessionStartedAt = useRef(Date.now());
+  const sessionJobs = useRef(new Set());
   const [readResults, setReadResults] = useState(() => {
     try { return new Set(JSON.parse(localStorage.getItem(`cs-read-jobs:${userId}`) || "[]")); } catch { return new Set(); }
   });
@@ -46,7 +48,7 @@ export function JobsProvider({ children, userId }) {
 
   const resultKey = (job) => `${job.id}:${jobOutcome(job)}`;
   const unreadResults = Object.values(jobs).filter((job) =>
-    jobOutcome(job) && !readResults.has(resultKey(job)));
+    jobOutcome(job) && isCurrentSessionResult(job, sessionStartedAt.current, sessionJobs.current) && !readResults.has(resultKey(job)));
   const unreadStatus = unreadResults.some((job) => jobOutcome(job) === "failed") ? "failed" : unreadResults.length ? "completed" : null;
   const markResultsRead = useCallback(() => {
     setReadResults((current) => {
@@ -73,6 +75,7 @@ export function JobsProvider({ children, userId }) {
   }, [jobs]);
 
   const mergeJobs = useCallback((rows) => {
+    for (const row of rows) if (ACTIVE(row.status)) sessionJobs.current.add(row.id);
     setJobs((previous) => {
       const next = { ...previous };
       for (const row of rows) {
@@ -108,6 +111,7 @@ export function JobsProvider({ children, userId }) {
 
   const track = useCallback((id, meta = {}) => {
     if (!id) return;
+    sessionJobs.current.add(id);
     setJobs((previous) => ({ ...previous, [id]: previous[id]
       ? { ...previous[id], meta: { ...previous[id].meta, ...Object.fromEntries(Object.entries(meta).filter(([, value]) => value != null)) } }
       : { id, status: "queued", progress: {}, meta, startedAt: Date.now() } }));

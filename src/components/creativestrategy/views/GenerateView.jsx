@@ -350,6 +350,13 @@ export default function GenerateView({ ctx }) {
       {mode === "statics" && (
         <GenerateWorkspace
           isStatics
+          sidebarFooter={(              <div className="space-y-3">
+                {visualSelection?.conceptReferenceIds.length > variationCount && <p className="text-xs text-amber-800">Increase variations to use all selected concept references.</p>}
+                <button type="button" onClick={runStatics} disabled={bulkBusy || !selectedProductId || !visualSelection?.ready || visualSelection.productId !== selectedProductId || generationActive || visualSelection.conceptReferenceIds.length > variationCount} className="cs-primary-button w-full">
+                  Generate Ads
+                </button>
+              </div>
+          )}
           footer={!generationActive && (imageItems.length > 0 || bulkMessage) && <div className="cs-generate-bulk-actions">
             {bulkAction && <label className="mr-auto flex items-center gap-2 text-xs">
               <Checkbox className="cs-generate-checkbox" checked={nextStaticOffset == null && items.length > 0 && items.every((item) => selectedImages.has(item.id)) ? true : selectedImages.size > 0 ? "indeterminate" : false} onCheckedChange={(checked) => selectAllImages(checked === true)} disabled={bulkBusy || generatedLoading} />
@@ -414,12 +421,7 @@ export default function GenerateView({ ctx }) {
                 )}
                 <VisualInspiration key={selectedProductId || "none"} productId={selectedProductId} clientId={ctx.selectedBrandId} onChange={handleVisualChange} />
               </div>
-              <div className="mt-auto space-y-3 pt-5">
-                {visualSelection?.conceptReferenceIds.length > variationCount && <p className="text-xs text-amber-800">Increase variations to use all selected concept references.</p>}
-                <button type="button" onClick={runStatics} disabled={bulkBusy || !selectedProductId || !visualSelection?.ready || visualSelection.productId !== selectedProductId || generationActive || visualSelection.conceptReferenceIds.length > variationCount} className="cs-primary-button w-full">
-                  {generationMode === "strategist" ? "Plan & Generate Ads" : "Generate Ads"}
-                </button>
-              </div>
+
             </>
           )}
         >
@@ -663,13 +665,14 @@ function BriefPanel({ productId }) {
   );
 }
 
-function GenerateWorkspace({ sidebar, children, isStatics = false, footer }) {
+function GenerateWorkspace({ sidebar, sidebarFooter, children, isStatics = false, footer }) {
   return (
     <div className="cs-generate-layout">
       <aside className="cs-generate-sidebar">
         <ScrollArea className="cs-generate-scroll" viewportClassName="cs-generate-viewport">
           <div className="cs-generate-sidebar-content">{sidebar}</div>
         </ScrollArea>
+        {sidebarFooter && <div className="cs-generate-sidebar-footer">{sidebarFooter}</div>}
       </aside>
       <section className={`cs-generate-canvas ${isStatics ? "is-statics" : ""}`}>
         <ScrollArea className="cs-generate-scroll" viewportClassName="cs-generate-viewport">
@@ -784,11 +787,7 @@ function GenerationGrid({ items, rate, selecting, selected, toggle, disabled }) 
       {Array.from(groups, ([key, group]) => <div key={key} className={group.length > 1 ? "cs-generate-pair" : undefined}>
         {group.sort((a, b) => Number(a.briefMeta?.aspect_ratio === "9:16") - Number(b.briefMeta?.aspect_ratio === "9:16")).map((item) => <div key={item.id}>
           <GeneratedImage item={item} rate={rate} selecting={selecting} selected={selected.has(item.id)} toggle={toggle} disabled={disabled} onPreview={setPreview} />
-          {item.briefMeta?.strategy && <div className="px-1 py-3 text-xs text-stone-600">
-            <p className="font-semibold text-stone-800">{item.briefMeta.strategy.concept_name}</p>
-            <p className="mt-1">{[item.briefMeta.strategy.persona_label, item.briefMeta.strategy.angle].filter(Boolean).join(" · ")}</p>
-            <p className="mt-1">{item.briefMeta.strategy.hypothesis}</p>
-          </div>}
+
         </div>)}
       </div>)}
     </div>
@@ -876,7 +875,7 @@ function Tag({ children }) {
 }
 
 GenerateView.propTypes = { ctx: PropTypes.object.isRequired };
-GenerateWorkspace.propTypes = { sidebar: PropTypes.node.isRequired, children: PropTypes.node.isRequired, isStatics: PropTypes.bool, footer: PropTypes.node };
+GenerateWorkspace.propTypes = { sidebarFooter: PropTypes.node, sidebar: PropTypes.node.isRequired, children: PropTypes.node.isRequired, isStatics: PropTypes.bool, footer: PropTypes.node };
 WorkspaceEmpty.propTypes = { icon: PropTypes.elementType.isRequired, title: PropTypes.string.isRequired, hint: PropTypes.string.isRequired };
 GenerateLoading.propTypes = { label: PropTypes.string.isRequired };
 SidebarSelect.propTypes = { label: PropTypes.string.isRequired, value: PropTypes.string.isRequired, onChange: PropTypes.func.isRequired, options: PropTypes.array.isRequired };

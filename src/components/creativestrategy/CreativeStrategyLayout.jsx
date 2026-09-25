@@ -2,6 +2,7 @@
 // page headings, and cross-workflow status controls are shared here.
 import doodle from "@/assets/doodle.webp";
 import rocket from "@/assets/rocket2.webp";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAppData } from "@/lib/AppContext";
@@ -65,6 +66,7 @@ export default function CreativeStrategyLayout() {
   const [productsLoading, setProductsLoading] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState(null);
   const [error, setError] = useState(null);
+  const [productError, setProductError] = useState(null);
   const [headerActionsTarget, setHeaderActionsTarget] = useState(null);
   const [headerStatusTarget, setHeaderStatusTarget] = useState(null);
   const [restoredUser, setRestoredUser] = useState(null);
@@ -163,6 +165,7 @@ export default function CreativeStrategyLayout() {
   const loadProducts = (brandId) => {
     const request = ++productRequest.current;
     setProductsLoading(true);
+    setProductError(null);
     return creativeApi
       .listProducts(brandId)
       .then((r) => {
@@ -171,7 +174,7 @@ export default function CreativeStrategyLayout() {
         setProducts(next);
         setSelectedProductId((id) => next.some((product) => product.id === id) ? id : null);
       })
-      .catch((e) => { if (request === productRequest.current) setError(e.message); })
+      .catch((e) => { if (request === productRequest.current) setProductError(e.message); })
       .finally(() => { if (request === productRequest.current) setProductsLoading(false); });
   };
 
@@ -197,19 +200,20 @@ export default function CreativeStrategyLayout() {
     }
   }, [accountsWithProducts, brandsLoaded, brandsLoading, restoredUser, userId, activeTab, selectedBrandId]);
   useEffect(() => {
-    if (!userId || restoredUser !== userId) return;
+    if (!userId || restoredUser !== userId || !brandsLoaded || brandsLoading) return;
+    setProductError(null);
     if (previousBrand.current !== selectedBrandId) setSelectedProductId(null);
     previousBrand.current = selectedBrandId;
     setProducts([]);
-    if (selectedBrandId) loadProducts(selectedBrandId);
+    if (selectedBrandId && brands.some((brand) => brand.id === selectedBrandId)) loadProducts(selectedBrandId);
     else { productRequest.current += 1; setProductsLoading(false); setSelectedProductId(null); }
-  }, [selectedBrandId, restoredUser, userId]);
+  }, [selectedBrandId, restoredUser, userId, brandsLoaded, brandsLoading, brands]);
 
   const selectedBrand = brands.find((b) => b.id === selectedBrandId) || null;
   const selectedProduct = products.find((p) => p.id === selectedProductId) || null;
   const selectorsDisabled = activeTab === "brands";
   const showProductSelector = activeTab !== "products" && activeTab !== "weekly";
-  const selectorBrands = activeTab === "brands" || activeTab === "products" ? brands : accountsWithProducts;
+  const selectorBrands = accountsWithProducts;
   const renderHeaderActions = useCallback(
     (actions) => (headerActionsTarget ? createPortal(actions, headerActionsTarget) : null),
     [headerActionsTarget],
@@ -345,6 +349,7 @@ export default function CreativeStrategyLayout() {
                     <SelectValue placeholder={brandsLoading ? "Loading Accounts…" : "Select Account"} />
                   </SelectTrigger>
                   <SelectContent className="cs-select-content bg-white">
+                    <p className="px-3 py-2 text-xs text-neutral-500">Only accounts with active products show up here.</p>
                     {selectorBrands.map((brand) => (
                       <SelectItem key={brand.id} value={brand.id}>{brand.name}</SelectItem>
                     ))}
@@ -385,17 +390,17 @@ export default function CreativeStrategyLayout() {
               <div ref={setHeaderActionsTarget} className="flex shrink-0 flex-wrap items-center justify-end gap-3" />
             </header>
 
-            <div className={cn("min-h-0 flex-1", activeTab === "generate" ? "overflow-hidden" : "overflow-auto")}>
+            <ScrollArea key={activeTab} className="min-h-0 flex-1" viewportClassName={activeTab === "generate" ? "cs-main-viewport h-full" : "h-full [&>div]:!block"}>
               <div
                 className={cn(
                   "w-full px-12 pb-12 pt-3 max-lg:px-7 max-lg:pb-7 max-lg:pt-3 max-md:px-5 max-md:pb-5 max-md:pt-3",
                   activeTab === "generate" && "flex h-full min-h-0 flex-col pb-6 max-lg:pb-5",
                 )}
               >
-                {error && <div className="mb-4 text-sm text-red-600">{error}</div>}
+                {(error || productError) && <div className="mb-4 text-sm text-red-600">{error || productError}</div>}
                 {renderView()}
               </div>
-            </div>
+            </ScrollArea>
             </div>
           </div>
         </main>

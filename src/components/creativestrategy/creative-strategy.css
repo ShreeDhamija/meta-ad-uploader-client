@@ -3291,3 +3291,9 @@ html body #root .creative-strategy button.cs-intel-ad-card.is-active {
 
 .cs-intel-funnel-bar .is-unclassified { background: #a3a3a3; }
 .cs-intel-funnel-segment.is-unclassified { background: #f0f0f0; }
+
+/* Constrain Generate inside the shared ScrollArea and keep its action visible. */
+.cs-main-viewport > div { display: flex !important; height: 100%; }
+.cs-generate-sidebar > .cs-generate-scroll { flex: 1; height: 0; }
+.cs-generate-sidebar-footer { flex-shrink: 0; padding: 16px; border-top: 1px solid #e5e5e5; }
+.cs-generate-image-card { width: 100%; max-width: 200px; }

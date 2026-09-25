@@ -1,6 +1,9 @@
 // Products under the selected brand: a card grid + a create-product dialog,
 // plus a single product editor containing context and brand guidelines. Meta
 // ad account is inherited from the brand.
+import { Button } from "@/components/ui/button";
+import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -10,7 +13,7 @@ import { creativeApi } from "@/lib/creativeApi";
 import RunModelControls from "../RunModelControls";
 import { useRunModels } from "../useRunModels";
 import { RUN_OPERATIONS } from "../run-model-operations";
-import { ArrowLeft, Box, Brain, ExternalLink, Image as ImageIcon, Pencil, Plus, Route, Star } from "lucide-react";
+import { ArrowLeft, Box, Brain, Check, ChevronDown, ExternalLink, Image as ImageIcon, Pencil, Plus, Route, Star } from "lucide-react";
 import PropTypes from "prop-types";
 import { useCallback, useEffect, useState } from "react";
 import { JobBadge, useJobRunner, useJobs } from "../JobsContext";
@@ -41,7 +44,12 @@ export default function ProductsView({ ctx }) {
     goTo,
     renderHeaderActions,
   } = ctx;
-  const models = useRunModels(selectedBrandId);
+  const [formBrandId, setFormBrandId] = useState(null);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const [accountQuery, setAccountQuery] = useState("");
+  const createBrandId = selectedBrandId || formBrandId;
+  const createBrand = ctx.brands.find((brand) => brand.id === createBrandId);
+  const models = useRunModels(createBrandId);
   const [tab, setTab] = useState("products");
   const [form, setForm] = useState({ name: "", url: "", productType: "physical" });
   const [err, setErr] = useState(null);
@@ -51,25 +59,27 @@ export default function ProductsView({ ctx }) {
 
   const add = async (e) => {
     e.preventDefault();
+    if (!createBrand) return;
     setErr(null);
     setCreating(true);
     try {
-      const response = await creativeApi.createProduct({ ...form, clientId: selectedBrandId, aiSelections: models.forRun(RUN_OPERATIONS.setup) });
+      const response = await creativeApi.createProduct({ ...form, clientId: createBrandId, aiSelections: models.forRun(RUN_OPERATIONS.setup) });
       models.reset(RUN_OPERATIONS.setup);
       if (response.product?.id) {
         setSelectedProductId(response.product.id);
         if (response.cascade?.jobId) {
           track(response.cascade.jobId, {
             kind: response.cascade.root || "ingest_context",
-            brandId: selectedBrandId,
+            brandId: createBrandId,
             productId: response.product.id,
           });
         }
       }
       setForm({ name: "", url: "", productType: "physical" });
       setAdding(false);
-      await reloadProducts();
       await reloadBrands();
+      if (selectedBrandId === createBrandId) await reloadProducts();
+      else ctx.setSelectedBrandId(createBrandId);
     } catch (e) {
       setErr(e.message);
     } finally {
@@ -91,9 +101,9 @@ export default function ProductsView({ ctx }) {
     <Tabs value={tab} onValueChange={setTab} className="space-y-7">
       {tab === "products" && (
         renderHeaderActions(
-          <Dialog open={adding} onOpenChange={setAdding}>
+          <Dialog open={adding} onOpenChange={(open) => { setAdding(open); setFormBrandId(null); setAccountQuery(""); setAccountOpen(false); setErr(null); }}>
             <DialogTrigger asChild>
-              <button disabled={!selectedBrandId} className="cs-primary-button">
+              <button className="cs-primary-button">
                 <Plus className="h-5 w-5" /> Add New Product
               </button>
             </DialogTrigger>
@@ -109,6 +119,25 @@ export default function ProductsView({ ctx }) {
                 </DialogDescription>
               </DialogHeader>
               <form onSubmit={add} className="mt-3 space-y-4">
+                {!selectedBrandId && <div className="space-y-2">
+                  <p className="text-sm font-medium text-neutral-700">Select an account first</p>
+                  <Popover open={accountOpen} onOpenChange={setAccountOpen}>
+                    <PopoverTrigger asChild><Button type="button" variant="outline" role="combobox" aria-expanded={accountOpen} disabled={creating || ctx.brandsLoading} className="w-full justify-between rounded-2xl border-gray-300 bg-white shadow hover:bg-white">
+                      <span className="truncate font-normal">{createBrand?.name || (ctx.brandsLoading ? "Loading accounts…" : "Select account")}</span><ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button></PopoverTrigger>
+                    <PopoverContent align="start" className="z-[60] w-[var(--radix-popover-trigger-width)] rounded-2xl bg-white p-0 shadow-lg">
+                      <Command shouldFilter={false} className="rounded-2xl">
+                        <CommandInput wrapperClassName="border-gray-200 bg-gray-50" placeholder="Search accounts…" value={accountQuery} onValueChange={setAccountQuery} />
+                        <CommandList className="p-1"><CommandEmpty>No accounts found.</CommandEmpty>
+                          {ctx.brands.filter((brand) => `${brand.name} ${brand.metaAdAccountId}`.toLowerCase().includes(accountQuery.trim().toLowerCase())).map((brand) => <CommandItem key={brand.id} value={brand.id} onSelect={() => { setFormBrandId(brand.id); setAccountOpen(false); setAccountQuery(""); }} className="m-1 cursor-pointer rounded-xl px-3 py-2 data-[selected=true]:bg-gray-100">
+                            <span className="min-w-0 flex-1 truncate">{brand.name}</span>{createBrandId === brand.id && <Check className="h-4 w-4 text-blue-500" />}
+                          </CommandItem>)}
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </div>}
+                {createBrand && <>
                 <Input
                   aria-label="Product name"
                   placeholder="Product name"
@@ -142,6 +171,7 @@ export default function ProductsView({ ctx }) {
                     {creating ? "Creating & starting setup…" : "Create Product & Start Setup"}
                   </button>
                 </DialogFooter>
+                </>}
               </form>
             </DialogContent>
           </Dialog>

@@ -23,7 +23,12 @@ async function request(path, { method = "GET", body, binary = false } = {}) {
   });
   if (binary && res.ok) return res.blob();
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+  if (!res.ok) {
+    const message = /^client not found$/i.test(data.error || "")
+      ? "This account is unavailable. Please select an account again."
+      : data.error || `HTTP ${res.status}`;
+    throw new Error(message);
+  }
   return data;
 }
 

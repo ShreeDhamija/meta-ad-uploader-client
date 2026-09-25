@@ -47,7 +47,7 @@ export default function JobsIndicator() {
           const description = describeJob(job);
           const failed = jobOutcome(job) === "failed";
           const done = jobOutcome(job) === "completed";
-          return <article key={job.id} className="rounded-xl bg-stone-50 p-3">
+          return <article key={job.id} className="rounded-xl border border-neutral-200 bg-stone-50 p-3">
             <div className="flex items-start gap-2">
               {done ? <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0 text-emerald-600" /> : failed ? <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-red-600" /> : <Loader2 className="h-4 w-4 mt-0.5 shrink-0 animate-spin text-blue-600" />}
               <div className="min-w-0 flex-1">

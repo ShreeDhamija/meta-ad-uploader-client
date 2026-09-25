@@ -2,7 +2,7 @@
 // creative_strategy_audit aggregates plus per-ad ad_creative_insights evidence.
 import { useCallback, useEffect, useRef, useState } from "react";
 import PropTypes from "prop-types";
-import { AlertTriangle, ChevronDown, ChevronRight, Loader2, Plus, Zap } from "lucide-react";
+import { AlertTriangle, ChevronDown, ChevronRight, Loader2, Zap } from "lucide-react";
 import { matchInsightAds, funnelBuckets } from "../insight-metrics";
 import { creativeApi } from "@/lib/creativeApi";
 import RunModelControls from "../RunModelControls";
@@ -13,14 +13,6 @@ import { Badge } from "@/components/ui/badge";
 import { humanize } from "../JsonView";
 import { EmptyState, ErrorBanner, PartialResultsNotice, ProgressiveSection } from "../ui";
 import { useJobRunner, JobBadge } from "../JobsContext";
-
-// audit keys rendered in named sections below → excluded from the generic dump.
-const NAMED_AUDIT_KEYS = new Set([
-  "messaging_themes", "persona_ad_mapping", "visual_openers", "visual_hook_trends", "messaging_trends",
-  "patterns", "top_hooks", "top_ad_grades", "angles_not_yet_tested", "untapped_angles",
-  "untapped_angles_by_persona", "prioritized_gaps", "concept_seed_list", "concept_seeds",
-  "first_test_recommendations", "creative_strategy_summary", "analysis_coverage",
-]);
 
 const money = (n) => `$${Math.round(n || 0).toLocaleString()}`;
 const mean = (arr) => (arr.length ? arr.reduce((s, x) => s + x, 0) / arr.length : null);
@@ -79,7 +71,8 @@ export default function IntelligenceView({ ctx }) {
   const a = audit || {};
   // ── Executive KPIs (computed from ads) ──
   const totalSpend = ads.reduce((s, x) => s + (x.spend || 0), 0);
-  const analyzedAds = ads.filter(x => x.primaryAngle && x.mediaDescription);
+  const analyzedAds = ads.filter(x => x.primaryAngle && x.mediaDescription
+    && (x.mediaType !== "video" || (x.transcriptStatus && x.transcriptStatus !== "none" && x.visualHookAnalysis)));
   const spendingAds = ads.filter(x => x.spend > 0);
   const analyzedSpending = analyzedAds.filter(x => x.spend > 0);
   const spendCoverage = totalSpend > 0 ? analyzedSpending.reduce((s, x) => s + x.spend, 0) / totalSpend : 0;
@@ -102,7 +95,6 @@ export default function IntelligenceView({ ctx }) {
   const patterns = Array.isArray(a.patterns) ? [...a.patterns].sort((x, y) =>
     ((y.spend_pct || 0) * 0.6 + (y.ad_count || 0) * 4) - ((x.spend_pct || 0) * 0.6 + (x.ad_count || 0) * 4)) : [];
 
-  const otherAuditEntries = Object.entries(a).filter(([k, v]) => v != null && !NAMED_AUDIT_KEYS.has(k));
   const analyzePhase = analyzeJob?.progress?.phase;
   const adWorkActive = analyzeActive && !String(analyzePhase || "").startsWith("audit");
   const auditWorkActive = analyzeActive && String(analyzePhase || "").startsWith("audit");
@@ -155,9 +147,10 @@ export default function IntelligenceView({ ctx }) {
 
       {spendingAds.length > 0 && (
         <div className="rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-xs text-neutral-600" role="status">
-          Creative analysis covers {analyzedSpending.length} of {spendingAds.length} spending ads ({Math.round(spendCoverage * 100)}% of spend). Performance metrics include all saved ads. New and rising ads are analyzed alongside top spenders on each refresh.
+          Creative analysis covers {analyzedSpending.length} of {spendingAds.length} spending ads ({Math.round(spendCoverage * 100)}% of spend). Performance metrics include all saved ads. Each refresh reuses completed analyses and processes remaining spending ads, subject to configured limits and available budget.
           {a.analysis_coverage?.sampled_ads != null && <> Strategy insights use {a.analysis_coverage.sampled_ads} analyzed ads{a.analysis_coverage.sample_method === "spend_and_evidence_diversity" ? ", selected for spend and distinct creative evidence" : ""}.</>}
-          {a.analysis_coverage?.cluster_coverage?.persona_ad_mapping?.unassigned_ads > 0 && <p className="mt-1">{a.analysis_coverage.cluster_coverage.persona_ad_mapping.unassigned_ads} sampled ads could not be assigned to a supported persona.</p>}
+          {a.analysis_coverage?.cluster_coverage?.persona_ad_mapping?.unassigned_ads > 0 && <p className="mt-1">{a.analysis_coverage.cluster_coverage.persona_ad_mapping.unassigned_ads} ads in the strategy analysis could not be assigned to a supported persona.</p>}
+          {!analyzeActive && analyzeJob?.progress?.deferred > 0 && <p className="mt-1">The last run left {analyzeJob.progress.deferred} ads for later analysis.</p>}
           {a.analysis_coverage?.stale_sections?.length > 0 && <p className="mt-1">Some insight sections are from the previous analysis while their refresh is incomplete.</p>}
         </div>
       )}
@@ -205,19 +198,12 @@ export default function IntelligenceView({ ctx }) {
 
       {fatigued.length > 0 && (
         <Block title="Fatigue alerts (frequency ≥ 3)">
-          {fatigued.map((f) => <div key={f.adId} className="text-sm text-neutral-700">{f.adName || "(unnamed)"} <span className="text-xs text-amber-600">· freq {Number(f.frequency).toFixed(1)} · {money(f.spend)}</span></div>)}
+          <div className="space-y-4">{fatigued.map((f) => <div key={f.adId}>
+            <p className="text-base font-medium text-neutral-800">{f.adName || "(unnamed)"}</p>
+            <MetricPills className="mt-2" items={[`Frequency ${Number(f.frequency).toFixed(1)}`, `${money(f.spend)} spend`]} />
+          </div>)}</div>
         </Block>
       )}
-
-      {otherAuditEntries.length > 0 && (
-        <section>
-          <div className="cs-intel-section-title"><h2>Full Creative Strategy Audit</h2><span>{otherAuditEntries.length}</span></div>
-          <div className="cs-research-intel-list">
-            {otherAuditEntries.map(([key, value]) => <AuditAccordion key={key} title={humanize(key)} data={value} />)}
-          </div>
-        </section>
-      )}
-
         </div>
       )}
     </div>
@@ -383,7 +369,8 @@ StrategicPatterns.propTypes = { patterns: PropTypes.array.isRequired };
 function TopHooksSection({ hooks }) {
   const [expanded, setExpanded] = useState(null);
   if (!hooks.length) return null;
-  return <InsightSection title="Top hooks" tone="dark">
+  return <InsightSection title="Top hooks" tone="dark" actions={<span className="text-xs text-neutral-400">{hooks.length} distinct hooks</span>}>
+    <p className="mb-3 text-xs text-neutral-400">Saved hooks with usable extracted text. Similar hooks are combined; ads without usable hook text are excluded.</p>
     <div className="cs-intel-accordion-list max-h-[720px] overflow-y-auto pr-1">{hooks.map((hook, index) => {
       const open = expanded === index;
       const formula = hook.hookFormula || {};
@@ -487,7 +474,7 @@ function FunnelBalanceSection({ ads }) {
   const activeStages = stages.filter((stage) => buckets[stage].spend > 0);
   const colors = { TOF: "is-tof", MOF: "is-mof", BOF: "is-bof", Unclassified: "is-unclassified" };
   return <InsightSection title="Funnel balance">
-    <p className="mb-3 text-xs text-neutral-400">Estimated stages from current CPM and frequency relative to this account, with CPA as a consistency check. This does not measure Meta targeting. Missing or conflicting signals remain unclassified; percentages include all spending ads.</p>
+    <p className="mb-3 text-xs text-neutral-400">Estimated stages from current CPM and frequency relative to this account. CPA is reported as performance, not used to decide audience stage. This does not measure Meta targeting. Missing or conflicting CPM/frequency signals remain unclassified; percentages include all spending ads.</p>
     <div className="cs-intel-funnel-bar">{activeStages.map((stage) => <div key={stage} className={colors[stage]} style={{ width: `${(buckets[stage].spend / total) * 100}%` }} />)}</div>
     <div className="cs-intel-funnel-breakdown">{activeStages.map((stage) => {
       const bucket = buckets[stage]; const cpa = bucket.purchases > 0 ? bucket.spend / bucket.purchases : null;
@@ -718,186 +705,6 @@ function AngleGroups({ groups, ads }) {
   );
 }
 AngleGroups.propTypes = { groups: PropTypes.object.isRequired, ads: PropTypes.array.isRequired };
-
-function AuditAccordion({ title, data }) {
-  const [open, setOpen] = useState(false);
-  const [full, setFull] = useState(false);
-  const [headerStuck, setHeaderStuck] = useState(false);
-  const stickySentinelRef = useRef(null);
-  const allEntries = auditDetailEntries(data, true);
-  const previewEntries = auditDetailEntries(data, false);
-  const hasMore = JSON.stringify(allEntries) !== JSON.stringify(previewEntries);
-
-  const toggle = () => {
-    if (open) setFull(false);
-    setOpen((current) => !current);
-  };
-
-  useEffect(() => {
-    if (!open || !stickySentinelRef.current) {
-      setHeaderStuck(false);
-      return undefined;
-    }
-
-    const sentinel = stickySentinelRef.current;
-    const root = findScrollParent(sentinel);
-    const scrollTarget = root || window;
-    let frame = null;
-    const update = () => {
-      frame = null;
-      const rootTop = root ? root.getBoundingClientRect().top : 0;
-      setHeaderStuck(sentinel.getBoundingClientRect().top <= rootTop);
-    };
-    const scheduleUpdate = () => {
-      if (frame == null) frame = window.requestAnimationFrame(update);
-    };
-
-    update();
-    scrollTarget.addEventListener("scroll", scheduleUpdate, { passive: true });
-    window.addEventListener("resize", scheduleUpdate);
-    return () => {
-      scrollTarget.removeEventListener("scroll", scheduleUpdate);
-      window.removeEventListener("resize", scheduleUpdate);
-      if (frame != null) window.cancelAnimationFrame(frame);
-    };
-  }, [open]);
-
-  return (
-    <article className={`cs-research-intel ${open ? "is-open" : ""} ${headerStuck ? "is-stuck" : ""}`}>
-      <span ref={stickySentinelRef} className="cs-research-sticky-sentinel" aria-hidden="true" />
-      <button type="button" onClick={toggle} className="cs-research-intel__header" aria-expanded={open}>
-        <div>
-          <h3>{title}</h3>
-          <p><span>{describeAuditData(data)}</span></p>
-        </div>
-        <span className="cs-research-intel__toggle"><Plus className="h-5 w-5" /></span>
-      </button>
-      {open && (
-        <div className="cs-research-intel__body">
-          <div className="cs-research-details">
-            {(full ? allEntries : previewEntries).map(([key, value]) => (
-              <section key={key} className="cs-research-detail-section">
-                <h4>{humanize(key)}</h4>
-                <AuditValue data={value} />
-              </section>
-            ))}
-          </div>
-          {hasMore && (
-            <button type="button" onClick={() => setFull((current) => !current)} className="cs-research-details-button">
-              {full ? "Show Key Details" : "View Full Details"}
-            </button>
-          )}
-        </div>
-      )}
-    </article>
-  );
-}
-AuditAccordion.propTypes = { title: PropTypes.string.isRequired, data: PropTypes.any };
-
-function describeAuditData(data) {
-  if (Array.isArray(data)) return `${data.length} items`;
-  if (data && typeof data === "object") return Object.keys(data).slice(0, 3).map(humanize).join(", ");
-  if (typeof data === "string") {
-    const parsed = parseAuditText(data);
-    if (parsed.length) return `${parsed.length} concepts`;
-  }
-  return "Strategy detail";
-}
-
-const AUDIT_PREVIEW_KEYS = /(concept.?name|angle|format|hypothesis|why.?this.?now|hook.?verbatim|success.?read|usp|unique.?selling|claim)/i;
-
-function auditDetailEntries(data, full) {
-  if (typeof data === "string") {
-    const parsed = parseAuditText(data);
-    if (parsed.length) return auditDetailEntries(parsed, full);
-  }
-  if (Array.isArray(data)) {
-    const values = full ? data : data.slice(0, 2);
-    return values.map((item, index) => {
-      const title = item && typeof item === "object"
-        ? item.concept_name || item.conceptName || item.name || item.title || `Concept ${index + 1}`
-        : `Item ${index + 1}`;
-      return [title, full ? item : pickAuditFields(item)];
-    });
-  }
-  if (data && typeof data === "object") {
-    const entries = Object.entries(data);
-    if (full) return entries;
-    const important = entries.filter(([key]) => AUDIT_PREVIEW_KEYS.test(key));
-    return (important.length ? important : entries).slice(0, 4);
-  }
-  return [["Details", data]];
-}
-
-const AUDIT_TEXT_LABELS = new Set([
-  "Angle", "Format", "Hypothesis", "Benefit Type", "Concept Name", "Success Read",
-  "Why This Now", "Hook Verbatim", "Proof Element", "Awareness Stage", "Building Blocks",
-  "Sentiment Check", "Persona Description", "Sophistication Stage", "Sophistication Framing",
-  "Expected Funnel Position",
-]);
-
-function parseAuditText(value) {
-  const records = [];
-  let record = {};
-  let activeKey = null;
-  String(value).split(/\r?\n/).forEach((rawLine) => {
-    const line = rawLine.trim();
-    if (!line) return;
-    if (AUDIT_TEXT_LABELS.has(line)) {
-      if (line === "Angle" && Object.keys(record).length) {
-        records.push(record);
-        record = {};
-      }
-      activeKey = line.toLowerCase().replace(/\s+/g, "_");
-      record[activeKey] = "";
-      return;
-    }
-    if (activeKey) record[activeKey] = record[activeKey] ? `${record[activeKey]}\n${line}` : line;
-  });
-  if (Object.keys(record).length) records.push(record);
-  return records.filter((item) => Object.values(item).some(Boolean));
-}
-
-function pickAuditFields(value) {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return value;
-  const entries = Object.entries(value);
-  const important = entries.filter(([key]) => AUDIT_PREVIEW_KEYS.test(key));
-  return Object.fromEntries((important.length ? important : entries).slice(0, 6));
-}
-
-function AuditValue({ data }) {
-  if (data == null || data === "") return <p className="cs-research-muted">—</p>;
-  if (typeof data !== "object") return <p className="whitespace-pre-wrap break-words">{String(data)}</p>;
-  if (Array.isArray(data)) {
-    if (data.length === 0) return <p className="cs-research-muted">None captured</p>;
-    return (
-      <ul className="cs-research-value-list">
-        {data.map((item, index) => <li key={index}><AuditValue data={item} /></li>)}
-      </ul>
-    );
-  }
-  return (
-    <div className="cs-research-nested">
-      {Object.entries(data).map(([key, value]) => (
-        <div key={key}>
-          <h5>{humanize(key)}</h5>
-          <AuditValue data={value} />
-        </div>
-      ))}
-    </div>
-  );
-}
-AuditValue.propTypes = { data: PropTypes.any };
-
-function findScrollParent(node) {
-  let parent = node.parentElement;
-  while (parent) {
-    const { overflowY } = window.getComputedStyle(parent);
-    if (/(auto|scroll|overlay)/.test(overflowY)) return parent;
-    parent = parent.parentElement;
-  }
-  return null;
-}
 
 function isActiveJob(job) {
   return Boolean(job && (job.status == null || job.status === "queued" || job.status === "running"));

@@ -4,6 +4,7 @@ import { creativeApi } from "@/lib/creativeApi";
 import RunModelControls from "../RunModelControls";
 import { useRunModels } from "../useRunModels";
 import { RUN_OPERATIONS } from "../run-model-operations";
+import { useJobRunner } from "../JobsContext";
 import { ViewLoading, ErrorBanner, EmptyState } from "../ui";
 import {
   Box, Check, Image as ImageIcon, Link, MessageSquareText, Palette,
@@ -34,6 +35,8 @@ const snippetRows = (value) => (Array.isArray(value) ? value : []).map((row) => 
 export default function BrandingEditor({ clientId, productId, productName }) {
   const models = useRunModels(productId);
   const [g, setG] = useState(EMPTY);
+  const [loadedGuidelines, setLoadedGuidelines] = useState(EMPTY);
+  const [refreshPending, setRefreshPending] = useState(false);
   const [assets, setAssets] = useState([]);
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState(null);
@@ -51,19 +54,22 @@ export default function BrandingEditor({ clientId, productId, productName }) {
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
-    if (!clientId) { setG(EMPTY); setLoading(false); return; }
+    if (!clientId) { setG(EMPTY); setLoadedGuidelines(EMPTY); setLoading(false); return; }
     setLoading(true);
     setErr(null);
     try {
       const r = await creativeApi.getBranding(clientId);
       const gd = r.guidelines || {};
-      setG({
+      const next = {
         primaryColors: colorRows(gd.primaryColors), secondaryColors: colorRows(gd.secondaryColors), accentColors: colorRows(gd.accentColors),
         fonts: fontRows(gd.fonts), logoUrl: gd.logoUrl || "", logoUsageRules: gd.logoUsageRules || "",
         toneOfVoice: gd.toneOfVoice || "", writingStyle: gd.writingStyle || "",
         bannedWords: gd.bannedWords || [], preferredVocabulary: gd.preferredVocabulary || [],
         reviewLanguageSnippets: snippetRows(gd.reviewLanguageSnippets), copyDocText: gd.copyDocText || "",
-      });
+      };
+      setG(next);
+      setLoadedGuidelines(next);
+      setRefreshPending(false);
       setIsHumanEdited(Boolean(gd.isHumanEdited));
     } catch (e) { setErr(e.message); } finally { setLoading(false); }
   }, [clientId]);
@@ -75,6 +81,17 @@ export default function BrandingEditor({ clientId, productId, productName }) {
   useEffect(() => { load(); }, [load]);
   useEffect(() => { loadAssets(); }, [loadAssets]);
 
+  const dirty = JSON.stringify(g) !== JSON.stringify(loadedGuidelines);
+  useJobRunner({
+    kind: "ingest_context", productId, enabled: Boolean(clientId && productId),
+    onComplete: () => setRefreshPending(true),
+  });
+  useEffect(() => {
+    // Both automatic setup and Run Ingestion save account-level guidelines.
+    // Refresh on completion, but never replace the user's unsaved draft.
+    if (refreshPending && !dirty && !saving) load();
+  }, [refreshPending, dirty, saving, load]);
+
   if (!clientId) return <EmptyState icon={Box} title="No account selected" hint="Select an account first." />;
   if (loading) return <ViewLoading label="Loading brand guidelines…" />;
 
@@ -84,6 +101,7 @@ export default function BrandingEditor({ clientId, productId, productName }) {
       await creativeApi.saveBranding({ clientId, ...g });
       setSavedAt(Date.now());
       setIsHumanEdited(true);
+      setLoadedGuidelines(g);
     } catch (e) { setErr(e.message); } finally { setSaving(false); }
   };
   const addAsset = async () => {
@@ -155,6 +173,7 @@ export default function BrandingEditor({ clientId, productId, productName }) {
             <p className="max-w-2xl text-sm leading-6 text-neutral-500">
               {isHumanEdited ? "Manually reviewed guidelines. Future ingestion will preserve your edits." : "Auto-detected from the product page. Review and refine anything the site did not expose clearly."}
             </p>
+            {refreshPending && dirty && <p className="mt-2 text-xs text-amber-700">Ingestion finished. Save your edits to keep them, or <button type="button" onClick={load} disabled={saving} className="underline">load the latest guidelines</button>.</p>}
           </div>
           <div className="flex items-center gap-3">
             {savedAt && <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700"><Check className="h-3.5 w-3.5" /> Saved</span>}
