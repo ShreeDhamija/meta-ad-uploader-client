@@ -4171,7 +4171,8 @@ export default function TikTokAdCreationForm({
         }
 
         const hasFormula = fd.adNameFormulaV2?.rawInput?.trim();
-        if (!hasFormula && !fd.adName.trim()) {
+        // Spark ads don't use an ad name (submitted as " "), so skip the check for them
+        if (fd.adType !== "SPARK" && !hasFormula && !fd.adName.trim()) {
           toast.error(`${variant.name}: ad name is required`);
           return;
         }
@@ -4580,7 +4581,7 @@ export default function TikTokAdCreationForm({
     adType !== "SPARK" && (!adTexts || adTexts.filter((t) => t.trim() !== "").length === 0);
 
   const hasFormula = adNameFormulaV2?.rawInput?.trim();
-  const isAdNameMissing = !hasFormula && !adName.trim();
+  const isAdNameMissing = adType !== "SPARK" && !hasFormula && !adName.trim();
   const isCtaMissing = !cta || cta.length === 0;
 
   const isWebsiteUrlMissing =
@@ -4708,7 +4709,8 @@ export default function TikTokAdCreationForm({
     }
 
     const hasFormula = adNameFormulaV2?.rawInput?.trim();
-    if (!hasFormula && !adName.trim()) {
+    // Spark ads don't use an ad name (submitted as " "), and the input is disabled for them
+    if (adType !== "SPARK" && !hasFormula && !adName.trim()) {
       errors.push("Ad name is required");
     }
 
@@ -7269,6 +7271,7 @@ export default function TikTokAdCreationForm({
                   )}
 
                   {!publishDisabled &&
+                    adType !== "SPARK" &&
                     !hasAdNameFormulaConfigured &&
                     adName === "Ad Generated Through Blip" && (
                       <div className="text-xs text-orange-700 text-left p-2 bg-orange-50 border border-orange-200 rounded-xl">
