@@ -4,6 +4,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import PropTypes from "prop-types";
 import { Box, Loader2, Plus } from "lucide-react";
 import { creativeApi } from "@/lib/creativeApi";
+import RunModelControls from "../RunModelControls";
+import { useRunModels } from "../useRunModels";
+import { RUN_OPERATIONS } from "../run-model-operations";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { humanize } from "../JsonView";
 import { EmptyState, ErrorBanner, PartialResultsNotice, ProgressiveSection } from "../ui";
@@ -33,6 +36,7 @@ export default function ResearchView({ ctx }) {
   const {
     selectedProduct, selectedProductId, renderHeaderActions,
   } = ctx;
+  const models = useRunModels(selectedProductId);
   const [intel, setIntel] = useState({});
   const [types, setTypes] = useState([]);
   const [err, setErr] = useState(null);
@@ -76,8 +80,8 @@ export default function ResearchView({ ctx }) {
     if (!selectedProductId) return;
     setErr(null);
     try {
-      const { jobId } = await creativeApi.runResearch(selectedProductId);
-      startResearch(jobId);
+      const { jobId } = await creativeApi.runResearch(selectedProductId, models.forRun(RUN_OPERATIONS.research));
+      startResearch(jobId); models.reset(RUN_OPERATIONS.research);
     } catch (error) { setErr(error.message); }
   };
 
@@ -87,9 +91,11 @@ export default function ResearchView({ ctx }) {
     try {
       await creativeApi.expandPersona({
         productId: selectedProductId,
+        aiSelections: models.forRun(RUN_OPERATIONS.persona),
         personaIndex: index,
         instructions: instructions || undefined,
       });
+      models.reset(RUN_OPERATIONS.persona);
       await load(selectedProductId);
     } catch (error) {
       setErr(error.message);
@@ -108,10 +114,12 @@ export default function ResearchView({ ctx }) {
     try {
       await creativeApi.expandPersona({
         productId: selectedProductId,
+        aiSelections: models.forRun(RUN_OPERATIONS.persona),
         name: addForm.name.trim(),
         description: addForm.description.trim(),
       });
       setAddForm(null);
+      models.reset(RUN_OPERATIONS.persona);
       await load(selectedProductId);
     } catch (error) {
       setErr(error.message);
@@ -147,6 +155,7 @@ export default function ResearchView({ ctx }) {
       )}
       {selectedProduct && <p className="text-xs font-normal text-neutral-400">{selectedProduct.name} · complete research usually takes 5–10 minutes</p>}
 
+      {selectedProductId && <RunModelControls models={models} operations={RUN_OPERATIONS.research} disabled={Boolean(researchActive)} />}
       <ErrorBanner message={err} />
       <PartialResultsNotice active={researchActive} completed={readyCount} total={PROGRESSIVE_RESEARCH_SECTIONS.length + 1} label="research sections" />
 
@@ -182,6 +191,7 @@ export default function ResearchView({ ctx }) {
                     rows={3}
                     className="cs-research-input"
                   />
+                  <RunModelControls models={models} operations={RUN_OPERATIONS.persona} title="Model for this persona" disabled={personaBusy === "add"} />
                   <button type="button" onClick={addPersona} disabled={personaBusy === "add"} className="cs-primary-button self-start">
                     {personaBusy === "add" && <Loader2 className="h-4 w-4 animate-spin" />}
                     {personaBusy === "add" ? "Building…" : "Build Persona"}
@@ -229,6 +239,7 @@ export default function ResearchView({ ctx }) {
       )}
 
       <PersonaDialog
+        models={models}
         persona={openPersona == null ? null : personas[openPersona]}
         index={openPersona}
         busy={openPersona != null && personaBusy === openPersona}
@@ -262,7 +273,7 @@ function PersonaCard({ persona, index, orange, onOpen }) {
   );
 }
 
-function PersonaDialog({ persona, index, busy, onOpenChange, onRefine }) {
+function PersonaDialog({ persona, index, busy, onOpenChange, onRefine, models }) {
   const [refining, setRefining] = useState(false);
   const [instructions, setInstructions] = useState("");
   const name = persona?.label || persona?.name || persona?.title || (index != null ? `Persona ${index + 1}` : "Persona");
@@ -299,6 +310,7 @@ function PersonaDialog({ persona, index, busy, onOpenChange, onRefine }) {
                     rows={3}
                     className="cs-research-input"
                   />
+                  <RunModelControls models={models} operations={RUN_OPERATIONS.persona} title="Model for this refinement" disabled={busy} />
                   <button type="button" onClick={() => onRefine(instructions)} disabled={busy} className="cs-primary-button">
                     {busy && <Loader2 className="h-4 w-4 animate-spin" />}
                     {busy ? "Refining…" : "Refine Persona"}
@@ -494,6 +506,7 @@ PersonaCard.propTypes = {
   onOpen: PropTypes.func.isRequired,
 };
 PersonaDialog.propTypes = {
+  models: PropTypes.object.isRequired,
   persona: PropTypes.object,
   index: PropTypes.number,
   busy: PropTypes.bool,

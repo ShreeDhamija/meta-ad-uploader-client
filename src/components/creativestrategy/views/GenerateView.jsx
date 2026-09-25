@@ -6,6 +6,9 @@ import { Box, ChevronLeft, ChevronRight, ClipboardList, Download, FileText, Flam
 import pLimit from "p-limit";
 import VisualInspiration from "./VisualInspiration";
 import { creativeApi } from "@/lib/creativeApi";
+import RunModelControls from "../RunModelControls";
+import { useRunModels } from "../useRunModels";
+import { RUN_OPERATIONS } from "../run-model-operations";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -13,8 +16,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ErrorBanner } from "../ui";
 import { useJobRunner } from "../JobsContext";
 import { toast } from "sonner";
-import ModelSelection from "../ModelSelection";
-import "../models.css";
 
 const CREATIVITY = [
   { key: "inspired", label: "Inspired (fresh concept)" },
@@ -94,13 +95,7 @@ function useGenerationHistory(productId, kind) {
 
 export default function GenerateView({ ctx }) {
   const { selectedProductId } = ctx;
-  const [modelCatalog, setModelCatalog] = useState(null);
-  const [imageSelection, setImageSelection] = useState(null);
-  useEffect(() => {
-    let active = true;
-    creativeApi.getModels().then(data => { if (active) { setModelCatalog(data); setImageSelection(data.resolved.selections["image.generate"]); } }).catch(error => toast.error(error.message));
-    return () => { active = false; };
-  }, []);
+  const models = useRunModels(selectedProductId);
   const [mode, setMode] = useState(() => {
     try {
       const saved = localStorage.getItem(`cs-generate-mode:${ctx.userId}`);
@@ -213,7 +208,7 @@ export default function GenerateView({ ctx }) {
       }
       const { jobId } = await creativeApi.runGenerate({
         productId: selectedProductId,
-        ...(imageSelection ? { aiSelections: { "image.generate": imageSelection } } : {}),
+        aiSelections: models.forRun(RUN_OPERATIONS.statics),
         generationMode,
         brandExampleAdIds: visualSelection?.brandExampleAdIds,
         productAssetIds: visualSelection?.productAssetIds,
@@ -227,6 +222,7 @@ export default function GenerateView({ ctx }) {
         userInputs: generationMode === "manual" && Object.keys(cleanedInputs).length ? cleanedInputs : undefined,
       });
       start(jobId);
+      models.reset(RUN_OPERATIONS.statics);
     } catch (error) {
       setErr(error.message);
     }
@@ -237,7 +233,8 @@ export default function GenerateView({ ctx }) {
     setErr(null);
     setFilling(true);
     try {
-      const response = await creativeApi.fillCopy({ productId: selectedProductId, formatSlug });
+      const response = await creativeApi.fillCopy({ productId: selectedProductId, formatSlug, aiSelections: models.forRun(RUN_OPERATIONS.fillCopy) });
+      models.reset(RUN_OPERATIONS.fillCopy);
       setUserInputs((current) => ({ ...current, ...(response.user_inputs || {}) }));
     } catch (error) {
       setErr(error.message);
@@ -388,7 +385,8 @@ export default function GenerateView({ ctx }) {
                   />
                 ))}
                 <SidebarNumber label="Variations" value={variationCount} min={1} max={8} onChange={setVariationCount} />
-                {modelCatalog && <ModelSelection catalog={modelCatalog} operationId="image.generate" value={imageSelection} onChange={setImageSelection} label="Image model" disabled={generationActive} />}
+                <RunModelControls models={models} operations={RUN_OPERATIONS.statics} disabled={Boolean(generationActive || filling)} />
+                <p className="text-xs text-stone-500">Paired portrait images use the original image’s model, quality and resolution.</p>
                 <SidebarSelect label="Creativity" value={creativityMode} onChange={setCreativityMode} options={CREATIVITY} />
                 <SidebarSelect label="Aspect Ratio" value={aspectRatio || "reference"} onChange={(value) => setAspectRatio(value === "reference" ? "" : value)} options={ASPECT} />
                 {aspectRatio.includes("+") && <p className="text-xs text-stone-500">Each variation produces a matching pair ({variationCount * 2} images total).</p>}
@@ -452,6 +450,7 @@ export default function GenerateView({ ctx }) {
 }
 
 function ScriptsPanel({ productId }) {
+  const models = useRunModels(productId);
   const [personas, setPersonas] = useState([]);
   const [personasLoading, setPersonasLoading] = useState(false);
   const [avatar, setAvatar] = useState("");
@@ -481,9 +480,11 @@ function ScriptsPanel({ productId }) {
       const response = await creativeApi.generateVideoScripts({
         productId,
         count,
+        aiSelections: models.forRun(RUN_OPERATIONS.scripts),
         selectedAvatar: avatar || undefined,
         notes: notes || undefined,
       });
+      models.reset(RUN_OPERATIONS.scripts);
       history.addBatch(response.batch);
     } catch (error) {
       setErr(error.message);
@@ -498,6 +499,7 @@ function ScriptsPanel({ productId }) {
         <>
           <div className="space-y-4">
             <p className="cs-generate-sidebar-description">Generates the requested number of concept-led Meta video scripts, each with three hook options.</p>
+            <RunModelControls models={models} operations={RUN_OPERATIONS.scripts} disabled={busy} />
             <SidebarNumber label="Count" value={count} min={1} max={8} onChange={setCount} />
             {personasLoading ? (
               <SidebarLoading label="Loading personas…" />
@@ -578,6 +580,7 @@ const BRIEF_FORMATS = [
 ];
 
 function BriefPanel({ productId }) {
+  const models = useRunModels(productId);
   const [format, setFormat] = useState("");
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
@@ -589,7 +592,8 @@ function BriefPanel({ productId }) {
     if (!productId) return;
     setErr(null); setBusy(true);
     try {
-      const data = await creativeApi.generateConceptBrief({ productId, format: format || undefined, notes: notes || undefined });
+      const data = await creativeApi.generateConceptBrief({ productId, format: format || undefined, notes: notes || undefined, aiSelections: models.forRun(RUN_OPERATIONS.brief) });
+      models.reset(RUN_OPERATIONS.brief);
       history.addBatch(data.batch);
     } catch (error) {
       setErr(error.message);
@@ -604,6 +608,7 @@ function BriefPanel({ productId }) {
         <>
           <div className="space-y-4">
             <p className="cs-generate-sidebar-description">Builds a concept-led video script or static creative brief with hooks, headlines, and production direction.</p>
+            <RunModelControls models={models} operations={RUN_OPERATIONS.brief} disabled={busy} />
             <SidebarSelect label="Format" value={format || "auto"} onChange={(value) => setFormat(value === "auto" ? "" : value)} options={BRIEF_FORMATS} />
             <SidebarInput label="Notes (optional)" type="textarea" value={notes} onChange={setNotes} placeholder="e.g. lean into the new bundle offer" />
           </div>

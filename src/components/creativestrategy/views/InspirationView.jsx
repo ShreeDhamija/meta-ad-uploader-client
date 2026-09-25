@@ -6,6 +6,9 @@ import { useEffect, useRef, useState } from "react";
 import PropTypes from "prop-types";
 import { Heart, Upload } from "lucide-react";
 import { creativeApi } from "@/lib/creativeApi";
+import RunModelControls from "../RunModelControls";
+import { useRunModels } from "../useRunModels";
+import { RUN_OPERATIONS } from "../run-model-operations";
 import { Button } from "@/components/ui/button";
 import { ViewLoading, EmptyState, ErrorBanner } from "../ui";
 import { useJobRunner, JobBadge } from "../JobsContext";
@@ -21,6 +24,7 @@ function fileToDataUrl(file) {
 
 export default function InspirationView({ ctx }) {
   const { selectedBrand, selectedBrandId, selectedProductId, renderHeaderActions } = ctx;
+  const models = useRunModels(`${selectedBrandId}:${selectedProductId}`);
   const [items, setItems] = useState([]);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
@@ -67,11 +71,13 @@ export default function InspirationView({ ctx }) {
       const fileType = file.type.startsWith("video") ? "video" : "image";
       const r = await creativeApi.uploadInspo({
         clientId: selectedBrandId,
+        aiSelections: models.forRun(RUN_OPERATIONS.inspiration),
         productId: selectedProductId || undefined,
         fileName: file.name,
         fileType,
         dataBase64: dataUrl,
       });
+      models.reset(RUN_OPERATIONS.inspiration);
       if (r.jobId) start(r.jobId);    // image → background job
       await load(selectedBrandId);    // video → already analyzed
     } catch (e2) { setErr(e2.message); }
@@ -83,6 +89,7 @@ export default function InspirationView({ ctx }) {
       {headerAction}
       <input ref={fileRef} type="file" accept="image/*,video/*" onChange={onPick} className="hidden" />
       <span className="text-sm text-neutral-400">{selectedBrand?.name} · image analyzes in background, video inline (not stored)</span>
+      <RunModelControls models={models} operations={RUN_OPERATIONS.inspiration} title="Models for the next reference" disabled={busy} />
       <ErrorBanner message={err} />
 
       {loading && items.length === 0 ? <ViewLoading label="Loading references…" /> : items.length === 0 ? (

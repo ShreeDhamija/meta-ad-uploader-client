@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import PropTypes from "prop-types";
 import { creativeApi } from "@/lib/creativeApi";
+import RunModelControls from "../RunModelControls";
+import { useRunModels } from "../useRunModels";
+import { RUN_OPERATIONS } from "../run-model-operations";
 import { ViewLoading, ErrorBanner, EmptyState } from "../ui";
 import {
   Box, Check, Image as ImageIcon, Link, MessageSquareText, Palette,
@@ -29,6 +32,7 @@ const snippetRows = (value) => (Array.isArray(value) ? value : []).map((row) => 
 });
 
 export default function BrandingEditor({ clientId, productId, productName }) {
+  const models = useRunModels(productId);
   const [g, setG] = useState(EMPTY);
   const [assets, setAssets] = useState([]);
   const [saving, setSaving] = useState(false);
@@ -132,7 +136,8 @@ export default function BrandingEditor({ clientId, productId, productName }) {
     if (!productId) return;
     setErr(null); setImportMsg(null); setImporting(true);
     try {
-      const r = await creativeApi.importBrandAssets(productId, scrapeUrl.trim() || undefined);
+      const r = await creativeApi.importBrandAssets(productId, scrapeUrl.trim() || undefined, models.forRun(RUN_OPERATIONS.assets));
+      models.reset(RUN_OPERATIONS.assets);
       setImportMsg(r.message || `Imported ${r.imported} · skipped ${r.skipped} of ${r.total_candidates} candidates`);
       loadAssets();
     } catch (e) { setErr(e.message); } finally { setImporting(false); }
@@ -228,6 +233,7 @@ export default function BrandingEditor({ clientId, productId, productName }) {
               <button type="button" onClick={addAsset} disabled={!newAsset.assetUrl.trim()} className="rounded-xl border border-[#6c3403]/20 px-4 py-2 text-sm font-semibold text-[#3b170b] disabled:opacity-40">Add URL</button>
             </div>
 
+            <RunModelControls models={models} operations={RUN_OPERATIONS.assets} title="Model for the next auto-import" disabled={importing} />
             <div className="grid gap-3 lg:grid-cols-[1fr_auto_auto]">
               <input value={scrapeUrl} onChange={(e) => setScrapeUrl(e.target.value)} placeholder="Page URL (blank for auto-import = product URL)" className={INPUT} />
               <button type="button" onClick={doScrape} disabled={scraping || !scrapeUrl.trim()} className="rounded-xl border border-[#6c3403]/20 px-4 py-2 text-sm font-semibold text-[#3b170b] disabled:opacity-40">{scraping ? "Scanning…" : "Review images"}</button>

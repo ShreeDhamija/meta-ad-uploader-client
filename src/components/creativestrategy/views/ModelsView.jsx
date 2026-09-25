@@ -82,20 +82,21 @@ export default function ModelsView({ ctx }) {
     </div>
     {error && <div role="alert" className="cs-model-error">{error}</div>}{notice && <div role="status" className="cs-model-notice"><Check size={16} />{notice}</div>}
     {tab === "defaults" ? <>
-      <div className="cs-model-toolbar"><p>Applies across your brands. Running jobs keep their original choices.</p><label className="cs-model-toggle"><input type="checkbox" checked={advanced} onChange={e => setAdvanced(e.target.checked)} /> Per-operation controls</label></div>
+      <div className="cs-model-toolbar"><p>Save defaults across your brands, or override models for an individual run on its page. Running jobs keep their original choices.</p><label className="cs-model-toggle"><input type="checkbox" checked={advanced} onChange={e => setAdvanced(e.target.checked)} /> Show every task</label></div>
       <div className="cs-model-group-grid">{Object.entries(GROUPS).map(([group, label]) => {
         const ops = catalog.operations.filter(op => op.group === group && op.id !== "image.edit");
         const common = catalog.models.filter(m => ops.every(op => op.models.includes(m.id)));
         const uniform = ops.every(op => draft[op.id]?.model === draft[ops[0].id]?.model);
         return <section className="cs-model-card" key={group}><div className="cs-model-card-heading"><h3>{label}</h3><span>{ops.length} operations</span></div>
-          <label className="cs-model-group-select"><span>Default model</span><select disabled={busy} value={uniform ? draft[ops[0].id]?.model : ""} onChange={e => {
+          <label className="cs-model-group-select"><span>Apply one model to all {label.toLowerCase()} tasks</span><select disabled={busy} value={uniform ? draft[ops[0].id]?.model : ""} onChange={e => {
             const model = catalog.models.find(m => m.id === e.target.value);
             setDraft(current => ({ ...current, ...Object.fromEntries(ops.map(op => [op.id, defaultSelection(model, op)])) }));
-          }}><option value="" disabled>Mixed selections</option>{common.map(m => <option key={m.id} value={m.id} disabled={m.availability === "missing_credentials"}>{m.label}{m.availability === "missing_credentials" ? " — key required" : ""}</option>)}</select></label>
+          }}><option value="" disabled>Different models by task</option>{common.map(m => <option key={m.id} value={m.id} disabled={m.availability === "missing_credentials"}>{m.label}{m.availability === "missing_credentials" ? " — key required" : ""}</option>)}</select></label>
+          <p className="cs-model-help">This group choice replaces the model and settings for every task in this group. Changes take effect when you save.</p>
           {group === "images" && <p className="cs-model-help">Paired portrait edits keep the model, quality and resolution used for the original image.</p>}
           {group === "analysis" && <p className="cs-model-help">Group choices support video and audio. Individual text and image tasks offer more providers.</p>}
           {group === "strategy" && <p className="cs-model-help">The weekly tool loop uses Claude. Other strategy tasks also support Gemini and OpenAI.</p>}
-          {(advanced || group === "images") && <div className="cs-model-operation-list">{ops.map(op => <ModelSelection key={op.id} catalog={catalog} operationId={op.id} label={op.label} value={draft[op.id]} disabled={busy} onChange={value => setDraft(current => ({ ...current, [op.id]: value }))} />)}</div>}
+          {(advanced || group === "images" || group === "strategy") && <div className="cs-model-operation-list">{ops.map(op => <ModelSelection key={op.id} catalog={catalog} operationId={op.id} label={op.label} value={draft[op.id]} disabled={busy} onChange={value => setDraft(current => ({ ...current, [op.id]: value }))} />)}</div>}
         </section>;
       })}</div>
       <div className="cs-model-save"><button className="cs-model-primary" disabled={busy} onClick={() => act(save)}>{busy ? "Saving…" : "Save as my default"}<ArrowRight size={16} /></button>

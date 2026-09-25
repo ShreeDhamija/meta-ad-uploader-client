@@ -7,6 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { creativeApi } from "@/lib/creativeApi";
+import RunModelControls from "../RunModelControls";
+import { useRunModels } from "../useRunModels";
+import { RUN_OPERATIONS } from "../run-model-operations";
 import { ArrowLeft, Box, Brain, ExternalLink, Image as ImageIcon, Pencil, Plus, Route, Star } from "lucide-react";
 import PropTypes from "prop-types";
 import { useCallback, useEffect, useState } from "react";
@@ -38,6 +41,7 @@ export default function ProductsView({ ctx }) {
     goTo,
     renderHeaderActions,
   } = ctx;
+  const models = useRunModels(selectedBrandId);
   const [tab, setTab] = useState("products");
   const [form, setForm] = useState({ name: "", url: "", productType: "physical" });
   const [err, setErr] = useState(null);
@@ -50,7 +54,8 @@ export default function ProductsView({ ctx }) {
     setErr(null);
     setCreating(true);
     try {
-      const response = await creativeApi.createProduct({ ...form, clientId: selectedBrandId });
+      const response = await creativeApi.createProduct({ ...form, clientId: selectedBrandId, aiSelections: models.forRun(RUN_OPERATIONS.setup) });
+      models.reset(RUN_OPERATIONS.setup);
       if (response.product?.id) {
         setSelectedProductId(response.product.id);
         if (response.cascade?.jobId) {
@@ -130,6 +135,7 @@ export default function ProductsView({ ctx }) {
                     ))}
                   </SelectContent>
                 </Select>
+                <RunModelControls models={models} operations={RUN_OPERATIONS.setup} title="Models for this product setup" disabled={creating} />
                 <ErrorBanner message={err} />
                 <DialogFooter>
                   <button type="submit" disabled={!form.name.trim() || !form.url.trim() || creating} className="cs-primary-button cs-modal-submit w-full">
@@ -249,6 +255,7 @@ ProductEditorNav.propTypes = { onBack: PropTypes.func.isRequired };
 // Context editor — per-category manual intel + "Run ingestion" (scrape the
 // product URL to auto-fill).
 function ContextEditor({ productId, productName, productUrl, renderHeaderActions }) {
+  const models = useRunModels(productId);
   const [intel, setIntel] = useState({});
   const [drafts, setDrafts] = useState({});
   const [savingType, setSavingType] = useState(null);
@@ -292,8 +299,9 @@ function ContextEditor({ productId, productName, productUrl, renderHeaderActions
   const ingest = async () => {
     setErr(null);
     try {
-      const { jobId } = await creativeApi.runIngest(productId);
+      const { jobId } = await creativeApi.runIngest(productId, models.forRun(RUN_OPERATIONS.ingestion));
       startIngest(jobId);
+      models.reset(RUN_OPERATIONS.ingestion);
     } catch (e) {
       setErr(e.message);
     }
@@ -316,6 +324,7 @@ function ContextEditor({ productId, productName, productUrl, renderHeaderActions
         </div>
       )}
 
+      {productId && <RunModelControls models={models} operations={RUN_OPERATIONS.ingestion} disabled={["queued", "running"].includes(ingestJob?.status)} />}
       {!productId ? (
         <EmptyState icon={Box} title="No product selected" hint="Select a product above to edit its context." />
       ) : loading ? (

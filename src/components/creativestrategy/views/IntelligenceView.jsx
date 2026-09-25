@@ -5,6 +5,9 @@ import PropTypes from "prop-types";
 import { AlertTriangle, ChevronDown, ChevronRight, Loader2, Plus, Zap } from "lucide-react";
 import { matchInsightAds, funnelBuckets } from "../insight-metrics";
 import { creativeApi } from "@/lib/creativeApi";
+import RunModelControls from "../RunModelControls";
+import { useRunModels } from "../useRunModels";
+import { RUN_OPERATIONS } from "../run-model-operations";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { humanize } from "../JsonView";
@@ -27,6 +30,7 @@ export default function IntelligenceView({ ctx }) {
   const {
     selectedProductId, renderHeaderActions,
   } = ctx;
+  const models = useRunModels(selectedProductId);
   const [ads, setAds] = useState([]);
   const [audit, setAudit] = useState(null);
   const [err, setErr] = useState(null);
@@ -69,7 +73,7 @@ export default function IntelligenceView({ ctx }) {
   const run = async () => {
     if (!selectedProductId) return;
     setErr(null);
-    try { const { jobId } = await creativeApi.runInsights(selectedProductId); startAnalyze(jobId); }
+    try { const { jobId } = await creativeApi.runInsights(selectedProductId, models.forRun(RUN_OPERATIONS.intelligence)); startAnalyze(jobId); models.reset(RUN_OPERATIONS.intelligence); }
     catch (e) { setErr(e.message); }
   };
   const a = audit || {};
@@ -132,6 +136,10 @@ export default function IntelligenceView({ ctx }) {
         </div>
         </div>
       )}
+      {selectedProductId && <>
+        <RunModelControls models={models} operations={RUN_OPERATIONS.intelligence} disabled={Boolean(analyzeActive)} />
+        <p className="text-xs text-neutral-500">Model choices apply to new analyses and the next audit. Completed ad analyses are reused.</p>
+      </>}
       <ErrorBanner message={err} />
       <PartialResultsNotice active={analyzeActive} completed={insightReadyCount} total={8} label="insight sections" />
 

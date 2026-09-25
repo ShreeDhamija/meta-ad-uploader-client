@@ -4,6 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import PropTypes from "prop-types";
 import { Archive, BookOpen, Box, Check, Copy, Loader2, Sparkles } from "lucide-react";
 import { creativeApi } from "@/lib/creativeApi";
+import RunModelControls from "../RunModelControls";
+import { useRunModels } from "../useRunModels";
+import { RUN_OPERATIONS } from "../run-model-operations";
 import { ViewLoading, EmptyState, ErrorBanner } from "../ui";
 import { useJobRunner, JobBadge } from "../JobsContext";
 
@@ -23,6 +26,7 @@ export default function LibraryView({ ctx }) {
   const {
     selectedProductId, renderHeaderActions,
   } = ctx;
+  const models = useRunModels(selectedProductId);
   const [items, setItems] = useState([]);
   const [err, setErr] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -56,8 +60,8 @@ export default function LibraryView({ ctx }) {
     if (!selectedProductId) return;
     setErr(null);
     try {
-      const { jobId } = await creativeApi.runLibrary(selectedProductId);
-      start(jobId);
+      const { jobId } = await creativeApi.runLibrary(selectedProductId, models.forRun(RUN_OPERATIONS.library));
+      start(jobId); models.reset(RUN_OPERATIONS.library);
     } catch (error) {
       setErr(error.message);
     }
@@ -99,6 +103,7 @@ export default function LibraryView({ ctx }) {
           </button>
         </div>
       )}
+      {selectedProductId && <RunModelControls models={models} operations={RUN_OPERATIONS.library} disabled={Boolean(jobActive)} />}
       <ErrorBanner message={err} />
 
       {!selectedProductId ? (

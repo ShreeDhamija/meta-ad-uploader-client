@@ -6,6 +6,9 @@ import {
   CircleCheck, CircleX, ClipboardList, Loader2, MousePointerClick, X,
 } from "lucide-react";
 import { creativeApi } from "@/lib/creativeApi";
+import RunModelControls from "../RunModelControls";
+import { useRunModels } from "../useRunModels";
+import { RUN_OPERATIONS } from "../run-model-operations";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { EmptyState, ErrorBanner, PartialResultsNotice, ProgressiveSection } from "../ui";
 import { useJobRunner, JobBadge } from "../JobsContext";
@@ -29,6 +32,7 @@ export default function WeeklyView({ ctx }) {
   const {
     selectedBrandId, renderHeaderActions, renderHeaderStatus,
   } = ctx;
+  const models = useRunModels(selectedBrandId);
   const currentBrand = useRef(selectedBrandId);
   currentBrand.current = selectedBrandId;
   const loadRequest = useRef(0);
@@ -110,8 +114,8 @@ export default function WeeklyView({ ctx }) {
     setErr(null);
     setCompletionNotice(null);
     try {
-      const { jobId } = await creativeApi.runWeekly(selectedBrandId);
-      startWeekly(jobId);
+      const { jobId } = await creativeApi.runWeekly(selectedBrandId, models.forRun(RUN_OPERATIONS.weekly));
+      startWeekly(jobId); models.reset(RUN_OPERATIONS.weekly);
     } catch (error) {
       setErr(error.message);
     }
@@ -145,7 +149,8 @@ export default function WeeklyView({ ctx }) {
     setErr(null);
     setBriefing(id);
     try {
-      const { brief } = await creativeApi.generateBrief(id);
+      const { brief } = await creativeApi.generateBrief(id, undefined, models.forRun(RUN_OPERATIONS.weeklyBrief));
+      models.reset(RUN_OPERATIONS.weeklyBrief);
       if (currentBrand.current !== selectedBrandId) return;
       setBriefs((current) => ({ ...current, [id]: brief }));
     } catch (error) {
@@ -223,6 +228,8 @@ export default function WeeklyView({ ctx }) {
       )}
       {ideas.length === 0 && !loading && !jobActive && !err && <p className="text-xs font-normal text-neutral-400">Needs analyzed ads and completed research</p>}
 
+      {selectedBrandId && <RunModelControls models={models} operations={RUN_OPERATIONS.weekly} disabled={Boolean(jobActive)} />}
+      {ideas.length > 0 && <RunModelControls models={models} operations={RUN_OPERATIONS.weeklyBrief} title="Models for the next idea brief" disabled={Boolean(briefing)} />}
       <ErrorBanner message={err} />
       <PartialResultsNotice active={Boolean(jobActive)} completed={0} total={1} label="concept board" />
 
