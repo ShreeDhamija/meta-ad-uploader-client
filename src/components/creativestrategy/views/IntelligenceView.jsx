@@ -156,7 +156,7 @@ export default function IntelligenceView({ ctx }) {
       )}
       <FailedDownloadsBanner ads={failedDownloads} total={analyzedAds.length} />
       {patterns.length > 0 ? <StrategicPatterns patterns={patterns} /> : <ProgressiveSection title="Strategic patterns by spend" active={auditWorkActive} />}
-      {topHooks.length > 0 ? <TopHooksSection hooks={topHooks} /> : <ProgressiveSection title="Top hooks" active={adWorkActive} cards={2} />}
+      {topHooks.length > 0 ? <TopHooksSection key={selectedProductId} hooks={topHooks} /> : <ProgressiveSection title="Top hooks" active={adWorkActive} cards={2} />}
       {Array.isArray(a.messaging_themes) && a.messaging_themes.length > 0
         ? <MessagingThemesSection themes={a.messaging_themes} ads={ads} />
         : <ProgressiveSection title="Messaging themes" active={auditWorkActive} cards={2} />}
@@ -368,10 +368,12 @@ StrategicPatterns.propTypes = { patterns: PropTypes.array.isRequired };
 
 function TopHooksSection({ hooks }) {
   const [expanded, setExpanded] = useState(null);
+  const [showAll, setShowAll] = useState(false);
+  const visibleHooks = showAll ? hooks : hooks.slice(0, 20);
   if (!hooks.length) return null;
-  return <InsightSection title="Top hooks" tone="dark" actions={<span className="text-xs text-neutral-400">{hooks.length} distinct hooks</span>}>
+  return <InsightSection title="Top hooks" tone="dark" actions={<span className="text-xs text-neutral-400">{visibleHooks.length < hooks.length ? `${visibleHooks.length} of ${hooks.length} distinct hooks` : `${hooks.length} distinct hooks`}</span>}>
     <p className="mb-3 text-xs text-neutral-400">Saved hooks with usable extracted text. Similar hooks are combined; ads without usable hook text are excluded.</p>
-    <div className="cs-intel-accordion-list max-h-[720px] overflow-y-auto pr-1">{hooks.map((hook, index) => {
+    <div className="cs-intel-accordion-list max-h-[720px] overflow-y-auto pr-1">{visibleHooks.map((hook, index) => {
       const open = expanded === index;
       const formula = hook.hookFormula || {};
       const primaryCopy = hook.adsManagerCopy || {};
@@ -434,6 +436,15 @@ function TopHooksSection({ hooks }) {
         </div>}
       </div>;
     })}</div>
+    {hooks.length > 20 && <button
+      type="button"
+      className="mt-4 rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-400"
+      aria-expanded={showAll}
+      onClick={() => {
+        if (showAll && expanded >= 20) setExpanded(null);
+        setShowAll((current) => !current);
+      }}
+    >{showAll ? "Show less" : `See more (${hooks.length - 20} more)`}</button>}
   </InsightSection>;
 }
 TopHooksSection.propTypes = { hooks: PropTypes.array.isRequired };
