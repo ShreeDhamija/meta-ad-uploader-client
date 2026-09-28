@@ -4,6 +4,7 @@ import SplitAdDataImage from "@/assets/onboarding/SplitAdData.webp"
 import AIGroupingImage from "@/assets/onboarding/AIGrouping.webp"
 import JobQueueingImage from "@/assets/onboarding/JobQueueing.webp"
 import AnalyticsPopup from "@/assets/onboarding/AnalyticsPopup.webp"
+import TikTok from "@/assets/onboarding/TikTok.webp"
 
 // Cards added on/before this date are treated as already-seen for users who
 // completed legacy onboarding (hasSeenOnboarding=true). Only future cards
@@ -72,6 +73,15 @@ export const ONBOARDING_CARDS = [
             label: "Go to Analytics",
             path: "/analytics",
         },
+    },
+    {
+        id: "tiktok",
+        title: "TikTok",
+        image: TikTok,
+        heading: "TikTok Launcher",
+        body: "Launch ads for your tiktok account just like Meta by linking it through preferences!",
+        addedAt: "2026-05-06",
+        existingUsersOnly: false,
     },
 ]
 
