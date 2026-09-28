@@ -49,6 +49,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuth } from "@/lib/AuthContext";
+import { partnersCacheGeneration, partnersCacheKey, readPartnersCache, writePartnersCache } from "@/lib/dataCache";
 import { deleteCopyTemplates } from "@/lib/deleteCopyTemplate";
 import { cleanupPublishedDraftMedia, createDraftShareUrl, listDrafts, refreshDraftMediaUrl } from "@/lib/draftApi";
 import { resizeOversizedImages } from "@/lib/resizeOversizedImage";
@@ -1112,53 +1113,78 @@ const extractFolderId = (url) => {
   return idMatch ? idMatch[0] : null;
 };
 
-/**
- * Hook to fetch approved partnership ad partners for a given Instagram account
- */
-const usePartnershipAdPartners = (instagramAccountId, pageId) => {
-  const [partners, setPartners] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
+function usePartnershipAdPartners(instagramAccountId, pageId) {
+  const { userId } = useAuth();
+  const cacheKey = partnersCacheKey(API_BASE_URL, userId, pageId, instagramAccountId);
+  const [state, setState] = useState({ key: null, partners: [], isLoading: false, error: null });
+  const activeRequest = useRef(null);
 
-  const fetchPartners = useCallback(async () => {
-    // Skip if missing required params
-    if (!instagramAccountId || !pageId) {
-      setPartners([]);
+  const fetchPartners = useCallback(async (force = false) => {
+    activeRequest.current?.abort();
+    const controller = new AbortController();
+    activeRequest.current = controller;
+    const generation = partnersCacheGeneration();
+    const isCurrent = () => !controller.signal.aborted && generation === partnersCacheGeneration();
+
+    if (!cacheKey) {
+      setState({ key: cacheKey, partners: [], isLoading: false, error: null });
       return;
     }
-
-    setIsLoading(true);
-    setError(null);
+    setState({ key: cacheKey, partners: [], isLoading: true, error: null });
 
     try {
+      if (!force) {
+        const cached = await readPartnersCache(cacheKey);
+        if (!isCurrent()) return;
+        if (cached !== null) {
+          setState({ key: cacheKey, partners: cached, isLoading: false, error: null });
+          return;
+        }
+      }
+
       const response = await axios.get(`${API_BASE_URL}/auth/partnership-ads/partners`, {
         params: { instagramAccountId, pageId },
         withCredentials: true,
+        signal: controller.signal,
       });
-
-      // Map to cleaner format
-      const approvedPartners = (response.data.data || []).map((partner) => ({
+      if (!isCurrent()) return;
+      if (!response.data.success || !Array.isArray(response.data.data)) {
+        throw new Error('Failed to fetch partners');
+      }
+      const partners = response.data.data.map((partner) => ({
         id: partner.id,
         creatorIgId: partner.creator_ig_id,
         creatorUsername: partner.creator_username,
         creatorFbPageId: partner.creator_fb_page_id,
       }));
-
-      setPartners(approvedPartners);
+      setState({ key: cacheKey, partners, isLoading: false, error: null });
+      // The server returns only after all pages succeed. Failed refreshes never
+      // replace the last complete cached list or extend its original expiry.
+      void writePartnersCache(cacheKey, partners, generation);
     } catch (err) {
-      setError(err.response?.data?.error || "Re-authenticate the app and approve additional permissions to make partnership ads");
-      setPartners([]);
-    } finally {
-      setIsLoading(false);
+      if (!isCurrent()) return;
+      setState({
+        key: cacheKey,
+        partners: [],
+        isLoading: false,
+        error: err.response?.data?.error || 'Failed to fetch partners. Please refresh to try again.',
+      });
     }
-  }, [instagramAccountId, pageId]);
+  }, [cacheKey, instagramAccountId, pageId]);
 
   useEffect(() => {
     fetchPartners();
+    return () => activeRequest.current?.abort();
   }, [fetchPartners]);
 
-  return { partners, isLoading, error, refetch: fetchPartners };
-};
+  const refetch = useCallback(() => fetchPartners(true), [fetchPartners]);
+  // Never show the previous account's partners while the new effect starts.
+  const current = state.key === cacheKey
+    ? state
+    : { partners: [], isLoading: Boolean(cacheKey), error: null };
+  return { partners: current.partners, isLoading: current.isLoading, error: current.error, refetch };
+}
+
 
 const ErrorFileName = ({ adName, fileName }) => {
   const [expanded, setExpanded] = useState(false);
@@ -9644,13 +9670,21 @@ export default function AdCreationForm({
                         <div className="space-y-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
                           <div className="flex items-center justify-between">
                             <Label className="text-sm font-medium text-gray-700">Select Partner Creator</Label>
-                            <RefreshCcw
-                              className={cn(
-                                "h-4 w-4 cursor-pointer transition-all duration-200",
-                                isLoadingPartners ? "text-gray-300 animate-[spin_3s_linear_infinite]" : "text-gray-500 hover:text-gray-700",
-                              )}
+                            <button
+                              type="button"
+                              aria-label="Refresh partners"
+                              title="Refresh partners"
+                              disabled={isLoadingPartners}
                               onClick={refetchPartners}
-                            />
+                              className="bg-transparent p-0 shadow-none disabled:cursor-not-allowed"
+                            >
+                              <RefreshCcw
+                                className={cn(
+                                  "h-4 w-4 transition-all duration-200",
+                                  isLoadingPartners ? "text-gray-300 animate-[spin_3s_linear_infinite]" : "text-gray-500 hover:text-gray-700",
+                                )}
+                              />
+                            </button>
                           </div>
 
                           {partnersError && (
