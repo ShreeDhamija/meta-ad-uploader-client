@@ -80,7 +80,7 @@ export const ONBOARDING_CARDS = [
         image: TikTok,
         heading: "TikTok Launcher",
         body: "Launch ads for your tiktok account just like Meta by linking it through preferences!",
-        addedAt: "2026-05-06",
+        addedAt: "2026-09-28",
         existingUsersOnly: false,
     },
 ]
