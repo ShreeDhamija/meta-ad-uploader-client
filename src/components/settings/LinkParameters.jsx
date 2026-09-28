@@ -970,7 +970,7 @@ export function LinkLabel({ link, showTitle = true }) {
     <TooltipTrigger asChild>
       <span className="flex min-w-0 flex-1 items-center gap-2 text-left">
         {showTitle && link.title?.trim() && <span className="max-w-[50%] shrink-0 truncate font-semibold text-zinc-900">{link.title.trim()}</span>}
-        <span className="truncate font-normal text-gray-600">{link.url}</span>
+        <span className="truncate font-normal text-black">{link.url}</span>
       </span>
     </TooltipTrigger>
     <TooltipContent className="z-[100] max-w-sm break-all rounded-xl bg-zinc-800 px-3 py-2 text-white">{link.title?.trim() ? `[${link.title.trim()} - ${link.url}]` : link.url}</TooltipContent>
