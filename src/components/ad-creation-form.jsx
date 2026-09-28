@@ -65,6 +65,7 @@ import {
   Ban,
   BicepsFlexed,
   Check,
+  CalendarDays,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -1116,7 +1117,7 @@ const extractFolderId = (url) => {
 function usePartnershipAdPartners(instagramAccountId, pageId) {
   const { userId } = useAuth();
   const cacheKey = partnersCacheKey(API_BASE_URL, userId, pageId, instagramAccountId);
-  const [state, setState] = useState({ key: null, partners: [], isLoading: false, error: null });
+  const [state, setState] = useState({ key: null, partners: [], isLoading: false, error: null, lastUpdated: null });
   const activeRequest = useRef(null);
 
   const fetchPartners = useCallback(async (force = false) => {
@@ -1127,17 +1128,20 @@ function usePartnershipAdPartners(instagramAccountId, pageId) {
     const isCurrent = () => !controller.signal.aborted && generation === partnersCacheGeneration();
 
     if (!cacheKey) {
-      setState({ key: cacheKey, partners: [], isLoading: false, error: null });
+      setState({ key: cacheKey, partners: [], isLoading: false, error: null, lastUpdated: null });
       return;
     }
-    setState({ key: cacheKey, partners: [], isLoading: true, error: null });
+    setState((previous) => ({
+      key: cacheKey, partners: [], isLoading: true, error: null,
+      lastUpdated: previous.key === cacheKey ? previous.lastUpdated : null,
+    }));
 
     try {
       if (!force) {
         const cached = await readPartnersCache(cacheKey);
         if (!isCurrent()) return;
         if (cached !== null) {
-          setState({ key: cacheKey, partners: cached, isLoading: false, error: null });
+          setState({ key: cacheKey, partners: cached.partners, isLoading: false, error: null, lastUpdated: cached.savedAt });
           return;
         }
       }
@@ -1157,18 +1161,20 @@ function usePartnershipAdPartners(instagramAccountId, pageId) {
         creatorUsername: partner.creator_username,
         creatorFbPageId: partner.creator_fb_page_id,
       }));
-      setState({ key: cacheKey, partners, isLoading: false, error: null });
+      const lastUpdated = Date.now();
+      setState({ key: cacheKey, partners, isLoading: false, error: null, lastUpdated });
       // The server returns only after all pages succeed. Failed refreshes never
       // replace the last complete cached list or extend its original expiry.
-      void writePartnersCache(cacheKey, partners, generation);
+      void writePartnersCache(cacheKey, partners, generation, lastUpdated);
     } catch (err) {
       if (!isCurrent()) return;
-      setState({
+      setState((previous) => ({
         key: cacheKey,
         partners: [],
         isLoading: false,
+        lastUpdated: previous.key === cacheKey ? previous.lastUpdated : null,
         error: err.response?.data?.error || 'Failed to fetch partners. Please refresh to try again.',
-      });
+      }));
     }
   }, [cacheKey, instagramAccountId, pageId]);
 
@@ -1181,8 +1187,8 @@ function usePartnershipAdPartners(instagramAccountId, pageId) {
   // Never show the previous account's partners while the new effect starts.
   const current = state.key === cacheKey
     ? state
-    : { partners: [], isLoading: Boolean(cacheKey), error: null };
-  return { partners: current.partners, isLoading: current.isLoading, error: current.error, refetch };
+    : { partners: [], isLoading: Boolean(cacheKey), error: null, lastUpdated: null };
+  return { partners: current.partners, isLoading: current.isLoading, error: current.error, lastUpdated: current.lastUpdated, refetch };
 }
 
 
@@ -1893,6 +1899,7 @@ export default function AdCreationForm({
     partners: availablePartners,
     isLoading: isLoadingPartners,
     error: partnersError,
+    lastUpdated: partnersLastUpdated,
     refetch: refetchPartners,
   } = usePartnershipAdPartners(isPartnershipAd ? instagramAccountId : null, isPartnershipAd ? pageId : null);
 
@@ -9667,9 +9674,23 @@ export default function AdCreationForm({
 
                       {/* Partner Selector (only shown when toggle is ON) */}
                       {isPartnershipAd && (
-                        <div className="space-y-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
-                          <div className="flex items-center justify-between">
-                            <Label className="text-sm font-medium text-gray-700">Select Partner Creator</Label>
+                        <div className="space-y-4 p-4 bg-gray-50 rounded-2xl border border-gray-200">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="min-w-0 space-y-0.5">
+                              <Label className="block text-sm font-medium leading-5 text-gray-700">Select Partner Creator</Label>
+                              <p className="flex items-center gap-1 text-[11px] leading-4 text-gray-400">
+                                <CalendarDays className="h-3 w-3 shrink-0" aria-hidden="true" />
+                                <span>
+                                  Last updated: {partnersLastUpdated ? (
+                                    <time dateTime={new Date(partnersLastUpdated).toISOString()}>
+                                      {new Date(partnersLastUpdated).toLocaleString(undefined, {
+                                        day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
+                                      })}
+                                    </time>
+                                  ) : "—"}
+                                </span>
+                              </p>
+                            </div>
                             <button
                               type="button"
                               aria-label="Refresh partners"

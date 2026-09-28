@@ -3,7 +3,7 @@ const TTL_MS = 1000 * 60 * 60 * 24 * 7; // 7 days
 
 const k = (name) => `${CACHE_PREFIX}${name}`;
 
-export const readCache = (name, ttlMs = TTL_MS) => {
+const readCacheEntry = (name, ttlMs = TTL_MS) => {
   try {
     const raw = localStorage.getItem(k(name));
     if (!raw) return null;
@@ -12,15 +12,17 @@ export const readCache = (name, ttlMs = TTL_MS) => {
       localStorage.removeItem(k(name));
       return null;
     }
-    return data;
+    return { data, savedAt };
   } catch {
     return null;
   }
 };
 
-export const writeCache = (name, data) => {
+export const readCache = (name, ttlMs = TTL_MS) => readCacheEntry(name, ttlMs)?.data ?? null;
+
+export const writeCache = (name, data, savedAt = Date.now()) => {
   try {
-    localStorage.setItem(k(name), JSON.stringify({ data, savedAt: Date.now() }));
+    localStorage.setItem(k(name), JSON.stringify({ data, savedAt }));
   } catch (e) {
     console.warn('Cache write failed', e);
   }
@@ -78,11 +80,11 @@ export const partnersCacheKey = (apiBase, userId, pageId, instagramAccountId) =>
 
 export const readPartnersCache = (key) => {
   if (!key) return null;
-  const partners = readCache(PARTNERS_CACHE_NAME + key, PARTNERS_TTL_MS);
-  return Array.isArray(partners) ? partners : null;
+  const entry = readCacheEntry(PARTNERS_CACHE_NAME + key, PARTNERS_TTL_MS);
+  return Array.isArray(entry?.data) ? { partners: entry.data, savedAt: entry.savedAt } : null;
 };
 
-export const writePartnersCache = (key, partners, expectedGeneration = generation) => {
+export const writePartnersCache = (key, partners, expectedGeneration = generation, savedAt = Date.now()) => {
   if (!key || expectedGeneration !== generation) return;
   // Reclaim expired partner entries across accounts before adding a complete
   // list. If storage is still full, writeCache catches the quota error and the
@@ -95,7 +97,7 @@ export const writePartnersCache = (key, partners, expectedGeneration = generatio
         if (!Array.isArray(readCache(name, PARTNERS_TTL_MS))) clearCache(name);
       });
   } catch { /* Storage can be unavailable in restricted browser contexts. */ }
-  writeCache(PARTNERS_CACHE_NAME + key, partners);
+  writeCache(PARTNERS_CACHE_NAME + key, partners, savedAt);
 };
 
 export const clearPartnersCache = () => {
