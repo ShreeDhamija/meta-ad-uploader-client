@@ -229,6 +229,7 @@ export default function Home() {
     const [pageId, setPageId] = useState("")
     const [instagramAccountId, setInstagramAccountId] = useState("")
     const [link, setLink] = useState([""])
+    const [displayLink, setDisplayLink] = useState("")
     const [customLink, setCustomLink] = useState("")
     const [destinationType, setDestinationType] = useState("website")
     const [instantExperienceId, setInstantExperienceId] = useState("")
@@ -624,6 +625,7 @@ export default function Home() {
         setPageId("");
         setInstagramAccountId("");
         setLink([""]);
+        setDisplayLink("");
         setPhoneNumber("");
         setCta("LEARN_MORE");
         setSelectedTemplate(undefined);
@@ -645,6 +647,7 @@ export default function Home() {
         const defaultLink = adAccountSettings.links?.find(link => link.isDefault);
         const linkToUse = defaultLink?.url || adAccountSettings.links?.[0]?.url || "";
         setLink([linkToUse]);
+        setDisplayLink(adAccountSettings.displayLinks?.[0] || "");
 
         setCta(adAccountSettings.defaultCTA || "LEARN_MORE");
         setPixelTrackingOverride({
@@ -672,6 +675,7 @@ export default function Home() {
         adAccountSettings.defaultPage,
         adAccountSettings.defaultInstagram,
         adAccountSettings.links,
+        adAccountSettings.displayLinks,
         adAccountSettings.defaultCTA,
         adAccountSettings.pixelTracking,
         adAccountSettings.adNameFormula,
@@ -830,6 +834,7 @@ export default function Home() {
         descriptions: cloneSnapshotValue(descriptions),
         messages: cloneSnapshotValue(messages),
         link: cloneSnapshotValue(link),
+        displayLink,
         customLink,
         destinationType,
         instantExperienceId,
@@ -878,6 +883,7 @@ export default function Home() {
         descriptions,
         messages,
         link,
+        displayLink,
         customLink,
         destinationType,
         instantExperienceId,
@@ -930,6 +936,7 @@ export default function Home() {
         setDescriptions(cloneSnapshotValue(snapshot.descriptions) || [""]);
         setMessages(cloneSnapshotValue(snapshot.messages) || [""]);
         setLink(cloneSnapshotValue(snapshot.link) || [""]);
+        setDisplayLink(snapshot.displayLink || "");
         setCustomLink(snapshot.customLink || "");
         setDestinationType(snapshot.destinationType === "instant_experience" ? "instant_experience" : "website");
         setInstantExperienceId(snapshot.instantExperienceId || "");
@@ -987,6 +994,7 @@ export default function Home() {
         setDescriptions,
         setMessages,
         setLink,
+        setDisplayLink,
         setCustomLink,
         setDestinationType,
         setInstantExperienceId,
@@ -2208,6 +2216,8 @@ export default function Home() {
                             setDescriptions={setDescriptions}
                             link={link}
                             setLink={setLink}
+                            displayLink={displayLink}
+                            setDisplayLink={setDisplayLink}
                             customLink={customLink}
                             setCustomLink={setCustomLink}
                             destinationType={destinationType}

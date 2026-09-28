@@ -1308,6 +1308,8 @@ export default function AdCreationForm({
   setDescriptions,
   link,
   setLink,
+  displayLink,
+  setDisplayLink,
   customLink,
   setCustomLink,
   destinationType,
@@ -1449,6 +1451,8 @@ export default function AdCreationForm({
   const isPlacementCustomizedSingleDescription = enablePlacementCustomization && !isCarouselAd;
   const hasPlacementCustomizationExtraDescriptions = isPlacementCustomizedSingleDescription && descriptions.length > 1;
   const renderDiffMark = (fieldKeys) => (isFormFieldModified?.(fieldKeys) ? <span className="text-red-500 font-semibold">*</span> : null);
+
+  const availableDisplayLinks = adAccountSettings?.displayLinks || [];
 
   // Local state
   const [showPostSelector, setShowPostSelector] = useState(false);
@@ -1974,6 +1978,7 @@ export default function AdCreationForm({
       descriptions,
       messages,
       link,
+      displayLink,
       customLink,
       showCustomLink,
       destinationType,
@@ -2017,6 +2022,7 @@ export default function AdCreationForm({
       descriptions,
       messages,
       link,
+      displayLink,
       customLink,
       showCustomLink,
       destinationType,
@@ -2483,6 +2489,9 @@ export default function AdCreationForm({
         descriptions: formDescriptions,
         messages: [...(variantState.messages || [""])],
         link: [...(variantState.link || [""])],
+        displayLink: availableDisplayLinks.length > 1
+          ? (availableDisplayLinks.includes(variantState.displayLink) ? variantState.displayLink : availableDisplayLinks[0])
+          : undefined,
         destinationType: variantState.destinationType === "instant_experience" ? "instant_experience" : "website",
         instantExperienceId: variantState.instantExperienceId || "",
         phoneNumber: variantState.phoneNumber || "",
@@ -2570,6 +2579,7 @@ export default function AdCreationForm({
       fileVariantMap,
       files,
       getVariantState,
+      availableDisplayLinks,
       groupVariantMap,
       importedFiles,
       importedPosts,
@@ -2602,6 +2612,7 @@ export default function AdCreationForm({
       setAddDescriptions((d.descriptions || []).some((description) => description !== ""));
       setMessages(d.messages || [""]);
       setLink(d.link || [""]);
+      setDisplayLink(d.displayLink || "");
       setDestinationType(d.destinationType === "instant_experience" ? "instant_experience" : "website");
       setInstantExperienceId(d.instantExperienceId || "");
       setPhoneNumber(d.phoneNumber || "");
@@ -2688,6 +2699,7 @@ export default function AdCreationForm({
       setIsPartnershipAd,
       setLaunchPaused,
       setLink,
+      setDisplayLink,
       setMessages,
       setNewAdSetName,
       setNewAdSetSettings,
@@ -5529,6 +5541,7 @@ export default function AdCreationForm({
       descriptions,
       messages,
       link,
+      displayLink,
       destinationType,
       instantExperienceId,
       cta,
@@ -6153,6 +6166,9 @@ export default function AdCreationForm({
         formData.append("phoneNumber", phoneNumber);
       } else if (!usesOnAdLeadFormDestination) {
         formData.append("link", linkJSON);
+        if (displayLink && destinationType !== "instant_experience" && !["FACEBOOK_PAGE", "INSTAGRAM_PROFILE", "INSTAGRAM_PROFILE_AND_FACEBOOK_PAGE"].includes(requestAdSet?.destination_type)) {
+          formData.append("displayLink", displayLink);
+        }
         formData.append("destinationType", destinationType === "instant_experience" ? "instant_experience" : "website");
         if (destinationType === "instant_experience" && instantExperienceId) {
           formData.append("instantExperienceId", instantExperienceId);
@@ -10901,6 +10917,26 @@ export default function AdCreationForm({
                             Add Card Link
                           </Button>
                         )}
+                      </div>
+                    )}
+                    {!showPhoneNumberField && destinationType !== "instant_experience" && selectedIgOrganicPosts.length === 0 && availableDisplayLinks.length > 1 && (
+                      <div className="space-y-2 pt-2">
+                        <Label htmlFor="display-link" className="flex items-center gap-2">
+                          <LinkIcon className="h-4 w-4" />
+                          Display Link {renderDiffMark("displayLink")}
+                        </Label>
+                        <Select value={displayLink || availableDisplayLinks[0]} onValueChange={setDisplayLink} disabled={!isLoggedIn}>
+                          <SelectTrigger id="display-link" className={cn("w-full", formFieldChrome)}>
+                            <SelectValue placeholder="Select a display link" />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-[300px] overflow-y-auto bg-white shadow-lg rounded-xl">
+                            {availableDisplayLinks.map(url => (
+                              <SelectItem key={url} value={url} className="cursor-pointer px-3 py-2 hover:bg-gray-100 rounded-xl mx-2 my-1">
+                                {url}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                     )}
                   </div>}

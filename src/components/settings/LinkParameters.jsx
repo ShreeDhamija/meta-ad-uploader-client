@@ -49,7 +49,7 @@ const mergeUniqueLinks = (...groups) => {
     return merged;
 };
 
-function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAccount, displayLink, setDisplayLink }) {
+function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAccount, displayLinks, setDisplayLinks }) {
     const [inputValue, setInputValue] = useState("")
     const [openIndex, setOpenIndex] = useState(null)
     // Anchor rect for the suggestions dropdown. Rendered in a portal (position: fixed)
@@ -80,7 +80,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
     const [rawUtmString, setRawUtmString] = useState("");
     const [selectedLinkIndex, setSelectedLinkIndex] = useState(null)
     const [tempUtmPairs, setTempUtmPairs] = useState([]);
-    const [enableDisplayLink, setEnableDisplayLink] = useState(false);
+    const enableDisplayLink = displayLinks.length > 0;
     // 2. TEMP HANDLERS
     const handleTempPairChange = useCallback((index, field, value) => {
         setTempUtmPairs(prev => prev.map((pair, i) => i === index ? { ...pair, [field]: value } : pair))
@@ -94,11 +94,6 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
         setShowAddForm(links.length === 0);
     }, [links.length]);
 
-    useEffect(() => {
-        if (displayLink) {
-            setEnableDisplayLink(true);
-        }
-    }, [displayLink]);
 
     const selectedLink = useMemo(() => {
         if (links.length === 0) return null;
@@ -605,8 +600,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                         checked={enableDisplayLink}
                         className="border-gray-300 w-4 h-4 rounded-md"
                         onCheckedChange={(checked) => {
-                            setEnableDisplayLink(checked);
-                            if (!checked) setDisplayLink("");
+                            setDisplayLinks(checked ? [""] : []);
                         }}
                     />
                     <label htmlFor="enableDisplayLink" className="text-sm font-semibold cursor-pointer">
@@ -615,12 +609,41 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                 </div>
 
                 {enableDisplayLink && (
-                    <Input
-                        placeholder="e.g. yourbrand.com"
-                        value={displayLink}
-                        onChange={(e) => setDisplayLink(e.target.value)}
-                        className="rounded-2xl border-gray-300 py-4.5 bg-white shadow"
-                    />
+                    <div className="space-y-2">
+                        {displayLinks.map((url, index) => (
+                            <div key={index} className="flex items-center gap-2">
+                                <Input
+                                    aria-label={`Display link ${index + 1}`}
+                                    placeholder="e.g. yourbrand.com"
+                                    value={url}
+                                    onChange={(e) => setDisplayLinks(previous => previous.map((value, i) => i === index ? e.target.value : value))}
+                                    className="rounded-2xl border-gray-300 py-4.5 bg-white shadow"
+                                />
+                                {displayLinks.length > 1 && (
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        aria-label={`Remove display link ${index + 1}`}
+                                        onClick={() => setDisplayLinks(previous => previous.filter((_, i) => i !== index))}
+                                    >
+                                        <Trash2 className="w-4 h-4 text-gray-600 hover:text-red-500" />
+                                    </Button>
+                                )}
+                            </div>
+                        ))}
+                        {displayLinks.every(url => url.trim()) && (
+                            <Button
+                                type="button"
+                                variant="outline"
+                                className="w-full rounded-xl"
+                                onClick={() => setDisplayLinks(previous => [...previous, ""])}
+                            >
+                                <Plus className="w-4 h-4 mr-2" />
+                                Add Display Link
+                            </Button>
+                        )}
+                    </div>
                 )}
             </div>
 
