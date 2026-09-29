@@ -40,6 +40,7 @@ const ENHANCEMENT_SECTIONS = [
         section: "Catalog",
         items: [
             { key: "catalogItems", label: "Add Catalog Items", description: "Items from your catalog might be shown next to your selected media" },
+            { key: "productBrowsing", label: "Product Browsing", description: "Help people browse more products from your ad" },
             { key: "dynamicOverlays", label: "Dynamic Overlays", description: "Add information from catalog items as visually-unique overlays" },
         ],
     },

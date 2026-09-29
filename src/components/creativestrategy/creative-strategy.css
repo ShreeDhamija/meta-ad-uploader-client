@@ -632,10 +632,23 @@ html body #root .creative-strategy button.cs-generate-switcher__item.is-active {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
 }
 
+/* Wrap whole generation groups so paired ratios always stay together.
+   Fixed group widths prevent empty column space on wide screens. */
 .cs-generate-gallery {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 18px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.cs-generate-gallery > div {
+  flex: 0 1 200px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.cs-generate-gallery > .cs-generate-pair {
+  flex-basis: 406px;
 }
 
 .cs-generate-scroll {
@@ -771,13 +784,7 @@ html body #root .creative-strategy button.cs-generate-switcher__item.is-active {
   background: #dcfce7;
 }
 
-.cs-generate-gallery.has-pairs,
-.cs-generate-gallery.is-gallery {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-
 .cs-generate-pair {
-  grid-column: span 2;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: start;
@@ -3105,12 +3112,6 @@ html body #root .creative-strategy button.cs-intel-ad-card.is-active {
   }
 }
 
-@media (max-width: 1500px) {
-  .cs-generate-gallery.is-gallery {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
 @media (max-width: 1220px) {
   .cs-generate-toolbar {
     align-items: flex-start;
@@ -3118,12 +3119,6 @@ html body #root .creative-strategy button.cs-intel-ad-card.is-active {
 
   .cs-generate-layout {
     grid-template-columns: 240px minmax(0, 1fr);
-  }
-
-  .cs-generate-gallery,
-  .cs-generate-gallery.has-pairs,
-  .cs-generate-gallery.is-gallery {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -3145,18 +3140,6 @@ html body #root .creative-strategy button.cs-intel-ad-card.is-active {
 
   .cs-generate-switcher__item {
     flex: 1 0 auto;
-  }
-}
-
-@media (max-width: 620px) {
-  .cs-generate-pair {
-    grid-column: span 1;
-  }
-
-  .cs-generate-gallery,
-  .cs-generate-gallery.has-pairs,
-  .cs-generate-gallery.is-gallery {
-    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -3295,5 +3278,5 @@ html body #root .creative-strategy button.cs-intel-ad-card.is-active {
 /* Constrain Generate inside the shared ScrollArea and keep its action visible. */
 .cs-main-viewport > div { display: flex !important; height: 100%; }
 .cs-generate-sidebar > .cs-generate-scroll { flex: 1; height: 0; }
-.cs-generate-sidebar-footer { flex-shrink: 0; padding: 16px; border-top: 1px solid #e5e5e5; }
+.cs-generate-sidebar-footer { flex-shrink: 0; padding: 16px; }
 .cs-generate-image-card { width: 100%; max-width: 200px; }

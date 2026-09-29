@@ -198,9 +198,12 @@ export default function IntelligenceView({ ctx }) {
 
       {fatigued.length > 0 && (
         <Block title="Fatigue alerts (frequency ≥ 3)">
-          <div className="space-y-4">{fatigued.map((f) => <div key={f.adId}>
-            <p className="text-base font-medium text-neutral-800">{f.adName || "(unnamed)"}</p>
-            <MetricPills className="mt-2" items={[`Frequency ${Number(f.frequency).toFixed(1)}`, `${money(f.spend)} spend`]} />
+          <div className="space-y-4">{fatigued.map((f) => <div key={f.adId} className="flex flex-wrap items-center gap-x-3 gap-y-2">
+            <p className="min-w-0 break-words text-base font-medium text-neutral-800">{f.adName || "(unnamed)"}</p>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <Pill>Frequency {Number(f.frequency).toFixed(1)}</Pill>
+              <Pill>{money(f.spend)} spend</Pill>
+            </div>
           </div>)}</div>
         </Block>
       )}

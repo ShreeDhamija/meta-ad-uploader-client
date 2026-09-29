@@ -41,6 +41,7 @@ const DEFAULT_ENHANCEMENTS = {
   backgroundGen: false,
   expandImage: false,
   catalogItems: false,
+  productBrowsing: false,
   textGeneration: false,
   translate: false,
   reveal: false,

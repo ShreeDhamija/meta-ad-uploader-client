@@ -4,6 +4,7 @@ import { createPortal } from "react-dom";
 import {
   Bookmark,
   ChevronRight,
+  Download,
   ExternalLink,
   Eye,
   Heart,
@@ -231,12 +232,13 @@ function ExpandableText({ text }) {
   return (
     <div className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5">
       <p className="whitespace-pre-wrap break-words text-sm font-medium leading-5 text-gray-950">
-        {displayed || "—"}
+        <span className="qa-screen-only">{displayed || "—"}</span>
+        <span className="qa-print-only">{value || "—"}</span>
         {isLong && (
           <button
             type="button"
             onClick={() => setExpanded((current) => !current)}
-            className="ml-1 whitespace-nowrap text-xs font-semibold text-blue-600 hover:text-blue-700"
+            className="qa-screen-only ml-1 whitespace-nowrap text-xs font-semibold text-blue-600 hover:text-blue-700"
           >
             {expanded ? "View less" : "View more"}
           </button>
@@ -882,6 +884,14 @@ function ReviewMedia({ media, anchorId }) {
           >
             {!media.deletedAt && <source src={media.url} type={media.mimeType} />}
           </video>
+          <img
+            src={media.deletedAt ? MEDIA_FALLBACK_URL : media.previewUrl || MEDIA_FALLBACK_URL}
+            alt={media.previewUrl ? media.name || "Video creative" : "Video preview unavailable"}
+            className="qa-print-only absolute inset-0 h-full w-full object-contain"
+            onError={(event) => {
+              if (event.currentTarget.src !== MEDIA_FALLBACK_URL) event.currentTarget.src = MEDIA_FALLBACK_URL;
+            }}
+          />
           <span className="pointer-events-none absolute left-2 top-2 rounded-full bg-black/55 p-1.5 text-white">
             <Play className="h-3 w-3 fill-current" />
           </span>
@@ -921,12 +931,12 @@ function CreativeReviewCard({ unit, groupIndex, formId }) {
         "data-comment-label": `Creative group ${groupIndex + 1}`,
         "data-comment-type": "group",
       } : {})}
-      className={`relative min-w-0 ${
+      className={`qa-creative relative min-w-0 ${
       grouped ? `rounded-2xl border p-2 sm:col-span-2 ${groupColor}` : ""
     }`}
     >
       {grouped && <CommentPins anchorId={groupAnchorId} />}
-      <div className={`grid min-w-0 gap-2 ${unit.media.length > 1 ? "grid-cols-1 min-[420px]:grid-cols-2" : "grid-cols-1"}`}>
+      <div className={`grid min-w-0 gap-2 ${unit.media.length > 1 ? "qa-media-pair grid-cols-1 min-[420px]:grid-cols-2" : "grid-cols-1"}`}>
         {unit.media.map((media, mediaIndex) => (
           <ReviewMedia
             key={media.id}
@@ -982,14 +992,14 @@ function ReviewForm({ form, index, state, mediaById, showLaunchHeading }) {
   const links = (values.link || []).filter(Boolean);
 
   return (
-    <section className={index > 0 ? "border-t border-gray-200" : ""}>
+    <section className={`qa-launch ${index > 0 ? "border-t border-gray-200" : ""}`}>
       {showLaunchHeading && (
         <header className="px-4 pt-6 sm:px-8 sm:pt-8">
           <h2 className="text-lg font-semibold text-gray-950">Launch {index + 1}</h2>
         </header>
       )}
 
-      <div className={`grid min-w-0 grid-cols-1 items-start gap-6 px-4 pb-8 sm:px-8 sm:pb-10 lg:grid-cols-[minmax(0,1.2fr)_minmax(340px,0.8fr)] ${
+      <div className={`qa-launch-grid grid min-w-0 grid-cols-1 items-start gap-6 px-4 pb-8 sm:px-8 sm:pb-10 lg:grid-cols-[minmax(0,1.2fr)_minmax(340px,0.8fr)] ${
         showLaunchHeading ? "pt-5" : "pt-10"
       }`}>
         <div className="min-w-0 lg:sticky lg:top-6 lg:self-start">
@@ -1139,6 +1149,8 @@ export default function QaReview() {
   const suppressCommentClickRef = useRef(false);
   const [draft, setDraft] = useState(null);
   const [error, setError] = useState("");
+  const [preparingPdf, setPreparingPdf] = useState(false);
+  const [pdfError, setPdfError] = useState("");
   const [comments, setComments] = useState([]);
   const [commentsError, setCommentsError] = useState("");
   const [commentMode, setCommentMode] = useState(false);
@@ -1280,6 +1292,31 @@ export default function QaReview() {
 
   const commentsContextValue = { comments, openInlineComment };
 
+  const handleDownloadPdf = async () => {
+    if (preparingPdf) return;
+    setPreparingPdf(true);
+    setPdfError("");
+    let timeout;
+    try {
+      // Include offscreen creatives and video posters before opening the print dialog.
+      await Promise.race([
+        Promise.all([
+          document.fonts.ready,
+          ...Array.from(reviewRootRef.current.querySelectorAll("img"), (image) => image.decode().catch(() => {})),
+        ]),
+        new Promise((_, reject) => {
+          timeout = window.setTimeout(() => reject(new Error("Images are still loading. Please try again in a moment.")), 15000);
+        }),
+      ]);
+      window.print();
+    } catch (printError) {
+      setPdfError(printError.message || "Could not open the print dialog. Please try again.");
+    } finally {
+      window.clearTimeout(timeout);
+      setPreparingPdf(false);
+    }
+  };
+
   if (error) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-gray-50 p-6">
@@ -1297,7 +1334,38 @@ export default function QaReview() {
 
   return (
     <CommentsContext.Provider value={commentsContextValue}>
-      <ScrollArea className="h-screen bg-gray-50">
+      <style>{`
+        .qa-print-only { display: none; }
+        @media print {
+          @page { size: A3 portrait; margin: 10mm; }
+          html, body, #root { height: auto !important; overflow: visible !important; background: white !important; }
+          body > :not(#root), #root > :not(.qa-scroll) { display: none !important; }
+          .qa-scroll, .qa-scroll [data-radix-scroll-area-viewport] {
+            height: auto !important; overflow: visible !important;
+          }
+          .qa-scroll [data-radix-scroll-area-viewport] > div { display: block !important; }
+          .qa-scroll { width: 277mm !important; background: white !important; }
+          .qa-scroll [data-orientation], [data-comment-ui], .qa-screen-only, .qa-scroll video { display: none !important; }
+          .qa-print-only { display: block !important; }
+          .qa-scroll main { min-height: 0; padding: 0; }
+          .qa-scroll * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          .qa-scroll header { break-after: avoid; }
+          .qa-launch + .qa-launch { break-before: page; }
+          .qa-launch > header { padding: 24px 32px 0; }
+          .qa-launch-grid { grid-template-columns: minmax(0, 1.2fr) minmax(340px, .8fr) !important; padding: 24px 32px 32px; }
+          .qa-launch-grid > :first-child { position: static !important; }
+          .qa-launch-grid dl { padding-right: 16px; }
+          .qa-launch-grid dl .grid, .qa-launch-grid > :last-child > .grid, .qa-media-pair {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+          }
+          .qa-launch-grid > :last-child { border-left: 1px solid #e5e7eb; padding-left: 24px; padding-right: 8px; }
+          .qa-creative[data-comment-type="group"] { grid-column: span 2; }
+          .qa-creative, .qa-launch [data-comment-type="field"] { break-inside: avoid; }
+          .qa-scroll .truncate { white-space: normal; overflow: visible; overflow-wrap: anywhere; }
+          .qa-scroll p { orphans: 3; widows: 3; }
+        }
+      `}</style>
+      <ScrollArea className="qa-scroll h-screen bg-gray-50">
       <main
         ref={reviewRootRef}
         onClickCapture={handleReviewClick}
@@ -1323,6 +1391,16 @@ export default function QaReview() {
               </p>
             </div>
             <div data-comment-ui className="flex shrink-0 flex-wrap items-center justify-end gap-2 self-end">
+              <button
+                type="button"
+                onClick={handleDownloadPdf}
+                disabled={preparingPdf}
+                title="Choose Save as PDF in the print dialog"
+                className="inline-flex items-center rounded-full border border-neutral-200 bg-white px-4 py-2.5 text-sm font-medium text-neutral-700 shadow-xs hover:shadow-sm disabled:cursor-wait disabled:opacity-45"
+              >
+                {preparingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                {preparingPdf ? "Preparing PDF…" : "Download PDF"}
+              </button>
               <button
                 type="button"
                 onClick={() => setAdvancedPreviewOpen(true)}
@@ -1356,6 +1434,7 @@ export default function QaReview() {
               </button>
             </div>
           </header>
+          {pdfError && <p data-comment-ui role="alert" className="mb-4 text-sm text-red-600">{pdfError}</p>}
           {commentMode && (
             <div data-comment-ui className="mb-4 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-800">
               Click any field, creative, or creative group to attach your comment.
