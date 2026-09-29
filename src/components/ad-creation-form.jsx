@@ -2911,7 +2911,7 @@ export default function AdCreationForm({
             // The server signs URLs for 10 minutes. Refresh before queued parts
             // reach that deadline; concurrent workers share one refresh request.
             if (!partUrls.size || Date.now() - urlsFetchedAt >= 8 * 60 * 1000 ||
-                (rejectedUrl && partUrls.get(partNumber) === rejectedUrl)) {
+              (rejectedUrl && partUrls.get(partNumber) === rejectedUrl)) {
               if (!refreshPromise) {
                 refreshPromise = (async () => {
                   const requestedAt = Date.now();
@@ -2921,7 +2921,7 @@ export default function AdCreationForm({
                   });
                   const parts = response.data.parts;
                   if (!Array.isArray(parts) || parts.length !== totalChunks ||
-                      parts.some((part, index) => part.partNumber !== index + 1 || !part.url)) {
+                    parts.some((part, index) => part.partNumber !== index + 1 || !part.url)) {
                     throw new Error("Invalid presigned URLs response");
                   }
                   partUrls = new Map(parts.map((part) => [part.partNumber, part.url]));
@@ -3696,6 +3696,8 @@ export default function AdCreationForm({
         .enableFeature(google.picker.Feature.SUPPORT_DRIVES)
         .hideTitleBar()
         .setAppId(102886794705)
+        .setDeveloperKey('AIzaSyDePb7a1CNxyaNMpLRJ3-R2T2GHtZKbv_g')
+        .setOrigin(window.location.origin)
         .setCallback((data) => {
           if (data.action === "picked") {
             const selected = data.docs.map((doc) => {
