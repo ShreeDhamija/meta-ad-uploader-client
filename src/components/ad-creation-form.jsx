@@ -3695,7 +3695,7 @@ export default function AdCreationForm({
         .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
         .enableFeature(google.picker.Feature.SUPPORT_DRIVES)
         .hideTitleBar()
-        .setAppId(102886794705)
+        .setAppId('102886794705')
         .setDeveloperKey('AIzaSyDePb7a1CNxyaNMpLRJ3-R2T2GHtZKbv_g')
         .setOrigin(window.location.origin)
         .setCallback((data) => {
