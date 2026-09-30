@@ -114,7 +114,7 @@ function PlacementPreferences({ value, onChange }) {
                   const section = column.sections[sectionIndex];
                   return (
                     <td key={column.name} className="align-top border-r border-gray-100 p-3 last:border-r-0">
-                      {section.placements.length > 0 && <p className="mb-2 text-[10px] font-medium uppercase tracking-wide text-gray-400">{section.name}</p>}
+                      {section.placements.length > 0 && <p className="mb-2 text-[10px] font-semibold normal-case text-black">{section.name}</p>}
                       <div className="space-y-2.5">
                         {section.placements.map(([key, label, defaultSize]) => {
                           const selection = preferences?.[key] || "auto";
@@ -123,12 +123,12 @@ function PlacementPreferences({ value, onChange }) {
                             <div key={key} className="space-y-1">
                               <p className="text-[11px] leading-4 text-gray-600">{label}</p>
                               <Select value={selection} onValueChange={next => changePlacement(key, next)}>
-                                <SelectTrigger aria-label={`${column.name}: ${label} asset size`} className={`h-8 rounded-lg px-2 py-1 text-xs shadow-none ${size.tint}`}>
+                                <SelectTrigger aria-label={`${column.name}: ${label} asset size`} className={`h-8 rounded-2xl px-2 py-1 text-xs shadow ${size.tint}`}>
                                   <SelectValue><span>{size.label}{selection === "auto" && <span className="ml-1.5 text-[10px] opacity-60">Auto</span>}</span></SelectValue>
                                 </SelectTrigger>
-                                <SelectContent className="rounded-xl">
-                                  <SelectItem value="auto" className="text-xs">Automatic</SelectItem>
-                                  {Object.entries(SIZES).map(([key, option]) => <SelectItem key={key} value={key} className="text-xs">{option.label}</SelectItem>)}
+                                <SelectContent className="rounded-2xl !bg-white shadow-lg">
+                                  <SelectItem value="auto" className="rounded-2xl text-xs focus:bg-gray-100">Automatic</SelectItem>
+                                  {Object.entries(SIZES).map(([key, option]) => <SelectItem key={key} value={key} className="rounded-2xl text-xs focus:bg-gray-100">{option.label}</SelectItem>)}
                                 </SelectContent>
                               </Select>
                             </div>
