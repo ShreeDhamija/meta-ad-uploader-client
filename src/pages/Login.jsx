@@ -29,6 +29,64 @@ const IS_STAGING =
         window.location.hostname.includes('dev.withblip.com')
     ))
 
+// Keep the common personal/disposable domains in sync with the other signup implementation.
+const PERSONAL_EMAIL_DOMAINS = new Set(`
+  gmail.com googlemail.com yahoo.com yahoo.co.uk yahoo.co.in yahoo.in yahoo.ca
+  yahoo.com.au yahoo.fr yahoo.de yahoo.es yahoo.it yahoo.co.jp yahoo.com.br
+  yahoo.com.mx yahoo.com.sg yahoo.com.hk yahoo.co.id yahoo.com.ph yahoo.co.nz
+  yahoo.com.ar yahoo.com.tw ymail.com rocketmail.com outlook.com outlook.in
+  outlook.fr outlook.de outlook.es outlook.it outlook.com.br outlook.com.au
+  outlook.co.nz outlook.jp hotmail.com hotmail.co.uk hotmail.fr hotmail.de
+  hotmail.it hotmail.es hotmail.ca hotmail.com.au hotmail.co.jp hotmail.com.br
+  live.com live.co.uk live.in live.fr live.de live.ca live.com.au live.nl live.it
+  live.com.mx msn.com icloud.com me.com mac.com aol.com aim.com aol.co.uk
+  proton.me protonmail.com protonmail.ch pm.me tutanota.com tutanota.de
+  tuta.com tuta.io tutamail.com keemail.me fastmail.com fastmail.fm hey.com
+  mail.com email.com usa.com consultant.com accountant.com engineer.com post.com
+  europe.com asia.com myself.com gmx.com gmx.net gmx.de gmx.at gmx.ch gmx.fr
+  gmx.co.uk web.de mailbox.org posteo.de posteo.net zoho.com zohomail.com
+  rediffmail.com rediff.com inbox.com hushmail.com mailfence.com runbox.com
+  yandex.com yandex.ru ya.ru mail.ru inbox.ru list.ru bk.ru rambler.ru qq.com
+  foxmail.com 163.com 126.com yeah.net sina.com sohu.com naver.com daum.net
+  hanmail.net nate.com libero.it virgilio.it tin.it alice.it tiscali.it
+  laposte.net orange.fr wanadoo.fr free.fr sfr.fr neuf.fr bol.com.br uol.com.br
+  terra.com.br ig.com.br comcast.net att.net sbcglobal.net bellsouth.net
+  verizon.net cox.net charter.net earthlink.net optonline.net btinternet.com
+  btopenworld.com talktalk.net virginmedia.com sky.com ntlworld.com
+  blueyonder.co.uk bigpond.com bigpond.net.au optusnet.com.au shaw.ca rogers.com
+  sympatico.ca mailinator.com mailinator.net maildrop.cc guerrillamail.com
+  guerrillamail.net guerrillamail.org guerrillamail.biz guerrillamail.de
+  guerrillamail.info guerrillamailblock.com sharklasers.com grr.la spam4.me
+  dispostable.com yopmail.com yopmail.fr yopmail.net 10minutemail.com
+  10minutemail.net temp-mail.org temp-mail.io tempmail.com tempmail.net
+  tempmail.org throwawaymail.com getnada.com dropmail.me mohmal.com
+  emailondeck.com trashmail.com trashmail.net fakeinbox.com getairmail.com
+  mintemail.com discard.email
+`.trim().split(/\s+/));
+
+function validateWorkEmail(value) {
+  const email = typeof value === "string" ? value.trim() : "";
+  const invalid = { valid: false, code: "INVALID_EMAIL", error: "Please enter a valid email address." };
+  if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return invalid;
+  const [local, rawDomain] = email.split("@");
+  if (local.length > 64 || local.startsWith(".") || local.endsWith(".") ||
+      local.includes("..") || /[<>(),;:\[\]\\"]/.test(local)) return invalid;
+  let domain;
+  try {
+    if (/[\s/\\:#?%\[\]]/.test(rawDomain)) return invalid;
+    domain = new URL(`https://${rawDomain}`).hostname.toLowerCase();
+  } catch {
+    return invalid;
+  }
+  const labels = domain.split(".");
+  if (domain.length > 253 || labels.length < 2 || /^\d+$/.test(labels[labels.length - 1]) ||
+      labels.some((label) => !/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(label))) return invalid;
+  if (labels.some((_, index) => PERSONAL_EMAIL_DOMAINS.has(labels.slice(index).join(".")))) {
+    return { valid: false, code: "PERSONAL_EMAIL", error: "Please use your work email. Personal and temporary email addresses aren’t supported." };
+  }
+  return { valid: true, email: `${local}@${domain}`, domain };
+}
+
 const ROLE_OPTIONS = [
     { value: "Freelancer Marketing Specialist", icon: UserRound },
     { value: "Paid Ads Agency", icon: Building2 },
@@ -101,7 +159,9 @@ export default function Login() {
     const navigate = useNavigate()
     const location = useLocation()
     const [email, setEmail] = useState("")
-    const [isValidEmail, setIsValidEmail] = useState(false)
+    const [domainCheck, setDomainCheck] = useState(null)
+    const [emailRetry, setEmailRetry] = useState(0)
+    const [emailTouched, setEmailTouched] = useState(false)
     useIntercom(true, true)
 
     // Manual login state
@@ -124,16 +184,62 @@ export default function Login() {
         if (isLoggedIn) navigate("/")
     }, [isLoggedIn, navigate])
 
+    const emailValidation = validateWorkEmail(email)
+    const emailDomain = emailValidation.valid ? emailValidation.domain : ""
+    const currentDomainCheck = domainCheck?.domain === emailDomain && domainCheck?.retry === emailRetry ? domainCheck : null
+    const isValidEmail = emailValidation.valid && currentDomainCheck?.valid === true
+    const isCheckingEmail = Boolean(emailDomain && !currentDomainCheck)
+    const emailError = emailValidation.code === "PERSONAL_EMAIL"
+        ? emailValidation.error
+        : email.trim() && emailTouched && !emailValidation.valid
+            ? emailValidation.error
+            : currentDomainCheck?.error || ""
+
     useEffect(() => {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-        setIsValidEmail(emailRegex.test(email))
-    }, [email])
+        if (!isSignupPage || !emailDomain) return
+        const controller = new AbortController()
+        let active = true
+        let timeout
+        // Only send the domain, and wait briefly so typing does not issue a request per keystroke.
+        const debounce = setTimeout(async () => {
+            timeout = setTimeout(() => controller.abort(), 6000)
+            try {
+                const response = await fetch(`${API_BASE_URL}/auth/signup-email-check`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ domain: emailDomain }),
+                    signal: controller.signal,
+                })
+                const result = await response.json()
+                if (active) setDomainCheck({
+                    domain: emailDomain,
+                    retry: emailRetry,
+                    valid: response.ok && result.valid === true,
+                    error: result.valid === true && response.ok ? "" : result.error || "We couldn’t check your email domain. Please try again.",
+                    retryable: response.status === 429 || response.status >= 500,
+                })
+            } catch {
+                if (active) setDomainCheck({ domain: emailDomain, retry: emailRetry, valid: false, retryable: true, error: "We couldn’t check your email domain. Please try again." })
+            } finally {
+                clearTimeout(timeout)
+            }
+        }, 400)
+        return () => {
+            active = false
+            clearTimeout(debounce)
+            clearTimeout(timeout)
+            controller.abort()
+        }
+    }, [emailDomain, emailRetry, isSignupPage])
 
     const startSignupFlow = () => {
+        if (!isValidEmail || !jobRole || !signupSource) return
         setPopupStep('fb')
     }
 
     const handleSignupFacebookLogin = async () => {
+        if (!isValidEmail || !jobRole || !signupSource || isInitializing) return
         setInitError("")
         setIsInitializing(true)
         try {
@@ -142,13 +248,20 @@ export default function Login() {
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    email,
+                    email: emailValidation.email,
                     signupSource,
                     jobRole,
                     teamCode: signupSource === 'Joining a Team' ? teamCode.trim() : '',
                 }),
             })
-            if (!res.ok) throw new Error('Failed to start signup')
+            if (!res.ok) {
+                const result = await res.json().catch(() => ({}))
+                if (result.code?.startsWith('EMAIL_') || result.code === 'PERSONAL_EMAIL' || result.code === 'INVALID_EMAIL') {
+                    setPopupStep(null)
+                    setDomainCheck({ domain: emailDomain, retry: emailRetry, valid: false, error: result.error, retryable: res.status >= 500 })
+                }
+                throw new Error(result.error || 'Failed to start signup')
+            }
             window.location.href = `${API_BASE_URL}/auth/facebook?state=signup`
         } catch (err) {
             setInitError(err.message)
@@ -219,7 +332,7 @@ export default function Login() {
                             >
                                 <div className="space-y-2">
                                     <div className="flex items-center justify-between">
-                                        <label className="text-sm font-semibold text-zinc-800">Work email</label>
+                                        <label htmlFor="signup-email" className="text-sm font-semibold text-zinc-800">Work email</label>
                                         {isValidEmail && <img src={Check} alt="Valid" className="size-5" />}
                                     </div>
                                     <div className="relative">
@@ -229,12 +342,29 @@ export default function Login() {
                                             strokeWidth={1.8}
                                         />
                                         <Input
+                                            id="signup-email"
                                             type="email"
+                                            autoComplete="email"
+                                            aria-invalid={Boolean(emailError)}
+                                            aria-describedby="signup-email-feedback"
+                                            onBlur={() => setEmailTouched(true)}
                                             placeholder="Enter your Work Email"
                                             value={email}
                                             onChange={(e) => setEmail(e.target.value)}
                                             className="h-[46px] rounded-[18px] pl-10 pr-3.5"
                                         />
+                                    </div>
+                                    <div id="signup-email-feedback" aria-live="polite">
+                                        {emailError ? (
+                                            <p className="text-xs leading-snug text-red-600">
+                                                {emailError}
+                                                {currentDomainCheck?.retryable && (
+                                                    <button type="button" className="ml-1 underline" onClick={() => setEmailRetry((retry) => retry + 1)}>Try again</button>
+                                                )}
+                                            </p>
+                                        ) : isCheckingEmail ? (
+                                            <p className="text-xs text-zinc-500">Checking email domain…</p>
+                                        ) : null}
                                     </div>
                                 </div>
 
@@ -336,9 +466,9 @@ export default function Login() {
                                                             fontSize: '18px',
                                                             lineHeight: 1,
                                                             borderRadius: '20px',
-                                                            border: '2px solid #3f3e3e',
-                                                            background: 'linear-gradient(0deg, #414141 0%, #000 77.88%)',
-                                                            boxShadow: '0 2px 10px 0 rgba(0,0,0,0.25)',
+                                                            border: isSignupFormComplete ? '2px solid #3f3e3e' : '2px solid #a1a1aa',
+                                                            background: isSignupFormComplete ? 'linear-gradient(0deg, #414141 0%, #000 77.88%)' : '#a1a1aa',
+                                                            boxShadow: isSignupFormComplete ? '0 2px 10px 0 rgba(0,0,0,0.25)' : 'none',
                                                             height: '56px',
                                                             maxHeight: '56px',
                                                             letterSpacing: '0.2px',
@@ -352,7 +482,7 @@ export default function Login() {
                                             </TooltipTrigger>
                                             {!isSignupFormComplete && (
                                                 <TooltipContent side="top">
-                                                    Please complete all signup fields to continue
+                                                    {emailError || (isCheckingEmail ? 'Checking your email domain…' : 'Please complete all signup fields to continue')}
                                                 </TooltipContent>
                                             )}
                                         </Tooltip>
@@ -501,7 +631,7 @@ export default function Login() {
                                     <div className="px-6 pb-6 pt-4 flex justify-end">
                                         <Button
                                             onClick={handleSignupFacebookLogin}
-                                            disabled={isInitializing}
+                                            disabled={isInitializing || !isSignupFormComplete}
                                             className="w-full bg-[#1877F2] hover:bg-[#0866FF] text-white rounded-2xl shadow-md flex items-center justify-center gap-2 h-[44px] disabled:opacity-60"
                                         >
                                             <img
