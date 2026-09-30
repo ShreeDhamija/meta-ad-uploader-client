@@ -220,6 +220,7 @@ export default function MetaMediaLibraryModal({
     const [creatorFilterOpen, setCreatorFilterOpen] = useState(false);
     const [creatorSearchQuery, setCreatorSearchQuery] = useState('');
     const [metaSearchQuery, setMetaSearchQuery] = useState('');
+    const [submittedMetaSearch, setSubmittedMetaSearch] = useState({ term: '', revision: 0 });
     const [metaSearchResult, setMetaSearchResult] = useState(null);
     const [metaSearchPage, setMetaSearchPage] = useState(null);
 
@@ -456,6 +457,7 @@ export default function MetaMediaLibraryModal({
         setCreatorFilter(IG_CREATOR_FILTER_UNSET);
         setCreatorSearchQuery('');
         setMetaSearchQuery('');
+        setSubmittedMetaSearch({ term: '', revision: 0 });
         if (mediaSource === 'meta_library') {
             fetchMetaLibrary();
         } else {
@@ -471,6 +473,7 @@ export default function MetaMediaLibraryModal({
         setCreatorFilter(IG_CREATOR_FILTER_UNSET);
         setCreatorSearchQuery('');
         setMetaSearchQuery('');
+        setSubmittedMetaSearch({ term: '', revision: 0 });
 
         if (source === 'instagram') {
             if (!instagramAccountId) {
@@ -543,8 +546,12 @@ export default function MetaMediaLibraryModal({
     };
 
     const isLoading = mediaSource === 'meta_library' ? loadingMeta : loadingIg;
-    const normalizedMetaSearch = metaSearchQuery.trim().toLowerCase();
-    const metaSearchTerm = metaSearchQuery.trim();
+    const submitMetaSearch = () => {
+        setMetaSearchPage(null);
+        setSubmittedMetaSearch(previous => ({ term: metaSearchQuery.trim(), revision: previous.revision + 1 }));
+    };
+    const metaSearchTerm = submittedMetaSearch.term;
+    const normalizedMetaSearch = metaSearchTerm.toLowerCase();
     const localMetaItems = useMemo(() => {
         const items = activeTab === 'images' ? metaImages : metaVideos;
         return normalizedMetaSearch
@@ -552,8 +559,8 @@ export default function MetaMediaLibraryModal({
             : items;
     }, [activeTab, metaImages, metaVideos, normalizedMetaSearch]);
     const useRemoteMetaSearch = isOpen && mediaSource === 'meta_library' && !!adAccountId
-        && !!metaSearchTerm && !loadingMeta && localMetaItems.length === 0;
-    const metaSearchKey = JSON.stringify([adAccountId, activeTab, metaSearchTerm]);
+        && !!metaSearchTerm && !loadingMeta;
+    const metaSearchKey = JSON.stringify([adAccountId, activeTab, metaSearchTerm, submittedMetaSearch.revision]);
     const remoteMetaResult = metaSearchResult?.key === metaSearchKey ? metaSearchResult : null;
     const metaSearchCursor = metaSearchPage?.key === metaSearchKey ? metaSearchPage.cursor : null;
     const isMetaSearchPending = useRemoteMetaSearch && (!remoteMetaResult || remoteMetaResult.loading);
@@ -572,7 +579,7 @@ export default function MetaMediaLibraryModal({
             pagination: metaSearchCursor && previous?.key === metaSearchKey ? previous.pagination : null,
             loading: true,
         }));
-        const timer = setTimeout(async () => {
+        const searchLibrary = async () => {
             try {
                 const response = await axios.get(`${API_BASE_URL}/auth/library-${activeTab}`, {
                     params: { adAccountId, search: metaSearchTerm, ...(metaSearchCursor ? { after: metaSearchCursor } : {}) },
@@ -604,10 +611,10 @@ export default function MetaMediaLibraryModal({
                     loading: false,
                 }));
             }
-        }, metaSearchCursor ? 0 : 350);
+        };
+        searchLibrary();
 
         return () => {
-            clearTimeout(timer);
             controller.abort();
         };
     }, [useRemoteMetaSearch, metaSearchKey, metaSearchCursor, metaSearchTerm, adAccountId, activeTab, mapMetaImages, mapMetaVideos]);
@@ -651,7 +658,11 @@ export default function MetaMediaLibraryModal({
 
     const displayItems = useMemo(() => {
         if (mediaSource === 'meta_library') {
-            return useRemoteMetaSearch ? remoteMetaResult?.items || [] : localMetaItems;
+            if (!useRemoteMetaSearch) return localMetaItems;
+            const combined = new Map(
+                [...localMetaItems, ...(remoteMetaResult?.items || [])].map(item => [item.hash || item.id, item]),
+            );
+            return [...combined.values()];
         }
         const items = activeTab === 'images' ? igImages : igVideos;
         if (!creatorFilter || creatorFilter === IG_CREATOR_FILTER_ALL) return items;
@@ -732,6 +743,7 @@ export default function MetaMediaLibraryModal({
         setCreatorFilter(IG_CREATOR_FILTER_UNSET);
         setCreatorSearchQuery('');
         setMetaSearchQuery('');
+        setSubmittedMetaSearch({ term: '', revision: 0 });
         setIsOpen(true);
         if (source === 'meta_library') {
             fetchMetaLibrary();
@@ -808,14 +820,29 @@ export default function MetaMediaLibraryModal({
                                 <Input
                                     type="search"
                                     value={metaSearchQuery}
-                                    onChange={(event) => {
-                                        setMetaSearchPage(null);
-                                        setMetaSearchQuery(event.target.value);
+                                    onChange={(event) => setMetaSearchQuery(event.target.value)}
+                                    onKeyDown={(event) => {
+                                        if (event.key === 'Enter') {
+                                            event.preventDefault();
+                                            if (!loadingMeta) submitMetaSearch();
+                                        }
                                     }}
                                     placeholder="Search asset names..."
                                     className="h-9 rounded-xl border-gray-200 pl-9 pr-3 text-sm focus-visible:ring-0 focus-visible:ring-offset-0"
                                 />
                             </div>
+                        )}
+                        {mediaSource === 'meta_library' && (
+                            <Button
+                                type="button"
+                                size="sm"
+                                onClick={submitMetaSearch}
+                                disabled={loadingMeta}
+                                className="h-9 rounded-xl bg-black px-3 text-white hover:bg-zinc-800"
+                            >
+                                <Search className="mr-1.5 h-4 w-4" />
+                                Search
+                            </Button>
                         )}
                         <Button
                             type="button"
@@ -976,12 +1003,17 @@ export default function MetaMediaLibraryModal({
                         </div>
                     )}
 
-                    <TabsContent value="images" className="mt-4 flex-1 overflow-hidden">
+                    <TabsContent value="images" className="mt-4 flex-1 overflow-hidden min-h-[520px]">
                         {isLoading ? (
                             <div className="flex items-center justify-center py-12">
                                 <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
                             </div>
-                        ) : displayItems.length === 0 && isMetaSearchPending ? null : displayItems.length === 0 ? (
+                        ) : displayItems.length === 0 && isMetaSearchPending ? (
+                            <div role="status" className="flex h-[520px] flex-col items-center justify-center gap-3 text-gray-500">
+                                <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                                <p>Searching…</p>
+                            </div>
+                        ) : displayItems.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-12 text-gray-500">
                                 <ImageIcon className="h-12 w-12 mb-2 opacity-50" />
                                 <p>{isMetaSearchActive
@@ -994,6 +1026,12 @@ export default function MetaMediaLibraryModal({
                         ) : (
                             <>
                                 <ScrollArea className="h-[520px] pr-4 outline-none focus:outline-none">
+                                    {isMetaSearchPending && (
+                                        <div role="status" className="mb-3 flex items-center gap-2 text-sm text-gray-500">
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                            <span>Searching… More matches may appear.</span>
+                                        </div>
+                                    )}
                                     <div className="grid grid-cols-4 gap-3">
                                         {displayItems.map((item) => {
                                             const isMeta = mediaSource === 'meta_library';
@@ -1065,12 +1103,17 @@ export default function MetaMediaLibraryModal({
                         )}
                     </TabsContent>
 
-                    <TabsContent value="videos" className="mt-4 flex-1 overflow-hidden">
+                    <TabsContent value="videos" className="mt-4 flex-1 overflow-hidden min-h-[520px]">
                         {isLoading ? (
                             <div className="flex items-center justify-center py-12">
                                 <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
                             </div>
-                        ) : displayItems.length === 0 && isMetaSearchPending ? null : displayItems.length === 0 ? (
+                        ) : displayItems.length === 0 && isMetaSearchPending ? (
+                            <div role="status" className="flex h-[520px] flex-col items-center justify-center gap-3 text-gray-500">
+                                <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                                <p>Searching…</p>
+                            </div>
+                        ) : displayItems.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-12 text-gray-500">
                                 <Video className="h-12 w-12 mb-2 opacity-50" />
                                 <p>{isMetaSearchActive ? 'No results found.' : 'No videos found.'}</p>
@@ -1079,6 +1122,12 @@ export default function MetaMediaLibraryModal({
                         ) : (
                             <>
                                 <ScrollArea className="h-[520px] pr-4 outline-none focus:outline-none">
+                                    {isMetaSearchPending && (
+                                        <div role="status" className="mb-3 flex items-center gap-2 text-sm text-gray-500">
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                            <span>Searching… More matches may appear.</span>
+                                        </div>
+                                    )}
                                     <div className="grid grid-cols-4 gap-3">
                                         {displayItems.map((item) => {
                                             const isMeta = mediaSource === 'meta_library';
