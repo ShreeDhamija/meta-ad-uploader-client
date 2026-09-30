@@ -126,7 +126,7 @@ function PlacementPreferences({ value, onChange }) {
                                 <SelectTrigger aria-label={`${column.name}: ${label} asset size`} className={`h-8 rounded-2xl px-2 py-1 text-xs shadow ${size.tint}`}>
                                   <SelectValue><span>{size.label}{selection === "auto" && <span className="ml-1.5 text-[10px] opacity-60">Auto</span>}</span></SelectValue>
                                 </SelectTrigger>
-                                <SelectContent className="rounded-2xl !bg-white shadow-lg">
+                                <SelectContent className="rounded-2xl bg-white !bg-white shadow-lg [&_[data-radix-select-viewport]]:!bg-white">
                                   <SelectItem value="auto" className="rounded-2xl text-xs focus:bg-gray-100">Automatic</SelectItem>
                                   {Object.entries(SIZES).map(([key, option]) => <SelectItem key={key} value={key} className="rounded-2xl text-xs focus:bg-gray-100">{option.label}</SelectItem>)}
                                 </SelectContent>
