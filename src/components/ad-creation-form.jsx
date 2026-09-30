@@ -5142,6 +5142,9 @@ export default function AdCreationForm({
     campaignObjective.length > 0 &&
     campaignObjective.every((objective) => ["OUTCOME_SALES", "OUTCOME_TRAFFIC"].includes(objective));
   const showPhoneNumberField = areAllAdSetsPhoneCall();
+  const hasWebsiteAndPhoneCallAdSets = (duplicateAdSet ? [duplicateAdSet] : selectedAdSets).some(
+    (adSetId) => adSets.find((adSet) => String(adSet.id) === String(adSetId))?.destination_type === "WEBSITE_AND_PHONE_CALL",
+  );
   const areAllAdSetsOnAd = useMemo(() => {
     const targetAdSetIds = duplicateAdSet ? [duplicateAdSet] : selectedAdSets;
     if (targetAdSetIds.length === 0) return false;
@@ -5156,6 +5159,7 @@ export default function AdCreationForm({
     !isCatalogueAd &&
     !isProfileDestinationEngagement &&
     !showPhoneNumberField &&
+    !hasWebsiteAndPhoneCallAdSets &&
     !areAllAdSetsOnAd &&
     !showShopDestinationSelector &&
     !isDuplicationMode &&
@@ -5172,9 +5176,10 @@ export default function AdCreationForm({
     importedPosts.length === 0 && !isDuplicationMode && !isCatalogueAd && !isProfileDestinationEngagement && !areAllAdSetsOnAd;
   const destinationLinkValue = showCustomLink ? customLink : link[0] || "";
   const isDestinationLinkInvalid =
-    requiresDestinationValue && !showPhoneNumberField && destinationType !== "instant_experience" &&
+    (requiresDestinationValue || hasWebsiteAndPhoneCallAdSets) && !showPhoneNumberField && destinationType !== "instant_experience" &&
     destinationLinkValue.trim().length > 0 && !isValidDomainLink(destinationLinkValue);
   const isMissingDestinationValue =
+    (hasWebsiteAndPhoneCallAdSets && (!phoneNumber.trim() || !destinationLinkValue.trim() || isDestinationLinkInvalid)) ||
     requiresDestinationValue &&
     (showPhoneNumberField
       ? !phoneNumber.trim()
@@ -6184,9 +6189,11 @@ export default function AdCreationForm({
       if (selectedInstagramAccount?.igId) formData.append("instagramAppUserId", selectedInstagramAccount.igId);
       const requestAdSet = adSets.find((entry) => String(entry.id) === String(adSetId));
       const usesOnAdLeadFormDestination = requestAdSet?.destination_type === "ON_AD";
-      if (usePhoneNumberField) {
+      const usesWebsiteAndPhoneCallDestination = requestAdSet?.destination_type === "WEBSITE_AND_PHONE_CALL";
+      if (usePhoneNumberField || usesWebsiteAndPhoneCallDestination) {
         formData.append("phoneNumber", phoneNumber);
-      } else if (!usesOnAdLeadFormDestination) {
+      }
+      if ((!usePhoneNumberField || usesWebsiteAndPhoneCallDestination) && !usesOnAdLeadFormDestination) {
         formData.append("link", linkJSON);
         if (displayLink && destinationType !== "instant_experience" && !["FACEBOOK_PAGE", "INSTAGRAM_PROFILE", "INSTAGRAM_PROFILE_AND_FACEBOOK_PAGE"].includes(requestAdSet?.destination_type)) {
           formData.append("displayLink", displayLink);
@@ -7108,6 +7115,10 @@ export default function AdCreationForm({
         const adSet = adSets.find((entry) => String(entry.id) === String(adSetId));
         return adSet?.destination_type === "ON_AD";
       };
+      const usesWebsiteAndPhoneCallDestination = (adSetId) => {
+        const adSet = adSets.find((entry) => String(entry.id) === String(adSetId));
+        return adSet?.destination_type === "WEBSITE_AND_PHONE_CALL";
+      };
       const commonPrecomputed = preComputeCommonValues(headlines, descriptions, messages, link);
 
       // ============================================================================
@@ -7243,9 +7254,10 @@ export default function AdCreationForm({
               formData.append("adId", post.ad_id); // ← Changed from post.id to post.ad_id
               formData.append("adType", "duplication");
             }
-            if (usePhoneNumberField) {
+            if (usePhoneNumberField || usesWebsiteAndPhoneCallDestination(adSetId)) {
               formData.append("phoneNumber", phoneNumber);
-            } else if (!usesOnAdLeadFormDestination(adSetId)) {
+            }
+            if ((!usePhoneNumberField || usesWebsiteAndPhoneCallDestination(adSetId)) && !usesOnAdLeadFormDestination(adSetId)) {
               formData.append("link", JSON.stringify(link));
             }
             if (usesOnAdLeadFormDestination(adSetId) && selectedForm) formData.append("leadgenFormId", selectedForm);
@@ -7284,9 +7296,10 @@ export default function AdCreationForm({
             formData.append("discloseAiMedia", String(Boolean(discloseAiMedia)));
             formData.append("jobId", frontendJobId);
             formData.append("cta", resolveCtaForServer(cta || "LEARN_MORE")); // placeholder CTA
-            if (usePhoneNumberField) {
+            if (usePhoneNumberField || usesWebsiteAndPhoneCallDestination(adSetId)) {
               formData.append("phoneNumber", phoneNumber);
-            } else if (!usesOnAdLeadFormDestination(adSetId)) {
+            }
+            if ((!usePhoneNumberField || usesWebsiteAndPhoneCallDestination(adSetId)) && !usesOnAdLeadFormDestination(adSetId)) {
               formData.append("link", JSON.stringify(link));
             }
             if (usesOnAdLeadFormDestination(adSetId) && selectedForm) formData.append("leadgenFormId", selectedForm);
@@ -10672,6 +10685,27 @@ export default function AdCreationForm({
                 )}
 
                 <div className="space-y-3">
+                  {hasWebsiteAndPhoneCallAdSets && (
+                    <div className="space-y-2">
+                      <Label htmlFor="website-call-phone" className="flex items-center gap-2">
+                        <Phone className="w-4 h-4" />
+                        Phone Number {renderDiffMark("phoneNumber")}
+                      </Label>
+                      <p className="text-gray-500 text-[12px] font-regular">
+                        This phone number will be used for your call ads. <span className="font-semibold">Please add country code as well</span>
+                      </p>
+                      <Input
+                        id="website-call-phone"
+                        type="tel"
+                        value={phoneNumber}
+                        onChange={(e) => setPhoneNumber(e.target.value)}
+                        className={cn("w-full", formInputChrome)}
+                        placeholder="+15551234567. You must add country code without spaces."
+                        disabled={!isLoggedIn}
+                        required
+                      />
+                    </div>
+                  )}
                   {!isProfileDestinationEngagement && !areAllAdSetsOnAd && <div className="space-y-2">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <Label className="flex items-center gap-2">
@@ -11770,7 +11804,7 @@ export default function AdCreationForm({
 
             {isMissingDestinationValue && !isDestinationLinkInvalid && (
               <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
-                {showPhoneNumberField ? "Please provide a phone number" : "Please provide a link URL"}
+                {showPhoneNumberField || (hasWebsiteAndPhoneCallAdSets && !phoneNumber.trim()) ? "Please provide a phone number" : "Please provide a link URL"}
               </div>
             )}
             {isDestinationLinkInvalid && delayedInvalidLink === destinationLinkValue && (
