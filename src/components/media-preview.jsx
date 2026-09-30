@@ -834,7 +834,7 @@ export default function MediaPreview({
     if (isPlacementCustomizedCarousel) {
       return selectedFiles.size >= 4 && selectedFiles.size <= 20 && selectedFiles.size % 2 === 0;
     }
-    const maxGroupSize = isFlexLikeAdType || isCarouselAd ? 10 : 3;
+    const maxGroupSize = isFlexLikeAdType || isCarouselAd ? 10 : 4;
     if (selectedFiles.size >= 2 && selectedFiles.size <= maxGroupSize) return true;
     // Exactly 2 total files and fewer than 2 selected — allow one-click grouping
     if (enablePlacementCustomization && totalFileCount === 2 && ungroupedFiles.length === 2 && selectedFiles.size === 0) return true;
@@ -1277,7 +1277,7 @@ export default function MediaPreview({
       return;
     }
 
-    if (selectedFiles.size >= 2 && selectedFiles.size <= 3) {
+    if (selectedFiles.size >= 2 && selectedFiles.size <= 4) {
       const newGroup = Array.from(selectedFiles);
       setFileGroups((prev) => [...prev, createFileGroup(newGroup)]);
 
@@ -1529,17 +1529,18 @@ export default function MediaPreview({
 
       // Video files are intentionally represented by names only. No video bytes,
       // URLs, thumbnails, or cloud-provider identifiers are sent to the server.
+      const maxGroupSize = isPlacementCustomizedCarousel ? 2 : isCarouselAd ? 3 : 4;
       const [imageResult, videoResult] = await Promise.all([
         processedImages.length >= 2
           ? requestGroups("/api/grouping/group-images", {
               images: processedImages,
-              maxGroupSize: isPlacementCustomizedCarousel ? 2 : 3,
+              maxGroupSize,
             })
           : Promise.resolve({ groups: [] }),
         videoFiles.length >= 2
           ? requestGroups("/api/grouping/group-videos", {
               videos: videoFiles.map((file) => ({ name: file.name || file.originalname || "" })),
-              maxGroupSize: isPlacementCustomizedCarousel ? 2 : 3,
+              maxGroupSize,
             })
           : Promise.resolve({ groups: [] }),
       ]);
@@ -1555,8 +1556,8 @@ export default function MediaPreview({
           .filter((ids) => ids.length >= minSize && ids.length <= maxSize);
 
       const matchedGroups = [
-        ...resolveGroups(imageResult.groups, imageFiles, 2, isPlacementCustomizedCarousel ? 2 : 3),
-        ...resolveGroups(videoResult.groups, videoFiles, 2, isPlacementCustomizedCarousel ? 2 : 3),
+        ...resolveGroups(imageResult.groups, imageFiles, 2, maxGroupSize),
+        ...resolveGroups(videoResult.groups, videoFiles, 2, maxGroupSize),
       ];
 
       let newGroups;
@@ -1590,7 +1591,7 @@ export default function MediaPreview({
     } finally {
       setIsAIGrouping(false);
     }
-  }, [files, driveFiles, dropboxFiles, frameioFiles, isPlacementCustomizedCarousel, setFileGroups, setSelectedFiles]);
+  }, [files, driveFiles, dropboxFiles, frameioFiles, isCarouselAd, isPlacementCustomizedCarousel, setFileGroups, setSelectedFiles]);
 
   const handleFlexibleAutoGroup = useCallback(async () => {
     setIsFlexAutoGrouping(true);
