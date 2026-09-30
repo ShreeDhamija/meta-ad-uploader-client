@@ -161,7 +161,7 @@ export default function Login() {
     const [email, setEmail] = useState("")
     const [domainCheck, setDomainCheck] = useState(null)
     const [emailRetry, setEmailRetry] = useState(0)
-    const [emailTouched, setEmailTouched] = useState(false)
+    const [emailFeedbackReady, setEmailFeedbackReady] = useState(false)
     useIntercom(true, true)
 
     // Manual login state
@@ -187,21 +187,27 @@ export default function Login() {
     const emailValidation = validateWorkEmail(email)
     const emailDomain = emailValidation.valid ? emailValidation.domain : ""
     const currentDomainCheck = domainCheck?.domain === emailDomain && domainCheck?.retry === emailRetry ? domainCheck : null
-    const isValidEmail = emailValidation.valid && currentDomainCheck?.valid === true
-    const isCheckingEmail = Boolean(emailDomain && !currentDomainCheck)
-    const emailError = emailValidation.code === "PERSONAL_EMAIL"
-        ? emailValidation.error
-        : email.trim() && emailTouched && !emailValidation.valid
-            ? emailValidation.error
-            : currentDomainCheck?.error || ""
+    const hasEmailStructure = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
+    const canShowEmailFeedback = hasEmailStructure && emailFeedbackReady
+    const isValidEmail = canShowEmailFeedback && emailValidation.valid && currentDomainCheck?.valid === true
+    const isCheckingEmail = Boolean(canShowEmailFeedback && emailDomain && !currentDomainCheck)
+    const emailError = !canShowEmailFeedback
+        ? ""
+        : !emailValidation.valid ? emailValidation.error : currentDomainCheck?.error || ""
 
     useEffect(() => {
-        if (!isSignupPage || !emailDomain) return
+        if (!isSignupPage || !hasEmailStructure) return
+        const debounce = setTimeout(() => setEmailFeedbackReady(true), 400)
+        return () => clearTimeout(debounce)
+    }, [email, hasEmailStructure, isSignupPage])
+
+    useEffect(() => {
+        if (!isSignupPage || !emailDomain || !canShowEmailFeedback) return
         const controller = new AbortController()
         let active = true
         let timeout
-        // Only send the domain, and wait briefly so typing does not issue a request per keystroke.
-        const debounce = setTimeout(async () => {
+        // The shared 400 ms typing debounce above gates both local errors and DNS checks.
+        const checkDomain = async () => {
             timeout = setTimeout(() => controller.abort(), 6000)
             try {
                 const response = await fetch(`${API_BASE_URL}/auth/signup-email-check`, {
@@ -224,14 +230,14 @@ export default function Login() {
             } finally {
                 clearTimeout(timeout)
             }
-        }, 400)
+        }
+        checkDomain()
         return () => {
             active = false
-            clearTimeout(debounce)
             clearTimeout(timeout)
             controller.abort()
         }
-    }, [emailDomain, emailRetry, isSignupPage])
+    }, [emailDomain, emailRetry, isSignupPage, canShowEmailFeedback])
 
     const startSignupFlow = () => {
         if (!isValidEmail || !jobRole || !signupSource) return
@@ -347,10 +353,12 @@ export default function Login() {
                                             autoComplete="email"
                                             aria-invalid={Boolean(emailError)}
                                             aria-describedby="signup-email-feedback"
-                                            onBlur={() => setEmailTouched(true)}
                                             placeholder="Enter your Work Email"
                                             value={email}
-                                            onChange={(e) => setEmail(e.target.value)}
+                                            onChange={(e) => {
+                                                setEmailFeedbackReady(false)
+                                                setEmail(e.target.value)
+                                            }}
                                             className="h-[46px] rounded-[18px] pl-10 pr-3.5"
                                         />
                                     </div>
