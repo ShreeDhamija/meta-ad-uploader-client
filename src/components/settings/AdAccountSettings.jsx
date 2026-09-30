@@ -21,6 +21,7 @@ import { saveSettings } from "@/lib/saveSettings"
 import useAdAccountSettings from "@/lib/useAdAccountSettings"
 import useTeamSync from "@/lib/useTeamSync"
 import CreativeEnhancements from "./CreativeEnhancements"
+import PlacementPreferences, { normalizePlacementPreferences } from "./PlacementPreferences"
 import PixelTracking from "./PixelTracking"
 import ReorderAdNameParts from "@/components/ui/ReorderAdNameParts"
 import LabelIcon from '@/assets/icons/label.svg?react';
@@ -125,6 +126,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
   const [defaultCTA, setDefaultCTA] = useState("Learn More")
   // const [copyTemplates, setCopyTemplates] = useState({})
   const [enhancements, setEnhancements] = useState(DEFAULT_ENHANCEMENTS)
+  const [placementPreferences, setPlacementPreferences] = useState(null)
   const [adNameFormulaV2, setAdNameFormulaV2] = useState({ rawInput: "" }) // Add this line
   const [customVariables, setCustomVariables] = useState([])
   const [pixelTracking, setPixelTracking] = useState(DEFAULT_PIXEL_TRACKING)
@@ -235,6 +237,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
       defaultCTA !== initialSettings.defaultCTA ||
       !areUtmPairsEqual(utmPairs, initialSettings.defaultUTMs) ||
       JSON.stringify(enhancements) !== JSON.stringify(initialSettings.creativeEnhancements) ||
+      JSON.stringify(placementPreferences) !== JSON.stringify(initialSettings.placementPreferences) ||
       adNameFormulaV2?.rawInput !== initialSettings.adNameFormulaV2?.rawInput ||
       multiAdvertiserAds !== initialSettings.multiAdvertiserAds ||
       defaultAdStatus !== initialSettings.defaultAdStatus ||
@@ -249,6 +252,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
     defaultCTA,
     utmPairs,
     enhancements,
+    placementPreferences,
     adNameFormulaV2,  // Add to dependencies
     initialSettings,
     multiAdvertiserAds,  // ADD THIS
@@ -278,6 +282,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
       defaultCTA: adSettings.defaultCTA || "LEARN_MORE",
       defaultUTMs: utms,
       creativeEnhancements: adSettings.creativeEnhancements || DEFAULT_ENHANCEMENTS,
+      placementPreferences: normalizePlacementPreferences(adSettings.placementPreferences),
       adNameFormulaV2: adSettings.adNameFormulaV2 || { rawInput: "" },
       multiAdvertiserAds: adSettings.multiAdvertiserAds || false,
       defaultAdStatus: adSettings.defaultAdStatus || "ACTIVE",
@@ -303,6 +308,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
       setUtmPairs([]);
       setDefaultCTA("LEARN_MORE");
       setEnhancements(DEFAULT_ENHANCEMENTS);
+      setPlacementPreferences(null);
       setAdNameFormulaV2({ rawInput: "" });
       setMultiAdvertiserAds(false);
       setDefaultAdStatus("ACTIVE");
@@ -337,6 +343,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
     setUtmPairs(initialSettings.defaultUTMs);
     setDefaultCTA(initialSettings.defaultCTA);
     setEnhancements(initialSettings.creativeEnhancements);
+    setPlacementPreferences(initialSettings.placementPreferences);
     setAdNameFormulaV2(initialSettings.adNameFormulaV2);
     setMultiAdvertiserAds(initialSettings.multiAdvertiserAds);
     setDefaultAdStatus(initialSettings.defaultAdStatus);
@@ -379,6 +386,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
       defaultCTA,
       defaultUTMs: utmPairs, // <--- Direct state reference
       creativeEnhancements: enhancements,
+      placementPreferences,
       adNameFormulaV2: {
         rawInput: adNameFormulaV2?.rawInput || ""
       },
@@ -419,6 +427,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
         defaultCTA,
         defaultUTMs: utmPairs, // <--- Direct state reference
         creativeEnhancements: enhancements,
+        placementPreferences,
         adNameFormulaV2: adNameFormulaV2,
         multiAdvertiserAds: multiAdvertiserAds,
         defaultAdStatus,
@@ -451,6 +460,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
     defaultCTA,
     utmPairs,
     enhancements,
+    placementPreferences,
     adNameFormulaV2,
     multiAdvertiserAds,
     defaultAdStatus,
@@ -514,6 +524,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
         utmPairs,
         defaultCTA,
         enhancements,
+        placementPreferences,
         adNameFormulaV2,
         multiAdvertiserAds,
         defaultAdStatus,
@@ -538,7 +549,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
         // Ignore parse errors
       }
     }
-  }, [selectedAdAccount, hasChanges, selectedPage, selectedInstagram, links, templateLinkSync, utmPairs, defaultCTA, enhancements, adNameFormulaV2, multiAdvertiserAds, defaultAdStatus, customVariables, displayLinks, pixelTracking]);
+  }, [selectedAdAccount, hasChanges, selectedPage, selectedInstagram, links, templateLinkSync, utmPairs, defaultCTA, enhancements, placementPreferences, adNameFormulaV2, multiAdvertiserAds, defaultAdStatus, customVariables, displayLinks, pixelTracking]);
 
 
 
@@ -578,6 +589,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
           setUtmPairs(draft.utmPairs);
           setDefaultCTA(draft.defaultCTA);
           setEnhancements(draft.enhancements);
+          setPlacementPreferences(Object.hasOwn(draft, "placementPreferences") ? normalizePlacementPreferences(draft.placementPreferences) : initial.placementPreferences);
           setAdNameFormulaV2(draft.adNameFormulaV2);
           setMultiAdvertiserAds(draft.multiAdvertiserAds);
           setDefaultAdStatus(draft.defaultAdStatus || initial.defaultAdStatus);
@@ -601,6 +613,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
     setUtmPairs(initial.defaultUTMs);
     setDefaultCTA(initial.defaultCTA);
     setEnhancements(initial.creativeEnhancements);
+    setPlacementPreferences(initial.placementPreferences);
     setAdNameFormulaV2(initial.adNameFormulaV2);
     setInitialSettings(initial);
     setMultiAdvertiserAds(initial.multiAdvertiserAds);
@@ -934,6 +947,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
             setEnhancements={setEnhancements}
             selectedAdAccount={selectedAdAccount}
           />
+          <PlacementPreferences value={placementPreferences} onChange={setPlacementPreferences} />
           <MultiAdvertiserAds enabled={multiAdvertiserAds} setEnabled={setMultiAdvertiserAds} />
           <DefaultAdStatus value={defaultAdStatus} onValueChange={setDefaultAdStatus} />
           {showPixelTracking && (

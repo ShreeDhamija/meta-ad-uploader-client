@@ -11,6 +11,7 @@ export default function useAdAccountSettings(adAccountId) {
         defaultAdName: "",
         displayLinks: [],
         multiAdvertiserAds: false,
+        placementPreferences: null,
         defaultAdStatus: "ACTIVE",
     });
 
@@ -25,6 +26,7 @@ export default function useAdAccountSettings(adAccountId) {
             defaultAdName: "",
             displayLinks: [],
             multiAdvertiserAds: false,
+            placementPreferences: null,
             defaultAdStatus: "ACTIVE",
             analyticsMode: null,
             conversionEvent: null,
@@ -87,6 +89,7 @@ export default function useAdAccountSettings(adAccountId) {
                         copyTemplates: {},
                         defaultTemplateName: "",
                         creativeEnhancements: { siteExtensions: false, siteLinks: [] },
+                        placementPreferences: null,
                         adNameFormulaV2: { rawInput: "" },
                         // Analytics settings (defaults)
                         anomalyThresholds: { cpaSpike: 50, overspend: 150 },
@@ -137,6 +140,7 @@ export default function useAdAccountSettings(adAccountId) {
                                 : [],
                         },
                         adNameFormulaV2: s.adNameFormulaV2 || { rawInput: "" },
+                        placementPreferences: s.placementPreferences || null,
                         adsCreatedCount: s.adsCreatedCount || 0,
                         // Analytics settings (from Firestore)
                         anomalyThresholds: s.anomalyThresholds || { cpaSpike: 50, overspend: 150 },
