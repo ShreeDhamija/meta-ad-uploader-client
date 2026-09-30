@@ -2726,8 +2726,8 @@ export default function AdCreationForm({
     ],
   );
 
-  const adLimitWarning = useMemo(() => {
-    if (selectedAdSets.length === 0) return null;
+  const adLimitWarnings = useMemo(() => {
+    if (selectedAdSets.length === 0 && !duplicateAdSet) return [];
 
     // Calculate how many ads this job will create per ad set
     let newAdsPerAdSet = 0;
@@ -2768,15 +2768,35 @@ export default function AdCreationForm({
       newAdsPerAdSet = files.length + driveFiles.length + importedFiles.length + (dropboxFiles?.length || 0) + (frameioFiles?.length || 0);
     }
 
-    // Find any ad set that would exceed 50
-    const overLimitAdSets = selectedAdSets
-      .map((id) => adSets.find((a) => a.id === id))
-      .filter((adset) => adset && (adset.totalAds || 0) + newAdsPerAdSet > 50);
+    const warnings = [];
+    const campaignIdFor = (adSet) => adSet.campaignId ?? adSet.campaign_id ?? (selectedCampaign.length === 1 ? selectedCampaign[0] : null);
 
-    if (overLimitAdSets.length === 0) return null;
+    for (const campaignId of selectedCampaign) {
+      const campaign = campaigns.find((entry) => entry.id === campaignId);
+      const campaignAdSets = adSets.filter((adSet) => campaignIdFor(adSet) === campaignId);
+      const targetAdSets = campaignAdSets.filter((adSet) => selectedAdSets.includes(adSet.id));
+      // A newly created ad set receives this job's ads in the first selected campaign.
+      const targetCount = duplicateAdSet ? Number(campaignId === selectedCampaign[0]) : targetAdSets.length;
+      if (targetCount === 0) continue;
 
-    return overLimitAdSets.map((a) => a.name || a.id);
+      const state = campaign?.advantage_state_info;
+      if (state?.advantage_state === "ADVANTAGE_PLUS_SALES" && state?.advantage_audience_state === "ENABLED") {
+        const totalAds = campaignAdSets.reduce((total, adSet) => total + (Number(adSet.totalAds) || 0), 0);
+        if (totalAds + newAdsPerAdSet * targetCount > 150) {
+          warnings.push({
+            key: campaignId,
+            message: `${selectedCampaign.length > 1 ? `${campaign.name || campaignId}: ` : ""}Sales campaigns using Advantage+ Audience can contain a maximum of 150 ads and your campaign has ${totalAds} ads. Publishing ads can lead to errors.`,
+          });
+        }
+      } else if (duplicateAdSet ? newAdsPerAdSet > 50 : targetAdSets.some((adSet) => (Number(adSet.totalAds) || 0) + newAdsPerAdSet > 50)) {
+        warnings.push({ key: campaignId, message: "This might push your ad set past the 50 ads limit!" });
+      }
+    }
+    return warnings;
   }, [
+    campaigns,
+    selectedCampaign,
+    duplicateAdSet,
     selectedAdSets,
     adSets,
     importedPosts,
@@ -11721,14 +11741,14 @@ export default function AdCreationForm({
               </div>
             )}
 
-            {adLimitWarning && (
-              <div className="flex items-start gap-1 p-1 pl-2 bg-orange-50 border border-orange-200 rounded-2xl mt-2">
+            {adLimitWarnings.map((warning) => (
+              <div key={warning.key} className="flex items-start gap-1 p-1 pl-2 bg-orange-50 border border-orange-200 rounded-2xl mt-2">
                 <AlertTriangle className="w-4 h-4 text-orange-500 shrink-0 mt-0.5 mr-0.5" />
                 <span className="text-xs text-orange-700">
-                  This might push your ad set past the 50 ads limit! Only Sales campaigns using Advantage+ Audience can contain a maximum of 150 Ads.
+                  {warning.message}
                 </span>
               </div>
-            )}
+            ))}
 
             {isCarouselAd &&
               files.length + driveFiles.length + dropboxFiles.length + frameioFiles.length > 0 &&
