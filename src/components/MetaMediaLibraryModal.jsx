@@ -220,8 +220,10 @@ export default function MetaMediaLibraryModal({
     const [creatorFilterOpen, setCreatorFilterOpen] = useState(false);
     const [creatorSearchQuery, setCreatorSearchQuery] = useState('');
     const [metaSearchQuery, setMetaSearchQuery] = useState('');
+    const [metaSearchResult, setMetaSearchResult] = useState(null);
+    const [metaSearchPage, setMetaSearchPage] = useState(null);
 
-    const mapMetaImages = (rawImages) => rawImages.map(img => ({
+    const mapMetaImages = useCallback((rawImages) => rawImages.map(img => ({
         type: 'image',
         hash: img.hash,
         name: img.name,
@@ -229,9 +231,9 @@ export default function MetaMediaLibraryModal({
         height: img.height,
         url: img.url,
         previewUrl: img.url,
-    }));
+    })), []);
 
-    const mapMetaVideos = (rawVideos) => rawVideos.map(vid => ({
+    const mapMetaVideos = useCallback((rawVideos) => rawVideos.map(vid => ({
         type: 'video',
         id: vid.id,
         name: vid.title || `Video ${vid.id}`,
@@ -240,7 +242,7 @@ export default function MetaMediaLibraryModal({
         thumbnail_url: vid.thumbnail_url,
         previewUrl: vid.thumbnail_url,
         source: vid.source,
-    }));
+    })), []);
 
     const openSourceUrl = (event, url) => {
         event.preventDefault();
@@ -542,6 +544,73 @@ export default function MetaMediaLibraryModal({
 
     const isLoading = mediaSource === 'meta_library' ? loadingMeta : loadingIg;
     const normalizedMetaSearch = metaSearchQuery.trim().toLowerCase();
+    const metaSearchTerm = metaSearchQuery.trim();
+    const localMetaItems = useMemo(() => {
+        const items = activeTab === 'images' ? metaImages : metaVideos;
+        return normalizedMetaSearch
+            ? items.filter(item => (item.name || '').toLowerCase().includes(normalizedMetaSearch))
+            : items;
+    }, [activeTab, metaImages, metaVideos, normalizedMetaSearch]);
+    const useRemoteMetaSearch = isOpen && mediaSource === 'meta_library' && !!adAccountId
+        && !!metaSearchTerm && !loadingMeta && localMetaItems.length === 0;
+    const metaSearchKey = JSON.stringify([adAccountId, activeTab, metaSearchTerm]);
+    const remoteMetaResult = metaSearchResult?.key === metaSearchKey ? metaSearchResult : null;
+    const metaSearchCursor = metaSearchPage?.key === metaSearchKey ? metaSearchPage.cursor : null;
+    const isMetaSearchPending = useRemoteMetaSearch && (!remoteMetaResult || remoteMetaResult.loading);
+
+    useEffect(() => {
+        if (!useRemoteMetaSearch) {
+            setMetaSearchResult(null);
+            setMetaSearchPage(null);
+            return;
+        }
+
+        const controller = new AbortController();
+        setMetaSearchResult(previous => ({
+            key: metaSearchKey,
+            items: metaSearchCursor && previous?.key === metaSearchKey ? previous.items : [],
+            pagination: metaSearchCursor && previous?.key === metaSearchKey ? previous.pagination : null,
+            loading: true,
+        }));
+        const timer = setTimeout(async () => {
+            try {
+                const response = await axios.get(`${API_BASE_URL}/auth/library-${activeTab}`, {
+                    params: { adAccountId, search: metaSearchTerm, ...(metaSearchCursor ? { after: metaSearchCursor } : {}) },
+                    withCredentials: true,
+                    signal: controller.signal,
+                });
+                if (controller.signal.aborted) return;
+                const items = activeTab === 'images'
+                    ? mapMetaImages(response.data?.data || [])
+                    : mapMetaVideos(response.data?.data || []);
+                setMetaSearchResult(previous => {
+                    const existing = metaSearchCursor && previous?.key === metaSearchKey ? previous.items : [];
+                    const combined = new Map([...existing, ...items].map(item => [item.hash || item.id, item]));
+                    return {
+                        key: metaSearchKey,
+                        items: [...combined.values()],
+                        pagination: response.data?.pagination || { hasMore: false, nextCursor: null },
+                        loading: false,
+                    };
+                });
+            } catch (error) {
+                if (controller.signal.aborted) return;
+                console.error('Error fetching Meta library:', error);
+                toast.error('Failed to load Meta media library');
+                setMetaSearchResult(previous => ({
+                    key: metaSearchKey,
+                    items: previous?.key === metaSearchKey ? previous.items : [],
+                    pagination: { hasMore: false, nextCursor: null },
+                    loading: false,
+                }));
+            }
+        }, metaSearchCursor ? 0 : 350);
+
+        return () => {
+            clearTimeout(timer);
+            controller.abort();
+        };
+    }, [useRemoteMetaSearch, metaSearchKey, metaSearchCursor, metaSearchTerm, adAccountId, activeTab, mapMetaImages, mapMetaVideos]);
     const instagramCreators = useMemo(() => {
         const creatorsByKey = new Map();
         [...igImages, ...igVideos].forEach((item) => {
@@ -582,9 +651,7 @@ export default function MetaMediaLibraryModal({
 
     const displayItems = useMemo(() => {
         if (mediaSource === 'meta_library') {
-            const items = activeTab === 'images' ? metaImages : metaVideos;
-            if (!normalizedMetaSearch) return items;
-            return items.filter(item => (item.name || '').toLowerCase().includes(normalizedMetaSearch));
+            return useRemoteMetaSearch ? remoteMetaResult?.items || [] : localMetaItems;
         }
         const items = activeTab === 'images' ? igImages : igVideos;
         if (!creatorFilter || creatorFilter === IG_CREATOR_FILTER_ALL) return items;
@@ -595,19 +662,22 @@ export default function MetaMediaLibraryModal({
                 ? creators.length > 0
                 : creators.some((creator) => creator.key === creatorFilter);
         });
-    }, [activeTab, creatorFilter, igImages, igVideos, instagramAccountId, mediaSource, metaImages, metaVideos, normalizedMetaSearch]);
+    }, [activeTab, creatorFilter, igImages, igVideos, instagramAccountId, mediaSource, useRemoteMetaSearch, remoteMetaResult, localMetaItems]);
 
-    const activeMetaPagination = activeTab === 'images' ? metaImagesPagination : metaVideosPagination;
     const isMetaSearchActive = mediaSource === 'meta_library' && normalizedMetaSearch.length > 0;
 
     const renderLoadMoreButton = () => {
         if (mediaSource === 'meta_library') {
             const isImagesTab = activeTab === 'images';
-            const hasMore = isImagesTab ? metaImagesPagination.hasMore : metaVideosPagination.hasMore;
+            const hasMore = useRemoteMetaSearch ? remoteMetaResult?.pagination?.hasMore
+                : isImagesTab ? metaImagesPagination.hasMore : metaVideosPagination.hasMore;
             if (!hasMore) return null;
 
-            const isLoadingMore = isImagesTab ? loadingMoreMetaImages : loadingMoreMetaVideos;
-            const onLoadMore = isImagesTab ? loadMoreMetaImages : loadMoreMetaVideos;
+            const isLoadingMore = useRemoteMetaSearch ? isMetaSearchPending
+                : isImagesTab ? loadingMoreMetaImages : loadingMoreMetaVideos;
+            const onLoadMore = useRemoteMetaSearch
+                ? () => setMetaSearchPage({ key: metaSearchKey, cursor: remoteMetaResult.pagination.nextCursor })
+                : isImagesTab ? loadMoreMetaImages : loadMoreMetaVideos;
 
             return (
                 <div className="flex w-full justify-center pt-4">
@@ -738,7 +808,10 @@ export default function MetaMediaLibraryModal({
                                 <Input
                                     type="search"
                                     value={metaSearchQuery}
-                                    onChange={(event) => setMetaSearchQuery(event.target.value)}
+                                    onChange={(event) => {
+                                        setMetaSearchPage(null);
+                                        setMetaSearchQuery(event.target.value);
+                                    }}
                                     placeholder="Search asset names..."
                                     className="h-9 rounded-xl border-gray-200 pl-9 pr-3 text-sm focus-visible:ring-0 focus-visible:ring-offset-0"
                                 />
@@ -767,7 +840,10 @@ export default function MetaMediaLibraryModal({
                     </div>
                 </div>
 
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex-1 flex flex-col overflow-hidden">
+                <Tabs value={activeTab} onValueChange={(tab) => {
+                    setMetaSearchPage(null);
+                    setActiveTab(tab);
+                }} className="w-full flex-1 flex flex-col overflow-hidden">
                     <TabsList className="grid w-full grid-cols-2 rounded-2xl p-1">
                         <TabsTrigger value="images" className="rounded-xl flex items-center gap-2">
                             <ImageIcon className="h-4 w-4" />
@@ -905,7 +981,7 @@ export default function MetaMediaLibraryModal({
                             <div className="flex items-center justify-center py-12">
                                 <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
                             </div>
-                        ) : displayItems.length === 0 ? (
+                        ) : displayItems.length === 0 && isMetaSearchPending ? null : displayItems.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-12 text-gray-500">
                                 <ImageIcon className="h-12 w-12 mb-2 opacity-50" />
                                 <p>{isMetaSearchActive
@@ -913,11 +989,6 @@ export default function MetaMediaLibraryModal({
                                     : mediaSource === 'instagram' && !instagramAccountId
                                         ? 'No Instagram account selected. Please select one first.'
                                         : 'No images found.'}</p>
-                                {isMetaSearchActive && activeMetaPagination.hasMore && (
-                                    <p className="mt-1 text-sm text-gray-400">
-                                        Try loading more items to search beyond the currently loaded assets.
-                                    </p>
-                                )}
                                 {isMetaSearchActive && renderLoadMoreButton()}
                             </div>
                         ) : (
@@ -999,15 +1070,10 @@ export default function MetaMediaLibraryModal({
                             <div className="flex items-center justify-center py-12">
                                 <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
                             </div>
-                        ) : displayItems.length === 0 ? (
+                        ) : displayItems.length === 0 && isMetaSearchPending ? null : displayItems.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-12 text-gray-500">
                                 <Video className="h-12 w-12 mb-2 opacity-50" />
                                 <p>{isMetaSearchActive ? 'No results found.' : 'No videos found.'}</p>
-                                {isMetaSearchActive && activeMetaPagination.hasMore && (
-                                    <p className="mt-1 text-sm text-gray-400">
-                                        Try loading more items to search beyond the currently loaded assets.
-                                    </p>
-                                )}
                                 {isMetaSearchActive && renderLoadMoreButton()}
                             </div>
                         ) : (
