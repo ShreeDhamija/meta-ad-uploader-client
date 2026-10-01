@@ -2,6 +2,8 @@ import { memo } from "react";
 import { LayoutPanelLeft, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import FacebookIcon from "@/assets/icons/signup/facebook.svg";
+import InstagramIcon from "@/assets/icons/signup/instagram.svg";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const SIZES = {
@@ -17,6 +19,7 @@ const SIZE_ORDER = ["portrait", "square", "four_by_five", "landscape"];
 const COLUMNS = [
   {
     name: "Facebook",
+    icon: FacebookIcon,
     sections: [
       { name: "Vertical placements", placements: [
         ["facebook:story", "Stories", "portrait"],
@@ -40,6 +43,7 @@ const COLUMNS = [
   },
   {
     name: "Instagram",
+    icon: InstagramIcon,
     sections: [
       { name: "Vertical placements", placements: [
         ["instagram:story", "Stories", "portrait"],
@@ -165,7 +169,12 @@ function PlacementPreferences({ value, onChange }) {
       <div aria-disabled={!canCustomize} className={`overflow-x-auto ${canCustomize ? "" : "opacity-50"}`}>
         <div className="min-w-[540px] space-y-2.5">
           <div className="grid grid-cols-3 gap-3">
-            {COLUMNS.map(column => <h4 key={column.name} className="rounded-2xl border border-gray-200 bg-white px-3 py-2.5 text-xs font-semibold text-gray-700">{column.name}</h4>)}
+            {COLUMNS.map(column => (
+              <h4 key={column.name} className="flex items-center gap-2 rounded-2xl border border-gray-200 bg-white px-3 py-2.5 text-xs font-semibold text-gray-700">
+                {column.icon && <img src={column.icon} alt="" className="h-4 w-4 shrink-0 object-contain" />}
+                {column.name}
+              </h4>
+            ))}
           </div>
           <div className="grid grid-cols-3 items-start gap-3">
             {COLUMNS.map(column => (
