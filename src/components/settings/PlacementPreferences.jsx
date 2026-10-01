@@ -154,7 +154,7 @@ function PlacementPreferences({ value, onChange }) {
         <div className="flex flex-wrap gap-x-5 gap-y-2">
           {SIZE_ORDER.map(size => (
             <label key={size} className="flex cursor-pointer items-center gap-2 text-xs text-gray-700">
-              <Checkbox checked={selectedSizes.includes(size)} onCheckedChange={checked => changeSizes(size, checked === true)} className="rounded border-gray-300" />
+              <Checkbox checked={selectedSizes.includes(size)} onCheckedChange={checked => changeSizes(size, checked === true)} className="rounded-md border-gray-300" />
               {SIZES[size].label}
             </label>
           ))}
@@ -163,13 +163,13 @@ function PlacementPreferences({ value, onChange }) {
       </fieldset>
 
       <div aria-disabled={!canCustomize} className={`overflow-x-auto ${canCustomize ? "" : "opacity-50"}`}>
-        <div className="min-w-[540px] space-y-3">
-          <div className="grid grid-cols-3 gap-3 rounded-xl border border-gray-200 bg-white py-2.5">
-            {COLUMNS.map(column => <h4 key={column.name} className="px-3 text-xs font-semibold text-gray-700">{column.name}</h4>)}
+        <div className="min-w-[540px] space-y-2.5">
+          <div className="grid grid-cols-3 gap-3">
+            {COLUMNS.map(column => <h4 key={column.name} className="rounded-2xl border border-gray-200 bg-white px-3 py-2.5 text-xs font-semibold text-gray-700">{column.name}</h4>)}
           </div>
           <div className="grid grid-cols-3 items-start gap-3">
             {COLUMNS.map(column => (
-              <div key={column.name} role="group" aria-label={`${column.name} placements`} className="min-w-0 space-y-5 rounded-xl border border-gray-200 bg-white p-3">
+              <div key={column.name} role="group" aria-label={`${column.name} placements`} className="min-w-0 space-y-5 rounded-2xl border border-gray-200 bg-white p-3">
                 {column.sections.filter(section => section.placements.length > 0).map(section => (
                   <div key={section.name}>
                     <p className="mb-2 text-[10px] font-semibold normal-case text-black">{section.name}</p>
