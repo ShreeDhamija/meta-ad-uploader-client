@@ -2,6 +2,7 @@ import { memo } from "react";
 import { LayoutPanelLeft, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import FacebookIcon from "@/assets/icons/signup/facebook.svg";
 import InstagramIcon from "@/assets/icons/signup/instagram.svg";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -166,8 +167,11 @@ function PlacementPreferences({ value, onChange }) {
         {!canCustomize && <p className="text-[11px] text-gray-500">Select at least two sizes to customize placements.</p>}
       </fieldset>
 
-      <div aria-disabled={!canCustomize} className={`overflow-x-auto ${canCustomize ? "" : "opacity-50"}`}>
-        <div className="min-w-[540px] space-y-2.5">
+      <TooltipProvider delayDuration={200}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+      <div tabIndex={canCustomize ? undefined : 0} aria-disabled={!canCustomize} className={`overflow-x-auto ${canCustomize ? "" : "opacity-50"}`}>
+        <div className={`min-w-[540px] space-y-2.5 ${canCustomize ? "" : "pointer-events-none"}`}>
           <div className="grid grid-cols-3 gap-3">
             {COLUMNS.map(column => (
               <h4 key={column.name} className="flex items-center gap-2 rounded-2xl border border-gray-200 bg-white px-3 py-2.5 text-xs font-semibold text-gray-700">
@@ -210,6 +214,14 @@ function PlacementPreferences({ value, onChange }) {
           </div>
         </div>
       </div>
+          </TooltipTrigger>
+          {!canCustomize && (
+            <TooltipContent className="rounded-xl bg-zinc-800 text-white">
+              Please select 2 asset sizes to customize placements.
+            </TooltipContent>
+          )}
+        </Tooltip>
+      </TooltipProvider>
       <p className="text-[11px] font-bold leading-relaxed text-gray-500">* These choices don’t enable placements excluded by your ad set.</p>
     </div>
   );
