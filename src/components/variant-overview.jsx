@@ -3,21 +3,25 @@ import FacebookIcon from "@/assets/icons/fb.svg?react";
 import TemplateIcon from "@/assets/icons/file.svg?react";
 import CampaignIcon from "@/assets/icons/folder.svg?react";
 import AdSetIcon from "@/assets/icons/grid.svg?react";
+import InstagramIcon from "@/assets/icons/ig.svg?react";
 import LabelIcon from "@/assets/icons/label.svg?react";
 import LinkIcon from "@/assets/icons/link.svg?react";
 import { SavedLinkSelector } from "@/components/settings/LinkParameters";
 import { sortTemplates } from "@/components/settings/TemplateLinkSync";
 import ReorderAdNameParts from "@/components/ui/ReorderAdNameParts";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Command, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Switch } from "@/components/ui/switch";
+import usePartnershipAdPartners from "@/lib/usePartnershipAdPartners";
 import { cn } from "@/lib/utils";
-import { ArrowLeft, Check, ChevronsUpDown, Loader, Pencil } from "lucide-react";
+import { Check, ChevronsUpDown, Loader, Users } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import TextareaAutosize from "react-textarea-autosize";
 
@@ -33,13 +37,7 @@ const dropdownContentStyle = {
   maxWidth: "min(calc(100vw - 2rem), 560px)",
 };
 const FALLBACK_THUMBNAIL = "https://api.withblip.com/thumbnail.jpg";
-
-const formatCta = (cta) =>
-  String(cta || "LEARN_MORE")
-    .toLowerCase()
-    .split("_")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
+const FALLBACK_PROFILE_IMAGE = "https://api.withblip.com/backup_page_image.png";
 
 function OverviewCombobox({
   options,
@@ -277,6 +275,143 @@ function ColumnLabel({ icon: Icon, children }) {
   );
 }
 
+function FieldLabel({ icon: Icon, children }) {
+  return (
+    <p className="flex items-center gap-1.5 px-1 text-xs font-medium text-gray-500">
+      {Icon && <Icon className="h-3.5 w-3.5" />}
+      {children}
+    </p>
+  );
+}
+
+function SelectedAccount({ imageUrl, name }) {
+  return (
+    <div className="flex min-w-0 items-center gap-2">
+      <img src={imageUrl || FALLBACK_PROFILE_IMAGE} alt="" className="h-5 w-5 shrink-0 rounded-full object-cover" />
+      <span className="truncate">{name}</span>
+    </div>
+  );
+}
+
+function OverviewRadioOption({ id, value, label, disabled = false }) {
+  return (
+    <div className="flex items-center gap-2">
+      <RadioGroupItem value={value} id={id} disabled={disabled} />
+      <Label htmlFor={id} className={cn("cursor-pointer text-sm font-normal", disabled && "cursor-not-allowed text-gray-400")}>
+        {label}
+      </Label>
+    </div>
+  );
+}
+
+function PartnershipCell({ row, brandUsername, onFieldsChange }) {
+  // Mirrors the native partnership toggle: partners load per brand IG account + page.
+  const { partners, isLoading, error } = usePartnershipAdPartners(
+    row.isPartnershipAd ? row.instagramAccountId : null,
+    row.isPartnershipAd ? row.pageId : null,
+  );
+  const selectedPartner = partners.find((partner) => partner.creatorIgId === row.partnerIgAccountId);
+  const partnerUsername = (selectedPartner?.creatorUsername || row.partnerName || "").replace(/^@/, "");
+  const partnerOptions = partners.map((partner) => ({
+    value: partner.creatorIgId,
+    label: `@${partner.creatorUsername ?? "Username not available"}`,
+    partner,
+    meta: <span className="ml-2 shrink-0 text-xs font-normal text-gray-400">{partner.creatorIgId}</span>,
+  }));
+  const partnerHasPage = Boolean(row.partnerFbPageId);
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2 pt-2">
+        <Switch
+          id={`${row.id}-partnership`}
+          checked={row.isPartnershipAd}
+          disabled={!row.instagramAccountId}
+          onCheckedChange={(checked) =>
+            onFieldsChange(
+              row.id,
+              checked ? { isPartnershipAd: true } : { isPartnershipAd: false, partnerIgAccountId: "", partnerFbPageId: "", partnerName: "" },
+            )
+          }
+        />
+        <Label htmlFor={`${row.id}-partnership`} className="cursor-pointer text-sm">
+          Add Partnership
+        </Label>
+      </div>
+      {!row.instagramAccountId && <p className="text-xs text-gray-500">Select an Instagram account first</p>}
+
+      {row.isPartnershipAd && (
+        <>
+          <OverviewCombobox
+            options={partnerOptions}
+            selectedValues={row.partnerIgAccountId ? [row.partnerIgAccountId] : []}
+            onSelect={({ partner }) =>
+              onFieldsChange(row.id, {
+                partnerIgAccountId: partner.creatorIgId,
+                partnerFbPageId: partner.creatorFbPageId,
+                partnerName: partner.creatorUsername || partner.creatorName || "",
+                ...(!partner.creatorFbPageId && row.partnershipPrimaryIdentity === "partner" ? { partnershipPrimaryIdentity: "brand" } : {}),
+              })
+            }
+            searchPlaceholder="Search partners..."
+            emptyText="No partners found."
+            loading={isLoading}
+            loadingLabel="Loading partners..."
+            disabled={partners.length === 0}
+            triggerLabel={
+              <span className="block flex-1 truncate text-left">
+                {partnerUsername ? `@${partnerUsername}` : partners.length === 0 ? "No approved partners found" : "Select a partner creator"}
+              </span>
+            }
+          />
+          {error && <p className="text-xs text-red-600">{error}</p>}
+
+          <div className="space-y-2">
+            <FieldLabel>Identities in header</FieldLabel>
+            <RadioGroup
+              value={row.partnershipIdentityMode}
+              onValueChange={(value) => onFieldsChange(row.id, { partnershipIdentityMode: value })}
+              className="gap-2 px-1"
+            >
+              <OverviewRadioOption id={`${row.id}-identity-dynamic`} value="dynamic" label="Dynamic" />
+              <OverviewRadioOption
+                id={`${row.id}-identity-first`}
+                value="first_identity_only"
+                label="First identity only"
+                disabled={!partnerHasPage && Boolean(row.partnerIgAccountId)}
+              />
+              <OverviewRadioOption id={`${row.id}-identity-both`} value="both_identities" label="Both identities" />
+            </RadioGroup>
+          </div>
+
+          {row.partnershipIdentityMode === "both_identities" && (
+            <div className="space-y-2">
+              <FieldLabel>Primary identity</FieldLabel>
+              <RadioGroup
+                value={row.partnershipPrimaryIdentity}
+                onValueChange={(value) => onFieldsChange(row.id, { partnershipPrimaryIdentity: value })}
+                className="gap-2 px-1"
+              >
+                <OverviewRadioOption
+                  id={`${row.id}-primary-brand`}
+                  value="brand"
+                  label={brandUsername ? `@${brandUsername}` : "Main brand IG"}
+                />
+                <OverviewRadioOption
+                  id={`${row.id}-primary-partner`}
+                  value="partner"
+                  label={partnerUsername ? `@${partnerUsername}` : "Partner IG"}
+                  disabled={!partnerHasPage}
+                />
+              </RadioGroup>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
 export default function VariantOverview({
   rows,
   campaigns,
@@ -284,6 +419,9 @@ export default function VariantOverview({
   copyTemplates,
   defaultTemplateName,
   availableLinks,
+  ctaOptions,
+  uploadSources,
+  onUpload,
   customVariables,
   showAdSetNameVariable,
   loadingAdSetVariantIds,
@@ -293,12 +431,15 @@ export default function VariantOverview({
   onTemplateSelect,
   onLinkSelect,
   onLinkInputChange,
-  onAdNameChange,
+  onFieldsChange,
   onCopyChange,
-  onEditVariant,
-  onClose,
 }) {
+  // Once shown, keep the partnership column even if every variant turns partnership off.
   const hasPartnershipVariants = rows.some((row) => row.isPartnershipAd);
+  const [showPartnershipColumn, setShowPartnershipColumn] = useState(hasPartnershipVariants);
+  useEffect(() => {
+    if (hasPartnershipVariants) setShowPartnershipColumn(true);
+  }, [hasPartnershipVariants]);
   const campaignOptions = useMemo(
     () =>
       campaigns.map((campaign) => ({
@@ -339,51 +480,54 @@ export default function VariantOverview({
     [copyTemplates, defaultTemplateName],
   );
   const hasTemplates = templateOptions.length > 0;
+  const instagramAccounts = useMemo(() => {
+    const seen = new Set();
+    return pages
+      .flatMap((page) => [...(page.instagramAccount ? [page.instagramAccount] : []), ...(page.additionalInstagramAccounts || [])])
+      .filter((account) => {
+        if (!account?.id || seen.has(account.id)) return false;
+        seen.add(account.id);
+        return true;
+      });
+  }, [pages]);
+  const instagramOptions = useMemo(
+    () =>
+      instagramAccounts.map((account) => ({
+        value: account.id,
+        label: account.username || account.id,
+        icon: (
+          <img
+            src={account.profilePictureUrl || FALLBACK_PROFILE_IMAGE}
+            alt=""
+            className="h-6 w-6 shrink-0 rounded-full border border-gray-300 object-cover"
+          />
+        ),
+      })),
+    [instagramAccounts],
+  );
+  const ctaSelectOptions = useMemo(() => ctaOptions.map((option) => ({ value: option.value, label: option.label })), [ctaOptions]);
 
+  // `divider: false` keeps the copy columns (primary text / headlines / descriptions) visually grouped.
   const columns = [
     { key: "variant", label: "Variant", width: 176 },
-    { key: "campaign", label: "Campaign", icon: CampaignIcon, width: 260 },
-    { key: "adSet", label: "Ad Set", icon: AdSetIcon, width: 260 },
-    { key: "page", label: "Page", icon: FacebookIcon, width: 240 },
-    ...(hasPartnershipVariants ? [{ key: "partnership", label: "Partnership", width: 180 }] : []),
+    { key: "campaignAdSet", label: "Campaign & Ad Set", icon: CampaignIcon, width: 280 },
+    { key: "identity", label: "Page & Instagram", icon: FacebookIcon, width: 260 },
+    ...(showPartnershipColumn ? [{ key: "partnership", label: "Partnership", icon: Users, width: 260 }] : []),
     { key: "adName", label: "Ad Name", icon: LabelIcon, width: 320 },
     { key: "template", label: "Template", icon: TemplateIcon, width: 240 },
-    { key: "messages", label: "Primary Text", width: 340 },
-    { key: "headlines", label: "Headlines", width: 280 },
+    { key: "messages", label: "Primary Text", width: 340, divider: false },
+    { key: "headlines", label: "Headlines", width: 280, divider: false },
     { key: "descriptions", label: "Descriptions", width: 280 },
     { key: "link", label: "Link", icon: LinkIcon, width: 300 },
-    { key: "cta", label: "CTA", icon: CTAIcon, width: 140 },
+    { key: "cta", label: "CTA", icon: CTAIcon, width: 220 },
     { key: "media", label: "Ads", width: 340 },
   ];
+  const hasDivider = (column, columnIndex) => column.divider !== false && columnIndex < columns.length - 1;
 
   const renderCell = (row, key) => {
     switch (key) {
-      case "campaign": {
+      case "campaignAdSet": {
         const selectedCampaigns = campaigns.filter((campaign) => row.campaignIds.includes(campaign.id));
-        return (
-          <OverviewCombobox
-            multiple
-            options={campaignOptions}
-            selectedValues={row.campaignIds}
-            onSelect={(option) => onCampaignToggle(row.id, option.value)}
-            searchPlaceholder="Search campaigns..."
-            emptyText="No campaigns found."
-            disabled={campaigns.length === 0}
-            triggerLabel={
-              <span className="block flex-1 truncate text-left" title={selectedCampaigns.length === 1 ? selectedCampaigns[0].name : undefined}>
-                {campaigns.length === 0
-                  ? "No campaigns available"
-                  : selectedCampaigns.length === 0
-                    ? "Select campaigns"
-                    : selectedCampaigns.length === 1
-                      ? selectedCampaigns[0].name || selectedCampaigns[0].id
-                      : `${selectedCampaigns.length} campaigns selected`}
-              </span>
-            }
-          />
-        );
-      }
-      case "adSet": {
         const adSetOptions = row.adSetOptions.map((adSet) => ({
           value: adSet.id,
           label: adSet.name || adSet.id,
@@ -400,103 +544,144 @@ export default function VariantOverview({
             </span>
           ),
         }));
-        const isLoading = loadingAdSetVariantIds.includes(row.id);
+        const isLoadingAdSets = loadingAdSetVariantIds.includes(row.id);
         const noAdSets = row.campaignIds.length > 0 && adSetOptions.length === 0;
         return (
-          <div className="space-y-1.5">
-            <OverviewCombobox
-              multiple
-              grouped
-              selectAll
-              options={adSetOptions}
-              selectedValues={row.isNewAdSet ? [] : row.adSetIds}
-              onSelect={(option) =>
-                onAdSetsChange(
-                  row.id,
-                  row.adSetIds.includes(option.value) ? row.adSetIds.filter((id) => id !== option.value) : [...row.adSetIds, option.value],
-                )
-              }
-              onSelectAll={(visibleOptions, allSelected) => {
-                const visibleIds = new Set(visibleOptions.map((option) => option.value));
-                onAdSetsChange(
-                  row.id,
-                  allSelected ? row.adSetIds.filter((id) => !visibleIds.has(id)) : Array.from(new Set([...row.adSetIds, ...visibleIds])),
-                );
-              }}
-              searchPlaceholder="Search AdSets..."
-              emptyText="No ad sets found."
-              loading={isLoading}
-              loadingLabel="Fetching ad sets..."
-              disabled={row.adSetsLocked || row.campaignIds.length === 0 || noAdSets}
-              triggerLabel={
-                <span className={cn("block flex-1 truncate text-left", row.adSetsLocked && "text-gray-400")}>
-                  {row.isNewAdSet
-                    ? "New Ad Set"
-                    : row.campaignIds.length === 0
-                      ? "Select a campaign first"
-                      : noAdSets
-                        ? "No ad sets in this campaign"
-                        : row.adSetIds.length > 0
-                          ? row.adSetIds.length === 1
-                            ? row.adSetOptions.find((adSet) => adSet.id === row.adSetIds[0])?.name || "1 AdSet selected"
-                            : `${row.adSetIds.length} AdSets selected`
-                          : "Select Ad Sets"}
-                </span>
-              }
-            />
-            {row.isNewAdSet && (
-              <p className="truncate px-1 text-xs text-gray-500" title={row.newAdSetName}>
-                {row.newAdSetName || "Unnamed ad set"}
-                {row.adSetsLocked && " · shared with Default"}
-              </p>
-            )}
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <FieldLabel icon={CampaignIcon}>Campaign</FieldLabel>
+              <OverviewCombobox
+                multiple
+                options={campaignOptions}
+                selectedValues={row.campaignIds}
+                onSelect={(option) => onCampaignToggle(row.id, option.value)}
+                searchPlaceholder="Search campaigns..."
+                emptyText="No campaigns found."
+                disabled={campaigns.length === 0}
+                triggerLabel={
+                  <span className="block flex-1 truncate text-left" title={selectedCampaigns.length === 1 ? selectedCampaigns[0].name : undefined}>
+                    {campaigns.length === 0
+                      ? "No campaigns available"
+                      : selectedCampaigns.length === 0
+                        ? "Select campaigns"
+                        : selectedCampaigns.length === 1
+                          ? selectedCampaigns[0].name || selectedCampaigns[0].id
+                          : `${selectedCampaigns.length} campaigns selected`}
+                  </span>
+                }
+              />
+            </div>
+            <div className="space-y-1.5">
+              <FieldLabel icon={AdSetIcon}>Ad Set</FieldLabel>
+              <OverviewCombobox
+                multiple
+                grouped
+                selectAll
+                options={adSetOptions}
+                selectedValues={row.isNewAdSet ? [] : row.adSetIds}
+                onSelect={(option) =>
+                  onAdSetsChange(
+                    row.id,
+                    row.adSetIds.includes(option.value) ? row.adSetIds.filter((id) => id !== option.value) : [...row.adSetIds, option.value],
+                  )
+                }
+                onSelectAll={(visibleOptions, allSelected) => {
+                  const visibleIds = new Set(visibleOptions.map((option) => option.value));
+                  onAdSetsChange(
+                    row.id,
+                    allSelected ? row.adSetIds.filter((id) => !visibleIds.has(id)) : Array.from(new Set([...row.adSetIds, ...visibleIds])),
+                  );
+                }}
+                searchPlaceholder="Search AdSets..."
+                emptyText="No ad sets found."
+                loading={isLoadingAdSets}
+                loadingLabel="Fetching ad sets..."
+                disabled={row.adSetsLocked || row.campaignIds.length === 0 || noAdSets}
+                triggerLabel={
+                  <span className={cn("block flex-1 truncate text-left", row.adSetsLocked && "text-gray-400")}>
+                    {row.isNewAdSet
+                      ? "New Ad Set"
+                      : row.campaignIds.length === 0
+                        ? "Select a campaign first"
+                        : noAdSets
+                          ? "No ad sets in this campaign"
+                          : row.adSetIds.length > 0
+                            ? row.adSetIds.length === 1
+                              ? row.adSetOptions.find((adSet) => adSet.id === row.adSetIds[0])?.name || "1 AdSet selected"
+                              : `${row.adSetIds.length} AdSets selected`
+                            : "Select Ad Sets"}
+                  </span>
+                }
+              />
+              {row.isNewAdSet && (
+                <p className="truncate px-1 text-xs text-gray-500" title={row.newAdSetName}>
+                  {row.newAdSetName || "Unnamed ad set"}
+                  {row.adSetsLocked && " · shared with Default"}
+                </p>
+              )}
+            </div>
           </div>
         );
       }
-      case "page": {
+      case "identity": {
         const selectedPage = pages.find((page) => String(page.id) === String(row.pageId));
+        const selectedInstagram = instagramAccounts.find((account) => String(account.id) === String(row.instagramAccountId));
         return (
-          <div className="space-y-1.5">
-            <OverviewCombobox
-              options={pageOptions}
-              selectedValues={row.pageId ? [row.pageId] : []}
-              onSelect={(option) => onPageSelect(row.id, option.page)}
-              searchPlaceholder="Search pages..."
-              emptyText="No pages found."
-              disabled={pages.length === 0}
-              triggerLabel={
-                selectedPage || row.pageId ? (
-                  <div className="flex min-w-0 items-center gap-2">
-                    <img
-                      src={selectedPage?.profilePicture || "https://api.withblip.com/backup_page_image.png"}
-                      alt=""
-                      className="h-5 w-5 shrink-0 rounded-full object-cover"
-                    />
-                    <span className="truncate">{selectedPage?.name || row.pageId}</span>
-                  </div>
-                ) : (
-                  <span className="block flex-1 truncate text-left">Select a Page</span>
-                )
-              }
-            />
-            {row.instagramName && <p className="truncate px-1 text-xs text-gray-500">@{String(row.instagramName).replace(/^@/, "")}</p>}
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <FieldLabel icon={FacebookIcon}>Facebook Page</FieldLabel>
+              <OverviewCombobox
+                options={pageOptions}
+                selectedValues={row.pageId ? [row.pageId] : []}
+                onSelect={(option) => onPageSelect(row.id, option.page)}
+                searchPlaceholder="Search pages..."
+                emptyText="No pages found."
+                disabled={pages.length === 0}
+                triggerLabel={
+                  row.pageId ? (
+                    <SelectedAccount imageUrl={selectedPage?.profilePicture} name={selectedPage?.name || row.pageId} />
+                  ) : (
+                    <span className="block flex-1 truncate text-left">Select a Page</span>
+                  )
+                }
+              />
+            </div>
+            <div className="space-y-1.5">
+              <FieldLabel icon={InstagramIcon}>Instagram</FieldLabel>
+              <OverviewCombobox
+                options={instagramOptions}
+                selectedValues={row.instagramAccountId ? [row.instagramAccountId] : []}
+                onSelect={(option) => onFieldsChange(row.id, { instagramAccountId: option.value })}
+                searchPlaceholder="Search Instagram usernames..."
+                emptyText="No IG accounts found."
+                disabled={instagramOptions.length === 0}
+                triggerLabel={
+                  row.instagramAccountId ? (
+                    <SelectedAccount imageUrl={selectedInstagram?.profilePictureUrl} name={selectedInstagram?.username || row.instagramAccountId} />
+                  ) : (
+                    <span className="block flex-1 truncate text-left">
+                      {instagramOptions.length === 0 ? "No IG accounts found" : "Select Instagram Account"}
+                    </span>
+                  )
+                }
+              />
+            </div>
           </div>
         );
       }
       case "partnership":
-        return row.isPartnershipAd ? (
-          <div className="space-y-1 pt-2">
-            <span className="inline-flex rounded-full bg-violet-50 px-2 py-1 text-xs font-medium text-violet-700">Enabled</span>
-            <p className="break-all text-xs text-gray-600">{row.partnerName || "Partner selected"}</p>
-          </div>
-        ) : (
-          <p className="pt-2.5 text-sm text-gray-400">None</p>
+        return (
+          <PartnershipCell
+            row={row}
+            brandUsername={instagramAccounts.find((account) => String(account.id) === String(row.instagramAccountId))?.username}
+            onFieldsChange={onFieldsChange}
+          />
         );
       case "adName":
         return (
           <ReorderAdNameParts
             formulaInput={row.adNameFormula}
-            onFormulaChange={(rawInput) => onAdNameChange(row.id, rawInput)}
+            onFormulaChange={(rawInput) => onFieldsChange(row.id, { adNameFormulaV2: { rawInput } })}
             variant="home"
             customVariables={customVariables}
             showAdSetNameVariable={showAdSetNameVariable}
@@ -571,35 +756,71 @@ export default function VariantOverview({
           </div>
         );
       }
-      case "cta":
+      case "cta": {
+        const selectedCta = ctaSelectOptions.find((option) => option.value === row.cta);
         return (
-          <span className="mt-1.5 inline-flex rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-700">{formatCta(row.cta)}</span>
+          <OverviewCombobox
+            options={ctaSelectOptions}
+            selectedValues={row.cta ? [row.cta] : []}
+            onSelect={(option) => onFieldsChange(row.id, { cta: option.value })}
+            searchPlaceholder="Search CTAs..."
+            emptyText="No CTAs found."
+            disabled={Boolean(row.fixedCtaLabel)}
+            triggerLabel={
+              <span className={cn("block flex-1 truncate text-left", !row.fixedCtaLabel && !selectedCta && "text-muted-foreground")}>
+                {row.fixedCtaLabel || selectedCta?.label || "Select a CTA"}
+              </span>
+            }
+          />
         );
+      }
       case "media":
-        return row.mediaItems.length > 0 ? (
-          <div className="grid grid-cols-2 items-stretch gap-3">
-            {row.mediaItems.map((item, itemIndex) => (
-              <div
-                key={itemIndex}
-                className={cn(
-                  "flex min-h-[96px] min-w-0 flex-col",
-                  item.isGroup && "col-span-2 rounded-2xl border border-gray-200 bg-gray-50 p-3",
-                )}
-              >
-                <span className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-gray-500">{item.label}</span>
-                <div
-                  className={cn("grid min-h-[72px] flex-1 items-start gap-2", item.files.length === 1 && "h-full")}
-                  style={{ gridTemplateColumns: `repeat(${Math.max(item.files.length, 1)}, minmax(0, 1fr))` }}
-                >
-                  {item.files.map((media, fileIndex) => (
-                    <OverviewThumbnail key={`${media.key}-${fileIndex}`} media={media} fitToWidth={item.files.length > 1 || item.isGroup} />
-                  ))}
-                </div>
+        return (
+          <div className="space-y-3">
+            {row.mediaItems.length > 0 ? (
+              <div className="grid grid-cols-2 items-stretch gap-3">
+                {row.mediaItems.map((item, itemIndex) => (
+                  <div
+                    key={itemIndex}
+                    className={cn(
+                      "flex min-h-[96px] min-w-0 flex-col",
+                      item.isGroup && "col-span-2 rounded-2xl border border-gray-200 bg-gray-50 p-3",
+                    )}
+                  >
+                    <span className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-gray-500">{item.label}</span>
+                    <div
+                      className={cn("grid min-h-[72px] flex-1 items-start gap-2", item.files.length === 1 && "h-full")}
+                      style={{ gridTemplateColumns: `repeat(${Math.max(item.files.length, 1)}, minmax(0, 1fr))` }}
+                    >
+                      {item.files.map((media, fileIndex) => (
+                        <OverviewThumbnail key={`${media.key}-${fileIndex}`} media={media} fitToWidth={item.files.length > 1 || item.isGroup} />
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
+            ) : (
+              <p className="pt-2.5 text-sm text-gray-400">No media assigned</p>
+            )}
+            {uploadSources.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {uploadSources.map((source) => (
+                  <Button
+                    key={source.id}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    title={`Add media to ${row.name} from ${source.name}`}
+                    onClick={() => onUpload(row.id, source.id)}
+                    className="h-7 gap-1.5 rounded-xl border-gray-300 bg-white px-2 text-xs font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+                  >
+                    <img src={source.icon} alt="" className={cn("h-3.5 w-3.5 object-contain", source.id === "frameio" && "rounded-sm object-cover")} />
+                    {source.compactLabel}
+                  </Button>
+                ))}
+              </div>
+            )}
           </div>
-        ) : (
-          <p className="pt-2.5 text-sm text-gray-400">No media assigned</p>
         );
       default:
         return null;
@@ -608,23 +829,8 @@ export default function VariantOverview({
 
   return (
     <Card className="!bg-white border border-gray-300 max-w-[calc(100vw-1rem)] shadow-[0_2px_4px_rgba(0,0,0,0.08)] rounded-3xl">
-      <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
-        <div className="space-y-1.5">
-          <CardTitle>Variant Overview</CardTitle>
-          <CardDescription>Compare and edit every variant side by side. Changes apply to each variant directly.</CardDescription>
-        </div>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onClose}
-          className="shrink-0 gap-1.5 rounded-2xl border-gray-300 bg-white py-4.5 shadow hover:bg-gray-50"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to editor
-        </Button>
-      </CardHeader>
-      <CardContent className="px-0 pb-6">
-        <ScrollArea type="always" className="w-full" viewportClassName="max-h-[calc(100vh-15rem)] pb-3">
+      <CardContent className="p-0">
+        <ScrollArea type="always" className="w-full rounded-3xl" viewportClassName="max-h-[calc(100vh-10rem)] pb-3">
           <table className="w-max min-w-full border-separate border-spacing-0 text-left">
             <thead>
               <tr>
@@ -633,7 +839,8 @@ export default function VariantOverview({
                     key={column.key}
                     style={{ width: column.width, minWidth: column.width }}
                     className={cn(
-                      "sticky top-0 z-20 border-b border-gray-200 bg-white px-3 pb-3 align-bottom font-normal",
+                      "sticky top-0 z-20 border-b border-gray-200 bg-white px-3 pb-3 pt-5 align-bottom font-normal",
+                      hasDivider(column, columnIndex) && "border-r",
                       columnIndex === 0 && "left-0 z-30 pl-6",
                       columnIndex === columns.length - 1 && "pr-6",
                     )}
@@ -652,6 +859,7 @@ export default function VariantOverview({
                       style={{ width: column.width, minWidth: column.width, maxWidth: column.width }}
                       className={cn(
                         "border-b border-gray-200 bg-white px-3 py-4",
+                        hasDivider(column, columnIndex) && "border-r",
                         columnIndex === 0 && "sticky left-0 z-10 pl-6",
                         columnIndex === columns.length - 1 && "pr-6",
                       )}
@@ -664,16 +872,7 @@ export default function VariantOverview({
                           </div>
                           <p className="text-xs text-gray-500">
                             {row.adCount} ad{row.adCount !== 1 ? "s" : ""}
-                            {row.isActive && " · Editing"}
                           </p>
-                          <button
-                            type="button"
-                            onClick={() => onEditVariant(row.id)}
-                            className="mt-1 inline-flex items-center gap-1 bg-transparent p-0 text-xs font-medium text-blue-600 shadow-none hover:text-blue-700 hover:underline"
-                          >
-                            <Pencil className="h-3 w-3" />
-                            Open in editor
-                          </button>
                         </div>
                       ) : (
                         renderCell(row, column.key)

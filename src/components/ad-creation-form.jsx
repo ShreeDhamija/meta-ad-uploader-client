@@ -50,7 +50,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuth } from "@/lib/AuthContext";
-import { partnersCacheGeneration, partnersCacheKey, readPartnersCache, writePartnersCache } from "@/lib/dataCache";
+import usePartnershipAdPartners from "@/lib/usePartnershipAdPartners";
 import { deleteCopyTemplates } from "@/lib/deleteCopyTemplate";
 import { cleanupPublishedDraftMedia, createDraftShareUrl, listDrafts, refreshDraftMediaUrl } from "@/lib/draftApi";
 import { resizeOversizedImages } from "@/lib/resizeOversizedImage";
@@ -923,83 +923,30 @@ const extractFolderId = (url) => {
   return idMatch ? idMatch[0] : null;
 };
 
-function usePartnershipAdPartners(instagramAccountId, pageId) {
-  const { userId } = useAuth();
-  const cacheKey = partnersCacheKey(API_BASE_URL, userId, pageId, instagramAccountId);
-  const [state, setState] = useState({ key: null, partners: [], isLoading: false, error: null, lastUpdated: null });
-  const activeRequest = useRef(null);
+const PROFILE_DESTINATION_TYPES = new Set(["FACEBOOK_PAGE", "INSTAGRAM_PROFILE", "INSTAGRAM_PROFILE_AND_FACEBOOK_PAGE"]);
 
-  const fetchPartners = useCallback(async (force = false) => {
-    activeRequest.current?.abort();
-    const controller = new AbortController();
-    activeRequest.current = controller;
-    const generation = partnersCacheGeneration();
-    const isCurrent = () => !controller.signal.aborted && generation === partnersCacheGeneration();
+// Engagement ad sets that send people to a profile have a fixed CTA.
+const getProfileDestinationType = ({ campaignObjective, duplicateAdSet, selectedAdSets = [], adSets = [] }) => {
+  if (!campaignObjective?.length || !campaignObjective.every((objective) => objective === "OUTCOME_ENGAGEMENT")) return null;
 
-    if (!cacheKey) {
-      setState({ key: cacheKey, partners: [], isLoading: false, error: null, lastUpdated: null });
-      return;
-    }
-    setState((previous) => ({
-      key: cacheKey, partners: [], isLoading: true, error: null,
-      lastUpdated: previous.key === cacheKey ? previous.lastUpdated : null,
-    }));
+  const targetAdSetIds = duplicateAdSet ? [duplicateAdSet] : selectedAdSets;
+  if (targetAdSetIds.length === 0) return null;
 
-    try {
-      if (!force) {
-        const cached = await readPartnersCache(cacheKey);
-        if (!isCurrent()) return;
-        if (cached !== null) {
-          setState({ key: cacheKey, partners: cached.partners, isLoading: false, error: null, lastUpdated: cached.savedAt });
-          return;
-        }
-      }
+  const destinations = targetAdSetIds
+    .map((adSetId) => adSets.find((adSet) => String(adSet.id) === String(adSetId))?.destination_type)
+    .filter(Boolean);
+  if (destinations.length !== targetAdSetIds.length || !destinations.every((destination) => PROFILE_DESTINATION_TYPES.has(destination))) return null;
 
-      const response = await axios.get(`${API_BASE_URL}/auth/partnership-ads/partners`, {
-        params: { instagramAccountId, pageId },
-        withCredentials: true,
-        signal: controller.signal,
-      });
-      if (!isCurrent()) return;
-      if (!response.data.success || !Array.isArray(response.data.data)) {
-        throw new Error('Failed to fetch partners');
-      }
-      const partners = response.data.data.map((partner) => ({
-        id: partner.id,
-        creatorIgId: partner.creator_ig_id,
-        creatorUsername: partner.creator_username,
-        creatorFbPageId: partner.creator_fb_page_id,
-      }));
-      const lastUpdated = Date.now();
-      setState({ key: cacheKey, partners, isLoading: false, error: null, lastUpdated });
-      // The server returns only after all pages succeed. Failed refreshes never
-      // replace the last complete cached list or extend its original expiry.
-      void writePartnersCache(cacheKey, partners, generation, lastUpdated);
-    } catch (err) {
-      if (!isCurrent()) return;
-      setState((previous) => ({
-        key: cacheKey,
-        partners: [],
-        isLoading: false,
-        lastUpdated: previous.key === cacheKey ? previous.lastUpdated : null,
-        error: err.response?.data?.error || 'Failed to fetch partners. Please refresh to try again.',
-      }));
-    }
-  }, [cacheKey, instagramAccountId, pageId]);
+  const uniqueDestinations = [...new Set(destinations)];
+  return uniqueDestinations.length === 1 ? uniqueDestinations[0] : null;
+};
 
-  useEffect(() => {
-    fetchPartners();
-    return () => activeRequest.current?.abort();
-  }, [fetchPartners]);
-
-  const refetch = useCallback(() => fetchPartners(true), [fetchPartners]);
-  // Never show the previous account's partners while the new effect starts.
-  const current = state.key === cacheKey
-    ? state
-    : { partners: [], isLoading: Boolean(cacheKey), error: null, lastUpdated: null };
-  return { partners: current.partners, isLoading: current.isLoading, error: current.error, lastUpdated: current.lastUpdated, refetch };
-}
-
+const getFixedProfileCtaLabel = (profileDestinationType) =>
+  profileDestinationType === "INSTAGRAM_PROFILE_AND_FACEBOOK_PAGE"
+    ? "Visit Page"
+    : profileDestinationType === "FACEBOOK_PAGE"
+      ? "Visit Facebook Page"
+      : "View Instagram Profile";
 
 const ErrorFileName = ({ adName, fileName }) => {
   const [expanded, setExpanded] = useState(false);
@@ -2146,33 +2093,33 @@ export default function AdCreationForm({
           ? [snapshot.selectedCampaign]
           : [];
       const isNewAdSet = Boolean(snapshot.showDuplicateBlock);
-      const selectedInstagram = pages
-        .flatMap((page) => [...(page.instagramAccount ? [page.instagramAccount] : []), ...(page.additionalInstagramAccounts || [])])
-        .find((account) => String(account?.id) === String(snapshot.instagramAccountId));
-      const selectedOverviewPartner = availablePartners.find(
-        (partner) => String(partner.creatorIgId) === String(snapshot.partnerIgAccountId),
-      );
+      const adSetOptions = Array.isArray(snapshot.adSets) ? snapshot.adSets : adSets;
+      const profileDestination = getProfileDestinationType({
+        campaignObjective: snapshot.campaignObjective,
+        duplicateAdSet: snapshot.duplicateAdSet,
+        selectedAdSets: snapshot.selectedAdSets,
+        adSets: adSetOptions,
+      });
 
       return {
         id: variant.id,
         name: variant.name,
         color: VARIANT_COLORS[variantIndex % VARIANT_COLORS.length],
-        isActive: variant.id === activeVariantId,
         adCount: countFilesForVariant(variant.id),
         campaignIds,
         adSetIds: snapshot.selectedAdSets || [],
-        adSetOptions: Array.isArray(snapshot.adSets) ? snapshot.adSets : adSets,
+        adSetOptions,
         isNewAdSet,
         adSetsLocked: isNewAdSet && shareNewAdSet && variant.id !== "default",
         newAdSetName: (snapshot.newAdSetName || "").trim(),
         pageId: snapshot.pageId || "",
-        instagramName: selectedInstagram?.username || "",
+        instagramAccountId: snapshot.instagramAccountId || "",
         isPartnershipAd: Boolean(snapshot.isPartnershipAd),
-        partnerName: snapshot.partnerName
-          ? `@${String(snapshot.partnerName).replace(/^@/, "")}`
-          : selectedOverviewPartner?.creatorUsername
-            ? `@${selectedOverviewPartner.creatorUsername}`
-            : snapshot.partnerIgAccountId || "",
+        partnerIgAccountId: snapshot.partnerIgAccountId || "",
+        partnerFbPageId: snapshot.partnerFbPageId || "",
+        partnerName: snapshot.partnerName || "",
+        partnershipIdentityMode: snapshot.partnershipIdentityMode || "dynamic",
+        partnershipPrimaryIdentity: snapshot.partnershipPrimaryIdentity || "brand",
         adNameFormula: snapshot.adNameFormulaV2?.rawInput || "",
         selectedTemplate: snapshot.selectedTemplate || "",
         messages: snapshot.messages || [],
@@ -2182,13 +2129,12 @@ export default function AdCreationForm({
         showCustomLink: Boolean(snapshot.showCustomLink),
         destinationType: snapshot.destinationType,
         cta: snapshot.cta || "LEARN_MORE",
+        fixedCtaLabel: profileDestination ? getFixedProfileCtaLabel(profileDestination) : "",
         mediaItems: mediaItems.map((item) => ({ ...item, files: item.files.map(toOverviewMedia) })),
       };
     });
   }, [
-    activeVariantId,
     adSets,
-    availablePartners,
     countFilesForVariant,
     driveFiles,
     dropboxFiles,
@@ -4290,7 +4236,12 @@ export default function AdCreationForm({
     [filterCatalogueImageFiles, stageCsvFile],
   );
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+  const {
+    getRootProps,
+    getInputProps,
+    isDragActive,
+    open: openFileDialog,
+  } = useDropzone({
     onDrop,
     multiple: true,
     accept: isCatalogueAd
@@ -4301,6 +4252,72 @@ export default function AdCreationForm({
       }
       : undefined,
   });
+
+  // Variant overview uploads reuse the native sources; whatever media arrives next is
+  // assigned to the variant whose row started the upload.
+  const metaLibraryOpenersRef = useRef({});
+  const overviewUploadVariantRef = useRef(null);
+  const knownMediaKeysRef = useRef(null);
+  const overviewUploadSources = useMemo(
+    () =>
+      uploadSources
+        .filter((id) => !["csv", "drafts"].includes(id))
+        .filter((id) => !(isCatalogueAd && (id === "instagram" || id === "meta_library")))
+        .map((id) => UPLOAD_SOURCE_OPTIONS.find((option) => option.id === id))
+        .filter(Boolean),
+    [isCatalogueAd, uploadSources],
+  );
+  const mediaVariantKeys = useMemo(
+    () => [
+      ...[
+        ...files,
+        ...driveFiles.map((file) => ({ ...file, isDrive: true })),
+        ...dropboxFiles.map((file) => ({ ...file, isDropbox: true })),
+        ...(frameioFiles || []).map((file) => ({ ...file, isFrameio: true })),
+        ...importedFiles.map((file) => ({ ...file, isMetaLibrary: true })),
+      ].map((file) => ({ type: "file", key: String(getFileId(file)) })),
+      ...importedPosts.map((post) => ({ type: "post", key: `post:${post.id}` })),
+      ...selectedIgOrganicPosts.map((post) => ({ type: "post", key: `igpost:${post.source_instagram_media_id}` })),
+    ],
+    [driveFiles, dropboxFiles, files, frameioFiles, importedFiles, importedPosts, selectedIgOrganicPosts],
+  );
+
+  useEffect(() => {
+    if (!showVariantOverview) overviewUploadVariantRef.current = null;
+  }, [showVariantOverview]);
+
+  useEffect(() => {
+    const knownKeys = knownMediaKeysRef.current;
+    knownMediaKeysRef.current = new Set(mediaVariantKeys.map((entry) => entry.key));
+    const targetVariantId = overviewUploadVariantRef.current;
+    if (!knownKeys || !targetVariantId || !variants.some((variant) => variant.id === targetVariantId)) return;
+
+    const addedEntries = mediaVariantKeys.filter((entry) => !knownKeys.has(entry.key));
+    // Same convention as media preview: "default" is the absence of an assignment.
+    const assign = (type, setter) => {
+      const keys = addedEntries.filter((entry) => entry.type === type).map((entry) => entry.key);
+      if (keys.length === 0) return;
+      setter((current) => {
+        const next = { ...current };
+        keys.forEach((key) => {
+          if (targetVariantId === "default") delete next[key];
+          else next[key] = targetVariantId;
+        });
+        return next;
+      });
+    };
+    assign("file", setFileVariantMap);
+    assign("post", setPostVariantMap);
+  }, [mediaVariantKeys, setFileVariantMap, setPostVariantMap, variants]);
+
+  const handleOverviewUpload = (variantId, sourceId) => {
+    overviewUploadVariantRef.current = variantId;
+    if (sourceId === "local") openFileDialog();
+    else if (sourceId === "drive") handleDriveClick();
+    else if (sourceId === "dropbox") handleDropboxClick();
+    else if (sourceId === "frameio") handleFrameioClick();
+    else metaLibraryOpenersRef.current[sourceId]?.(sourceId);
+  };
 
   const getVideoAspectRatio = async (file) => {
     if (!isVideoFile(file)) {
@@ -5052,21 +5069,10 @@ export default function AdCreationForm({
     });
   }, [duplicateAdSet, selectedAdSets, adSets]);
 
-  const profileDestinationType = useMemo(() => {
-    if (!campaignObjective?.length || !campaignObjective.every((objective) => objective === "OUTCOME_ENGAGEMENT")) return null;
-
-    const targetAdSetIds = duplicateAdSet ? [duplicateAdSet] : selectedAdSets;
-    if (targetAdSetIds.length === 0) return null;
-
-    const destinations = targetAdSetIds
-      .map((adSetId) => adSets.find((adSet) => String(adSet.id) === String(adSetId))?.destination_type)
-      .filter(Boolean);
-    const supportedDestinations = new Set(["FACEBOOK_PAGE", "INSTAGRAM_PROFILE", "INSTAGRAM_PROFILE_AND_FACEBOOK_PAGE"]);
-    if (destinations.length !== targetAdSetIds.length || !destinations.every((destination) => supportedDestinations.has(destination))) return null;
-
-    const uniqueDestinations = [...new Set(destinations)];
-    return uniqueDestinations.length === 1 ? uniqueDestinations[0] : null;
-  }, [adSets, campaignObjective, duplicateAdSet, selectedAdSets]);
+  const profileDestinationType = useMemo(
+    () => getProfileDestinationType({ campaignObjective, duplicateAdSet, selectedAdSets, adSets }),
+    [adSets, campaignObjective, duplicateAdSet, selectedAdSets],
+  );
 
   const isProfileDestinationEngagement = Boolean(profileDestinationType);
   const isUnifiedProfileDestination = profileDestinationType === "INSTAGRAM_PROFILE_AND_FACEBOOK_PAGE";
@@ -5079,11 +5085,7 @@ export default function AdCreationForm({
   const profileHeadlineLimit = 5;
   const profilePrimaryTextLimit = 5;
   const fixedProfileCta = profileDestinationType === "FACEBOOK_PAGE" ? "VISIT_PROFILE" : "VIEW_INSTAGRAM_PROFILE";
-  const fixedProfileCtaLabel = isUnifiedProfileDestination
-    ? "Visit Page"
-    : profileDestinationType === "FACEBOOK_PAGE"
-      ? "Visit Facebook Page"
-      : "View Instagram Profile";
+  const fixedProfileCtaLabel = getFixedProfileCtaLabel(profileDestinationType);
 
   useEffect(() => {
     if (isProfileDestinationEngagement) {
@@ -11370,7 +11372,11 @@ export default function AdCreationForm({
                                     selectedIgOrganicPosts={selectedIgOrganicPosts}
                                     setSelectedIgOrganicPosts={setSelectedIgOrganicPosts}
                                     showSourceSwitcher={false}
-                                    renderTrigger={(openWithSource) => renderButton(src, () => openWithSource(id))}
+                                    renderTrigger={(openWithSource) => {
+                                      // Lets the variant overview open the same library from its rows.
+                                      metaLibraryOpenersRef.current[id] = openWithSource;
+                                      return renderButton(src, () => openWithSource(id));
+                                    }}
                                   />
                                 </div>
                               );
@@ -12382,6 +12388,9 @@ export default function AdCreationForm({
             copyTemplates={copyTemplates}
             defaultTemplateName={defaultTemplateName}
             availableLinks={availableLinks}
+            ctaOptions={ctaOptions}
+            uploadSources={overviewUploadSources}
+            onUpload={handleOverviewUpload}
             customVariables={adAccountSettings.customVariables || []}
             showAdSetNameVariable={showAdSetNameVariable}
             loadingAdSetVariantIds={loadingAdSetVariantIds}
@@ -12391,13 +12400,8 @@ export default function AdCreationForm({
             onTemplateSelect={handleOverviewTemplateSelect}
             onLinkSelect={handleOverviewLinkSelect}
             onLinkInputChange={handleOverviewLinkInputChange}
-            onAdNameChange={(variantId, rawInput) => updateVariantFields(variantId, { adNameFormulaV2: { rawInput } })}
+            onFieldsChange={updateVariantFields}
             onCopyChange={handleOverviewCopyChange}
-            onEditVariant={(variantId) => {
-              switchVariant(variantId);
-              onToggleVariantOverview(false);
-            }}
-            onClose={() => onToggleVariantOverview(false)}
           />,
           variantOverviewHost,
         )}
