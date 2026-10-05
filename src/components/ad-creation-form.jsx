@@ -1376,6 +1376,8 @@ export default function AdCreationForm({
   setLaunchPaused,
   discloseAiMedia,
   setDiscloseAiMedia,
+  isPoliticalAd,
+  setIsPoliticalAd,
   pixelTrackingOverride,
   setPixelTrackingOverride,
   isCarouselAd,
@@ -1438,6 +1440,14 @@ export default function AdCreationForm({
   onSaveDraft,
   onRestoreDraft,
 }) {
+  const hasPoliticalCampaign = selectedCampaign.some((campaignId) =>
+    campaigns.find((campaign) => campaign.id === campaignId)?.special_ad_categories?.includes("ISSUES_ELECTIONS_POLITICS"),
+  );
+
+  useEffect(() => {
+    if (!hasPoliticalCampaign) setIsPoliticalAd(false);
+  }, [hasPoliticalCampaign, setIsPoliticalAd]);
+
   const formFieldChrome = "border-gray-300 rounded-2xl py-4.5 bg-white shadow";
   const formInputChrome = `${formFieldChrome} focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0`;
   const formDropdownTriggerChrome = `${formFieldChrome} hover:bg-white`;
@@ -2014,6 +2024,7 @@ export default function AdCreationForm({
       adScheduleEndTime,
       launchPaused,
       discloseAiMedia,
+      isPoliticalAd,
       pixelTrackingOverride,
     }),
     [
@@ -2058,6 +2069,7 @@ export default function AdCreationForm({
       adScheduleEndTime,
       launchPaused,
       discloseAiMedia,
+      isPoliticalAd,
       pixelTrackingOverride,
     ],
   );
@@ -2516,6 +2528,7 @@ export default function AdCreationForm({
         selectedCampaign: Array.isArray(variantState.selectedCampaign) ? [...variantState.selectedCampaign] : variantState.selectedCampaign,
         launchPaused: Boolean(variantState.launchPaused),
         discloseAiMedia: Boolean(variantState.discloseAiMedia),
+        isPoliticalAd: Boolean(variantState.isPoliticalAd),
         pixelTrackingOverride: showPixelTrackingOverride
           ? { ...(variantState.pixelTrackingOverride || EMPTY_PIXEL_TRACKING_OVERRIDE) }
           : { ...EMPTY_PIXEL_TRACKING_OVERRIDE },
@@ -2648,6 +2661,7 @@ export default function AdCreationForm({
       setSelectedFiles(new Set());
       setLaunchPaused(d.launchPaused || false);
       setDiscloseAiMedia(Boolean(d.discloseAiMedia));
+      setIsPoliticalAd(Boolean(d.isPoliticalAd));
       setPixelTrackingOverride(d.pixelTrackingOverride || EMPTY_PIXEL_TRACKING_OVERRIDE);
 
       setSelectedShopDestination(d.selectedShopDestination || "");
@@ -5596,6 +5610,7 @@ export default function AdCreationForm({
       // Configuration
       launchPaused,
       discloseAiMedia,
+      isPoliticalAd,
       pixelTrackingOverride,
       adType,
       isCarouselAd,
@@ -7067,6 +7082,7 @@ export default function AdCreationForm({
         );
       };
       const queueCreateAdPromise = (formData, metadata = {}) => {
+        if (isPoliticalAd) formData.append("isPoliticalAd", "true");
         const queuedAdName = formData.get("adName");
         if (typeof queuedAdName === "string" && queuedAdName.includes(PER_AD_SET_NAME_PLACEHOLDER)) {
           const queuedAdSetId = formData.get("adSetId");
@@ -12021,6 +12037,20 @@ export default function AdCreationForm({
               </Label>
             </div>
           </div>
+          {hasPoliticalCampaign && (
+            <div className="flex items-center space-x-2 rounded-xl transition-colors duration-150">
+              <Checkbox
+                id="isPoliticalAd"
+                checked={isPoliticalAd}
+                onCheckedChange={(checked) => setIsPoliticalAd(checked === true)}
+                disabled={!isLoggedIn}
+                className="rounded-md focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+              />
+              <Label htmlFor="isPoliticalAd" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                Political Ad
+              </Label>
+            </div>
+          )}
         </form>
       </CardContent>
       {showSaveNewDialog && (

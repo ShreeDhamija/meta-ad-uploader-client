@@ -256,6 +256,7 @@ export default function Home() {
     const [frameioFiles, setFrameioFiles] = useState([]);
     const [launchPaused, setLaunchPaused] = useState(false); // <-- New state
     const [discloseAiMedia, setDiscloseAiMedia] = useState(false);
+    const [isPoliticalAd, setIsPoliticalAd] = useState(false);
     const [pixelTrackingOverride, setPixelTrackingOverride] = useState({ ...EMPTY_PIXEL_TRACKING_OVERRIDE });
     const [isCarouselAd, setIsCarouselAd] = useState(false);
     const [adType, setAdType] = useState('regular'); // 'regular' | 'carousel' | 'flexible'
@@ -876,6 +877,7 @@ export default function Home() {
         adScheduleEndTime,
         launchPaused,
         discloseAiMedia,
+        isPoliticalAd,
         pixelTrackingOverride: cloneSnapshotValue(pixelTrackingOverride),
     }), [
         adName,
@@ -925,6 +927,7 @@ export default function Home() {
         adScheduleEndTime,
         launchPaused,
         discloseAiMedia,
+        isPoliticalAd,
         pixelTrackingOverride,
     ]);
 
@@ -985,6 +988,7 @@ export default function Home() {
         setAdScheduleEndTime(snapshot.adScheduleEndTime || null);
         setLaunchPaused(Boolean(snapshot.launchPaused));
         setDiscloseAiMedia(Boolean(snapshot.discloseAiMedia));
+        setIsPoliticalAd(Boolean(snapshot.isPoliticalAd));
         setPixelTrackingOverride(
             cloneSnapshotValue(snapshot.pixelTrackingOverride) || { ...EMPTY_PIXEL_TRACKING_OVERRIDE }
         );
@@ -1035,6 +1039,7 @@ export default function Home() {
         setAdScheduleEndTime,
         setLaunchPaused,
         setDiscloseAiMedia,
+        setIsPoliticalAd,
         setPixelTrackingOverride,
     ]);
 
@@ -2284,6 +2289,8 @@ export default function Home() {
                             setLaunchPaused={setLaunchPaused}
                             discloseAiMedia={discloseAiMedia}
                             setDiscloseAiMedia={setDiscloseAiMedia}
+                            isPoliticalAd={isPoliticalAd}
+                            setIsPoliticalAd={setIsPoliticalAd}
                             pixelTrackingOverride={pixelTrackingOverride}
                             setPixelTrackingOverride={setPixelTrackingOverride}
                             isCarouselAd={isCarouselAd}
