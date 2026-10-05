@@ -31,6 +31,7 @@ import MetaMediaLibraryModal from "@/components/MetaMediaLibraryModal";
 import PostSelectorInline from "@/components/PostIDSelector";
 import PixelTracking from "@/components/settings/PixelTracking";
 import ShopDestinationSelector from "@/components/shop-destination-selector";
+import VariantOverview from "@/components/variant-overview";
 import ReorderAdNameParts from "@/components/ui/ReorderAdNameParts";
 import ScheduleDateTimePicker from "@/components/ui/ScheduleDateTimePicker";
 import { Button } from "@/components/ui/button";
@@ -61,6 +62,7 @@ import { cn } from "@/lib/utils";
 import axios from "axios";
 import {
   AlertTriangle,
+  ArrowLeft,
   ArrowUpDown,
   Ban,
   BicepsFlexed,
@@ -78,7 +80,6 @@ import {
   Info,
   Link2,
   Loader,
-  Pencil,
   Phone,
   Plus,
   RefreshCcw,
@@ -91,6 +92,7 @@ import {
 } from "lucide-react";
 import pLimit from "p-limit";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useDropzone } from "react-dropzone";
 import { useNavigate } from "react-router-dom";
 import TextareaAutosize from "react-textarea-autosize";
@@ -916,199 +918,6 @@ function VariantDot({ variantId, variants }) {
   return <span className="inline-block h-2 w-2 rounded-full shrink-0" style={{ background: color }} />;
 }
 
-const OVERVIEW_COPY_PREVIEW_LIMIT = 120;
-
-const truncateOverviewText = (value, limit = OVERVIEW_COPY_PREVIEW_LIMIT) => {
-  const text = String(value || "").trim();
-  if (!text) return "";
-  return text.length > limit ? `${text.slice(0, limit).trimEnd()}…` : text;
-};
-
-function OverviewInlineEditor({ value, onSave, label, multiline = false }) {
-  const [open, setOpen] = useState(false);
-  const [draft, setDraft] = useState(value || "");
-
-  useEffect(() => {
-    if (open) setDraft(value || "");
-  }, [open, value]);
-
-  const save = () => {
-    onSave(draft);
-    setOpen(false);
-  };
-
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          aria-label={`Edit ${label}`}
-          className="shrink-0 rounded-md p-1 text-gray-400 opacity-0 transition hover:bg-gray-100 hover:text-blue-600 group-hover/overview-value:opacity-100 focus-visible:opacity-100"
-        >
-          <Pencil className="h-3 w-3" />
-        </button>
-      </PopoverTrigger>
-      <PopoverContent align="start" side="bottom" sideOffset={6} className="w-80 rounded-2xl border-gray-200 bg-white p-3 shadow-xl">
-        <Label className="text-xs font-medium text-gray-700">Edit {label}</Label>
-        {multiline ? (
-          <TextareaAutosize
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-            minRows={4}
-            maxRows={10}
-            autoFocus
-            className="mt-2 w-full resize-none rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm leading-5 shadow-sm focus:border-blue-400 focus:outline-none"
-          />
-        ) : (
-          <Input
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                event.preventDefault();
-                save();
-              }
-            }}
-            autoFocus
-            className="mt-2 h-10 rounded-xl border-gray-300 text-sm"
-          />
-        )}
-        <div className="mt-3 flex justify-end gap-3">
-          <button type="button" onClick={() => setOpen(false)} className="bg-transparent p-0 text-xs font-medium text-gray-500 hover:text-gray-800">
-            Cancel
-          </button>
-          <button type="button" onClick={save} className="bg-transparent p-0 text-xs font-medium text-blue-600 hover:text-blue-700 hover:underline">
-            Save
-          </button>
-        </div>
-      </PopoverContent>
-    </Popover>
-  );
-}
-
-function VariantOverviewThumbnail({ file, videoThumbs, fitToWidth = false }) {
-  const [localUrl, setLocalUrl] = useState("");
-  const [aspectRatio, setAspectRatio] = useState(() => {
-    const width = Number(file?.width || file?.videoWidth);
-    const height = Number(file?.height || file?.videoHeight);
-    return width > 0 && height > 0 ? width / height : 1;
-  });
-  const fileId = file ? getFileId(file) : "";
-  const isVideo = isVideoFile(file) || file?.media_type === "VIDEO" || Boolean(file?.video_id);
-
-  useEffect(() => {
-    if (!file || isVideo || typeof File === "undefined" || !(file instanceof File)) {
-      setLocalUrl("");
-      return undefined;
-    }
-
-    const nextUrl = URL.createObjectURL(file);
-    setLocalUrl(nextUrl);
-    return () => URL.revokeObjectURL(nextUrl);
-  }, [file, isVideo]);
-
-  const src =
-    videoThumbs?.[fileId] ||
-    file?.pickerThumbnail ||
-    file?.thumbnail_url ||
-    file?.thumbnailUrl ||
-    file?.image_url ||
-    file?.previewUrl ||
-    file?.preview ||
-    file?.media_url ||
-    (file?.isMetaLibrary ? file?.url : "") ||
-    (file?.isDrive ? `https://drive.google.com/thumbnail?id=${file.id}&sz=w160-h120` : "") ||
-    file?.directLink ||
-    file?.icon ||
-    localUrl ||
-    "https://api.withblip.com/thumbnail.jpg";
-  const name = getDisplayFileName(file);
-
-  return (
-    <div
-      className={cn(
-        "relative max-h-[180px] min-h-[72px] min-w-0 justify-self-start overflow-hidden rounded-xl border border-gray-200 bg-gray-100",
-        fitToWidth ? "w-full" : "h-full w-auto max-w-full",
-      )}
-      style={{ aspectRatio }}
-    >
-      <img
-        src={src}
-        alt={name}
-        className="h-full w-full object-contain"
-        onLoad={(event) => {
-          const nextWidth = event.currentTarget.naturalWidth;
-          const nextHeight = event.currentTarget.naturalHeight;
-          if (nextWidth > 0 && nextHeight > 0) setAspectRatio(nextWidth / nextHeight);
-        }}
-        onError={(event) => {
-          event.currentTarget.onerror = null;
-          event.currentTarget.src = "https://api.withblip.com/thumbnail.jpg";
-        }}
-      />
-    </div>
-  );
-}
-
-function OverviewCopyList({ label, values, onEdit, showDividers = false }) {
-  const [expandedItems, setExpandedItems] = useState(new Set());
-  const populated = (values || [])
-    .map((value, sourceIndex) => ({ raw: String(value || ""), display: truncateOverviewText(value), sourceIndex }))
-    .filter((value) => Boolean(value.display));
-  if (populated.length === 0) return null;
-
-  const toggleExpanded = (index) => {
-    setExpandedItems((current) => {
-      const next = new Set(current);
-      if (next.has(index)) next.delete(index);
-      else next.add(index);
-      return next;
-    });
-  };
-
-  return (
-    <div className="space-y-1">
-      <span className="text-[9px] font-semibold uppercase tracking-wide text-gray-400">{label}</span>
-      <div className="space-y-2">
-        {populated.map((value, displayIndex) => {
-          const isExpanded = expandedItems.has(value.sourceIndex);
-          const canExpand = value.raw.trim().length > OVERVIEW_COPY_PREVIEW_LIMIT;
-
-          return (
-            <div
-              key={`${label}-${value.sourceIndex}`}
-              className={cn(showDividers && displayIndex > 0 && "border-t border-gray-200 pt-2")}
-            >
-              <div className="group/overview-value flex items-start gap-1">
-                <p className="max-w-[18rem] flex-1 whitespace-pre-wrap break-words text-[11px] leading-4 text-gray-700">
-                  {isExpanded ? value.raw.trim() : value.display}
-                </p>
-                {onEdit && (
-                  <OverviewInlineEditor
-                    value={value.raw}
-                    onSave={(nextValue) => onEdit(value.sourceIndex, nextValue)}
-                    label={label}
-                    multiline
-                  />
-                )}
-              </div>
-              {canExpand && (
-                <button
-                  type="button"
-                  onClick={() => toggleExpanded(value.sourceIndex)}
-                  className="mt-0.5 bg-transparent p-0 text-[10px] font-medium text-blue-600 shadow-none hover:text-blue-700 hover:underline"
-                >
-                  {isExpanded ? "View less" : "View more"}
-                </button>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
 const extractFolderId = (url) => {
   const idMatch = url.match(/[-\w]{25,}/);
   return idMatch ? idMatch[0] : null;
@@ -1439,6 +1248,10 @@ export default function AdCreationForm({
   onAdLaunchInProgressChange,
   onSaveDraft,
   onRestoreDraft,
+  showVariantOverview = false,
+  onToggleVariantOverview,
+  variantOverviewHost,
+  updateVariantFields,
 }) {
   const hasPoliticalCampaign = selectedCampaign.some((campaignId) =>
     campaigns.find((campaign) => campaign.id === campaignId)?.special_ad_categories?.includes("ISSUES_ELECTIONS_POLITICS"),
@@ -1838,7 +1651,6 @@ export default function AdCreationForm({
   const [selectedForDelete, setSelectedForDelete] = useState(new Set());
   const [isDeletingTemplates, setIsDeletingTemplates] = useState(false);
   const [showDeleteAllVariantsDialog, setShowDeleteAllVariantsDialog] = useState(false);
-  const [showVariantOverview, setShowVariantOverview] = useState(false);
   const wasPhoneCallCtaAutoAppliedRef = useRef(false);
 
   const [activeIgCaptionIndex, setActiveIgCaptionIndex] = useState(0);
@@ -2251,6 +2063,8 @@ export default function AdCreationForm({
   );
 
   const variantOverviewRows = useMemo(() => {
+    if (!showVariantOverview) return [];
+
     const overviewFiles = [
       ...files,
       ...driveFiles.map((file) => ({ ...file, isDrive: true })),
@@ -2266,8 +2080,31 @@ export default function AdCreationForm({
     }));
     const groupedIds = new Set(overviewGroups.flatMap((group) => group.fileIds));
     const totalOverviewMedia = overviewFiles.length + importedPosts.length + selectedIgOrganicPosts.length;
+    const toOverviewMedia = (file) => {
+      const fileId = getFileId(file);
+      return {
+        key: fileId,
+        file,
+        name: getDisplayFileName(file),
+        isVideo: isVideoFile(file) || file?.media_type === "VIDEO" || Boolean(file?.video_id),
+        src:
+          videoThumbs?.[fileId] ||
+          file?.pickerThumbnail ||
+          file?.thumbnail_url ||
+          file?.thumbnailUrl ||
+          file?.image_url ||
+          file?.previewUrl ||
+          file?.preview ||
+          file?.media_url ||
+          (file?.isMetaLibrary ? file?.url : "") ||
+          (file?.isDrive ? `https://drive.google.com/thumbnail?id=${file.id}&sz=w160-h120` : "") ||
+          file?.directLink ||
+          file?.icon ||
+          "",
+      };
+    };
 
-    return variants.map((variant) => {
+    return variants.map((variant, variantIndex) => {
       const snapshot = getVariantState(variant.id) || {};
       const mediaItems = [];
 
@@ -2303,26 +2140,14 @@ export default function AdCreationForm({
           .forEach((post) => mediaItems.push({ label: `Ad ${mediaItems.length + 1}`, files: [post], isGroup: false }));
       }
 
-      const selectedCampaignIds = Array.isArray(snapshot.selectedCampaign)
+      const campaignIds = Array.isArray(snapshot.selectedCampaign)
         ? snapshot.selectedCampaign
         : snapshot.selectedCampaign
           ? [snapshot.selectedCampaign]
           : [];
-      const snapshotAdSets = Array.isArray(snapshot.adSets) ? snapshot.adSets : adSets;
-      const campaignNames = selectedCampaignIds.map(
-        (campaignId) =>
-          campaigns.find((campaign) => String(campaign.id) === String(campaignId))?.name ||
-          snapshotAdSets.find((entry) => String(entry.campaignId) === String(campaignId))?.campaignName ||
-          campaignId,
-      );
-      const adSetNames = snapshot.duplicateAdSet
-        ? [(snapshot.newAdSetName || "New ad set").trim()]
-        : (snapshot.selectedAdSets || []).map(
-          (adSetId) => snapshotAdSets.find((entry) => String(entry.id) === String(adSetId))?.name || adSetId,
-        );
-      const selectedPage = pages.find((page) => String(page.id) === String(snapshot.pageId));
+      const isNewAdSet = Boolean(snapshot.showDuplicateBlock);
       const selectedInstagram = pages
-        .map((page) => page.instagramAccount)
+        .flatMap((page) => [...(page.instagramAccount ? [page.instagramAccount] : []), ...(page.additionalInstagramAccounts || [])])
         .find((account) => String(account?.id) === String(snapshot.instagramAccountId));
       const selectedOverviewPartner = availablePartners.find(
         (partner) => String(partner.creatorIgId) === String(snapshot.partnerIgAccountId),
@@ -2331,31 +2156,40 @@ export default function AdCreationForm({
       return {
         id: variant.id,
         name: variant.name,
-        adName: snapshot.adNameFormulaV2?.rawInput || snapshot.adName || "",
-        campaignNames,
-        adSetNames,
-        pageName: selectedPage?.name || snapshot.pageId || "—",
-        instagramName: selectedInstagram?.username || snapshot.instagramAccountId || "",
+        color: VARIANT_COLORS[variantIndex % VARIANT_COLORS.length],
+        isActive: variant.id === activeVariantId,
+        adCount: countFilesForVariant(variant.id),
+        campaignIds,
+        adSetIds: snapshot.selectedAdSets || [],
+        adSetOptions: Array.isArray(snapshot.adSets) ? snapshot.adSets : adSets,
+        isNewAdSet,
+        adSetsLocked: isNewAdSet && shareNewAdSet && variant.id !== "default",
+        newAdSetName: (snapshot.newAdSetName || "").trim(),
+        pageId: snapshot.pageId || "",
+        instagramName: selectedInstagram?.username || "",
         isPartnershipAd: Boolean(snapshot.isPartnershipAd),
         partnerName: snapshot.partnerName
           ? `@${String(snapshot.partnerName).replace(/^@/, "")}`
           : selectedOverviewPartner?.creatorUsername
             ? `@${selectedOverviewPartner.creatorUsername}`
             : snapshot.partnerIgAccountId || "",
+        adNameFormula: snapshot.adNameFormulaV2?.rawInput || "",
+        selectedTemplate: snapshot.selectedTemplate || "",
         messages: snapshot.messages || [],
         headlines: snapshot.headlines || [],
         descriptions: snapshot.descriptions || [],
-        links: (snapshot.link || [])
-          .map((value, index) => ({ value, index }))
-          .filter((entry) => Boolean(entry.value)),
+        links: snapshot.link || [],
+        showCustomLink: Boolean(snapshot.showCustomLink),
+        destinationType: snapshot.destinationType,
         cta: snapshot.cta || "LEARN_MORE",
-        mediaItems,
+        mediaItems: mediaItems.map((item) => ({ ...item, files: item.files.map(toOverviewMedia) })),
       };
     });
   }, [
+    activeVariantId,
     adSets,
     availablePartners,
-    campaigns,
+    countFilesForVariant,
     driveFiles,
     dropboxFiles,
     fileGroups,
@@ -2372,70 +2206,11 @@ export default function AdCreationForm({
     pages,
     postVariantMap,
     selectedIgOrganicPosts,
+    shareNewAdSet,
+    showVariantOverview,
     variants,
+    videoThumbs,
   ]);
-  const hasPartnershipVariants = variantOverviewRows.some((row) => row.isPartnershipAd);
-
-  const updateVariantOverviewValue = useCallback(
-    (variantId, field, index, value) => {
-      const updateIndexedValue = (currentValues = []) => {
-        const nextValues = [...currentValues];
-        while (nextValues.length <= index) nextValues.push("");
-        nextValues[index] = value;
-        return nextValues;
-      };
-
-      if (variantId === activeVariantId) {
-        if (field === "adName") {
-          setAdName(value);
-          setAdNameFormulaV2({ rawInput: value, overrideImportedPostName: true });
-        }
-        if (field === "messages") setMessages((current) => updateIndexedValue(current));
-        if (field === "headlines") setHeadlines((current) => updateIndexedValue(current));
-        if (field === "descriptions") setDescriptions((current) => updateIndexedValue(current));
-        if (field === "link") {
-          setLink((current) => updateIndexedValue(current));
-          setShowCustomLink(true);
-          if (index === 0) setCustomLink(value);
-        }
-        return;
-      }
-
-      const currentSnapshot = getVariantState(variantId) || {};
-      setVariants((currentVariants) =>
-        currentVariants.map((variant) => {
-          if (variant.id !== variantId) return variant;
-
-          const nextSnapshot = {
-            ...currentSnapshot,
-            [field]: field === "adName" ? value : updateIndexedValue(currentSnapshot[field]),
-          };
-          if (field === "adName") {
-            nextSnapshot.adNameFormulaV2 = { rawInput: value, overrideImportedPostName: true };
-          }
-          if (field === "link") {
-            nextSnapshot.showCustomLink = true;
-            if (index === 0) nextSnapshot.customLink = value;
-          }
-
-          return { ...variant, snapshot: nextSnapshot };
-        }),
-      );
-    },
-    [
-      activeVariantId,
-      getVariantState,
-      setAdName,
-      setAdNameFormulaV2,
-      setCustomLink,
-      setDescriptions,
-      setHeadlines,
-      setLink,
-      setMessages,
-      setShowCustomLink,
-      setVariants,
-    ],
-  );
 
   const captureFormDataAsJob = useCallback(
     (variantId = "default") => {
@@ -3588,6 +3363,182 @@ export default function AdCreationForm({
       handleTemplateSelect(matchingTemplate, { syncLink: false });
     }
   }, [setLink, templateLinkPairs, selectedTemplate, handleTemplateSelect]);
+
+  // Variant overview edits. The active variant goes through the native handlers where they carry
+  // form-only side effects; every other change is a snapshot patch applied by updateVariantFields.
+  const [loadingAdSetVariantIds, setLoadingAdSetVariantIds] = useState([]);
+  const overviewAdSetRequestRef = useRef({});
+
+  const buildTemplatePatch = useCallback(
+    (state, templateName, { syncLink = true } = {}) => {
+      const template = copyTemplates[templateName];
+      if (!template) return null;
+
+      const patch = {
+        selectedTemplate: templateName,
+        messages: [...(template.primaryTexts || [""])],
+        headlines: [...(template.headlines || [""])],
+        descriptions: [...(template.descriptions || [""])],
+      };
+      const pairedUrl =
+        syncLink && state.destinationType !== "instant_experience" && templateLinkPairs.find((pair) => pair.templateName === templateName)?.url;
+      if (pairedUrl) {
+        const currentLinks = state.link || [];
+        patch.link = currentLinks.length > 1 ? currentLinks.map(() => pairedUrl) : [pairedUrl];
+        patch.showCustomLink = false;
+        patch.customLink = "";
+      }
+      return patch;
+    },
+    [copyTemplates, templateLinkPairs],
+  );
+
+  const handleOverviewTemplateSelect = useCallback(
+    (variantId, templateName) => {
+      if (variantId === activeVariantId) {
+        handleTemplateSelect(templateName);
+        return;
+      }
+      const patch = buildTemplatePatch(getVariantState(variantId) || {}, templateName);
+      if (patch) updateVariantFields(variantId, patch);
+    },
+    [activeVariantId, buildTemplatePatch, getVariantState, handleTemplateSelect, updateVariantFields],
+  );
+
+  const handleOverviewLinkSelect = useCallback(
+    (variantId, url, cardIndex) => {
+      const state = getVariantState(variantId) || {};
+      const exitCustomLink = cardIndex === null && state.showCustomLink;
+
+      if (variantId === activeVariantId) {
+        handleSavedLinkSelect(url, cardIndex);
+        if (exitCustomLink) {
+          setShowCustomLink(false);
+          setCustomLink("");
+        }
+        return;
+      }
+
+      const currentLinks = state.link || [];
+      const patch = { link: cardIndex === null ? [url] : currentLinks.map((current, index) => (index === cardIndex ? url : current)) };
+      if (exitCustomLink) Object.assign(patch, { showCustomLink: false, customLink: "" });
+      const matchingTemplate = templateForLink(templateLinkPairs, url, state.selectedTemplate);
+      if (matchingTemplate && matchingTemplate !== state.selectedTemplate) {
+        Object.assign(patch, buildTemplatePatch(state, matchingTemplate, { syncLink: false }));
+      }
+      updateVariantFields(variantId, patch);
+    },
+    [
+      activeVariantId,
+      buildTemplatePatch,
+      getVariantState,
+      handleSavedLinkSelect,
+      setCustomLink,
+      setShowCustomLink,
+      templateLinkPairs,
+      updateVariantFields,
+    ],
+  );
+
+  const handleOverviewLinkInputChange = useCallback(
+    (variantId, index, value) => {
+      const state = getVariantState(variantId) || {};
+      const currentLinks = state.link?.length ? state.link : [""];
+      const nextLinks = currentLinks.map((current, linkIndex) => (linkIndex === index ? value : current));
+      updateVariantFields(variantId, currentLinks.length === 1 ? { link: nextLinks, customLink: value } : { link: nextLinks });
+    },
+    [getVariantState, updateVariantFields],
+  );
+
+  const handleOverviewPageSelect = useCallback(
+    (variantId, page) => {
+      const state = getVariantState(variantId) || {};
+      const pageChanged = page.id !== state.pageId;
+      const patch = {
+        pageId: page.id,
+        instagramAccountId: page.instagramAccount?.id || "",
+        partnerIgAccountId: "",
+        partnerFbPageId: "",
+      };
+      if (pageChanged) {
+        Object.assign(patch, {
+          selectedShopDestination: "",
+          selectedShopDestinationType: "",
+          selectedShopProductCatalogId: "",
+          productExtensionProductSetId: "",
+          productExtensionProductCatalogId: "",
+        });
+      }
+      if (pageChanged && state.destinationType === "instant_experience") {
+        Object.assign(patch, { instantExperienceId: "", link: [""] });
+      }
+      updateVariantFields(variantId, patch);
+    },
+    [getVariantState, updateVariantFields],
+  );
+
+  const handleOverviewCampaignToggle = useCallback(
+    async (variantId, campaignId) => {
+      const state = getVariantState(variantId) || {};
+      const currentCampaigns = (Array.isArray(state.selectedCampaign) ? state.selectedCampaign : []).filter((id) =>
+        campaigns.some((campaign) => campaign.id === id),
+      );
+      const nextCampaigns = currentCampaigns.includes(campaignId)
+        ? currentCampaigns.filter((id) => id !== campaignId)
+        : [...currentCampaigns, campaignId];
+      const patch = {
+        selectedCampaign: nextCampaigns,
+        selectedAdSets: [],
+        showDuplicateBlock: false,
+        duplicateAdSet: "",
+        newAdSetName: "",
+        showDuplicateCampaignBlock: false,
+        duplicateCampaign: "",
+        newCampaignName: "",
+        campaignObjective: nextCampaigns.map((id) => campaigns.find((campaign) => campaign.id === id)?.objective).filter(Boolean),
+      };
+      if (nextCampaigns.length === 0) patch.adSets = [];
+
+      if (variantId === activeVariantId || nextCampaigns.length === 0) {
+        updateVariantFields(variantId, patch);
+        return;
+      }
+
+      const requestId = (overviewAdSetRequestRef.current[variantId] || 0) + 1;
+      overviewAdSetRequestRef.current[variantId] = requestId;
+      setLoadingAdSetVariantIds((ids) => (ids.includes(variantId) ? ids : [...ids, variantId]));
+      try {
+        await updateVariantFields(variantId, patch);
+      } finally {
+        if (overviewAdSetRequestRef.current[variantId] === requestId) {
+          setLoadingAdSetVariantIds((ids) => ids.filter((id) => id !== variantId));
+        }
+      }
+    },
+    [activeVariantId, campaigns, getVariantState, updateVariantFields],
+  );
+
+  const handleOverviewAdSetsChange = useCallback(
+    (variantId, adSetIds) => {
+      const state = getVariantState(variantId) || {};
+      const patch = { selectedAdSets: adSetIds };
+      if (adSetIds.length > 0 && state.showDuplicateBlock) {
+        Object.assign(patch, { showDuplicateBlock: false, duplicateAdSet: "", newAdSetName: "" });
+      }
+      updateVariantFields(variantId, patch);
+    },
+    [getVariantState, updateVariantFields],
+  );
+
+  const handleOverviewCopyChange = useCallback(
+    (variantId, field, index, value) => {
+      const nextValues = [...((getVariantState(variantId) || {})[field] || [])];
+      while (nextValues.length <= index) nextValues.push("");
+      nextValues[index] = value;
+      updateVariantFields(variantId, { [field]: nextValues });
+    },
+    [getVariantState, updateVariantFields],
+  );
 
   useEffect(() => {
     if (!isCarouselAd) return;
@@ -12352,7 +12303,10 @@ export default function AdCreationForm({
                   <div key={variant.id} className="group flex shrink-0 items-center">
                     <button
                       type="button"
-                      onClick={() => switchVariant(variant.id)}
+                      onClick={() => {
+                        switchVariant(variant.id);
+                        if (showVariantOverview) onToggleVariantOverview(false);
+                      }}
                       className={cn(
                         "flex items-center gap-2 whitespace-nowrap rounded-full px-3.5 py-2.5 text-sm transition",
                         isActive ? "bg-zinc-700 text-white" : "text-white/75 hover:bg-white/10 hover:text-white",
@@ -12388,14 +12342,25 @@ export default function AdCreationForm({
             >
               <Plus className="h-4 w-4" />
             </button>
-            <button
-              type="button"
-              onClick={() => setShowVariantOverview(true)}
-              aria-label="View variant overview"
-              className="rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white"
-            >
-              <Eye className="h-4 w-4" />
-            </button>
+            {showVariantOverview ? (
+              <button
+                type="button"
+                onClick={() => onToggleVariantOverview(false)}
+                className="flex items-center gap-1.5 whitespace-nowrap rounded-full bg-white px-3 py-2 text-sm font-medium text-black transition hover:bg-white/90"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Back to editor
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => onToggleVariantOverview(true)}
+                aria-label="View variant overview"
+                className="rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white"
+              >
+                <Eye className="h-4 w-4" />
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setShowDeleteAllVariantsDialog(true)}
@@ -12407,185 +12372,35 @@ export default function AdCreationForm({
           </div>
         </div>
       )}
-      <Dialog open={showVariantOverview} onOpenChange={setShowVariantOverview}>
-        <DialogContent
-          disableSlide
-          overlayClassName="bg-black/35"
-          className="flex h-[min(86vh,900px)] w-[min(96vw,1500px)] max-w-none flex-col gap-0 overflow-hidden rounded-[32px] border-gray-200 bg-white p-0 sm:rounded-[32px]"
-        >
-          <DialogHeader className="shrink-0 border-b border-gray-200 px-6 py-5 pr-14">
-            <DialogTitle>Variant overview</DialogTitle>
-            <DialogDescription>Quickly compare targeting, copy, destinations, and assigned creative across every variant.</DialogDescription>
-          </DialogHeader>
-          <div className="min-h-0 flex-1 overflow-auto bg-gray-50/50">
-            <table className={cn("w-full border-separate border-spacing-0 text-left", hasPartnershipVariants ? "min-w-[1472px]" : "min-w-[1312px]")}>
-              <thead className="sticky top-0 z-20 bg-gray-100/95 text-[10px] uppercase tracking-wide text-gray-500 backdrop-blur">
-                <tr>
-                  <th className="sticky left-0 z-30 w-44 border-b border-r border-gray-200 bg-gray-100 px-[0.9rem] py-3 font-semibold">Variant</th>
-                  <th className="min-w-48 border-b border-gray-200 px-[0.9rem] py-3 font-semibold">Ad Name</th>
-                  <th className="w-60 border-b border-gray-200 px-[0.9rem] py-3 font-semibold">Campaign / Ad set</th>
-                  <th className="w-48 border-b border-gray-200 px-[0.9rem] py-3 font-semibold">Page / Instagram</th>
-                  {hasPartnershipVariants && <th className="w-40 border-b border-gray-200 px-[0.9rem] py-3 font-semibold">Partnership</th>}
-                  <th className="w-80 border-b border-gray-200 px-[0.9rem] py-3 font-semibold">Copy</th>
-                  <th className="w-64 border-b border-gray-200 px-[0.9rem] py-3 font-semibold">Link / CTA</th>
-                  <th className="min-w-[320px] border-b border-gray-200 px-[0.9rem] py-3 font-semibold">Ads / Groups</th>
-                </tr>
-              </thead>
-              <tbody>
-                {variantOverviewRows.map((row, rowIndex) => (
-                  <tr key={row.id} className="align-top">
-                    <td
-                      className={cn(
-                        "sticky left-0 z-10 border-b border-r border-gray-200 px-[0.9rem] py-4",
-                        rowIndex % 2 === 0 ? "bg-white" : "bg-gray-50",
-                      )}
-                    >
-                      <div className="flex items-center gap-2 text-sm font-semibold text-gray-900">
-                        <VariantDot variantId={row.id} variants={variants} />
-                        <span>{row.name}</span>
-                      </div>
-                      <p className="mt-1 text-[10px] text-gray-400">
-                        {row.mediaItems.length} ad{row.mediaItems.length !== 1 ? "s" : ""}
-                      </p>
-                    </td>
-                    <td className="border-b border-gray-200 bg-white px-[0.9rem] py-4">
-                      <div className="group/overview-value flex items-start gap-1">
-                        <p className="flex-1 whitespace-pre-wrap break-words text-xs leading-4 text-gray-800">{row.adName || "—"}</p>
-                        <OverviewInlineEditor
-                          value={row.adName}
-                          onSave={(value) => updateVariantOverviewValue(row.id, "adName", 0, value)}
-                          label="ad name"
-                        />
-                      </div>
-                    </td>
-                    <td className="border-b border-gray-200 bg-white px-[0.9rem] py-4">
-                      <div className="space-y-3">
-                        <div>
-                          <p className="text-[9px] font-semibold uppercase tracking-wide text-gray-400">Campaign</p>
-                          <p className="mt-1 text-xs leading-4 text-gray-800">{row.campaignNames.join(", ") || "—"}</p>
-                        </div>
-                        <div>
-                          <p className="text-[9px] font-semibold uppercase tracking-wide text-gray-400">Ad set</p>
-                          <p className="mt-1 text-xs leading-4 text-gray-800">{row.adSetNames.join(", ") || "—"}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="border-b border-gray-200 bg-white px-[0.9rem] py-4">
-                      <p className="text-xs font-medium text-gray-800">{row.pageName}</p>
-                      {row.instagramName && <p className="mt-1 text-[11px] text-gray-500">@{String(row.instagramName).replace(/^@/, "")}</p>}
-                    </td>
-                    {hasPartnershipVariants && (
-                      <td className="border-b border-gray-200 bg-white px-[0.9rem] py-4">
-                        {row.isPartnershipAd ? (
-                          <div className="space-y-1">
-                            <span className="inline-flex rounded-full bg-violet-50 px-2 py-1 text-[10px] font-medium text-violet-700">Enabled</span>
-                            <p className="break-all text-[11px] leading-4 text-gray-600">{row.partnerName || "Partner selected"}</p>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-gray-400">None</span>
-                        )}
-                      </td>
-                    )}
-                    <td className="border-b border-gray-200 bg-white px-[0.9rem] py-4">
-                      <div className="space-y-3">
-                        <OverviewCopyList
-                          label="Primary text"
-                          values={row.messages}
-                          onEdit={(index, value) => updateVariantOverviewValue(row.id, "messages", index, value)}
-                          showDividers
-                        />
-                        <OverviewCopyList
-                          label="Headlines"
-                          values={row.headlines}
-                          onEdit={(index, value) => updateVariantOverviewValue(row.id, "headlines", index, value)}
-                          showDividers
-                        />
-                        <OverviewCopyList
-                          label="Descriptions"
-                          values={row.descriptions}
-                          onEdit={(index, value) => updateVariantOverviewValue(row.id, "descriptions", index, value)}
-                        />
-                        {row.messages.every((value) => !String(value || "").trim()) &&
-                          row.headlines.every((value) => !String(value || "").trim()) &&
-                          row.descriptions.every((value) => !String(value || "").trim()) && <span className="text-xs text-gray-400">No copy</span>}
-                      </div>
-                    </td>
-                    <td className="border-b border-gray-200 bg-white px-[0.9rem] py-4">
-                      <span className="inline-flex rounded-full bg-gray-100 px-2 py-1 text-[10px] font-semibold text-gray-700">
-                        {String(row.cta)
-                          .toLowerCase()
-                          .split("_")
-                          .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-                          .join(" ")}
-                      </span>
-                      <div className="mt-2 space-y-1">
-                        {row.links.length > 0 ? (
-                          row.links.map((linkEntry) => (
-                            <div key={`${row.id}-link-${linkEntry.index}`} className="group/overview-value flex items-center gap-1">
-                              <p className="max-w-56 flex-1 truncate text-[11px] text-blue-600">
-                                {linkEntry.value}
-                              </p>
-                              <OverviewInlineEditor
-                                value={linkEntry.value}
-                                onSave={(value) => updateVariantOverviewValue(row.id, "link", linkEntry.index, value)}
-                                label="link"
-                              />
-                            </div>
-                          ))
-                        ) : (
-                          <div className="group/overview-value flex items-center gap-1">
-                            <p className="flex-1 text-xs text-gray-400">No link</p>
-                            <OverviewInlineEditor
-                              value=""
-                              onSave={(value) => updateVariantOverviewValue(row.id, "link", 0, value)}
-                              label="link"
-                            />
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                    <td className="h-1 border-b border-gray-200 bg-white px-[0.9rem] py-4">
-                      {row.mediaItems.length > 0 ? (
-                        <div className="grid h-full grid-cols-2 items-stretch gap-4">
-                          {row.mediaItems.map((item, itemIndex) => (
-                            <div
-                              key={`${row.id}-media-${itemIndex}`}
-                              className={cn(
-                                "flex h-full min-h-[96px] min-w-0 flex-col",
-                                item.isGroup && "col-span-2",
-                                item.isGroup && "rounded-2xl border border-gray-200 bg-gray-50 p-3",
-                              )}
-                            >
-                              <div className={item.isGroup ? "mb-2" : "mb-1.5"}>
-                                <span className="text-[9px] font-semibold uppercase tracking-wide text-gray-500">{item.label}</span>
-                              </div>
-                              <div
-                                className={cn("grid min-h-[72px] flex-1 items-start gap-2", item.files.length === 1 && "h-full")}
-                                style={{ gridTemplateColumns: `repeat(${Math.max(item.files.length, 1)}, minmax(0, 1fr))` }}
-                              >
-                                {item.files.map((file, fileIndex) => (
-                                  <VariantOverviewThumbnail
-                                    key={`${getFileId(file)}-${fileIndex}`}
-                                    file={file}
-                                    videoThumbs={videoThumbs}
-                                    fitToWidth={item.files.length > 1 || item.isGroup}
-                                  />
-                                ))}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <span className="text-xs text-gray-400">No media assigned</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {showVariantOverview &&
+        variantOverviewHost &&
+        createPortal(
+          <VariantOverview
+            rows={variantOverviewRows}
+            campaigns={campaigns}
+            pages={pages}
+            copyTemplates={copyTemplates}
+            defaultTemplateName={defaultTemplateName}
+            availableLinks={availableLinks}
+            customVariables={adAccountSettings.customVariables || []}
+            showAdSetNameVariable={showAdSetNameVariable}
+            loadingAdSetVariantIds={loadingAdSetVariantIds}
+            onCampaignToggle={handleOverviewCampaignToggle}
+            onAdSetsChange={handleOverviewAdSetsChange}
+            onPageSelect={handleOverviewPageSelect}
+            onTemplateSelect={handleOverviewTemplateSelect}
+            onLinkSelect={handleOverviewLinkSelect}
+            onLinkInputChange={handleOverviewLinkInputChange}
+            onAdNameChange={(variantId, rawInput) => updateVariantFields(variantId, { adNameFormulaV2: { rawInput } })}
+            onCopyChange={handleOverviewCopyChange}
+            onEditVariant={(variantId) => {
+              switchVariant(variantId);
+              onToggleVariantOverview(false);
+            }}
+            onClose={() => onToggleVariantOverview(false)}
+          />,
+          variantOverviewHost,
+        )}
       {showDeleteAllVariantsDialog && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center">
           <div className="absolute inset-0 bg-black/30" onClick={() => setShowDeleteAllVariantsDialog(false)} />

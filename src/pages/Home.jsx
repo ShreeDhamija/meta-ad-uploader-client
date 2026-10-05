@@ -99,6 +99,25 @@ const sortAdSets = (adSets) => {
     });
 };
 
+const fetchAdSetsForCampaigns = async (campaignIds, campaigns) => {
+    const results = await Promise.all(
+        campaignIds.map((id) =>
+            fetch(`${API_BASE_URL}/auth/fetch-adsets?campaignId=${id}`, {
+                credentials: "include"
+            }).then((res) => res.json())
+        )
+    );
+
+    return sortAdSets(results.flatMap((data, index) => {
+        if (!data.adSets) return [];
+        return data.adSets.map((adset) => ({
+            ...adset,
+            campaignId: campaignIds[index],
+            campaignName: campaigns.find((campaign) => campaign.id === campaignIds[index])?.name
+        }));
+    }));
+};
+
 // Move these functions outside the component - around line 20, before the component
 const sortCampaigns = (campaigns) => {
     const priority = { ACTIVE: 1, PAUSED: 2 };
@@ -299,6 +318,11 @@ export default function Home() {
 
     const [variants, setVariants] = useState([{ id: "default", name: "Default", snapshot: null }]);
     const [activeVariantId, setActiveVariantId] = useState("default");
+    const activeVariantIdRef = useRef(activeVariantId);
+    activeVariantIdRef.current = activeVariantId;
+    const [showVariantOverview, setShowVariantOverview] = useState(false);
+    const [variantOverviewHost, setVariantOverviewHost] = useState(null);
+    const variantAdSetRequestRef = useRef({});
     const [fileVariantMap, setFileVariantMap] = useState({});
     const [groupVariantMap, setGroupVariantMap] = useState({});
     const [postVariantMap, setPostVariantMap] = useState({});
@@ -1065,6 +1089,75 @@ export default function Home() {
         setActiveVariantId(targetId);
         setSelectedFiles(new Set());
     }, [activeVariantId, captureCurrentSnapshot, hydrateFromSnapshot, variants]);
+
+    // Applies a partial snapshot to any variant: the active variant lives in form state,
+    // every other variant lives in its saved snapshot. Used by the variant overview.
+    const updateVariantFields = useCallback(async (variantId, patch) => {
+        const liveSetters = {
+            adNameFormulaV2: setAdNameFormulaV2,
+            messages: setMessages,
+            headlines: setHeadlines,
+            descriptions: setDescriptions,
+            link: setLink,
+            customLink: setCustomLink,
+            showCustomLink: setShowCustomLink,
+            selectedTemplate: setSelectedTemplate,
+            pageId: setPageId,
+            instagramAccountId: setInstagramAccountId,
+            partnerIgAccountId: setPartnerIgAccountId,
+            partnerFbPageId: setPartnerFbPageId,
+            instantExperienceId: setInstantExperienceId,
+            selectedShopDestination: setSelectedShopDestination,
+            selectedShopDestinationType: setSelectedShopDestinationType,
+            selectedShopProductCatalogId: setSelectedShopProductCatalogId,
+            productExtensionProductSetId: setProductExtensionProductSetId,
+            productExtensionProductCatalogId: setProductExtensionProductCatalogId,
+            selectedCampaign: setSelectedCampaign,
+            selectedAdSets: setSelectedAdSets,
+            adSets: setAdSets,
+            campaignObjective: setCampaignObjective,
+            showDuplicateBlock: setShowDuplicateBlock,
+            duplicateAdSet: setDuplicateAdSet,
+            newAdSetName: setNewAdSetName,
+            showDuplicateCampaignBlock: setShowDuplicateCampaignBlock,
+            duplicateCampaign: setDuplicateCampaign,
+            newCampaignName: setNewCampaignName,
+        };
+
+        // The active variant's ad sets are fetched by the selectedCampaign effect above.
+        if (variantId === activeVariantIdRef.current) {
+            Object.entries(patch).forEach(([key, value]) => liveSetters[key]?.(value));
+            return;
+        }
+
+        const patchSnapshot = (nextPatch) => setVariants((prev) => prev.map((variant) => (
+            variant.id === variantId && variant.snapshot
+                ? { ...variant, snapshot: { ...variant.snapshot, ...nextPatch } }
+                : variant
+        )));
+        patchSnapshot(patch);
+
+        if (!Array.isArray(patch.selectedCampaign) || patch.selectedCampaign.length === 0) return;
+
+        const requestId = (variantAdSetRequestRef.current[variantId] || 0) + 1;
+        variantAdSetRequestRef.current[variantId] = requestId;
+        try {
+            const nextAdSets = await fetchAdSetsForCampaigns(patch.selectedCampaign, campaigns);
+            if (variantAdSetRequestRef.current[variantId] !== requestId || variantId === activeVariantIdRef.current) return;
+            patchSnapshot({ adSets: nextAdSets });
+        } catch (err) {
+            toast.error(`Failed to fetch ad sets: ${err.message || "Unknown error occurred"}`);
+        }
+    }, [campaigns]);
+
+    useEffect(() => {
+        if (variants.length <= 1) setShowVariantOverview(false);
+    }, [variants.length]);
+
+    const toggleVariantOverview = useCallback((open) => {
+        setShowVariantOverview(open);
+        window.scrollTo({ top: 0 });
+    }, []);
 
     const getVariantSnapshot = useCallback((variantId) => {
         const current = captureCurrentSnapshot();
@@ -1865,25 +1958,10 @@ export default function Home() {
 
         const fetchAdSetsForSelection = async () => {
             try {
-                const adSetPromises = selectedCampaign.map((id) =>
-                    fetch(`${API_BASE_URL}/auth/fetch-adsets?campaignId=${id}`, {
-                        credentials: "include"
-                    }).then((res) => res.json())
-                );
-
-                const results = await Promise.all(adSetPromises);
-
-                const allAdSets = results.flatMap((data, index) => {
-                    if (!data.adSets) return [];
-                    return data.adSets.map((adset) => ({
-                        ...adset,
-                        campaignId: selectedCampaign[index],
-                        campaignName: campaigns.find((campaign) => campaign.id === selectedCampaign[index])?.name
-                    }));
-                });
+                const allAdSets = await fetchAdSetsForCampaigns(selectedCampaign, campaigns);
 
                 if (!cancelled) {
-                    setAdSets(sortAdSets(allAdSets));
+                    setAdSets(allAdSets);
                     adSetsLoadedForSelectionRef.current = selectionKey;
                 }
             } catch (err) {
@@ -2139,7 +2217,9 @@ export default function Home() {
 
             <div className="w-full max-w-[1600px] mx-auto py-8 px-2 sm:px-4 md:px-6">
                 <Header isLoggedIn={isLoggedIn} userName={userName} handleLogout={handleLogout} showMessenger={showMessenger} hideMessenger={hideMessenger} />
-                <div className="flex flex-col lg:flex-row gap-6 min-w-0">
+                {/* Collapsed rather than unmounted while the overview is open so form state, the
+                    variant pill and the job queue (both position: fixed) stay alive. */}
+                <div className={`flex flex-col lg:flex-row gap-6 min-w-0 ${showVariantOverview ? "h-0 overflow-hidden" : ""}`}>
                     <div className={`flex-1 lg:flex-[55] min-w-0 space-y-6 ${!userHasActiveAccess ? 'pointer-events-none opacity-50 cursor-not-allowed' : ''}`}>
                         <AdAccountSettings
                             isLoading={isLoading}
@@ -2353,6 +2433,10 @@ export default function Home() {
                             onAdLaunchInProgressChange={setAdLaunchInProgress}
                             onSaveDraft={saveCurrentDraft}
                             onRestoreDraft={restoreDraftToForm}
+                            showVariantOverview={showVariantOverview}
+                            onToggleVariantOverview={toggleVariantOverview}
+                            variantOverviewHost={variantOverviewHost}
+                            updateVariantFields={updateVariantFields}
 
 
                         />
@@ -2404,6 +2488,7 @@ export default function Home() {
 
                     </div>
                 </div>
+                <div ref={setVariantOverviewHost} className={showVariantOverview ? "" : "hidden"} />
             </div>
 
             {showOnboardingWizard && (isNewOnboardingUser || unseenOnboardingCards.length > 0) && (
