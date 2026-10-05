@@ -1,3 +1,4 @@
+import CopyIcon from "@/assets/icons/copy.svg?react";
 import CTAIcon from "@/assets/icons/cta.svg?react";
 import FacebookIcon from "@/assets/icons/fb.svg?react";
 import TemplateIcon from "@/assets/icons/file.svg?react";
@@ -38,6 +39,8 @@ const dropdownContentStyle = {
 };
 const FALLBACK_THUMBNAIL = "https://api.withblip.com/thumbnail.jpg";
 const FALLBACK_PROFILE_IMAGE = "https://api.withblip.com/backup_page_image.png";
+const ADVANTAGE_PLUS_TYPES = ["AUTOMATED_SHOPPING_ADS", "SMART_APP_PROMOTION"];
+const MAX_AD_SET_NAME_LENGTH = 400;
 
 function OverviewCombobox({
   options,
@@ -53,6 +56,7 @@ function OverviewCombobox({
   grouped = false,
   selectAll = false,
   onSelectAll,
+  action,
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -161,6 +165,24 @@ function OverviewCombobox({
             wrapperClassName="bg-gray-50 border-gray-200 rounded-[20px]"
           />
           <CommandList className="max-h-none overflow-hidden rounded-2xl" selectOnFocus={false}>
+            {action && (
+              <CommandItem
+                value="__action__"
+                disabled={action.disabled}
+                onSelect={() => {
+                  if (action.disabled) return;
+                  action.onSelect();
+                  setOpen(false);
+                }}
+                className={cn(
+                  "m-1 flex h-10 items-center justify-center rounded-2xl px-4 py-3 text-sm font-semibold shadow-md transition-all duration-150",
+                  action.disabled ? "cursor-not-allowed !bg-zinc-800 !text-zinc-500" : "cursor-pointer !bg-zinc-700 !text-white hover:!bg-black",
+                )}
+              >
+                {action.label}
+                {action.disabled && action.hint && <span className="ml-2 text-xs font-normal text-zinc-400">{action.hint}</span>}
+              </CommandItem>
+            )}
             <ScrollArea viewportClassName="max-h-[300px] [&>div]:!block">
               {filtered.length === 0 ? (
                 <p className="px-4 py-5 text-center text-sm text-gray-500">{emptyText}</p>
@@ -412,6 +434,158 @@ function PartnershipCell({ row, brandUsername, onFieldsChange }) {
   );
 }
 
+function NewAdSetFields({ row, sourceAdSets, onChange }) {
+  const sourceOptions = sourceAdSets.map((adSet) => ({
+    value: adSet.id,
+    label: adSet.name || adSet.id,
+    adSet,
+    group: `${adSet.campaignName || adSet.campaignId} Ad Sets`,
+    muted: adSet.status !== "ACTIVE",
+    meta: adSet.status === "ACTIVE" ? <span className="ml-2 h-2 w-2 shrink-0 rounded-full bg-green-500" /> : null,
+  }));
+  const sourceAdSet = sourceAdSets.find((adSet) => adSet.id === row.duplicateAdSet);
+  const nameTooLong = row.newAdSetName.length > MAX_AD_SET_NAME_LENGTH;
+
+  return (
+    <div className="mt-1.5 space-y-2 rounded-2xl border border-gray-200 bg-gray-50 p-3">
+      <FieldLabel icon={CopyIcon}>Ad set to duplicate</FieldLabel>
+      <OverviewCombobox
+        grouped
+        options={sourceOptions}
+        selectedValues={row.duplicateAdSet ? [row.duplicateAdSet] : []}
+        onSelect={({ adSet }) =>
+          onChange({ duplicateAdSet: adSet.id, newAdSetName: `${adSet.name || adSet.id}_Copy`, newAdSetSettings: null })
+        }
+        searchPlaceholder="Search ad set..."
+        emptyText="No ad sets found."
+        disabled={sourceOptions.length === 0}
+        triggerLabel={
+          <span className="block flex-1 truncate text-left" title={sourceAdSet?.name}>
+            {row.duplicateAdSet ? sourceAdSet?.name || row.duplicateAdSet : "Select existing ad set"}
+          </span>
+        }
+      />
+      {row.duplicateAdSet && (
+        <>
+          <FieldLabel>New ad set name</FieldLabel>
+          <Input
+            value={row.newAdSetName}
+            onChange={(event) => onChange({ newAdSetName: event.target.value })}
+            placeholder="Enter new ad set name..."
+            aria-invalid={nameTooLong}
+            className={cn("w-full", formInputChrome, nameTooLong && "!border-red-500")}
+          />
+          {nameTooLong && <p className="px-1 text-xs text-red-600">New ad set names must be 400 characters or fewer.</p>}
+        </>
+      )}
+      {row.newAdSetShared && <p className="px-1 text-xs text-gray-500">Shared by every variant launching in 1 new ad set.</p>}
+    </div>
+  );
+}
+
+function LinkCell({ row, availableLinks, onLinkSelect, onLinkInputChange, onCustomLinkChange, onCustomLinkToggle }) {
+  const hasSavedLinks = availableLinks.length > 0;
+  const defaultUrl = (availableLinks.find((link) => link.isDefault) || availableLinks[0])?.url || "";
+  const links = row.links.length > 0 ? row.links : [""];
+  // Per-card custom state isn't part of a variant's snapshot (natively it's local form state),
+  // so start cards whose link isn't a saved one in custom mode.
+  const [customCards, setCustomCards] = useState(
+    () => new Set(links.map((value, index) => (value && !availableLinks.some((link) => link.url === value) ? index : null)).filter((index) => index !== null)),
+  );
+
+  if (row.destinationType === "instant_experience") {
+    return <p className="pt-2.5 text-sm text-gray-500">Instant Experience</p>;
+  }
+
+  if (links.length <= 1) {
+    const showInput = row.showCustomLink || !hasSavedLinks;
+    return (
+      <div className="space-y-3">
+        {!showInput && (
+          <SavedLinkSelector
+            links={availableLinks}
+            value={links[0] || ""}
+            onValueChange={(url) => onLinkSelect(row.id, url, null)}
+            className={formFieldChrome}
+          />
+        )}
+        {showInput && (
+          <Input
+            type="text"
+            value={row.customLink}
+            onChange={(event) => onCustomLinkChange(row.id, event.target.value)}
+            placeholder="https://example.com"
+            className={cn("w-full", formInputChrome)}
+          />
+        )}
+        {hasSavedLinks && (
+          <div className="flex items-center gap-2 px-1">
+            <Checkbox
+              id={`${row.id}-custom-link`}
+              checked={row.showCustomLink}
+              onCheckedChange={(checked) => onCustomLinkToggle(row.id, Boolean(checked))}
+              className="h-4 w-4 rounded-md border-gray-300"
+            />
+            <label htmlFor={`${row.id}-custom-link`} className="cursor-pointer text-xs font-medium text-gray-600">
+              Enter custom link
+            </label>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {links.map((value, index) => {
+        const isCustom = !hasSavedLinks || customCards.has(index);
+        return (
+          <div key={index} className="space-y-2">
+            <p className="px-1 text-xs font-medium text-gray-500">Card {index + 1}</p>
+            {isCustom ? (
+              <Input
+                type="text"
+                value={value || ""}
+                onChange={(event) => onLinkInputChange(row.id, index, event.target.value)}
+                placeholder="https://example.com"
+                className={cn("w-full", formInputChrome)}
+              />
+            ) : (
+              <SavedLinkSelector
+                links={availableLinks}
+                value={value || ""}
+                onValueChange={(url) => onLinkSelect(row.id, url, index)}
+                className={formFieldChrome}
+              />
+            )}
+            {hasSavedLinks && (
+              <div className="flex items-center gap-2 px-1">
+                <Checkbox
+                  id={`${row.id}-custom-link-${index}`}
+                  checked={customCards.has(index)}
+                  onCheckedChange={(checked) => {
+                    setCustomCards((current) => {
+                      const next = new Set(current);
+                      if (checked) next.add(index);
+                      else next.delete(index);
+                      return next;
+                    });
+                    if (!checked) onLinkSelect(row.id, defaultUrl, index);
+                  }}
+                  className="h-4 w-4 rounded-md border-gray-300"
+                />
+                <label htmlFor={`${row.id}-custom-link-${index}`} className="cursor-pointer text-xs font-medium text-gray-600">
+                  Use custom link
+                </label>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function VariantOverview({
   rows,
   campaigns,
@@ -427,10 +601,14 @@ export default function VariantOverview({
   loadingAdSetVariantIds,
   onCampaignToggle,
   onAdSetsChange,
+  onStartNewAdSet,
+  onNewAdSetChange,
   onPageSelect,
   onTemplateSelect,
   onLinkSelect,
   onLinkInputChange,
+  onCustomLinkChange,
+  onCustomLinkToggle,
   onFieldsChange,
   onCopyChange,
 }) {
@@ -480,6 +658,7 @@ export default function VariantOverview({
     [copyTemplates, defaultTemplateName],
   );
   const hasTemplates = templateOptions.length > 0;
+  const defaultRow = rows.find((row) => row.id === "default");
   const instagramAccounts = useMemo(() => {
     const seen = new Set();
     return pages
@@ -545,6 +724,9 @@ export default function VariantOverview({
           ),
         }));
         const isLoadingAdSets = loadingAdSetVariantIds.includes(row.id);
+        const isAdvantagePlus = campaigns.some(
+          (campaign) => row.campaignIds.includes(campaign.id) && ADVANTAGE_PLUS_TYPES.includes(campaign.smart_promotion_type),
+        );
         const noAdSets = row.campaignIds.length > 0 && adSetOptions.length === 0;
         return (
           <div className="space-y-3">
@@ -596,9 +778,19 @@ export default function VariantOverview({
                 emptyText="No ad sets found."
                 loading={isLoadingAdSets}
                 loadingLabel="Fetching ad sets..."
-                disabled={row.adSetsLocked || row.campaignIds.length === 0 || noAdSets}
+                disabled={row.campaignIds.length === 0 || noAdSets}
+                action={
+                  isAdvantagePlus
+                    ? null
+                    : {
+                      label: "🚀 Launch in a New Ad Set",
+                      disabled: row.campaignIds.length !== 1,
+                      hint: "(Please select 1 campaign)",
+                      onSelect: () => onStartNewAdSet(row.id),
+                    }
+                }
                 triggerLabel={
-                  <span className={cn("block flex-1 truncate text-left", row.adSetsLocked && "text-gray-400")}>
+                  <span className="block flex-1 truncate text-left">
                     {row.isNewAdSet
                       ? "New Ad Set"
                       : row.campaignIds.length === 0
@@ -614,10 +806,11 @@ export default function VariantOverview({
                 }
               />
               {row.isNewAdSet && (
-                <p className="truncate px-1 text-xs text-gray-500" title={row.newAdSetName}>
-                  {row.newAdSetName || "Unnamed ad set"}
-                  {row.adSetsLocked && " · shared with Default"}
-                </p>
+                <NewAdSetFields
+                  row={row}
+                  sourceAdSets={row.newAdSetShared && defaultRow?.adSetOptions.length ? defaultRow.adSetOptions : row.adSetOptions}
+                  onChange={(fields) => onNewAdSetChange(row.id, fields)}
+                />
               )}
             </div>
           </div>
@@ -724,38 +917,17 @@ export default function VariantOverview({
             onChange={(index, value) => onCopyChange(row.id, "descriptions", index, value)}
           />
         );
-      case "link": {
-        if (row.destinationType === "instant_experience") {
-          return <p className="pt-2.5 text-sm text-gray-500">Instant Experience</p>;
-        }
-        const links = row.links.length > 0 ? row.links : [""];
-        const isPerCard = links.length > 1;
+      case "link":
         return (
-          <div className="space-y-2">
-            {links.map((value, index) => (
-              <div key={index} className="space-y-1">
-                {isPerCard && <p className="px-1 text-xs font-medium text-gray-500">Card {index + 1}</p>}
-                {availableLinks.length > 0 ? (
-                  <SavedLinkSelector
-                    links={availableLinks}
-                    value={value || ""}
-                    onValueChange={(url) => onLinkSelect(row.id, url, isPerCard ? index : null)}
-                    className={formFieldChrome}
-                  />
-                ) : (
-                  <Input
-                    type="text"
-                    value={value || ""}
-                    onChange={(event) => onLinkInputChange(row.id, index, event.target.value)}
-                    placeholder="https://example.com"
-                    className={cn("w-full", formInputChrome)}
-                  />
-                )}
-              </div>
-            ))}
-          </div>
+          <LinkCell
+            row={row}
+            availableLinks={availableLinks}
+            onLinkSelect={onLinkSelect}
+            onLinkInputChange={onLinkInputChange}
+            onCustomLinkChange={onCustomLinkChange}
+            onCustomLinkToggle={onCustomLinkToggle}
+          />
         );
-      }
       case "cta": {
         const selectedCta = ctaSelectOptions.find((option) => option.value === row.cta);
         return (

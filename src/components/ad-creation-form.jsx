@@ -2110,8 +2110,9 @@ export default function AdCreationForm({
         adSetIds: snapshot.selectedAdSets || [],
         adSetOptions,
         isNewAdSet,
-        adSetsLocked: isNewAdSet && shareNewAdSet && variant.id !== "default",
-        newAdSetName: (snapshot.newAdSetName || "").trim(),
+        newAdSetShared: shareNewAdSet && variants.length > 1,
+        duplicateAdSet: snapshot.duplicateAdSet || "",
+        newAdSetName: snapshot.newAdSetName || "",
         pageId: snapshot.pageId || "",
         instagramAccountId: snapshot.instagramAccountId || "",
         isPartnershipAd: Boolean(snapshot.isPartnershipAd),
@@ -2126,6 +2127,7 @@ export default function AdCreationForm({
         headlines: snapshot.headlines || [],
         descriptions: snapshot.descriptions || [],
         links: snapshot.link || [],
+        customLink: snapshot.customLink || "",
         showCustomLink: Boolean(snapshot.showCustomLink),
         destinationType: snapshot.destinationType,
         cta: snapshot.cta || "LEARN_MORE",
@@ -3351,6 +3353,19 @@ export default function AdCreationForm({
     [activeVariantId, buildTemplatePatch, getVariantState, handleTemplateSelect, updateVariantFields],
   );
 
+  const buildLinkPatch = useCallback(
+    (state, url, cardIndex) => {
+      const currentLinks = state.link || [];
+      const patch = { link: cardIndex === null ? [url] : currentLinks.map((current, index) => (index === cardIndex ? url : current)) };
+      const matchingTemplate = templateForLink(templateLinkPairs, url, state.selectedTemplate);
+      if (matchingTemplate && matchingTemplate !== state.selectedTemplate) {
+        Object.assign(patch, buildTemplatePatch(state, matchingTemplate, { syncLink: false }));
+      }
+      return patch;
+    },
+    [buildTemplatePatch, templateLinkPairs],
+  );
+
   const handleOverviewLinkSelect = useCallback(
     (variantId, url, cardIndex) => {
       const state = getVariantState(variantId) || {};
@@ -3365,25 +3380,44 @@ export default function AdCreationForm({
         return;
       }
 
-      const currentLinks = state.link || [];
-      const patch = { link: cardIndex === null ? [url] : currentLinks.map((current, index) => (index === cardIndex ? url : current)) };
+      const patch = buildLinkPatch(state, url, cardIndex);
       if (exitCustomLink) Object.assign(patch, { showCustomLink: false, customLink: "" });
-      const matchingTemplate = templateForLink(templateLinkPairs, url, state.selectedTemplate);
-      if (matchingTemplate && matchingTemplate !== state.selectedTemplate) {
-        Object.assign(patch, buildTemplatePatch(state, matchingTemplate, { syncLink: false }));
-      }
       updateVariantFields(variantId, patch);
     },
-    [
-      activeVariantId,
-      buildTemplatePatch,
-      getVariantState,
-      handleSavedLinkSelect,
-      setCustomLink,
-      setShowCustomLink,
-      templateLinkPairs,
-      updateVariantFields,
-    ],
+    [activeVariantId, buildLinkPatch, getVariantState, handleSavedLinkSelect, setCustomLink, setShowCustomLink, updateVariantFields],
+  );
+
+  const handleOverviewCustomLinkChange = useCallback(
+    (variantId, value) => {
+      if (variantId === activeVariantId) {
+        setCustomLink(value);
+        handleSavedLinkSelect(value);
+        return;
+      }
+      updateVariantFields(variantId, { customLink: value, ...buildLinkPatch(getVariantState(variantId) || {}, value, null) });
+    },
+    [activeVariantId, buildLinkPatch, getVariantState, handleSavedLinkSelect, setCustomLink, updateVariantFields],
+  );
+
+  const handleOverviewCustomLinkToggle = useCallback(
+    (variantId, checked) => {
+      const defaultUrl = defaultLink?.url || "";
+      if (variantId === activeVariantId) {
+        setShowCustomLink(checked);
+        if (!checked) {
+          setCustomLink("");
+          handleSavedLinkSelect(defaultUrl);
+        }
+        return;
+      }
+      updateVariantFields(
+        variantId,
+        checked
+          ? { showCustomLink: true }
+          : { showCustomLink: false, customLink: "", ...buildLinkPatch(getVariantState(variantId) || {}, defaultUrl, null) },
+      );
+    },
+    [activeVariantId, buildLinkPatch, defaultLink, getVariantState, handleSavedLinkSelect, setCustomLink, setShowCustomLink, updateVariantFields],
   );
 
   const handleOverviewLinkInputChange = useCallback(
@@ -3462,6 +3496,26 @@ export default function AdCreationForm({
       }
     },
     [activeVariantId, campaigns, getVariantState, updateVariantFields],
+  );
+
+  const handleOverviewStartNewAdSet = useCallback(
+    (variantId) => updateVariantFields(variantId, { showDuplicateBlock: true, selectedAdSets: [] }),
+    [updateVariantFields],
+  );
+
+  // With "Launch all in 1 new ad set", Default holds the shared source and name, so an edit from
+  // any row is written to Default and to every variant launching in a new ad set.
+  const handleOverviewNewAdSetChange = useCallback(
+    (variantId, fields) => {
+      const targetIds =
+        shareNewAdSet && variants.length > 1
+          ? variants
+            .filter((variant) => variant.id === "default" || variant.id === variantId || getVariantState(variant.id)?.showDuplicateBlock)
+            .map((variant) => variant.id)
+          : [variantId];
+      targetIds.forEach((id) => updateVariantFields(id, fields));
+    },
+    [getVariantState, shareNewAdSet, updateVariantFields, variants],
   );
 
   const handleOverviewAdSetsChange = useCallback(
@@ -12396,10 +12450,14 @@ export default function AdCreationForm({
             loadingAdSetVariantIds={loadingAdSetVariantIds}
             onCampaignToggle={handleOverviewCampaignToggle}
             onAdSetsChange={handleOverviewAdSetsChange}
+            onStartNewAdSet={handleOverviewStartNewAdSet}
+            onNewAdSetChange={handleOverviewNewAdSetChange}
             onPageSelect={handleOverviewPageSelect}
             onTemplateSelect={handleOverviewTemplateSelect}
             onLinkSelect={handleOverviewLinkSelect}
             onLinkInputChange={handleOverviewLinkInputChange}
+            onCustomLinkChange={handleOverviewCustomLinkChange}
+            onCustomLinkToggle={handleOverviewCustomLinkToggle}
             onFieldsChange={updateVariantFields}
             onCopyChange={handleOverviewCopyChange}
           />,

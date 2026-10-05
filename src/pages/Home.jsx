@@ -1124,6 +1124,7 @@ export default function Home() {
             showDuplicateBlock: setShowDuplicateBlock,
             duplicateAdSet: setDuplicateAdSet,
             newAdSetName: setNewAdSetName,
+            newAdSetSettings: setNewAdSetSettings,
             showDuplicateCampaignBlock: setShowDuplicateCampaignBlock,
             duplicateCampaign: setDuplicateCampaign,
             newCampaignName: setNewCampaignName,
