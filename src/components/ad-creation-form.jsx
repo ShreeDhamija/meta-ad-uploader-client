@@ -12037,19 +12037,20 @@ export default function AdCreationForm({
               </Label>
             </div>
           </div>
-          {/* Temporarily always visible for UI testing. */}
-          <div className="flex items-center space-x-2 rounded-xl transition-colors duration-150">
-            <Checkbox
-              id="isPoliticalAd"
-              checked={isPoliticalAd}
-              onCheckedChange={(checked) => setIsPoliticalAd(checked === true)}
-              disabled={!isLoggedIn}
-              className="rounded-md focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
-            />
-            <Label htmlFor="isPoliticalAd" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-              Political Ad
-            </Label>
-          </div>
+          {hasPoliticalCampaign && (
+            <div className="flex items-center space-x-2 rounded-xl transition-colors duration-150">
+              <Checkbox
+                id="isPoliticalAd"
+                checked={isPoliticalAd}
+                onCheckedChange={(checked) => setIsPoliticalAd(checked === true)}
+                disabled={!isLoggedIn}
+                className="rounded-md focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+              />
+              <Label htmlFor="isPoliticalAd" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                Political Ad
+              </Label>
+            </div>
+          )}
         </form>
       </CardContent>
       {showSaveNewDialog && (
