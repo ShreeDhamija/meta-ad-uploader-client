@@ -2226,8 +2226,10 @@ export default function Home() {
                     <Header isLoggedIn={isLoggedIn} userName={userName} handleLogout={handleLogout} showMessenger={showMessenger} hideMessenger={hideMessenger} />
                 </div>
                 {/* Collapsed rather than unmounted while the overview is open so form state, the
-                    variant pill and the job queue (both position: fixed) stay alive. */}
-                <div className={`flex flex-col lg:flex-row gap-6 min-w-0 ${showVariantOverview ? "h-0 min-h-0 shrink-0 overflow-hidden" : ""}`}>
+                    variant pill and the job queue (both position: fixed) stay alive. `relative` makes
+                    this the containing block for absolutely positioned descendants (hidden inputs,
+                    sr-only text) so they're clipped too instead of stretching the page height. */}
+                <div className={`flex flex-col lg:flex-row gap-6 min-w-0 ${showVariantOverview ? "relative h-0 min-h-0 shrink-0 overflow-hidden" : ""}`}>
                     <div className={`flex-1 lg:flex-[55] min-w-0 space-y-6 ${!userHasActiveAccess ? 'pointer-events-none opacity-50 cursor-not-allowed' : ''}`}>
                         <AdAccountSettings
                             isLoading={isLoading}
