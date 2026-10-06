@@ -2221,11 +2221,13 @@ export default function Home() {
                 </div>
             )}
 
-            <div className="w-full max-w-[1600px] mx-auto py-8 px-2 sm:px-4 md:px-6">
-                <Header isLoggedIn={isLoggedIn} userName={userName} handleLogout={handleLogout} showMessenger={showMessenger} hideMessenger={hideMessenger} />
+            <div className={`w-full max-w-[1600px] mx-auto py-8 px-2 sm:px-4 md:px-6 ${showVariantOverview ? "flex h-dvh flex-col overflow-hidden" : ""}`}>
+                <div className="shrink-0">
+                    <Header isLoggedIn={isLoggedIn} userName={userName} handleLogout={handleLogout} showMessenger={showMessenger} hideMessenger={hideMessenger} />
+                </div>
                 {/* Collapsed rather than unmounted while the overview is open so form state, the
                     variant pill and the job queue (both position: fixed) stay alive. */}
-                <div className={`flex flex-col lg:flex-row gap-6 min-w-0 ${showVariantOverview ? "h-0 overflow-hidden" : ""}`}>
+                <div className={`flex flex-col lg:flex-row gap-6 min-w-0 ${showVariantOverview ? "h-0 min-h-0 shrink-0 overflow-hidden" : ""}`}>
                     <div className={`flex-1 lg:flex-[55] min-w-0 space-y-6 ${!userHasActiveAccess ? 'pointer-events-none opacity-50 cursor-not-allowed' : ''}`}>
                         <AdAccountSettings
                             isLoading={isLoading}
@@ -2494,7 +2496,8 @@ export default function Home() {
 
                     </div>
                 </div>
-                <div ref={setVariantOverviewHost} className={showVariantOverview ? "" : "hidden"} />
+                {/* Keep the overview inside the viewport, with room below for the fixed variant pill. */}
+                <div ref={setVariantOverviewHost} className={showVariantOverview ? "min-h-0 flex-1 pb-20" : "hidden"} />
             </div>
 
             {showOnboardingWizard && (isNewOnboardingUser || unseenOnboardingCards.length > 0) && (

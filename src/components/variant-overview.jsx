@@ -1000,9 +1000,9 @@ export default function VariantOverview({
   };
 
   return (
-    <Card className="!bg-white border border-gray-300 max-w-[calc(100vw-1rem)] shadow-[0_2px_4px_rgba(0,0,0,0.08)] rounded-3xl">
-      <CardContent className="p-0">
-        <ScrollArea type="always" className="w-full rounded-3xl" viewportClassName="max-h-[calc(100vh-10rem)] pb-3">
+    <Card className="h-full min-h-0 !bg-white border border-gray-300 max-w-[calc(100vw-1rem)] shadow-[0_2px_4px_rgba(0,0,0,0.08)] rounded-3xl">
+      <CardContent className="h-full min-h-0 p-0">
+        <ScrollArea type="always" className="h-full w-full rounded-3xl" viewportClassName="overscroll-contain pb-3">
           <table className="w-max min-w-full border-separate border-spacing-0 text-left">
             <thead>
               <tr>
