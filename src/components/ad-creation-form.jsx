@@ -4416,14 +4416,26 @@ export default function AdCreationForm({
 
       // Business accounts may need a second consent for the picker's SharePoint access.
       let config = null;
+      let pickerConsentAttempted = false;
       for (let attempt = 0; attempt < 3 && !config; attempt++) {
         try {
           config = await fetchOneDriveJson("/api/onedrive/picker-config");
         } catch (error) {
           if (attempt === 2) throw error;
-          if (error.code === "onedrive_consent_required") await runOneDriveAuthInWindow(win, "picker");
-          else if (error.code === "onedrive_not_connected" || error.code === "onedrive_reauth_required") await runOneDriveAuthInWindow(win, "connect");
-          else throw error;
+          if (error.code === "onedrive_consent_required") {
+            if (pickerConsentAttempted) {
+              throw createOneDriveClientError(
+                "Microsoft did not grant Blip access to your OneDrive files. If you use a work or school account, your Microsoft 365 admin may need to approve Blip.",
+                error.code,
+              );
+            }
+            pickerConsentAttempted = true;
+            await runOneDriveAuthInWindow(win, "picker");
+          } else if (error.code === "onedrive_not_connected" || error.code === "onedrive_reauth_required") {
+            await runOneDriveAuthInWindow(win, "connect");
+          } else {
+            throw error;
+          }
         }
       }
       if (!isTrustedOneDriveOrigin(config.pickerUrl)) throw new Error("OneDrive returned an unexpected picker address.");
