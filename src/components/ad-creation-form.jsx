@@ -4817,7 +4817,7 @@ export default function AdCreationForm({
         console.warn(`OneDrive video metadata unavailable for ${file.name}:`, error);
       }
       const mediaUrl = `${API_BASE_URL}/api/onedrive/media?driveId=${encodeURIComponent(file.oneDriveDriveId)}&itemId=${encodeURIComponent(file.oneDriveItemId)}`;
-      return (await readVideoAspectRatioFromUrl(mediaUrl)) || 16 / 9; // Same fallback as the other sources
+      return readVideoAspectRatioFromUrl(mediaUrl);
     }
 
     if (file.isFrameio) {
@@ -6196,6 +6196,8 @@ export default function AdCreationForm({
               } catch (error) {
                 throwIfCancelled();
                 console.error(`Failed to get aspect ratio for ${file.name}:`, error);
+                // OneDrive never guesses a ratio; unresolved files block placement launches below.
+                if (file.isOneDrive) return null;
                 const key = getFileId(file); // ← Use getFileId here too
                 return { key, aspectRatio: 16 / 9 }; // Default fallback
               }
@@ -6231,6 +6233,12 @@ export default function AdCreationForm({
             aspectRatioMap[key] = aspectRatio;
           }
         });
+      }
+
+      const unresolvedOneDriveVideos = oneDriveFiles.filter((file) => isVideoFile(file) && !aspectRatioMap[file.oneDriveId]);
+      if (unresolvedOneDriveVideos.length > 0) {
+        const names = unresolvedOneDriveVideos.map((file) => file.name).join(", ");
+        throw new Error(`Couldn't read the video dimensions for ${names} from OneDrive. Placement customization needs them, so remove the file or launch without placement customization.`);
       }
     }
 
