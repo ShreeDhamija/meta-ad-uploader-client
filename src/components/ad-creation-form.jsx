@@ -401,6 +401,16 @@ function runOneDriveAuthInWindow(win, intent) {
   });
 }
 
+// Console trace of where a OneDrive video's dimensions came from during placement analysis.
+function logOneDriveVideoDimensions(file, source, width, height, ratio = width && height ? width / height : null) {
+  console.log(`[OneDrive] Video dimensions for "${file.name}":`, {
+    source,
+    width,
+    height,
+    aspectRatio: ratio ? Number(ratio.toFixed(4)) : null,
+  });
+}
+
 // Reads a video's real dimensions with the browser's own decoder. Resolves null
 // (never a guessed ratio) when the browser cannot load the metadata.
 function readVideoAspectRatioFromUrl(url, timeoutMs = 20000) {
@@ -4350,6 +4360,21 @@ export default function AdCreationForm({
         isOneDrive: true,
         pickerThumbnail: `${API_BASE_URL}/api/onedrive/thumbnail?driveId=${encodeURIComponent(file.oneDriveDriveId)}&itemId=${encodeURIComponent(file.oneDriveItemId)}`,
       }));
+      console.log(`[OneDrive] Picked ${mapped.length} file(s) — metadata returned by Microsoft:`);
+      console.table(
+        mapped.map((file) => ({
+          name: file.name,
+          type: file.mimeType,
+          width: file.width,
+          height: file.height,
+          aspectRatio: file.width && file.height ? Number((file.width / file.height).toFixed(4)) : null,
+          durationMs: file.duration,
+          sizeBytes: file.size,
+          driveId: file.oneDriveDriveId,
+          itemId: file.oneDriveItemId,
+        })),
+      );
+
       const allowed = filterCatalogueImageFiles(mapped);
       setOneDriveFiles((prev) => {
         const existingIds = new Set(prev.map((file) => file.oneDriveId));
@@ -4773,6 +4798,7 @@ export default function AdCreationForm({
     }
 
     if (file.width && file.height) {
+      if (file.isOneDrive) logOneDriveVideoDimensions(file, "Microsoft (at pick)", file.width, file.height);
       return file.width / file.height;
     }
 
@@ -4812,12 +4838,17 @@ export default function AdCreationForm({
           method: "POST",
           body: JSON.stringify({ driveId: file.oneDriveDriveId, itemId: file.oneDriveItemId }),
         });
-        if (data.width && data.height) return data.width / data.height;
+        if (data.width && data.height) {
+          logOneDriveVideoDimensions(file, "Microsoft (re-check)", data.width, data.height);
+          return data.width / data.height;
+        }
       } catch (error) {
         console.warn(`OneDrive video metadata unavailable for ${file.name}:`, error);
       }
       const mediaUrl = `${API_BASE_URL}/api/onedrive/media?driveId=${encodeURIComponent(file.oneDriveDriveId)}&itemId=${encodeURIComponent(file.oneDriveItemId)}`;
-      return readVideoAspectRatioFromUrl(mediaUrl);
+      const browserRatio = await readVideoAspectRatioFromUrl(mediaUrl);
+      logOneDriveVideoDimensions(file, browserRatio ? "Browser (video element)" : "Unknown (could not be read)", null, null, browserRatio);
+      return browserRatio;
     }
 
     if (file.isFrameio) {
