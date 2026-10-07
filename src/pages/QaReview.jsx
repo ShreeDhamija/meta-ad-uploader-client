@@ -491,7 +491,7 @@ function PreviewMedia({ mediaItems, targetRatio, alt }) {
       {isVideo ? (
         <video
           src={media?.deletedAt ? undefined : media?.url}
-          poster={media?.previewUrl || MEDIA_FALLBACK_URL}
+          poster={media?.previewUrl || (media?.posterFromVideo ? undefined : MEDIA_FALLBACK_URL)}
           muted
           playsInline
           preload="metadata"
@@ -1143,7 +1143,8 @@ function ReviewForm({ form, index, state, mediaById, showLaunchHeading }) {
   );
 }
 
-export default function QaReview() {
+// Also renders Blip MCP previews (/mcp-review/:token): a different loader, and no comments.
+export default function QaReview({ loadDraft = getQaDraft, commentsEnabled = true }) {
   const { token } = useParams();
   const reviewRootRef = useRef(null);
   const suppressCommentClickRef = useRef(false);
@@ -1167,10 +1168,11 @@ export default function QaReview() {
   });
 
   useEffect(() => {
-    getQaDraft(token).then(setDraft).catch((requestError) => setError(requestError.message));
-  }, [token]);
+    loadDraft(token).then(setDraft).catch((requestError) => setError(requestError.message));
+  }, [loadDraft, token]);
 
   useEffect(() => {
+    if (!commentsEnabled) return undefined;
     let cancelled = false;
     getQaComments(token)
       .then((nextComments) => {
@@ -1182,7 +1184,7 @@ export default function QaReview() {
     return () => {
       cancelled = true;
     };
-  }, [token]);
+  }, [commentsEnabled, token]);
 
   const mediaById = useMemo(
     () => new Map((draft?.media || []).map((media) => [media.id, media])),
@@ -1420,7 +1422,7 @@ export default function QaReview() {
                   View {comments.length} comment{comments.length === 1 ? "" : "s"}
                 </button>
               )}
-              <button
+              {commentsEnabled && <button
                 type="button"
                 onClick={() => {
                   setCommentMode((current) => !current);
@@ -1431,10 +1433,15 @@ export default function QaReview() {
                 style={{ background: "linear-gradient(0deg, #414141 0%, #000 77.88%)" }}
               >
                 {commentMode ? "Exit commenting mode" : "Leave a comment"}
-              </button>
+              </button>}
             </div>
           </header>
           {pdfError && <p data-comment-ui role="alert" className="mb-4 text-sm text-red-600">{pdfError}</p>}
+          {draft.reviewNotes?.length > 0 && (
+            <ul data-comment-ui className="mb-4 list-disc space-y-1 rounded-2xl border border-blue-200 bg-blue-50 py-3 pl-9 pr-4 text-sm font-medium text-blue-800">
+              {draft.reviewNotes.map((note, noteIndex) => <li key={noteIndex}>{note}</li>)}
+            </ul>
+          )}
           {commentMode && (
             <div data-comment-ui className="mb-4 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-800">
               Click any field, creative, or creative group to attach your comment.

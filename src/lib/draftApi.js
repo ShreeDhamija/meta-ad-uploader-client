@@ -383,6 +383,12 @@ export async function getQaDraft(token) {
   return (await readJson(response)).draft;
 }
 
+// Blip MCP preview sheet: the same draft shape as QA, served for a chat-prepared preview.
+export async function getMcpReview(token) {
+  const response = await fetch(`${API_BASE_URL}/mcp/review-data/${encodeURIComponent(token)}`);
+  return (await readJson(response)).draft;
+}
+
 export async function getQaComments(token) {
   const response = await fetch(`${API_BASE_URL}/api/qa/${encodeURIComponent(token)}/comments`);
   return (await readJson(response)).comments || [];

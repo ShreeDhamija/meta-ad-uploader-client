@@ -27,6 +27,7 @@ import TikTokAds from "./pages/TikTokAds.jsx";
 import TikTokCallback from "./pages/TikTokCallback.jsx";
 import TikTokLogin from "./pages/TikTokLogin.jsx";
 import QaReview from "./pages/QaReview.jsx";
+import { getMcpReview } from "./lib/draftApi";
 
 function TikTokRoute({ children, requireConnection = false }) {
   const location = useLocation()
@@ -76,6 +77,7 @@ const router = createBrowserRouter([
       { path: "terms-of-service", element: <TermsOfService /> },
       { path: "privacy-policy", element: <PrivacyPolicy /> },
       { path: "qa/:token", element: <QaReview /> },
+      { path: "mcp-review/:token", element: <QaReview loadDraft={getMcpReview} commentsEnabled={false} /> },
       { path: "*", element: <NotFound /> },
     ],
   },
