@@ -328,6 +328,115 @@ function getAdSetTimingIssue({ selectedAdSets = [], duplicateAdSet, adSets = [],
   return null;
 }
 
+const OneDriveIcon = `data:image/svg+xml;utf8,${encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="#0364B8" d="M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/></svg>',
+)}`;
+
+const ONEDRIVE_PICKER_WINDOW_NAME = "blip-onedrive-picker";
+const ONEDRIVE_PICKER_EXTENSIONS = [".jpg", ".jpeg", ".png", ".gif", ".mp4", ".mov", ".webm"];
+const ONEDRIVE_PICKER_IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".gif"];
+
+// The picker page is hosted by Microsoft: SharePoint for work/school accounts,
+// onedrive.live.com for personal accounts.
+const isTrustedOneDriveOrigin = (origin) => {
+  try {
+    const { protocol, hostname } = new URL(origin);
+    const host = hostname.toLowerCase();
+    return (
+      protocol === "https:" &&
+      (host.endsWith(".sharepoint.com") || host === "onedrive.live.com" || host.endsWith(".live.com") || host === "onedrive.com" || host.endsWith(".onedrive.com"))
+    );
+  } catch {
+    return false;
+  }
+};
+
+const createOneDriveClientError = (message, code) => Object.assign(new Error(message), { code });
+
+async function fetchOneDriveJson(path, options = {}) {
+  const res = await fetch(`${API_BASE_URL}${path}`, {
+    credentials: "include",
+    ...options,
+    headers: { ...(options.body ? { "Content-Type": "application/json" } : {}), ...(options.headers || {}) },
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw Object.assign(new Error(data.error || `OneDrive request failed (${res.status})`), { code: data.code, status: res.status });
+  return data;
+}
+
+// Runs Blip's server-side Microsoft sign-in inside the already-open picker window,
+// so no second popup (which the browser would block) is needed.
+function runOneDriveAuthInWindow(win, intent) {
+  return new Promise((resolve, reject) => {
+    const attemptId = uuidv4();
+    const apiOrigin = new URL(API_BASE_URL).origin;
+    let settled = false;
+    const finish = (settle, value) => {
+      if (settled) return;
+      settled = true;
+      window.removeEventListener("message", onMessage);
+      clearInterval(closedPoll);
+      clearTimeout(timeoutId);
+      settle(value);
+    };
+    const onMessage = (event) => {
+      if (event.origin !== apiOrigin || event.source !== win) return;
+      const data = event.data || {};
+      if (data.type !== "onedrive-auth-result" || data.attemptId !== attemptId) return;
+      if (data.success) finish(resolve, data);
+      else finish(reject, createOneDriveClientError(data.error || "OneDrive sign-in failed", data.code));
+    };
+    const closedPoll = setInterval(() => {
+      if (win.closed) finish(reject, createOneDriveClientError("OneDrive sign-in was cancelled", "onedrive_cancelled"));
+    }, 500);
+    const timeoutId = setTimeout(
+      () => finish(reject, createOneDriveClientError("OneDrive sign-in timed out. Please try again.", "onedrive_timeout")),
+      5 * 60 * 1000,
+    );
+    window.addEventListener("message", onMessage);
+
+    const params = new URLSearchParams({ popup: "true", keepOpen: "true", attempt: attemptId });
+    if (intent === "picker") params.set("intent", "picker");
+    win.location.href = `${API_BASE_URL}/auth/onedrive?${params.toString()}`;
+  });
+}
+
+// Reads a video's real dimensions with the browser's own decoder. Resolves null
+// (never a guessed ratio) when the browser cannot load the metadata.
+function readVideoAspectRatioFromUrl(url, timeoutMs = 20000) {
+  return new Promise((resolve) => {
+    const video = document.createElement("video");
+    let settled = false;
+    const finish = (aspectRatio) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeoutId);
+      video.removeAttribute("src");
+      video.load();
+      resolve(aspectRatio);
+    };
+    const timeoutId = setTimeout(() => finish(null), timeoutMs);
+    video.preload = "metadata";
+    video.muted = true;
+    video.addEventListener(
+      "loadedmetadata",
+      () => finish(video.videoWidth > 0 && video.videoHeight > 0 ? video.videoWidth / video.videoHeight : null),
+      { once: true },
+    );
+    video.addEventListener("error", () => finish(null), { once: true });
+    video.src = url;
+  });
+}
+
+// The create-ad payload for a OneDrive image: IDs only, never a Microsoft download URL.
+const toOneDriveImageReference = (file) => ({
+  oneDriveId: file.oneDriveId,
+  oneDriveDriveId: file.oneDriveDriveId,
+  oneDriveItemId: file.oneDriveItemId,
+  name: file.name,
+  mimeType: file.mimeType || getMimeFromName(file.name),
+});
+
 const UPLOAD_SOURCE_OPTIONS = [
   {
     id: "local",
@@ -365,6 +474,13 @@ const UPLOAD_SOURCE_OPTIONS = [
     dropdownIconClass: "-ml-0.5 h-6 w-6 rounded-sm object-cover",
     fullLabel: "Choose Files from Frame.io",
     compactLabel: "Frame.io",
+  },
+  {
+    id: "onedrive",
+    name: "OneDrive",
+    icon: OneDriveIcon,
+    fullLabel: "Choose Files from OneDrive",
+    compactLabel: "OneDrive",
   },
   {
     id: "instagram",
@@ -624,6 +740,7 @@ const getFileId = (file) => {
   if (file.isDrive) return file.id;
   if (file.isDropbox) return file.dropboxId;
   if (file.isFrameio) return file.frameioId;
+  if (file.isOneDrive) return file.oneDriveId;
   if (file.isMetaLibrary) return file.type === "image" ? file.hash : file.id;
   return file.uniqueId || file.name;
 };
@@ -849,7 +966,7 @@ const normalizeFileGroups = (groups = []) =>
 
 const getDisplayFileName = (file) => file?.name || file?.originalName || file?.originalname || file?.title || "Unnamed file";
 
-const buildMediaFileEntries = ({ files = [], driveFiles = [], dropboxFiles = [], frameioFiles = [], importedFiles = [] }) =>
+const buildMediaFileEntries = ({ files = [], driveFiles = [], dropboxFiles = [], frameioFiles = [], oneDriveFiles = [], importedFiles = [] }) =>
   [
     ...files.map((file) => ({
       id: file.uniqueId || file.name,
@@ -865,6 +982,10 @@ const buildMediaFileEntries = ({ files = [], driveFiles = [], dropboxFiles = [],
     })),
     ...(frameioFiles || []).map((file) => ({
       id: file.frameioId,
+      name: getDisplayFileName(file),
+    })),
+    ...(oneDriveFiles || []).map((file) => ({
+      id: file.oneDriveId,
       name: getDisplayFileName(file),
     })),
     ...(importedFiles || []).map((file) => ({
@@ -1111,6 +1232,8 @@ export default function AdCreationForm({
   setDropboxFiles,
   frameioFiles,
   setFrameioFiles,
+  oneDriveFiles = [],
+  setOneDriveFiles,
   selectedShopDestination,
   setSelectedShopDestination,
   selectedShopDestinationType,
@@ -1424,8 +1547,8 @@ export default function AdCreationForm({
   );
 
   const getCatalogueMediaCount = useCallback(
-    () => files.length + driveFiles.length + dropboxFiles.length + (frameioFiles?.length || 0) + importedFiles.length,
-    [files.length, driveFiles.length, dropboxFiles.length, frameioFiles?.length, importedFiles.length],
+    () => files.length + driveFiles.length + dropboxFiles.length + (frameioFiles?.length || 0) + oneDriveFiles.length + importedFiles.length,
+    [files.length, driveFiles.length, dropboxFiles.length, frameioFiles?.length, oneDriveFiles.length, importedFiles.length],
   );
 
   const filterCatalogueImageFiles = useCallback(
@@ -1734,11 +1857,12 @@ export default function AdCreationForm({
       ...driveFiles.map((file) => file.id),
       ...dropboxFiles.map((file) => file.dropboxId),
       ...(frameioFiles || []).map((file) => file.frameioId),
+      ...oneDriveFiles.map((file) => file.oneDriveId),
       ...importedFiles.map((file) => file.type === "image" ? file.hash : file.id),
     ];
     return mediaIds.length > 1 && groupedFileIds.size === mediaIds.length && mediaIds.every((id) => groupedFileIds.has(id));
   }, [isCarouselAd, enablePlacementCustomization, isFlexLikeAdType, fileGroups, importedPosts, selectedIgOrganicPosts,
-    files, driveFiles, dropboxFiles, frameioFiles, importedFiles, groupedFileIds]);
+    files, driveFiles, dropboxFiles, frameioFiles, oneDriveFiles, importedFiles, groupedFileIds]);
 
   const liveVariantSnapshot = useMemo(
     () => ({
@@ -1859,6 +1983,7 @@ export default function AdCreationForm({
       (formData.driveFiles?.length || 0) > 0 ||
       (formData.dropboxFiles?.length || 0) > 0 ||
       (formData.frameioFiles?.length || 0) > 0 ||
+      (formData.oneDriveFiles?.length || 0) > 0 ||
       (formData.importedPosts?.length || 0) > 0 ||
       (formData.importedFiles?.length || 0) > 0 ||
       (formData.selectedIgOrganicPosts?.length || 0) > 0,
@@ -1876,6 +2001,7 @@ export default function AdCreationForm({
           (formData.driveFiles?.length || 0) +
           (formData.dropboxFiles?.length || 0) +
           (formData.frameioFiles?.length || 0) +
+          (formData.oneDriveFiles?.length || 0) +
           (formData.importedFiles?.filter((file) => file.type === "image").length || 0);
         return adSetCount * Math.max(mediaCount, 1);
       }
@@ -1912,6 +2038,7 @@ export default function AdCreationForm({
           ...formData.driveFiles.map((file) => ({ ...file, isDrive: true })),
           ...formData.dropboxFiles.map((file) => ({ ...file, isDropbox: true })),
           ...(formData.frameioFiles || []).map((file) => ({ ...file, isFrameio: true })),
+          ...(formData.oneDriveFiles || []).map((file) => ({ ...file, isOneDrive: true })),
           ...formData.importedFiles.map((file) => ({ ...file, isMetaLibrary: true })),
         ].filter((file) => !groupedIds.has(getFileId(file))).length;
 
@@ -1933,7 +2060,8 @@ export default function AdCreationForm({
         formData.driveFiles.length +
         formData.importedFiles.length +
         formData.dropboxFiles.length +
-        (formData.frameioFiles?.length || 0)
+        (formData.frameioFiles?.length || 0) +
+        (formData.oneDriveFiles?.length || 0)
       );
     },
     [hasMediaInFormData],
@@ -1946,6 +2074,7 @@ export default function AdCreationForm({
         driveFiles.length +
         dropboxFiles.length +
         (frameioFiles?.length || 0) +
+        (oneDriveFiles?.length || 0) +
         importedFiles.length +
         importedPosts.length +
         selectedIgOrganicPosts.length;
@@ -1957,6 +2086,7 @@ export default function AdCreationForm({
         ...driveFiles.map((file) => ({ ...file, isDrive: true })),
         ...dropboxFiles.map((file) => ({ ...file, isDropbox: true })),
         ...(frameioFiles || []).map((file) => ({ ...file, isFrameio: true })),
+        ...(oneDriveFiles || []).map((file) => ({ ...file, isOneDrive: true })),
         ...importedFiles.map((file) => ({ ...file, isMetaLibrary: true })),
       ];
 
@@ -1980,6 +2110,7 @@ export default function AdCreationForm({
               ...driveFiles.map((file) => ({ ...file, isDrive: true })),
               ...dropboxFiles.map((file) => ({ ...file, isDropbox: true })),
               ...(frameioFiles || []).map((file) => ({ ...file, isFrameio: true })),
+              ...(oneDriveFiles || []).map((file) => ({ ...file, isOneDrive: true })),
               ...importedFiles.map((file) => ({ ...file, isMetaLibrary: true })),
             ].filter((file) => !groupedFileIds.has(getFileId(file))).length
             : 0;
@@ -1994,6 +2125,7 @@ export default function AdCreationForm({
       driveFiles,
       dropboxFiles,
       frameioFiles,
+      oneDriveFiles,
       enablePlacementCustomization,
       fileGroups,
       fileVariantMap,
@@ -2017,6 +2149,7 @@ export default function AdCreationForm({
       ...driveFiles.map((file) => ({ ...file, isDrive: true })),
       ...dropboxFiles.map((file) => ({ ...file, isDropbox: true })),
       ...(frameioFiles || []).map((file) => ({ ...file, isFrameio: true })),
+      ...(oneDriveFiles || []).map((file) => ({ ...file, isOneDrive: true })),
       ...importedFiles.map((file) => ({ ...file, isMetaLibrary: true })),
     ];
     const fileById = new Map(overviewFiles.map((file) => [String(getFileId(file)), file]));
@@ -2144,6 +2277,7 @@ export default function AdCreationForm({
     fileVariantMap,
     files,
     frameioFiles,
+    oneDriveFiles,
     getVariantState,
     groupVariantMap,
     importedFiles,
@@ -2175,6 +2309,7 @@ export default function AdCreationForm({
         driveFiles.length +
         dropboxFiles.length +
         (frameioFiles?.length || 0) +
+        (oneDriveFiles?.length || 0) +
         importedFiles.length +
         importedPosts.length +
         selectedIgOrganicPosts.length;
@@ -2206,6 +2341,7 @@ export default function AdCreationForm({
       const variantDriveFiles = filterFiles(driveFiles, (file) => ({ ...file, isDrive: true }));
       const variantDropboxFiles = filterFiles(dropboxFiles, (file) => ({ ...file, isDropbox: true }));
       const variantFrameioFiles = filterFiles(frameioFiles || [], (file) => ({ ...file, isFrameio: true }));
+      const variantOneDriveFiles = filterFiles(oneDriveFiles || [], (file) => ({ ...file, isOneDrive: true }));
       const variantImportedFiles = filterFiles(importedFiles, (file) => ({ ...file, isMetaLibrary: true }));
       const variantFileGroups = fileGroups.filter((group) => isSingleGroupSplit || (groupVariantMap[group.id] || "default") === variantId);
       const variantImportedPosts = importedPosts.filter(
@@ -2235,6 +2371,7 @@ export default function AdCreationForm({
         driveFiles: [...variantDriveFiles],
         dropboxFiles: [...variantDropboxFiles],
         frameioFiles: [...variantFrameioFiles],
+        oneDriveFiles: [...variantOneDriveFiles],
         videoThumbs: { ...videoThumbs },
         thumbnail,
         importedPosts: [...variantImportedPosts],
@@ -2310,6 +2447,7 @@ export default function AdCreationForm({
       driveFiles,
       dropboxFiles,
       frameioFiles,
+      oneDriveFiles,
       enablePlacementCustomization,
       fileGroups,
       fileVariantMap,
@@ -2366,6 +2504,7 @@ export default function AdCreationForm({
       setDriveFiles(d.driveFiles || []);
       setDropboxFiles(d.dropboxFiles || []);
       setFrameioFiles(d.frameioFiles || []);
+      setOneDriveFiles?.(d.oneDriveFiles || []);
       setImportedPosts(d.importedPosts || []);
       setImportedFiles(d.importedFiles || []);
       setSelectedIgOrganicPosts(d.selectedIgOrganicPosts || []);
@@ -2421,6 +2560,7 @@ export default function AdCreationForm({
       setDriveFiles,
       setDropboxFiles,
       setFrameioFiles,
+      setOneDriveFiles,
       setDuplicateAdSet,
       setEnablePlacementCustomization,
       setFileGroups,
@@ -2480,21 +2620,9 @@ export default function AdCreationForm({
         ...driveFiles.map((f) => ({ ...f, isDrive: true })),
         ...(dropboxFiles || []).map((f) => ({ ...f, isDropbox: true })),
         ...(frameioFiles || []).map((f) => ({ ...f, isFrameio: true })),
+        ...(oneDriveFiles || []).map((f) => ({ ...f, isOneDrive: true })),
         ...importedFiles.map((f) => ({ ...f, isMetaLibrary: true })),
-      ].filter((f) => {
-        const id = f.isMetaLibrary
-          ? f.type === "image"
-            ? f.hash
-            : f.id
-          : f.isDropbox
-            ? f.dropboxId
-            : f.isFrameio
-              ? f.frameioId
-              : f.isDrive
-                ? f.id
-                : f.uniqueId || f.name;
-        return !groupedFileIds.has(id);
-      }).length;
+      ].filter((f) => !groupedFileIds.has(getFileId(f))).length;
       // ungrouped files pair up as placement groups of 2
       newAdsPerAdSet = fileGroups.length + Math.ceil(ungroupedCount / 2);
     } else if (isFlexLikeAdType) {
@@ -2502,7 +2630,8 @@ export default function AdCreationForm({
     } else if (selectedIgOrganicPosts.length > 0) {
       newAdsPerAdSet = selectedIgOrganicPosts.length;
     } else {
-      newAdsPerAdSet = files.length + driveFiles.length + importedFiles.length + (dropboxFiles?.length || 0) + (frameioFiles?.length || 0);
+      newAdsPerAdSet =
+        files.length + driveFiles.length + importedFiles.length + (dropboxFiles?.length || 0) + (frameioFiles?.length || 0) + oneDriveFiles.length;
     }
 
     const warnings = [];
@@ -2545,6 +2674,7 @@ export default function AdCreationForm({
     driveFiles,
     dropboxFiles,
     frameioFiles,
+    oneDriveFiles,
     importedFiles,
     adType,
     isFlexLikeAdType,
@@ -2941,6 +3071,50 @@ export default function AdCreationForm({
         }
         if (attempt === maxRetries) {
           throw new Error(`Frame.io S3 upload failed after ${maxRetries} attempts: ${error.message}`);
+        }
+        const delayMs = Math.pow(2, attempt - 1) * 1000;
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+    }
+  }
+
+  // Every OneDrive video is streamed server-side from OneDrive into S3.
+  async function uploadOneDriveFileToS3(file, maxRetries = 3, signal = null) {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/upload-from-onedrive`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            driveId: file.oneDriveDriveId,
+            itemId: file.oneDriveItemId,
+            fileName: file.name,
+          }),
+          signal,
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          const error = new Error(data.error || "S3 upload failed");
+          // Reconnect/permission problems will not succeed on retry.
+          error.noRetry = res.status === 400 || res.status === 401 || res.status === 403 || res.status === 404;
+          throw error;
+        }
+
+        return {
+          ...file,
+          s3Url: data.s3Url,
+          isS3Upload: true,
+          width: file.width || data.width || null,
+          height: file.height || data.height || null,
+        };
+      } catch (error) {
+        if (axios.isCancel(error) || error.name === "AbortError" || signal?.aborted) {
+          throw new DOMException(`Upload cancelled for ${file.name}`, "AbortError");
+        }
+        if (attempt === maxRetries || error.noRetry) {
+          throw new Error(`OneDrive S3 upload failed for ${file.name}: ${error.message}`);
         }
         const delayMs = Math.pow(2, attempt - 1) * 1000;
         await new Promise((resolve) => setTimeout(resolve, delayMs));
@@ -4146,6 +4320,212 @@ export default function AdCreationForm({
     [setFrameioFiles, filterCatalogueImageFiles],
   );
 
+  // OneDrive uses Microsoft's hosted File Picker v8 in a popup. Blip's server holds the
+  // Microsoft refresh token and hands the picker short-lived, resource-specific tokens.
+  const oneDrivePickerRef = useRef(null);
+
+  const closeOneDrivePicker = useCallback(() => {
+    const session = oneDrivePickerRef.current;
+    if (!session) return;
+    oneDrivePickerRef.current = null;
+    session.cleanup();
+  }, []);
+
+  useEffect(() => closeOneDrivePicker, [closeOneDrivePicker]);
+
+  const addOneDriveSelection = useCallback(
+    async (pickedItems) => {
+      const items = pickedItems
+        .map((item) => ({ driveId: item?.parentReference?.driveId, itemId: item?.id, name: item?.name }))
+        .filter((item) => item.driveId && item.itemId);
+      if (items.length === 0) return;
+
+      const { files: resolvedFiles = [], rejected = [] } = await fetchOneDriveJson("/api/onedrive/files/metadata", {
+        method: "POST",
+        body: JSON.stringify({ items }),
+      });
+
+      const mapped = resolvedFiles.map((file) => ({
+        ...file,
+        isOneDrive: true,
+        pickerThumbnail: `${API_BASE_URL}/api/onedrive/thumbnail?driveId=${encodeURIComponent(file.oneDriveDriveId)}&itemId=${encodeURIComponent(file.oneDriveItemId)}`,
+      }));
+      const allowed = filterCatalogueImageFiles(mapped);
+      setOneDriveFiles((prev) => {
+        const existingIds = new Set(prev.map((file) => file.oneDriveId));
+        return [...prev, ...allowed.filter((file) => !existingIds.has(file.oneDriveId))];
+      });
+
+      if (rejected.length > 0) {
+        const names = rejected.map((entry) => entry.name || "file").join(", ");
+        toast.error(`${rejected.length} OneDrive item${rejected.length > 1 ? "s were" : " was"} skipped: ${names}`);
+      }
+    },
+    [filterCatalogueImageFiles, setOneDriveFiles],
+  );
+
+  const handleOneDriveClick = useCallback(async () => {
+    const existing = oneDrivePickerRef.current;
+    if (existing?.win && !existing.win.closed) {
+      existing.win.focus();
+      return;
+    }
+
+    // Open the window synchronously from the click so the popup blocker allows it.
+    const width = 1080;
+    const height = 680;
+    const left = window.screenX + Math.max(0, (window.outerWidth - width) / 2);
+    const top = window.screenY + Math.max(0, (window.outerHeight - height) / 2);
+    const win = window.open("", ONEDRIVE_PICKER_WINDOW_NAME, `width=${width},height=${height},left=${left},top=${top}`);
+    if (!win) {
+      toast.error("Popup blocked. Please allow popups and try again.");
+      return;
+    }
+    try {
+      win.document.title = "OneDrive";
+      win.document.body.innerHTML =
+        '<p style="font-family:system-ui,sans-serif;color:#374151;text-align:center;margin-top:40vh">Opening OneDrive…</p>';
+    } catch {
+      // The window may already be on a Microsoft page from an earlier attempt.
+    }
+
+    const listeners = { onWindowMessage: null, closedPoll: null, port: null };
+    const session = {
+      win,
+      cleanup: () => {
+        if (listeners.onWindowMessage) window.removeEventListener("message", listeners.onWindowMessage);
+        clearInterval(listeners.closedPoll);
+        listeners.port?.close();
+        if (!win.closed) win.close();
+      },
+    };
+    oneDrivePickerRef.current = session;
+
+    try {
+      const status = await fetchOneDriveJson("/auth/onedrive/status");
+      if (status.configured === false) {
+        throw createOneDriveClientError("OneDrive is not available yet. Please contact support.", "onedrive_not_configured");
+      }
+      if (!status.authenticated) {
+        const result = await runOneDriveAuthInWindow(win, "connect");
+        if (result.accountChanged) {
+          setOneDriveFiles([]);
+          toast.info("A different OneDrive account was connected, so earlier OneDrive selections were removed.");
+        }
+      }
+
+      // Business accounts may need a second consent for the picker's SharePoint access.
+      let config = null;
+      for (let attempt = 0; attempt < 3 && !config; attempt++) {
+        try {
+          config = await fetchOneDriveJson("/api/onedrive/picker-config");
+        } catch (error) {
+          if (attempt === 2) throw error;
+          if (error.code === "onedrive_consent_required") await runOneDriveAuthInWindow(win, "picker");
+          else if (error.code === "onedrive_not_connected" || error.code === "onedrive_reauth_required") await runOneDriveAuthInWindow(win, "connect");
+          else throw error;
+        }
+      }
+      if (!isTrustedOneDriveOrigin(config.pickerUrl)) throw new Error("OneDrive returned an unexpected picker address.");
+      if (oneDrivePickerRef.current !== session || win.closed) return;
+
+      const channelId = uuidv4();
+      const pickerOptions = {
+        sdk: "8.0",
+        entry: { oneDrive: {} },
+        authentication: {},
+        messaging: { origin: window.location.origin, channelId },
+        typesAndSources: {
+          mode: "files",
+          filters: isCatalogueAd ? ONEDRIVE_PICKER_IMAGE_EXTENSIONS : ONEDRIVE_PICKER_EXTENSIONS,
+          locations: { oneDrive: {} },
+          pivots: { oneDrive: true, recent: true },
+        },
+        selection: { mode: "multiple", maximumCount: 100 },
+        commands: {
+          pick: { action: "select" },
+          upload: { enabled: false },
+          createFolder: { enabled: false },
+        },
+      };
+
+      await new Promise((resolve, reject) => {
+        const respond = (id, data) => listeners.port?.postMessage({ type: "result", id, data });
+
+        const onPortMessage = async (event) => {
+          const message = event.data || {};
+          if (message.type !== "command") return;
+          listeners.port?.postMessage({ type: "acknowledge", id: message.id });
+          const command = message.data || {};
+
+          if (command.command === "authenticate") {
+            try {
+              const { token } = await fetchOneDriveJson("/api/onedrive/picker-token", {
+                method: "POST",
+                body: JSON.stringify({ resource: command.resource, type: command.type }),
+              });
+              respond(message.id, { result: "token", token });
+            } catch (error) {
+              respond(message.id, { result: "error", error: { code: "unableToObtainToken", message: error.message } });
+            }
+          } else if (command.command === "pick") {
+            try {
+              await addOneDriveSelection(command.items || []);
+              respond(message.id, { result: "success" });
+              resolve();
+            } catch (error) {
+              respond(message.id, { result: "error", error: { code: "unusableItem", message: error.message } });
+              reject(error);
+            }
+          } else if (command.command === "close") {
+            resolve();
+          } else {
+            respond(message.id, { result: "error", error: { code: "unsupportedCommand", message: command.command } });
+          }
+        };
+
+        // The picker announces itself (again after any reload) with an 'initialize'
+        // message carrying our channel ID and a MessagePort for all further traffic.
+        listeners.onWindowMessage = (event) => {
+          if (event.source !== win || !isTrustedOneDriveOrigin(event.origin)) return;
+          const message = event.data || {};
+          if (message.type !== "initialize" || message.channelId !== channelId || !event.ports?.[0]) return;
+          listeners.port?.close();
+          listeners.port = event.ports[0];
+          listeners.port.addEventListener("message", onPortMessage);
+          listeners.port.start();
+          listeners.port.postMessage({ type: "activate" });
+        };
+        window.addEventListener("message", listeners.onWindowMessage);
+        listeners.closedPoll = setInterval(() => {
+          if (win.closed) resolve();
+        }, 500);
+
+        // POST the picker configuration and initial token into the named popup.
+        const form = document.createElement("form");
+        form.method = "POST";
+        form.action = `${config.pickerUrl}?${new URLSearchParams({ filePicker: JSON.stringify(pickerOptions), locale: "en-us" }).toString()}`;
+        form.target = ONEDRIVE_PICKER_WINDOW_NAME;
+        form.style.display = "none";
+        const tokenInput = document.createElement("input");
+        tokenInput.type = "hidden";
+        tokenInput.name = "access_token";
+        tokenInput.value = config.token;
+        form.appendChild(tokenInput);
+        document.body.appendChild(form);
+        form.submit();
+        form.remove();
+      });
+    } catch (error) {
+      if (error.code !== "onedrive_cancelled") {
+        console.error("OneDrive picker failed:", error);
+        toast.error(error.message || "Failed to open OneDrive");
+      }
+    } finally {
+      if (oneDrivePickerRef.current === session) closeOneDrivePicker();
+    }
+  }, [addOneDriveSelection, closeOneDrivePicker, isCatalogueAd, setOneDriveFiles]);
+
   // Dropzone logic
   const importCsvFile = useCallback(
     async (file) => {
@@ -4328,12 +4708,13 @@ export default function AdCreationForm({
         ...driveFiles.map((file) => ({ ...file, isDrive: true })),
         ...dropboxFiles.map((file) => ({ ...file, isDropbox: true })),
         ...(frameioFiles || []).map((file) => ({ ...file, isFrameio: true })),
+        ...(oneDriveFiles || []).map((file) => ({ ...file, isOneDrive: true })),
         ...importedFiles.map((file) => ({ ...file, isMetaLibrary: true })),
       ].map((file) => ({ type: "file", key: String(getFileId(file)) })),
       ...importedPosts.map((post) => ({ type: "post", key: `post:${post.id}` })),
       ...selectedIgOrganicPosts.map((post) => ({ type: "post", key: `igpost:${post.source_instagram_media_id}` })),
     ],
-    [driveFiles, dropboxFiles, files, frameioFiles, importedFiles, importedPosts, selectedIgOrganicPosts],
+    [driveFiles, dropboxFiles, files, frameioFiles, oneDriveFiles, importedFiles, importedPosts, selectedIgOrganicPosts],
   );
 
   useEffect(() => {
@@ -4370,6 +4751,7 @@ export default function AdCreationForm({
     else if (sourceId === "drive") handleDriveClick();
     else if (sourceId === "dropbox") handleDropboxClick();
     else if (sourceId === "frameio") handleFrameioClick();
+    else if (sourceId === "onedrive") handleOneDriveClick();
     else metaLibraryOpenersRef.current[sourceId]?.(sourceId);
   };
 
@@ -4408,6 +4790,22 @@ export default function AdCreationForm({
         );
         video.addEventListener("error", () => finish(16 / 9), { once: true });
       });
+    }
+
+    if (file.isOneDrive) {
+      // Microsoft's dimensions (file.width/height) were checked above. Ask again in case
+      // Microsoft finished extracting them, then let the browser read the video itself.
+      try {
+        const data = await fetchOneDriveJson("/api/onedrive/video-metadata", {
+          method: "POST",
+          body: JSON.stringify({ driveId: file.oneDriveDriveId, itemId: file.oneDriveItemId }),
+        });
+        if (data.width && data.height) return data.width / data.height;
+      } catch (error) {
+        console.warn(`OneDrive video metadata unavailable for ${file.name}:`, error);
+      }
+      const mediaUrl = `${API_BASE_URL}/api/onedrive/media?driveId=${encodeURIComponent(file.oneDriveDriveId)}&itemId=${encodeURIComponent(file.oneDriveItemId)}`;
+      return readVideoAspectRatioFromUrl(mediaUrl);
     }
 
     if (file.isFrameio) {
@@ -4767,6 +5165,17 @@ export default function AdCreationForm({
         });
         setVideoThumbs((prev) => ({ ...prev, ...newThumbs }));
       }
+
+      // --- 5. ONEDRIVE ---
+      // The Blip thumbnail endpoint proxies Microsoft's current preview, keyed by the composite ID.
+      const oneDriveFilesNeedingThumbs = (oneDriveFiles || []).filter((file) => !videoThumbsRef.current[file.oneDriveId]);
+      if (oneDriveFilesNeedingThumbs.length > 0 && !abortController.signal.aborted) {
+        const newThumbs = {};
+        oneDriveFilesNeedingThumbs.forEach((file) => {
+          newThumbs[file.oneDriveId] = file.pickerThumbnail || "https://api.withblip.com/thumbnail.jpg";
+        });
+        setVideoThumbs((prev) => ({ ...prev, ...newThumbs }));
+      }
     };
 
     processThumbnails();
@@ -4775,7 +5184,7 @@ export default function AdCreationForm({
       abortController.abort();
       processingRef.current.clear();
     };
-  }, [files, driveFiles, dropboxFiles, frameioFiles, generateThumbnail, getDriveVideoThumbnail, setVideoThumbs]);
+  }, [files, driveFiles, dropboxFiles, frameioFiles, oneDriveFiles, generateThumbnail, getDriveVideoThumbnail, setVideoThumbs]);
 
   const addField = (setter, values) => {
     const maxFields = isCarouselAd ? 10 : 5;
@@ -5034,7 +5443,7 @@ export default function AdCreationForm({
   );
 
   const adNamePreviewFile = useMemo(() => {
-    const directFile = files[0] || driveFiles[0] || dropboxFiles[0] || frameioFiles[0] || importedFiles[0];
+    const directFile = files[0] || driveFiles[0] || dropboxFiles[0] || frameioFiles[0] || oneDriveFiles[0] || importedFiles[0];
     if (directFile) return directFile;
 
     const existingPost = importedPosts[0];
@@ -5054,7 +5463,7 @@ export default function AdCreationForm({
     }
 
     return null;
-  }, [driveFiles, dropboxFiles, files, frameioFiles, importedFiles, importedPosts, selectedIgOrganicPosts]);
+  }, [driveFiles, dropboxFiles, files, frameioFiles, oneDriveFiles, importedFiles, importedPosts, selectedIgOrganicPosts]);
 
   useEffect(() => {
     const computedAdName = computeAdNameFromFormula(adNamePreviewFile, 0, link[0], null, adType);
@@ -5063,7 +5472,8 @@ export default function AdCreationForm({
 
   useEffect(() => {
     if (!isCarouselAd) return;
-    const fileCount = files.length + driveFiles.length + dropboxFiles.length + (frameioFiles?.length || 0) + importedFiles.length;
+    const fileCount =
+      files.length + driveFiles.length + dropboxFiles.length + (frameioFiles?.length || 0) + oneDriveFiles.length + importedFiles.length;
     const cardCount = enablePlacementCustomization ? Math.floor(fileCount / 2) : fileCount;
 
     if (applyTextToAllCards && cardCount > 0) {
@@ -5599,6 +6009,7 @@ export default function AdCreationForm({
       driveFiles,
       dropboxFiles,
       frameioFiles = [],
+      oneDriveFiles = [],
       videoThumbs,
       thumbnail,
       importedPosts,
@@ -5674,6 +6085,7 @@ export default function AdCreationForm({
       driveFiles.length === 0 &&
       dropboxFiles.length === 0 &&
       frameioFiles.length === 0 &&
+      oneDriveFiles.length === 0 &&
       importedPosts.length === 0 &&
       importedFiles.length === 0 &&
       (!selectedIgOrganicPosts || selectedIgOrganicPosts.length === 0)
@@ -5688,7 +6100,7 @@ export default function AdCreationForm({
     }
 
     if (isCatalogueJob) {
-      const catalogueMedia = [...files, ...driveFiles, ...dropboxFiles, ...(frameioFiles || []), ...(importedFiles || [])];
+      const catalogueMedia = [...files, ...driveFiles, ...dropboxFiles, ...(frameioFiles || []), ...oneDriveFiles, ...(importedFiles || [])];
       if (catalogueMedia.some((file) => isVideoFile(file) || isGifFile(file) || !isImageFile(file))) {
         toast.error("Catalogue ads support image files only. Videos and GIFs are not supported.");
         throw new Error("Catalogue ads support image files only. Videos and GIFs are not supported.");
@@ -5744,7 +6156,7 @@ export default function AdCreationForm({
       setProgressMessage("Analyzing files...");
 
       try {
-        const allFiles = [...files, ...driveFiles, ...dropboxFiles, ...frameioFiles];
+        const allFiles = [...files, ...driveFiles, ...dropboxFiles, ...frameioFiles, ...oneDriveFiles.map((file) => ({ ...file, isOneDrive: true }))];
         const videoFiles = allFiles.filter(isVideoFile);
 
         if (videoFiles.length > 0) {
@@ -5772,6 +6184,8 @@ export default function AdCreationForm({
               } catch (error) {
                 throwIfCancelled();
                 console.error(`Failed to get aspect ratio for ${file.name}:`, error);
+                // OneDrive never guesses a ratio; unresolved files block placement launches below.
+                if (file.isOneDrive) return null;
                 const key = getFileId(file); // ← Use getFileId here too
                 return { key, aspectRatio: 16 / 9 }; // Default fallback
               }
@@ -5808,6 +6222,12 @@ export default function AdCreationForm({
           }
         });
       }
+
+      const unresolvedOneDriveVideos = oneDriveFiles.filter((file) => isVideoFile(file) && !aspectRatioMap[file.oneDriveId]);
+      if (unresolvedOneDriveVideos.length > 0) {
+        const names = unresolvedOneDriveVideos.map((file) => file.name).join(", ");
+        throw new Error(`Couldn't read the video dimensions for ${names} from OneDrive. Placement customization needs them, so remove the file or launch without placement customization.`);
+      }
     }
 
     const largeFiles = files.filter((file) => !file.isDraftAsset && isVideoFile(file) && file.size > S3_UPLOAD_THRESHOLD);
@@ -5816,6 +6236,8 @@ export default function AdCreationForm({
     // Frame.io videos always go to S3 (matches Drive/Dropbox large-video pattern).
     // Frame.io images skip S3 — backend streams them from Frame.io directly.
     const largeFrameioFiles = frameioFiles.filter((file) => isVideoFile(file));
+    // OneDrive follows Frame.io: every video is staged in S3, images are fetched server-side.
+    const largeOneDriveFiles = oneDriveFiles.filter((file) => isVideoFile(file));
 
     let restoredDraftAssets = files
       .filter((file) => file.isDraftAsset && file.draftId && file.draftMediaId)
@@ -5833,8 +6255,10 @@ export default function AdCreationForm({
     const s3DriveResults = [];
     const s3DropboxResults = [];
     const s3FrameioResults = [];
+    const s3OneDriveResults = [];
 
-    const totalLargeFiles = largeFiles.length + largeDriveFiles.length + largeDropboxFiles.length + largeFrameioFiles.length;
+    const totalLargeFiles =
+      largeFiles.length + largeDriveFiles.length + largeDropboxFiles.length + largeFrameioFiles.length + largeOneDriveFiles.length;
     if (totalLargeFiles > 0) {
       setUploadingToS3(true);
       setProgressMessage(`Uploading videos...`);
@@ -5974,6 +6398,36 @@ export default function AdCreationForm({
           }
         });
 
+        const oneDriveResults = await Promise.allSettled(
+          largeOneDriveFiles.map((file) =>
+            limit(() => {
+              throwIfCancelled();
+              return uploadOneDriveFileToS3(file, 3, signal);
+            }),
+          ),
+        );
+        const failedOneDriveFiles = [];
+        oneDriveResults.forEach((result, index) => {
+          const oneDriveFile = largeOneDriveFiles[index];
+          if (result.status === "fulfilled") {
+            const uploadResult = result.value;
+            if (enablePlacementCustomization && aspectRatioMap[oneDriveFile.oneDriveId]) {
+              uploadResult.aspectRatio = aspectRatioMap[oneDriveFile.oneDriveId];
+            }
+            uploadResult.oneDriveId = oneDriveFile.oneDriveId;
+            s3OneDriveResults.push(uploadResult);
+          } else {
+            const isCancellation = result.reason?.name === "AbortError" || axios.isCancel(result.reason) || signal?.aborted;
+            if (!isCancellation) failedOneDriveFiles.push(oneDriveFile.name);
+            console.error("❌ OneDrive to S3 upload failed", result.reason);
+          }
+        });
+        throwIfCancelled();
+        // A missing OneDrive video would silently drop it from the ads, so stop instead.
+        if (failedOneDriveFiles.length > 0) {
+          throw new Error(`Failed to upload OneDrive video${failedOneDriveFiles.length > 1 ? "s" : ""}: ${failedOneDriveFiles.join(", ")}`);
+        }
+
         throwIfCancelled();
         setProgress(100);
         setProgressMessage("File upload complete! Creating ads...");
@@ -6032,6 +6486,8 @@ export default function AdCreationForm({
     const smallDropboxFiles = dropboxFiles.filter((file) => !(isVideoFile(file) && file.size > S3_UPLOAD_THRESHOLD));
     // Frame.io images stream as JSON blobs (backend fetches from Frame.io directly)
     const smallFrameioFiles = frameioFiles.filter((file) => !isVideoFile(file));
+    // OneDrive images are sent as drive/item references (backend fetches them from Microsoft)
+    const smallOneDriveFiles = oneDriveFiles.filter((file) => !isVideoFile(file));
 
     // Determine the ad set(s) to use: if "Create New AdSet" is chosen, duplicate it
     let finalAdSetIds = [...selectedAdSets];
@@ -6324,10 +6780,12 @@ export default function AdCreationForm({
         smallDriveFiles,
         smallDropboxFiles,
         smallFrameioFiles = [],
+        smallOneDriveFiles = [],
         s3Results,
         s3DriveResults,
         s3DropboxResults,
         s3FrameioResults = [],
+        s3OneDriveResults = [],
         S3_UPLOAD_THRESHOLD,
         getFileId,
         isVideoFile,
@@ -6420,11 +6878,19 @@ export default function AdCreationForm({
         }
       });
 
-      // Add ALL S3 files from this group (local, drive, dropbox, frameio videos)
+      // Add OneDrive image files from this group (videos go through s3 below)
       group.forEach((fileId) => {
-        const allS3Results = [...s3Results, ...s3DriveResults, ...s3DropboxResults, ...s3FrameioResults];
+        const oneDriveFile = smallOneDriveFiles.find((f) => f.oneDriveId === fileId);
+        if (oneDriveFile) {
+          formData.append("oneDriveFiles", JSON.stringify(toOneDriveImageReference(oneDriveFile)));
+        }
+      });
 
-        const s3File = allS3Results.find((f) => f.uniqueId === fileId || f.id === fileId || f.dropboxId === fileId || f.frameioId === fileId);
+      // Add ALL S3 files from this group (local, drive, dropbox, frameio, onedrive videos)
+      group.forEach((fileId) => {
+        const allS3Results = [...s3Results, ...s3DriveResults, ...s3DropboxResults, ...s3FrameioResults, ...s3OneDriveResults];
+
+        const s3File = allS3Results.find((f) => f.uniqueId === fileId || f.id === fileId || f.dropboxId === fileId || f.frameioId === fileId || f.oneDriveId === fileId);
 
         if (s3File) {
           formData.append("s3VideoUrls", s3File.s3Url);
@@ -6472,10 +6938,12 @@ export default function AdCreationForm({
         smallDriveFiles,
         smallDropboxFiles,
         smallFrameioFiles = [],
+        smallOneDriveFiles = [],
         s3Results,
         s3DriveResults,
         s3DropboxResults,
         s3FrameioResults = [],
+        s3OneDriveResults = [],
         S3_UPLOAD_THRESHOLD,
         importedFiles,
       },
@@ -6524,8 +6992,13 @@ export default function AdCreationForm({
         );
       });
 
-      // Add all large file URLs (S3) — includes Frame.io videos
-      [...s3Results, ...s3DriveResults, ...s3DropboxResults, ...s3FrameioResults].forEach((s3File) => {
+      // OneDrive image files (videos go through s3OneDriveResults below)
+      smallOneDriveFiles.forEach((oneDriveFile) => {
+        formData.append("oneDriveFiles", JSON.stringify(toOneDriveImageReference(oneDriveFile)));
+      });
+
+      // Add all large file URLs (S3) — includes Frame.io and OneDrive videos
+      [...s3Results, ...s3DriveResults, ...s3DropboxResults, ...s3FrameioResults, ...s3OneDriveResults].forEach((s3File) => {
         formData.append("s3VideoUrls", s3File.s3Url);
         formData.append("s3VideoNames", s3File.name);
       });
@@ -6590,6 +7063,16 @@ export default function AdCreationForm({
       formData.append("frameioMimeType", frameioFile.mimeType || getMimeFromName(frameioFile.name));
     };
 
+    const appendSingleOneDriveFile = (formData, oneDriveFile) => {
+      formData.append("enablePlacementCustomization", false);
+      formData.append("oneDriveFile", "true");
+      formData.append("oneDriveDriveId", oneDriveFile.oneDriveDriveId);
+      formData.append("oneDriveItemId", oneDriveFile.oneDriveItemId);
+      formData.append("oneDriveId", oneDriveFile.oneDriveId);
+      formData.append("oneDriveName", oneDriveFile.name);
+      formData.append("oneDriveMimeType", oneDriveFile.mimeType || getMimeFromName(oneDriveFile.name));
+    };
+
     /**
      * Append single S3 file fields
      */
@@ -6639,8 +7122,10 @@ export default function AdCreationForm({
       s3DriveResults,
       s3DropboxResults, // ADD THIS
       s3FrameioResults,
+      s3OneDriveResults,
       S3_UPLOAD_THRESHOLD,
       importedFiles, // ADD THIS PARAMETER
+      oneDriveFiles = [],
     ) => {
       const fileOrder = [];
       let fileIndex = 0;
@@ -6737,6 +7222,31 @@ export default function AdCreationForm({
         }
       });
 
+      // Process OneDrive files: videos go through S3, images are fetched server-side by ID
+      (oneDriveFiles || []).forEach((oneDriveFile) => {
+        if (isVideoFile(oneDriveFile)) {
+          const s3OneDriveFile = (s3OneDriveResults || []).find((s3f) => s3f.oneDriveId === oneDriveFile.oneDriveId);
+          if (s3OneDriveFile) {
+            fileOrder.push({
+              index: fileIndex++,
+              type: "s3",
+              url: s3OneDriveFile.s3Url,
+              name: oneDriveFile.name,
+              oneDriveId: oneDriveFile.oneDriveId,
+            });
+          }
+        } else {
+          fileOrder.push({
+            index: fileIndex++,
+            type: "onedrive",
+            oneDriveId: oneDriveFile.oneDriveId,
+            oneDriveDriveId: oneDriveFile.oneDriveDriveId,
+            oneDriveItemId: oneDriveFile.oneDriveItemId,
+            name: oneDriveFile.name,
+          });
+        }
+      });
+
       if (importedFiles && importedFiles.length > 0) {
         importedFiles.forEach((metaFile) => {
           if (metaFile.type === "image") {
@@ -6783,8 +7293,10 @@ export default function AdCreationForm({
       s3DriveResults,
       s3DropboxResults,
       s3FrameioResults,
+      s3OneDriveResults,
       S3_UPLOAD_THRESHOLD,
       importedFiles,
+      oneDriveFiles = [],
     ) => {
       const fileOrder = [];
       let fileIndex = 0;
@@ -6891,9 +7403,38 @@ export default function AdCreationForm({
           return;
         }
 
+        // Check OneDrive files: videos via S3, images by drive/item reference
+        const oneDriveFile = (oneDriveFiles || []).find((f) => f.oneDriveId === fileId);
+        if (oneDriveFile) {
+          if (isVideoFile(oneDriveFile)) {
+            const s3File = (s3OneDriveResults || []).find((s3f) => s3f.oneDriveId === fileId);
+            if (s3File) {
+              fileOrder.push({
+                index: fileIndex++,
+                type: "s3",
+                url: s3File.s3Url,
+                name: oneDriveFile.name,
+                oneDriveId: oneDriveFile.oneDriveId,
+                ...getCarouselPlacementMetadata(oneDriveFile, fileId, s3File),
+              });
+            }
+          } else {
+            fileOrder.push({
+              index: fileIndex++,
+              type: "onedrive",
+              oneDriveId: oneDriveFile.oneDriveId,
+              oneDriveDriveId: oneDriveFile.oneDriveDriveId,
+              oneDriveItemId: oneDriveFile.oneDriveItemId,
+              name: oneDriveFile.name,
+              ...getCarouselPlacementMetadata(oneDriveFile, fileId),
+            });
+          }
+          return;
+        }
+
         // Check S3 results (for files that were already uploaded)
-        const allS3 = [...s3Results, ...s3DriveResults, ...s3DropboxResults, ...(s3FrameioResults || [])];
-        const s3File = allS3.find((f) => f.uniqueId === fileId || f.id === fileId || f.dropboxId === fileId || f.frameioId === fileId);
+        const allS3 = [...s3Results, ...s3DriveResults, ...s3DropboxResults, ...(s3FrameioResults || []), ...(s3OneDriveResults || [])];
+        const s3File = allS3.find((f) => f.uniqueId === fileId || f.id === fileId || f.dropboxId === fileId || f.frameioId === fileId || f.oneDriveId === fileId);
         if (s3File) {
           fileOrder.push({
             index: fileIndex++,
@@ -6944,10 +7485,12 @@ export default function AdCreationForm({
         smallDriveFiles,
         smallDropboxFiles,
         smallFrameioFiles = [],
+        smallOneDriveFiles = [],
         s3Results,
         s3DriveResults,
         s3DropboxResults,
         s3FrameioResults = [],
+        s3OneDriveResults = [],
         S3_UPLOAD_THRESHOLD,
         importedFiles,
       },
@@ -7012,9 +7555,16 @@ export default function AdCreationForm({
           return;
         }
 
-        // S3 files (videos only — local, drive, dropbox, frameio video)
-        const allS3 = [...s3Results, ...s3DriveResults, ...s3DropboxResults, ...s3FrameioResults];
-        const s3File = allS3.find((f) => f.uniqueId === fileId || f.id === fileId || f.dropboxId === fileId || f.frameioId === fileId);
+        // OneDrive image files (videos go through s3 below)
+        const oneDriveFile = smallOneDriveFiles.find((f) => f.oneDriveId === fileId);
+        if (oneDriveFile) {
+          formData.append("oneDriveFiles", JSON.stringify(toOneDriveImageReference(oneDriveFile)));
+          return;
+        }
+
+        // S3 files (videos only — local, drive, dropbox, frameio, onedrive video)
+        const allS3 = [...s3Results, ...s3DriveResults, ...s3DropboxResults, ...s3FrameioResults, ...s3OneDriveResults];
+        const s3File = allS3.find((f) => f.uniqueId === fileId || f.id === fileId || f.dropboxId === fileId || f.frameioId === fileId || f.oneDriveId === fileId);
         if (s3File) {
           formData.append("s3VideoUrls", s3File.s3Url);
           formData.append("s3VideoNames", s3File.name);
@@ -7155,6 +7705,7 @@ export default function AdCreationForm({
           ...driveFiles.map((file) => ({ source: "drive", file })),
           ...dropboxFiles.map((file) => ({ source: "dropbox", file })),
           ...(frameioFiles || []).map((file) => ({ source: "frameio", file })),
+          ...oneDriveFiles.map((file) => ({ source: "onedrive", file })),
           ...importedFiles.filter((file) => file.type === "image").map((file) => ({ source: "meta", file })),
         ];
         const catalogueAdsToCreate = catalogueMedia.length > 0 ? catalogueMedia : [null];
@@ -7203,6 +7754,8 @@ export default function AdCreationForm({
               appendSingleDropboxFile(formData, media.file);
             } else if (media?.source === "frameio") {
               appendSingleFrameioFile(formData, media.file);
+            } else if (media?.source === "onedrive") {
+              appendSingleOneDriveFile(formData, media.file);
             } else if (media?.source === "meta") {
               appendMetaImageFile(formData, media.file);
             }
@@ -7365,8 +7918,10 @@ export default function AdCreationForm({
               s3DriveResults,
               s3DropboxResults,
               s3FrameioResults,
+              s3OneDriveResults,
               S3_UPLOAD_THRESHOLD,
               importedFiles,
+              oneDriveFiles,
             );
           } else {
             // Ungrouped: build order from all files (original behavior)
@@ -7379,8 +7934,10 @@ export default function AdCreationForm({
               s3DriveResults,
               s3DropboxResults,
               s3FrameioResults,
+              s3OneDriveResults,
               S3_UPLOAD_THRESHOLD,
               importedFiles,
+              oneDriveFiles,
             );
           }
 
@@ -7397,11 +7954,12 @@ export default function AdCreationForm({
                 driveFiles.find((f) => f.id === firstId) ||
                 dropboxFiles.find((f) => f.dropboxId === firstId) ||
                 frameioFiles.find((f) => f.frameioId === firstId) ||
+                oneDriveFiles.find((f) => f.oneDriveId === firstId) ||
                 (importedFiles || []).find((f) => (f.type === "image" && f.hash === firstId) || (f.type === "video" && f.id === firstId)) ||
                 files[0]
               );
             })()
-            : files[0] || driveFiles[0] || dropboxFiles[0] || frameioFiles[0] || (importedFiles?.[0] ? { name: importedFiles[0].name } : null);
+            : files[0] || driveFiles[0] || dropboxFiles[0] || frameioFiles[0] || oneDriveFiles[0] || (importedFiles?.[0] ? { name: importedFiles[0].name } : null);
 
           const carouselAdName = computeAdNameFromFormula(firstFile, groupIndex, link[0], jobData.formData.adNameFormulaV2, adType);
 
@@ -7456,10 +8014,12 @@ export default function AdCreationForm({
                 smallDriveFiles,
                 smallDropboxFiles,
                 smallFrameioFiles,
+                smallOneDriveFiles,
                 s3Results,
                 s3DriveResults,
                 s3DropboxResults,
                 s3FrameioResults,
+                s3OneDriveResults,
                 S3_UPLOAD_THRESHOLD,
                 importedFiles,
               });
@@ -7506,7 +8066,11 @@ export default function AdCreationForm({
                 );
               });
 
-              [...s3Results, ...s3DriveResults, ...s3DropboxResults, ...s3FrameioResults].forEach((s3File) => {
+              smallOneDriveFiles.forEach((oneDriveFile) => {
+                formData.append("oneDriveFiles", JSON.stringify(toOneDriveImageReference(oneDriveFile)));
+              });
+
+              [...s3Results, ...s3DriveResults, ...s3DropboxResults, ...s3FrameioResults, ...s3OneDriveResults].forEach((s3File) => {
                 formData.append("s3VideoUrls", s3File.s3Url);
                 formData.append("s3VideoNames", s3File.name);
               });
@@ -7550,10 +8114,11 @@ export default function AdCreationForm({
               driveFiles.find((f) => f.id === firstFileId) ||
               dropboxFiles.find((f) => f.dropboxId === firstFileId) || // ADD
               frameioFiles.find((f) => f.frameioId === firstFileId) ||
+              oneDriveFiles.find((f) => f.oneDriveId === firstFileId) ||
               (importedFiles || []).find((f) => (f.type === "image" && f.hash === firstFileId) || (f.type === "video" && f.id === firstFileId));
 
             return computeAdNameFromFormula(
-              firstFile || files[0] || driveFiles[0] || dropboxFiles[0] || frameioFiles[0],
+              firstFile || files[0] || driveFiles[0] || dropboxFiles[0] || frameioFiles[0] || oneDriveFiles[0],
               groupIndex,
               link[0],
               jobData.formData.adNameFormulaV2,
@@ -7604,10 +8169,12 @@ export default function AdCreationForm({
                 smallDriveFiles,
                 smallDropboxFiles,
                 smallFrameioFiles,
+                smallOneDriveFiles,
                 s3Results,
                 s3DriveResults,
                 s3DropboxResults,
                 s3FrameioResults,
+                s3OneDriveResults,
                 S3_UPLOAD_THRESHOLD,
                 getFileId,
                 isVideoFile,
@@ -7625,7 +8192,7 @@ export default function AdCreationForm({
 
           // Pre-compute ad name once for ungrouped flexible
           const ungroupedFlexibleAdName = computeAdNameFromFormula(
-            files[0] || driveFiles[0] || dropboxFiles[0] || frameioFiles[0] || (importedFiles?.[0] ? { name: importedFiles[0].name } : null),
+            files[0] || driveFiles[0] || dropboxFiles[0] || frameioFiles[0] || oneDriveFiles[0] || (importedFiles?.[0] ? { name: importedFiles[0].name } : null),
             0,
             link[0],
             jobData.formData.adNameFormulaV2,
@@ -7670,10 +8237,12 @@ export default function AdCreationForm({
               smallDriveFiles,
               smallDropboxFiles,
               smallFrameioFiles,
+              smallOneDriveFiles,
               s3Results,
               s3DriveResults,
               s3DropboxResults,
               s3FrameioResults,
+              s3OneDriveResults,
               S3_UPLOAD_THRESHOLD,
               importedFiles,
             });
@@ -7696,7 +8265,7 @@ export default function AdCreationForm({
       if (!isCatalogueJob && dynamicAdSetIds.length > 0) {
         // Pre-compute ad name for dynamic ads
         const dynamicAdName = computeAdNameFromFormula(
-          files[0] || driveFiles[0] || dropboxFiles[0] || frameioFiles[0],
+          files[0] || driveFiles[0] || dropboxFiles[0] || frameioFiles[0] || oneDriveFiles[0],
           0,
           link[0],
           jobData.formData.adNameFormulaV2,
@@ -7746,10 +8315,12 @@ export default function AdCreationForm({
             smallDriveFiles,
             smallDropboxFiles,
             smallFrameioFiles,
+            smallOneDriveFiles,
             s3Results,
             s3DriveResults,
             s3DropboxResults,
             s3FrameioResults,
+            s3OneDriveResults,
             S3_UPLOAD_THRESHOLD,
             importedFiles,
           });
@@ -7776,13 +8347,15 @@ export default function AdCreationForm({
             smallDriveFiles.some((driveFile) => !groupedFileIds.has(driveFile.id)) ||
             smallDropboxFiles.some((dropboxFile) => !groupedFileIds.has(dropboxFile.dropboxId)) ||
             smallFrameioFiles.some((frameioFile) => !groupedFileIds.has(frameioFile.frameioId)) ||
-            [...s3Results, ...s3DriveResults, ...s3DropboxResults, ...s3FrameioResults].some(
+            smallOneDriveFiles.some((oneDriveFile) => !groupedFileIds.has(oneDriveFile.oneDriveId)) ||
+            [...s3Results, ...s3DriveResults, ...s3DropboxResults, ...s3FrameioResults, ...s3OneDriveResults].some(
               (s3File) =>
                 !(
                   groupedFileIds.has(s3File.uniqueId) ||
                   groupedFileIds.has(s3File.id) ||
                   groupedFileIds.has(s3File.dropboxId) ||
-                  groupedFileIds.has(s3File.frameioId)
+                  groupedFileIds.has(s3File.frameioId) ||
+                  groupedFileIds.has(s3File.oneDriveId)
                 ),
             ) ||
             (importedFiles &&
@@ -7804,13 +8377,14 @@ export default function AdCreationForm({
                 smallDriveFiles.find((f) => f.id === firstFileId) ||
                 smallDropboxFiles.find((f) => f.dropboxId === firstFileId) ||
                 smallFrameioFiles.find((f) => f.frameioId === firstFileId) ||
-                [...s3Results, ...s3DriveResults, ...s3DropboxResults, ...s3FrameioResults].find(
-                  (f) => f.uniqueId === firstFileId || f.id === firstFileId || f.dropboxId === firstFileId || f.frameioId === firstFileId,
+                smallOneDriveFiles.find((f) => f.oneDriveId === firstFileId) ||
+                [...s3Results, ...s3DriveResults, ...s3DropboxResults, ...s3FrameioResults, ...s3OneDriveResults].find(
+                  (f) => f.uniqueId === firstFileId || f.id === firstFileId || f.dropboxId === firstFileId || f.frameioId === firstFileId || f.oneDriveId === firstFileId,
                 ) ||
                 (importedFiles || []).find((f) => (f.type === "image" && f.hash === firstFileId) || (f.type === "video" && f.id === firstFileId));
 
               return computeAdNameFromFormula(
-                firstFileForNaming || files[0] || driveFiles[0] || dropboxFiles[0] || frameioFiles[0],
+                firstFileForNaming || files[0] || driveFiles[0] || dropboxFiles[0] || frameioFiles[0] || oneDriveFiles[0],
                 localIterationIndex + groupIndex,
                 link[0],
                 jobData.formData.adNameFormulaV2,
@@ -7853,10 +8427,12 @@ export default function AdCreationForm({
                 smallDriveFiles,
                 smallDropboxFiles,
                 smallFrameioFiles,
+                smallOneDriveFiles,
                 s3Results,
                 s3DriveResults,
                 s3DropboxResults,
                 s3FrameioResults,
+                s3OneDriveResults,
                 S3_UPLOAD_THRESHOLD,
                 getFileId,
                 isVideoFile,
@@ -7893,13 +8469,15 @@ export default function AdCreationForm({
             const ungroupedDriveFiles = smallDriveFiles.filter((driveFile) => !groupedFileIds.has(driveFile.id));
             const ungroupedDropboxFiles = smallDropboxFiles.filter((dropboxFile) => !groupedFileIds.has(dropboxFile.dropboxId));
             const ungroupedFrameioFiles = smallFrameioFiles.filter((frameioFile) => !groupedFileIds.has(frameioFile.frameioId));
-            const ungroupedS3Files = [...s3Results, ...s3DriveResults, ...s3DropboxResults, ...s3FrameioResults].filter(
+            const ungroupedOneDriveFiles = smallOneDriveFiles.filter((oneDriveFile) => !groupedFileIds.has(oneDriveFile.oneDriveId));
+            const ungroupedS3Files = [...s3Results, ...s3DriveResults, ...s3DropboxResults, ...s3FrameioResults, ...s3OneDriveResults].filter(
               (s3File) =>
                 !(
                   groupedFileIds.has(s3File.uniqueId) ||
                   groupedFileIds.has(s3File.id) ||
                   groupedFileIds.has(s3File.dropboxId) ||
-                  groupedFileIds.has(s3File.frameioId)
+                  groupedFileIds.has(s3File.frameioId) ||
+                  groupedFileIds.has(s3File.oneDriveId)
                 ),
             );
 
@@ -7927,6 +8505,12 @@ export default function AdCreationForm({
             );
 
             localIterationIndex += ungroupedFrameioFiles.length;
+
+            const oneDriveFileAdNames = ungroupedOneDriveFiles.map((oneDriveFile, index) =>
+              computeAdNameFromFormula(oneDriveFile, localIterationIndex + index, link[0], jobData.formData.adNameFormulaV2, adType),
+            );
+
+            localIterationIndex += ungroupedOneDriveFiles.length;
 
             const s3FileAdNames = ungroupedS3Files.map((s3File, index) =>
               computeAdNameFromFormula(s3File, localIterationIndex + index, link[0], jobData.formData.adNameFormulaV2, adType),
@@ -8077,6 +8661,41 @@ export default function AdCreationForm({
               appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
 
               queueCreateAdPromise(formData, { fileName: frameioFile.name });
+            });
+
+            // Handle OneDrive image files (videos go through ungroupedS3Files below)
+            ungroupedOneDriveFiles.forEach((oneDriveFile, index) => {
+              const formData = new FormData();
+
+              appendCommonFields(formData, {
+                adName: oneDriveFileAdNames[index],
+                headlinesJSON: commonPrecomputed.headlinesJSON,
+                descriptionsJSON: commonPrecomputed.descriptionsJSON,
+                messagesJSON: commonPrecomputed.messagesJSON,
+                selectedAdAccount,
+                adSetId,
+                pageId,
+                instagramAccountId,
+                linkJSON: commonPrecomputed.linkJSON,
+                phoneNumber,
+                usePhoneNumberField,
+                cta,
+                launchPaused,
+                jobId: frontendJobId,
+                selectedForm,
+                isPartnershipAd,
+                partnerIgAccountId,
+                partnerFbPageId,
+                partnershipIdentityMode,
+                partnershipPrimaryIdentity,
+                adScheduleStartTime,
+                adScheduleEndTime,
+              });
+
+              appendSingleOneDriveFile(formData, oneDriveFile);
+              appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
+
+              queueCreateAdPromise(formData, { fileName: oneDriveFile.name });
             });
 
             // Handle S3 uploaded files
@@ -8461,6 +9080,7 @@ export default function AdCreationForm({
     setDriveFiles([]);
     setDropboxFiles([]);
     setFrameioFiles([]);
+    setOneDriveFiles?.([]);
     setVideoThumbs({});
     setThumbnail(null);
     setFileGroups([]);
@@ -8506,6 +9126,7 @@ export default function AdCreationForm({
         ...driveFiles.map((file) => ({ ...file, isDrive: true })),
         ...dropboxFiles.map((file) => ({ ...file, isDropbox: true })),
         ...frameioFiles.map((file) => ({ ...file, isFrameio: true })),
+        ...oneDriveFiles.map((file) => ({ ...file, isOneDrive: true })),
         ...importedFiles.map((file) => ({ ...file, isMetaLibrary: true })),
         ...importedPosts
           .filter((post) => post.image_url)
@@ -8680,6 +9301,7 @@ export default function AdCreationForm({
       driveFiles.length === 0 &&
       dropboxFiles.length === 0 &&
       frameioFiles.length === 0 &&
+      oneDriveFiles.length === 0 &&
       importedPosts.length === 0 &&
       importedFiles.length === 0 &&
       selectedIgOrganicPosts.length === 0
@@ -8813,6 +9435,7 @@ export default function AdCreationForm({
         driveFiles.length === 0 &&
         dropboxFiles.length === 0 &&
         frameioFiles.length === 0 &&
+        oneDriveFiles.length === 0 &&
         importedPosts.length === 0 &&
         importedFiles.length === 0 &&
         selectedIgOrganicPosts.length === 0) ||
@@ -8825,14 +9448,15 @@ export default function AdCreationForm({
         driveFiles.length === 0 &&
         dropboxFiles.length === 0 &&
         frameioFiles.length === 0 &&
+        oneDriveFiles.length === 0 &&
         importedPosts.length === 0 &&
         importedFiles.length === 0 &&
         selectedIgOrganicPosts.length === 0) ||
       (duplicateAdSet && (!newAdSetName || newAdSetName.trim() === "")) ||
-      (adType === "carousel" && files.length + driveFiles.length + importedFiles.length + dropboxFiles.length + frameioFiles.length < 2) ||
+      (adType === "carousel" && files.length + driveFiles.length + importedFiles.length + dropboxFiles.length + frameioFiles.length + oneDriveFiles.length < 2) ||
       (isFlexLikeAdType &&
         fileGroups.length === 0 &&
-        files.length + driveFiles.length + importedFiles.length + dropboxFiles.length + frameioFiles.length > 10) ||
+        files.length + driveFiles.length + importedFiles.length + dropboxFiles.length + frameioFiles.length + oneDriveFiles.length > 10) ||
       (isCatalogueAd && !hasCatalogueEligibleAdSets) ||
       hasCatalogueInvalidMedia ||
       (showShopDestinationSelector && !selectedShopDestination) ||
@@ -8908,6 +9532,7 @@ export default function AdCreationForm({
               driveFiles.length > 0 ||
               dropboxFiles.length > 0 ||
               frameioFiles.length > 0 ||
+              oneDriveFiles.length > 0 ||
               importedFiles.length > 0 ||
               importedPosts.length > 0 ||
               selectedIgOrganicPosts.length > 0
@@ -10276,7 +10901,7 @@ export default function AdCreationForm({
                                   if (checked && messages.length > 0) {
                                     const firstMessage = messages[0];
                                     const fileCount =
-                                      files.length + driveFiles.length + dropboxFiles.length + importedFiles.length + frameioFiles.length;
+                                      files.length + driveFiles.length + dropboxFiles.length + importedFiles.length + frameioFiles.length + oneDriveFiles.length;
                                     const cardCount = enablePlacementCustomization ? Math.floor(fileCount / 2) : fileCount;
                                     if (cardCount > 0) {
                                       setMessages(new Array(cardCount).fill(firstMessage));
@@ -10392,7 +11017,7 @@ export default function AdCreationForm({
                                 if (checked && headlines.length > 0) {
                                   const firstHeadline = headlines[0];
                                   const fileCount =
-                                    files.length + driveFiles.length + dropboxFiles.length + importedFiles.length + frameioFiles.length;
+                                    files.length + driveFiles.length + dropboxFiles.length + importedFiles.length + frameioFiles.length + oneDriveFiles.length;
                                   const cardCount = enablePlacementCustomization ? Math.floor(fileCount / 2) : fileCount;
                                   if (cardCount > 0) {
                                     setHeadlines(new Array(cardCount).fill(firstHeadline));
@@ -11405,7 +12030,7 @@ export default function AdCreationForm({
                       );
                     };
 
-                    const hasFastUploadSource = rowSources.some((id) => ["drive", "dropbox", "frameio"].includes(id));
+                    const hasFastUploadSource = rowSources.some((id) => ["drive", "dropbox", "frameio", "onedrive"].includes(id));
 
                     return (
                       <div className="mb-2 space-y-1">
@@ -11445,7 +12070,9 @@ export default function AdCreationForm({
                                     ? handleDropboxClick
                                     : id === "frameio"
                                       ? handleFrameioClick
-                                      : id === "drafts"
+                                      : id === "onedrive"
+                                        ? handleOneDriveClick
+                                        : id === "drafts"
                                         ? () => setDraftsModalOpen(true)
                                         : () => { };
 
@@ -11474,7 +12101,7 @@ export default function AdCreationForm({
                         </div>
 
                         {hasFastUploadSource && (
-                          <p className="px-1 text-[11px] leading-tight text-gray-500">Google Drive/Dropbox/Frame files upload 5X faster</p>
+                          <p className="px-1 text-[11px] leading-tight text-gray-500">Google Drive/Dropbox/Frame/OneDrive files upload 5X faster</p>
                         )}
                       </div>
                     );
@@ -11812,8 +12439,8 @@ export default function AdCreationForm({
             ))}
 
             {isCarouselAd &&
-              files.length + driveFiles.length + dropboxFiles.length + frameioFiles.length > 0 &&
-              files.length + driveFiles.length + dropboxFiles.length + frameioFiles.length < 2 && (
+              files.length + driveFiles.length + dropboxFiles.length + frameioFiles.length + oneDriveFiles.length > 0 &&
+              files.length + driveFiles.length + dropboxFiles.length + frameioFiles.length + oneDriveFiles.length < 2 && (
                 <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
                   Carousel ads require at least 2 files. You have {files.length + driveFiles.length + dropboxFiles.length}.
                 </div>
@@ -11821,10 +12448,10 @@ export default function AdCreationForm({
 
             {isFlexLikeAdType &&
               fileGroups.length === 0 &&
-              files.length + driveFiles.length + importedFiles.length + dropboxFiles.length + frameioFiles.length > 10 && (
+              files.length + driveFiles.length + importedFiles.length + dropboxFiles.length + frameioFiles.length + oneDriveFiles.length > 10 && (
                 <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
                   This ad type can have maximum 10 files per ad. You have{" "}
-                  {files.length + driveFiles.length + importedFiles.length + dropboxFiles.length + frameioFiles.length}. Use the group ads button to
+                  {files.length + driveFiles.length + importedFiles.length + dropboxFiles.length + frameioFiles.length + oneDriveFiles.length}. Use the group ads button to
                   split them into multiple ads.
                 </div>
               )}

@@ -344,8 +344,11 @@ export async function importDraftMedia({
         ? file.dropboxId
         : source === "frameio"
           ? file.frameioId
-          : null,
-    accountId: file.frameioAccountId || null,
+          : source === "onedrive"
+            ? file.oneDriveItemId
+            : null,
+    // OneDrive item IDs are only unique within their drive, so the drive ID rides along.
+    accountId: source === "onedrive" ? file.oneDriveDriveId || null : file.frameioAccountId || null,
     sourceUrl: file.s3Url || file.source || file.url || file.thumbnail_url || null,
     previewSourceUrl: file.previewUrl || file.thumbnail_url || file.url || null,
     previewDataUrl: previewDataUrl || null,

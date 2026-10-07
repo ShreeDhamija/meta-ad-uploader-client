@@ -149,6 +149,7 @@ const draftMediaKey = (file) => {
     if (file?.isDrive) return file.id;
     if (file?.isDropbox) return file.dropboxId;
     if (file?.isFrameio) return file.frameioId;
+    if (file?.isOneDrive) return file.oneDriveId;
     if (file?.isMetaLibrary) return file.type === "image" ? file.hash : file.id;
     return file?.uniqueId || file?.name;
 };
@@ -273,6 +274,10 @@ export default function Home() {
         setDropboxFilesState((previous) => normalizeImportedFileNames(typeof update === "function" ? update(previous) : update));
     }, []);
     const [frameioFiles, setFrameioFiles] = useState([]);
+    const [oneDriveFiles, setOneDriveFilesState] = useState([]);
+    const setOneDriveFiles = useCallback((update) => {
+        setOneDriveFilesState((previous) => normalizeImportedFileNames(typeof update === "function" ? update(previous) : update));
+    }, []);
     const [launchPaused, setLaunchPaused] = useState(false); // <-- New state
     const [discloseAiMedia, setDiscloseAiMedia] = useState(false);
     const [isPoliticalAd, setIsPoliticalAd] = useState(false);
@@ -487,6 +492,7 @@ export default function Home() {
             driveFiles.length > 0 ||
             dropboxFiles.length > 0 ||
             frameioFiles.length > 0 ||
+            oneDriveFiles.length > 0 ||
             importedPosts.length > 0 ||
             importedFiles.length > 0 ||
             selectedIgOrganicPosts.length > 0
@@ -518,6 +524,7 @@ export default function Home() {
         driveFiles.length,
         dropboxFiles.length,
         frameioFiles.length,
+        oneDriveFiles.length,
         importedPosts.length,
         importedFiles.length,
         selectedIgOrganicPosts.length,
@@ -1352,6 +1359,12 @@ export default function Home() {
             ...driveFiles.map((file) => ({ file: { ...file, isDrive: true }, source: "drive", role: "form_media" })),
             ...dropboxFiles.map((file) => ({ file: { ...file, isDropbox: true }, source: "dropbox", role: "form_media" })),
             ...frameioFiles.map((file) => ({ file: { ...file, isFrameio: true }, source: "frameio", role: "form_media" })),
+            ...oneDriveFiles.map((file) => ({
+                file: { ...file, isOneDrive: true },
+                source: "onedrive",
+                role: "form_media",
+                providerRef: { type: "onedrive_file", id: file.oneDriveItemId, accountId: file.oneDriveDriveId, driveId: file.oneDriveDriveId },
+            })),
             ...importedFiles.map((file) => ({
                 file: {
                     ...file,
@@ -1527,6 +1540,7 @@ export default function Home() {
         dropboxFiles,
         files,
         frameioFiles,
+        oneDriveFiles,
         importedFiles,
         importedPosts,
         selectedAdAccount,
@@ -1624,6 +1638,7 @@ export default function Home() {
         setDriveFiles([]);
         setDropboxFiles([]);
         setFrameioFiles([]);
+        setOneDriveFiles([]);
         setVideoThumbs(restoredVideoThumbs);
         setFileGroups(cloneSnapshotValue(state.mediaLayout?.fileGroups) || []);
         setFileVariantMap(cloneSnapshotValue(state.mediaLayout?.fileVariantMap) || {});
@@ -1646,7 +1661,7 @@ export default function Home() {
             return media ? { ...post, previewUrl: media.previewUrl || media.url } : post;
         }));
         setSelectedFiles(new Set());
-    }, [hydrateFromSnapshot, selectedAdAccount, setDriveFiles, setDropboxFiles]);
+    }, [hydrateFromSnapshot, selectedAdAccount, setDriveFiles, setDropboxFiles, setOneDriveFiles]);
 
     const handleAddVariant = useCallback(() => {
         const usedLetters = new Set(
@@ -1849,6 +1864,7 @@ export default function Home() {
             ...driveFiles.map((file) => file.id),
             ...dropboxFiles.map((file) => file.dropboxId),
             ...frameioFiles.map((file) => file.frameioId),
+            ...oneDriveFiles.map((file) => file.oneDriveId),
             ...importedFiles.map((file) => file.type === "image" ? file.hash : file.id),
         ]);
         const groupedFileIds = new Set(
@@ -1868,7 +1884,7 @@ export default function Home() {
 
             return changed ? next : prev;
         });
-    }, [files, driveFiles, dropboxFiles, frameioFiles, importedFiles, fileGroups]);
+    }, [files, driveFiles, dropboxFiles, frameioFiles, oneDriveFiles, importedFiles, fileGroups]);
 
     useEffect(() => {
         const validGroupIds = new Set(fileGroups.map((group) => group.id));
@@ -2358,6 +2374,8 @@ export default function Home() {
                             setDropboxFiles={setDropboxFiles}
                             frameioFiles={frameioFiles}
                             setFrameioFiles={setFrameioFiles}
+                            oneDriveFiles={oneDriveFiles}
+                            setOneDriveFiles={setOneDriveFiles}
                             selectedShopDestination={selectedShopDestination}
                             setSelectedShopDestination={setSelectedShopDestination}
                             selectedShopDestinationType={selectedShopDestinationType}
@@ -2466,6 +2484,8 @@ export default function Home() {
                                 setDropboxFiles={setDropboxFiles}
                                 frameioFiles={frameioFiles}
                                 setFrameioFiles={setFrameioFiles}
+                                oneDriveFiles={oneDriveFiles}
+                                setOneDriveFiles={setOneDriveFiles}
                                 importedFiles={importedFiles}
                                 setImportedFiles={setImportedFiles}
                                 videoThumbs={videoThumbs}

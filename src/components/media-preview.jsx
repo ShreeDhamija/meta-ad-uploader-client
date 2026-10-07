@@ -17,7 +17,7 @@ import { v4 as uuidv4 } from "uuid";
 const API_BASE_URL = import.meta.env.VITE_API_URL || "https://api.withblip.com";
 
 function withUniqueId(file) {
-  if (file.isDrive || file.isDropbox || file.isFrameio) return file; // Drive/Dropbox already have unique id
+  if (file.isDrive || file.isDropbox || file.isFrameio || file.isOneDrive) return file; // Drive/Dropbox already have unique id
   if (file.uniqueId) return file; // already tagged
   file.uniqueId = `${file.name}-${file.lastModified || Date.now()}-${uuidv4()}`;
   return file;
@@ -28,6 +28,7 @@ const getFileId = (file) => {
   if (file.isDrive) return file.id;
   if (file.isDropbox) return file.dropboxId;
   if (file.isFrameio) return file.frameioId;
+  if (file.isOneDrive) return file.oneDriveId;
   if (file.isMetaLibrary) return file.type === "image" ? file.hash : file.id;
   return file.uniqueId || file.name;
 };
@@ -495,18 +496,9 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
   onOpenDrivePreview,
   onCloseDrivePreview,
 }) {
+  const fileId = getFileId(file);
   const { attributes, listeners, setActivatorNodeRef, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: file.isMetaLibrary
-      ? file.type === "image"
-        ? file.hash
-        : file.id
-      : file.isDropbox
-        ? file.dropboxId
-        : file.isFrameio
-          ? file.frameioId
-          : file.isDrive
-            ? file.id
-            : file.uniqueId || file.name,
+    id: fileId,
     disabled: disableSorting,
   });
 
@@ -515,18 +507,6 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
     transition,
     zIndex: isDragging ? 1000 : "auto",
   };
-
-  const fileId = file.isMetaLibrary
-    ? file.type === "image"
-      ? file.hash
-      : file.id
-    : file.isDropbox
-      ? file.dropboxId
-      : file.isFrameio
-        ? file.frameioId
-        : file.isDrive
-          ? file.id
-          : file.uniqueId || file.name;
 
   const isFlexLikeAdType = adType === "flexible" || adType === "multi_media";
   const isSelectable = (enablePlacementCustomization || isFlexLikeAdType || isCarouselAd) && groupNumber == null;
@@ -614,8 +594,8 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
                     e.target.src = "https://api.withblip.com/thumbnail.jpg";
                   }}
                 />
-              ) : file.isFrameio ? (
-                // Frame.io video - use pickerThumbnail or fallback thumbnail
+              ) : file.isFrameio || file.isOneDrive ? (
+                // Frame.io / OneDrive video - use pickerThumbnail or fallback thumbnail
                 <img
                   src={file.pickerThumbnail || "https://api.withblip.com/thumbnail.jpg"}
                   alt={file.name}
@@ -648,7 +628,7 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
                     ? `https://drive.google.com/thumbnail?id=${file.id}&sz=w400-h300`
                     : file.isDropbox
                       ? videoThumbs[getFileId(file)] || file.directLink || file.icon
-                      : file.isFrameio
+                      : file.isFrameio || file.isOneDrive
                         ? file.pickerThumbnail || "https://api.withblip.com/thumbnail.jpg"
                         : URL.createObjectURL(file)
                 }
@@ -730,6 +710,8 @@ export default function MediaPreview({
   setDropboxFiles,
   frameioFiles,
   setFrameioFiles,
+  oneDriveFiles = [],
+  setOneDriveFiles,
   importedFiles,
   setImportedFiles,
   videoThumbs,
@@ -803,6 +785,10 @@ export default function MediaPreview({
       .map((file) => ({ ...file, isFrameio: true }))
       .filter((file) => !groupedFileIds.has(file.frameioId));
 
+    const ungroupedOneDriveFiles = (oneDriveFiles || [])
+      .map((file) => ({ ...file, isOneDrive: true }))
+      .filter((file) => !groupedFileIds.has(file.oneDriveId));
+
     const ungroupedImportedFiles = importedFiles
       .map((file) => ({
         ...file,
@@ -811,8 +797,8 @@ export default function MediaPreview({
       }))
       .filter((file) => !groupedFileIds.has(file.type === "image" ? file.hash : file.id));
 
-    return [...ungroupedLocalFiles, ...ungroupedDropboxFiles, ...ungroupedFrameioFiles, ...ungroupedImportedFiles];
-  }, [files, dropboxFiles, frameioFiles, importedFiles, groupedFileIds]);
+    return [...ungroupedLocalFiles, ...ungroupedDropboxFiles, ...ungroupedFrameioFiles, ...ungroupedOneDriveFiles, ...ungroupedImportedFiles];
+  }, [files, dropboxFiles, frameioFiles, oneDriveFiles, importedFiles, groupedFileIds]);
 
   // const totalFileCount = useMemo(() => {
   //   return files.filter(f => !f.isDrive).length + driveFiles.length + (dropboxFiles?.length || 0) + importedFiles.length;
@@ -824,11 +810,12 @@ export default function MediaPreview({
       driveFiles.length +
       (dropboxFiles?.length || 0) +
       (frameioFiles?.length || 0) +
+      (oneDriveFiles?.length || 0) +
       importedFiles.length +
       importedPosts.length +
       selectedIgOrganicPosts.length
     );
-  }, [files, driveFiles, dropboxFiles, frameioFiles, importedFiles, importedPosts, selectedIgOrganicPosts]);
+  }, [files, driveFiles, dropboxFiles, frameioFiles, oneDriveFiles, importedFiles, importedPosts, selectedIgOrganicPosts]);
 
   const canGroupFiles = useMemo(() => {
     if (isPlacementCustomizedCarousel) {
@@ -855,11 +842,12 @@ export default function MediaPreview({
       ...driveFiles.filter((df) => !files.some((f) => f.isDrive && f.id === df.id)).map((f) => ({ ...f, isDrive: true })),
       ...(dropboxFiles || []).map((f) => ({ ...f, isDropbox: true })),
       ...(frameioFiles || []).map((f) => ({ ...f, isFrameio: true })),
+      ...(oneDriveFiles || []).map((f) => ({ ...f, isOneDrive: true })),
     ];
     const imageFiles = allFiles.filter((file) => !isVideoFile(file));
     const videoFiles = allFiles.filter(isVideoFile);
     return imageFiles.length >= 2 || videoFiles.length >= 2;
-  }, [files, driveFiles, dropboxFiles, frameioFiles]);
+  }, [files, driveFiles, dropboxFiles, frameioFiles, oneDriveFiles]);
 
   const compressAndConvertToBase64 = async (file) => {
     return new Promise(async (resolve, reject) => {
@@ -888,10 +876,10 @@ export default function MediaPreview({
         }
       }
 
-      if (file.isFrameio) {
+      if (file.isFrameio || file.isOneDrive) {
         try {
           if (!file.pickerThumbnail) {
-            throw new Error("Frame.io file missing pickerThumbnail");
+            throw new Error(`${file.isOneDrive ? "OneDrive" : "Frame.io"} file missing pickerThumbnail`);
           }
           const res = await fetch(file.pickerThumbnail, {
             credentials: "include",
@@ -950,6 +938,8 @@ export default function MediaPreview({
   };
 
   const getAspectRatio = async (file) => {
+    // OneDrive reports source dimensions; a thumbnail may be cropped, so prefer them.
+    if (file.isOneDrive && file.width > 0 && file.height > 0) return file.width / file.height;
     return new Promise((resolve) => {
       const img = new Image();
       img.onload = () => {
@@ -962,7 +952,7 @@ export default function MediaPreview({
         img.src = `https://drive.google.com/thumbnail?id=${file.id}&sz=w400`;
       } else if (file.isDropbox) {
         img.src = file.icon || file.directLink;
-      } else if (file.isFrameio) {
+      } else if (file.isFrameio || file.isOneDrive) {
         img.src = file.pickerThumbnail;
       } else {
         img.src = URL.createObjectURL(file);
@@ -1170,6 +1160,8 @@ export default function MediaPreview({
           setDropboxFiles((prev) => prev.filter((f) => f.dropboxId !== file.dropboxId));
         } else if (file.isFrameio) {
           setFrameioFiles((prev) => prev.filter((f) => f.frameioId !== file.frameioId));
+        } else if (file.isOneDrive) {
+          setOneDriveFiles((prev) => prev.filter((f) => f.oneDriveId !== file.oneDriveId));
         } else if (file.isDrive) {
           setDriveFiles((prev) => prev.filter((f) => f.id !== file.id));
         } else {
@@ -1183,7 +1175,7 @@ export default function MediaPreview({
         });
       }, removeDelay);
     },
-    [setSelectedFiles, setFileGroups, setDropboxFiles, setFrameioFiles, setDriveFiles, setFiles, setImportedFiles],
+    [setSelectedFiles, setFileGroups, setDropboxFiles, setFrameioFiles, setOneDriveFiles, setDriveFiles, setFiles, setImportedFiles],
   );
 
   const handlePlacementCustomizationChange = useCallback(
@@ -1308,6 +1300,10 @@ export default function MediaPreview({
         })
         .map((file) => ({ ...file, isFrameio: true }));
 
+      const selectedOneDriveFiles = (oneDriveFiles || [])
+        .filter((file) => selectedFileIds.includes(file.oneDriveId))
+        .map((file) => ({ ...file, isOneDrive: true }));
+
       const selectedMetaFiles = importedFiles
         .filter((file) => {
           const fileId = file.type === "image" ? file.hash : file.id;
@@ -1340,6 +1336,10 @@ export default function MediaPreview({
         })
         .map((file) => ({ ...file, isFrameio: true }));
 
+      const unselectedOneDriveFiles = (oneDriveFiles || [])
+        .filter((file) => !selectedFileIds.includes(file.oneDriveId))
+        .map((file) => ({ ...file, isOneDrive: true }));
+
       const unselectedMetaFiles = importedFiles
         .filter((file) => {
           const fileId = file.type === "image" ? file.hash : file.id;
@@ -1352,6 +1352,7 @@ export default function MediaPreview({
       const allDriveFiles = [...unselectedDriveFiles, ...selectedDriveFiles];
       const allDropboxFiles = [...unselectedDropboxFiles, ...selectedDropboxFiles];
       const allFrameioFiles = [...unselectedFrameioFiles, ...selectedFrameioFiles];
+      const allOneDriveFiles = [...unselectedOneDriveFiles, ...selectedOneDriveFiles];
       const allMetaFiles = [...unselectedMetaFiles, ...selectedMetaFiles];
 
       // Remove duplicates and set state
@@ -1360,15 +1361,18 @@ export default function MediaPreview({
       const newDriveFiles = [];
       const newDropboxFiles = [];
       const newFrameioFiles = [];
+      const newOneDriveFiles = [];
 
-      [...allLocalFiles, ...allDriveFiles, ...allDropboxFiles, ...allFrameioFiles].forEach((file) => {
-        const uniqueKey = file.isDropbox ? file.dropboxId : file.isFrameio ? file.frameioId : file.isDrive ? file.id : file.uniqueId || file.name;
+      [...allLocalFiles, ...allDriveFiles, ...allDropboxFiles, ...allFrameioFiles, ...allOneDriveFiles].forEach((file) => {
+        const uniqueKey = getFileId(file);
         if (!seenFiles.has(uniqueKey)) {
           seenFiles.add(uniqueKey);
           if (file.isDropbox) {
             newDropboxFiles.push(file);
           } else if (file.isFrameio) {
             newFrameioFiles.push(file);
+          } else if (file.isOneDrive) {
+            newOneDriveFiles.push(file);
           } else if (file.isDrive) {
             newDriveFiles.push(file);
           } else {
@@ -1381,6 +1385,7 @@ export default function MediaPreview({
       setDriveFiles(newDriveFiles);
       setDropboxFiles(newDropboxFiles);
       setFrameioFiles(newFrameioFiles);
+      setOneDriveFiles(newOneDriveFiles);
       setImportedFiles(
         allMetaFiles.filter(
           (file, index, self) =>
@@ -1396,11 +1401,13 @@ export default function MediaPreview({
     driveFiles,
     dropboxFiles,
     frameioFiles,
+    oneDriveFiles,
     importedFiles,
     setFiles,
     setDriveFiles,
     setDropboxFiles,
     setFrameioFiles,
+    setOneDriveFiles,
     setImportedFiles,
     setSelectedFiles,
     adType,
@@ -1485,6 +1492,7 @@ export default function MediaPreview({
         ...driveFiles.filter((df) => !files.some((f) => f.isDrive && f.id === df.id)).map((f) => ({ ...f, isDrive: true })),
         ...(dropboxFiles || []).map((f) => ({ ...f, isDropbox: true })),
         ...(frameioFiles || []).map((f) => ({ ...f, isFrameio: true })),
+        ...(oneDriveFiles || []).map((f) => ({ ...f, isOneDrive: true })),
       ];
 
       const imageFiles = allFiles.filter((file) => !isVideoFile(file));
@@ -1591,7 +1599,7 @@ export default function MediaPreview({
     } finally {
       setIsAIGrouping(false);
     }
-  }, [files, driveFiles, dropboxFiles, frameioFiles, isCarouselAd, isPlacementCustomizedCarousel, setFileGroups, setSelectedFiles]);
+  }, [files, driveFiles, dropboxFiles, frameioFiles, oneDriveFiles, isCarouselAd, isPlacementCustomizedCarousel, setFileGroups, setSelectedFiles]);
 
   const handleFlexibleAutoGroup = useCallback(async () => {
     setIsFlexAutoGrouping(true);
@@ -1603,6 +1611,7 @@ export default function MediaPreview({
       ...driveFiles.filter((df) => !files.some((f) => f.isDrive && f.id === df.id)),
       ...(dropboxFiles || []).map((f) => ({ ...f, isDropbox: true })),
       ...(frameioFiles || []).map((f) => ({ ...f, isFrameio: true })),
+      ...(oneDriveFiles || []).map((f) => ({ ...f, isOneDrive: true })),
       ...importedFiles.map((f) => ({ ...f, isMetaLibrary: true })),
     ];
 
@@ -1620,7 +1629,7 @@ export default function MediaPreview({
     setFileGroups(newGroups);
     setSelectedFiles(new Set());
     setIsFlexAutoGrouping(false);
-  }, [files, driveFiles, dropboxFiles, frameioFiles, importedFiles, setFileGroups, setSelectedFiles]);
+  }, [files, driveFiles, dropboxFiles, frameioFiles, oneDriveFiles, importedFiles, setFileGroups, setSelectedFiles]);
 
   const handleUngroup = useCallback(
     (groupId) => {
@@ -1686,6 +1695,7 @@ export default function MediaPreview({
         ...driveFiles.filter((df) => !files.some((f) => f.isDrive && f.id === df.id)),
         ...(dropboxFiles || []).map((f) => ({ ...f, isDropbox: true })),
         ...(frameioFiles || []).map((f) => ({ ...f, isFrameio: true })),
+        ...(oneDriveFiles || []).map((f) => ({ ...f, isOneDrive: true })),
         ...importedFiles.map((f) => ({ ...f, isMetaLibrary: true })),
       ];
 
@@ -1693,6 +1703,7 @@ export default function MediaPreview({
         if (file.isMetaLibrary) return file.type === "image" ? file.hash : file.id;
         if (file.isDropbox) return file.dropboxId;
         if (file.isFrameio) return file.frameioId;
+        if (file.isOneDrive) return file.oneDriveId;
         return file.isDrive ? file.id : file.uniqueId || file.name;
       };
 
@@ -1701,10 +1712,11 @@ export default function MediaPreview({
 
       if (oldIndex !== -1 && newIndex !== -1) {
         const newAllFiles = arrayMove(allFiles, oldIndex, newIndex);
-        setFiles(newAllFiles.filter((f) => !f.isDrive && !f.isDropbox && !f.isFrameio && !f.isMetaLibrary));
+        setFiles(newAllFiles.filter((f) => !f.isDrive && !f.isDropbox && !f.isFrameio && !f.isOneDrive && !f.isMetaLibrary));
         setDriveFiles(newAllFiles.filter((f) => f.isDrive));
         setDropboxFiles(newAllFiles.filter((f) => f.isDropbox));
         setFrameioFiles(newAllFiles.filter((f) => f.isFrameio));
+        setOneDriveFiles(newAllFiles.filter((f) => f.isOneDrive));
         setImportedFiles(
           newAllFiles
             .filter((f) => f.isMetaLibrary)
@@ -1715,7 +1727,20 @@ export default function MediaPreview({
         );
       }
     },
-    [files, driveFiles, dropboxFiles, frameioFiles, importedFiles, setFiles, setDriveFiles, setDropboxFiles, setFrameioFiles, setImportedFiles],
+    [
+      files,
+      driveFiles,
+      dropboxFiles,
+      frameioFiles,
+      oneDriveFiles,
+      importedFiles,
+      setFiles,
+      setDriveFiles,
+      setDropboxFiles,
+      setFrameioFiles,
+      setOneDriveFiles,
+      setImportedFiles,
+    ],
   );
 
   const assignFileToVariant = useCallback(
@@ -1777,12 +1802,15 @@ export default function MediaPreview({
       file = (frameioFiles || []).find((entry) => entry.frameioId === fileId);
       if (file) return { ...file, isFrameio: true };
 
+      file = (oneDriveFiles || []).find((entry) => entry.oneDriveId === fileId);
+      if (file) return { ...file, isOneDrive: true };
+
       file = importedFiles.find((entry) => getFileId({ ...entry, isMetaLibrary: true }) === fileId);
       if (file) return { ...file, isMetaLibrary: true, name: file.name };
 
       return null;
     },
-    [driveFiles, dropboxFiles, frameioFiles, files, importedFiles],
+    [driveFiles, dropboxFiles, frameioFiles, oneDriveFiles, files, importedFiles],
   );
   return (
     <>
@@ -1790,6 +1818,7 @@ export default function MediaPreview({
       driveFiles.length > 0 ||
       (dropboxFiles?.length || 0) > 0 ||
       (frameioFiles?.length || 0) > 0 ||
+      (oneDriveFiles?.length || 0) > 0 ||
       importedPosts.length > 0 ||
       importedFiles.length > 0 ||
       selectedIgOrganicPosts.length > 0 ? (
@@ -1861,7 +1890,7 @@ export default function MediaPreview({
                 <div className="flex flex-col items-start">
                   <CardTitle className="text-left">Uploads Preview</CardTitle>
                   <CardDescription className="text-left">
-                    {`${files.filter((f) => !f.isDrive).length + driveFiles.length + (dropboxFiles?.length || 0) + (frameioFiles?.length || 0) + importedFiles.length + importedPosts.length + selectedIgOrganicPosts.length} file${files.filter((f) => !f.isDrive).length + driveFiles.length + (dropboxFiles?.length || 0) + (frameioFiles?.length || 0) + importedFiles.length + importedPosts.length + selectedIgOrganicPosts.length > 1 ? "s" : ""} selected`}
+                    {`${totalFileCount} file${totalFileCount > 1 ? "s" : ""} selected`}
                   </CardDescription>
                 </div>
 
@@ -1933,6 +1962,7 @@ export default function MediaPreview({
                       setDriveFiles([]);
                       setDropboxFiles([]);
                       setFrameioFiles([]);
+                      setOneDriveFiles?.([]);
                       setSelectedFiles(new Set());
                       setFileGroups([]);
                       setImportedPosts([]);
@@ -2025,6 +2055,7 @@ export default function MediaPreview({
                     ...files.map((file) => (file.isDrive ? file.id : file.uniqueId || file.name)),
                     ...(dropboxFiles || []).map((file) => file.dropboxId),
                     ...(frameioFiles || []).map((file) => file.frameioId),
+                    ...(oneDriveFiles || []).map((file) => file.oneDriveId),
                     ...importedFiles.map((file) => (file.type === "image" ? file.hash : file.id)),
                   ]}
                   strategy={verticalListSortingStrategy}
