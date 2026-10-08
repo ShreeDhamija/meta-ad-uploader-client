@@ -5537,6 +5537,7 @@ export default function AdCreationForm({
     driveFiles.length,
     dropboxFiles.length,
     frameioFiles?.length,
+    oneDriveFiles.length,
     importedFiles.length,
     isCarouselAd,
     enablePlacementCustomization,
@@ -5641,7 +5642,7 @@ export default function AdCreationForm({
     selectedIgOrganicPosts.length === 0;
   const hasCatalogueInvalidMedia =
     isCatalogueAd &&
-    [...files, ...driveFiles, ...dropboxFiles, ...(frameioFiles || []), ...importedFiles].some(
+    [...files, ...driveFiles, ...dropboxFiles, ...(frameioFiles || []), ...oneDriveFiles, ...importedFiles].some(
       (file) => isVideoFile(file) || isGifFile(file) || !isImageFile(file),
     );
   const hasCatalogueStaticCardVariableWarning =
@@ -6606,7 +6607,8 @@ export default function AdCreationForm({
           }
         }
       } else {
-        const totalFiles = files.length + driveFiles.length + dropboxFiles.length + frameioFiles.length + (importedFiles?.length || 0);
+        const totalFiles =
+          files.length + driveFiles.length + dropboxFiles.length + frameioFiles.length + oneDriveFiles.length + (importedFiles?.length || 0);
         if (enablePlacementCustomization) {
           toast.error("Group files into paired carousel cards before publishing");
           setIsLoading(false);
@@ -6627,7 +6629,8 @@ export default function AdCreationForm({
 
     // Add flex-like ads validation
     if (isFlexLikeAdType) {
-      const totalFiles = files.length + driveFiles.length + dropboxFiles.length + frameioFiles.length + (importedFiles?.length || 0);
+      const totalFiles =
+        files.length + driveFiles.length + dropboxFiles.length + frameioFiles.length + oneDriveFiles.length + (importedFiles?.length || 0);
 
       // If no groups, validate single ad
       if (fileGroups.length === 0) {
@@ -12485,7 +12488,7 @@ export default function AdCreationForm({
               files.length + driveFiles.length + dropboxFiles.length + frameioFiles.length + oneDriveFiles.length > 0 &&
               files.length + driveFiles.length + dropboxFiles.length + frameioFiles.length + oneDriveFiles.length < 2 && (
                 <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
-                  Carousel ads require at least 2 files. You have {files.length + driveFiles.length + dropboxFiles.length}.
+                  Carousel ads require at least 2 files. You have {files.length + driveFiles.length + dropboxFiles.length + frameioFiles.length + oneDriveFiles.length}.
                 </div>
               )}
 
