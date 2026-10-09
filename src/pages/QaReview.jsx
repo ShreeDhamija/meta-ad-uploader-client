@@ -1437,11 +1437,6 @@ export default function QaReview({ loadDraft = getQaDraft, commentsEnabled = tru
             </div>
           </header>
           {pdfError && <p data-comment-ui role="alert" className="mb-4 text-sm text-red-600">{pdfError}</p>}
-          {draft.reviewNotes?.length > 0 && (
-            <ul data-comment-ui className="mb-4 list-disc space-y-1 rounded-2xl border border-blue-200 bg-blue-50 py-3 pl-9 pr-4 text-sm font-medium text-blue-800">
-              {draft.reviewNotes.map((note, noteIndex) => <li key={noteIndex}>{note}</li>)}
-            </ul>
-          )}
           {commentMode && (
             <div data-comment-ui className="mb-4 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-800">
               Click any field, creative, or creative group to attach your comment.
