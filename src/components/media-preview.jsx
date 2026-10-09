@@ -854,14 +854,16 @@ export default function MediaPreview({
       // 1. Determine if we need to fetch via Proxy
       let blobToProcess = file;
 
-      if (file.isDrive || file.isDropbox) {
+      if (file.isDrive || file.isDropbox || file.isOneDrive) {
         try {
-          const provider = file.isDrive ? "google" : "dropbox";
+          const provider = file.isDrive ? "google" : file.isDropbox ? "dropbox" : "onedrive";
           // Dropbox IDs usually start with 'id:', ensuring we pass the ID correctly
           // const fileId = file.id;
-          const fileId = file.isDrive ? file.id : file.dropboxId;
+          const fileId = file.isDrive ? file.id : file.isDropbox ? file.dropboxId : file.oneDriveItemId;
+          // OneDrive item IDs are only unique within their drive, so the drive ID rides along.
+          const driveParam = file.isOneDrive ? `&driveId=${encodeURIComponent(file.oneDriveDriveId)}` : "";
           // Fetch from YOUR backend
-          const res = await fetch(`${API_BASE_URL}/api/proxy/cloud-image?fileId=${encodeURIComponent(fileId)}&provider=${provider}`, {
+          const res = await fetch(`${API_BASE_URL}/api/proxy/cloud-image?fileId=${encodeURIComponent(fileId)}&provider=${provider}${driveParam}`, {
             credentials: "include", // Important to send session cookies for auth
           });
 
@@ -876,10 +878,10 @@ export default function MediaPreview({
         }
       }
 
-      if (file.isFrameio || file.isOneDrive) {
+      if (file.isFrameio) {
         try {
           if (!file.pickerThumbnail) {
-            throw new Error(`${file.isOneDrive ? "OneDrive" : "Frame.io"} file missing pickerThumbnail`);
+            throw new Error("Frame.io file missing pickerThumbnail");
           }
           const res = await fetch(file.pickerThumbnail, {
             credentials: "include",
@@ -938,8 +940,6 @@ export default function MediaPreview({
   };
 
   const getAspectRatio = async (file) => {
-    // OneDrive reports source dimensions; a thumbnail may be cropped, so prefer them.
-    if (file.isOneDrive && file.width > 0 && file.height > 0) return file.width / file.height;
     return new Promise((resolve) => {
       const img = new Image();
       img.onload = () => {
