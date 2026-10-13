@@ -2112,6 +2112,10 @@ export default function AdCreationForm({
       ).length;
       const postsForVariant = importedPostsForVariant + igOrganicPostsForVariant;
 
+      if (enablePlacementCustomization && !isCarouselAd && !isFlexLikeAdType) {
+        return variantGroups.length + ungroupedCount + postsForVariant;
+      }
+
       if (isCarouselAd || enablePlacementCustomization || isFlexLikeAdType) {
         const defaultOnly =
           variantId === "default"
@@ -2340,10 +2344,11 @@ export default function AdCreationForm({
             return false;
           }
 
-          if (isCarouselAd || enablePlacementCustomization) {
+          if (isCarouselAd) {
             return variantId === "default";
           }
 
+          // Ungrouped placement-customization media launches as standalone ads.
           return (fileVariantMap[fileId] || "default") === variantId;
         });
 

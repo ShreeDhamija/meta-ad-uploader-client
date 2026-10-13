@@ -129,7 +129,7 @@ const TrialExpiredPopup = ({
                 {/* Rocket Image */}
                 <div className="flex justify-center mb-6 mt-4">
                     <div className="w-24 h-24 rounded-full flex items-center justify-center">
-                        <img src={Rocket2} />
+                        <img src={Rocket2} alt="" />
                     </div>
                 </div>
                 <div className='flex flex-col'>
@@ -148,7 +148,7 @@ const TrialExpiredPopup = ({
 
                     <button
                         onClick={onUpgrade}
-                        className="w-[300px] bg-[#F72585] text-white font-bold py-4 px-8 rounded-3xl text-xl"
+                        className="w-[300px] bg-[linear-gradient(0deg,#414141_0%,#000_77.88%)] border-2 border-[#3f3e3e] text-white shadow-[0_2px_10px_0_rgba(0,0,0,0.25)] font-bold py-4 px-8 rounded-full text-xl transition-opacity duration-200 ease-in-out hover:opacity-90"
                     >
                         Upgrade To Pro
                     </button>
@@ -157,7 +157,7 @@ const TrialExpiredPopup = ({
 
                     <button
                         onClick={joinTeam}
-                        className="w-[300px] bg-zinc-800 hover:bg-zinc-900 text-white font-bold py-4 px-8 rounded-3xl text-xl"
+                        className="w-[300px] bg-[#ffbe85] border border-[#6c3403] text-[#6c3403] shadow-[0_2px_2px_0_rgba(0,0,0,0.2)] font-bold py-4 px-8 rounded-full text-xl transition-opacity duration-200 ease-in-out hover:opacity-90"
                     >
                         Join a Team
                     </button>
@@ -172,7 +172,7 @@ const TrialExpiredPopup = ({
                             <button
                                 onClick={handleExtendTrial}
                                 disabled={extending}
-                                className="w-[300px] bg-white border-2 border-zinc-300 hover:border-zinc-400 text-zinc-700 font-bold py-4 px-8 rounded-3xl text-xl transition-colors disabled:opacity-50"
+                                className="w-[300px] bg-white border-2 border-zinc-300 hover:border-zinc-400 text-zinc-700 font-bold py-4 px-8 rounded-full text-xl transition-colors disabled:opacity-50"
                             >
                                 {extending ? 'Extending...' : 'Extend Your Trial'}
                             </button>
