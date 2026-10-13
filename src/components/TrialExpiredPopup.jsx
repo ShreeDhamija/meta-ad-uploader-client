@@ -148,7 +148,7 @@ const TrialExpiredPopup = ({
 
                     <button
                         onClick={onUpgrade}
-                        className="w-[300px] bg-[#F72585] text-white font-bold py-4 px-8 rounded-3xl text-xl"
+                        className="w-[300px] bg-[linear-gradient(0deg,#414141_0%,#000_77.88%)] border-2 border-[#3f3e3e] text-white shadow-[0_2px_10px_0_rgba(0,0,0,0.25)] font-bold py-4 px-8 rounded-full text-xl transition-opacity duration-200 ease-in-out hover:opacity-90"
                     >
                         Upgrade To Pro
                     </button>
@@ -172,7 +172,7 @@ const TrialExpiredPopup = ({
                             <button
                                 onClick={handleExtendTrial}
                                 disabled={extending}
-                                className="w-[300px] bg-[linear-gradient(0deg,#414141_0%,#000_77.88%)] border-2 border-[#3f3e3e] text-white shadow-[0_2px_10px_0_rgba(0,0,0,0.25)] font-bold py-4 px-8 rounded-full text-xl transition-opacity duration-200 ease-in-out hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="w-[300px] bg-white border-2 border-zinc-300 hover:border-zinc-400 text-zinc-700 font-bold py-4 px-8 rounded-3xl text-xl transition-colors disabled:opacity-50"
                             >
                                 {extending ? 'Extending...' : 'Extend Your Trial'}
                             </button>
