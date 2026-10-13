@@ -5759,7 +5759,7 @@ export default function TikTokAdCreationForm({
 
                         {(() => {
                           const sourcePlacements = getAdGroupPlacements(adGroups.find((ag) => ag.adgroup_id === duplicateAdGroup));
-                          if (sourcePlacements.length < 2) return null;
+                          const hasSinglePlacement = sourcePlacements.length === 1;
                           const keptPlacements = sourcePlacements.filter((id) => !excludedAdGroupPlacements.includes(id));
                           const togglePlacement = (id) =>
                             setExcludedAdGroupPlacements((prev) => (prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]));
@@ -5781,7 +5781,11 @@ export default function TikTokAdCreationForm({
                               </button>
                               {showAdGroupPlacements && (
                                 <div className="space-y-2 rounded-2xl border border-gray-200 bg-white p-3 animate-in fade-in duration-200">
-                                  <p className="text-xs text-gray-500">Uncheck a placement to remove it from the new ad group. Everything else is copied as is.</p>
+                                  <p className="text-xs text-gray-500">
+                                    {hasSinglePlacement
+                                      ? `This ad group only runs on ${getPlacementLabel(sourcePlacements[0])}, so there's nothing to remove.`
+                                      : "Uncheck a placement to remove it from the new ad group. Everything else is copied as is."}
+                                  </p>
                                   {sourcePlacements.map((id) => {
                                     const checked = !excludedAdGroupPlacements.includes(id);
                                     const isLastKept = checked && keptPlacements.length === 1;
