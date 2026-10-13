@@ -126,12 +126,6 @@ const TrialExpiredPopup = ({
         >
             <div className="bg-white rounded-3xl p-8 w-[500px] mx-4 relative shadow-2xl">
 
-                {/* Rocket Image */}
-                <div className="flex justify-center mb-6 mt-4">
-                    <div className="w-24 h-24 rounded-full flex items-center justify-center">
-                        <img src={Rocket2} />
-                    </div>
-                </div>
                 <div className='flex flex-col'>
                     {/* Subtext */}
                     <p className="text-gray-500 text-center text-sm">
@@ -148,8 +142,9 @@ const TrialExpiredPopup = ({
 
                     <button
                         onClick={onUpgrade}
-                        className="w-[300px] bg-[linear-gradient(0deg,#414141_0%,#000_77.88%)] border-2 border-[#3f3e3e] text-white shadow-[0_2px_10px_0_rgba(0,0,0,0.25)] font-bold py-4 px-8 rounded-full text-xl transition-opacity duration-200 ease-in-out hover:opacity-90"
+                        className="w-[300px] bg-[linear-gradient(0deg,#414141_0%,#000_77.88%)] border-2 border-[#3f3e3e] text-white shadow-[0_2px_10px_0_rgba(0,0,0,0.25)] font-bold py-4 px-8 rounded-3xl text-xl transition-opacity duration-200 ease-in-out hover:opacity-90 flex items-center justify-center gap-2"
                     >
+                        <img src={Rocket2} alt="" className="w-7 h-7 object-contain shrink-0" />
                         Upgrade To Pro
                     </button>
                 </div>
@@ -157,7 +152,7 @@ const TrialExpiredPopup = ({
 
                     <button
                         onClick={joinTeam}
-                        className="w-[300px] bg-[#ffbe85] border border-[#6c3403] text-[#6c3403] shadow-[0_2px_2px_0_rgba(0,0,0,0.2)] font-bold py-4 px-8 rounded-full text-xl transition-opacity duration-200 ease-in-out hover:opacity-90"
+                        className="w-[300px] bg-[#ffbe85] border border-[#6c3403] text-[#6c3403] shadow-[0_2px_2px_0_rgba(0,0,0,0.2)] font-bold py-4 px-8 rounded-3xl text-xl transition-opacity duration-200 ease-in-out hover:opacity-90"
                     >
                         Join a Team
                     </button>
