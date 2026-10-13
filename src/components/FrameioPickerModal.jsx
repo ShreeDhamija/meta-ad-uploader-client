@@ -40,6 +40,22 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
   const [search, setSearch] = useState(null);
   const searchInputRef = useRef(null);
   const searchRequestRef = useRef(null);
+  const searchButtonRef = useRef(null);
+  const [breadcrumbRoot, setBreadcrumbRoot] = useState(null);
+  const [breadcrumbsOverflow, setBreadcrumbsOverflow] = useState(false);
+
+  useEffect(() => {
+    const viewport = breadcrumbRoot?.querySelector('[data-radix-scroll-area-viewport]');
+    const content = viewport?.firstElementChild;
+    if (!viewport || !content) return;
+    const measure = () => setBreadcrumbsOverflow(viewport.scrollWidth > viewport.clientWidth + 1);
+    const observer = new ResizeObserver(measure);
+    observer.observe(viewport);
+    observer.observe(content);
+    measure();
+    viewport.scrollLeft = viewport.scrollWidth;
+    return () => observer.disconnect();
+  }, [breadcrumbRoot, stack]);
 
   const clearSearch = useCallback(() => {
     searchRequestRef.current?.abort();
@@ -338,11 +354,11 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
           </DialogPrimitive.Close>
 
           <DialogHeader className="shrink-0 space-y-0">
-            <div className="flex min-h-14 items-center gap-3 pr-10 sm:gap-4">
-              <div className={cn("h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[18px] bg-white sm:h-14 sm:w-14", searchOpen ? "hidden sm:flex" : "flex")}>
+            <div className="flex min-h-10 items-center gap-2 pr-10">
+              <div className={cn("h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white", searchOpen ? "hidden sm:flex" : "flex")}>
                 <img src={FrameHeaderImage} alt="Frame.io" className="h-full w-full object-cover" />
               </div>
-              <DialogTitle className={cn("shrink-0 whitespace-nowrap text-[22px] font-semibold tracking-[-0.02em] text-[#111111] sm:text-[28px]", searchOpen && "sr-only sm:not-sr-only")}>
+              <DialogTitle className={cn("shrink-0 whitespace-nowrap text-lg font-semibold tracking-[-0.02em] text-[#111111] sm:text-xl", searchOpen && "sr-only sm:not-sr-only")}>
                 Select Media
               </DialogTitle>
               <div
@@ -353,6 +369,7 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
                 )}
               >
                 <button
+                  ref={searchButtonRef}
                   type="button"
                   aria-label={searchOpen ? "Search account" : "Open account search"}
                   aria-expanded={searchOpen}
@@ -386,8 +403,17 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
                   />
                   <button
                     type="button"
-                    aria-label="Clear search and return to browsing"
-                    onClick={() => { clearSearch(); searchInputRef.current?.focus(); }}
+                    aria-label={searchInput ? "Clear search and return to browsing" : "Collapse search"}
+                    onClick={() => {
+                      if (!searchInput.trim()) {
+                        clearSearch();
+                        setSearchOpen(false);
+                        searchButtonRef.current?.focus();
+                      } else {
+                        clearSearch();
+                        searchInputRef.current?.focus();
+                      }
+                    }}
                     className="shrink-0 rounded-full p-1.5 text-[#6B7280] hover:bg-[#E5E7EB]"
                   >
                     <X className="h-3.5 w-3.5" />
@@ -422,8 +448,11 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
                 <ArrowLeft className="h-3 w-3 mr-1" /> Back
               </Button>
             )}
-            <div className="min-w-0 flex-1 overflow-x-auto">
-              <div className="flex min-w-max items-center gap-1 whitespace-nowrap pr-1">
+            <ScrollArea
+              ref={setBreadcrumbRoot}
+              className={cn("min-w-0 flex-1 rounded-full border border-transparent [&_[data-orientation=horizontal]]:h-1.5 [&_[data-orientation=horizontal]]:border-0 [&_[data-orientation=horizontal]]:px-3", breadcrumbsOverflow && "border-[#E2E2E2]")}
+            >
+              <div className="flex w-max items-center gap-1 whitespace-nowrap px-1 py-1">
                 {stack.map((entry, idx) => {
                   const isLast = idx === stack.length - 1;
 
@@ -442,7 +471,7 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
                   );
                 })}
               </div>
-            </div>
+            </ScrollArea>
           </div>}
 
           {/* List */}
@@ -524,9 +553,10 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
                     <div className="flex-1 min-w-0">
                       <div className="truncate text-sm font-medium text-[#111111]">{item.display_name || item.name}</div>
                       {!navigable && (search || current.kind === "folder") && (
-                        <div className="text-xs text-[#6B7280]">
+                        <div className="truncate text-xs text-[#6B7280]" title={search ? item.breadcrumbPath : undefined}>
                           {(item.media_type || guessMime(item.name) || "").split("/")[0] || "file"}
                           {(item.file_size || item.filesize) ? ` • ${formatBytes(item.file_size || item.filesize)}` : ""}
+                          {search && ` • ${item.breadcrumbPath || "Path unavailable"}`}
                         </div>
                       )}
                     </div>
