@@ -693,16 +693,18 @@ export default function TikTokAdCreationForm({
     return null;
   };
 
-  const { tiktokFetch, refreshTikTokUser, isLoading: authLoading } = useTikTokAuth();
-  const { tiktokIdentities, tiktokIdentitiesLoading, fetchTikTokIdentities } = useAppData();
+  const { tiktokFetch, isLoading: authLoading } = useTikTokAuth();
+  const { tiktokIdentities, tiktokIdentitiesLoading, fetchTikTokIdentities, fetchTikTokAdvertisers } = useAppData();
 
   const [selectedAdvertiser, setSelectedAdvertiser] = useState(advertiserId || "");
   const [refreshingAdvertisers, setRefreshingAdvertisers] = useState(false);
 
+  // Refetch in place (like Meta's refetchAdAccounts). Going through
+  // refreshTikTokUser flips the auth loading flag, which unmounts the whole page.
   const handleRefreshAdvertisers = async () => {
     setRefreshingAdvertisers(true);
     try {
-      await refreshTikTokUser();
+      await fetchTikTokAdvertisers();
       toast.success("Advertiser list refreshed successfully.");
     } catch (err) {
       console.error("Failed to refresh advertiser list:", err);

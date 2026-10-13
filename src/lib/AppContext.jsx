@@ -164,15 +164,15 @@ export const AppProvider = ({ children }) => {
       const res = await tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-advertisers`, {
         headers: { Accept: 'application/json' },
       })
-      if (!res.ok) return []
-      const data = await res.json()
-      const advertisers = data.advertisers || []
+      const data = await res.json().catch(() => null)
+      if (!res.ok) throw new Error(data?.error || 'Failed to fetch TikTok advertisers')
+      const advertisers = data?.advertisers || []
       setAllTikTokAdvertisers(advertisers)
       writeCache('tiktokAdvertisers', advertisers)
       return advertisers
     } catch (err) {
       console.error("Failed to fetch TikTok advertisers:", err)
-      return []
+      throw err
     } finally {
       setTiktokAdvertisersLoading(false)
     }
