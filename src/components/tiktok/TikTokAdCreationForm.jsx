@@ -3572,14 +3572,25 @@ export default function TikTokAdCreationForm({
     return map[ext] || "application/octet-stream";
   };
 
-  // Supported TikTok file types
-  const TIKTOK_SUPPORTED_EXTENSIONS = /\.(mp4|mov|webm|jpg|jpeg|png|gif)$/i;
-  const TIKTOK_SUPPORTED_MIME = /^(video\/(mp4|quicktime|webm)|image\/(jpeg|png|gif))$/;
+  // Supported TikTok file types — video only; image ads are blocked until they're supported
+  const TIKTOK_SUPPORTED_EXTENSIONS = /\.(mp4|mov|webm)$/i;
+  const TIKTOK_SUPPORTED_MIME = /^video\/(mp4|quicktime|webm)$/;
+  const TIKTOK_FILE_INPUT_ACCEPT = "video/mp4,video/quicktime,video/webm,.mp4,.mov,.webm";
 
   const isTikTokSupportedFile = (file) => {
     const nameOk = TIKTOK_SUPPORTED_EXTENSIONS.test(file.name);
     const mimeOk = file.type ? TIKTOK_SUPPORTED_MIME.test(file.type) : nameOk;
     return nameOk || mimeOk;
+  };
+
+  const rejectUnsupportedFile = (file) => {
+    const isImage = file.type?.startsWith("image/") || /\.(png|jpe?g|gif|webp|bmp|heic)$/i.test(file.name);
+    toast.error(
+      isImage
+        ? `Image ads aren't supported on TikTok yet — please upload a video. (${file.name})`
+        : `Job Failed: The type of file is not supported. (${file.name})`,
+      { duration: 6000 },
+    );
   };
 
   const handleVideoSelect = (e) => {
@@ -3597,11 +3608,7 @@ export default function TikTokAdCreationForm({
       }
     });
 
-    if (rejectedFiles.length > 0) {
-      rejectedFiles.forEach((file) => {
-        toast.error(`Job Failed: The type of file is not supported. (${file.name})`, { duration: 6000 });
-      });
-    }
+    rejectedFiles.forEach(rejectUnsupportedFile);
 
     if (supportedFiles.length === 0) {
       e.target.value = "";
@@ -3662,11 +3669,7 @@ export default function TikTokAdCreationForm({
         }
       });
 
-      if (rejectedFiles.length > 0) {
-        rejectedFiles.forEach((file) => {
-          toast.error(`Job Failed: The type of file is not supported. (${file.name})`, { duration: 6000 });
-        });
-      }
+      rejectedFiles.forEach(rejectUnsupportedFile);
 
       if (supportedFiles.length === 0) return;
 
@@ -3769,9 +3772,6 @@ export default function TikTokAdCreationForm({
       setShowFolderInput(true);
       const mimeTypes = [
         "application/vnd.google-apps.folder",
-        "image/jpeg",
-        "image/png",
-        "image/gif",
         "video/mp4",
         "video/webm",
         "video/quicktime",
@@ -3905,6 +3905,10 @@ export default function TikTokAdCreationForm({
         });
         if (!response.ok) throw new Error("File not found or permission denied.");
         const data = await response.json();
+        if (!isTikTokSupportedFile({ name: data.name || "", type: data.mimeType })) {
+          rejectUnsupportedFile({ name: data.name || "", type: data.mimeType });
+          return;
+        }
         const newFile = {
           id: data.id,
           name: data.name,
@@ -7096,7 +7100,7 @@ export default function TikTokAdCreationForm({
                           className={`group cursor-pointer border-2 border-dashed rounded-2xl p-6 text-center transition-colors ${isDragActive ? "border-primary bg-primary/5" : "border-gray-300 hover:border-primary/50"
                             }`}
                         >
-                          <input {...getInputProps()} />
+                          <input {...getInputProps({ accept: TIKTOK_FILE_INPUT_ACCEPT })} />
                           <div className="flex flex-col items-center gap-2">
                             <Upload className="h-6 w-6 text-gray-500 group-hover:text-black" />
                             {isDragActive ? (
