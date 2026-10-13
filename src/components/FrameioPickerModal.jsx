@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { ChevronRight, Film, Image as ImageIcon, Loader2, ArrowLeft, X } from "lucide-react";
+import { ChevronRight, Film, Image as ImageIcon, Loader2, ArrowLeft, Search, X } from "lucide-react";
 import FrameHeaderImage from "@/assets/icons/Frame.webp";
 import BlueFolderIcon from "@/assets/icons/BlueFolder.svg?react";
 import { toast } from "sonner";
@@ -34,6 +34,34 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchInput, setSearchInput] = useState("");
+  // Keep browsing data and the navigation stack intact while showing search results.
+  const [search, setSearch] = useState(null);
+  const searchInputRef = useRef(null);
+  const searchRequestRef = useRef(null);
+
+  const clearSearch = useCallback(() => {
+    searchRequestRef.current?.abort();
+    searchRequestRef.current = null;
+    setSearchInput("");
+    setSearch(null);
+  }, []);
+
+  useEffect(() => {
+    if (searchOpen) searchInputRef.current?.focus();
+  }, [searchOpen]);
+
+  useEffect(() => {
+    if (!open) {
+      clearSearch();
+      setSearchOpen(false);
+    }
+    return () => {
+      searchRequestRef.current?.abort();
+      searchRequestRef.current = null;
+    };
+  }, [open, clearSearch]);
 
   // selected[frameioId] = { frameioId, frameioAccountId, name, mimeType, size, thumbnailUrl, width, height }
   const [selected, setSelected] = useState({});
@@ -145,21 +173,22 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
   }, [open, current, fetchView]);
 
   const handleNavigate = useCallback((nextEntry) => {
+    clearSearch();
+    setSearchOpen(false);
     setStack(prev => [...prev, nextEntry]);
-  }, []);
+  }, [clearSearch]);
 
   const handleBack = useCallback(() => {
+    clearSearch();
+    setSearchOpen(false);
     setStack(prev => prev.length > 1 ? prev.slice(0, -1) : prev);
-  }, []);
+  }, [clearSearch]);
 
   const handleBreadcrumbClick = useCallback((index) => {
+    clearSearch();
+    setSearchOpen(false);
     setStack(prev => prev.slice(0, index + 1));
-  }, []);
-
-  const handleLoadMore = useCallback(() => {
-    if (!nextAfter) return;
-    fetchView(current, { append: true, after: nextAfter });
-  }, [current, nextAfter, fetchView]);
+  }, [clearSearch]);
 
   const isImageOrVideo = useCallback((item) => {
     if (item.type === "folder" || item.kind === "folder") return false;
@@ -229,6 +258,57 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
     return null;
   }, [stack]);
 
+  const fetchSearch = useCallback(async (query, after = null) => {
+    const submittedQuery = query.trim();
+    if (!currentAccountId || !submittedQuery) return;
+    searchRequestRef.current?.abort();
+    const controller = new AbortController();
+    searchRequestRef.current = controller;
+    setSearch(prev => ({
+      query: submittedQuery,
+      items: after ? prev?.items || [] : [],
+      nextAfter: after,
+      loading: true,
+      loadingMore: Boolean(after),
+      error: null,
+    }));
+    try {
+      const params = new URLSearchParams({ accountId: currentAccountId, query: submittedQuery, pageSize: String(PAGE_SIZE) });
+      if (after) params.set("after", after);
+      const res = await fetch(`${API_BASE_URL}/api/frameio/search?${params}`, { credentials: "include", signal: controller.signal });
+      const data = await res.json();
+      if (searchRequestRef.current !== controller) return;
+      if (!res.ok) throw new Error(`${data.error || "Search failed"}${data.debugId ? ` — reference ${data.debugId}` : ""}`);
+      setSearch(prev => ({
+        query: submittedQuery,
+        items: Array.from(new Map([...(after ? prev.items : []), ...(data.items || [])].map(item => [item.id, item])).values()),
+        nextAfter: data.pagination?.after || null,
+        loading: false,
+        loadingMore: false,
+        error: null,
+      }));
+    } catch (err) {
+      if (searchRequestRef.current !== controller || controller.signal.aborted) return;
+      setSearch(prev => ({ ...prev, loading: false, loadingMore: false, error: err.message || "Search failed" }));
+    } finally {
+      if (searchRequestRef.current === controller) searchRequestRef.current = null;
+    }
+  }, [currentAccountId]);
+
+  const handleLoadMore = () => {
+    if (search) {
+      if (search.nextAfter && !search.loading && !searchRequestRef.current) fetchSearch(search.query, search.nextAfter);
+    } else if (nextAfter && !loading && !loadingMore) {
+      fetchView(current, { append: true, after: nextAfter });
+    }
+  };
+
+  const visibleItems = search ? search.items : items;
+  const visibleLoading = search ? search.loading && !search.loadingMore : loading;
+  const visibleLoadingMore = search ? search.loadingMore : loadingMore;
+  const visibleError = search ? search.error : error;
+  const visibleNextAfter = search ? search.nextAfter : nextAfter;
+
   const handleOpenChange = useCallback((nextOpen) => {
     if (!nextOpen) {
       lastViewedStackRef.current = stack;
@@ -242,6 +322,12 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
         <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-[#111111]/42 backdrop-blur-[2px] transition-opacity duration-200 data-[state=closed]:opacity-0 data-[state=open]:opacity-100" />
         <DialogPrimitive.Content
           onOpenAutoFocus={(event) => event.preventDefault()}
+          onEscapeKeyDown={(event) => {
+            if (!searchOpen) return;
+            event.preventDefault();
+            clearSearch();
+            setSearchOpen(false);
+          }}
           className={cn(
             "fixed left-1/2 top-1/2 z-50 flex h-[min(625px,calc(100dvh-2rem))] min-h-0 w-full max-w-3xl -translate-x-1/2 -translate-y-1/2 flex-col gap-4 overflow-hidden border-0 bg-[#FFFFFF] px-5 py-5 shadow-xl transition-opacity duration-200 data-[state=closed]:opacity-0 data-[state=open]:opacity-100 focus:outline-none sm:rounded-[28px]"
           )}
@@ -252,18 +338,79 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
           </DialogPrimitive.Close>
 
           <DialogHeader className="shrink-0 space-y-0">
-            <div className="flex items-center gap-4 pr-10">
-              <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-[18px] bg-white">
+            <div className="flex min-h-14 items-center gap-3 pr-10 sm:gap-4">
+              <div className={cn("h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[18px] bg-white sm:h-14 sm:w-14", searchOpen ? "hidden sm:flex" : "flex")}>
                 <img src={FrameHeaderImage} alt="Frame.io" className="h-full w-full object-cover" />
               </div>
-              <DialogTitle className="text-[28px] font-semibold tracking-[-0.02em] text-[#111111]">
+              <DialogTitle className={cn("shrink-0 whitespace-nowrap text-[22px] font-semibold tracking-[-0.02em] text-[#111111] sm:text-[28px]", searchOpen && "sr-only sm:not-sr-only")}>
                 Select Media
               </DialogTitle>
+              <div
+                role="search"
+                className={cn(
+                  "ml-auto flex h-10 min-w-0 items-center overflow-hidden rounded-full transition-[width,background-color,box-shadow] duration-200 ease-out motion-reduce:transition-none",
+                  searchOpen ? "w-[min(20rem,calc(100vw-7rem))] bg-[#F3F4F6] ring-1 ring-[#E2E2E2]" : "w-10",
+                )}
+              >
+                <button
+                  type="button"
+                  aria-label={searchOpen ? "Search account" : "Open account search"}
+                  aria-expanded={searchOpen}
+                  title={currentAccountId ? "Search this account" : "Choose an account to search"}
+                  disabled={!currentAccountId}
+                  onClick={() => searchOpen ? fetchSearch(searchInput) : setSearchOpen(true)}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[#6B7280] hover:bg-[#E5E7EB] disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <Search className="h-4 w-4" />
+                </button>
+                <div className={cn("flex min-w-0 flex-1 items-center gap-1 pr-1 transition-opacity duration-200 motion-reduce:transition-none", searchOpen ? "opacity-100" : "invisible opacity-0")}>
+                  <input
+                    ref={searchInputRef}
+                    aria-label="Search files across this account"
+                    placeholder="Search account…"
+                    value={searchInput}
+                    maxLength={1000}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      if (!value.trim()) clearSearch();
+                      else setSearchInput(value);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" && !event.nativeEvent.isComposing) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        fetchSearch(searchInput);
+                      }
+                    }}
+                    className="w-full min-w-0 bg-transparent text-sm text-[#111111] outline-none placeholder:text-[#9CA3AF]"
+                  />
+                  <button
+                    type="button"
+                    aria-label="Clear search and return to browsing"
+                    onClick={() => { clearSearch(); searchInputRef.current?.focus(); }}
+                    className="shrink-0 rounded-full p-1.5 text-[#6B7280] hover:bg-[#E5E7EB]"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!searchInput.trim() || !currentAccountId}
+                    onClick={() => fetchSearch(searchInput)}
+                    className="h-8 shrink-0 rounded-full bg-[#111111] px-3 text-xs font-medium text-white hover:bg-[#2563EB] disabled:opacity-40"
+                  >
+                    Search
+                  </button>
+                </div>
+              </div>
             </div>
           </DialogHeader>
 
           {/* Breadcrumb */}
-          <div className="flex shrink-0 items-center gap-3 text-sm text-[#5F5F5F]">
+          {search ? (
+            <div role="status" className="truncate text-sm text-[#5F5F5F]" title={search.query}>
+              Account results for “{search.query}”
+            </div>
+          ) : <div className="flex shrink-0 items-center gap-3 text-sm text-[#5F5F5F]">
             {stack.length > 1 && (
               <Button
                 type="button"
@@ -296,10 +443,10 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
                 })}
               </div>
             </div>
-          </div>
+          </div>}
 
           {/* List */}
-          {current.kind === "workspaces" && (
+          {!search && current.kind === "workspaces" && (
             <Button
               type="button"
               variant="outline"
@@ -310,28 +457,28 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
             </Button>
           )}
           <ScrollArea
-            key={[current.kind, current.accountId, current.workspaceId, current.projectId, current.folderId].filter(Boolean).join(":")}
+            key={search ? `search:${search.query}` : [current.kind, current.accountId, current.workspaceId, current.projectId, current.folderId].filter(Boolean).join(":")}
             className="h-0 min-h-0 flex-1 overflow-hidden rounded-[20px] border border-[#E2E2E2] bg-[#F0F0F0]"
             viewportClassName="h-full overscroll-contain"
           >
             <div className="divide-y divide-[#E1E1E1]">
-              {loading && (
+              {visibleLoading && (
                 <div className="flex items-center justify-center py-8">
                   <Loader2 className="h-5 w-5 animate-spin text-[#6B7280]" />
                 </div>
               )}
 
-              {error && !loading && (
-                <div className="p-4 text-sm text-red-600">{error}</div>
+              {visibleError && !visibleLoading && (
+                <div role="alert" className="p-4 text-sm text-red-600">{visibleError}</div>
               )}
 
-              {!loading && !error && items.length === 0 && (
-                <div className="p-4 text-sm text-[#6B7280]">No items.</div>
+              {!visibleLoading && !visibleError && visibleItems.length === 0 && (
+                <div className="p-4 text-sm text-[#6B7280]">{search ? (visibleNextAfter ? "No image or video matches on this page. Load more to continue." : "No matching images or videos.") : "No items."}</div>
               )}
 
-              {!loading && !error && items.map((item) => {
+              {!visibleLoading && visibleItems.map((item) => {
                 const folder = isFolder(item);
-                const navigable = isNavigable(item, current.kind);
+                const navigable = !search && isNavigable(item, current.kind);
                 const mediaOk = !navigable && isImageOrVideo(item);
                 const disabled = !navigable && !mediaOk;
                 const isSelected = !!selected[item.id];
@@ -361,7 +508,7 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
                   >
                     {/* Thumb / icon */}
                     <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white shadow-[0_1px_2px_rgba(17,17,17,0.06)]">
-                      {(current.kind === "accounts" || current.kind === "workspaces" || current.kind === "projects") ? (
+                      {!search && (current.kind === "accounts" || current.kind === "workspaces" || current.kind === "projects") ? (
                         <BlueFolderIcon className="h-5 w-5" />
                       ) : folder ? (
                         <BlueFolderIcon className="h-5 w-5" />
@@ -376,7 +523,7 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
 
                     <div className="flex-1 min-w-0">
                       <div className="truncate text-sm font-medium text-[#111111]">{item.display_name || item.name}</div>
-                      {!navigable && current.kind === "folder" && (
+                      {!navigable && (search || current.kind === "folder") && (
                         <div className="text-xs text-[#6B7280]">
                           {(item.media_type || guessMime(item.name) || "").split("/")[0] || "file"}
                           {(item.file_size || item.filesize) ? ` • ${formatBytes(item.file_size || item.filesize)}` : ""}
@@ -402,17 +549,17 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
                 );
               })}
 
-              {nextAfter && !loading && (
+              {visibleNextAfter && !visibleLoading && (
                 <div className="flex justify-center py-2">
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
                     onClick={handleLoadMore}
-                    disabled={loadingMore}
+                    disabled={visibleLoadingMore}
                     className="rounded-full border-[#D7D7D7] bg-white px-4 hover:bg-[#E3E3E3]"
                   >
-                    {loadingMore ? <Loader2 className="h-4 w-4 animate-spin" /> : "Load more"}
+                    {visibleLoadingMore ? <Loader2 className="h-4 w-4 animate-spin" /> : "Load more"}
                   </Button>
                 </div>
               )}
