@@ -209,6 +209,8 @@ export default function TikTokAds() {
   const [duplicateAdSet, setDuplicateAdSet] = useState('')
   const [duplicateAdGroup, setDuplicateAdGroup] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.duplicateAdGroup : null) || '')
   const [newAdGroupName, setNewAdGroupName] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.newAdGroupName : null) || '')
+  // Placements to drop from the duplicated ad group (empty = keep the source's placements)
+  const [excludedAdGroupPlacements, setExcludedAdGroupPlacements] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.excludedAdGroupPlacements : null) || [])
   const [showDuplicateCampaignBlock, setShowDuplicateCampaignBlock] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.showDuplicateCampaignBlock : null) || false)
   const [duplicateCampaign, setDuplicateCampaign] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.duplicateCampaign : null) || '')
   const [newCampaignName, setNewCampaignName] = useState(() => (_tiktokCache?.selectedAdvertiser === selectedAdvertiser ? _tiktokCache?.newCampaignName : null) || '')
@@ -663,6 +665,7 @@ export default function TikTokAds() {
       formProductSetName,
       duplicateAdGroup,
       newAdGroupName,
+      excludedAdGroupPlacements,
       showDuplicateAdGroupBlock,
       duplicateCampaign,
       newCampaignName,
@@ -692,6 +695,7 @@ export default function TikTokAds() {
     formProductSetName,
     duplicateAdGroup,
     newAdGroupName,
+    excludedAdGroupPlacements,
     showDuplicateAdGroupBlock,
     duplicateCampaign,
     newCampaignName,
@@ -782,6 +786,7 @@ export default function TikTokAds() {
     setFormProductSetName(null);
     setDuplicateAdGroup("");
     setNewAdGroupName("");
+    setExcludedAdGroupPlacements([]);
     setShowDuplicateAdGroupBlock(false);
     setDuplicateCampaign("");
     setNewCampaignName("");
@@ -839,6 +844,7 @@ export default function TikTokAds() {
     adGroups: cloneSnapshotValue(adGroups),
     duplicateAdGroup,
     newAdGroupName,
+    excludedAdGroupPlacements,
     showDuplicateAdGroupBlock,
     duplicateCampaign,
     newCampaignName,
@@ -880,6 +886,7 @@ export default function TikTokAds() {
     adGroups,
     duplicateAdGroup,
     newAdGroupName,
+    excludedAdGroupPlacements,
     showDuplicateAdGroupBlock,
     duplicateCampaign,
     newCampaignName,
@@ -929,6 +936,7 @@ export default function TikTokAds() {
     }
     setDuplicateAdGroup(snapshot.duplicateAdGroup || "");
     setNewAdGroupName(snapshot.newAdGroupName || "");
+    setExcludedAdGroupPlacements(snapshot.excludedAdGroupPlacements || []);
     setShowDuplicateAdGroupBlock(Boolean(snapshot.showDuplicateAdGroupBlock));
     setDuplicateCampaign(snapshot.duplicateCampaign || "");
     setNewCampaignName(snapshot.newCampaignName || "");
@@ -1305,6 +1313,7 @@ export default function TikTokAds() {
               selectedAdGroup={selectedAdGroup} setSelectedAdGroup={setSelectedAdGroup}
               duplicateAdGroup={duplicateAdGroup} setDuplicateAdGroup={setDuplicateAdGroup}
               newAdGroupName={newAdGroupName} setNewAdGroupName={setNewAdGroupName}
+              excludedAdGroupPlacements={excludedAdGroupPlacements} setExcludedAdGroupPlacements={setExcludedAdGroupPlacements}
               showDuplicateAdGroupBlock={showDuplicateAdGroupBlock} setShowDuplicateAdGroupBlock={setShowDuplicateAdGroupBlock}
               duplicateCampaign={duplicateCampaign} setDuplicateCampaign={setDuplicateCampaign}
               newCampaignName={newCampaignName} setNewCampaignName={setNewCampaignName}
