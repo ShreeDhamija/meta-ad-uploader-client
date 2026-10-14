@@ -30,9 +30,11 @@ import {
   BookOpen,
   Check,
   ChevronsUpDown,
+  CircleX,
   CloudUpload,
   Copy,
   CopyIcon,
+  LayoutGrid,
   Link as LinkIcon,
   Loader,
   Plus,
@@ -47,6 +49,7 @@ import {
   X,
   Zap,
 } from "lucide-react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import pLimit from "p-limit";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDropzone } from "react-dropzone";
@@ -324,7 +327,7 @@ const UPLOAD_SOURCE_OPTIONS = [
 
 const TIKTOK_PLACEMENT_OPTIONS = [
   { id: "PLACEMENT_TIKTOK", label: "TikTok" },
-  { id: "PLACEMENT_PANGLE", label: "Pangle" },
+  { id: "PLACEMENT_PANGLE", label: "TikTok Ad Network (Pangle)" },
   { id: "PLACEMENT_GLOBAL_APP_BUNDLE", label: "Global App Bundle" },
 ];
 
@@ -797,6 +800,7 @@ export default function TikTokAdCreationForm({
   const [duplicateCampaignSearchValue, setDuplicateCampaignSearchValue] = useState("");
   const [openDuplicateAdGroup, setOpenDuplicateAdGroup] = useState(false);
   const [showAdGroupPlacements, setShowAdGroupPlacements] = useState(false);
+  const reduceMotion = useReducedMotion();
   const [duplicateAdGroupSearchValue, setDuplicateAdGroupSearchValue] = useState("");
 
   // Search input local states
@@ -5764,49 +5768,95 @@ export default function TikTokAdCreationForm({
                           const togglePlacement = (id) =>
                             setExcludedAdGroupPlacements((prev) => (prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]));
 
+                          // Mirrors Meta's "Edit setup" panel for new ad sets (ad-account-settings.jsx)
                           return (
-                            <div className="space-y-2">
-                              <button
-                                type="button"
-                                aria-expanded={showAdGroupPlacements}
-                                onClick={() => setShowAdGroupPlacements((open) => !open)}
-                                className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 hover:text-black"
-                              >
-                                <CogIcon className="h-3.5 w-3.5" /> Edit placements
-                                {keptPlacements.length < sourcePlacements.length && (
-                                  <span className="font-normal text-gray-400">
-                                    · {keptPlacements.length} of {sourcePlacements.length} selected
-                                  </span>
+                            <div className="mt-2 min-w-0">
+                              <div className="flex items-center justify-between gap-3">
+                                <button
+                                  type="button"
+                                  aria-expanded={showAdGroupPlacements}
+                                  onClick={() => setShowAdGroupPlacements(true)}
+                                  title="Edit placements"
+                                  className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 hover:text-black"
+                                >
+                                  <CogIcon className="h-3.5 w-3.5" /> Edit placements
+                                  {keptPlacements.length < sourcePlacements.length && (
+                                    <span className="font-normal text-gray-400">
+                                      · {keptPlacements.length} of {sourcePlacements.length} selected
+                                    </span>
+                                  )}
+                                </button>
+                                {showAdGroupPlacements && (
+                                  <div className="flex items-center gap-3">
+                                    <button
+                                      type="button"
+                                      className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-red-600"
+                                      onClick={() => {
+                                        setExcludedAdGroupPlacements([]);
+                                        setShowAdGroupPlacements(false);
+                                      }}
+                                    >
+                                      <CircleX className="h-3.5 w-3.5" aria-hidden="true" />
+                                      Discard
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-black"
+                                      onClick={() => setExcludedAdGroupPlacements([])}
+                                    >
+                                      <RefreshCcw className="h-3.5 w-3.5" aria-hidden="true" />
+                                      Reset
+                                    </button>
+                                  </div>
                                 )}
-                              </button>
-                              {showAdGroupPlacements && (
-                                <div className="space-y-2 rounded-2xl border border-gray-200 bg-white p-3 animate-in fade-in duration-200">
-                                  <p className="text-xs text-gray-500">
-                                    {hasSinglePlacement
-                                      ? `This ad group only runs on ${getPlacementLabel(sourcePlacements[0])}, so there's nothing to remove.`
-                                      : "Uncheck a placement to remove it from the new ad group. Everything else is copied as is."}
-                                  </p>
-                                  {sourcePlacements.map((id) => {
-                                    const checked = !excludedAdGroupPlacements.includes(id);
-                                    const isLastKept = checked && keptPlacements.length === 1;
-                                    return (
-                                      <label
-                                        key={id}
-                                        className={cn("flex items-center gap-2 text-sm", isLastKept ? "cursor-not-allowed opacity-60" : "cursor-pointer")}
-                                        title={isLastKept ? "At least one placement must stay selected" : undefined}
-                                      >
-                                        <Checkbox
-                                          checked={checked}
-                                          disabled={isLastKept}
-                                          onCheckedChange={() => togglePlacement(id)}
-                                          className="w-4 h-4 bg-white border border-gray-300 rounded-[6px] data-[state=checked]:bg-zinc-800 data-[state=checked]:text-white"
-                                        />
-                                        {getPlacementLabel(id)}
-                                      </label>
-                                    );
-                                  })}
-                                </div>
-                              )}
+                              </div>
+                              <AnimatePresence initial={false}>
+                                {showAdGroupPlacements && (
+                                  <motion.div
+                                    key="adgroup-placements"
+                                    initial={{ height: 0, opacity: 0 }}
+                                    animate={{ height: "auto", opacity: 1 }}
+                                    exit={{ height: 0, opacity: 0 }}
+                                    transition={{ duration: reduceMotion ? 0 : 0.18, ease: "easeInOut" }}
+                                    className="overflow-hidden"
+                                  >
+                                    <div className="mt-3 rounded-2xl border border-gray-200 bg-white p-4">
+                                      <section className="space-y-3">
+                                        <h4 className="flex items-center gap-2 text-sm font-semibold">
+                                          <LayoutGrid className="h-4 w-4 shrink-0" aria-hidden="true" />
+                                          Placements
+                                        </h4>
+                                        <p className="text-xs text-gray-500">
+                                          {hasSinglePlacement
+                                            ? `This ad group only runs on ${getPlacementLabel(sourcePlacements[0])}, so there's nothing to remove.`
+                                            : "Uncheck a placement to remove it from the new ad group. Everything else is copied as is."}
+                                        </p>
+                                        <div className="space-y-2">
+                                          {sourcePlacements.map((id) => {
+                                            const checked = !excludedAdGroupPlacements.includes(id);
+                                            const isLastKept = checked && keptPlacements.length === 1;
+                                            return (
+                                              <label
+                                                key={id}
+                                                className={cn("flex items-center gap-2 text-sm", isLastKept ? "cursor-not-allowed opacity-60" : "cursor-pointer")}
+                                                title={isLastKept ? "At least one placement must stay selected" : undefined}
+                                              >
+                                                <Checkbox
+                                                  checked={checked}
+                                                  disabled={isLastKept}
+                                                  onCheckedChange={() => togglePlacement(id)}
+                                                  className="w-4 h-4 bg-white border border-gray-300 rounded-[6px] data-[state=checked]:bg-zinc-800 data-[state=checked]:text-white"
+                                                />
+                                                {getPlacementLabel(id)}
+                                              </label>
+                                            );
+                                          })}
+                                        </div>
+                                      </section>
+                                    </div>
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
                             </div>
                           );
                         })()}
