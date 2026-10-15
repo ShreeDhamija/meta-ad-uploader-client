@@ -36,7 +36,7 @@ import {
 } from "@/lib/accountSelection"
 import "../settings.css"
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
-const META_SETTINGS_TABS = ["adaccount", "mcp", "billing", "team", "help"]
+const META_SETTINGS_TABS = ["adaccount", "billing", "team", "mcp", "help"]
 const TIKTOK_SETTINGS_TABS = ["tiktok", "billing", "team", "help"]
 const TIKTOK_SWITCH_TAB = "tiktok-switch"
 const META_SWITCH_TAB = "meta-switch"
@@ -47,8 +47,9 @@ export default function Settings({ platform = "meta" }) {
     const { isLoggedIn, userName, profilePicUrl, handleLogout, authLoading, features } = useAuth()
     const { isTikTokLoggedIn, tiktokUser, isLoading: tiktokLoading } = useTikTokAuth()
     const providerSwitchTab = isTikTok ? META_SWITCH_TAB : TIKTOK_SWITCH_TAB
+    // The provider switch (TikTok / Meta) sits just above Help.
     const sidebarTabs = features.tiktokLauncher === true
-        ? [...settingsTabs, providerSwitchTab]
+        ? [...settingsTabs.filter((tab) => tab !== "help"), providerSwitchTab, "help"]
         : settingsTabs
     const [showSettingsPopup, setShowSettingsPopup] = useState(false)
     const [showAdAccountPopup, setShowAdAccountPopup] = useState(false)

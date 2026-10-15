@@ -169,7 +169,7 @@ export default function MCPSettings() {
                     ))}
                 </ol>
 
-                <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-3">
                     {selected.screenshots.map((image, index) => (
                         <a
                             key={image}
@@ -181,7 +181,7 @@ export default function MCPSettings() {
                             <img
                                 src={image}
                                 alt={`${selected.label} step ${index + 1}`}
-                                className="aspect-[20/13] w-full object-cover object-top"
+                                className="h-auto w-full"
                             />
                             <span className="block px-3 py-2 text-xs font-medium text-gray-600">Step {index + 1}</span>
                         </a>
@@ -196,18 +196,12 @@ export default function MCPSettings() {
             {/* Example prompts */}
             {PROMPTS.map((group) => (
                 <div key={group.title} className="p-4 bg-[#f5f5f5] rounded-2xl space-y-4">
-                    <SectionHeader icon={group.icon} title={`Try it: ${group.title}`} description={group.tip} />
-                    <div className="space-y-2">
+                    <SectionHeader icon={group.icon} title={group.title} description={group.tip} />
+                    <ul className="list-disc space-y-1.5 pl-5 text-sm leading-6 text-gray-700">
                         {group.prompts.map((prompt) => (
-                            <div
-                                key={prompt}
-                                className="flex items-center justify-between gap-3 rounded-2xl border border-gray-300 bg-white shadow-xs pl-4 pr-1.5 py-1.5"
-                            >
-                                <span className="text-sm text-gray-800">{prompt}</span>
-                                <CopyButton text={prompt} label="Prompt" />
-                            </div>
+                            <li key={prompt}>&ldquo;{prompt}&rdquo;</li>
                         ))}
-                    </div>
+                    </ul>
                 </div>
             ))}
         </div>
