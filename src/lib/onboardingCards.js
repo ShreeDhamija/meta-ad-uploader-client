@@ -1,5 +1,5 @@
 import PostIDImage from "@/assets/onboarding/PostID.webp"
-import InstagramImage from "@/assets/onboarding/Instagram.webp"
+import MCPImage from "@/assets/MCP/OnboardingMCP.webp"
 import SplitAdDataImage from "@/assets/onboarding/SplitAdData.webp"
 import AIGroupingImage from "@/assets/onboarding/AIGrouping.webp"
 import JobQueueingImage from "@/assets/onboarding/JobQueueing.webp"
@@ -26,13 +26,17 @@ export const ONBOARDING_CARDS = [
         existingUsersOnly: false,
     },
     {
-        id: "igScaling",
-        title: "Instagram Scaling",
-        image: InstagramImage,
-        heading: "Instagram Scaling",
-        body: "Promote Organic Instagram Posts, Reels and tagged collab posts easily.",
-        addedAt: "2026-05-06",
+        id: "mcp",
+        title: "Blip MCP",
+        image: MCPImage,
+        heading: "Blip MCP for Claude & ChatGPT",
+        body: "Launch ads, check analytics and apply budget recommendations right from Claude and ChatGPT.",
+        addedAt: "2026-10-15",
         existingUsersOnly: false,
+        singleCardAction: {
+            label: "Connect MCP",
+            path: "/settings?tab=mcp",
+        },
     },
     {
         id: "splitAdData",

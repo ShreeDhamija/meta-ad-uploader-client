@@ -3,7 +3,7 @@
 import { useAuth } from "@/lib/AuthContext"
 import { Navigate, useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
-import { CircleHelp, LogOutIcon } from "lucide-react"
+import { CircleHelp, LogOutIcon, MessageCircle } from "lucide-react"
 import { Toaster } from "sonner"
 import { useState, useEffect } from "react"
 import PropTypes from "prop-types"
@@ -20,6 +20,7 @@ import Folder from '@/assets/icons/cog-three.svg?react';
 import Card from '@/assets/icons/card.svg?react';
 import TeamSettings from "@/components/settings/TeamSettings"
 import HelpFAQs from "@/components/settings/HelpFAQs"
+import MCPSettings from "@/components/settings/MCPSettings"
 import { useIntercom } from "@/lib/useIntercom";
 import UsersIcon from "@/assets/icons/users.svg?react";
 import TikTokIcon from "@/assets/icons/tiktok.svg?react"
@@ -35,7 +36,7 @@ import {
 } from "@/lib/accountSelection"
 import "../settings.css"
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
-const META_SETTINGS_TABS = ["adaccount", "billing", "team", "help"]
+const META_SETTINGS_TABS = ["adaccount", "mcp", "billing", "team", "help"]
 const TIKTOK_SETTINGS_TABS = ["tiktok", "billing", "team", "help"]
 const TIKTOK_SWITCH_TAB = "tiktok-switch"
 const META_SWITCH_TAB = "meta-switch"
@@ -71,6 +72,7 @@ export default function Settings({ platform = "meta" }) {
         tiktok: TikTokIcon,
         [TIKTOK_SWITCH_TAB]: TikTokIcon,
         [META_SWITCH_TAB]: MetaIcon,
+        mcp: MessageCircle,
         billing: Card,
         team: UsersIcon,
         help: CircleHelp,
@@ -87,6 +89,7 @@ export default function Settings({ platform = "meta" }) {
     const tabDescriptionMap = {
         adaccount: "Configure default settings and values to pre-fill into ads for all your ad accounts.",
         tiktok: "Configure default settings, UTMs and ad copy for your TikTok advertiser accounts.",
+        mcp: "Connect Blip to Claude or ChatGPT to launch ads and view analytics right from chat.",
         billing: "Manage your subscription, billing methods, and view invoices.",
         team: "Manage your team, invite members, or join an existing team.",
         help: "Find quick answers and step-by-step video walkthroughs for common Blip workflows.",
@@ -95,6 +98,7 @@ export default function Settings({ platform = "meta" }) {
     const tabTitleMap = {
         adaccount: "Ad Account Settings",
         tiktok: "TikTok Ad Account Settings",
+        mcp: "Blip MCP",
         billing: "Billing and Subscription",
         team: "Team Management",
         help: "Help & FAQs",
@@ -105,6 +109,7 @@ export default function Settings({ platform = "meta" }) {
         tiktok: "Preferences",
         [TIKTOK_SWITCH_TAB]: "TikTok",
         [META_SWITCH_TAB]: "Meta",
+        mcp: "MCP",
         billing: "Billing",
         team: "Team",
         help: "Help & FAQs",
@@ -326,6 +331,7 @@ export default function Settings({ platform = "meta" }) {
                                             }}
                                         />
                                     )}
+                                    {activeTab === "mcp" && <MCPSettings />}
                                     {activeTab === "billing" && <BillingSettings platform={platform} />}
                                     {activeTab === "team" && <TeamSettings />}
                                     {activeTab === "help" && <HelpFAQs onOpenChat={showMessenger} />}
