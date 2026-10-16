@@ -3196,6 +3196,11 @@ export default function AdCreationForm({
   }, [pages, instagramSearchValue]);
   const hasPages = pages.length > 0;
   const hasInstagramAccounts = pages.some((page) => page.instagramAccount || page.additionalInstagramAccounts?.length);
+  // Selected IG account's details. Primary accounts are checked first so
+  // regular users resolve exactly as before; hardcoded extras are the fallback.
+  const selectedInstagramDetails =
+    pages.find((p) => p.instagramAccount?.id === instagramAccountId)?.instagramAccount ||
+    pages.flatMap((p) => p.additionalInstagramAccounts || []).find((acct) => acct.id === instagramAccountId);
 
   const refreshPages = async () => {
     setIsLoading(true);
@@ -10313,7 +10318,7 @@ export default function AdCreationForm({
                             <div className="flex items-center gap-2">
                               <img
                                 src={
-                                  pages.find((p) => p.instagramAccount?.id === instagramAccountId)?.instagramAccount?.profilePictureUrl ||
+                                  selectedInstagramDetails?.profilePictureUrl ||
                                   "https://api.withblip.com/backup_page_image.png" ||
                                   "/placeholder.svg"
                                 }
@@ -10321,7 +10326,7 @@ export default function AdCreationForm({
                                 className="w-5 h-5 rounded-full object-cover"
                               />
                               <span>
-                                {pages.find((p) => p.instagramAccount?.id === instagramAccountId)?.instagramAccount?.username || instagramAccountId}
+                                {selectedInstagramDetails?.username || instagramAccountId}
                               </span>
                             </div>
                           ) : !hasInstagramAccounts ? (
@@ -10629,8 +10634,7 @@ export default function AdCreationForm({
                                   <RadioGroupItem value="brand" id="primary-brand" />
                                   <Label htmlFor="primary-brand" className="text-sm font-normal cursor-pointer">
                                     {(() => {
-                                      const brandUsername = pages.find((p) => p.instagramAccount?.id === instagramAccountId)?.instagramAccount
-                                        ?.username;
+                                      const brandUsername = selectedInstagramDetails?.username;
                                       return brandUsername ? `@${brandUsername}` : "Main brand IG";
                                     })()}
                                   </Label>

@@ -44,16 +44,26 @@ function PageSelectors({
   );
 
   // Memoized filtered Instagram accounts
-  const filteredInstagramAccounts = useMemo(() =>
-    pages.filter((p) =>
-      p.instagramAccount?.username
-        ?.toLowerCase()
-        .includes(instagramSearch.toLowerCase())
-    ),
-    [pages, instagramSearch]
-  );
+  // Primary accounts are listed exactly as before; hardcoded extras
+  // (additionalInstagramAccounts) are appended, wrapped as { instagramAccount }
+  // so the render loop below can keep reading `item.instagramAccount`.
+  const filteredInstagramAccounts = useMemo(() => {
+    const matchesSearch = (acct) =>
+      acct?.username?.toLowerCase().includes(instagramSearch.toLowerCase());
+    const primary = pages.filter((p) => matchesSearch(p.instagramAccount));
+    const seen = new Set(pages.map((p) => p.instagramAccount?.id).filter(Boolean));
+    const extras = pages
+      .flatMap((p) => p.additionalInstagramAccounts || [])
+      .filter((acct) => {
+        if (!acct?.id || seen.has(acct.id)) return false;
+        seen.add(acct.id);
+        return matchesSearch(acct);
+      })
+      .map((instagramAccount) => ({ instagramAccount }));
+    return [...primary, ...extras];
+  }, [pages, instagramSearch]);
   const hasPages = pages.length > 0;
-  const hasInstagramAccounts = pages.some((p) => p.instagramAccount);
+  const hasInstagramAccounts = pages.some((p) => p.instagramAccount || p.additionalInstagramAccounts?.length);
 
   // Memoized refresh function
   const refreshPages = useCallback(async () => {
@@ -69,9 +79,11 @@ function PageSelectors({
         setPages(data.pages);
 
         const updatedPage = data.pages.find(p => p.id === selectedPage?.id);
-        const updatedInstagram = data.pages
-          .find(p => p.instagramAccount?.id === selectedInstagram?.id)
-          ?.instagramAccount;
+        const updatedInstagram =
+          data.pages.find(p => p.instagramAccount?.id === selectedInstagram?.id)?.instagramAccount ||
+          data.pages
+            .flatMap(p => p.additionalInstagramAccounts || [])
+            .find(acct => acct.id === selectedInstagram?.id);
 
         if (updatedPage) setSelectedPage(updatedPage);
         else setSelectedPage(null);
