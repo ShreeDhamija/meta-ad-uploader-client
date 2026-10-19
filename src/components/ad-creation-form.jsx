@@ -6418,7 +6418,7 @@ export default function AdCreationForm({
             const isCancellation = result.reason?.name === "AbortError" || axios.isCancel(result.reason) || signal?.aborted;
 
             if (!isCancellation) {
-              toast.error(`Failed to upload Dropbox video: ${largeDriveFiles[index].name}`);
+              toast.error(`Failed to upload Dropbox video: ${largeDropboxFiles[index].name}`);
             }
             console.error("❌ Dropbox to S3 upload failed", result.reason);
           }
