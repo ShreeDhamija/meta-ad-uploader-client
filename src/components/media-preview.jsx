@@ -2350,9 +2350,9 @@ export default function MediaPreview({
                                 </div>
                               )}
                             </div>
-                            {/* post_id below the image card */}
+                            {/* post name below the image card */}
                             <p
-                              className="mt-1 ml-1 text-xs font-mono text-gray-700 truncate max-w-full transition-opacity"
+                              className="mt-1 ml-1 text-sm truncate max-w-full transition-opacity"
                               style={{ opacity: isDimmed ? 0.3 : 1 }}
                             >
                               {post.ad_name}

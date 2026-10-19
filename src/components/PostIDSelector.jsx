@@ -152,6 +152,28 @@ function PostSelectorInline({
     const [adsetSortMode, setAdsetSortMode] = useState('spend') // 'spend' | 'roas' | 'name_az' | 'date_newest' | 'date_oldest'
     const [adsetAdsSearch, setAdsetAdsSearch] = useState('')
 
+    // Only the latest ads request may write results. Switching views aborts the
+    // in-flight request so its response can't land in the new view.
+    const requestRef = useRef({ id: 0, controller: null })
+    // Last completed results per view, restored when switching back.
+    const viewCacheRef = useRef({})
+
+    const startRequest = useCallback(() => {
+        requestRef.current.controller?.abort()
+        const controller = new AbortController()
+        requestRef.current = { id: requestRef.current.id + 1, controller }
+        return { requestId: requestRef.current.id, signal: controller.signal }
+    }, [])
+
+    const cancelInFlightRequest = useCallback(() => {
+        requestRef.current.controller?.abort()
+        requestRef.current = { id: requestRef.current.id + 1, controller: null }
+    }, [])
+
+    const isCurrentRequest = useCallback((requestId) => requestRef.current.id === requestId, [])
+
+    useEffect(() => () => requestRef.current.controller?.abort(), [])
+
     const filteredBrowseCampaigns = useMemo(() =>
         campaigns.filter((camp) =>
             (camp.name?.toLowerCase() || camp.id.toLowerCase()).includes(browseCampaignSearch.toLowerCase())
@@ -206,6 +228,7 @@ function PostSelectorInline({
             setIsLoadingMore(true)
         }
         setError(null)
+        const { requestId, signal } = startRequest()
 
         try {
             const params = {
@@ -219,8 +242,10 @@ function PostSelectorInline({
 
             const response = await axios.get(`${API_BASE_URL}/auth/ad-insights`, {
                 params,
-                withCredentials: true
+                withCredentials: true,
+                signal,
             })
+            if (!isCurrentRequest(requestId)) return
 
             const { data, paging } = response.data
 
@@ -244,15 +269,18 @@ function PostSelectorInline({
             }
 
         } catch (err) {
+            if (axios.isCancel(err) || !isCurrentRequest(requestId)) return
             console.error("Error fetching ads:", err)
             const errorMessage = err.response?.data?.error || err.message || "Failed to fetch ads"
             setError(errorMessage)
             toast.error(errorMessage)
         } finally {
-            setIsLoading(false)
-            setIsLoadingMore(false)
+            if (isCurrentRequest(requestId)) {
+                setIsLoading(false)
+                setIsLoadingMore(false)
+            }
         }
-    }, [adAccountId, datePreset])
+    }, [adAccountId, datePreset, startRequest, isCurrentRequest])
 
     const searchAds = useCallback(async () => {
         if (!adAccountId) {
@@ -272,6 +300,7 @@ function PostSelectorInline({
         setNextCursor(null)
         setHasMore(false)
         setError(null)
+        const { requestId, signal } = startRequest()
 
         try {
             const response = await axios.get(`${API_BASE_URL}/auth/ad-search`, {
@@ -279,23 +308,28 @@ function PostSelectorInline({
                     adAccountId,
                     searchQuery: searchQuery.trim()
                 },
-                withCredentials: true
+                withCredentials: true,
+                signal,
             })
+            if (!isCurrentRequest(requestId)) return
 
             const { data } = response.data
             setAds(data || [])
             setHasFetched(true)
 
         } catch (err) {
+            if (axios.isCancel(err) || !isCurrentRequest(requestId)) return
             console.error("Error searching ads:", err)
             const errorMessage = err.response?.data?.error || err.message || "Failed to search ads"
             setError(errorMessage)
             toast.error(errorMessage)
         } finally {
-            setIsLoading(false)
-            setIsSearching(false)
+            if (isCurrentRequest(requestId)) {
+                setIsLoading(false)
+                setIsSearching(false)
+            }
         }
-    }, [adAccountId, searchQuery])
+    }, [adAccountId, searchQuery, startRequest, isCurrentRequest])
 
     // Fetch ads for a specific adset
     const fetchAdsetAds = useCallback(async (adsetId, preset = adsetBrowseDatePreset) => {
@@ -307,6 +341,7 @@ function PostSelectorInline({
         setNextCursor(null)
         setHasMore(false)
         setError(null)
+        const { requestId, signal } = startRequest()
 
         try {
             const response = await axios.get(`${API_BASE_URL}/auth/adset-ads`, {
@@ -314,22 +349,25 @@ function PostSelectorInline({
                     adsetId,
                     datePreset: preset,
                 },
-                withCredentials: true
+                withCredentials: true,
+                signal,
             })
+            if (!isCurrentRequest(requestId)) return
 
             const { data } = response.data
             setAds(data || [])
             setHasFetched(true)
 
         } catch (err) {
+            if (axios.isCancel(err) || !isCurrentRequest(requestId)) return
             console.error("Error fetching adset ads:", err)
             const errorMessage = err.response?.data?.error || err.message || "Failed to fetch ads for this ad set"
             setError(errorMessage)
             toast.error(errorMessage)
         } finally {
-            setIsLoading(false)
+            if (isCurrentRequest(requestId)) setIsLoading(false)
         }
-    }, [adsetBrowseDatePreset])
+    }, [adsetBrowseDatePreset, startRequest, isCurrentRequest])
 
     // Fetch adsets when a campaign is selected in browse mode
     const fetchBrowseAdSets = useCallback(async (campaignId) => {
@@ -360,7 +398,12 @@ function PostSelectorInline({
     }, [])
 
     useEffect(() => {
-        // Reset adset browse state when ad account changes
+        // Reset adset browse state and per-view results when ad account changes
+        cancelInFlightRequest()
+        viewCacheRef.current = {}
+        setIsLoading(false)
+        setIsLoadingMore(false)
+        setIsSearching(false)
         setAdsetBrowseCampaignId('')
         setAdsetBrowseAdSets([])
         setAdsetBrowseSelectedAdSetId('')
@@ -432,23 +475,44 @@ function PostSelectorInline({
 
     const handleViewModeChange = (mode) => {
         if (mode === viewMode) return
+
+        // Stop the current view's fetch so its results can't show up in the new view
+        cancelInFlightRequest()
+        if (hasFetched && !isLoading && !error) {
+            viewCacheRef.current[viewMode] = { ads, nextCursor, hasMore }
+        }
+
         setViewMode(mode)
-        setAds([])
-        setSelectedAdIds(new Set())
+        setIsLoading(false)
+        setIsLoadingMore(false)
+        setIsSearching(false)
         setError(null)
+
+        const cached = viewCacheRef.current[mode]
+        if (cached) {
+            setAds(cached.ads)
+            setNextCursor(cached.nextCursor)
+            setHasMore(cached.hasMore)
+            setHasFetched(true)
+            return
+        }
+
+        setAds([])
         setHasFetched(false)
         setNextCursor(null)
         setHasMore(false)
 
         if (mode === 'list') {
-            setSearchQuery('')
             fetchAds(null, datePreset)
+        } else if (mode === 'adset' && adsetBrowseSelectedAdSetId) {
+            fetchAdsetAds(adsetBrowseSelectedAdSetId, adsetBrowseDatePreset)
         }
-        // When switching to adset mode, don't auto-fetch - wait for user to select campaign/adset
-        // When switching to search mode, don't auto-fetch - wait for user to type
+        // Search mode doesn't auto-fetch - wait for the user to search
     }
 
     const handleBrowseCampaignChange = (campaignId) => {
+        cancelInFlightRequest()
+        setIsLoading(false)
         setAdsetBrowseCampaignId(campaignId)
         setAdsetBrowseSelectedAdSetId('')
         setAdsetBrowseAdSets([])
@@ -613,7 +677,7 @@ function PostSelectorInline({
                                     size="sm"
                                     onClick={() => fetchAdsetAds(adsetBrowseSelectedAdSetId, adsetBrowseDatePreset)}
                                     disabled={isLoading}
-                                    className="px-3 py-5 bg-white text-black border border-gray-300 rounded-xl hover:bg-white"
+                                    className="px-3 py-3 bg-white text-black border border-gray-300 rounded-[14px] hover:bg-white"
                                 >
                                     <RefreshCw className={`h-3 w-3 mr-1 ${isLoading ? 'animate-spin' : ''}`} />
                                     Refresh Ads
@@ -1081,9 +1145,7 @@ function PostSelectorInline({
                     {viewMode === 'adset' && displayedAdsetAds.length > 0 && !isLoading && (
                         <label className="flex items-center gap-2 px-3 py-2 text-sm font-medium cursor-pointer">
                             <Checkbox
-                                checked={displayedAdsetAds.every(ad => selectedAdIds.has(ad.id))
-                                    ? true
-                                    : displayedAdsetAds.some(ad => selectedAdIds.has(ad.id)) ? 'indeterminate' : false}
+                                checked={displayedAdsetAds.every(ad => selectedAdIds.has(ad.id))}
                                 onCheckedChange={toggleAllDisplayedAds}
                             />
                             Select all
