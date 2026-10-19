@@ -869,7 +869,7 @@ export default function CreativeEnhancementsReport({ open, onOpenChange, adAccou
                                                 className="rounded-2xl bg-white p-3"
                                                 style={{ border: `1px solid ${pending.size ? BLUE : LINE}` }}
                                             >
-                                                <div className="grid grid-cols-[48px_minmax(0,1fr)_120px_100px_64px_100px] gap-3 items-center">
+                                                <div className="grid grid-cols-[48px_minmax(0,1fr)_140px_120px_80px] gap-x-8 items-center pr-1">
                                                     <div className="w-12 h-12 rounded-md overflow-hidden bg-gray-100 flex items-center justify-center">
                                                         {ad.thumbnail ? (
                                                             <img
@@ -929,11 +929,8 @@ export default function CreativeEnhancementsReport({ open, onOpenChange, adAccou
                                                             className="scale-75"
                                                         />
                                                     </label>
-                                                    <div className="text-right">
-                                                        <RowStatus status={status} />
-                                                    </div>
                                                 </div>
-                                                <div className="flex flex-wrap items-center gap-1.5 mt-3 pl-[60px]">
+                                                <div className="flex flex-wrap items-center gap-1.5 mt-3 pl-[80px]">
                                                     {ad.enabledFeatures.length === 0 ? (
                                                         <span className="text-[11.5px] font-medium px-2.5 py-1 rounded-full bg-gray-100 text-gray-600">
                                                             All off
@@ -948,6 +945,11 @@ export default function CreativeEnhancementsReport({ open, onOpenChange, adAccou
                                                                 onToggle={(key, turnOff) => toggleFeature(ad.id, key, turnOff)}
                                                             />
                                                         ))
+                                                    )}
+                                                    {status && (
+                                                        <span className="ml-auto pl-3">
+                                                            <RowStatus status={status} />
+                                                        </span>
                                                     )}
                                                 </div>
                                             </div>
