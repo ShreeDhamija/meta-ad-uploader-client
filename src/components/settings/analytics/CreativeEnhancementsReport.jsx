@@ -22,9 +22,10 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import {
     Sparkles, DollarSign, Search, List, ChevronsUpDown, ChevronDown, Loader,
-    ImageOff, RefreshCw, Check, AlertTriangle,
+    ImageOff, RefreshCw, Check, AlertTriangle, ExternalLink,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useAppData } from "@/lib/AppContext"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "https://api.withblip.com"
 
@@ -97,6 +98,20 @@ const FORMAT_LABELS = {
 
 const enhancementLabel = (key) =>
     ENHANCEMENT_LABELS[key] || key.replace(/_/g, " ").replace(/^\w/, c => c.toUpperCase())
+
+const truncateText = (text, maxLength = 70) =>
+    text && text.length > maxLength ? `${text.substring(0, maxLength)}…` : text
+
+// Same link shape as the job queue's "View in Ads Manager" (ad-creation-form),
+// selecting the ad instead of the ad set.
+const buildAdsManagerAdUrl = (adAccountId, businessId, adId) => {
+    const params = [
+        String(adAccountId).replace("_", "="),
+        ...(businessId ? [`business_id=${businessId}`, `global_scope_id=${businessId}`] : []),
+        `selected_ad_ids=${adId}`,
+    ]
+    return `https://adsmanager.facebook.com/adsmanager/manage/ads/edit/standalone?${params.join("&")}`
+}
 
 const formatSpend = (spend) => `$${(parseFloat(spend) || 0).toFixed(2)}`
 
@@ -263,6 +278,11 @@ function SearchableCombobox({ open, onOpenChange, disabled, triggerLabel, loadin
 }
 
 export default function CreativeEnhancementsReport({ open, onOpenChange, adAccountId, adAccountName }) {
+    const { adAccounts } = useAppData()
+    const businessId = useMemo(
+        () => (adAccounts || []).find(account => account.id === adAccountId)?.business_id || "",
+        [adAccounts, adAccountId]
+    )
     const [viewMode, setViewMode] = useState("list") // 'list' | 'search' | 'adset'
     const [datePreset, setDatePreset] = useState("last_30d")
     const [ads, setAds] = useState([])
@@ -505,6 +525,15 @@ export default function CreativeEnhancementsReport({ open, onOpenChange, adAccou
             const next = { ...prev }
             if (keys.size) next[adId] = [...keys]
             else delete next[adId]
+            return next
+        })
+    }
+
+    const toggleAllForAd = (ad, turnOff) => {
+        setPendingOff(prev => {
+            const next = { ...prev }
+            if (turnOff && ad.enabledFeatures.length) next[ad.id] = [...ad.enabledFeatures]
+            else delete next[ad.id]
             return next
         })
     }
@@ -840,7 +869,7 @@ export default function CreativeEnhancementsReport({ open, onOpenChange, adAccou
                                                 className="rounded-2xl bg-white p-3"
                                                 style={{ border: `1px solid ${pending.size ? BLUE : LINE}` }}
                                             >
-                                                <div className="grid grid-cols-[48px_minmax(0,1fr)_120px_100px_90px] gap-3 items-center">
+                                                <div className="grid grid-cols-[48px_minmax(0,1fr)_120px_100px_64px_100px] gap-3 items-center">
                                                     <div className="w-12 h-12 rounded-md overflow-hidden bg-gray-100 flex items-center justify-center">
                                                         {ad.thumbnail ? (
                                                             <img
@@ -854,12 +883,26 @@ export default function CreativeEnhancementsReport({ open, onOpenChange, adAccou
                                                         )}
                                                     </div>
                                                     <div className="min-w-0">
-                                                        <Tooltip>
-                                                            <TooltipTrigger asChild>
-                                                                <p className="text-sm font-semibold truncate" style={{ color: INK, margin: 0 }}>{ad.name || ad.id}</p>
-                                                            </TooltipTrigger>
-                                                            <TooltipContent side="top" className="max-w-[360px] break-words text-xs">{ad.name || ad.id}</TooltipContent>
-                                                        </Tooltip>
+                                                        <div className="flex items-center gap-1.5 min-w-0">
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <p className="text-sm font-semibold truncate" style={{ color: INK, margin: 0 }}>
+                                                                        {truncateText(ad.name || ad.id, 70)}
+                                                                    </p>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent side="top" className="max-w-[360px] break-words text-xs">{ad.name || ad.id}</TooltipContent>
+                                                            </Tooltip>
+                                                            <a
+                                                                href={buildAdsManagerAdUrl(adAccountId, businessId, ad.id)}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="flex-shrink-0 text-gray-400 hover:text-blue-500 transition-colors"
+                                                                aria-label="Open in Ads Manager"
+                                                                title="Open in Ads Manager"
+                                                            >
+                                                                <ExternalLink className="h-3.5 w-3.5" />
+                                                            </a>
+                                                        </div>
                                                         <p className="text-[11.5px] truncate" style={{ color: MUTED, margin: "2px 0 0" }}>
                                                             {ad.adsetName || "—"} · {FORMAT_LABELS[ad.format] || ad.format} · Created {formatDate(ad.createdTime)}
                                                         </p>
@@ -871,6 +914,21 @@ export default function CreativeEnhancementsReport({ open, onOpenChange, adAccou
                                                     <div className="text-right">
                                                         <StatusPill status={ad.effectiveStatus} />
                                                     </div>
+                                                    <label
+                                                        className={cn(
+                                                            "flex items-center justify-end gap-1.5 text-[11px] font-medium text-gray-500",
+                                                            ad.enabledFeatures.length && !rowBusy && !isApplying ? "cursor-pointer" : "opacity-50 cursor-not-allowed"
+                                                        )}
+                                                        title="Turn every enhancement on this ad off or back on"
+                                                    >
+                                                        All
+                                                        <Switch
+                                                            checked={ad.enabledFeatures.some(key => !pending.has(key))}
+                                                            disabled={!ad.enabledFeatures.length || rowBusy || isApplying}
+                                                            onCheckedChange={(checked) => toggleAllForAd(ad, !checked)}
+                                                            className="scale-75"
+                                                        />
+                                                    </label>
                                                     <div className="text-right">
                                                         <RowStatus status={status} />
                                                     </div>
@@ -927,23 +985,32 @@ export default function CreativeEnhancementsReport({ open, onOpenChange, adAccou
                                         <Button variant="outline" size="sm" className="rounded-2xl h-9" onClick={() => setConfirmBulk(false)}>
                                             Cancel
                                         </Button>
-                                        <Button size="sm" className="rounded-2xl h-9 bg-black text-white" onClick={applyTurnOffAllLoaded}>
+                                        <Button size="sm" className="rounded-2xl h-9 bg-red-600 text-white hover:bg-red-700" onClick={applyTurnOffAllLoaded}>
                                             Turn off all
                                         </Button>
                                     </div>
                                 </>
                             ) : (
                                 <>
-                                    <p className="text-sm" style={{ color: pendingFeatureCount ? INK_2 : MUTED, margin: 0 }}>
-                                        {pendingFeatureCount
-                                            ? `${pendingFeatureCount} ${pendingFeatureCount === 1 ? "change" : "changes"} on ${pendingAdCount} ${pendingAdCount === 1 ? "ad" : "ads"}`
-                                            : "Switch an enhancement off to queue a change"}
-                                    </p>
+                                    {pendingFeatureCount ? (
+                                        <div className="flex items-center gap-2 min-w-0">
+                                            <span className="inline-flex items-center gap-1 rounded-full bg-yellow-100 text-yellow-800 px-2 py-0.5 text-[11px] font-semibold flex-shrink-0">
+                                                <AlertTriangle className="h-3 w-3" />
+                                                Not applied
+                                            </span>
+                                            <p className="text-sm font-semibold truncate" style={{ color: INK_2, margin: 0 }}>
+                                                {pendingFeatureCount} {pendingFeatureCount === 1 ? "change" : "changes"} on {pendingAdCount} {pendingAdCount === 1 ? "ad" : "ads"}
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        <p className="text-sm" style={{ color: MUTED, margin: 0 }}>
+                                            Switch an enhancement off to queue a change
+                                        </p>
+                                    )}
                                     <div className="flex items-center gap-2 flex-shrink-0">
                                         <Button
-                                            variant="outline"
                                             size="sm"
-                                            className="rounded-2xl h-9"
+                                            className="rounded-2xl h-9 bg-red-600 text-white hover:bg-red-700"
                                             onClick={() => setConfirmBulk(true)}
                                             disabled={isApplying || loadedEnabledCount === 0}
                                         >
