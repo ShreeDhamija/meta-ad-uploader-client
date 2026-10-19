@@ -296,6 +296,9 @@ export default function CreativeEnhancementsReport({ open, onOpenChange, adAccou
     const requestRef = useRef({ id: 0, controller: null })
     // Last results per view, restored when switching tabs.
     const viewCacheRef = useRef({})
+    // Close only when the press both starts and ends on the backdrop. A tab
+    // switch can resize the card mid-click, so the mouseup may land outside it.
+    const backdropPressRef = useRef(false)
 
     const startRequest = useCallback(() => {
         requestRef.current.controller?.abort()
@@ -600,17 +603,19 @@ export default function CreativeEnhancementsReport({ open, onOpenChange, adAccou
     return (
         <>
             <div
-                onClick={() => onOpenChange(false)}
                 style={{ position: "fixed", top: 0, left: 0, width: "100vw", height: "100dvh", background: "rgba(15,17,21,0.55)", zIndex: 50 }}
             />
             <div
                 className="fixed inset-0 z-50 flex items-center justify-center p-4"
                 style={{ fontFamily: FONT }}
-                onClick={() => onOpenChange(false)}
+                onMouseDown={(e) => { backdropPressRef.current = e.target === e.currentTarget }}
+                onClick={(e) => {
+                    if (backdropPressRef.current && e.target === e.currentTarget) onOpenChange(false)
+                    backdropPressRef.current = false
+                }}
             >
                 <div
-                    onClick={(e) => e.stopPropagation()}
-                    className="w-full max-w-[1080px] max-h-[92vh] overflow-hidden flex flex-col"
+                    className="w-full max-w-[1080px] h-[92vh] overflow-hidden flex flex-col"
                     style={{
                         background: PAPER,
                         borderRadius: 24,
