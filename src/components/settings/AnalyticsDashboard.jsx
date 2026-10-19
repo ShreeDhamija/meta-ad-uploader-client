@@ -11,7 +11,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip"
 import {
     AlertTriangle, Loader2, ChevronsUpDown, RefreshCw,
-    Target, Settings2, Activity, Zap, CheckCircle2, BarChart3, FileBarChart2, FileText, ChevronDown, Stethoscope
+    Target, Settings2, Activity, Zap, CheckCircle2, BarChart3, FileBarChart2, FileText, ChevronDown, Stethoscope, Sparkles
 } from "lucide-react"
 import { toast } from "sonner"
 import { useAppData } from "@/lib/AppContext"
@@ -29,6 +29,7 @@ import AnalyticsOnboarding from "./analytics/AnalyticsOnboarding"
 import AggregateKPIDialog from "./analytics/AggregateKPIDialog"
 import AdAccountAudit from "./analytics/AdAccountAudit"
 import AdAccountDiagnostic from "./analytics/AdAccountDiagnostic"
+import CreativeEnhancementsReport from "./analytics/CreativeEnhancementsReport"
 import WeeklyPlacementChart from "./analytics/WeeklyPlacementChart"
 import FunnelHealthChart from "./analytics/FunnelHealthChart"
 import CreativeHitRateChart from "./analytics/CreativeHitRateChart"
@@ -244,6 +245,7 @@ export default function AnalyticsDashboard() {
 
     const [auditOpen, setAuditOpen] = useState(false)
     const [diagnosticOpen, setDiagnosticOpen] = useState(false)
+    const [enhancementsOpen, setEnhancementsOpen] = useState(false)
     const [chartsRefreshKey, setChartsRefreshKey] = useState(0)
     // Per-account response caches (session-scoped, cleared on tab close)
     const recsCacheRef = useRef({})       // { [accountId]: responsePayload }
@@ -1457,6 +1459,20 @@ export default function AnalyticsDashboard() {
                                         A plain-English recap of what changed in your account over the last 7 days.
                                     </TooltipContent>
                                 </Tooltip>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <DropdownMenuItem
+                                            onClick={() => setEnhancementsOpen(true)}
+                                            className="cursor-pointer rounded-xl px-3 py-2 text-sm focus:bg-gray-100 whitespace-nowrap"
+                                        >
+                                            <Sparkles className="w-4 h-4 text-gray-500" />
+                                            Review Creative Enhancements
+                                        </DropdownMenuItem>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="left" className="max-w-[240px]">
+                                        See which Advantage+ creative enhancements are on for your ads and turn them off without changing anything else.
+                                    </TooltipContent>
+                                </Tooltip>
                             </TooltipProvider>
                         </DropdownMenuContent>
                     </DropdownMenu>
@@ -1961,6 +1977,12 @@ export default function AnalyticsDashboard() {
                 adAccountName={selectedAdAccountName}
                 kpiType={metricMode === 'roas' ? 'roas' : 'cpa'}
                 conversionEvent={adAccountSettings?.conversionEvent}
+            />
+            <CreativeEnhancementsReport
+                open={enhancementsOpen}
+                onOpenChange={setEnhancementsOpen}
+                adAccountId={selectedAdAccount}
+                adAccountName={selectedAdAccountName}
             />
             <AccountSummaryDialog
                 open={showSummaryDialog}
