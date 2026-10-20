@@ -34,6 +34,7 @@ import WeeklyPlacementChart from "./analytics/WeeklyPlacementChart"
 import FunnelHealthChart from "./analytics/FunnelHealthChart"
 import CreativeHitRateChart from "./analytics/CreativeHitRateChart"
 import TrendingCreative from "./analytics/TrendingCreative"
+import TopAdCopy from "./analytics/TopAdCopy"
 import TrailingSixWeeksSnapshot from "./analytics/TrailingSixWeeksSnapshot"
 // import FlexAdsLauncher from "./analytics/FlexAdsLauncher" // Hidden — see Flex Ads Launcher block below
 // FEATURE START: PERIOD METRICS SUMMARY (added 2026-05-19)
@@ -1816,6 +1817,18 @@ export default function AnalyticsDashboard() {
                 once with the right event instead of refetching — same as the KPI chart. */}
             {selectedAdAccount && !autoEventPending && (
                 <TrendingCreative
+                    adAccountId={selectedAdAccount}
+                    conversionEvent={effectiveConversionEvent}
+                    mode={metricMode}
+                    refreshKey={chartsRefreshKey}
+                />
+            )}
+
+            {/* ── Top Ad Copy (full-width) ── */}
+            {/* Same event gating as Trending Creatives: CPA ranking needs one event,
+                so wait for the auto-detected one when nothing is saved. */}
+            {selectedAdAccount && !autoEventPending && (
+                <TopAdCopy
                     adAccountId={selectedAdAccount}
                     conversionEvent={effectiveConversionEvent}
                     mode={metricMode}

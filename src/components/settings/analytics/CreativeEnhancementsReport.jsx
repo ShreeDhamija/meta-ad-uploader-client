@@ -69,7 +69,7 @@ const ENHANCEMENT_LABELS = {
     reveal_details_over_time: "Reveal Details Over Time",
     show_summary: "Show Summaries",
     image_animation: "Image Animations",
-    cv_transformation: "Visual Transformations",
+    image_text_translation: "Translate Image Text",
     video_filtering: "Video Filter",
     video_uncrop: "Video Uncrop",
     pac_relaxation: "Flex Media",
@@ -77,14 +77,15 @@ const ENHANCEMENT_LABELS = {
     site_extensions: "Add Site Links",
     local_store_extension: "Store Locator",
     product_extensions: "Add Catalog Items",
+    product_browsing: "Product Browsing",
     add_text_overlay: "Dynamic Overlays",
-    media_type_automation: "Dynamic Media",
-    adapt_to_placement: "Adapt to Placement",
-    creative_stickers: "Creative Stickers",
-    image_background_gen: "Background Generation",
+    media_type_automation: "Allow Product Video",
+    adapt_to_placement: "Image Touch-ups (Catalog)",
+    creative_stickers: "Create Sticker CTA",
+    image_background_gen: "Generate Backgrounds",
+    dynamic_partner_content: "Dynamic Partnership Ads",
     audio: "Music",
     profile_card: "Profile End Card",
-    standard_enhancements: "Standard Enhancements (legacy)",
 }
 
 const FORMAT_LABELS = {
@@ -804,9 +805,9 @@ export default function CreativeEnhancementsReport({ open, onOpenChange, adAccou
                     </div>
 
                     {/* Body */}
-                    <div className="flex-1 overflow-y-auto custom-scrollbar min-h-0" style={{ padding: 24, background: PAPER_2 }}>
+                    <div className="flex-1 flex flex-col overflow-y-auto custom-scrollbar min-h-0" style={{ padding: 24, background: PAPER_2 }}>
                         {isLoading && (
-                            <div className="flex flex-col items-center justify-center py-20">
+                            <div className="flex-1 flex flex-col items-center justify-center py-10">
                                 <div style={{ marginBottom: 12 }}><Helix size="40" speed="2.5" color={BLUE} /></div>
                                 <p style={{ fontSize: 13, fontWeight: 600, color: INK_2, margin: 0 }}>
                                     {viewMode === "search" ? "Searching ads…" : "Reading creatives from Meta…"}
