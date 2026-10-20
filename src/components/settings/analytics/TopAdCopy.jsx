@@ -5,7 +5,7 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Helix } from "ldrs/react"
 import "ldrs/react/Helix.css"
-import { Check, ChevronDown, CirclePlus, Copy, Loader, Type } from "lucide-react"
+import { ArrowDown, ArrowUp, Check, ChevronDown, CirclePlus, Copy, Loader, Type } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -20,6 +20,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || "https://api.withblip.com"
 
 const WINDOWS = [30, 90]
 const MAX_PER_TYPE = 5 // copy templates hold up to 5 of each type
+const TEXT_PREVIEW_CHARS = 750
 
 const COPY_TYPES = [
     { key: "primary", label: "Primary text", plural: "primary text", templateKey: "primaryTexts" },
@@ -27,13 +28,33 @@ const COPY_TYPES = [
     { key: "description", label: "Description", plural: "descriptions", templateKey: "descriptions" },
 ]
 
-const emptySelection = () => ({ primary: [], headline: [], description: [] })
-
-const CONFIDENCE_STYLES = {
-    high: "bg-emerald-50 text-emerald-600",
-    medium: "bg-amber-50 text-amber-600",
-    low: "bg-gray-100 text-gray-500",
+// `best` is the direction a column sorts in on first click (best first).
+const SORT_COLUMNS = {
+    spend: { value: c => c.spend, best: "desc" },
+    results: { value: c => c.results, best: "desc" },
+    cpa: { value: c => c.cpa, best: "asc" },
+    roas: { value: c => c.roas, best: "desc" },
+    ctr: { value: c => c.ctr, best: "desc" },
+    ads: { value: c => c.adCount, best: "desc" },
 }
+
+const defaultSort = isRoasMode => (isRoasMode ? { key: "roas", dir: "desc" } : { key: "cpa", dir: "asc" })
+
+// Missing values (e.g. no CPA without results) always sort last; ties go to spend.
+function sortCopies(copies, sort) {
+    const { value } = SORT_COLUMNS[sort.key]
+    const sign = sort.dir === "asc" ? 1 : -1
+    return [...copies].sort((a, b) => {
+        const av = value(a)
+        const bv = value(b)
+        if (av == null && bv == null) return b.spend - a.spend
+        if (av == null) return 1
+        if (bv == null) return -1
+        return (av - bv) * sign || b.spend - a.spend
+    })
+}
+
+const emptySelection = () => ({ primary: [], headline: [], description: [] })
 
 function formatSpend(v) {
     if (v == null) return "—"
@@ -83,7 +104,7 @@ function HeaderHint({ label, hint }) {
     return (
         <Tooltip delayDuration={150}>
             <TooltipTrigger asChild>
-                <span className="cursor-default underline decoration-gray-300 decoration-dotted underline-offset-4">{label}</span>
+                <span className="underline decoration-gray-300 decoration-dotted underline-offset-4">{label}</span>
             </TooltipTrigger>
             <TooltipContent side="top" className="max-w-xs text-xs leading-relaxed">{hint}</TooltipContent>
         </Tooltip>
@@ -106,10 +127,18 @@ function VsAccountBadge({ pct, title }) {
     )
 }
 
+// Cut at the last word break before the limit, unless that loses too much.
+function previewText(text) {
+    if (text.length <= TEXT_PREVIEW_CHARS) return null
+    const cut = text.slice(0, TEXT_PREVIEW_CHARS)
+    const lastBreak = cut.search(/\s\S*$/)
+    return (lastBreak > TEXT_PREVIEW_CHARS * 0.8 ? cut.slice(0, lastBreak) : cut).trimEnd()
+}
+
 function CopyText({ text }) {
     const [expanded, setExpanded] = useState(false)
     const [copied, setCopied] = useState(false)
-    const long = text.length > 180 || text.split("\n").length > 3
+    const preview = useMemo(() => previewText(text), [text])
 
     const handleCopy = () => {
         navigator.clipboard.writeText(text)
@@ -122,15 +151,17 @@ function CopyText({ text }) {
 
     return (
         <div className="flex items-start gap-2">
-            <p
-                className={cn(
-                    "whitespace-pre-line text-sm leading-snug text-gray-800",
-                    !expanded && "line-clamp-3",
-                    long && "cursor-pointer",
+            <p className="whitespace-pre-line text-sm leading-snug text-gray-800">
+                {preview && !expanded ? `${preview}… ` : text}
+                {preview && (
+                    <button
+                        type="button"
+                        onClick={() => setExpanded(e => !e)}
+                        className={cn("font-medium text-blue-600 hover:text-blue-700", expanded && "ml-1")}
+                    >
+                        {expanded ? "View less" : "View more"}
+                    </button>
                 )}
-                onClick={() => long && setExpanded(e => !e)}
-            >
-                {text}
             </p>
             <button
                 type="button"
@@ -144,12 +175,12 @@ function CopyText({ text }) {
     )
 }
 
-function AdsUsing({ copy }) {
+function AdCount({ copy }) {
     return (
         <Tooltip delayDuration={150}>
             <TooltipTrigger asChild>
-                <span className="mt-1 inline-block cursor-default text-xs text-gray-400 underline decoration-dotted underline-offset-2">
-                    {copy.adCount} {copy.adCount === 1 ? "ad" : "ads"}
+                <span className="cursor-default underline decoration-gray-300 decoration-dotted underline-offset-4">
+                    {copy.adCount}
                 </span>
             </TooltipTrigger>
             <TooltipContent side="bottom" className="max-w-sm">
@@ -196,53 +227,59 @@ function SegmentedToggle({ options, value, onChange }) {
     )
 }
 
-// Copy-column header that doubles as the copy-type switcher.
+// Copy-column header that doubles as the copy-type switcher. While picking
+// copy for a template each tab shows how many of that type are selected.
 function TypeTabs({ value, onChange, selection }) {
+    const options = COPY_TYPES.map(type => {
+        const count = selection?.[type.key]?.length
+        return {
+            key: type.key,
+            label: selection ? (
+                <>
+                    {type.label}
+                    <span className={cn("ml-1", count ? "text-blue-600" : "text-gray-400")}>{count}/{MAX_PER_TYPE}</span>
+                </>
+            ) : type.label,
+        }
+    })
+    return <SegmentedToggle options={options} value={value} onChange={onChange} />
+}
+
+function SortHeader({ column, label, sort, onSort }) {
+    const active = sort?.key === column
+    const bestFirst = active && sort.dir === SORT_COLUMNS[column].best
     return (
-        <div className="flex items-center gap-1">
-            {COPY_TYPES.map(type => {
-                const active = type.key === value
-                const count = selection?.[type.key]?.length
-                return (
-                    <button
-                        key={type.key}
-                        type="button"
-                        onClick={() => onChange(type.key)}
-                        className={cn(
-                            "rounded-lg px-2 py-1 text-xs font-medium transition-colors",
-                            active ? "bg-gray-100 text-gray-900" : "text-gray-400 hover:text-gray-600",
-                        )}
-                    >
-                        {type.label}
-                        {selection && (
-                            <span className={cn("ml-1", count ? "text-blue-600" : "text-gray-300")}>
-                                {count}/{MAX_PER_TYPE}
-                            </span>
-                        )}
-                    </button>
-                )
-            })}
-        </div>
+        <button
+            type="button"
+            onClick={() => onSort(column)}
+            className={cn("inline-flex items-center gap-1 transition-colors hover:text-gray-800", active && "text-gray-800")}
+        >
+            {label}
+            {active && (bestFirst
+                ? <ArrowDown className="h-3.5 w-3.5 text-blue-600" />
+                : <ArrowUp className="h-3.5 w-3.5 text-blue-600" />)}
+        </button>
     )
 }
 
-function CopyTable({ copies, isRoasMode, copyHeader, columnHints, body, leading, maxHeight = "max-h-[60vh]" }) {
-    const th = "whitespace-nowrap border-b border-gray-200 bg-white px-4 py-2.5 text-left text-xs font-medium text-gray-500"
+function CopyTable({ copies, isRoasMode, copyHeader, resultsHint, body, leading, sort, onSort, maxHeight = "max-h-[60vh]" }) {
+    const th = "whitespace-nowrap border-b border-gray-200 bg-gray-50 px-4 py-2.5 text-left text-xs font-medium text-gray-500"
     const td = "whitespace-nowrap border-b border-gray-100 px-4 py-3 text-left align-top text-sm text-gray-800"
     const columnCount = isRoasMode ? 7 : 6
+    const header = (column, label) => <SortHeader column={column} label={label} sort={sort} onSort={onSort} />
     return (
         <div className="overflow-hidden rounded-2xl border border-gray-200">
             <ScrollArea viewportClassName={maxHeight}>
                 <table className="w-full border-separate border-spacing-0">
                     <thead className="sticky top-0 z-10">
                         <tr>
-                            <th className={cn(th, "w-[48%] min-w-[300px] border-r")}>{copyHeader}</th>
-                            <th className={th}>Spend</th>
-                            <th className={th}><HeaderHint label="Results" hint={columnHints.results} /></th>
-                            <th className={th}>CPA</th>
-                            {isRoasMode && <th className={th}>ROAS</th>}
-                            <th className={th}>CTR</th>
-                            <th className={th}><HeaderHint label="Evidence" hint={columnHints.evidence} /></th>
+                            <th className={cn(th, "w-[52%] min-w-[300px] border-r py-2")}>{copyHeader}</th>
+                            <th className={th}>{header("spend", "Spend")}</th>
+                            <th className={th}>{header("results", <HeaderHint label="Results" hint={resultsHint} />)}</th>
+                            <th className={th}>{header("cpa", "CPA")}</th>
+                            {isRoasMode && <th className={th}>{header("roas", "ROAS")}</th>}
+                            <th className={th}>{header("ctr", "CTR")}</th>
+                            <th className={th}>{header("ads", "Ads")}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -255,7 +292,6 @@ function CopyTable({ copies, isRoasMode, copyHeader, columnHints, body, leading,
                                         {leading && <div className="flex w-5 flex-shrink-0 justify-center pt-0.5">{leading(copy, i)}</div>}
                                         <div className="min-w-0 flex-1">
                                             <CopyText text={copy.text} />
-                                            <AdsUsing copy={copy} />
                                         </div>
                                     </div>
                                 </td>
@@ -272,11 +308,7 @@ function CopyTable({ copies, isRoasMode, copyHeader, columnHints, body, leading,
                                     </td>
                                 )}
                                 <td className={td}>{copy.ctr != null ? `${copy.ctr.toFixed(2)}%` : "—"}</td>
-                                <td className={td}>
-                                    <span className={cn("rounded-full px-1.5 py-0.5 text-[10px] font-medium capitalize", CONFIDENCE_STYLES[copy.confidence])}>
-                                        {copy.confidence}
-                                    </span>
-                                </td>
+                                <td className={td}><AdCount copy={copy} /></td>
                             </tr>
                         ))}
                     </tbody>
@@ -296,8 +328,9 @@ export default function TopAdCopy({
     onTemplateSaved,
     className,
 }) {
+    const isRoasMode = mode === "roas"
     const [days, setDays] = useState(30)
-    const [sortBy, setSortBy] = useState("kpi")
+    const [sort, setSort] = useState(() => defaultSort(isRoasMode))
     const [copyType, setCopyType] = useState("primary")
     const [data, setData] = useState(null)
     const [loading, setLoading] = useState(false)
@@ -307,7 +340,6 @@ export default function TopAdCopy({
     const [selection, setSelection] = useState(emptySelection)
     const [templateName, setTemplateName] = useState("")
     const [saving, setSaving] = useState(false)
-    const isRoasMode = mode === "roas"
     const kpiLabel = isRoasMode ? "ROAS" : "CPA"
     const type = COPY_TYPES.find(t => t.key === copyType)
 
@@ -320,6 +352,9 @@ export default function TopAdCopy({
         setSelection(emptySelection())
         setTemplateName("")
     }, [adAccountId])
+
+    // The ROAS column only exists in ROAS mode, so reset to that mode's default.
+    useEffect(() => { setSort(defaultSort(isRoasMode)) }, [isRoasMode])
 
     useEffect(() => {
         if (!adAccountId) { setData(null); return }
@@ -371,19 +406,19 @@ export default function TopAdCopy({
         return () => controller.abort()
     }, [adAccountId, conversionEvent, mode, days, refreshKey, waiting])
 
-    const view = data?.types?.[copyType]
-    const copies = useMemo(() => {
-        if (!view) return []
-        if (sortBy !== "used") return view.copies
-        return [...view.copies].sort((a, b) => b.adCount - a.adCount || b.spend - a.spend)
-    }, [view, sortBy])
+    const handleSort = (column) => {
+        setSort(prev => prev.key === column
+            ? { key: column, dir: prev.dir === "asc" ? "desc" : "asc" }
+            : { key: column, dir: SORT_COLUMNS[column].best })
+    }
 
-    const columnHints = useMemo(() => ({
-        results: data?.conversionEvent
-            ? "Conversions of your selected event (7-day click, 1-day view), summed across every ad that ran this text."
-            : "Purchases (7-day click, 1-day view), summed across every ad that ran this text.",
-        evidence: `How many results back this text up: High is 20+, Medium 10–19, Low ${data?.thresholds?.minResults ?? 5}–9. Copy needs ${data?.thresholds?.minResults ?? 5}+ results and ${(data?.thresholds?.minImpressions ?? 1000).toLocaleString()}+ impressions to be ranked.`,
-    }), [data?.conversionEvent, data?.thresholds])
+    const view = data?.types?.[copyType]
+    const copies = useMemo(() => (view ? sortCopies(view.copies, sort) : []), [view, sort])
+    const underperforming = useMemo(() => (view ? sortCopies(view.underperforming, sort) : []), [view, sort])
+
+    const resultsHint = data?.conversionEvent
+        ? "Conversions of your selected event (7-day click, 1-day view), summed across every ad that ran this text."
+        : "Purchases (7-day click, 1-day view), summed across every ad that ran this text."
 
     // ── Template selection ──
     const isSelected = (copy) => selection[copyType].some(item => item.key === copy.key)
@@ -452,7 +487,8 @@ export default function TopAdCopy({
             ? <p className="text-center text-sm text-gray-400">No {type.plural} with {data?.thresholds?.minResults ?? 5}+ results in the last {days} days</p>
             : null
 
-    const hasAnyCopies = Object.values(data?.types || {}).some(t => t.copies?.length > 0)
+    const hasUnderperforming = view?.underperformingCount > 0
+    const canCreateTemplate = !loading && Object.values(data?.types || {}).some(t => t.copies?.length > 0)
 
     return (
         <TooltipProvider delayDuration={150}>
@@ -463,26 +499,16 @@ export default function TopAdCopy({
                             <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-900">
                                 <Type className="h-5 w-5 text-purple-500" />
                                 Top Ad Copy
-                                {view?.rankedCount > 0 && (
-                                    <span className="text-base font-normal text-gray-400">({view.rankedCount})</span>
-                                )}
                             </h2>
                             <p className="mt-1 text-sm text-gray-500">
                                 Copy ranked by {kpiLabel} across every ad that ran it, last {days} days.
                             </p>
                         </div>
-                        <div className="flex flex-wrap items-center gap-2">
-                            <SegmentedToggle
-                                options={[{ key: "kpi", label: `Best ${kpiLabel}` }, { key: "used", label: "Most used" }]}
-                                value={sortBy}
-                                onChange={setSortBy}
-                            />
-                            <SegmentedToggle
-                                options={WINDOWS.map(w => ({ key: w, label: `${w}d` }))}
-                                value={days}
-                                onChange={setDays}
-                            />
-                        </div>
+                        <SegmentedToggle
+                            options={WINDOWS.map(w => ({ key: w, label: `${w}d` }))}
+                            value={days}
+                            onChange={setDays}
+                        />
                     </div>
 
                     {error ? (
@@ -496,92 +522,100 @@ export default function TopAdCopy({
                             <CopyTable
                                 copies={copies}
                                 isRoasMode={isRoasMode}
-                                columnHints={columnHints}
+                                resultsHint={resultsHint}
                                 body={tableBody}
                                 leading={leading}
+                                sort={sort}
+                                onSort={handleSort}
                                 copyHeader={
                                     <TypeTabs value={copyType} onChange={setCopyType} selection={selecting ? selection : null} />
                                 }
                             />
 
-                            {view?.underperformingCount > 0 && (
-                                <div className="mt-4">
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowUnderperforming(s => !s)}
-                                        className="flex items-center gap-1.5 px-1 text-sm font-medium text-gray-600 hover:text-gray-900"
-                                    >
-                                        <ChevronDown className={cn("h-4 w-4 transition-transform", showUnderperforming && "rotate-180")} />
-                                        Underperforming {type.plural} ({view.underperformingCount})
-                                    </button>
-                                    {showUnderperforming && (
-                                        <>
-                                            <p className="mb-2 mt-1 px-1 text-xs text-gray-400">
-                                                Spent {formatSpend(data.thresholds.underperformingSpend)}+ (2× the account&apos;s cost per result) with
-                                                fewer than {data.thresholds.minResults} results, and doing worse than the account on {kpiLabel}.
-                                            </p>
-                                            <CopyTable
-                                                copies={view.underperforming}
-                                                isRoasMode={isRoasMode}
-                                                columnHints={columnHints}
-                                                copyHeader={type.label}
-                                                maxHeight="max-h-[40vh]"
-                                            />
-                                        </>
+                            {(hasUnderperforming || canCreateTemplate) && (
+                                <div className="mt-4 flex flex-wrap items-center gap-3">
+                                    {hasUnderperforming && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowUnderperforming(s => !s)}
+                                            className="flex items-center gap-1.5 px-1 text-sm font-medium text-gray-600 hover:text-gray-900"
+                                        >
+                                            <ChevronDown className={cn("h-4 w-4 transition-transform", showUnderperforming && "rotate-180")} />
+                                            Underperforming {type.plural} ({view.underperformingCount})
+                                        </button>
+                                    )}
+
+                                    {canCreateTemplate && (
+                                        <div className="ml-auto flex flex-wrap items-center gap-2">
+                                            {selecting ? (
+                                                <>
+                                                    <Input
+                                                        value={templateName}
+                                                        onChange={(e) => setTemplateName(e.target.value)}
+                                                        placeholder="Template name (required)"
+                                                        className="h-9 w-[240px] rounded-xl border border-gray-300 bg-white py-2 shadow"
+                                                        disabled={saving}
+                                                    />
+                                                    <Button
+                                                        variant="outline"
+                                                        className="h-9 rounded-xl"
+                                                        onClick={cancelSelecting}
+                                                        disabled={saving}
+                                                    >
+                                                        Cancel
+                                                    </Button>
+                                                    <Button
+                                                        className="h-9 rounded-xl bg-blue-500 text-white hover:bg-blue-600"
+                                                        onClick={handleSaveTemplate}
+                                                        disabled={!canSave}
+                                                    >
+                                                        {saving ? (
+                                                            <>
+                                                                <Loader className="h-4 w-4 animate-spin" />
+                                                                Saving...
+                                                            </>
+                                                        ) : "Save"}
+                                                    </Button>
+                                                </>
+                                            ) : (
+                                                <Button
+                                                    className="h-9 rounded-xl bg-zinc-800 text-white hover:bg-black"
+                                                    onClick={() => setSelecting(true)}
+                                                >
+                                                    <CirclePlus className="h-4 w-4" />
+                                                    Create template from top copy
+                                                </Button>
+                                            )}
+                                        </div>
                                     )}
                                 </div>
                             )}
 
-                            {!loading && hasAnyCopies && (
-                                <div className="mt-5 border-t border-gray-100 pt-4">
-                                    {selecting ? (
-                                        <div className="space-y-2">
-                                            <div className="flex flex-wrap items-center gap-2">
-                                                <Input
-                                                    value={templateName}
-                                                    onChange={(e) => setTemplateName(e.target.value)}
-                                                    placeholder="Template name (required)"
-                                                    className="h-9 min-w-[220px] flex-1 rounded-xl border border-gray-300 bg-white py-2 shadow"
-                                                    disabled={saving}
-                                                />
-                                                <Button
-                                                    variant="outline"
-                                                    className="h-9 rounded-xl"
-                                                    onClick={cancelSelecting}
-                                                    disabled={saving}
-                                                >
-                                                    Cancel
-                                                </Button>
-                                                <Button
-                                                    className="h-9 rounded-xl bg-blue-500 text-white hover:bg-blue-600"
-                                                    onClick={handleSaveTemplate}
-                                                    disabled={!canSave}
-                                                >
-                                                    {saving ? (
-                                                        <>
-                                                            <Loader className="h-4 w-4 animate-spin" />
-                                                            Saving...
-                                                        </>
-                                                    ) : "Save"}
-                                                </Button>
-                                            </div>
-                                            <p className={cn("px-1 text-xs", nameExists ? "text-rose-500" : "text-gray-400")}>
-                                                {nameExists
-                                                    ? "This template name already exists"
-                                                    : selection.primary.length === 0
-                                                        ? `Select at least one primary text. Up to ${MAX_PER_TYPE} of each type.`
-                                                        : `Up to ${MAX_PER_TYPE} of each type. Switch tabs in the table header to pick headlines and descriptions.`}
-                                            </p>
-                                        </div>
-                                    ) : (
-                                        <Button
-                                            className="h-10 rounded-[14px] bg-zinc-800 text-white hover:bg-black"
-                                            onClick={() => setSelecting(true)}
-                                        >
-                                            <CirclePlus className="h-4 w-4" />
-                                            Create template from top copy
-                                        </Button>
-                                    )}
+                            {selecting && canCreateTemplate && (
+                                <p className={cn("mt-1.5 text-right text-xs", nameExists ? "text-rose-500" : "text-gray-400")}>
+                                    {nameExists
+                                        ? "This template name already exists"
+                                        : selection.primary.length === 0
+                                            ? `Select at least one primary text. Up to ${MAX_PER_TYPE} of each type.`
+                                            : `Up to ${MAX_PER_TYPE} of each type. Switch tabs in the table header to pick headlines and descriptions.`}
+                                </p>
+                            )}
+
+                            {hasUnderperforming && showUnderperforming && (
+                                <div className="mt-3">
+                                    <p className="mb-2 px-1 text-xs text-gray-400">
+                                        Spent {formatSpend(data.thresholds.underperformingSpend)}+ (2× the account&apos;s cost per result) with
+                                        fewer than {data.thresholds.minResults} results, and doing worse than the account on {kpiLabel}.
+                                    </p>
+                                    <CopyTable
+                                        copies={underperforming}
+                                        isRoasMode={isRoasMode}
+                                        resultsHint={resultsHint}
+                                        sort={sort}
+                                        onSort={handleSort}
+                                        copyHeader={type.label}
+                                        maxHeight="max-h-[40vh]"
+                                    />
                                 </div>
                             )}
                         </>
