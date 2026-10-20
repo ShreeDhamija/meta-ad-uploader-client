@@ -207,9 +207,9 @@ function AdCount({ copy }) {
     )
 }
 
-function SegmentedToggle({ options, value, onChange }) {
+function SegmentedToggle({ options, value, onChange, className }) {
     return (
-        <div className="inline-flex rounded-xl bg-gray-100 p-0.5">
+        <div className={cn("inline-flex rounded-xl bg-gray-100 p-0.5", className)}>
             {options.map(option => (
                 <button
                     key={option.key}
@@ -242,7 +242,7 @@ function TypeTabs({ value, onChange, selection }) {
             ) : type.label,
         }
     })
-    return <SegmentedToggle options={options} value={value} onChange={onChange} />
+    return <SegmentedToggle options={options} value={value} onChange={onChange} className="border border-gray-200" />
 }
 
 function SortHeader({ column, label, sort, onSort }) {
@@ -252,12 +252,16 @@ function SortHeader({ column, label, sort, onSort }) {
         <button
             type="button"
             onClick={() => onSort(column)}
-            className={cn("inline-flex items-center gap-1 transition-colors hover:text-gray-800", active && "text-gray-800")}
+            className={cn("group inline-flex items-center gap-1 transition-colors hover:text-gray-800", active && "text-gray-800")}
         >
             {label}
-            {active && (bestFirst
-                ? <ArrowDown className="h-3.5 w-3.5 text-blue-600" />
-                : <ArrowUp className="h-3.5 w-3.5 text-blue-600" />)}
+            {active
+                ? (bestFirst
+                    ? <ArrowDown className="h-3.5 w-3.5 text-blue-600" />
+                    : <ArrowUp className="h-3.5 w-3.5 text-blue-600" />)
+                // Hover hint that the column sorts. Hidden with opacity, not
+                // removed, so the header width doesn't shift on hover.
+                : <ArrowDown className="h-3.5 w-3.5 text-gray-400 opacity-0 transition-opacity group-hover:opacity-100" />}
         </button>
     )
 }
