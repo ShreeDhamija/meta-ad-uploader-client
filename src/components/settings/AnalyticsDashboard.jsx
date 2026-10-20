@@ -1813,26 +1813,34 @@ export default function AnalyticsDashboard() {
             )}
 
             {/* ── Trending Creative (full-width) ── */}
-            {/* Wait for the auto event to resolve (CPA, no saved pref) so it fetches
-                once with the right event instead of refetching — same as the KPI chart. */}
-            {selectedAdAccount && !autoEventPending && (
+            {/* Mounted right away so the card shows a loading state; it holds its
+                fetch (waiting) until settings load and, for a CPA account with no
+                saved event, the auto-detected event resolves — so it fetches once
+                with the right event instead of refetching. */}
+            {selectedAdAccount && (
                 <TrendingCreative
                     adAccountId={selectedAdAccount}
                     conversionEvent={effectiveConversionEvent}
                     mode={metricMode}
                     refreshKey={chartsRefreshKey}
+                    waiting={adAccountSettingsLoading || autoEventPending}
                 />
             )}
 
             {/* ── Top Ad Copy (full-width) ── */}
-            {/* Same event gating as Trending Creatives: CPA ranking needs one event,
-                so wait for the auto-detected one when nothing is saved. */}
-            {selectedAdAccount && !autoEventPending && (
+            {/* Same event gating as Trending Creatives: CPA ranking needs one event. */}
+            {selectedAdAccount && (
                 <TopAdCopy
                     adAccountId={selectedAdAccount}
                     conversionEvent={effectiveConversionEvent}
                     mode={metricMode}
                     refreshKey={chartsRefreshKey}
+                    waiting={adAccountSettingsLoading || autoEventPending}
+                    copyTemplates={adAccountSettings?.copyTemplates}
+                    onTemplateSaved={(name, template) => setAdAccountSettings(prev => ({
+                        ...prev,
+                        copyTemplates: { ...(prev?.copyTemplates || {}), [name]: template },
+                    }))}
                 />
             )}
 

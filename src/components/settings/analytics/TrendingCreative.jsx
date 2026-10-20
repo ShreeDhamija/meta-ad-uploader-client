@@ -91,7 +91,7 @@ function TruncatedWithTooltip({ text, max, className, tooltipSide = "top" }) {
     )
 }
 
-export default function TrendingCreative({ adAccountId, conversionEvent, mode = "cpr", refreshKey, className }) {
+export default function TrendingCreative({ adAccountId, conversionEvent, mode = "cpr", refreshKey, waiting = false, className }) {
     const [data, setData] = useState(null)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState(null)
@@ -106,6 +106,8 @@ export default function TrendingCreative({ adAccountId, conversionEvent, mode = 
 
     useEffect(() => {
         if (!adAccountId) { setData(null); return }
+        // Render the shell immediately; fetch once the conversion event is known.
+        if (waiting) { setData(null); setLoading(true); setError(null); return }
         const cacheKey = `${adAccountId}::${mode}::${conversionEvent || "__auto__"}::${refreshKey || 0}`
 
         // Cache hit — render instantly, no Helix.
@@ -139,7 +141,7 @@ export default function TrendingCreative({ adAccountId, conversionEvent, mode = 
             .finally(() => { if (!cancelled) setLoading(false) })
 
         return () => { cancelled = true }
-    }, [adAccountId, conversionEvent, mode, refreshKey])
+    }, [adAccountId, conversionEvent, mode, refreshKey, waiting])
 
     return (
         <TooltipProvider delayDuration={150}>
