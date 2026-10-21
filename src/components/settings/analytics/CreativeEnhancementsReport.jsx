@@ -129,7 +129,7 @@ const formatStatus = (status) => {
     return status.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, c => c.toUpperCase())
 }
 
-const sortCampaignsActiveFirst = (items) =>
+export const sortCampaignsActiveFirst = (items) =>
     [...items].sort((a, b) => Number(b.status === "ACTIVE") - Number(a.status === "ACTIVE"))
 
 function StatusPill({ status }) {
@@ -207,7 +207,7 @@ function RowStatus({ status }) {
     )
 }
 
-function SearchableCombobox({ open, onOpenChange, disabled, triggerLabel, loading, loadingLabel, placeholder, search, onSearchChange, emptyLabel, items, selectedId, onSelect, renderMeta }) {
+export function SearchableCombobox({ open, onOpenChange, disabled, triggerLabel, loading, loadingLabel, placeholder, search, onSearchChange, emptyLabel, items, selectedId, onSelect, renderMeta }) {
     return (
         <Popover open={open} onOpenChange={onOpenChange}>
             <PopoverTrigger asChild>

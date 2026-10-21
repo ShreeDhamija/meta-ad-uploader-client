@@ -5,7 +5,7 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Helix } from "ldrs/react"
 import "ldrs/react/Helix.css"
-import { ArrowDown, ArrowUp, Check, ChevronDown, CirclePlus, Copy, Loader, Type } from "lucide-react"
+import { ArrowDown, ArrowUp, Check, ChevronDown, CirclePlus, Copy, Loader, TriangleAlert, Type } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -545,7 +545,10 @@ export default function TopAdCopy({
                                             className="flex items-center gap-1.5 px-1 text-sm font-medium text-gray-600 hover:text-gray-900"
                                         >
                                             <ChevronDown className={cn("h-4 w-4 transition-transform", showUnderperforming && "rotate-180")} />
-                                            Underperforming {type.plural} ({view.underperformingCount})
+                                            <span className="inline-flex items-center gap-1.5 border-b border-dotted border-gray-400 pb-0.5">
+                                                <TriangleAlert className="h-4 w-4 text-red-500" />
+                                                Underperforming {type.plural} ({view.underperformingCount})
+                                            </span>
                                         </button>
                                     )}
 
