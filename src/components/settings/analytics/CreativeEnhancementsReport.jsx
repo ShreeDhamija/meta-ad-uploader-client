@@ -105,7 +105,7 @@ const truncateText = (text, maxLength = 70) =>
 
 // Same link shape as the job queue's "View in Ads Manager" (ad-creation-form),
 // selecting the ad instead of the ad set.
-const buildAdsManagerAdUrl = (adAccountId, businessId, adId) => {
+export const buildAdsManagerAdUrl = (adAccountId, businessId, adId) => {
     const params = [
         String(adAccountId).replace("_", "="),
         ...(businessId ? [`business_id=${businessId}`, `global_scope_id=${businessId}`] : []),

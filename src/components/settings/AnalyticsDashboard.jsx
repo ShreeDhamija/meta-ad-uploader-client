@@ -11,7 +11,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip"
 import {
     AlertTriangle, Loader2, ChevronsUpDown, RefreshCw,
-    Target, Settings2, Activity, Zap, CheckCircle2, BarChart3, FileBarChart2, FileText, ChevronDown, Stethoscope, Sparkles
+    Target, Settings2, Activity, Zap, CheckCircle2, BarChart3, FileBarChart2, FileText, ChevronDown, Stethoscope, Sparkles, ShieldAlert,
 } from "lucide-react"
 import { toast } from "sonner"
 import { useAppData } from "@/lib/AppContext"
@@ -30,6 +30,7 @@ import AggregateKPIDialog from "./analytics/AggregateKPIDialog"
 import AdAccountAudit from "./analytics/AdAccountAudit"
 import AdAccountDiagnostic from "./analytics/AdAccountDiagnostic"
 import CreativeEnhancementsReport from "./analytics/CreativeEnhancementsReport"
+import RejectedAdsReport from "./analytics/RejectedAdsReport"
 import WeeklyPlacementChart from "./analytics/WeeklyPlacementChart"
 import FunnelHealthChart from "./analytics/FunnelHealthChart"
 import CreativeHitRateChart from "./analytics/CreativeHitRateChart"
@@ -247,6 +248,7 @@ export default function AnalyticsDashboard() {
     const [auditOpen, setAuditOpen] = useState(false)
     const [diagnosticOpen, setDiagnosticOpen] = useState(false)
     const [enhancementsOpen, setEnhancementsOpen] = useState(false)
+    const [rejectedAdsOpen, setRejectedAdsOpen] = useState(false)
     const [chartsRefreshKey, setChartsRefreshKey] = useState(0)
     // Per-account response caches (session-scoped, cleared on tab close)
     const recsCacheRef = useRef({})       // { [accountId]: responsePayload }
@@ -1474,6 +1476,20 @@ export default function AnalyticsDashboard() {
                                         See which Advantage+ creative enhancements are on for your ads and turn them off without changing anything else.
                                     </TooltipContent>
                                 </Tooltip>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <DropdownMenuItem
+                                            onClick={() => setRejectedAdsOpen(true)}
+                                            className="cursor-pointer rounded-xl px-3 py-2 text-sm focus:bg-gray-100 whitespace-nowrap"
+                                        >
+                                            <ShieldAlert className="w-4 h-4 text-gray-500" />
+                                            Review Rejected Ads
+                                        </DropdownMenuItem>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="left" className="max-w-[240px]">
+                                        Ads Meta rejected or can't deliver, with the reason Meta gives for each.
+                                    </TooltipContent>
+                                </Tooltip>
                             </TooltipProvider>
                         </DropdownMenuContent>
                     </DropdownMenu>
@@ -2002,6 +2018,12 @@ export default function AnalyticsDashboard() {
             <CreativeEnhancementsReport
                 open={enhancementsOpen}
                 onOpenChange={setEnhancementsOpen}
+                adAccountId={selectedAdAccount}
+                adAccountName={selectedAdAccountName}
+            />
+            <RejectedAdsReport
+                open={rejectedAdsOpen}
+                onOpenChange={setRejectedAdsOpen}
                 adAccountId={selectedAdAccount}
                 adAccountName={selectedAdAccountName}
             />

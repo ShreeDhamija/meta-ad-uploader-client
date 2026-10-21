@@ -13,6 +13,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import {
     Loader2, XCircle, Activity, Pause,
     CheckCircle2, AlertTriangle, Zap, ChevronDown, RefreshCw, RotateCcw, Info,
+    ExternalLink, Image as ImageIcon,
 } from "lucide-react"
 import { toast } from "sonner"
 import {
@@ -22,6 +23,7 @@ import {
     Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
+import { buildAdsManagerAdUrl } from "./CreativeEnhancementsReport"
 import scaleIcon from "@/assets/icons/analytics/recommendations/scale.svg"
 import reduceIcon from "@/assets/icons/analytics/recommendations/reduce.svg"
 import pauseIcon from "@/assets/icons/analytics/recommendations/pause.svg"
@@ -235,6 +237,25 @@ const RECOMMENDATION_GUIDE = [
         trigger: 'Significant shift in spend distribution across age ranges or placements that may need rebalancing.',
     },
 ]
+
+function PoorAdThumbnail({ url, name }) {
+    const [errored, setErrored] = useState(false)
+    if (url && !errored) {
+        return (
+            <img
+                src={url}
+                alt={name}
+                className="w-14 h-14 rounded-xl object-cover flex-shrink-0"
+                onError={() => setErrored(true)}
+            />
+        )
+    }
+    return (
+        <div className="w-14 h-14 rounded-xl bg-gray-100 flex items-center justify-center flex-shrink-0">
+            <ImageIcon className="w-5 h-5 text-gray-300" />
+        </div>
+    )
+}
 
 function RecommendationGuideTooltip() {
     return (
@@ -564,6 +585,7 @@ export default function RecommendationCards({
         if (!poorAdsData?.ads) return []
         return poorAdsData.ads.filter(ad => !pausedIds.has(ad.adId))
     }, [poorAdsData, pausedIds])
+    const poorAdsBusinessId = adAccounts?.find(entry => entry.id === adAccountId)?.business_id || ""
 
     const markPoorAdsPaused = (adIds) => {
         if (onPoorAdsPaused) onPoorAdsPaused(adIds, adAccountId)
@@ -1301,10 +1323,21 @@ export default function RecommendationCards({
                                                         )}
                                                     </button>
 
+                                                    <PoorAdThumbnail url={ad.thumbnailUrl} name={ad.adName} />
+
                                                     {/* Ad info */}
                                                     <div className="flex-1 min-w-0">
                                                         <div className="flex items-center gap-2 min-w-0">
                                                             <p className="font-medium text-gray-900 text-sm break-words line-clamp-2 min-w-0">{ad.adName}</p>
+                                                            <a
+                                                                href={buildAdsManagerAdUrl(adAccountId, poorAdsBusinessId, ad.adId)}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="text-gray-400 hover:text-blue-600 transition-colors flex-shrink-0"
+                                                                title="Open in Ads Manager"
+                                                            >
+                                                                <ExternalLink className="w-3.5 h-3.5" />
+                                                            </a>
                                                             {daysOld && (
                                                                 <Badge variant="outline" className="text-[10px] px-1.5 py-0 rounded-full bg-gray-100 text-gray-500 border-gray-200 flex-shrink-0">
                                                                     {daysOld}d old
