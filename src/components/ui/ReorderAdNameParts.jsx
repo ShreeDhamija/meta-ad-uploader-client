@@ -357,9 +357,13 @@ export default function ReorderAdNameParts({
     const inputStyles = window.getComputedStyle(input)
     const paddingLeft = parseInt(inputStyles.paddingLeft)
 
+    // Account for horizontal scroll on long names and keep the anchor
+    // within the input's visible width.
+    const left = paddingLeft + textWidth - input.scrollLeft
+
     return {
       top: input.offsetHeight + 4,
-      left: paddingLeft + textWidth,
+      left: Math.min(Math.max(left, 0), input.offsetWidth),
     }
   }, [inputValue])
 
@@ -859,7 +863,8 @@ export default function ReorderAdNameParts({
             className="absolute z-50 w-[276px]"
             style={{
               top: `${slashDropdownPos.top}px`,
-              left: `${slashDropdownPos.left}px`,
+              // Pin to the input's right edge rather than overflowing it
+              left: `max(0px, min(${slashDropdownPos.left}px, 100% - 276px))`,
             }}
           >
             <Command
@@ -968,15 +973,20 @@ export default function ReorderAdNameParts({
             {{CategoryName:Value}}.
         */}
         {inlineDropdown && (
+          // Full-width row under the input: the spacer shrinks once the
+          // dropdown would pass the input's right edge, pinning it there.
           <div
-            ref={inlineDropdownRef}
-            className="absolute z-50"
-            style={{
-              top: `${inlineDropdown.position.top}px`,
-              left: `${inlineDropdown.position.left}px`,
-            }}
+            className="absolute z-50 inset-x-0 flex pointer-events-none"
+            style={{ top: `${inlineDropdown.position.top}px` }}
           >
-            <div className="rounded-xl border shadow-md bg-white overflow-hidden min-w-[160px] py-1">
+            <div
+              className="shrink min-w-0"
+              style={{ width: `${inlineDropdown.position.left}px` }}
+            />
+            <div
+              ref={inlineDropdownRef}
+              className="pointer-events-auto shrink-0 max-w-full rounded-xl border shadow-md bg-white overflow-hidden min-w-[160px] py-1"
+            >
               <div className="px-3 py-1.5 text-xs font-medium text-gray-400 select-none">
                 Select a value for {inlineDropdown.category.name}
               </div>
