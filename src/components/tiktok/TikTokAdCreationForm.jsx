@@ -30,9 +30,11 @@ import {
   BookOpen,
   Check,
   ChevronsUpDown,
+  CircleX,
   CloudUpload,
   Copy,
   CopyIcon,
+  LayoutGrid,
   Link as LinkIcon,
   Loader,
   Plus,
@@ -47,6 +49,7 @@ import {
   X,
   Zap,
 } from "lucide-react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import pLimit from "p-limit";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDropzone } from "react-dropzone";
@@ -322,6 +325,25 @@ const UPLOAD_SOURCE_OPTIONS = [
   },
 ];
 
+const TIKTOK_PLACEMENT_OPTIONS = [
+  { id: "PLACEMENT_TIKTOK", label: "TikTok" },
+  { id: "PLACEMENT_PANGLE", label: "TikTok Ad Network (Pangle)" },
+  { id: "PLACEMENT_GLOBAL_APP_BUNDLE", label: "Global App Bundle" },
+];
+
+const getPlacementLabel = (id) =>
+  TIKTOK_PLACEMENT_OPTIONS.find((p) => p.id === id)?.label ||
+  id.replace(/^PLACEMENT_/, "").toLowerCase().replace(/(^|_)(\w)/g, (_, sep, c) => (sep ? " " : "") + c.toUpperCase());
+
+// Placements an ad group runs on. Automatic placement (or no placement data) means all of them.
+const getAdGroupPlacements = (adGroup) => {
+  const placements = Array.isArray(adGroup?.placements) ? adGroup.placements : [];
+  if (adGroup?.placement_type === "PLACEMENT_TYPE_AUTOMATIC" || placements.length === 0) {
+    return TIKTOK_PLACEMENT_OPTIONS.map((p) => p.id);
+  }
+  return placements;
+};
+
 const ErrorFileName = ({ name }) => {
   const [expanded, setExpanded] = useState(false);
   const LIMIT = 50;
@@ -592,7 +614,9 @@ export default function TikTokAdCreationForm({
   duplicateAdGroup,
   setDuplicateAdGroup,
   newAdGroupName,
+  excludedAdGroupPlacements,
   setNewAdGroupName,
+  setExcludedAdGroupPlacements,
   showDuplicateAdGroupBlock,
   setShowDuplicateAdGroupBlock,
   duplicateCampaign,
@@ -775,6 +799,8 @@ export default function TikTokAdCreationForm({
   const [openDuplicateCampaign, setOpenDuplicateCampaign] = useState(false);
   const [duplicateCampaignSearchValue, setDuplicateCampaignSearchValue] = useState("");
   const [openDuplicateAdGroup, setOpenDuplicateAdGroup] = useState(false);
+  const [showAdGroupPlacements, setShowAdGroupPlacements] = useState(false);
+  const reduceMotion = useReducedMotion();
   const [duplicateAdGroupSearchValue, setDuplicateAdGroupSearchValue] = useState("");
 
   // Search input local states
@@ -1579,6 +1605,7 @@ export default function TikTokAdCreationForm({
     showDuplicateAdGroupBlock,
     duplicateAdGroup,
     newAdGroupName,
+    excludedAdGroupPlacements,
     selectedIdentity,
     launchPaused,
     productName,
@@ -1620,6 +1647,7 @@ export default function TikTokAdCreationForm({
       adGroups,
       duplicateAdGroup,
       newAdGroupName,
+      excludedAdGroupPlacements,
       showDuplicateAdGroupBlock,
       productName,
       productImageUrl,
@@ -1715,6 +1743,7 @@ export default function TikTokAdCreationForm({
       isDuplicatingAdGroupMode: Boolean(variantState.showDuplicateAdGroupBlock && variantState.duplicateAdGroup),
       duplicateAdGroup: variantState.duplicateAdGroup || "",
       newAdGroupName: variantState.newAdGroupName || "",
+      excludedAdGroupPlacements: [...(variantState.excludedAdGroupPlacements || [])],
       selectedIdentity: variantState.selectedIdentity || "",
       launchPaused: Boolean(variantState.launchPaused),
 
@@ -1792,6 +1821,7 @@ export default function TikTokAdCreationForm({
       setShowDuplicateAdGroupBlock(Boolean(d.isDuplicatingAdGroupMode));
       setDuplicateAdGroup(d.duplicateAdGroup || "");
       setNewAdGroupName(d.newAdGroupName || "");
+      setExcludedAdGroupPlacements(d.excludedAdGroupPlacements || []);
       setSelectedIdentity(d.selectedIdentity || "");
       setLaunchPaused(Boolean(d.launchPaused));
       setAdNameFormulaV2(d.adNameFormulaV2 || { rawInput: "" });
@@ -1833,6 +1863,7 @@ export default function TikTokAdCreationForm({
       setShowDuplicateAdGroupBlock,
       setDuplicateAdGroup,
       setNewAdGroupName,
+      setExcludedAdGroupPlacements,
       setSelectedIdentity,
       setLaunchPaused,
       setAdNameFormulaV2,
@@ -1885,6 +1916,7 @@ export default function TikTokAdCreationForm({
       isDuplicatingAdGroupMode,
       duplicateAdGroup,
       newAdGroupName,
+      excludedAdGroupPlacements,
       selectedIdentity,
       launchPaused,
       adNameFormulaV2: jobAdNameFormula,
@@ -2139,6 +2171,8 @@ export default function TikTokAdCreationForm({
             new_campaign_id: selectedCampaign[0],
             new_adgroup_name: newAdGroupName.trim(),
             is_smart: isSmartCampaign,
+            // Only sent when the user removed placements; the server keeps the source's placements otherwise
+            ...(excludedAdGroupPlacements?.length > 0 && { excluded_placements: excludedAdGroupPlacements }),
           }),
           signal,
         });
@@ -2161,6 +2195,10 @@ export default function TikTokAdCreationForm({
             ad_count: 0,
             operation_status: "DISABLE",
             secondary_status: "DISABLE",
+            ...(excludedAdGroupPlacements?.length > 0 && {
+              placement_type: "PLACEMENT_TYPE_NORMAL",
+              placements: getAdGroupPlacements(sourceAg).filter((id) => !excludedAdGroupPlacements.includes(id)),
+            }),
           };
           if (setAdGroups) {
             setAdGroups((prev) => {
@@ -2693,6 +2731,7 @@ export default function TikTokAdCreationForm({
       setShowDuplicateAdGroupBlock(false);
       setDuplicateAdGroup("");
       setNewAdGroupName("");
+      setExcludedAdGroupPlacements([]);
       setShowDuplicateCampaignBlock(false);
       setDuplicateCampaign("");
       setNewCampaignName("");
@@ -2706,6 +2745,7 @@ export default function TikTokAdCreationForm({
       setShowDuplicateAdGroupBlock,
       setDuplicateAdGroup,
       setNewAdGroupName,
+      setExcludedAdGroupPlacements,
       setShowDuplicateCampaignBlock,
       setDuplicateCampaign,
       setNewCampaignName,
@@ -3160,6 +3200,7 @@ export default function TikTokAdCreationForm({
       }
     } else {
       setNewAdGroupName("");
+      setExcludedAdGroupPlacements([]);
     }
   }, [duplicateAdGroup, adGroups, setNewAdGroupName]);
 
@@ -3572,14 +3613,25 @@ export default function TikTokAdCreationForm({
     return map[ext] || "application/octet-stream";
   };
 
-  // Supported TikTok file types
-  const TIKTOK_SUPPORTED_EXTENSIONS = /\.(mp4|mov|webm|jpg|jpeg|png|gif)$/i;
-  const TIKTOK_SUPPORTED_MIME = /^(video\/(mp4|quicktime|webm)|image\/(jpeg|png|gif))$/;
+  // Supported TikTok file types — video only; image ads are blocked until they're supported
+  const TIKTOK_SUPPORTED_EXTENSIONS = /\.(mp4|mov|webm)$/i;
+  const TIKTOK_SUPPORTED_MIME = /^video\/(mp4|quicktime|webm)$/;
+  const TIKTOK_FILE_INPUT_ACCEPT = "video/mp4,video/quicktime,video/webm,.mp4,.mov,.webm";
 
   const isTikTokSupportedFile = (file) => {
     const nameOk = TIKTOK_SUPPORTED_EXTENSIONS.test(file.name);
     const mimeOk = file.type ? TIKTOK_SUPPORTED_MIME.test(file.type) : nameOk;
     return nameOk || mimeOk;
+  };
+
+  const rejectUnsupportedFile = (file) => {
+    const isImage = file.type?.startsWith("image/") || /\.(png|jpe?g|gif|webp|bmp|heic)$/i.test(file.name);
+    toast.error(
+      isImage
+        ? `Image ads aren't supported on TikTok yet — please upload a video. (${file.name})`
+        : `Job Failed: The type of file is not supported. (${file.name})`,
+      { duration: 6000 },
+    );
   };
 
   const handleVideoSelect = (e) => {
@@ -3597,11 +3649,7 @@ export default function TikTokAdCreationForm({
       }
     });
 
-    if (rejectedFiles.length > 0) {
-      rejectedFiles.forEach((file) => {
-        toast.error(`Job Failed: The type of file is not supported. (${file.name})`, { duration: 6000 });
-      });
-    }
+    rejectedFiles.forEach(rejectUnsupportedFile);
 
     if (supportedFiles.length === 0) {
       e.target.value = "";
@@ -3662,11 +3710,7 @@ export default function TikTokAdCreationForm({
         }
       });
 
-      if (rejectedFiles.length > 0) {
-        rejectedFiles.forEach((file) => {
-          toast.error(`Job Failed: The type of file is not supported. (${file.name})`, { duration: 6000 });
-        });
-      }
+      rejectedFiles.forEach(rejectUnsupportedFile);
 
       if (supportedFiles.length === 0) return;
 
@@ -3769,9 +3813,6 @@ export default function TikTokAdCreationForm({
       setShowFolderInput(true);
       const mimeTypes = [
         "application/vnd.google-apps.folder",
-        "image/jpeg",
-        "image/png",
-        "image/gif",
         "video/mp4",
         "video/webm",
         "video/quicktime",
@@ -3905,6 +3946,10 @@ export default function TikTokAdCreationForm({
         });
         if (!response.ok) throw new Error("File not found or permission denied.");
         const data = await response.json();
+        if (!isTikTokSupportedFile({ name: data.name || "", type: data.mimeType })) {
+          rejectUnsupportedFile({ name: data.name || "", type: data.mimeType });
+          return;
+        }
         const newFile = {
           id: data.id,
           name: data.name,
@@ -4780,6 +4825,7 @@ export default function TikTokAdCreationForm({
     duplicateAdGroup,
     selectedAdGroup,
     newAdGroupName,
+    excludedAdGroupPlacements,
     selectedIdentity,
     adType,
     importedPosts,
@@ -5077,6 +5123,7 @@ export default function TikTokAdCreationForm({
                                 setShowDuplicateAdGroupBlock(false);
                                 setDuplicateAdGroup("");
                                 setNewAdGroupName("");
+                                setExcludedAdGroupPlacements([]);
                                 setShowDuplicateCampaignBlock(false);
                                 setDuplicateCampaign("");
                                 setNewCampaignName("");
@@ -5487,6 +5534,7 @@ export default function TikTokAdCreationForm({
                                               setShowDuplicateAdGroupBlock(false);
                                               setDuplicateAdGroup("");
                                               setNewAdGroupName("");
+                                              setExcludedAdGroupPlacements([]);
                                             }
                                           }
                                         }}
@@ -5579,6 +5627,7 @@ export default function TikTokAdCreationForm({
                       setShowDuplicateAdGroupBlock(false);
                       setDuplicateAdGroup("");
                       setNewAdGroupName("");
+                      setExcludedAdGroupPlacements([]);
                     }}
                     className="absolute top-2 right-2 p-0.5 rounded-full !bg-white border border-gray-200 hover:bg-gray-50 text-gray-700"
                     aria-label="Close duplicate ad group selection"
@@ -5649,6 +5698,7 @@ export default function TikTokAdCreationForm({
                                     key={ag.adgroup_id}
                                     value={ag.adgroup_id}
                                     onSelect={() => {
+                                      if (ag.adgroup_id !== duplicateAdGroup) setExcludedAdGroupPlacements([]);
                                       setDuplicateAdGroup(ag.adgroup_id);
                                       setOpenDuplicateAdGroup(false);
                                     }}
@@ -5710,6 +5760,106 @@ export default function TikTokAdCreationForm({
                             <p className="text-xs text-red-500 font-medium mt-1">Please enter a name for the duplicated ad group</p>
                           )}
                         </div>
+
+                        {(() => {
+                          const sourcePlacements = getAdGroupPlacements(adGroups.find((ag) => ag.adgroup_id === duplicateAdGroup));
+                          const hasSinglePlacement = sourcePlacements.length === 1;
+                          const keptPlacements = sourcePlacements.filter((id) => !excludedAdGroupPlacements.includes(id));
+                          const togglePlacement = (id) =>
+                            setExcludedAdGroupPlacements((prev) => (prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]));
+
+                          // Mirrors Meta's "Edit setup" panel for new ad sets (ad-account-settings.jsx)
+                          return (
+                            <div className="mt-2 min-w-0">
+                              <div className="flex items-center justify-between gap-3">
+                                <button
+                                  type="button"
+                                  aria-expanded={showAdGroupPlacements}
+                                  onClick={() => setShowAdGroupPlacements(true)}
+                                  title="Edit placements"
+                                  className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 hover:text-black"
+                                >
+                                  <CogIcon className="h-3.5 w-3.5" /> Edit placements
+                                  {keptPlacements.length < sourcePlacements.length && (
+                                    <span className="font-normal text-gray-400">
+                                      · {keptPlacements.length} of {sourcePlacements.length} selected
+                                    </span>
+                                  )}
+                                </button>
+                                {showAdGroupPlacements && (
+                                  <div className="flex items-center gap-3">
+                                    <button
+                                      type="button"
+                                      className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-red-600"
+                                      onClick={() => {
+                                        setExcludedAdGroupPlacements([]);
+                                        setShowAdGroupPlacements(false);
+                                      }}
+                                    >
+                                      <CircleX className="h-3.5 w-3.5" aria-hidden="true" />
+                                      Discard
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-black"
+                                      onClick={() => setExcludedAdGroupPlacements([])}
+                                    >
+                                      <RefreshCcw className="h-3.5 w-3.5" aria-hidden="true" />
+                                      Reset
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                              <AnimatePresence initial={false}>
+                                {showAdGroupPlacements && (
+                                  <motion.div
+                                    key="adgroup-placements"
+                                    initial={{ height: 0, opacity: 0 }}
+                                    animate={{ height: "auto", opacity: 1 }}
+                                    exit={{ height: 0, opacity: 0 }}
+                                    transition={{ duration: reduceMotion ? 0 : 0.18, ease: "easeInOut" }}
+                                    className="overflow-hidden"
+                                  >
+                                    <div className="mt-3 rounded-2xl border border-gray-200 bg-white p-4">
+                                      <section className="space-y-3">
+                                        <h4 className="flex items-center gap-2 text-sm font-semibold">
+                                          <LayoutGrid className="h-4 w-4 shrink-0" aria-hidden="true" />
+                                          Placements
+                                        </h4>
+                                        <p className="text-xs text-gray-500">
+                                          {hasSinglePlacement
+                                            ? `This ad group only runs on ${getPlacementLabel(sourcePlacements[0])}, so there's nothing to remove.`
+                                            : "Uncheck a placement to remove it from the new ad group. Everything else is copied as is."}
+                                        </p>
+                                        <div className="space-y-2">
+                                          {sourcePlacements.map((id) => {
+                                            const checked = !excludedAdGroupPlacements.includes(id);
+                                            const isLastKept = checked && keptPlacements.length === 1;
+                                            return (
+                                              <label
+                                                key={id}
+                                                className={cn("flex items-center gap-2 text-sm", isLastKept ? "cursor-not-allowed opacity-60" : "cursor-pointer")}
+                                                title={isLastKept ? "At least one placement must stay selected" : undefined}
+                                              >
+                                                <Checkbox
+                                                  checked={checked}
+                                                  disabled={isLastKept}
+                                                  onCheckedChange={() => togglePlacement(id)}
+                                                  className="w-4 h-4 bg-white border border-gray-300 rounded-[6px] data-[state=checked]:bg-zinc-800 data-[state=checked]:text-white"
+                                                />
+                                                {getPlacementLabel(id)}
+                                              </label>
+                                            );
+                                          })}
+                                        </div>
+                                      </section>
+                                    </div>
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
+                            </div>
+                          );
+                        })()}
                       </div>
                     )}
                   </div>
@@ -7096,7 +7246,7 @@ export default function TikTokAdCreationForm({
                           className={`group cursor-pointer border-2 border-dashed rounded-2xl p-6 text-center transition-colors ${isDragActive ? "border-primary bg-primary/5" : "border-gray-300 hover:border-primary/50"
                             }`}
                         >
-                          <input {...getInputProps()} />
+                          <input {...getInputProps({ accept: TIKTOK_FILE_INPUT_ACCEPT })} />
                           <div className="flex flex-col items-center gap-2">
                             <Upload className="h-6 w-6 text-gray-500 group-hover:text-black" />
                             {isDragActive ? (
