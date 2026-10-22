@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Helix } from "ldrs/react"
 import "ldrs/react/Helix.css"
 import {
-    Image as ImageIcon, ExternalLink, TrendingUp, SlidersHorizontal, X, Info, RotateCcw,
+    Image as ImageIcon, ExternalLink, TrendingUp, SlidersHorizontal, XCircle, Info, RotateCcw,
     Columns3, Table2, LayoutGrid, ArrowDown, ArrowUp,
 } from "lucide-react"
 import { Area, AreaChart, ResponsiveContainer, Tooltip as ChartTooltip, XAxis, YAxis } from "recharts"
@@ -953,9 +953,9 @@ export default function TrendingCreative({ adAccountId, conversionEvent, mode = 
                                                         if (e.key !== "Enter" && e.key !== " ") return
                                                         e.stopPropagation(); e.preventDefault(); setFilters(EMPTY_FILTERS)
                                                     }}
-                                                    className="-mr-1 ml-1.5 inline-flex h-5 w-5 items-center justify-center rounded-md border border-blue-200 bg-white text-blue-600 transition-colors hover:bg-blue-100"
+                                                    className="-mr-1 ml-1.5 inline-flex items-center justify-center text-red-500 transition-colors hover:text-red-600"
                                                 >
-                                                    <X className="h-3 w-3" />
+                                                    <XCircle className="h-4 w-4" />
                                                 </span>
                                             </>
                                         )}

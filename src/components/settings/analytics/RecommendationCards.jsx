@@ -333,7 +333,7 @@ function formatEventName(actionType) {
 export default function RecommendationCards({
     section = "budget",
     data, loading, mode, adAccountId, adAccounts,
-    poorAdsData, poorAdsLoading,
+    poorAdsData, poorAdsLoading, poorAdsError,
     onRefreshBudgetRecommendations,
     onRefreshPoorAds,
     onPoorAdsPaused,
@@ -1303,7 +1303,22 @@ export default function RecommendationCards({
                         </div>
                     </div>
 
-                    {(poorAdsLoading || !poorAdsData) ? (
+                    {!poorAdsLoading && !poorAdsData && poorAdsError ? (
+                        <Card className="rounded-2xl border-red-200 bg-red-50/50">
+                            <CardContent className="py-8">
+                                <div className="flex flex-col items-center justify-center gap-3">
+                                    <AlertTriangle className="w-8 h-8 text-red-500" />
+                                    <p className="text-sm font-medium text-red-700">{poorAdsError}</p>
+                                    {onRefreshPoorAds && (
+                                        <Button variant="outline" size="sm" onClick={onRefreshPoorAds} className="rounded-xl text-xs">
+                                            <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+                                            Try again
+                                        </Button>
+                                    )}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ) : (poorAdsLoading || !poorAdsData) ? (
                         <Card className="rounded-2xl">
                             <CardContent className="py-10">
                                 <HelixLoader color="#ef4444" size="36" label="Scanning for poor performing ads..." />

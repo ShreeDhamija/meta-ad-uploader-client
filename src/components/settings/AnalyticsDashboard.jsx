@@ -237,6 +237,7 @@ export default function AnalyticsDashboard() {
 
     const [poorAds, setPoorAds] = useState(null)
     const [poorAdsLoading, setPoorAdsLoading] = useState(false)
+    const [poorAdsError, setPoorAdsError] = useState(null)
 
     const [dailyInsights, setDailyInsights] = useState(null)
     const [dailyLoading, setDailyLoading] = useState(false)
@@ -573,6 +574,7 @@ export default function AnalyticsDashboard() {
         }
 
         setPoorAdsLoading(true)
+        setPoorAdsError(null)
         try {
             let url = `${API_BASE_URL}/api/analytics/poor-performing-ads?adAccountId=${selectedAdAccount}&mode=${metricMode}`
             if (adAccountSettings?.conversionEvent) {
@@ -588,12 +590,12 @@ export default function AnalyticsDashboard() {
                 poorAdsCacheRef.current[accountAtStart] = data
                 setPoorAds(data)
             } else {
-                toast.error(data.error || 'Failed to fetch poor performing ads')
+                setPoorAdsError(data.error || 'Failed to fetch poor performing ads')
             }
         } catch (err) {
             if (currentAccountRef.current !== accountAtStart) return
             console.error('Poor ads error:', err)
-            toast.error('Failed to fetch poor performing ads')
+            setPoorAdsError('Failed to fetch poor performing ads')
         } finally {
             if (currentAccountRef.current === accountAtStart) setPoorAdsLoading(false)
         }
@@ -1806,6 +1808,7 @@ export default function AnalyticsDashboard() {
                                 adAccounts={adAccounts}
                                 poorAdsData={poorAds}
                                 poorAdsLoading={poorAdsLoading}
+                                poorAdsError={poorAdsError}
                                 onRefreshBudgetRecommendations={handleRefreshBudgetRecommendations}
                                 onRefreshPoorAds={handleRefreshPoorAds}
                                 onPoorAdsPaused={handlePoorAdsPaused}
@@ -1825,6 +1828,7 @@ export default function AnalyticsDashboard() {
                             adAccounts={adAccounts}
                             poorAdsData={poorAds}
                             poorAdsLoading={poorAdsLoading}
+                                poorAdsError={poorAdsError}
                             onRefreshBudgetRecommendations={handleRefreshBudgetRecommendations}
                             onRefreshPoorAds={handleRefreshPoorAds}
                             onPoorAdsPaused={handlePoorAdsPaused}
