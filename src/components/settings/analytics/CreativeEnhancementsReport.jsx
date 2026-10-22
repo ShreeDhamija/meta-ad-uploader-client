@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -274,7 +275,8 @@ export function SearchableCombobox({
                         wrapperClassName="bg-gray-50 border-gray-200 rounded-[20px]"
                     />
                     <CommandEmpty>{emptyLabel}</CommandEmpty>
-                    <CommandList className="max-h-[400px] overflow-y-auto rounded-2xl custom-scrollbar" selectOnFocus={false}>
+                    <CommandList className="max-h-none overflow-visible rounded-2xl" selectOnFocus={false}>
+                        <ScrollArea viewportClassName="max-h-[400px]">
                         <CommandGroup>
                             {items.map((item) => (
                                 <CommandItem
@@ -297,6 +299,7 @@ export function SearchableCombobox({
                                 </CommandItem>
                             ))}
                         </CommandGroup>
+                        </ScrollArea>
                     </CommandList>
                 </Command>
             </PopoverContent>

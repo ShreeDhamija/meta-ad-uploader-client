@@ -383,7 +383,7 @@ function AdsTable({ ads, columns, sort, onSort }) {
                 <table className="w-full min-w-max border-separate border-spacing-0">
                     <thead className="sticky top-0 z-20">
                         <tr>
-                            <th className={cn(th, "sticky left-0 z-30 min-w-[320px] border-r")}>Ad</th>
+                            <th className={cn(th, "sticky left-0 z-30 min-w-[380px] border-r")}>Ad</th>
                             {columns.map(column => (
                                 <th key={column.key} className={th}>
                                     {column.chart ? (
@@ -403,9 +403,9 @@ function AdsTable({ ads, columns, sort, onSort }) {
                             const video = isVideoAd(ad)
                             return (
                                 <tr key={ad.adId} className="group">
-                                    <td className="sticky left-0 z-10 max-w-[320px] border-b border-r border-gray-100 border-r-gray-200 bg-white px-4 py-3 transition-colors group-hover:bg-gray-50">
-                                        <div className="flex items-center gap-3">
-                                            <Thumbnail url={ad.thumbnailUrl} name={ad.adName} href={ad.postUrl} className="h-14 w-14 rounded-lg" />
+                                    <td className="sticky left-0 z-10 max-w-[380px] border-b border-r border-gray-100 border-r-gray-200 bg-white px-4 py-3 transition-colors group-hover:bg-gray-50">
+                                        <div className="flex items-center gap-4">
+                                            <Thumbnail url={ad.thumbnailUrl} name={ad.adName} href={ad.postUrl} className="h-[104px] w-[104px] rounded-2xl" />
                                             <AdNameCell ad={ad} />
                                         </div>
                                     </td>
@@ -415,7 +415,7 @@ function AdsTable({ ads, columns, sort, onSort }) {
                                             className={cn(td, "transition-colors group-hover:bg-gray-50", column.chart && (column.key === "retention" ? "w-[180px] min-w-[180px]" : "w-[240px] min-w-[240px]"))}
                                         >
                                             {column.chart
-                                                ? <ChartCell column={column} ad={ad} height={56} compact />
+                                                ? <ChartCell column={column} ad={ad} height={88} compact={column.key === "retention"} />
                                                 : column.video && !video ? <span className="text-gray-300">—</span> : column.render(ad)}
                                         </td>
                                     ))}
@@ -434,7 +434,7 @@ function AdsGrid({ ads, columns }) {
     const chartColumns = columns.filter(c => c.chart)
     return (
         <ScrollArea viewportClassName="max-h-[75vh]">
-            <div className="grid grid-cols-1 gap-3 pr-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="grid grid-cols-1 gap-x-3 gap-y-6 pr-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {ads.map(ad => {
                     const video = isVideoAd(ad)
                     const metrics = metricColumns.filter(c => video || !c.video)
@@ -623,9 +623,9 @@ function FilterPanel({ applied, onApply, onClose, isRoasMode, getCampaigns, getA
 
     return (
         <div className="space-y-4">
-            <div className="flex flex-col gap-1.5">
+            <div className="flex items-center justify-between gap-3">
                 <Label className="text-xs text-gray-700">Date range</Label>
-                <div className="inline-flex self-start rounded-full bg-gray-100 p-0.5">
+                <div className="inline-flex rounded-full bg-gray-100 p-0.5">
                     {DAY_OPTIONS.map(d => (
                         <button
                             key={d}
@@ -925,17 +925,6 @@ export default function TrendingCreative({ adAccountId, conversionEvent, mode = 
                             <p className="mt-1 text-sm text-gray-500">{subtitle}</p>
                         </div>
                         <div className="flex items-center gap-2">
-                            {filterCount > 0 && (
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="rounded-xl text-gray-500"
-                                    onClick={() => setFilters(EMPTY_FILTERS)}
-                                >
-                                    <X className="mr-1 h-3.5 w-3.5" />
-                                    Clear filters
-                                </Button>
-                            )}
                             <ColumnsPicker columns={availableColumns} hidden={hiddenColumns} onChange={setHiddenColumns} />
                             <Popover open={filterOpen} onOpenChange={setFilterOpen}>
                                 <PopoverTrigger asChild>
@@ -948,9 +937,27 @@ export default function TrendingCreative({ adAccountId, conversionEvent, mode = 
                                         <SlidersHorizontal className="mr-1.5 h-3.5 w-3.5" />
                                         Filter
                                         {filterCount > 0 && (
-                                            <span className="ml-1.5 rounded-full bg-blue-600 px-1.5 text-[10px] font-semibold text-white">
-                                                {filterCount}
-                                            </span>
+                                            <>
+                                                <span className="ml-1.5 rounded-full bg-blue-600 px-1.5 text-[10px] font-semibold text-white">
+                                                    {filterCount}
+                                                </span>
+                                                {/* A span, not a nested button: clears without opening the panel. */}
+                                                <span
+                                                    role="button"
+                                                    tabIndex={0}
+                                                    aria-label="Clear filters"
+                                                    title="Clear filters"
+                                                    onPointerDown={(e) => e.stopPropagation()}
+                                                    onClick={(e) => { e.stopPropagation(); e.preventDefault(); setFilters(EMPTY_FILTERS) }}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key !== "Enter" && e.key !== " ") return
+                                                        e.stopPropagation(); e.preventDefault(); setFilters(EMPTY_FILTERS)
+                                                    }}
+                                                    className="-mr-1 ml-1.5 inline-flex h-5 w-5 items-center justify-center rounded-md border border-blue-200 bg-white text-blue-600 transition-colors hover:bg-blue-100"
+                                                >
+                                                    <X className="h-3 w-3" />
+                                                </span>
+                                            </>
                                         )}
                                     </Button>
                                 </PopoverTrigger>
