@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Helix } from "ldrs/react"
 import "ldrs/react/Helix.css"
 import { Button } from "@/components/ui/button"
@@ -12,6 +12,7 @@ import {
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip"
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
+import ReportShareMenu from "./ReportShareMenu"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "https://api.withblip.com"
 
@@ -664,6 +665,24 @@ function PerfMetricSelector({ value, onChange, exclude }) {
     )
 }
 
+const PERF_DAY_OPTIONS = [14, 30]
+
+async function fetchAccountDailySummary(params) {
+    const res = await fetch(`${API_BASE_URL}/api/analytics/account-daily-summary?${params}`, {
+        credentials: "include",
+        cache: "no-store",
+    })
+    if (!res.ok) {
+        let errMsg = "Failed to load"
+        try { const err = await res.json(); errMsg = err.error || errMsg } catch { /* */ }
+        throw new Error(errMsg)
+    }
+    return res.json()
+}
+
+// staticSummaries ({ 14: summary, 30: summary }) renders a shared snapshot
+// without fetching; onSummary(days, summary) reports each loaded range so a
+// share can include it.
 function PerformanceMetricsChart({
     adAccountId,
     kpiType = "cpa",
@@ -672,16 +691,21 @@ function PerformanceMetricsChart({
     since,
     until,
     breakdown = "daily",
+    staticSummaries,
+    onSummary,
 }) {
     const controlled = !!(since && until)
     const [days, setDays] = useState(14)
-    const [summary, setSummary] = useState(null)
+    const [fetchedSummary, setSummary] = useState(null)
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState(null)
     const [leftMetric, setLeftMetric] = useState("cplc")
     const [rightMetric, setRightMetric] = useState("cr")
+    const summary = staticSummaries ? staticSummaries[days] || null : fetchedSummary
+    const dayOptions = staticSummaries ? PERF_DAY_OPTIONS.filter(d => staticSummaries[d]) : PERF_DAY_OPTIONS
 
     useEffect(() => {
+        if (staticSummaries) return
         if (!adAccountId) { setSummary(null); return }
         let cancelled = false
         setIsLoading(true)
@@ -700,17 +724,11 @@ function PerformanceMetricsChart({
 
         async function load() {
             try {
-                const res = await fetch(`${API_BASE_URL}/api/analytics/account-daily-summary?${params}`, {
-                    credentials: "include",
-                    cache: "no-store",
-                })
-                if (!res.ok) {
-                    let errMsg = "Failed to load"
-                    try { const err = await res.json(); errMsg = err.error || errMsg } catch { /* */ }
-                    throw new Error(errMsg)
+                const data = await fetchAccountDailySummary(params)
+                if (!cancelled) {
+                    setSummary(data)
+                    if (!controlled) onSummary?.(days, data)
                 }
-                const data = await res.json()
-                if (!cancelled) setSummary(data)
             } catch (err) {
                 if (!cancelled) setError(err.message || "Error")
             } finally {
@@ -719,7 +737,8 @@ function PerformanceMetricsChart({
         }
         load()
         return () => { cancelled = true }
-    }, [adAccountId, kpiType, conversionEvent, days, since, until, controlled, breakdown, refreshKey])
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [adAccountId, kpiType, conversionEvent, days, since, until, controlled, breakdown, refreshKey, staticSummaries])
 
     const leftCfg = getPerfMetricConfig(leftMetric)
     const rightCfg = getPerfMetricConfig(rightMetric)
@@ -730,7 +749,7 @@ function PerformanceMetricsChart({
         right: resolvePerfMetric(rightMetric, d),
     }))
 
-    if (!adAccountId) return null
+    if (!adAccountId && !staticSummaries) return null
 
     return (
         <SectionCard id="performance">
@@ -743,9 +762,9 @@ function PerformanceMetricsChart({
                         <PerfMetricSelector value={rightMetric} onChange={setRightMetric} exclude={leftMetric} />
                     </div>
                 </div>
-                {!controlled && (
+                {!controlled && dayOptions.length > 0 && (
                     <div className="flex items-center gap-1 rounded-xl p-0.5 flex-shrink-0" style={{ background: PAPER_2, border: `1px solid ${LINE}` }}>
-                        {[14, 30].map(d => (
+                        {dayOptions.map(d => (
                             <button
                                 key={d}
                                 onClick={() => setDays(d)}
@@ -885,6 +904,78 @@ function EventHealthSection({ eventHealth }) {
 // MAIN EXPORT
 // ═════════════════════════════════════════════════════════════════════════════
 
+// Title block of the report's top bar — shared by the dialog and the public
+// shared-report page (pages/SharedReport.jsx) so both read the same.
+export function DiagnosticReportTitle({ accountName, reportDate, report }) {
+    return (
+        <div className="flex items-center gap-3 flex-1 min-w-0 mr-4">
+            <div className="w-9 h-9 rounded-[10px] flex items-center justify-center flex-shrink-0 bg-white border border-gray-200 shadow-xs">
+                <Stethoscope className="w-[18px] h-[18px] text-gray-700" />
+            </div>
+            <div className="min-w-0">
+                <h2 className="text-[16px] font-bold text-gray-900 truncate leading-tight">
+                    {accountName || "Diagnostic Report"}
+                </h2>
+                <p className="text-[11px] text-gray-400 mt-0.5">
+                    Diagnostic Report · {reportDate}
+                    {report && (
+                        <span
+                            className="ml-2 px-2.5 py-0.5 text-[10px] font-semibold rounded-full"
+                            style={{ background: BLUE_SOFT, color: BLUE, border: `1px solid ${BLUE_BORDER}` }}
+                        >
+                            {report.kpiLabel}
+                            {report.mode === "cpr" && report.conversionEvent
+                                ? ` · ${formatEventName(report.conversionEvent)}`
+                                : ""}
+                        </span>
+                    )}
+                </p>
+            </div>
+        </div>
+    )
+}
+
+// The report's sections, as rendered in the dialog and on the shared page.
+// perfSummaries renders the performance chart from a snapshot instead of fetching.
+export function DiagnosticReportView({ report, adAccountId, kpiType, conversionEvent, refreshKey, perfSummaries, onPerfSummary }) {
+    return (
+        <TooltipProvider delayDuration={0}>
+            <div className="flex flex-col gap-5" style={{ animation: "diagnosticFadeIn 0.4s ease" }}>
+                <SummarySection report={report} />
+                <TrendSection dailyData={report.dailyData} anomalyPeriod={report.anomalyPeriod} mode={report.mode} kpiLabel={report.kpiLabel} />
+                <PerformanceMetricsChart
+                    adAccountId={adAccountId}
+                    kpiType={kpiType}
+                    conversionEvent={report.conversionEvent || conversionEvent}
+                    refreshKey={refreshKey}
+                    staticSummaries={perfSummaries}
+                    onSummary={onPerfSummary}
+                />
+                <AnomalySection
+                    anomalyPeriod={report.anomalyPeriod}
+                    previousPeriod={report.previousPeriod}
+                    culprits={report.culprits || []}
+                    mode={report.mode}
+                    kpiLabel={report.kpiLabel}
+                />
+                <ChangesSection changes={report.changes || []} anomalyDetected={!!report.anomalyPeriod} />
+                <EventHealthSection eventHealth={report.eventHealth} />
+            </div>
+        </TooltipProvider>
+    )
+}
+
+export const DIAGNOSTIC_ANIMATION_STYLES = `
+    @keyframes diagnosticSlideUp {
+        from { opacity: 0; transform: translateY(16px) scale(0.98); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @keyframes diagnosticFadeIn {
+        from { opacity: 0; transform: translateY(6px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+`
+
 export default function AdAccountDiagnostic({
     open, onOpenChange, adAccountId, adAccountName,
     kpiType = "cpa", conversionEvent = null,
@@ -893,6 +984,7 @@ export default function AdAccountDiagnostic({
     const [isGenerating, setIsGenerating] = useState(false)
     const [error, setError] = useState(null)
     const [refreshKey, setRefreshKey] = useState(0)
+    const perfSummariesRef = useRef({})
 
     useEffect(() => {
         if (open && adAccountId && !report && !isGenerating) generateReport()
@@ -902,6 +994,7 @@ export default function AdAccountDiagnostic({
 
     const generateReport = async () => {
         setIsGenerating(true); setError(null); setReport(null)
+        perfSummariesRef.current = {}
         const params = new URLSearchParams({ adAccountId, kpiType })
         if (kpiType === "cpa" && conversionEvent) params.set("conversionEvent", conversionEvent)
         try {
@@ -919,6 +1012,19 @@ export default function AdAccountDiagnostic({
     }
 
     const reportDate = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
+    const effectiveConversionEvent = report?.conversionEvent || conversionEvent
+
+    // The shared page shows the performance chart for both ranges, so load
+    // whichever one the user didn't open.
+    const getShareSnapshot = async () => {
+        const perfSummaries = { ...perfSummariesRef.current }
+        await Promise.all(PERF_DAY_OPTIONS.filter(d => !perfSummaries[d]).map(async (d) => {
+            const params = new URLSearchParams({ adAccountId, kpiType, days: String(d) })
+            if (effectiveConversionEvent) params.set("conversionEvent", effectiveConversionEvent)
+            try { perfSummaries[d] = await fetchAccountDailySummary(params) } catch { /* range left out of the share */ }
+        }))
+        return { report, kpiType, conversionEvent: effectiveConversionEvent, reportDate, perfSummaries }
+    }
 
     if (!open) return null
 
@@ -946,36 +1052,21 @@ export default function AdAccountDiagnostic({
                 >
                     {/* Sticky header */}
                     <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between flex-shrink-0 bg-white">
-                        <div className="flex items-center gap-3 flex-1 min-w-0 mr-4">
-                            <div className="w-9 h-9 rounded-[10px] flex items-center justify-center flex-shrink-0 bg-white border border-gray-200 shadow-xs">
-                                <Stethoscope className="w-[18px] h-[18px] text-gray-700" />
-                            </div>
-                            <div className="min-w-0">
-                                <h2 className="text-[16px] font-bold text-gray-900 truncate leading-tight">
-                                    {adAccountName || "Diagnostic Report"}
-                                </h2>
-                                <p className="text-[11px] text-gray-400 mt-0.5">
-                                    Diagnostic Report · {reportDate}
-                                    {report && (
-                                        <span
-                                            className="ml-2 px-2.5 py-0.5 text-[10px] font-semibold rounded-full"
-                                            style={{ background: BLUE_SOFT, color: BLUE, border: `1px solid ${BLUE_BORDER}` }}
-                                        >
-                                            {report.kpiLabel}
-                                            {report.mode === "cpr" && report.conversionEvent
-                                                ? ` · ${formatEventName(report.conversionEvent)}`
-                                                : ""}
-                                        </span>
-                                    )}
-                                </p>
-                            </div>
-                        </div>
+                        <DiagnosticReportTitle accountName={adAccountName} reportDate={reportDate} report={report} />
                         <div className="flex items-center gap-2 flex-shrink-0">
                             {report && !isGenerating && (
                                 <Button variant="outline" size="sm" onClick={generateReport} className="rounded-2xl text-xs gap-1.5 h-9">
                                     <Activity className="w-3.5 h-3.5" />
                                     Re-run Diagnostic
                                 </Button>
+                            )}
+                            {report && !isGenerating && (
+                                <ReportShareMenu
+                                    type="diagnostic"
+                                    adAccountId={adAccountId}
+                                    snapshotKey={report}
+                                    getSnapshot={getShareSnapshot}
+                                />
                             )}
                             <button
                                 onClick={() => onOpenChange(false)}
@@ -1010,25 +1101,14 @@ export default function AdAccountDiagnostic({
                                 </div>
                             )}
                             {report && !isGenerating && (
-                                <div className="flex flex-col gap-5" style={{ animation: "diagnosticFadeIn 0.4s ease" }}>
-                                    <SummarySection report={report} />
-                                    <TrendSection dailyData={report.dailyData} anomalyPeriod={report.anomalyPeriod} mode={report.mode} kpiLabel={report.kpiLabel} />
-                                    <PerformanceMetricsChart
-                                        adAccountId={adAccountId}
-                                        kpiType={kpiType}
-                                        conversionEvent={report.conversionEvent || conversionEvent}
-                                        refreshKey={refreshKey}
-                                    />
-                                    <AnomalySection
-                                        anomalyPeriod={report.anomalyPeriod}
-                                        previousPeriod={report.previousPeriod}
-                                        culprits={report.culprits || []}
-                                        mode={report.mode}
-                                        kpiLabel={report.kpiLabel}
-                                    />
-                                    <ChangesSection changes={report.changes || []} anomalyDetected={!!report.anomalyPeriod} />
-                                    <EventHealthSection eventHealth={report.eventHealth} />
-                                </div>
+                                <DiagnosticReportView
+                                    report={report}
+                                    adAccountId={adAccountId}
+                                    kpiType={kpiType}
+                                    conversionEvent={conversionEvent}
+                                    refreshKey={refreshKey}
+                                    onPerfSummary={(d, summary) => { perfSummariesRef.current[d] = summary }}
+                                />
                             )}
                             </div>
                         </div>
@@ -1036,16 +1116,7 @@ export default function AdAccountDiagnostic({
                 </div>
             </div>
 
-            <style>{`
-                @keyframes diagnosticSlideUp {
-                    from { opacity: 0; transform: translateY(16px) scale(0.98); }
-                    to { opacity: 1; transform: translateY(0) scale(1); }
-                }
-                @keyframes diagnosticFadeIn {
-                    from { opacity: 0; transform: translateY(6px); }
-                    to { opacity: 1; transform: translateY(0); }
-                }
-            `}</style>
+            <style>{DIAGNOSTIC_ANIMATION_STYLES}</style>
         </>
     )
 }

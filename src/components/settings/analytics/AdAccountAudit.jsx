@@ -11,6 +11,7 @@ import {
 } from "recharts"
 import { cn } from "@/lib/utils"
 import Audit from "@/assets/icons/analytics/Audit.svg"
+import ReportShareMenu from "./ReportShareMenu"
 import slackColor from "@/assets/icons/analytics/slack-color.svg"
 
 const SLACK_BORDER_LIGHT = "rgba(74,21,75,0.35)"
@@ -1092,6 +1093,64 @@ function OpportunitiesSection({ text, isLoading, error }) {
 // MAIN EXPORT
 // ═════════════════════════════════════════════════════════════════════════════
 
+// Title block of the report's top bar — shared by the dialog and the public
+// shared-report page (pages/SharedReport.jsx) so both read the same.
+export function AuditReportTitle({ accountName, reportDate, kpiType, kpiTarget, conversionEvent }) {
+    return (
+        <div className="flex items-center gap-3 flex-1 min-w-0 mr-4">
+            <div
+                className="w-9 h-9 rounded-[10px] flex items-center justify-center flex-shrink-0 bg-white border border-gray-200 shadow-xs"
+            >
+                <img src={Audit} alt="" className="w-[18px] h-[18px]" />
+            </div>
+            <div className="min-w-0">
+                <h2 className="text-[16px] font-bold text-gray-900 truncate leading-tight">
+                    {accountName || "Ad Account Audit"}
+                </h2>
+                <p className="text-[11px] text-gray-400 mt-0.5">
+                    Ad Account Audit · {reportDate}
+                    {kpiTarget && (
+                        <span
+                            className="ml-2 px-2.5 py-0.5 text-[10px] font-semibold rounded-full"
+                            style={{ background: "#eff6ff", color: "#1d4ed8" }}
+                        >
+                            Target {kpiType.toUpperCase()}: {kpiType === "cpa" ? `${kpiTarget}` : `${kpiTarget}×`}
+                            {kpiType === "cpa" && conversionEvent ? ` · ${formatEventName(conversionEvent)}` : ""}
+                        </span>
+                    )}
+                </p>
+            </div>
+        </div>
+    )
+}
+
+// The report's sections, as rendered in the dialog and on the shared page.
+export function AuditReportView({ report, kpiType, kpiTarget, opportunitiesText, isLoadingOpps = false, oppsError = null }) {
+    return (
+        <div className="flex flex-col gap-5" style={{ animation: "auditFadeIn 0.4s ease" }}>
+            <SummarySection report={report} kpiType={report.kpiType || kpiType} kpiTarget={kpiTarget} />
+            <TrafficSection traffic={report.traffic} />
+            <FunnelSection funnel={report.funnel} />
+            <MonthlySpendSection monthlySpend={report.monthlySpend} kpiType={report.kpiType || kpiType} kpiTarget={kpiTarget} />
+            <AudienceSection audience={report.audience} />
+            <LearningSection learning={report.learning} />
+            {report.copyUtilization && <CopyUtilizationSection copyUtilization={report.copyUtilization} />}
+            <OpportunitiesSection text={opportunitiesText} isLoading={isLoadingOpps} error={oppsError} />
+        </div>
+    )
+}
+
+export const AUDIT_ANIMATION_STYLES = `
+    @keyframes auditSlideUp {
+        from { opacity: 0; transform: translateY(16px) scale(0.98); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @keyframes auditFadeIn {
+        from { opacity: 0; transform: translateY(6px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+`
+
 export default function AdAccountAudit({
     open, onOpenChange, adAccountId, adAccountName,
     kpiType = "cpa", conversionEvent = null, targetCPA = null, targetROAS = null,
@@ -1172,30 +1231,13 @@ export default function AdAccountAudit({
                 >
                     {/* Sticky header */}
                     <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between flex-shrink-0 bg-white">
-                        <div className="flex items-center gap-3 flex-1 min-w-0 mr-4">
-                            <div
-                                className="w-9 h-9 rounded-[10px] flex items-center justify-center flex-shrink-0 bg-white border border-gray-200 shadow-xs"
-                            >
-                                <img src={Audit} alt="" className="w-[18px] h-[18px]" />
-                            </div>
-                            <div className="min-w-0">
-                                <h2 className="text-[16px] font-bold text-gray-900 truncate leading-tight">
-                                    {adAccountName || "Ad Account Audit"}
-                                </h2>
-                                <p className="text-[11px] text-gray-400 mt-0.5">
-                                    Ad Account Audit · {reportDate}
-                                    {kpiTarget && (
-                                        <span
-                                            className="ml-2 px-2.5 py-0.5 text-[10px] font-semibold rounded-full"
-                                            style={{ background: "#eff6ff", color: "#1d4ed8" }}
-                                        >
-                                            Target {kpiType.toUpperCase()}: {kpiType === "cpa" ? `$${kpiTarget}` : `${kpiTarget}×`}
-                                            {kpiType === "cpa" && conversionEvent ? ` · ${formatEventName(conversionEvent)}` : ""}
-                                        </span>
-                                    )}
-                                </p>
-                            </div>
-                        </div>
+                        <AuditReportTitle
+                            accountName={adAccountName}
+                            reportDate={reportDate}
+                            kpiType={kpiType}
+                            kpiTarget={kpiTarget}
+                            conversionEvent={conversionEvent}
+                        />
                         <div className="flex items-center gap-2 flex-shrink-0">
                             {slackConnected ? (
                                 <div
@@ -1221,6 +1263,19 @@ export default function AdAccountAudit({
                                     <FileBarChart2 className="w-3.5 h-3.5" />
                                     Re-run Audit
                                 </Button>
+                            )}
+                            {report && !isGenerating && (
+                                <ReportShareMenu
+                                    type="audit"
+                                    adAccountId={adAccountId}
+                                    snapshotKey={report}
+                                    disabled={isLoadingOpps}
+                                    disabledReason="Waiting for opportunities to finish"
+                                    getSnapshot={() => ({
+                                        report, kpiType, kpiTarget, conversionEvent, reportDate,
+                                        opportunitiesText, oppsError,
+                                    })}
+                                />
                             )}
                             <button
                                 onClick={() => onOpenChange(false)}
@@ -1258,32 +1313,21 @@ export default function AdAccountAudit({
                                 </div>
                             )}
                             {report && !isGenerating && (
-                                <div className="flex flex-col gap-5" style={{ animation: "auditFadeIn 0.4s ease" }}>
-                                    <SummarySection report={report} kpiType={report.kpiType || kpiType} kpiTarget={kpiTarget} />
-                                    <TrafficSection traffic={report.traffic} />
-                                    <FunnelSection funnel={report.funnel} />
-                                    <MonthlySpendSection monthlySpend={report.monthlySpend} kpiType={report.kpiType || kpiType} kpiTarget={kpiTarget} />
-                                    <AudienceSection audience={report.audience} />
-                                    <LearningSection learning={report.learning} />
-                                    {report.copyUtilization && <CopyUtilizationSection copyUtilization={report.copyUtilization} />}
-                                    <OpportunitiesSection text={opportunitiesText} isLoading={isLoadingOpps} error={oppsError} />
-                                </div>
+                                <AuditReportView
+                                    report={report}
+                                    kpiType={kpiType}
+                                    kpiTarget={kpiTarget}
+                                    opportunitiesText={opportunitiesText}
+                                    isLoadingOpps={isLoadingOpps}
+                                    oppsError={oppsError}
+                                />
                             )}
                         </div>
                     </div>
                 </div>
             </div>
 
-            <style>{`
-                @keyframes auditSlideUp {
-                    from { opacity: 0; transform: translateY(16px) scale(0.98); }
-                    to { opacity: 1; transform: translateY(0) scale(1); }
-                }
-                @keyframes auditFadeIn {
-                    from { opacity: 0; transform: translateY(6px); }
-                    to { opacity: 1; transform: translateY(0); }
-                }
-            `}</style>
+            <style>{AUDIT_ANIMATION_STYLES}</style>
         </>
     )
 }
