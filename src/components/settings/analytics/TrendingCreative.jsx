@@ -5,13 +5,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Helix } from "ldrs/react"
 import "ldrs/react/Helix.css"
-import { Image as ImageIcon, ExternalLink, TrendingUp, SlidersHorizontal, X, Info } from "lucide-react"
+import {
+    Image as ImageIcon, ExternalLink, TrendingUp, SlidersHorizontal, X, Info, RotateCcw,
+    Columns3, Table2, LayoutGrid, ArrowDown, ArrowUp,
+} from "lucide-react"
 import { Area, AreaChart, ResponsiveContainer, Tooltip as ChartTooltip, XAxis, YAxis } from "recharts"
 import { toast } from "sonner"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Slider } from "@/components/ui/slider"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
@@ -24,20 +30,26 @@ const BLUE = "#3b82f6"
 const DAY_OPTIONS = ["7", "14", "30"]
 
 // Units match what the server compares: CPC in account currency, ROAS as a
-// multiple, CTRs in percent, video views as a count of 3-second views.
+// multiple, CTRs in percent. ROAS only applies in ROAS mode.
 const METRIC_FILTERS = [
-    { key: "cpc", label: "CPC (link)", unit: "$", step: "0.01" },
-    { key: "roas", label: "ROAS", unit: "x", step: "0.1" },
-    { key: "ctr", label: "CTR (link)", unit: "%", step: "0.1" },
-    { key: "outboundCtr", label: "Outbound CTR", unit: "%", step: "0.1" },
-    { key: "videoViews", label: "3s video views", unit: "", step: "1" },
+    { key: "cpc", label: "CPC", unit: "$" },
+    { key: "roas", label: "ROAS", unit: "x", roasOnly: true },
+    { key: "ctr", label: "CTR", unit: "%" },
+    { key: "outboundCtr", label: "Outbound CTR", unit: "%" },
 ]
+
+// 3s video views slider stops. The last stop means "no upper limit" (100k+);
+// the first means "no lower limit".
+const VIEW_STEPS = [0, 100, 250, 500, 1000, 2500, 5000, 10000, 25000, 50000, 100000]
+const VIEW_MAX_INDEX = VIEW_STEPS.length - 1
 
 const EMPTY_FILTERS = {
     days: "7",
     campaignId: "",
     adsetId: "",
     ...Object.fromEntries(METRIC_FILTERS.flatMap(f => [[`${f.key}Min`, ""], [`${f.key}Max`, ""]])),
+    videoViewsMin: "",
+    videoViewsMax: "",
 }
 
 // video_play_curve_actions bins: seconds 0–14, then widening ranges.
@@ -55,7 +67,24 @@ const METRIC_HINTS = {
     hookRate: "3-second video views ÷ impressions",
     holdRate: "ThruPlays ÷ 3-second video views. A ThruPlay is a play to the end, or at least 15 seconds on longer videos.",
     videoViews3s: "Video plays of at least 3 seconds",
-    watch: "Average time a video was played",
+    videoAvgWatchTime: "Average time a video was played",
+    retention: "Share of video plays still watching at each point. Later points cover wider time ranges.",
+    ageBreakdown: "Share of impressions by age band. Meta estimates these values.",
+}
+
+const STORAGE_KEYS = { hidden: "blip.trendingCreatives.hiddenColumns", view: "blip.trendingCreatives.view" }
+
+function readStored(key, fallback) {
+    try {
+        const raw = window.localStorage.getItem(key)
+        return raw == null ? fallback : JSON.parse(raw)
+    } catch {
+        return fallback
+    }
+}
+
+function writeStored(key, value) {
+    try { window.localStorage.setItem(key, JSON.stringify(value)) } catch { /* storage unavailable */ }
 }
 
 function formatSpend(v) {
@@ -80,7 +109,7 @@ function formatRoas(v) {
 function formatCount(v) {
     if (v == null) return "—"
     if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`
-    if (v >= 1000) return `${(v / 1000).toFixed(1)}k`
+    if (v >= 1000) return `${(v / 1000).toFixed(v >= 10000 ? 0 : 1)}k`
     return String(Math.round(v))
 }
 
@@ -93,15 +122,7 @@ function formatWatchTime(seconds) {
     return rem > 0 ? `${m}m ${rem}s` : `${m}m`
 }
 
-function activeFilterCount(filters) {
-    let count = 0
-    if (filters.days !== "7") count++
-    if (filters.campaignId || filters.adsetId) count++
-    for (const f of METRIC_FILTERS) {
-        if (filters[`${f.key}Min`] !== "" || filters[`${f.key}Max`] !== "") count++
-    }
-    return count
-}
+const isVideoAd = (ad) => ad.videoViews3s != null || ad.thruplays != null || ad.videoAvgWatchTime != null || (ad.retention?.length > 0)
 
 function DeltaBadge({ delta }) {
     if (delta === null || delta === undefined) {
@@ -125,84 +146,112 @@ function DeltaBadge({ delta }) {
     )
 }
 
-function Thumbnail({ url, name, href }) {
+// Table / grid columns. `best` is the direction a column sorts in on first
+// click (best first); chart columns don't sort. Video columns are dropped when
+// no ad in the results has video data, and show "—" on image ads.
+const COLUMNS = [
+    { key: "spend", label: "Spend", best: "desc", value: a => a.currentSpend, render: a => <>{formatSpend(a.currentSpend)}<DeltaBadge delta={a.spendDelta} /></> },
+    { key: "cpa", label: "CPA", best: "asc", value: a => a.cpa, render: a => (a.cpa != null ? `$${Math.round(a.cpa)}` : "—") },
+    { key: "roas", label: "ROAS", best: "desc", roasOnly: true, value: a => a.roas, render: a => formatRoas(a.roas) },
+    { key: "cpc", label: "CPC", best: "asc", value: a => a.cpc, render: a => formatMoney(a.cpc) },
+    { key: "ctr", label: "CTR", best: "desc", value: a => a.ctr, render: a => formatPct(a.ctr) },
+    { key: "outboundCtr", label: "Outbound CTR", best: "desc", value: a => a.outboundCtr, render: a => formatPct(a.outboundCtr) },
+    { key: "cvrOutbound", label: "CVR", best: "desc", value: a => a.cvrOutbound, render: a => formatPct(a.cvrOutbound) },
+    { key: "cvrLandingPage", label: "CVR (LPV)", best: "desc", value: a => a.cvrLandingPage, render: a => formatPct(a.cvrLandingPage) },
+    { key: "hookRate", label: "Hook rate", best: "desc", video: true, value: a => a.hookRate, render: a => formatPct(a.hookRate, 1) },
+    { key: "holdRate", label: "3s → ThruPlay", best: "desc", video: true, value: a => a.holdRate, render: a => formatPct(a.holdRate, 1) },
+    { key: "videoViews3s", label: "3s views", best: "desc", video: true, value: a => a.videoViews3s, render: a => formatCount(a.videoViews3s) },
+    { key: "videoAvgWatchTime", label: "Avg watch", best: "desc", video: true, value: a => a.videoAvgWatchTime, render: a => formatWatchTime(a.videoAvgWatchTime) },
+    { key: "retention", label: "Retention", chart: true, video: true },
+    { key: "ageBreakdown", label: "Viewer age", chart: true },
+]
+const COLUMN_BY_KEY = Object.fromEntries(COLUMNS.map(c => [c.key, c]))
+
+// Missing values always sort last; ties go to spend.
+function sortAds(ads, sort) {
+    const column = COLUMN_BY_KEY[sort.key]
+    if (!column?.value) return ads
+    const sign = sort.dir === "asc" ? 1 : -1
+    return [...ads].sort((a, b) => {
+        const av = column.value(a)
+        const bv = column.value(b)
+        if (av == null && bv == null) return b.currentSpend - a.currentSpend
+        if (av == null) return 1
+        if (bv == null) return -1
+        return (av - bv) * sign || b.currentSpend - a.currentSpend
+    })
+}
+
+function Thumbnail({ url, name, href, className }) {
     const [errored, setErrored] = useState(false)
     const content = url && !errored ? (
-        <img
-            src={url}
-            alt={name}
-            className="h-[104px] w-[104px] flex-shrink-0 rounded-2xl object-cover"
-            onError={() => setErrored(true)}
-        />
+        <img src={url} alt={name} className={cn("flex-shrink-0 object-cover", className)} onError={() => setErrored(true)} />
     ) : (
-        <div className="flex h-[104px] w-[104px] flex-shrink-0 items-center justify-center rounded-2xl bg-gray-100">
+        <div className={cn("flex flex-shrink-0 items-center justify-center bg-gray-100", className)}>
             <ImageIcon className="h-6 w-6 text-gray-300" />
         </div>
     )
     if (!href) return content
     return (
-        <a href={href} target="_blank" rel="noopener noreferrer" className="flex-shrink-0 transition-opacity hover:opacity-90">
+        <a href={href} target="_blank" rel="noopener noreferrer" className="block flex-shrink-0 transition-opacity hover:opacity-90">
             {content}
         </a>
     )
 }
 
-function TruncatedWithTooltip({ text, max, className, tooltipSide = "top" }) {
+// Shows the full text in a tooltip only when it's cut off.
+function OverflowText({ text, className }) {
+    const ref = useRef(null)
+    const [open, setOpen] = useState(false)
     if (!text) return null
-    const truncated = text.length > max ? `${text.slice(0, max)}…` : text
-    if (text.length <= max) {
-        return <span className={className}>{text}</span>
-    }
     return (
-        <Tooltip delayDuration={150}>
+        <Tooltip open={open} onOpenChange={(next) => setOpen(next && !!ref.current && ref.current.scrollWidth > ref.current.clientWidth)}>
             <TooltipTrigger asChild>
-                <span className={cn(className, "cursor-default")}>{truncated}</span>
+                <span ref={ref} className={cn("block truncate", className)}>{text}</span>
             </TooltipTrigger>
-            <TooltipContent side={tooltipSide} className="max-w-xs break-words">
-                {text}
-            </TooltipContent>
+            <TooltipContent side="top" className="max-w-xs break-words">{text}</TooltipContent>
         </Tooltip>
     )
 }
 
-function MetricCell({ label, value, hint, muted }) {
+function HintIcon({ hint }) {
+    if (!hint) return null
     return (
-        <div className="min-w-0">
-            <div className="flex items-center gap-1 text-[10px] font-medium uppercase tracking-wide text-gray-400">
-                <span className="truncate">{label}</span>
-                {hint && (
-                    <Tooltip delayDuration={150}>
-                        <TooltipTrigger asChild>
-                            <Info className="h-3 w-3 flex-shrink-0 cursor-default text-gray-300" />
-                        </TooltipTrigger>
-                        <TooltipContent side="top" className="max-w-[240px] text-xs normal-case">{hint}</TooltipContent>
-                    </Tooltip>
-                )}
-            </div>
-            <div className={cn("mt-0.5 text-sm font-medium", muted ? "text-gray-300" : "text-gray-800")}>{value}</div>
-        </div>
+        <Tooltip delayDuration={150}>
+            <TooltipTrigger asChild>
+                <Info className="h-3 w-3 flex-shrink-0 cursor-default text-gray-300" />
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-[240px] text-xs normal-case">{hint}</TooltipContent>
+        </Tooltip>
     )
 }
 
-function PanelTitle({ children, hint }) {
+function SortHeader({ column, sort, onSort }) {
+    const active = sort.key === column.key
+    const bestFirst = active && sort.dir === column.best
     return (
-        <div className="mb-2 flex items-center gap-1 text-[10px] font-medium uppercase tracking-wide text-gray-400">
-            {children}
-            {hint && (
-                <Tooltip delayDuration={150}>
-                    <TooltipTrigger asChild>
-                        <Info className="h-3 w-3 cursor-default text-gray-300" />
-                    </TooltipTrigger>
-                    <TooltipContent side="top" className="max-w-[240px] text-xs normal-case">{hint}</TooltipContent>
-                </Tooltip>
-            )}
-        </div>
+        <span className="inline-flex items-center gap-1">
+            <button
+                type="button"
+                onClick={() => onSort(column.key)}
+                className={cn("group inline-flex items-center gap-1 transition-colors hover:text-gray-800", active && "text-gray-800")}
+            >
+                {column.label}
+                {active
+                    ? (bestFirst
+                        ? <ArrowDown className="h-3.5 w-3.5 text-blue-600" />
+                        : <ArrowUp className="h-3.5 w-3.5 text-blue-600" />)
+                    // Hidden with opacity, not removed, so the header width doesn't shift on hover.
+                    : <ArrowDown className="h-3.5 w-3.5 text-gray-400 opacity-0 transition-opacity group-hover:opacity-100" />}
+            </button>
+            <HintIcon hint={METRIC_HINTS[column.key]} />
+        </span>
     )
 }
 
-function EmptyPanel({ children }) {
+function EmptyPanel({ children, height }) {
     return (
-        <div className="flex h-[96px] items-center justify-center rounded-xl bg-gray-50 text-xs text-gray-400">
+        <div className="flex items-center justify-center rounded-xl bg-gray-50 text-xs text-gray-400" style={{ height }}>
             {children}
         </div>
     )
@@ -219,7 +268,7 @@ function RetentionTooltip({ active, payload }) {
     )
 }
 
-function RetentionChart({ values }) {
+function RetentionChart({ values, height = 96, compact = false }) {
     // Bins past the video's end come back as 0 — drop the trailing run.
     const data = useMemo(() => {
         if (!values?.length) return []
@@ -228,10 +277,10 @@ function RetentionChart({ values }) {
         return values.slice(0, end).map((value, i) => ({ label: RETENTION_LABELS[i] || `${i}`, value }))
     }, [values])
 
-    if (data.length < 2) return <EmptyPanel>No retention data</EmptyPanel>
+    if (data.length < 2) return <EmptyPanel height={height}>No retention data</EmptyPanel>
 
     return (
-        <div className="h-[96px] w-full">
+        <div className="w-full" style={{ height }}>
             <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
                     <defs>
@@ -242,6 +291,7 @@ function RetentionChart({ values }) {
                     </defs>
                     <XAxis
                         dataKey="label"
+                        hide={compact}
                         tick={{ fontSize: 9, fill: "#9ca3af" }}
                         tickLine={false}
                         axisLine={false}
@@ -265,19 +315,20 @@ function RetentionChart({ values }) {
     )
 }
 
-function AgeBars({ rows }) {
-    if (!rows?.length) return <EmptyPanel>No age data</EmptyPanel>
+function AgeBars({ rows, height = 96, compact = false }) {
+    if (!rows?.length) return <EmptyPanel height={height}>No age data</EmptyPanel>
     const max = Math.max(...rows.map(r => r.pct), 1)
+    const barMax = height - (compact ? 30 : 44)
     return (
-        <div className="flex h-[96px] items-end gap-1.5">
+        <div className="flex items-end gap-1" style={{ height }}>
             {rows.map(row => (
                 <Tooltip key={row.age} delayDuration={100}>
                     <TooltipTrigger asChild>
-                        <div className="flex h-full min-w-0 flex-1 cursor-default flex-col items-center justify-end gap-1">
-                            <span className="text-[10px] font-medium text-gray-600">{Math.round(row.pct)}%</span>
+                        <div className="flex h-full min-w-0 flex-1 cursor-default flex-col items-center justify-end gap-0.5">
+                            {!compact && <span className="text-[10px] font-medium text-gray-600">{Math.round(row.pct)}%</span>}
                             <div
                                 className="w-full rounded-t bg-blue-500/80 transition-colors hover:bg-blue-500"
-                                style={{ height: `${Math.max((row.pct / max) * 52, 2)}px` }}
+                                style={{ height: `${Math.max((row.pct / max) * barMax, 2)}px` }}
                             />
                             <span className="w-full truncate text-center text-[9px] text-gray-400">{row.age}</span>
                         </div>
@@ -291,136 +342,264 @@ function AgeBars({ rows }) {
     )
 }
 
-function AdRow({ ad, isRoasMode }) {
-    const isVideo = ad.videoViews3s != null
-    const videoValue = (formatted) => (isVideo ? formatted : "N/A")
-    const metrics = [
-        { label: "CPA", value: ad.cpa != null ? `$${Math.round(ad.cpa)}` : "—" },
-        ...(isRoasMode ? [{ label: "ROAS", value: formatRoas(ad.roas) }] : []),
-        { label: "CPC", value: formatMoney(ad.cpc), hint: METRIC_HINTS.cpc },
-        { label: "CTR", value: formatPct(ad.ctr), hint: METRIC_HINTS.ctr },
-        { label: "Outbound CTR", value: formatPct(ad.outboundCtr), hint: METRIC_HINTS.outboundCtr },
-        { label: "CVR", value: formatPct(ad.cvrOutbound), hint: METRIC_HINTS.cvrOutbound },
-        { label: "CVR (LPV)", value: formatPct(ad.cvrLandingPage), hint: METRIC_HINTS.cvrLandingPage },
-        { label: "Hook rate", value: videoValue(formatPct(ad.hookRate, 1)), hint: METRIC_HINTS.hookRate, muted: !isVideo },
-        { label: "3s → ThruPlay", value: videoValue(formatPct(ad.holdRate, 1)), hint: METRIC_HINTS.holdRate, muted: !isVideo },
-        { label: "3s views", value: videoValue(formatCount(ad.videoViews3s)), hint: METRIC_HINTS.videoViews3s, muted: !isVideo },
-        { label: "Avg watch", value: videoValue(formatWatchTime(ad.videoAvgWatchTime)), hint: METRIC_HINTS.watch, muted: !isVideo },
-    ]
-
+function AdNameCell({ ad }) {
     return (
-        <div className="flex flex-col gap-4 rounded-2xl border border-gray-100 p-4 transition-colors hover:border-gray-200 xl:flex-row">
-            <div className="flex min-w-0 gap-4 xl:w-[55%]">
-                <Thumbnail url={ad.thumbnailUrl} name={ad.adName} href={ad.postUrl} />
-                <div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                            <div className="flex items-center gap-1.5">
-                                <TruncatedWithTooltip
-                                    text={ad.adName}
-                                    max={48}
-                                    className="text-sm font-semibold leading-tight text-gray-900"
-                                />
-                                {ad.postUrl && (
-                                    <a
-                                        href={ad.postUrl}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="flex-shrink-0 text-gray-400 transition-colors hover:text-blue-600"
-                                        title="Open ad on Facebook"
-                                    >
-                                        <ExternalLink className="h-3.5 w-3.5" />
-                                    </a>
-                                )}
-                            </div>
-                            <div className="mt-0.5 max-w-[320px]">
-                                <TruncatedWithTooltip
-                                    text={[ad.campaignName, ad.adsetName].filter(Boolean).join(" › ")}
-                                    max={52}
-                                    className="text-xs leading-tight text-gray-400"
-                                />
-                            </div>
-                        </div>
-                        <div className="flex-shrink-0 whitespace-nowrap text-right">
-                            <div className="text-[10px] font-medium uppercase tracking-wide text-gray-400">Spend</div>
-                            <div className="text-sm font-semibold text-gray-900">
-                                {formatSpend(ad.currentSpend)}
-                                <DeltaBadge delta={ad.spendDelta} />
-                            </div>
-                        </div>
-                    </div>
-                    <div className="mt-3 grid grid-cols-3 gap-x-4 gap-y-2.5 sm:grid-cols-4 lg:grid-cols-6">
-                        {metrics.map(m => <MetricCell key={m.label} {...m} />)}
-                    </div>
-                </div>
+        <div className="min-w-0">
+            <div className="flex min-w-0 items-center gap-1.5">
+                <OverflowText text={ad.adName} className="min-w-0 text-sm font-semibold leading-tight text-gray-900" />
+                {ad.postUrl && (
+                    <a
+                        href={ad.postUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-shrink-0 text-gray-400 transition-colors hover:text-blue-600"
+                        title="Open ad on Facebook"
+                    >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                    </a>
+                )}
             </div>
-            <div className="grid min-w-0 flex-1 grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="min-w-0">
-                    <PanelTitle hint="Share of video plays still watching at each point. Later points cover wider time ranges.">
-                        Retention
-                    </PanelTitle>
-                    {isVideo ? <RetentionChart values={ad.retention} /> : <EmptyPanel>Not a video ad</EmptyPanel>}
-                </div>
-                <div className="min-w-0">
-                    <PanelTitle hint="Share of impressions by age band. Meta estimates these values.">
-                        Viewer age
-                    </PanelTitle>
-                    <AgeBars rows={ad.ageBreakdown} />
-                </div>
-            </div>
+            <OverflowText
+                text={[ad.campaignName, ad.adsetName].filter(Boolean).join(" › ")}
+                className="mt-0.5 text-xs leading-tight text-gray-400"
+            />
         </div>
     )
 }
 
-function FilterPanel({ adAccountId, applied, onApply, onClose }) {
+function ChartCell({ column, ad, height, compact }) {
+    if (column.key === "retention") {
+        return isVideoAd(ad) ? <RetentionChart values={ad.retention} height={height} compact={compact} /> : <span className="text-gray-300">—</span>
+    }
+    return <AgeBars rows={ad.ageBreakdown} height={height} compact={compact} />
+}
+
+function AdsTable({ ads, columns, sort, onSort }) {
+    const th = "whitespace-nowrap border-b border-gray-200 bg-gray-50 px-4 py-2.5 text-left text-xs font-medium text-gray-500"
+    const td = "whitespace-nowrap border-b border-gray-100 px-4 py-3 text-left align-middle text-sm text-gray-800"
+    return (
+        <div className="overflow-hidden rounded-2xl border border-gray-200">
+            <ScrollArea viewportClassName="max-h-[70vh]">
+                <table className="w-full min-w-max border-separate border-spacing-0">
+                    <thead className="sticky top-0 z-20">
+                        <tr>
+                            <th className={cn(th, "sticky left-0 z-30 min-w-[320px] border-r")}>Ad</th>
+                            {columns.map(column => (
+                                <th key={column.key} className={th}>
+                                    {column.chart ? (
+                                        <span className="inline-flex items-center gap-1">
+                                            {column.label}
+                                            <HintIcon hint={METRIC_HINTS[column.key]} />
+                                        </span>
+                                    ) : (
+                                        <SortHeader column={column} sort={sort} onSort={onSort} />
+                                    )}
+                                </th>
+                            ))}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {ads.map(ad => {
+                            const video = isVideoAd(ad)
+                            return (
+                                <tr key={ad.adId} className="group">
+                                    <td className="sticky left-0 z-10 max-w-[320px] border-b border-r border-gray-100 border-r-gray-200 bg-white px-4 py-3 transition-colors group-hover:bg-gray-50">
+                                        <div className="flex items-center gap-3">
+                                            <Thumbnail url={ad.thumbnailUrl} name={ad.adName} href={ad.postUrl} className="h-14 w-14 rounded-lg" />
+                                            <AdNameCell ad={ad} />
+                                        </div>
+                                    </td>
+                                    {columns.map(column => (
+                                        <td
+                                            key={column.key}
+                                            className={cn(td, "transition-colors group-hover:bg-gray-50", column.chart && (column.key === "retention" ? "w-[180px] min-w-[180px]" : "w-[240px] min-w-[240px]"))}
+                                        >
+                                            {column.chart
+                                                ? <ChartCell column={column} ad={ad} height={56} compact />
+                                                : column.video && !video ? <span className="text-gray-300">—</span> : column.render(ad)}
+                                        </td>
+                                    ))}
+                                </tr>
+                            )
+                        })}
+                    </tbody>
+                </table>
+            </ScrollArea>
+        </div>
+    )
+}
+
+function AdsGrid({ ads, columns }) {
+    const metricColumns = columns.filter(c => !c.chart)
+    const chartColumns = columns.filter(c => c.chart)
+    return (
+        <ScrollArea viewportClassName="max-h-[75vh]">
+            <div className="grid grid-cols-1 gap-3 pr-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {ads.map(ad => {
+                    const video = isVideoAd(ad)
+                    const metrics = metricColumns.filter(c => video || !c.video)
+                    const charts = chartColumns.filter(c => video || !c.video)
+                    return (
+                        <div key={ad.adId} className="flex min-w-0 flex-col gap-3 rounded-2xl border border-gray-100 p-3 transition-colors hover:border-gray-200">
+                            <Thumbnail url={ad.thumbnailUrl} name={ad.adName} href={ad.postUrl} className="aspect-square w-full rounded-xl" />
+                            <AdNameCell ad={ad} />
+                            {metrics.length > 0 && (
+                                <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+                                    {metrics.map(column => (
+                                        <div key={column.key} className="min-w-0">
+                                            <div className="flex items-center gap-1 text-[10px] font-medium uppercase tracking-wide text-gray-400">
+                                                <span className="truncate">{column.label}</span>
+                                                <HintIcon hint={METRIC_HINTS[column.key]} />
+                                            </div>
+                                            <div className="mt-0.5 whitespace-nowrap text-sm font-medium text-gray-800">{column.render(ad)}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                            {charts.map(column => (
+                                <div key={column.key} className="min-w-0">
+                                    <div className="mb-1.5 flex items-center gap-1 text-[10px] font-medium uppercase tracking-wide text-gray-400">
+                                        {column.label}
+                                        <HintIcon hint={METRIC_HINTS[column.key]} />
+                                    </div>
+                                    <ChartCell column={column} ad={ad} height={88} />
+                                </div>
+                            ))}
+                        </div>
+                    )
+                })}
+            </div>
+        </ScrollArea>
+    )
+}
+
+function ColumnsPicker({ columns, hidden, onChange }) {
+    const visibleCount = columns.filter(c => !hidden.includes(c.key)).length
+    const toggle = (key, checked) => onChange(checked ? hidden.filter(k => k !== key) : [...hidden, key])
+    return (
+        <Popover>
+            <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="rounded-xl">
+                    <Columns3 className="mr-1.5 h-3.5 w-3.5" />
+                    Columns
+                    {visibleCount < columns.length && (
+                        <span className="ml-1.5 text-[11px] text-gray-400">{visibleCount}/{columns.length}</span>
+                    )}
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" sideOffset={6} className="w-[240px] rounded-2xl bg-white p-3 shadow-lg">
+                <div className="mb-2 flex items-center justify-between">
+                    <span className="text-xs font-medium text-gray-700">Show columns</span>
+                    {hidden.length > 0 && (
+                        <button type="button" className="text-[11px] text-gray-400 hover:text-gray-700" onClick={() => onChange([])}>
+                            Show all
+                        </button>
+                    )}
+                </div>
+                <div className="space-y-1">
+                    {columns.map(column => {
+                        const id = `trending-col-${column.key}`
+                        return (
+                            <label key={column.key} htmlFor={id} className="flex cursor-pointer items-center gap-2 rounded-lg px-1.5 py-1 text-sm text-gray-700 hover:bg-gray-50">
+                                <Checkbox
+                                    id={id}
+                                    checked={!hidden.includes(column.key)}
+                                    onCheckedChange={(checked) => toggle(column.key, checked === true)}
+                                />
+                                {column.label}
+                            </label>
+                        )
+                    })}
+                </div>
+            </PopoverContent>
+        </Popover>
+    )
+}
+
+function ViewToggle({ view, onChange }) {
+    const options = [
+        { key: "table", icon: Table2, label: "Table view" },
+        { key: "grid", icon: LayoutGrid, label: "Grid view" },
+    ]
+    return (
+        <div className="inline-flex rounded-xl border border-gray-200 bg-white p-0.5">
+            {options.map(({ key, icon: Icon, label }) => (
+                <button
+                    key={key}
+                    type="button"
+                    onClick={() => onChange(key)}
+                    title={label}
+                    aria-label={label}
+                    aria-pressed={view === key}
+                    className={cn(
+                        "rounded-lg px-2 py-1 transition-colors",
+                        view === key ? "bg-gray-100 text-gray-900" : "text-gray-400 hover:text-gray-700",
+                    )}
+                >
+                    <Icon className="h-4 w-4" />
+                </button>
+            ))}
+        </div>
+    )
+}
+
+const viewStepIndex = (value, fallback) => {
+    if (value === "" || value == null) return fallback
+    const n = Number(value)
+    let best = 0
+    VIEW_STEPS.forEach((step, i) => { if (Math.abs(step - n) < Math.abs(VIEW_STEPS[best] - n)) best = i })
+    return best
+}
+const viewStepLabel = (index) => (index >= VIEW_MAX_INDEX ? "100k+" : formatCount(VIEW_STEPS[index]))
+
+function FilterPanel({ applied, onApply, onClose, isRoasMode, getCampaigns, getAdSets }) {
     const [draft, setDraft] = useState(applied)
-    const [campaigns, setCampaigns] = useState([])
-    const [campaignsLoading, setCampaignsLoading] = useState(false)
+    const [campaignEntry] = useState(() => getCampaigns())
+    const [campaigns, setCampaigns] = useState(campaignEntry.data || [])
+    const [campaignsLoading, setCampaignsLoading] = useState(!campaignEntry.data)
     const [adSets, setAdSets] = useState([])
     const [adSetsLoading, setAdSetsLoading] = useState(false)
     const [openCampaign, setOpenCampaign] = useState(false)
     const [campaignSearch, setCampaignSearch] = useState("")
     const [openAdSet, setOpenAdSet] = useState(false)
     const [adSetSearch, setAdSetSearch] = useState("")
-
-    const fetchAdSets = useCallback(async (campaignId) => {
-        setAdSetsLoading(true)
-        try {
-            const res = await fetch(`${API_BASE_URL}/auth/fetch-adsets?campaignId=${campaignId}`, { credentials: "include" })
-            const data = await res.json()
-            setAdSets(data.adSets || [])
-        } catch (err) {
-            console.error("Failed to fetch ad sets:", err)
-            toast.error("Failed to fetch ad sets")
-            setAdSets([])
-        } finally {
-            setAdSetsLoading(false)
-        }
-    }, [])
+    const adSetRequestRef = useRef(null)
 
     useEffect(() => {
+        if (campaignEntry.data) return
         let cancelled = false
-        setCampaignsLoading(true)
-        fetch(`${API_BASE_URL}/auth/fetch-campaigns?adAccountId=${adAccountId}`, { credentials: "include" })
-            .then(r => r.json())
-            .then(data => { if (!cancelled) setCampaigns(sortCampaignsActiveFirst(data.campaigns || [])) })
-            .catch(err => {
-                console.error("Failed to fetch campaigns:", err)
-                if (!cancelled) toast.error("Failed to fetch campaigns")
-            })
+        campaignEntry.promise
+            .then(data => { if (!cancelled) setCampaigns(data) })
+            .catch(() => { if (!cancelled) toast.error("Failed to fetch campaigns") })
             .finally(() => { if (!cancelled) setCampaignsLoading(false) })
-        if (applied.campaignId) fetchAdSets(applied.campaignId)
         return () => { cancelled = true }
-    }, [adAccountId, applied.campaignId, fetchAdSets])
+    }, [campaignEntry])
+
+    // Cached per campaign for the session (getAdSets), so reopening the panel is instant.
+    const loadAdSets = useCallback((campaignId) => {
+        const entry = getAdSets(campaignId)
+        adSetRequestRef.current = entry
+        if (entry.data) { setAdSets(entry.data); setAdSetsLoading(false); return }
+        setAdSets([])
+        setAdSetsLoading(true)
+        entry.promise
+            .then(data => { if (adSetRequestRef.current === entry) setAdSets(data) })
+            .catch(() => { if (adSetRequestRef.current === entry) toast.error("Failed to fetch ad sets") })
+            .finally(() => { if (adSetRequestRef.current === entry) setAdSetsLoading(false) })
+    }, [getAdSets])
+
+    useEffect(() => {
+        if (applied.campaignId) loadAdSets(applied.campaignId)
+    }, [applied.campaignId, loadAdSets])
 
     const set = (key, value) => setDraft(prev => ({ ...prev, [key]: value }))
+    const setNumber = (key, value) => set(key, value.replace(/[^\d.]/g, "").replace(/(\..*)\./g, "$1"))
 
     const handleCampaignChange = (id) => {
         setDraft(prev => ({ ...prev, campaignId: id, adsetId: "" }))
-        setAdSets([])
         setAdSetSearch("")
         setOpenCampaign(false)
-        fetchAdSets(id)
+        loadAdSets(id)
     }
 
     const filteredCampaigns = useMemo(() => {
@@ -433,11 +612,20 @@ function FilterPanel({ adAccountId, applied, onApply, onClose }) {
         return adSets.filter(a => (a.name || a.id).toLowerCase().includes(q))
     }, [adSets, adSetSearch])
 
+    const metricFilters = METRIC_FILTERS.filter(f => isRoasMode || !f.roasOnly)
+    const viewRange = [viewStepIndex(draft.videoViewsMin, 0), viewStepIndex(draft.videoViewsMax, VIEW_MAX_INDEX)]
+    const setViewRange = ([lo, hi]) => setDraft(prev => ({
+        ...prev,
+        videoViewsMin: lo > 0 ? String(VIEW_STEPS[lo]) : "",
+        videoViewsMax: hi < VIEW_MAX_INDEX ? String(VIEW_STEPS[hi]) : "",
+    }))
+    const viewsFiltered = viewRange[0] > 0 || viewRange[1] < VIEW_MAX_INDEX
+
     return (
         <div className="space-y-4">
-            <div className="space-y-1.5">
+            <div className="flex flex-col gap-1.5">
                 <Label className="text-xs text-gray-700">Date range</Label>
-                <div className="inline-flex rounded-full bg-gray-100 p-0.5">
+                <div className="inline-flex self-start rounded-full bg-gray-100 p-0.5">
                     {DAY_OPTIONS.map(d => (
                         <button
                             key={d}
@@ -484,6 +672,9 @@ function FilterPanel({ adAccountId, applied, onApply, onClose }) {
                         items={filteredCampaigns}
                         selectedId={draft.campaignId}
                         onSelect={handleCampaignChange}
+                        align="start"
+                        maxWidth="700px"
+                        avoidCollisions
                     />
                 </div>
                 <div className="min-w-0 space-y-1.5">
@@ -511,6 +702,9 @@ function FilterPanel({ adAccountId, applied, onApply, onClose }) {
                                 ({adset.totalAds} {adset.totalAds === 1 ? "Ad" : "Ads"})
                             </span>
                         )}
+                        align="end"
+                        maxWidth="700px"
+                        avoidCollisions
                     />
                 </div>
             </div>
@@ -521,44 +715,64 @@ function FilterPanel({ adAccountId, applied, onApply, onClose }) {
                     <span>Min</span>
                     <span>Max</span>
                 </div>
-                {METRIC_FILTERS.map(f => (
+                {metricFilters.map(f => (
                     <div key={f.key} className="grid grid-cols-[1fr_96px_96px] items-center gap-2">
                         <span className="text-sm text-gray-700">
                             {f.label}
-                            {f.unit && <span className="ml-1 text-xs text-gray-400">({f.unit})</span>}
+                            <span className="ml-1 text-xs text-gray-400">({f.unit})</span>
                         </span>
                         {["Min", "Max"].map(bound => (
                             <Input
                                 key={bound}
-                                type="number"
+                                type="text"
                                 inputMode="decimal"
-                                min="0"
-                                step={f.step}
                                 placeholder="Any"
                                 value={draft[`${f.key}${bound}`]}
-                                onChange={(e) => set(`${f.key}${bound}`, e.target.value)}
+                                onChange={(e) => setNumber(`${f.key}${bound}`, e.target.value)}
                                 className="h-8 rounded-xl text-sm"
                             />
                         ))}
                     </div>
                 ))}
-                <p className="pt-1 text-[11px] text-gray-400">
-                    Ads without data for a filtered metric (e.g. image ads for video views) are left out.
+            </div>
+
+            <div className="space-y-2.5">
+                <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-700">3s video views</span>
+                    <span className="text-xs font-medium text-gray-500">
+                        {viewsFiltered ? `${viewStepLabel(viewRange[0])} – ${viewStepLabel(viewRange[1])}` : "Any"}
+                    </span>
+                </div>
+                <Slider
+                    min={0}
+                    max={VIEW_MAX_INDEX}
+                    step={1}
+                    minStepsBetweenThumbs={1}
+                    value={viewRange}
+                    onValueChange={setViewRange}
+                    aria-label="3s video views range"
+                />
+                <div className="flex justify-between text-[10px] text-gray-400">
+                    <span>0</span>
+                    <span>100k+</span>
+                </div>
+                <p className="text-[11px] text-gray-400">
+                    Image ads are left out when a 3s video views range is set.
                 </p>
             </div>
 
-            <div className="flex items-center justify-between border-t border-gray-100 pt-3">
-                <button
-                    type="button"
-                    className="text-xs font-medium text-gray-500 hover:text-gray-800"
+            <div className="flex items-center gap-2 pt-1">
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    className="rounded-xl text-gray-500"
                     onClick={() => setDraft(EMPTY_FILTERS)}
                 >
+                    <RotateCcw className="mr-1 h-3.5 w-3.5" />
                     Reset
-                </button>
-                <div className="flex gap-2">
-                    <Button variant="outline" size="sm" className="rounded-xl" onClick={onClose}>Cancel</Button>
-                    <Button size="sm" className="rounded-xl" onClick={() => onApply(draft)}>Search</Button>
-                </div>
+                </Button>
+                <Button variant="outline" size="sm" className="flex-1 rounded-xl" onClick={onClose}>Cancel</Button>
+                <Button size="sm" className="flex-1 rounded-xl" onClick={() => onApply(draft)}>Search</Button>
             </div>
         </div>
     )
@@ -570,8 +784,27 @@ export default function TrendingCreative({ adAccountId, conversionEvent, mode = 
     const [error, setError] = useState(null)
     const [filters, setFilters] = useState(EMPTY_FILTERS)
     const [filterOpen, setFilterOpen] = useState(false)
+    const [sort, setSort] = useState({ key: "spend", dir: "desc" })
+    const [hiddenColumns, setHiddenColumns] = useState(() => readStored(STORAGE_KEYS.hidden, []))
+    const [view, setView] = useState(() => (readStored(STORAGE_KEYS.view, "table") === "grid" ? "grid" : "table"))
     const isRoasMode = mode === "roas"
-    const filterCount = activeFilterCount(filters)
+
+    // ROAS isn't a column outside ROAS mode, so its filter is dropped there.
+    const activeFilters = useMemo(() => Object.fromEntries(
+        Object.entries(filters).filter(([key, value]) =>
+            value !== ""
+            && !(key === "days" && value === "7")
+            && (isRoasMode || !key.startsWith("roas"))),
+    ), [filters, isRoasMode])
+    const filterCount = useMemo(() => {
+        let count = 0
+        if (activeFilters.days) count++
+        if (activeFilters.campaignId || activeFilters.adsetId) count++
+        for (const key of [...METRIC_FILTERS.map(f => f.key), "videoViews"]) {
+            if (activeFilters[`${key}Min`] || activeFilters[`${key}Max`]) count++
+        }
+        return count
+    }, [activeFilters])
 
     // Session-scoped response cache. Keyed by accountId + conversionEvent +
     // filters + refreshKey — includes refreshKey so the user's manual refresh
@@ -580,16 +813,46 @@ export default function TrendingCreative({ adAccountId, conversionEvent, mode = 
     // pattern used elsewhere in AnalyticsDashboard (recsCacheRef, etc.).
     const cacheRef = useRef({})
 
+    // Same pattern for the filter's campaign / ad set lists: one request per
+    // account / campaign until the account changes or the user refreshes.
+    const listCacheRef = useRef({})
+    useEffect(() => { listCacheRef.current = {} }, [adAccountId, refreshKey])
+    const cachedList = useCallback((key, url, pick) => {
+        const cache = listCacheRef.current
+        if (!cache[key]) {
+            const entry = { data: null }
+            entry.promise = fetch(url, { credentials: "include" })
+                .then(r => r.json())
+                .then(body => { entry.data = pick(body); return entry.data })
+                .catch(err => {
+                    if (listCacheRef.current[key] === entry) delete listCacheRef.current[key]
+                    throw err
+                })
+            cache[key] = entry
+        }
+        return cache[key]
+    }, [])
+    const getCampaigns = useCallback(() => cachedList(
+        `campaigns:${adAccountId}`,
+        `${API_BASE_URL}/auth/fetch-campaigns?adAccountId=${adAccountId}`,
+        body => sortCampaignsActiveFirst(body.campaigns || []),
+    ), [cachedList, adAccountId])
+    const getAdSets = useCallback((campaignId) => cachedList(
+        `adsets:${campaignId}`,
+        `${API_BASE_URL}/auth/fetch-adsets?campaignId=${campaignId}`,
+        body => body.adSets || [],
+    ), [cachedList])
+
     // Filters belong to one ad account.
     useEffect(() => { setFilters(EMPTY_FILTERS) }, [adAccountId])
+
+    useEffect(() => { writeStored(STORAGE_KEYS.hidden, hiddenColumns) }, [hiddenColumns])
+    useEffect(() => { writeStored(STORAGE_KEYS.view, view) }, [view])
 
     useEffect(() => {
         if (!adAccountId) { setData(null); return }
         // Render the shell immediately; fetch once the conversion event is known.
         if (waiting) { setData(null); setLoading(true); setError(null); return }
-        const activeFilters = Object.fromEntries(
-            Object.entries(filters).filter(([key, value]) => value !== "" && !(key === "days" && value === "7")),
-        )
         const cacheKey = `${adAccountId}::${mode}::${conversionEvent || "__auto__"}::${JSON.stringify(activeFilters)}::${refreshKey || 0}`
 
         // Cache hit — render instantly, no Helix.
@@ -623,12 +886,27 @@ export default function TrendingCreative({ adAccountId, conversionEvent, mode = 
             .finally(() => { if (!cancelled) setLoading(false) })
 
         return () => { cancelled = true }
-    }, [adAccountId, conversionEvent, mode, refreshKey, waiting, filters])
+    }, [adAccountId, conversionEvent, mode, refreshKey, waiting, activeFilters])
+
+    // Columns that apply to these results: ROAS only in ROAS mode, video columns
+    // only when at least one ad has video data.
+    const availableColumns = useMemo(() => {
+        const anyVideo = (data?.ads || []).some(isVideoAd)
+        return COLUMNS.filter(c => (isRoasMode || !c.roasOnly) && (anyVideo || !c.video))
+    }, [data, isRoasMode])
+    const visibleColumns = availableColumns.filter(c => !hiddenColumns.includes(c.key))
+    const sortedAds = useMemo(() => sortAds(data?.ads || [], sort), [data, sort])
+
+    const handleSort = (key) => {
+        setSort(prev => (prev.key === key
+            ? { key, dir: prev.dir === "asc" ? "desc" : "asc" }
+            : { key, dir: COLUMN_BY_KEY[key].best }))
+    }
 
     const isSearch = data?.mode === "search"
     const days = data?.window?.days || Number(filters.days)
     const subtitle = isSearch
-        ? `${data.ads.length}${data.totalMatches > data.ads.length ? ` of ${data.totalMatches}` : ""} matching ads in the last ${days} days, sorted by spend. Spend change is vs the ${days} days before.`
+        ? `${data.ads.length}${data.totalMatches > data.ads.length ? ` of ${data.totalMatches}` : ""} matching ads in the last ${days} days. Spend change is vs the ${days} days before.`
         : "Ads with >35% spend growth over the last 7 days vs the prior 7 days."
 
     return (
@@ -658,6 +936,7 @@ export default function TrendingCreative({ adAccountId, conversionEvent, mode = 
                                     Clear filters
                                 </Button>
                             )}
+                            <ColumnsPicker columns={availableColumns} hidden={hiddenColumns} onChange={setHiddenColumns} />
                             <Popover open={filterOpen} onOpenChange={setFilterOpen}>
                                 <PopoverTrigger asChild>
                                     <Button
@@ -682,14 +961,17 @@ export default function TrendingCreative({ adAccountId, conversionEvent, mode = 
                                 >
                                     {filterOpen && (
                                         <FilterPanel
-                                            adAccountId={adAccountId}
                                             applied={filters}
+                                            isRoasMode={isRoasMode}
+                                            getCampaigns={getCampaigns}
+                                            getAdSets={getAdSets}
                                             onApply={(next) => { setFilters(next); setFilterOpen(false) }}
                                             onClose={() => setFilterOpen(false)}
                                         />
                                     )}
                                 </PopoverContent>
                             </Popover>
+                            <ViewToggle view={view} onChange={setView} />
                         </div>
                     </div>
 
@@ -704,10 +986,10 @@ export default function TrendingCreative({ adAccountId, conversionEvent, mode = 
                         <div className="flex h-[160px] items-center justify-center text-sm text-gray-400">
                             {filterCount > 0 ? "No ads match these filters" : "No trending creatives in the last 7 days"}
                         </div>
+                    ) : view === "grid" ? (
+                        <AdsGrid ads={sortedAds} columns={visibleColumns} />
                     ) : (
-                        <div className="custom-scrollbar space-y-3 overflow-y-auto pr-1" style={{ maxHeight: "75vh" }}>
-                            {data.ads.map(ad => <AdRow key={ad.adId} ad={ad} isRoasMode={isRoasMode} />)}
-                        </div>
+                        <AdsTable ads={sortedAds} columns={visibleColumns} sort={sort} onSort={handleSort} />
                     )}
                 </CardContent>
             </Card>

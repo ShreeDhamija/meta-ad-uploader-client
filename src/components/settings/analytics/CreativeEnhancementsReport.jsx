@@ -207,8 +207,32 @@ function RowStatus({ status }) {
     )
 }
 
-export function SearchableCombobox({ open, onOpenChange, disabled, triggerLabel, loading, loadingLabel, placeholder, search, onSearchChange, emptyLabel, items, selectedId, onSelect, renderMeta }) {
+// A name that shows its full text in a tooltip only when it's cut off.
+function OverflowTooltipText({ text, className }) {
+    const ref = useRef(null)
+    const [open, setOpen] = useState(false)
     return (
+        <Tooltip
+            open={open}
+            onOpenChange={(next) => setOpen(next && !!ref.current && ref.current.scrollWidth > ref.current.clientWidth)}
+        >
+            <TooltipTrigger asChild>
+                <span ref={ref} className={className}>{text}</span>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-[480px] break-words text-xs">{text}</TooltipContent>
+        </Tooltip>
+    )
+}
+
+// align / maxWidth / avoidCollisions let a caller open the list toward the
+// page's other edge and keep long names on screen (TrendingCreative's filter).
+export function SearchableCombobox({
+    open, onOpenChange, disabled, triggerLabel, loading, loadingLabel, placeholder, search, onSearchChange,
+    emptyLabel, items, selectedId, onSelect, renderMeta,
+    align = "start", maxWidth = "48rem", avoidCollisions = false,
+}) {
+    return (
+        <TooltipProvider delayDuration={300}>
         <Popover open={open} onOpenChange={onOpenChange}>
             <PopoverTrigger asChild>
                 <Button
@@ -220,23 +244,25 @@ export function SearchableCombobox({ open, onOpenChange, disabled, triggerLabel,
                 >
                     <div className="w-full overflow-hidden flex items-center gap-2">
                         {loading && <Loader className="h-3.5 w-3.5 animate-spin" />}
-                        <span className={cn("block truncate flex-1 text-left", loading && "text-gray-500")}>
-                            {loading ? loadingLabel : triggerLabel}
-                        </span>
+                        <OverflowTooltipText
+                            text={loading ? loadingLabel : triggerLabel}
+                            className={cn("block min-w-0 truncate flex-1 text-left", loading && "text-gray-500")}
+                        />
                     </div>
                     <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
                 </Button>
             </PopoverTrigger>
             <PopoverContent
-                className="!w-auto !max-w-none p-0 bg-white shadow-lg rounded-2xl"
-                align="start"
+                className="!w-auto p-0 bg-white shadow-lg rounded-2xl"
+                align={align}
                 sideOffset={4}
                 side="bottom"
-                avoidCollisions={false}
+                avoidCollisions={avoidCollisions}
+                collisionPadding={16}
                 style={{
                     minWidth: "var(--radix-popover-trigger-width)",
                     width: "max-content",
-                    maxWidth: "min(calc(100vw - 2rem), 48rem)",
+                    maxWidth: `min(calc(100vw - 2rem), ${maxWidth})`,
                 }}
             >
                 <Command loop={false}>
@@ -262,7 +288,7 @@ export function SearchableCombobox({ open, onOpenChange, disabled, triggerLabel,
                                     )}
                                 >
                                     <div className="flex justify-between items-center w-full truncate">
-                                        <span className="truncate">{item.name || item.id}</span>
+                                        <OverflowTooltipText text={item.name || item.id} className="min-w-0 truncate" />
                                         <span className="flex items-center">
                                             {renderMeta?.(item)}
                                             {item.status === "ACTIVE" && <span className="ml-2 w-2 h-2 rounded-full bg-green-500 shrink-0" />}
@@ -275,6 +301,7 @@ export function SearchableCombobox({ open, onOpenChange, disabled, triggerLabel,
                 </Command>
             </PopoverContent>
         </Popover>
+        </TooltipProvider>
     )
 }
 
