@@ -150,6 +150,19 @@ function formatEventName(actionType) {
     return actionType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
 }
 
+// Dashboard usage for the admin tool (POST /api/analytics/track). Fire-and-forget.
+const trackAnalyticsUsage = (body) => {
+    fetch(`${API_BASE_URL}/api/analytics/track`, {
+        method: 'POST', credentials: 'include', keepalive: true,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+    }).catch(() => {})
+}
+const openReport = (report, open) => () => {
+    trackAnalyticsUsage({ action: 'report', report })
+    open()
+}
+
 export default function AnalyticsDashboard() {
     const { adAccounts, adAccountsLoading } = useAppData()
     const { loading: globalSettingsLoading, hasSeenAnalyticsOnboarding } = useGlobalSettings()
@@ -249,6 +262,8 @@ export default function AnalyticsDashboard() {
     const [diagnosticOpen, setDiagnosticOpen] = useState(false)
     const [enhancementsOpen, setEnhancementsOpen] = useState(false)
     const [rejectedAdsOpen, setRejectedAdsOpen] = useState(false)
+
+    useEffect(() => { trackAnalyticsUsage({ action: 'open' }) }, [])
     const [chartsRefreshKey, setChartsRefreshKey] = useState(0)
     // Per-account response caches (session-scoped, cleared on tab close)
     const recsCacheRef = useRef({})       // { [accountId]: responsePayload }
@@ -1423,7 +1438,7 @@ export default function AnalyticsDashboard() {
                                 <Tooltip>
                                     <TooltipTrigger asChild>
                                         <DropdownMenuItem
-                                            onClick={() => setAuditOpen(true)}
+                                            onClick={openReport('audit', () => setAuditOpen(true))}
                                             className="cursor-pointer rounded-xl px-3 py-2 text-sm focus:bg-gray-100 whitespace-nowrap"
                                         >
                                             <FileBarChart2 className="w-4 h-4 text-gray-500" />
@@ -1437,7 +1452,7 @@ export default function AnalyticsDashboard() {
                                 <Tooltip>
                                     <TooltipTrigger asChild>
                                         <DropdownMenuItem
-                                            onClick={() => setDiagnosticOpen(true)}
+                                            onClick={openReport('diagnostic', () => setDiagnosticOpen(true))}
                                             className="cursor-pointer rounded-xl px-3 py-2 text-sm focus:bg-gray-100 whitespace-nowrap"
                                         >
                                             <Stethoscope className="w-4 h-4 text-gray-500" />
@@ -1451,7 +1466,7 @@ export default function AnalyticsDashboard() {
                                 <Tooltip>
                                     <TooltipTrigger asChild>
                                         <DropdownMenuItem
-                                            onClick={() => setShowSummaryDialog(true)}
+                                            onClick={openReport('summary', () => setShowSummaryDialog(true))}
                                             className="cursor-pointer rounded-xl px-3 py-2 text-sm focus:bg-gray-100 whitespace-nowrap"
                                         >
                                             <FileText className="w-4 h-4 text-gray-500" />
@@ -1465,7 +1480,7 @@ export default function AnalyticsDashboard() {
                                 <Tooltip>
                                     <TooltipTrigger asChild>
                                         <DropdownMenuItem
-                                            onClick={() => setEnhancementsOpen(true)}
+                                            onClick={openReport('creative_enhancements', () => setEnhancementsOpen(true))}
                                             className="cursor-pointer rounded-xl px-3 py-2 text-sm focus:bg-gray-100 whitespace-nowrap"
                                         >
                                             <Sparkles className="w-4 h-4 text-gray-500" />
@@ -1479,7 +1494,7 @@ export default function AnalyticsDashboard() {
                                 <Tooltip>
                                     <TooltipTrigger asChild>
                                         <DropdownMenuItem
-                                            onClick={() => setRejectedAdsOpen(true)}
+                                            onClick={openReport('rejected_ads', () => setRejectedAdsOpen(true))}
                                             className="cursor-pointer rounded-xl px-3 py-2 text-sm focus:bg-gray-100 whitespace-nowrap"
                                         >
                                             <ShieldAlert className="w-4 h-4 text-gray-500" />
