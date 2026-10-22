@@ -349,6 +349,7 @@ export default function RecommendationCards({
     const [confirmDialog, setConfirmDialog] = useState(null) // { rec, action } or { type: 'single'|'bulk', ad?, count? }
     const [scaleWinnersExpanded, setScaleWinnersExpanded] = useState(false)
     const [fatigueExpanded, setFatigueExpanded] = useState(false)
+    const [expandedSpendShiftGroups, setExpandedSpendShiftGroups] = useState(new Set()) // group ids
     const [selectedScaleWinners, setSelectedScaleWinners] = useState(new Set()) // recKeys
     const [showDismissed, setShowDismissed] = useState(false)
 
@@ -1021,6 +1022,77 @@ export default function RecommendationCards({
                                         const groupWinners = scaleWinners.length >= 5
                                         const groupFatigue = fatigueRecs.length > 3
 
+                                        // Spend shifts the server tagged as one account-level change
+                                        // (rec.group) collapse into one card when more than 2 remain.
+                                        const spendShiftGroups = new Map()
+                                        for (const rec of otherRecs) {
+                                            if (rec.type !== 'spend_shift' || !rec.group?.id) continue
+                                            if (!spendShiftGroups.has(rec.group.id)) spendShiftGroups.set(rec.group.id, [])
+                                            spendShiftGroups.get(rec.group.id).push(rec)
+                                        }
+                                        const collapsedGroupId = (rec) =>
+                                            rec.type === 'spend_shift' && rec.group?.id && spendShiftGroups.get(rec.group.id).length > 2
+                                                ? rec.group.id
+                                                : null
+                                        const toggleSpendShiftGroup = (groupId) => setExpandedSpendShiftGroups(prev => {
+                                            const next = new Set(prev)
+                                            if (next.has(groupId)) next.delete(groupId)
+                                            else next.add(groupId)
+                                            return next
+                                        })
+                                        const renderSpendShiftGroup = (groupId) => {
+                                            const members = spendShiftGroups.get(groupId)
+                                            const { group } = members[0]
+                                            const expanded = expandedSpendShiftGroups.has(groupId)
+                                            const noun = members[0].segmentType === 'age' ? 'age groups' : 'placements'
+                                            return (
+                                                <Card key={groupId} className="rounded-2xl border-amber-300 bg-amber-50/40">
+                                                    <CardContent className="p-0">
+                                                        <button
+                                                            onClick={() => toggleSpendShiftGroup(groupId)}
+                                                            className="w-full p-4 flex items-center justify-between gap-3"
+                                                        >
+                                                            <div className="flex items-center gap-3 min-w-0">
+                                                                <img
+                                                                    src={spendShiftIcon}
+                                                                    alt=""
+                                                                    aria-hidden="true"
+                                                                    className="h-[38px] w-[38px] flex-shrink-0"
+                                                                    style={{ filter: "drop-shadow(0px 1px 5px rgba(0, 0, 0, 0.15))" }}
+                                                                />
+                                                                <div className="text-left min-w-0">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <Badge className="text-[10px] px-2 py-0.5 rounded-full bg-amber-600 text-white border-amber-600 whitespace-nowrap">
+                                                                            Spend Shift
+                                                                        </Badge>
+                                                                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 rounded-full bg-amber-100 text-amber-800 border-amber-200">
+                                                                            {members.length} {noun}
+                                                                        </Badge>
+                                                                    </div>
+                                                                    <p className="text-sm text-amber-900 mt-1 font-medium">{group.title}</p>
+                                                                    {group.summary && (
+                                                                        <p className="text-xs text-amber-800 mt-0.5">{group.summary}</p>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                            <ChevronDown className={cn(
+                                                                "w-5 h-5 text-amber-600 transition-transform flex-shrink-0",
+                                                                expanded && "rotate-180"
+                                                            )} />
+                                                        </button>
+
+                                                        {expanded && (
+                                                            <div className="px-4 pb-4 space-y-2 border-t border-amber-100 pt-3">
+                                                                {members.map(rec => renderRecCard(rec, { neutralStyle: true }))}
+                                                            </div>
+                                                        )}
+                                                    </CardContent>
+                                                </Card>
+                                            )
+                                        }
+                                        // Each collapsed group renders once, where its first member would be.
+                                        const renderedGroups = new Set()
+
                                         return (
                                             <>
                                                 {/* Grouped Scale Winners collapsible card */}
@@ -1168,7 +1240,13 @@ export default function RecommendationCards({
                                                 {!groupFatigue && fatigueRecs.map(rec => renderRecCard(rec))}
 
                                                 {/* All other recommendation cards */}
-                                                {otherRecs.map(rec => renderRecCard(rec))}
+                                                {otherRecs.map(rec => {
+                                                    const groupId = collapsedGroupId(rec)
+                                                    if (!groupId) return renderRecCard(rec)
+                                                    if (renderedGroups.has(groupId)) return null
+                                                    renderedGroups.add(groupId)
+                                                    return renderSpendShiftGroup(groupId)
+                                                })}
                                             </>
                                         )
                                     })()}
