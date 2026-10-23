@@ -115,7 +115,10 @@ function MetricTileSkeleton({ label }) {
     )
 }
 
-export default function PeriodMetricsSummary({ data, loading, mode = "cpr" }) {
+// `extraTiles` (custom data scorecards, added 2026-10-23): already-formatted
+// { key, label, value, delta, lowerIsBetter, previousValue } appended after the
+// standard tiles; `extraLoading` shows them as skeletons.
+export default function PeriodMetricsSummary({ data, loading, mode = "cpr", extraTiles = [], extraLoading = false }) {
     const isRoas = mode === "roas"
 
     const tiles = useMemo(() => {
@@ -196,6 +199,9 @@ export default function PeriodMetricsSummary({ data, loading, mode = "cpr" }) {
                     {loadingLabels.map((label) => (
                         <MetricTileSkeleton key={label} label={label} />
                     ))}
+                    {extraTiles.map((t) => (
+                        <MetricTileSkeleton key={t.key} label={t.label} />
+                    ))}
                 </div>
             </div>
         )
@@ -216,6 +222,21 @@ export default function PeriodMetricsSummary({ data, loading, mode = "cpr" }) {
                         previousValue={t.previousValue}
                         previousLabel={previousLabel}
                     />
+                ))}
+                {extraTiles.map((t) => (
+                    extraLoading ? (
+                        <MetricTileSkeleton key={t.key} label={t.label} />
+                    ) : (
+                        <MetricTile
+                            key={t.key}
+                            label={t.label}
+                            value={t.value}
+                            delta={t.delta}
+                            lowerIsBetter={t.lowerIsBetter}
+                            previousValue={t.previousValue}
+                            previousLabel={previousLabel}
+                        />
+                    )
                 ))}
             </div>
         </div>

@@ -41,6 +41,17 @@ import TrailingSixWeeksSnapshot from "./analytics/TrailingSixWeeksSnapshot"
 // FEATURE START: PERIOD METRICS SUMMARY (added 2026-05-19)
 import PeriodMetricsSummary from "./analytics/PeriodMetricsSummary"
 // FEATURE END: PERIOD METRICS SUMMARY
+// FEATURE START: CUSTOM DATA + CUSTOM METRICS (added 2026-10-23)
+import CustomDataSettings from "./analytics/CustomDataSettings"
+import CustomDataChart from "./analytics/CustomDataChart"
+import {
+    describeCustomKey,
+    formatMetricValue,
+    getCustomDisplayKeys,
+    periodContext,
+    resolveMetricKey,
+} from "./analytics/customMetrics"
+// FEATURE END: CUSTOM DATA + CUSTOM METRICS
 import AccountSummaryDialog from "./analytics/AccountSummaryDialog"
 import {
     buildAnalyticsDateQueryParams,
@@ -56,6 +67,8 @@ import {
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 const SELECTED_ACCOUNT_KEY = 'analytics-selected-ad-account'
+// Stable fallback so memos keyed on custom metrics don't rerun every render
+const NO_CUSTOM_METRICS = []
 
 const DEFAULT_THRESHOLDS = {
     cpaSpike: 50,
@@ -257,6 +270,20 @@ export default function AnalyticsDashboard() {
     // FEATURE END: PERIOD METRICS SUMMARY — state
     // ──────────────────────────────────────────────────────────────────────
 
+    // ──────────────────────────────────────────────────────────────────────
+    // FEATURE START: CUSTOM DATA + CUSTOM METRICS (added 2026-10-23) — state
+    // The sheet is re-read on every range change / refresh (no cache) so
+    // edits to it show up straight away.
+    // ──────────────────────────────────────────────────────────────────────
+    const [tempCustomDataSource, setTempCustomDataSource] = useState(null)
+    const [tempCustomMetrics, setTempCustomMetrics] = useState([])
+    const [customData, setCustomData] = useState(null)
+    const [customDataLoading, setCustomDataLoading] = useState(false)
+    const [customDataError, setCustomDataError] = useState(null)
+    // ──────────────────────────────────────────────────────────────────────
+    // FEATURE END: CUSTOM DATA + CUSTOM METRICS — state
+    // ──────────────────────────────────────────────────────────────────────
+
 
 
     const [auditOpen, setAuditOpen] = useState(false)
@@ -292,6 +319,8 @@ export default function AnalyticsDashboard() {
     const targetROAS = adAccountSettings?.targetROAS ?? null
     const anomalyThresholds = adAccountSettings?.anomalyThresholds ?? DEFAULT_THRESHOLDS
     const slackAlertsEnabled = adAccountSettings?.slackAlertsEnabled ?? false
+    const customDataSource = adAccountSettings?.customDataSource ?? null
+    const customMetrics = adAccountSettings?.customMetrics ?? NO_CUSTOM_METRICS
     const preferencesLoading = Boolean(selectedAdAccount) && adAccountSettingsLoading
 
     // Block all background data loading until first-time onboarding is resolved
@@ -337,6 +366,8 @@ export default function AnalyticsDashboard() {
         setTempSlackAlertsEnabled(slackAlertsEnabled)
         setTempAnalyticsMode(adAccountSettings?.analyticsMode || 'roas')
         setTempConversionEvent(adAccountSettings?.conversionEvent || null)
+        setTempCustomDataSource(adAccountSettings?.customDataSource ?? null)
+        setTempCustomMetrics(adAccountSettings?.customMetrics ?? [])
     }, [
         showSettingsDialog,
         adAccountSettingsLoading,
@@ -345,7 +376,9 @@ export default function AnalyticsDashboard() {
         targetROAS,
         slackAlertsEnabled,
         adAccountSettings?.analyticsMode,
-        adAccountSettings?.conversionEvent
+        adAccountSettings?.conversionEvent,
+        adAccountSettings?.customDataSource,
+        adAccountSettings?.customMetrics,
     ])
 
 
@@ -1036,6 +1069,86 @@ export default function AnalyticsDashboard() {
     // FEATURE END: PERIOD METRICS SUMMARY — effect
     // ──────────────────────────────────────────────────────────────────────
 
+    // ──────────────────────────────────────────────────────────────────────
+    // FEATURE START: CUSTOM DATA + CUSTOM METRICS (added 2026-10-23) — fetch
+    // + scorecards
+    // ──────────────────────────────────────────────────────────────────────
+    const customSheetUrl = customDataSource?.sheetUrl || null
+    useEffect(() => {
+        setCustomData(null)
+        setCustomDataError(null)
+        if (!selectedAdAccount || !customSheetUrl || blockForOnboarding) {
+            setCustomDataLoading(false)
+            return
+        }
+        const since = analyticsDateRange?.since
+        const until = analyticsDateRange?.until
+        if (!since || !until) return
+
+        const controller = new AbortController()
+        setCustomDataLoading(true)
+        const params = new URLSearchParams({ sheetUrl: customSheetUrl, since, until })
+        fetch(`${API_BASE_URL}/api/analytics/custom-data?${params}`, {
+            credentials: 'include',
+            signal: controller.signal,
+        })
+            .then(async (res) => {
+                const json = await res.json()
+                if (!res.ok) throw new Error(json.error || 'Failed to read Google Sheet')
+                setCustomData(json)
+                setCustomDataError(json.error || null)
+            })
+            .catch((err) => {
+                if (err.name === 'AbortError') return
+                console.error('Custom data error:', err)
+                setCustomDataError(err.message)
+            })
+            .finally(() => {
+                if (!controller.signal.aborted) setCustomDataLoading(false)
+            })
+        return () => controller.abort()
+    }, [selectedAdAccount, customSheetUrl, analyticsDateRange?.since, analyticsDateRange?.until, chartsRefreshKey, blockForOnboarding])
+
+    const customDisplayKeys = useMemo(
+        () => getCustomDisplayKeys(customDataSource, customMetrics),
+        [customDataSource, customMetrics]
+    )
+
+    const customTiles = useMemo(() => {
+        const currentCtx = periodContext(periodSummary, customData, 'current')
+        const previousCtx = periodContext(periodSummary, customData, 'previous')
+        return customDisplayKeys
+            .map((key) => {
+                const desc = describeCustomKey(key, customMetrics)
+                if (!desc) return null
+                const cur = resolveMetricKey(key, currentCtx, customMetrics)
+                const prev = resolveMetricKey(key, previousCtx, customMetrics)
+                const delta = cur !== null && prev !== null && prev !== 0 ? ((cur - prev) / prev) * 100 : null
+                return {
+                    key,
+                    label: desc.label,
+                    value: formatMetricValue(cur, desc.format),
+                    delta,
+                    lowerIsBetter: desc.lowerIsBetter,
+                    previousValue: formatMetricValue(prev, desc.format),
+                }
+            })
+            .filter(Boolean)
+    }, [customDisplayKeys, customMetrics, periodSummary, customData])
+
+    const customTilesLoading =
+        (Boolean(customSheetUrl) && customDataLoading) ||
+        (customMetrics.length > 0 && periodSummaryLoading)
+
+    // The builder previews a new metric against the selected range.
+    const customMetricPreviewCtx = useMemo(
+        () => (periodSummary || customData ? periodContext(periodSummary, customData, 'current') : null),
+        [periodSummary, customData]
+    )
+    // ──────────────────────────────────────────────────────────────────────
+    // FEATURE END: CUSTOM DATA + CUSTOM METRICS — fetch + scorecards
+    // ──────────────────────────────────────────────────────────────────────
+
 
 
     const handleAdAccountSelect = (accountId) => {
@@ -1167,6 +1280,8 @@ export default function AnalyticsDashboard() {
                     slackAlertsEnabled: tempSlackAlertsEnabled,
                     analyticsMode: modeForStorage,
                     conversionEvent: nextConversionEvent,
+                    customDataSource: tempCustomDataSource,
+                    customMetrics: tempCustomMetrics,
                 }
             })
 
@@ -1179,6 +1294,8 @@ export default function AnalyticsDashboard() {
                 slackAlertsEnabled: tempSlackAlertsEnabled,
                 analyticsMode: modeForStorage,
                 conversionEvent: nextConversionEvent,
+                customDataSource: tempCustomDataSource,
+                customMetrics: tempCustomMetrics,
             }))
             setShowSettingsDialog(false)
 
@@ -1634,6 +1751,8 @@ export default function AnalyticsDashboard() {
                             data={periodSummary}
                             loading={periodSummaryLoading}
                             mode={metricMode}
+                            extraTiles={customTiles}
+                            extraLoading={customTilesLoading}
                         />
                         {/* FEATURE END: PERIOD METRICS SUMMARY */}
 
@@ -1682,6 +1801,28 @@ export default function AnalyticsDashboard() {
                             </div>
                             <div className="pointer-events-none absolute left-1/2 top-[7%] hidden h-[90%] -translate-x-1/2 border-l border-dashed border-gray-300 lg:block" />
                         </div>
+
+                        {/* FEATURE START: CUSTOM DATA + CUSTOM METRICS — 5th chart (full width) */}
+                        {customDisplayKeys.length > 0 && (
+                            <>
+                                <div className="border-t border-gray-200 lg:border-dashed lg:border-gray-300 lg:mx-4" />
+                                <div className="lg:pt-4 [&_*:focus]:outline-none [&_*:focus-visible]:outline-none">
+                                    <CustomDataChart
+                                        displayKeys={customDisplayKeys}
+                                        customMetrics={customMetrics}
+                                        sheetName={customDataSource?.sheetName}
+                                        sheetDaily={customData?.daily ?? null}
+                                        weeklyInsights={weeklyInsights}
+                                        dateRange={analyticsDateRange}
+                                        granularity={analyticsGranularity}
+                                        loading={(Boolean(customSheetUrl) && customDataLoading) || (customMetrics.length > 0 && weeklyLoading)}
+                                        error={customDataError}
+                                        showDefaultTooltip={showSingleDayChartTooltips}
+                                    />
+                                </div>
+                            </>
+                        )}
+                        {/* FEATURE END: CUSTOM DATA + CUSTOM METRICS */}
 
                     </CardContent>
                 </Card>
@@ -2311,6 +2452,18 @@ export default function AnalyticsDashboard() {
                                                 </div>
                                             </div>
                                         </div>
+
+                                        <div className="border-t border-gray-200" />
+
+                                        {/* FEATURE START: CUSTOM DATA + CUSTOM METRICS */}
+                                        <CustomDataSettings
+                                            source={tempCustomDataSource}
+                                            onSourceChange={setTempCustomDataSource}
+                                            customMetrics={tempCustomMetrics}
+                                            onCustomMetricsChange={setTempCustomMetrics}
+                                            previewCtx={customMetricPreviewCtx}
+                                        />
+                                        {/* FEATURE END: CUSTOM DATA + CUSTOM METRICS */}
 
 
 

@@ -34,6 +34,8 @@ export default function useAdAccountSettings(adAccountId) {
             targetROAS: null,
             anomalyThresholds: null,
             slackAlertsEnabled: false,
+            customDataSource: null,
+            customMetrics: [],
         });
     }
 
@@ -98,6 +100,9 @@ export default function useAdAccountSettings(adAccountId) {
                         slackAlertsEnabled: false,
                         analyticsMode: null,
                         conversionEvent: null,
+                        // Analytics custom data (Optimization Focus popup)
+                        customDataSource: null,
+                        customMetrics: [],
                         multiAdvertiserAds: false,
                         defaultAdStatus: "ACTIVE",
                         customVariables: [],
@@ -149,6 +154,9 @@ export default function useAdAccountSettings(adAccountId) {
                         slackAlertsEnabled: s.slackAlertsEnabled || false,
                         analyticsMode: s.analyticsMode || null,
                         conversionEvent: s.conversionEvent || null,
+                        // Analytics custom data (Optimization Focus popup)
+                        customDataSource: s.customDataSource?.sheetUrl ? s.customDataSource : null,
+                        customMetrics: Array.isArray(s.customMetrics) ? s.customMetrics : [],
                         multiAdvertiserAds: s.multiAdvertiserAds ?? false,
                         defaultAdStatus: s.defaultAdStatus === "PAUSED" ? "PAUSED" : "ACTIVE",
                         customVariables: Array.isArray(s.customVariables) ? s.customVariables : [],
