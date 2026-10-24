@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import GiftIcon from "@/assets/gift.webp"
@@ -75,6 +75,32 @@ const CANCEL_REASONS = [
     { id: "other", label: "Other" },
 ]
 
+const COMPETITORS = ["AdManage", "AdNova", "RapidAds", "AdsUploader", "Apoogee", "Other"]
+
+const cancelTextareaClass = "w-full resize-none rounded-2xl border border-gray-300 bg-white p-3 text-sm shadow focus:border-zinc-800 focus:outline-none"
+
+// Smoothly expands/collapses its children via a grid-rows transition. Stays mounted so it can animate closed.
+// eslint-disable-next-line react/prop-types
+function ExpandablePanel({ open, children }) {
+    return (
+        <div
+            className={`grid transition-[grid-template-rows,opacity,visibility] duration-300 ease-out ${open
+                ? "visible grid-rows-[1fr] opacity-100"
+                : "invisible grid-rows-[0fr] opacity-0"
+                }`}
+            onTransitionEnd={(e) => {
+                if (open && e.target === e.currentTarget && e.propertyName === "grid-template-rows") {
+                    e.currentTarget.scrollIntoView({ block: "nearest", behavior: "smooth" })
+                }
+            }}
+        >
+            <div className="min-h-0 overflow-hidden">
+                <div className="space-y-2 px-1 pb-1 pt-2">{children}</div>
+            </div>
+        </div>
+    )
+}
+
 const commonFeatureLines = [
     "Unlimited Ads",
     "Instant Setting Sync",
@@ -105,6 +131,14 @@ export default function BillingSettings({ platform = "meta" }) {
 
     const [cancelReason, setCancelReason] = useState(null)
     const [cancelOtherText, setCancelOtherText] = useState("")
+    const [cancelPriceText, setCancelPriceText] = useState("")
+    const [cancelCompetitors, setCancelCompetitors] = useState([])
+    const [cancelCompetitorText, setCancelCompetitorText] = useState("")
+    // Height of the reasons list locked on open, so expanding details scrolls inside it instead of growing the popup
+    const [reasonsListHeight, setReasonsListHeight] = useState(null)
+    const measureReasonsList = useCallback((node) => {
+        if (node) setReasonsListHeight((height) => height ?? node.offsetHeight)
+    }, [])
     const [submittingCancel, setSubmittingCancel] = useState(false)
     const [showPlanSelector, setShowPlanSelector] = useState(false)
     const [showChangePlanDialog, setShowChangePlanDialog] = useState(false)
@@ -299,13 +333,40 @@ export default function BillingSettings({ platform = "meta" }) {
         }
     }
 
-    const getReasonPayload = () => {
-        const reasonObj = CANCEL_REASONS.find((reason) => reason.id === cancelReason)
-        return {
-            reason: cancelReason,
-            details: cancelReason === "other" ? cancelOtherText : (reasonObj?.label || ""),
-        }
+    const resetCancelForm = () => {
+        setCancelReason(null)
+        setCancelOtherText("")
+        setCancelPriceText("")
+        setCancelCompetitors([])
+        setCancelCompetitorText("")
+        setReasonsListHeight(null)
     }
+
+    const toggleCancelCompetitor = (competitor) => {
+        setCancelCompetitors((prev) => (
+            prev.includes(competitor) ? prev.filter((c) => c !== competitor) : [...prev, competitor]
+        ))
+    }
+
+    const getReasonDetails = () => {
+        const reasonObj = CANCEL_REASONS.find((reason) => reason.id === cancelReason)
+        const label = reasonObj?.label || ""
+        if (cancelReason === "other") return cancelOtherText
+        if (cancelReason === "price") return cancelPriceText.trim() ? `${label}: ${cancelPriceText.trim()}` : label
+        if (cancelReason === "competitor") {
+            const parts = [label]
+            if (cancelCompetitors.length) parts.push(`Competitors: ${cancelCompetitors.join(", ")}`)
+            if (cancelCompetitorText.trim()) parts.push(cancelCompetitorText.trim())
+            return parts.join(" | ")
+        }
+        return label
+    }
+
+    const getReasonPayload = () => ({
+        reason: cancelReason,
+        details: getReasonDetails(),
+        ...(cancelReason === "competitor" && cancelCompetitors.length ? { competitors: cancelCompetitors } : {}),
+    })
 
     const confirmCancel = async () => {
         if (!cancelReason) {
@@ -330,8 +391,7 @@ export default function BillingSettings({ platform = "meta" }) {
                 toast.success("Subscription will cancel at the end of your billing period")
                 refreshSubscriptionData()
                 setShowCancelDialog(false)
-                setCancelReason(null)
-                setCancelOtherText("")
+                resetCancelForm()
             } else {
                 toast.error("Failed to cancel subscription")
             }
@@ -356,8 +416,7 @@ export default function BillingSettings({ platform = "meta" }) {
                 toast.success("75% off applied to your next invoice!")
                 refreshSubscriptionData()
                 setShowCancelDialog(false)
-                setCancelReason(null)
-                setCancelOtherText("")
+                resetCancelForm()
             } else {
                 const err = await response.json()
                 toast.error(err.error || "Failed to apply discount")
@@ -772,14 +831,11 @@ export default function BillingSettings({ platform = "meta" }) {
                 open={showCancelDialog}
                 onOpenChange={(open) => {
                     setShowCancelDialog(open)
-                    if (!open) {
-                        setCancelReason(null)
-                        setCancelOtherText("")
-                    }
+                    if (!open) resetCancelForm()
                 }}
             >
                 <DialogOverlay className="bg-black/50 !-mt-[20px]" />
-                <DialogContent className="space-y-4 p-6 sm:max-w-[480px] !rounded-[30px]">
+                <DialogContent disableSlide className="space-y-4 p-6 sm:max-w-[480px] !rounded-[30px]">
                     <DialogHeader className="space-y-1">
                         <DialogTitle className="text-xl">You're breaking my heart</DialogTitle>
                         <DialogDescription className="text-sm leading-relaxed">
@@ -787,36 +843,89 @@ export default function BillingSettings({ platform = "meta" }) {
                         </DialogDescription>
                     </DialogHeader>
 
-                    <div className="space-y-1.5">
+                    <div
+                        ref={measureReasonsList}
+                        style={reasonsListHeight ? { height: reasonsListHeight } : undefined}
+                        className="-mx-1 space-y-1.5 overflow-y-auto px-1"
+                    >
                         {CANCEL_REASONS.map((reason) => (
-                            <label
-                                key={reason.id}
-                                className={`flex cursor-pointer items-center gap-3 rounded-xl border px-3 py-2 transition ${cancelReason === reason.id
-                                    ? "border-zinc-800 bg-zinc-50"
-                                    : "border-gray-200 hover:border-gray-300"
-                                    }`}
-                            >
-                                <input
-                                    type="radio"
-                                    name="cancelReason"
-                                    value={reason.id}
-                                    checked={cancelReason === reason.id}
-                                    onChange={() => setCancelReason(reason.id)}
-                                    className="accent-zinc-800"
-                                />
-                                <span className="text-sm text-gray-700">{reason.label}</span>
-                            </label>
-                        ))}
+                            <div key={reason.id}>
+                                <label
+                                    className={`flex cursor-pointer items-center gap-3 rounded-xl border px-3 py-2 transition ${cancelReason === reason.id
+                                        ? "border-zinc-800 bg-zinc-50"
+                                        : "border-gray-200 hover:border-gray-300"
+                                        }`}
+                                >
+                                    <input
+                                        type="radio"
+                                        name="cancelReason"
+                                        value={reason.id}
+                                        checked={cancelReason === reason.id}
+                                        onChange={() => setCancelReason(reason.id)}
+                                        className="accent-zinc-800"
+                                    />
+                                    <span className="text-sm text-gray-700">{reason.label}</span>
+                                </label>
 
-                        {cancelReason === "other" && (
-                            <textarea
-                                value={cancelOtherText}
-                                onChange={(e) => setCancelOtherText(e.target.value)}
-                                placeholder="Tell us more..."
-                                className="mt-2 w-full resize-none rounded-2xl border border-gray-300 bg-white p-3 text-sm shadow focus:border-zinc-800 focus:outline-none"
-                                rows={2}
-                            />
-                        )}
+                                {reason.id === "price" && (
+                                    <ExpandablePanel open={cancelReason === "price"}>
+                                        <p className="px-1 text-xs text-gray-500">Optional</p>
+                                        <textarea
+                                            value={cancelPriceText}
+                                            onChange={(e) => setCancelPriceText(e.target.value)}
+                                            placeholder="What's the maximum you are willing to pay? You can reach out to the team to work out a custom price if needed"
+                                            className={cancelTextareaClass}
+                                            rows={3}
+                                        />
+                                    </ExpandablePanel>
+                                )}
+
+                                {reason.id === "competitor" && (
+                                    <ExpandablePanel open={cancelReason === "competitor"}>
+                                        <p className="px-1 text-xs text-gray-500">Which one are you switching to? (optional)</p>
+                                        <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
+                                            {COMPETITORS.map((competitor) => (
+                                                <label
+                                                    key={competitor}
+                                                    className={`flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-1.5 transition ${cancelCompetitors.includes(competitor)
+                                                        ? "border-zinc-800 bg-zinc-50"
+                                                        : "border-gray-200 hover:border-gray-300"
+                                                        }`}
+                                                >
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={cancelCompetitors.includes(competitor)}
+                                                        onChange={() => toggleCancelCompetitor(competitor)}
+                                                        className="accent-zinc-800"
+                                                    />
+                                                    <span className="text-sm text-gray-700">{competitor}</span>
+                                                </label>
+                                            ))}
+                                        </div>
+                                        <p className="px-1 pt-1 text-xs text-gray-500">What are we missing? (optional)</p>
+                                        <textarea
+                                            value={cancelCompetitorText}
+                                            onChange={(e) => setCancelCompetitorText(e.target.value)}
+                                            placeholder="Nothing has broken my heart more than this moment 💔💔💔. If Blip has ever helped you save time from the drudgery of ads manager, I would love to know what features we're lacking that caused you to switch. Won't try to keep you back but it will help us improve the product"
+                                            className={cancelTextareaClass}
+                                            rows={5}
+                                        />
+                                    </ExpandablePanel>
+                                )}
+
+                                {reason.id === "other" && (
+                                    <ExpandablePanel open={cancelReason === "other"}>
+                                        <textarea
+                                            value={cancelOtherText}
+                                            onChange={(e) => setCancelOtherText(e.target.value)}
+                                            placeholder="Tell us more..."
+                                            className={cancelTextareaClass}
+                                            rows={2}
+                                        />
+                                    </ExpandablePanel>
+                                )}
+                            </div>
+                        ))}
                     </div>
 
                     {!hasUsedRetentionDiscount && (
