@@ -77,6 +77,9 @@ const CANCEL_REASONS = [
 
 const COMPETITORS = ["AdManage", "AdNova", "RapidAds", "AdsUploader", "Apoogee", "Other"]
 
+// Server copies details into Stripe metadata, which rejects values over 500 characters
+const CANCEL_DETAILS_MAX_LENGTH = 500
+
 const cancelTextareaClass = "w-full resize-none rounded-2xl border border-gray-300 bg-white p-3 text-sm shadow focus:border-zinc-800 focus:outline-none"
 
 // Smoothly expands/collapses its children via a grid-rows transition. Stays mounted so it can animate closed.
@@ -348,24 +351,20 @@ export default function BillingSettings({ platform = "meta" }) {
         ))
     }
 
+    // Competitors go into details too, since the server only stores reason + details
+    const competitorsPrefix = cancelCompetitors.length ? `Switching to: ${cancelCompetitors.join(", ")}\n` : ""
+
+    // Only what the user typed; the reason id itself says which option they picked
     const getReasonDetails = () => {
-        const reasonObj = CANCEL_REASONS.find((reason) => reason.id === cancelReason)
-        const label = reasonObj?.label || ""
-        if (cancelReason === "other") return cancelOtherText
-        if (cancelReason === "price") return cancelPriceText.trim() ? `${label}: ${cancelPriceText.trim()}` : label
-        if (cancelReason === "competitor") {
-            const parts = [label]
-            if (cancelCompetitors.length) parts.push(`Competitors: ${cancelCompetitors.join(", ")}`)
-            if (cancelCompetitorText.trim()) parts.push(cancelCompetitorText.trim())
-            return parts.join(" | ")
-        }
-        return label
+        if (cancelReason === "other") return cancelOtherText.trim()
+        if (cancelReason === "price") return cancelPriceText.trim()
+        if (cancelReason === "competitor") return `${competitorsPrefix}${cancelCompetitorText.trim()}`.trim()
+        return ""
     }
 
     const getReasonPayload = () => ({
         reason: cancelReason,
-        details: getReasonDetails(),
-        ...(cancelReason === "competitor" && cancelCompetitors.length ? { competitors: cancelCompetitors } : {}),
+        details: getReasonDetails().slice(0, CANCEL_DETAILS_MAX_LENGTH),
     })
 
     const confirmCancel = async () => {
@@ -873,6 +872,7 @@ export default function BillingSettings({ platform = "meta" }) {
                                         <textarea
                                             value={cancelPriceText}
                                             onChange={(e) => setCancelPriceText(e.target.value)}
+                                            maxLength={CANCEL_DETAILS_MAX_LENGTH}
                                             placeholder="What's the maximum you are willing to pay? You can reach out to the team to work out a custom price if needed"
                                             className={cancelTextareaClass}
                                             rows={3}
@@ -906,6 +906,7 @@ export default function BillingSettings({ platform = "meta" }) {
                                         <textarea
                                             value={cancelCompetitorText}
                                             onChange={(e) => setCancelCompetitorText(e.target.value)}
+                                            maxLength={CANCEL_DETAILS_MAX_LENGTH - competitorsPrefix.length}
                                             placeholder="Nothing has broken my heart more than this moment 💔💔💔. If Blip has ever helped you save time from the drudgery of ads manager, I would love to know what features we're lacking that caused you to switch. Won't try to keep you back but it will help us improve the product"
                                             className={cancelTextareaClass}
                                             rows={5}
@@ -918,6 +919,7 @@ export default function BillingSettings({ platform = "meta" }) {
                                         <textarea
                                             value={cancelOtherText}
                                             onChange={(e) => setCancelOtherText(e.target.value)}
+                                            maxLength={CANCEL_DETAILS_MAX_LENGTH}
                                             placeholder="Tell us more..."
                                             className={cancelTextareaClass}
                                             rows={2}
