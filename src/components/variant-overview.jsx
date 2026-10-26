@@ -400,6 +400,7 @@ function PartnershipCell({ row, brandUsername, onFieldsChange }) {
                 id={`${row.id}-identity-first`}
                 value="first_identity_only"
                 label="First identity only"
+                disabled={!partnerHasPage && Boolean(row.partnerIgAccountId)}
               />
               <OverviewRadioOption id={`${row.id}-identity-both`} value="both_identities" label="Both identities" />
             </RadioGroup>

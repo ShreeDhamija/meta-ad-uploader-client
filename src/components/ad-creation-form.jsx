@@ -10580,12 +10580,33 @@ export default function AdCreationForm({
                                   Dynamic
                                 </Label>
                               </div>
-                              <div className="flex items-center gap-2">
-                                <RadioGroupItem value="first_identity_only" id="identity-first" />
-                                <Label htmlFor="identity-first" className="text-sm font-normal cursor-pointer">
-                                  First identity only
-                                </Label>
-                              </div>
+                              <TooltipProvider delayDuration={0}>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="flex items-center gap-2">
+                                      <RadioGroupItem
+                                        value="first_identity_only"
+                                        id="identity-first"
+                                        disabled={!partnerFbPageId && partnerIgAccountId}
+                                      />
+                                      <Label
+                                        htmlFor="identity-first"
+                                        className={cn(
+                                          "text-sm font-normal cursor-pointer",
+                                          !partnerFbPageId && partnerIgAccountId && "text-gray-400 cursor-not-allowed",
+                                        )}
+                                      >
+                                        First identity only
+                                      </Label>
+                                    </div>
+                                  </TooltipTrigger>
+                                  {!partnerFbPageId && partnerIgAccountId && (
+                                    <TooltipContent side="right" className="max-w-xs text-xs">
+                                      You can't choose first identity only without an approved Facebook page for the partner
+                                    </TooltipContent>
+                                  )}
+                                </Tooltip>
+                              </TooltipProvider>
                               <div className="flex items-center gap-2">
                                 <RadioGroupItem value="both_identities" id="identity-both" />
                                 <Label htmlFor="identity-both" className="text-sm font-normal cursor-pointer">
