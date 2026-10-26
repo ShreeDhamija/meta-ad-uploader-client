@@ -3,6 +3,7 @@ import { useAuth } from '@/lib/AuthContext'
 import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
+import { consumeTikTokOAuthReturnTo } from '@/lib/tiktokOAuth'
 
 export default function TikTokCallback() {
   const navigate = useNavigate()
@@ -10,6 +11,7 @@ export default function TikTokCallback() {
   const { refreshTikTokUser } = useTikTokAuth()
   const { refreshAuth } = useAuth()
   const [error, setError] = useState(null)
+  const [returnTo, setReturnTo] = useState(null)
   const handled = useRef(false)
 
   useEffect(() => {
@@ -20,6 +22,9 @@ export default function TikTokCallback() {
     const connected = params.get('connected')
     const errorCode = params.get('error')
     window.history.replaceState({}, document.title, location.pathname)
+    // Set when the flow was started as a reauth from inside the TikTok launcher
+    const reauthReturnTo = consumeTikTokOAuthReturnTo()
+    setReturnTo(reauthReturnTo)
 
     if (errorCode || connected !== 'true') {
       const message = errorCode || 'Authentication was not successful'
@@ -35,8 +40,8 @@ export default function TikTokCallback() {
         setError('TikTok connection could not be verified')
         return
       }
-      toast.success('Successfully connected to TikTok Ads!')
-      navigate('/tiktok-ads', { replace: true })
+      toast.success(reauthReturnTo ? 'TikTok reauthenticated. Advertiser accounts updated.' : 'Successfully connected to TikTok Ads!')
+      navigate(reauthReturnTo || '/tiktok-ads', { replace: true })
     }
 
     finishConnection()
@@ -57,7 +62,7 @@ export default function TikTokCallback() {
           <h2 className="text-xl font-bold text-zinc-900">Connection Failed</h2>
           <p className="text-sm text-zinc-500">{error}</p>
           <button
-            onClick={() => navigate('/tiktok-login', { replace: true })}
+            onClick={() => navigate(returnTo || '/tiktok-login', { replace: true })}
             className="w-full bg-[#010101] hover:bg-[#121212] text-white py-2.5 rounded-xl font-semibold transition-colors"
           >
             Try Again

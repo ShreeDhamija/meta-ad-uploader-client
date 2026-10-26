@@ -8,7 +8,9 @@ import useTikTokAdvertiserSettings from "@/lib/useTikTokAdvertiserSettings"
 import useTeamSync from "@/lib/useTeamSync"
 import { useAppData } from "@/lib/AppContext"
 import { cn } from "@/lib/utils"
-import { Check, ChevronsUpDown, HelpCircle, Layout, Loader, Loader2, RefreshCcw, Info, Trash, Plus, X, Upload, Pencil, Folder, Search, CloudSync, CircleX } from "lucide-react"
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu"
+import TikTokReauthDialog from "@/components/TikTokReauthDialog"
+import { Check, ChevronDown, ChevronsUpDown, CirclePlus, HelpCircle, Layout, Loader, Loader2, RefreshCcw, Info, Trash, Plus, X, Upload, Pencil, Folder, Search, CloudSync, CircleX } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import { toast } from "sonner"
@@ -113,6 +115,7 @@ export default function TikTokAdvertiserSettings({
     };
     const { isTikTokLoggedIn, refreshTikTokUser } = useTikTokAuth();
     const [refreshingAdvertisers, setRefreshingAdvertisers] = useState(false);
+    const [isReauthOpen, setIsReauthOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const { tiktokIdentities, tiktokIdentitiesLoading, fetchTikTokIdentities } = useAppData();
     const identities = (tiktokIdentities[selectedAdvertiser] || []).filter(i => i.identity_type === 'BC_AUTH_TT');
@@ -620,18 +623,58 @@ export default function TikTokAdvertiserSettings({
                                 </Button>
                             )
                         )}
-                        {(subscriptionData?.planType === 'brand' || subscriptionData?.planType === 'starter') && (
+                        {/* Dropdown: Edit Active Accounts — mirrors Meta's AdAccountSettings */}
+                        {subscriptionData?.planType && (
+                            (subscriptionData.planType === 'brand' || subscriptionData.planType === 'starter') ? (
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="outline"
+                                        className="text-sm rounded-xl border-gray-200 hover:bg-gray-50"
+                                    >
+                                        <Folder className="w-3.5 h-3.5 mr-1.5 opacity-80" />
+                                        Edit Active Accounts
+                                        <ChevronDown className="w-3.5 h-3.5 ml-1.5 opacity-50" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" side="bottom" className="rounded-xl bg-white" avoidCollisions={false}>
+                                    <DropdownMenuItem
+                                        onClick={() => setIsReauthOpen(true)}
+                                        className="cursor-pointer rounded-lg text-blue-600 hover:text-blue-700"
+                                    >
+                                        <CirclePlus className="w-4 h-4 text-blue-600 hover:text-blue-700" />
+                                        Link New Advertiser Accounts
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                        onClick={onTriggerAdAccountPopup}
+                                        className="cursor-pointer rounded-lg"
+                                    >
+                                        <Pencil className="w-4 h-4" />
+                                        Change Selected Accounts in Plan
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        ) : (
                             <Button
                                 type="button"
                                 size="sm"
                                 variant="outline"
-                                onClick={onTriggerAdAccountPopup}
-                                className="rounded-xl border-gray-200 text-sm hover:bg-gray-50"
+                                onClick={() => setIsReauthOpen(true)}
+                                className="text-sm rounded-xl border-gray-200 hover:border-blue-500 bg-white hover:bg-gray-50 text-blue-600 hover:text-blue-700"
                             >
-                                <Pencil className="mr-1.5 h-3.5 w-3.5 opacity-80" />
-                                Change Selected Accounts in Plan
+                                <CirclePlus className="w-4 h-4 mr-1.5 text-blue-600 hover:text-blue-700" />
+                                Link New Advertiser Accounts
                             </Button>
+                            )
                         )}
+
+                        <TikTokReauthDialog
+                            open={isReauthOpen}
+                            onOpenChange={setIsReauthOpen}
+                            returnTo="/tiktok-settings"
+                        />
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
