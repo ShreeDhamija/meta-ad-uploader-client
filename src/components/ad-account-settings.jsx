@@ -36,6 +36,7 @@ const META_COUNTRIES = [{ "value": "AD", "label": "Andorra" }, { "value": "AE", 
 
 // Add constant
 const ADVANTAGE_PLUS_TYPES = ["AUTOMATED_SHOPPING_ADS", "SMART_APP_PROMOTION"];
+const ACTIVE_ONLY_DROPDOWN_USER_IDS = ["10236978990363167", "10235270203720983"];
 const DROPDOWN_MAX_WIDTH = "min(calc(100vw - 2rem), 850px)";
 const dropdownContentStyle = {
   minWidth: "var(--radix-popover-trigger-width)",
@@ -632,7 +633,16 @@ export default function AdAccountSettings({
     isFormFieldModified?.(fieldKeys) ? <span className="text-red-500 font-semibold">*</span> : null
   );
   // Local state for comboboxes
-  const { isLoggedIn } = useAuth()
+  const { isLoggedIn, userId } = useAuth()
+  const showActiveOnly = ACTIVE_ONLY_DROPDOWN_USER_IDS.includes(String(userId));
+  const dropdownCampaigns = useMemo(
+    () => showActiveOnly ? campaigns.filter((campaign) => campaign.status === "ACTIVE") : campaigns,
+    [campaigns, showActiveOnly]
+  );
+  const dropdownAdSets = useMemo(
+    () => showActiveOnly ? adSets.filter((adSet) => adSet.status === "ACTIVE") : adSets,
+    [adSets, showActiveOnly]
+  );
   const [open, setOpen] = useState(false)
   const [searchValue, setSearchValue] = useState("")
   const [openCampaign, setOpenCampaign] = useState(false)
@@ -729,17 +739,17 @@ export default function AdAccountSettings({
   );
 
   const filteredCampaigns = useMemo(() =>
-    campaigns.filter((camp) =>
+    dropdownCampaigns.filter((camp) =>
       (camp.name?.toLowerCase() || camp.id.toLowerCase()).includes(campaignSearchValue.toLowerCase())
     ),
-    [campaigns, campaignSearchValue]
+    [dropdownCampaigns, campaignSearchValue]
   );
 
   const filteredAdSets = useMemo(() =>
-    adSets.filter((adset) =>
+    dropdownAdSets.filter((adset) =>
       (adset.name || adset.id).toLowerCase().includes(adSetSearchValue.toLowerCase())
     ),
-    [adSets, adSetSearchValue]
+    [dropdownAdSets, adSetSearchValue]
   );
 
   const visibleAdSetIds = useMemo(
@@ -1254,7 +1264,7 @@ export default function AdAccountSettings({
                   variant="outline"
                   role="combobox"
                   aria-expanded={openCampaign}
-                  disabled={!isLoggedIn || !selectedAdAccount || isLoadingCampaigns || (selectedAdAccount && campaigns.length === 0)}
+                  disabled={!isLoggedIn || !selectedAdAccount || isLoadingCampaigns || (selectedAdAccount && dropdownCampaigns.length === 0)}
                   className="w-full justify-between border border-gray-300 rounded-2xl py-4.5 bg-white shadow overflow-hidden whitespace-nowrap hover:!bg-white"
                 >
                   <div className="w-full overflow-hidden flex items-center gap-2">
@@ -1272,8 +1282,8 @@ export default function AdAccountSettings({
                             : undefined
                         }
                       >
-                        {selectedAdAccount && campaigns.length === 0
-                          ? "No campaigns exist in this ad account. Try selecting a different account."
+                        {selectedAdAccount && dropdownCampaigns.length === 0
+                          ? `No ${showActiveOnly ? "active " : ""}campaigns exist in this ad account. Try selecting a different account.`
                           : selectedCampaignData.length === 0
                             ? "Select campaigns"
                             : selectedCampaignData.length === 1
@@ -1395,7 +1405,7 @@ transition-all duration-150 hover:!bg-black
                         variant="outline"
                         role="combobox"
                         aria-expanded={openDuplicateCampaign}
-                        disabled={!isLoggedIn || campaigns.length === 0}
+                        disabled={!isLoggedIn || dropdownCampaigns.length === 0}
                         className="w-full justify-between border border-gray-400 rounded-2xl bg-white shadow overflow-hidden whitespace-nowrap hover:!bg-white"
                       >
                         <div className="w-full overflow-hidden">
@@ -1435,7 +1445,7 @@ transition-all duration-150 hover:!bg-black
                         <CommandList className="max-h-none overflow-hidden rounded-2xl" selectOnFocus={false}>
                           <ScrollArea viewportClassName="max-h-[500px]">
                             <CommandGroup>
-                              {campaigns
+                              {dropdownCampaigns
                                 .filter((campaign) =>
                                   (campaign.name || campaign.id).toLowerCase().includes(duplicateCampaignSearchValue.toLowerCase())
                                 )
@@ -1582,7 +1592,7 @@ transition-all duration-150 hover:!bg-black
                   variant="outline"
                   role="combobox"
                   aria-expanded={openAdSet}
-                  disabled={isAdSetSelectionBlockedByCampaignCreation || !isLoggedIn || selectedCampaign.length === 0 || isLoadingAdSetsLocal || (selectedCampaign.length > 0 && adSets.length === 0)}
+                  disabled={isAdSetSelectionBlockedByCampaignCreation || !isLoggedIn || selectedCampaign.length === 0 || isLoadingAdSetsLocal || (selectedCampaign.length > 0 && dropdownAdSets.length === 0)}
                   className={cn(
                     "w-full justify-between border border-gray-300 rounded-2xl py-4.5 bg-white shadow group-data-[state=open]:border-blue-500 transition-colors duration-150 hover:bg-white",
                     isAdSetSelectionBlockedByCampaignCreation && "cursor-not-allowed bg-gray-50 text-gray-400 hover:bg-gray-50"
@@ -1602,8 +1612,8 @@ transition-all duration-150 hover:!bg-black
                       <span className="block truncate flex-1 text-left">
                         {showDuplicateBlock
                           ? "New Ad Set"
-                          : selectedCampaign.length > 0 && adSets.length === 0
-                            ? "No ad sets exist in this campaign. Select a different campaign"
+                          : selectedCampaign.length > 0 && dropdownAdSets.length === 0
+                            ? `No ${showActiveOnly ? "active " : ""}ad sets exist in this campaign. Select a different campaign`
                             : selectedAdSets.length > 0
                               ? `${selectedAdSets.length} AdSet${selectedAdSets.length > 1 ? "s" : ""} selected`
                               : "Select Ad Sets"}
@@ -1822,7 +1832,7 @@ transition-all duration-150 hover:!bg-black
                         variant="outline"
                         role="combobox"
                         aria-expanded={openDuplicateAdSet}
-                        disabled={!isLoggedIn || adSets.length === 0 || sharedAdSetLocked}
+                        disabled={!isLoggedIn || dropdownAdSets.length === 0 || sharedAdSetLocked}
                         className="h-11 w-full justify-between border border-gray-300 rounded-2xl py-2 bg-white shadow group-data-[state=open]:border-blue-500 transition-colors duration-150 hover:bg-white"
                       >
                         <div className="w-full overflow-hidden">
