@@ -2,9 +2,12 @@
 
 /* eslint-disable react/prop-types */
 
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 import { Helix } from "ldrs/react"
 import "ldrs/react/Helix.css"
+import { Button } from "@/components/ui/button"
+import { DropdownMenu, DropdownMenuItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { ChevronDown, CheckCircle2 } from "lucide-react"
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid,
     Tooltip, ResponsiveContainer,
@@ -28,15 +31,21 @@ const METRIC_OPTIONS = {
         subtitle: 'Share of impressions hitting new users',
         yAxisWidth: 52,
     },
+    // Not a Meta metric: CPM x Frequency, i.e. cost per 1,000 people reached.
+    cpmr: {
+        label: 'CPMr',
+        color: '#d97706',
+        tickFormatter: (value) => `$${value.toFixed(0)}`,
+        valueFormatter: (value) => value !== null && value !== undefined ? `$${value.toFixed(2)}` : 'N/A',
+        subtitle: 'Cost per 1,000 people reached (CPM x Frequency)',
+        yAxisWidth: 52,
+    },
 }
 
 const FUNNEL_CHART_SIDE_INSET = 0
 
-// Both metrics are always shown — the metric selector dropdown was removed.
-const SELECTED_METRICS = ["frequency", "firstTimeImpressionRate"]
-
 export default function FunnelHealthChart({ data, loading, className, granularity = 'weekly', showDefaultTooltip = false }) {
-    const selectedMetrics = SELECTED_METRICS
+    const [selectedMetrics, setSelectedMetrics] = useState(["frequency", "firstTimeImpressionRate", "cpmr"])
 
     const chartData = useMemo(() => {
         if (!data?.weeklyInsights?.length) return []
@@ -44,17 +53,37 @@ export default function FunnelHealthChart({ data, loading, className, granularit
         return data.weeklyInsights.map((w) => {
             const impressions = w.impressions ?? 0
             const reach = w.reach ?? 0
+            const spend = w.spend ?? 0
 
             return {
                 label: formatBucketLabel(w.weekStart, granularity),
                 tooltipTitle: formatBucketTooltipTitle(w.weekStart, granularity),
                 frequency: w.frequency,
                 firstTimeImpressionRate: impressions > 0 ? (reach / impressions) * 100 : null,
+                // CPM x Frequency = (spend / impressions * 1000) * (impressions / reach)
+                cpmr: reach > 0 ? (spend / reach) * 1000 : null,
                 impressions,
                 reach,
+                spend,
             }
         })
     }, [data, granularity])
+
+    const dropdownLabel = selectedMetrics.length === 1
+        ? METRIC_OPTIONS[selectedMetrics[0]].label
+        : `${selectedMetrics.length} metrics`
+
+    const handleMetricToggle = (metricKey, checked) => {
+        setSelectedMetrics((prev) => {
+            if (checked) {
+                if (prev.includes(metricKey)) return prev
+                return [...prev, metricKey]
+            }
+
+            if (prev.length === 1) return prev
+            return prev.filter((key) => key !== metricKey)
+        })
+    }
 
     const selectedMetricConfigs = selectedMetrics.map((metricKey) => ({
         key: metricKey,
@@ -85,6 +114,7 @@ export default function FunnelHealthChart({ data, loading, className, granularit
                     <div className="border-t border-gray-100 mt-1.5 pt-1.5">
                         <p className="text-gray-600">Impressions: <span className="font-medium">{(row.impressions || 0).toLocaleString()}</span></p>
                         <p className="text-gray-600">Reach: <span className="font-medium">{(row.reach || 0).toLocaleString()}</span></p>
+                        <p className="text-gray-600">Spend: <span className="font-medium">${(row.spend || 0).toFixed(2)}</span></p>
                     </div>
                 </div>
             </div>
@@ -156,13 +186,13 @@ export default function FunnelHealthChart({ data, loading, className, granularit
                     </ResponsiveContainer>
 
                     <div
-                        className="mt-3"
+                        className="relative mt-3"
                         style={{
                             paddingLeft: `${FUNNEL_CHART_SIDE_INSET}px`,
                             paddingRight: `${FUNNEL_CHART_SIDE_INSET}px`,
                         }}
                     >
-                        <div className="flex flex-wrap items-center justify-start gap-x-12 gap-y-1.5 px-1 w-full">
+                        <div className="flex flex-wrap items-center justify-start gap-x-8 gap-y-1.5 px-1 w-full sm:pr-[180px]">
                             {selectedMetricConfigs.map((metric) => (
                                 <div key={metric.key} className="flex items-center gap-2">
                                     <span
@@ -174,6 +204,41 @@ export default function FunnelHealthChart({ data, loading, className, granularit
                                     </span>
                                 </div>
                             ))}
+                        </div>
+
+                        <div className="mt-3 flex justify-center sm:mt-0 sm:absolute sm:right-0 sm:top-0">
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        className="h-8 min-w-[170px] justify-between rounded-xl border-gray-200 bg-white px-3 text-xs font-medium shadow-xs hover:bg-white"
+                                    >
+                                        <span className="truncate">{dropdownLabel}</span>
+                                        <ChevronDown className="ml-2 h-3.5 w-3.5 text-gray-400" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-[240px] rounded-2xl bg-white p-2 shadow-lg">
+                                    <DropdownMenuLabel className="px-2 py-1 text-xs font-semibold text-gray-500">
+                                        Show on graph
+                                    </DropdownMenuLabel>
+                                    <DropdownMenuSeparator className="mx-1 my-1 bg-gray-100" />
+                                    {Object.entries(METRIC_OPTIONS).map(([metricKey, metric]) => (
+                                        <DropdownMenuItem
+                                            key={metricKey}
+                                            onSelect={(e) => e.preventDefault()}
+                                            onClick={() => handleMetricToggle(metricKey, !selectedMetrics.includes(metricKey))}
+                                            className="cursor-pointer rounded-xl px-3 py-2 text-sm focus:bg-gray-100 flex items-center gap-2"
+                                        >
+                                            {selectedMetrics.includes(metricKey) ? (
+                                                <CheckCircle2 className="h-4 w-4 text-blue-500" />
+                                            ) : (
+                                                <span className="h-4 w-4" />
+                                            )}
+                                            {metric.label}
+                                        </DropdownMenuItem>
+                                    ))}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
                         </div>
                     </div>
                 </>

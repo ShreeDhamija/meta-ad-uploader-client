@@ -12,6 +12,7 @@ import { Image as ImageIcon, Trophy, ExternalLink, ChevronDown, BadgePercent } f
 import { Card, CardContent } from "@/components/ui/card"
 import { Tooltip as ShadTooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
+import { InlineThresholdApply, InlineThresholdInput, useThresholdDraft } from "./InlineThreshold"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "https://api.withblip.com"
 
@@ -164,7 +165,8 @@ function MonthTabSwitcher({ months, selectedMonth, onSelect }) {
     )
 }
 
-export default function CreativeHitRateChart({ adAccountId, conversionEvent, refreshKey, className }) {
+export default function CreativeHitRateChart({ adAccountId, conversionEvent, refreshKey, winnerMultiple = 10, onWinnerMultipleChange, className }) {
+    const winnerDraft = useThresholdDraft(winnerMultiple, onWinnerMultipleChange)
     const [data, setData] = useState(null)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState(null)
@@ -178,7 +180,7 @@ export default function CreativeHitRateChart({ adAccountId, conversionEvent, ref
 
     useEffect(() => {
         if (!adAccountId) { return }
-        const cacheKey = `${adAccountId}::${conversionEvent || "__auto__"}::${refreshKey || 0}`
+        const cacheKey = `${adAccountId}::${conversionEvent || "__auto__"}::${winnerMultiple}::${refreshKey || 0}`
 
         // Cache hit — render instantly, no Helix.
         if (cacheRef.current[cacheKey]) {
@@ -192,7 +194,7 @@ export default function CreativeHitRateChart({ adAccountId, conversionEvent, ref
         setLoading(true)
         setError(null)
 
-        const params = new URLSearchParams({ adAccountId })
+        const params = new URLSearchParams({ adAccountId, winnerMultiple: String(winnerMultiple) })
         if (conversionEvent) params.set("conversionEvent", conversionEvent)
         if (refreshKey) params.set("rk", String(refreshKey))
 
@@ -211,7 +213,7 @@ export default function CreativeHitRateChart({ adAccountId, conversionEvent, ref
             .finally(() => { if (!cancelled) setLoading(false) })
 
         return () => { cancelled = true }
-    }, [adAccountId, conversionEvent, refreshKey])
+    }, [adAccountId, conversionEvent, refreshKey, winnerMultiple])
 
     // Default selected month = most recent month with launches (else last month).
     // The API returns rows shaped { month, launches, winners, ... }, so the key is `.month`.
@@ -261,8 +263,11 @@ export default function CreativeHitRateChart({ adAccountId, conversionEvent, ref
                             )}
                         </h2>
                         <p className="mt-1 text-sm text-gray-500">
-                            Unique creative launches per month. Winners reach 10× the account&apos;s average CPA in spend within 90 days of launch.
+                            Unique creative launches per month. Winners reach
+                            <InlineThresholdInput {...winnerDraft} suffix="×" step="0.5" disabled={!onWinnerMultipleChange} />
+                            the account&apos;s average CPA in spend within 90 days of launch.
                             {hasMaturingMonth && " Recent months still maturing."}
+                            <InlineThresholdApply {...winnerDraft} />
                         </p>
                     </div>
 

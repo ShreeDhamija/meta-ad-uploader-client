@@ -22,6 +22,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 import { SearchableCombobox, sortCampaignsActiveFirst } from "./CreativeEnhancementsReport"
+import { InlineThresholdApply, InlineThresholdInput, useThresholdDraft } from "./InlineThreshold"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "https://api.withblip.com"
 
@@ -778,7 +779,8 @@ function FilterPanel({ applied, onApply, onClose, isRoasMode, getCampaigns, getA
     )
 }
 
-export default function TrendingCreative({ adAccountId, conversionEvent, mode = "cpr", refreshKey, waiting = false, className }) {
+export default function TrendingCreative({ adAccountId, conversionEvent, mode = "cpr", refreshKey, waiting = false, growthPct = 35, onGrowthPctChange, className }) {
+    const growthDraft = useThresholdDraft(growthPct, onGrowthPctChange)
     const [data, setData] = useState(null)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState(null)
@@ -853,7 +855,7 @@ export default function TrendingCreative({ adAccountId, conversionEvent, mode = 
         if (!adAccountId) { setData(null); return }
         // Render the shell immediately; fetch once the conversion event is known.
         if (waiting) { setData(null); setLoading(true); setError(null); return }
-        const cacheKey = `${adAccountId}::${mode}::${conversionEvent || "__auto__"}::${JSON.stringify(activeFilters)}::${refreshKey || 0}`
+        const cacheKey = `${adAccountId}::${mode}::${conversionEvent || "__auto__"}::${growthPct}::${JSON.stringify(activeFilters)}::${refreshKey || 0}`
 
         // Cache hit — render instantly, no Helix.
         if (cacheRef.current[cacheKey]) {
@@ -867,7 +869,7 @@ export default function TrendingCreative({ adAccountId, conversionEvent, mode = 
         setLoading(true)
         setError(null)
 
-        const params = new URLSearchParams({ adAccountId, mode, ...activeFilters })
+        const params = new URLSearchParams({ adAccountId, mode, growthPct: String(growthPct), ...activeFilters })
         if (conversionEvent) params.set("conversionEvent", conversionEvent)
         if (refreshKey) params.set("rk", String(refreshKey))
 
@@ -886,7 +888,7 @@ export default function TrendingCreative({ adAccountId, conversionEvent, mode = 
             .finally(() => { if (!cancelled) setLoading(false) })
 
         return () => { cancelled = true }
-    }, [adAccountId, conversionEvent, mode, refreshKey, waiting, activeFilters])
+    }, [adAccountId, conversionEvent, mode, refreshKey, waiting, activeFilters, growthPct])
 
     // Columns that apply to these results: ROAS only in ROAS mode, video columns
     // only when at least one ad has video data.
@@ -907,7 +909,14 @@ export default function TrendingCreative({ adAccountId, conversionEvent, mode = 
     const days = data?.window?.days || Number(filters.days)
     const subtitle = isSearch
         ? `${data.ads.length}${data.totalMatches > data.ads.length ? ` of ${data.totalMatches}` : ""} matching ads in the last ${days} days. Spend change is vs the ${days} days before.`
-        : "Ads with >35% spend growth over the last 7 days vs the prior 7 days."
+        : (
+            <>
+                Ads with &gt;
+                <InlineThresholdInput {...growthDraft} suffix="%" disabled={!onGrowthPctChange} />
+                spend growth over the last 7 days vs the prior 7 days.
+                <InlineThresholdApply {...growthDraft} />
+            </>
+        )
 
     return (
         <TooltipProvider delayDuration={150}>

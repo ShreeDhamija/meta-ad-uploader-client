@@ -31,6 +31,14 @@ const STATUS_STYLES = {
     PENDING_BILLING_INFO: { label: "Pending billing", className: "bg-gray-100 text-gray-600" },
 }
 
+// Rejected first, then with issues, then everything else (e.g. pending billing).
+const STATUS_ORDER = { DISAPPROVED: 0, WITH_ISSUES: 1 }
+const sortByStatus = (ads) =>
+    [...ads].sort((a, b) => (STATUS_ORDER[a.effectiveStatus] ?? 2) - (STATUS_ORDER[b.effectiveStatus] ?? 2))
+
+const buildRequestReviewUrl = (businessId, adAccountId) =>
+    `https://www.facebook.com/business-support-home/${businessId}/${String(adAccountId).replace(/^act_/, "")}/?tab=available_for_review`
+
 const formatStatus = (status) =>
     status ? status.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, c => c.toUpperCase()) : "—"
 
@@ -91,7 +99,9 @@ export default function RejectedAdsReport({ open, onOpenChange, adAccountId, adA
             const data = await res.json()
             if (requestId !== requestRef.current) return
             if (!res.ok) throw new Error(data.details || data.error || "Failed to load rejected ads")
-            setAds(prev => (cursor ? [...prev, ...(data.ads || [])] : data.ads || []))
+            // Each page is sorted on its own so rows already on screen don't move on Load more.
+            const page = sortByStatus(data.ads || [])
+            setAds(prev => (cursor ? [...prev, ...page] : page))
             setNextCursor(data.nextCursor || null)
             setHasFetched(true)
         } catch (err) {
@@ -155,6 +165,14 @@ export default function RejectedAdsReport({ open, onOpenChange, adAccountId, adA
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
+                            {businessId && adAccountId && (
+                                <Button asChild variant="outline" size="sm" className="rounded-2xl h-9 text-xs gap-1.5">
+                                    <a href={buildRequestReviewUrl(businessId, adAccountId)} target="_blank" rel="noopener noreferrer">
+                                        <ExternalLink className="h-3.5 w-3.5" />
+                                        Request Review
+                                    </a>
+                                </Button>
+                            )}
                             <Button
                                 variant="outline"
                                 size="sm"

@@ -34,8 +34,12 @@ export default function useAdAccountSettings(adAccountId) {
             targetROAS: null,
             anomalyThresholds: null,
             slackAlertsEnabled: false,
+            eventsManagerAlertsEnabled: false,
+            adCopyAlertsEnabled: false,
+            adPerformanceAlertsEnabled: false,
             customDataSource: null,
             customMetrics: [],
+            analyticsThresholds: null,
         });
     }
 
@@ -98,11 +102,15 @@ export default function useAdAccountSettings(adAccountId) {
                         targetCPA: null,
                         targetROAS: null,
                         slackAlertsEnabled: false,
+                        eventsManagerAlertsEnabled: false,
+                        adCopyAlertsEnabled: false,
+                        adPerformanceAlertsEnabled: false,
                         analyticsMode: null,
                         conversionEvent: null,
                         // Analytics custom data (Optimization Focus popup)
                         customDataSource: null,
                         customMetrics: [],
+                        analyticsThresholds: null,
                         multiAdvertiserAds: false,
                         defaultAdStatus: "ACTIVE",
                         customVariables: [],
@@ -152,11 +160,17 @@ export default function useAdAccountSettings(adAccountId) {
                         targetCPA: s.targetCPA || null,
                         targetROAS: s.targetROAS || null,
                         slackAlertsEnabled: s.slackAlertsEnabled || false,
+                        // Slack Alerts popup: the three daily alerts besides anomalies
+                        eventsManagerAlertsEnabled: s.eventsManagerAlertsEnabled || false,
+                        adCopyAlertsEnabled: s.adCopyAlertsEnabled || false,
+                        adPerformanceAlertsEnabled: s.adPerformanceAlertsEnabled || false,
                         analyticsMode: s.analyticsMode || null,
                         conversionEvent: s.conversionEvent || null,
                         // Analytics custom data (Optimization Focus popup)
                         customDataSource: s.customDataSource?.sheetUrl ? s.customDataSource : null,
                         customMetrics: Array.isArray(s.customMetrics) ? s.customMetrics : [],
+                        // Editable chart thresholds (Trending Creatives growth %, Hit Rate winner multiple)
+                        analyticsThresholds: s.analyticsThresholds || null,
                         multiAdvertiserAds: s.multiAdvertiserAds ?? false,
                         defaultAdStatus: s.defaultAdStatus === "PAUSED" ? "PAUSED" : "ACTIVE",
                         customVariables: Array.isArray(s.customVariables) ? s.customVariables : [],

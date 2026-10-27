@@ -37,6 +37,8 @@ import CreativeHitRateChart from "./analytics/CreativeHitRateChart"
 import TrendingCreative from "./analytics/TrendingCreative"
 import TopAdCopy from "./analytics/TopAdCopy"
 import TrailingSixWeeksSnapshot from "./analytics/TrailingSixWeeksSnapshot"
+import AudienceBreakdownChart from "./analytics/AudienceBreakdownChart"
+import AccountStructureOverview from "./analytics/AccountStructureOverview"
 // import FlexAdsLauncher from "./analytics/FlexAdsLauncher" // Hidden — see Flex Ads Launcher block below
 // FEATURE START: PERIOD METRICS SUMMARY (added 2026-05-19)
 import PeriodMetricsSummary from "./analytics/PeriodMetricsSummary"
@@ -53,6 +55,8 @@ import {
 } from "./analytics/customMetrics"
 // FEATURE END: CUSTOM DATA + CUSTOM METRICS
 import AccountSummaryDialog from "./analytics/AccountSummaryDialog"
+import SlackAlertsDialog from "./analytics/SlackAlertsDialog"
+import { resolveAnalyticsThreshold } from "./analytics/InlineThreshold"
 import {
     buildAnalyticsDateQueryParams,
     createAnalyticsDateRangeFromPreset,
@@ -211,8 +215,8 @@ export default function AnalyticsDashboard() {
 
     // ── Settings 
     const [showSettingsDialog, setShowSettingsDialog] = useState(false)
-    // const [anomalyThresholds, setAnomalyThresholds] = useState(DEFAULT_THRESHOLDS)
-    const [tempThresholds, setTempThresholds] = useState(DEFAULT_THRESHOLDS)
+    // Anomaly thresholds + all Slack alert toggles live in the Slack Alerts popup.
+    const [showSlackAlertsDialog, setShowSlackAlertsDialog] = useState(false)
 
     // ── Target KPI (lives in settings dialog, feeds recommendations)
     const [tempTargetCPA, setTempTargetCPA] = useState("")
@@ -239,8 +243,6 @@ export default function AnalyticsDashboard() {
     // ── Slack state 
     const [slackConnected, setSlackConnected] = useState(false)
     const [slackChannelName, setSlackChannelName] = useState(null)
-    // const [slackAlertsEnabled, setSlackAlertsEnabled] = useState(false)
-    const [tempSlackAlertsEnabled, setTempSlackAlertsEnabled] = useState(false)
     const [slackDisconnecting, setSlackDisconnecting] = useState(false)
     const [showSummaryDialog, setShowSummaryDialog] = useState(false)
     // ── Data state 
@@ -318,9 +320,10 @@ export default function AnalyticsDashboard() {
     const targetCPA = adAccountSettings?.targetCPA ?? null
     const targetROAS = adAccountSettings?.targetROAS ?? null
     const anomalyThresholds = adAccountSettings?.anomalyThresholds ?? DEFAULT_THRESHOLDS
-    const slackAlertsEnabled = adAccountSettings?.slackAlertsEnabled ?? false
     const customDataSource = adAccountSettings?.customDataSource ?? null
     const customMetrics = adAccountSettings?.customMetrics ?? NO_CUSTOM_METRICS
+    const trendingGrowthPct = resolveAnalyticsThreshold(adAccountSettings?.analyticsThresholds, 'trendingGrowthPct')
+    const hitRateWinnerMultiple = resolveAnalyticsThreshold(adAccountSettings?.analyticsThresholds, 'hitRateWinnerMultiple')
     const preferencesLoading = Boolean(selectedAdAccount) && adAccountSettingsLoading
 
     // Block all background data loading until first-time onboarding is resolved
@@ -360,10 +363,8 @@ export default function AnalyticsDashboard() {
     useEffect(() => {
         if (!showSettingsDialog || adAccountSettingsLoading) return
 
-        setTempThresholds(anomalyThresholds)
         setTempTargetCPA(targetCPA ? String(targetCPA) : "")
         setTempTargetROAS(targetROAS ? String(targetROAS) : "")
-        setTempSlackAlertsEnabled(slackAlertsEnabled)
         setTempAnalyticsMode(adAccountSettings?.analyticsMode || 'roas')
         setTempConversionEvent(adAccountSettings?.conversionEvent || null)
         setTempCustomDataSource(adAccountSettings?.customDataSource ?? null)
@@ -371,10 +372,8 @@ export default function AnalyticsDashboard() {
     }, [
         showSettingsDialog,
         adAccountSettingsLoading,
-        anomalyThresholds,
         targetCPA,
         targetROAS,
-        slackAlertsEnabled,
         adAccountSettings?.analyticsMode,
         adAccountSettings?.conversionEvent,
         adAccountSettings?.customDataSource,
@@ -1274,10 +1273,8 @@ export default function AnalyticsDashboard() {
             await saveSettings({
                 adAccountId: selectedAdAccount,
                 adAccountSettings: {
-                    anomalyThresholds: tempThresholds,
                     targetCPA: newTargetCPA,
                     targetROAS: newTargetROAS,
-                    slackAlertsEnabled: tempSlackAlertsEnabled,
                     analyticsMode: modeForStorage,
                     conversionEvent: nextConversionEvent,
                     customDataSource: tempCustomDataSource,
@@ -1288,10 +1285,8 @@ export default function AnalyticsDashboard() {
             // One update — all derived values update in a single render
             setAdAccountSettings(prev => ({
                 ...prev,
-                anomalyThresholds: tempThresholds,
                 targetCPA: newTargetCPA,
                 targetROAS: newTargetROAS,
-                slackAlertsEnabled: tempSlackAlertsEnabled,
                 analyticsMode: modeForStorage,
                 conversionEvent: nextConversionEvent,
                 customDataSource: tempCustomDataSource,
@@ -1346,7 +1341,6 @@ export default function AnalyticsDashboard() {
                 setSlackConnected(false)
                 setSlackChannelName(null)
                 setAdAccountSettings(prev => ({ ...prev, slackAlertsEnabled: false }))
-                setTempSlackAlertsEnabled(false)
                 toast.success('Slack disconnected')
             } else {
                 const data = await res.json().catch(() => ({}))
@@ -1420,6 +1414,20 @@ export default function AnalyticsDashboard() {
             setSavingBudgetTarget(false)
         }
     }
+
+    // Inline chart thresholds (Trending Creatives growth %, Hit Rate winner ×).
+    // Saved per account; the charts refetch once the new value lands in settings.
+    const handleSaveAnalyticsThreshold = useCallback(async (key, value) => {
+        if (!selectedAdAccount) return
+        const analyticsThresholds = { ...(adAccountSettings?.analyticsThresholds || {}), [key]: value }
+        try {
+            await saveSettings({ adAccountId: selectedAdAccount, adAccountSettings: { analyticsThresholds } })
+            setAdAccountSettings(prev => ({ ...prev, analyticsThresholds }))
+        } catch (err) {
+            console.error('Failed to save analytics threshold:', err)
+            toast.error('Failed to save threshold')
+        }
+    }, [selectedAdAccount, adAccountSettings?.analyticsThresholds, setAdAccountSettings])
 
     // ── Loading / Empty states ──────────────────────────────
     if (adAccountsLoading || globalSettingsLoading) {
@@ -1542,6 +1550,15 @@ export default function AnalyticsDashboard() {
                         ) : (
                             <span className="truncate">{optimizationFocusLabel}</span>
                         )}
+                    </Button>
+
+                    <Button
+                        variant="outline" size="sm"
+                        onClick={() => setShowSlackAlertsDialog(true)}
+                        className="rounded-2xl h-11 px-4"
+                    >
+                        <img src={slackColor} alt="" className="w-4 h-4 mr-2" />
+                        Slack Alerts
                     </Button>
 
                     <DropdownMenu>
@@ -2000,10 +2017,43 @@ export default function AnalyticsDashboard() {
                     mode={metricMode}
                     refreshKey={chartsRefreshKey}
                     waiting={adAccountSettingsLoading || autoEventPending}
+                    growthPct={trendingGrowthPct}
+                    onGrowthPctChange={(value) => handleSaveAnalyticsThreshold('trendingGrowthPct', value)}
                 />
             )}
 
-            {/* ── Top Ad Copy (full-width) ── */}
+            {/* ── Audience Breakdown (full-width; follows the charts' date range + breakdown) ── */}
+            {selectedAdAccount && (
+                <AudienceBreakdownChart
+                    adAccountId={selectedAdAccount}
+                    dateRange={analyticsDateRange}
+                    granularity={analyticsGranularity}
+                    refreshKey={chartsRefreshKey}
+                />
+            )}
+
+            {/* ── Account Structure (full-width; scrollable campaign → ad set table) ── */}
+            {selectedAdAccount && (
+                <AccountStructureOverview
+                    adAccountId={selectedAdAccount}
+                    conversionEvent={effectiveConversionEvent}
+                    refreshKey={chartsRefreshKey}
+                    waiting={adAccountSettingsLoading || autoEventPending}
+                />
+            )}
+
+            {/* ── Creative Hit Rate (full-width) ── */}
+            {selectedAdAccount && (
+                <CreativeHitRateChart
+                    adAccountId={selectedAdAccount}
+                    conversionEvent={adAccountSettings?.conversionEvent}
+                    refreshKey={chartsRefreshKey}
+                    winnerMultiple={hitRateWinnerMultiple}
+                    onWinnerMultipleChange={(value) => handleSaveAnalyticsThreshold('hitRateWinnerMultiple', value)}
+                />
+            )}
+
+            {/* ── Top Ad Copy (full-width; bottom) ── */}
             {/* Same event gating as Trending Creatives: CPA ranking needs one event. */}
             {selectedAdAccount && (
                 <TopAdCopy
@@ -2017,15 +2067,6 @@ export default function AnalyticsDashboard() {
                         ...prev,
                         copyTemplates: { ...(prev?.copyTemplates || {}), [name]: template },
                     }))}
-                />
-            )}
-
-            {/* ── Creative Hit Rate (full-width; bottom) ── */}
-            {selectedAdAccount && (
-                <CreativeHitRateChart
-                    adAccountId={selectedAdAccount}
-                    conversionEvent={adAccountSettings?.conversionEvent}
-                    refreshKey={chartsRefreshKey}
                 />
             )}
 
@@ -2194,6 +2235,20 @@ export default function AnalyticsDashboard() {
                 slackConnected={slackConnected}
                 onConnectSlack={startSlackConnect}
             />
+            {/* ── Slack Alerts Popup ── */}
+            <SlackAlertsDialog
+                open={showSlackAlertsDialog}
+                onClose={() => setShowSlackAlertsDialog(false)}
+                adAccountId={selectedAdAccount}
+                settings={adAccountSettings}
+                settingsLoading={adAccountSettingsLoading}
+                onSaved={(patch) => setAdAccountSettings(prev => ({ ...prev, ...patch }))}
+                slackConnected={slackConnected}
+                slackChannelName={slackChannelName}
+                onConnectSlack={startSlackConnect}
+                onDisconnectSlack={handleSlackDisconnect}
+                slackDisconnecting={slackDisconnecting}
+            />
             {/* ── Custom Settings Popup ── */}
             {showSettingsDialog && (
                 <>
@@ -2227,7 +2282,7 @@ export default function AnalyticsDashboard() {
                                             Optimization Focus
                                         </h2>
                                         <p className="text-sm text-gray-500">
-                                            Configure optimization mode, recommendations, anomaly detection, and alerts
+                                            Configure optimization mode, recommendations, and custom data
                                         </p>
                                     </div>
                                     <button
@@ -2359,97 +2414,6 @@ export default function AnalyticsDashboard() {
                                                         />
                                                     </div>
                                                 )}
-                                            </div>
-                                        </div>
-
-                                        <div className="border-t border-gray-200" />
-
-                                        {/* ── Anomaly Thresholds ── */}
-                                        <div className="space-y-4">
-                                            <div className="space-y-2">
-                                                <div className="flex items-center justify-between gap-3">
-                                                    <h3 className="font-medium text-gray-900 flex items-center gap-2">
-                                                        <AlertTriangle className="w-4 h-4 text-orange-500" />
-                                                        Anomaly Thresholds
-                                                    </h3>
-                                                    {!slackConnected && (
-                                                        <button
-                                                            type="button"
-                                                            onClick={startSlackConnect}
-                                                            style={{ borderColor: "rgba(74,21,75,0.35)" }}
-                                                            className="inline-flex h-8 items-center gap-1.5 rounded-xl border bg-white px-3 text-xs font-medium text-gray-700 shadow-[0_2px_10px_rgba(74,21,75,0.18)] transition-colors hover:bg-gray-50"
-                                                        >
-                                                            <img src={slackColor} alt="Slack" className="h-3.5 w-3.5" />
-                                                            Get Anomaly Alerts in Slack
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            {/* Connected state — channel info, disconnect, and anomaly-alerts toggle */}
-                                            {slackConnected && (
-                                                <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4 space-y-3">
-                                                    <div className="flex items-center justify-between gap-3">
-                                                        <div className="flex items-center gap-2 min-w-0">
-                                                            <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
-                                                            <p className="text-sm text-gray-700 truncate">
-                                                                Connected to <span className="font-medium">{slackChannelName || 'Slack'}</span>
-                                                            </p>
-                                                        </div>
-                                                        <button
-                                                            type="button"
-                                                            onClick={handleSlackDisconnect}
-                                                            disabled={slackDisconnecting}
-                                                            className="flex-shrink-0 text-xs text-white bg-red-500 hover:bg-red-600 font-medium px-3 py-1 rounded-lg transition-colors disabled:opacity-70"
-                                                        >
-                                                            {slackDisconnecting ? 'Disconnecting...' : 'Disconnect'}
-                                                        </button>
-                                                    </div>
-                                                    <div className="flex items-center justify-between gap-3">
-                                                        <p className="text-xs text-gray-500">
-                                                            Get notified in <span className="font-semibold text-gray-700">{slackChannelName || 'your channel'}</span> when CPA spikes or overspend is detected.
-                                                        </p>
-                                                        <Switch
-                                                            checked={tempSlackAlertsEnabled}
-                                                            onCheckedChange={setTempSlackAlertsEnabled}
-                                                        />
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            <div className="space-y-4 pl-6">
-                                                <div className="space-y-2">
-                                                    <p className="text-sm font-medium text-gray-600">CPA Spike Threshold (%)</p>
-                                                    <div className="flex items-center gap-3">
-                                                        <input
-                                                            type="number"
-                                                            value={tempThresholds.cpaSpike}
-                                                            onChange={(e) => setTempThresholds(prev => ({ ...prev, cpaSpike: e.target.value }))}
-                                                            onBlur={(e) => setTempThresholds(prev => ({ ...prev, cpaSpike: parseInt(e.target.value) || 50 }))}
-                                                            className="w-24 px-3 py-2.5 border border-gray-300 rounded-2xl bg-white text-sm shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                                        />
-                                                        <span className="text-xs text-gray-500 leading-snug">
-                                                            Get alerts in Slack when CPA increases<br></br> by more than this % vs 7-day average
-                                                        </span>
-                                                    </div>
-                                                </div>
-
-                                                <div className="space-y-2">
-                                                    <p className="text-sm font-medium text-gray-600">Overspend Threshold (%)</p>
-                                                    <div className="flex items-center gap-3">
-                                                        <input
-                                                            type="number"
-                                                            value={tempThresholds.overspend}
-                                                            onChange={(e) => setTempThresholds(prev => ({ ...prev, overspend: e.target.value }))}
-                                                            onBlur={(e) => setTempThresholds(prev => ({ ...prev, overspend: parseInt(e.target.value) || 150 }))}
-                                                            className="w-24 px-3 py-2.5 border border-gray-300 rounded-2xl bg-white text-sm shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                                        />
-                                                        <span className="text-xs text-gray-500 leading-snug">
-                                                            Get alerts in Slack when daily spend <br></br>exceeds this
-                                                            % of budget (ABO only)
-                                                        </span>
-                                                    </div>
-                                                </div>
                                             </div>
                                         </div>
 

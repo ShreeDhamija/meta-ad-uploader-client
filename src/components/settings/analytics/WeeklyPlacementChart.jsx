@@ -21,6 +21,7 @@ const DIMENSIONS = [
     { key: "placement", label: "Placement", subtitle: "By placement + platform" },
     { key: "age", label: "Age", subtitle: "By age" },
     { key: "gender", label: "Gender", subtitle: "By gender" },
+    { key: "hour", label: "Time of Day", subtitle: "By time of day (ad account time zone)" },
 ]
 
 function getDimensionConfig(key) {
