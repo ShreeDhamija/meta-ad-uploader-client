@@ -167,7 +167,24 @@ function MonthTabSwitcher({ months, selectedMonth, onSelect }) {
 
 export default function CreativeHitRateChart({ adAccountId, conversionEvent, refreshKey, winnerMultiple = 10, onWinnerMultipleChange, className }) {
     const winnerDraft = useThresholdDraft(winnerMultiple, onWinnerMultipleChange)
-    const [data, setData] = useState(null)
+    // Fetched once; winners are worked out here from each creative's spend and the
+    // account's average CPA, so editing the multiple re-scores instantly instead of
+    // re-reading six months of ads from Meta.
+    const [fetchedData, setData] = useState(null)
+    const data = useMemo(() => {
+        if (!fetchedData?.months) return fetchedData
+        const winnerThreshold = fetchedData.accountAvgCPA ? fetchedData.accountAvgCPA * winnerMultiple : null
+        const creativesByMonth = {}
+        const months = fetchedData.months.map(m => {
+            const creatives = (fetchedData.creativesByMonth?.[m.month] || [])
+                .map(c => ({ ...c, isWinner: winnerThreshold != null && c.spend >= winnerThreshold }))
+                .sort((a, b) => (a.isWinner !== b.isWinner ? (a.isWinner ? -1 : 1) : b.spend - a.spend))
+            creativesByMonth[m.month] = creatives
+            const winners = creatives.filter(c => c.isWinner).length
+            return { ...m, winners, hitRate: m.launches > 0 ? Math.round((winners / m.launches) * 1000) / 10 : null }
+        })
+        return { ...fetchedData, winnerThreshold, winnerCpaMultiple: winnerMultiple, months, creativesByMonth }
+    }, [fetchedData, winnerMultiple])
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState(null)
     const [selectedMonth, setSelectedMonth] = useState(null)
@@ -180,7 +197,7 @@ export default function CreativeHitRateChart({ adAccountId, conversionEvent, ref
 
     useEffect(() => {
         if (!adAccountId) { return }
-        const cacheKey = `${adAccountId}::${conversionEvent || "__auto__"}::${winnerMultiple}::${refreshKey || 0}`
+        const cacheKey = `${adAccountId}::${conversionEvent || "__auto__"}::${refreshKey || 0}`
 
         // Cache hit — render instantly, no Helix.
         if (cacheRef.current[cacheKey]) {
@@ -194,7 +211,7 @@ export default function CreativeHitRateChart({ adAccountId, conversionEvent, ref
         setLoading(true)
         setError(null)
 
-        const params = new URLSearchParams({ adAccountId, winnerMultiple: String(winnerMultiple) })
+        const params = new URLSearchParams({ adAccountId })
         if (conversionEvent) params.set("conversionEvent", conversionEvent)
         if (refreshKey) params.set("rk", String(refreshKey))
 
@@ -213,7 +230,7 @@ export default function CreativeHitRateChart({ adAccountId, conversionEvent, ref
             .finally(() => { if (!cancelled) setLoading(false) })
 
         return () => { cancelled = true }
-    }, [adAccountId, conversionEvent, refreshKey, winnerMultiple])
+    }, [adAccountId, conversionEvent, refreshKey])
 
     // Default selected month = most recent month with launches (else last month).
     // The API returns rows shaped { month, launches, winners, ... }, so the key is `.month`.

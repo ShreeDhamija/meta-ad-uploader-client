@@ -781,7 +781,17 @@ function FilterPanel({ applied, onApply, onClose, isRoasMode, getCampaigns, getA
 
 export default function TrendingCreative({ adAccountId, conversionEvent, mode = "cpr", refreshKey, waiting = false, growthPct = 35, onGrowthPctChange, className }) {
     const growthDraft = useThresholdDraft(growthPct, onGrowthPctChange)
-    const [data, setData] = useState(null)
+    // Fetched once without a growth bar; the threshold is applied below, so editing
+    // it re-filters instantly instead of re-reading Meta (the server reads the same
+    // ads whatever the threshold — growth is only a filter on top).
+    const [fetchedData, setData] = useState(null)
+    const data = useMemo(() => {
+        if (!fetchedData || fetchedData.mode !== "trending") return fetchedData
+        return {
+            ...fetchedData,
+            ads: (fetchedData.ads || []).filter(ad => !(ad.previousSpend > 0) || ad.spendDelta > growthPct),
+        }
+    }, [fetchedData, growthPct])
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState(null)
     const [filters, setFilters] = useState(EMPTY_FILTERS)
@@ -855,7 +865,7 @@ export default function TrendingCreative({ adAccountId, conversionEvent, mode = 
         if (!adAccountId) { setData(null); return }
         // Render the shell immediately; fetch once the conversion event is known.
         if (waiting) { setData(null); setLoading(true); setError(null); return }
-        const cacheKey = `${adAccountId}::${mode}::${conversionEvent || "__auto__"}::${growthPct}::${JSON.stringify(activeFilters)}::${refreshKey || 0}`
+        const cacheKey = `${adAccountId}::${mode}::${conversionEvent || "__auto__"}::${JSON.stringify(activeFilters)}::${refreshKey || 0}`
 
         // Cache hit — render instantly, no Helix.
         if (cacheRef.current[cacheKey]) {
@@ -869,7 +879,7 @@ export default function TrendingCreative({ adAccountId, conversionEvent, mode = 
         setLoading(true)
         setError(null)
 
-        const params = new URLSearchParams({ adAccountId, mode, growthPct: String(growthPct), ...activeFilters })
+        const params = new URLSearchParams({ adAccountId, mode, growthPct: "0", ...activeFilters })
         if (conversionEvent) params.set("conversionEvent", conversionEvent)
         if (refreshKey) params.set("rk", String(refreshKey))
 
@@ -888,7 +898,7 @@ export default function TrendingCreative({ adAccountId, conversionEvent, mode = 
             .finally(() => { if (!cancelled) setLoading(false) })
 
         return () => { cancelled = true }
-    }, [adAccountId, conversionEvent, mode, refreshKey, waiting, activeFilters, growthPct])
+    }, [adAccountId, conversionEvent, mode, refreshKey, waiting, activeFilters])
 
     // Columns that apply to these results: ROAS only in ROAS mode, video columns
     // only when at least one ad has video data.

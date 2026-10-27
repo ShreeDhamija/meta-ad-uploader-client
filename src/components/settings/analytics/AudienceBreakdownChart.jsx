@@ -30,6 +30,33 @@ function formatSpend(v) {
     return `$${v.toFixed(0)}`
 }
 
+const TOP_RADIUS = 10
+const BOTTOM_RADIUS = 4
+
+// A bar segment with rounded corners only where it's the visible edge of the
+// stack: the top of the highest non-zero segment and the bottom of the lowest,
+// so a week where the top segment is $0 still gets a rounded top.
+function StackSegment({ x, y, width, height, fill, payload, dataKey, segments }) {
+    if (!height || height <= 0 || !width) return null
+    const index = segments.indexOf(dataKey)
+    const isTop = segments.slice(index + 1).every(k => !(Number(payload?.[k]) > 0))
+    const isBottom = segments.slice(0, index).every(k => !(Number(payload?.[k]) > 0))
+    const rt = isTop ? Math.min(TOP_RADIUS, width / 2, height) : 0
+    const rb = isBottom ? Math.min(BOTTOM_RADIUS, width / 2, Math.max(height - rt, 0)) : 0
+    const d = [
+        `M${x},${y + rt}`,
+        `Q${x},${y} ${x + rt},${y}`,
+        `L${x + width - rt},${y}`,
+        `Q${x + width},${y} ${x + width},${y + rt}`,
+        `L${x + width},${y + height - rb}`,
+        `Q${x + width},${y + height} ${x + width - rb},${y + height}`,
+        `L${x + rb},${y + height}`,
+        `Q${x},${y + height} ${x},${y + height - rb}`,
+        "Z",
+    ].join(" ")
+    return <path d={d} fill={fill} />
+}
+
 function CustomTooltip({ active, payload, segments }) {
     if (!active || !payload?.length) return null
     const row = payload[0]?.payload
@@ -199,14 +226,14 @@ export default function AudienceBreakdownChart({ adAccountId, dateRange, granula
                                         width={52}
                                     />
                                     <Tooltip content={<CustomTooltip segments={segments} />} cursor={{ fill: "rgba(0,0,0,0.03)" }} />
-                                    {segments.map((key, i) => (
+                                    {segments.map((key) => (
                                         <Bar
                                             key={key}
                                             dataKey={key}
                                             name={segmentLabel(key)}
                                             stackId="segments"
                                             fill={segmentColor(key)}
-                                            radius={i === segments.length - 1 ? [4, 4, 0, 0] : 0}
+                                            shape={(props) => <StackSegment {...props} dataKey={key} segments={segments} />}
                                             isAnimationActive={false}
                                         />
                                     ))}

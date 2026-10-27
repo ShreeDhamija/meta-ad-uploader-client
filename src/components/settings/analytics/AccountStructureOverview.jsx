@@ -20,8 +20,11 @@ const LEARNING_STATUS = {
     FAIL: { label: "Learning limited", className: "bg-red-50 text-red-700 ring-red-200" },
 }
 
-// 6 columns shared by the header, campaign rows and ad set rows.
+// 6 columns shared by the header row, campaign rows and ad set rows.
 const GRID = "grid grid-cols-[minmax(240px,2.4fr)_minmax(110px,0.9fr)_minmax(90px,0.7fr)_minmax(80px,0.6fr)_minmax(150px,1.2fr)_minmax(120px,0.9fr)] gap-x-4"
+
+// The tree's trunk runs under the campaign chevron: px-4 (16px) + half the 16px chevron.
+const TRUNK_LEFT = "left-[23px]"
 
 function formatSpend(v) {
     if (v == null) return "—"
@@ -59,13 +62,27 @@ function LearningProgress({ conversions, floor }) {
     )
 }
 
-function StatTile({ label, value, sub }) {
+function StatTile({ label, value, sub, dot }) {
     return (
         <div className="rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3">
-            <p className="text-[11px] font-medium text-gray-500">{label}</p>
+            <div className="flex items-center gap-1.5">
+                <span className="h-2 w-2 flex-shrink-0 rounded-full" style={{ backgroundColor: dot }} />
+                <p className="truncate text-[11px] font-medium text-gray-500">{label}</p>
+            </div>
             <p className="mt-1 text-xl font-semibold text-gray-900">{value}</p>
             {sub && <p className="mt-0.5 text-[11px] text-gray-400">{sub}</p>}
         </div>
+    )
+}
+
+// One branch of the tree: a full-height trunk while more ad sets follow, and a
+// rounded elbow out to this ad set.
+function TreeBranch({ isLast }) {
+    return (
+        <>
+            {!isLast && <span className={cn("absolute top-0 bottom-0 border-l-2 border-gray-200", TRUNK_LEFT)} aria-hidden />}
+            <span className={cn("absolute top-0 h-1/2 w-[18px] rounded-bl-[10px] border-b-2 border-l-2 border-gray-200", TRUNK_LEFT)} aria-hidden />
+        </>
     )
 }
 
@@ -175,25 +192,28 @@ export default function AccountStructureOverview({ adAccountId, conversionEvent,
                     ) : (
                         <>
                             <div className="mb-4 grid grid-cols-2 gap-2 lg:grid-cols-4">
-                                <StatTile label="Active campaigns" value={totals.campaigns} />
-                                <StatTile label="Active ad sets" value={totals.adsets} />
+                                <StatTile label="Active campaigns" value={totals.campaigns} dot="#8b5cf6" />
+                                <StatTile label="Active ad sets" value={totals.adsets} dot="#3b82f6" />
                                 <StatTile
                                     label="Out of learning (theoretical)"
                                     value={`${totals.adsetsOutOfLearning} / ${totals.adsets}`}
                                     sub={`${floor}+ conversions in 7 days`}
+                                    dot="#22c55e"
                                 />
                                 <StatTile
                                     label={`Spend via ${floor}+ conversion ad sets`}
                                     value={totals.healthySpendPct == null ? "—" : `${Math.round(totals.healthySpendPct * 100)}%`}
                                     sub={`${formatSpend(totals.healthySpend7d)} of ${formatSpend(totals.spend7d)} (7d)`}
+                                    dot="#f59e0b"
                                 />
                             </div>
 
-                            {/* Both axes scroll: wide on small screens, tall on big accounts. */}
-                            <div className="max-h-[520px] overflow-auto rounded-2xl border border-gray-200 custom-scrollbar">
-                                <div className="min-w-[900px]">
-                                    <div className={cn(GRID, "sticky top-0 z-10 border-b border-gray-200 bg-gray-50 px-4 py-2.5 text-[10.5px] font-medium uppercase tracking-wide text-gray-500")}>
-                                        <span>Campaign / Ad set</span>
+                            {/* Scrolls both ways: wide on small screens, tall on big accounts. */}
+                            <div className="max-h-[560px] overflow-auto custom-scrollbar pr-1">
+                                <div className="flex min-w-[900px] flex-col gap-2.5">
+                                    {/* Column headers: their own rounded row, pinned while scrolling */}
+                                    <div className={cn(GRID, "sticky top-0 z-10 items-center rounded-2xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-[10.5px] font-medium uppercase tracking-wide text-gray-500 shadow-[0_6px_10px_-8px_rgba(0,0,0,0.12)]")}>
+                                        <span className="pl-6">Campaign / Ad set</span>
                                         <span>Budget</span>
                                         <span className="text-right">Spend (7d)</span>
                                         <span className="text-right">Conv. (7d)</span>
@@ -205,14 +225,15 @@ export default function AccountStructureOverview({ adAccountId, conversionEvent,
                                         const isCollapsed = collapsed.has(c.id)
                                         const budget = formatBudget(c.dailyBudget, c.lifetimeBudget)
                                         return (
-                                            <div key={c.id} className="border-b border-gray-100 last:border-b-0">
+                                            <div key={c.id} className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xs">
                                                 {/* Campaign row */}
                                                 <div
                                                     role="button"
                                                     tabIndex={0}
+                                                    aria-expanded={!isCollapsed}
                                                     onClick={() => toggleCampaign(c.id)}
                                                     onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleCampaign(c.id) } }}
-                                                    className={cn(GRID, "cursor-pointer items-center bg-white px-4 py-3 transition-colors hover:bg-gray-50")}
+                                                    className={cn(GRID, "cursor-pointer items-center px-4 py-3 transition-colors hover:bg-gray-50")}
                                                 >
                                                     <div className="flex min-w-0 items-center gap-2">
                                                         <ChevronRight className={cn("h-4 w-4 flex-shrink-0 text-gray-400 transition-transform", !isCollapsed && "rotate-90")} />
@@ -262,37 +283,30 @@ export default function AccountStructureOverview({ adAccountId, conversionEvent,
                                                     <span />
                                                 </div>
 
-                                                {/* Ad set rows */}
+                                                {/* Ad set rows, branching off one continuous trunk */}
                                                 {!isCollapsed && (
-                                                    <div className="bg-gray-50/60">
+                                                    <div className="bg-gray-50/60 pb-1.5">
                                                         {c.adsets.map((a, i) => {
                                                             const status = LEARNING_STATUS[a.learningStatus]
-                                                            const isLast = i === c.adsets.length - 1
                                                             return (
-                                                                <div key={a.id} className={cn(GRID, "items-center px-4 py-2")}>
-                                                                    <div className="flex min-w-0 items-center">
-                                                                        {/* Tree connector */}
-                                                                        <span className="relative ml-[7px] mr-3 h-8 w-4 flex-shrink-0" aria-hidden>
-                                                                            <span className={cn("absolute left-0 top-0 border-l border-gray-300", isLast ? "h-1/2" : "h-full")} />
-                                                                            <span className="absolute left-0 top-1/2 w-4 border-t border-gray-300" />
-                                                                        </span>
-                                                                        <div className="flex min-w-0 items-center gap-1.5">
-                                                                            <Tooltip>
-                                                                                <TooltipTrigger asChild>
-                                                                                    <p className={cn("truncate text-[13px]", a.outOfLearning ? "font-medium text-gray-900" : "text-gray-700")}>{a.name}</p>
-                                                                                </TooltipTrigger>
-                                                                                <TooltipContent side="top" className="max-w-[360px] break-words text-xs">{a.name}</TooltipContent>
-                                                                            </Tooltip>
-                                                                            <a
-                                                                                href={adsManagerUrl("adset", a.id)}
-                                                                                target="_blank"
-                                                                                rel="noopener noreferrer"
-                                                                                className="flex-shrink-0 text-gray-400 transition-colors hover:text-blue-500"
-                                                                                title="Open in Ads Manager"
-                                                                            >
-                                                                                <ExternalLink className="h-3 w-3" />
-                                                                            </a>
-                                                                        </div>
+                                                                <div key={a.id} className={cn(GRID, "relative items-center px-4 py-2")}>
+                                                                    <TreeBranch isLast={i === c.adsets.length - 1} />
+                                                                    <div className="flex min-w-0 items-center gap-1.5 pl-8">
+                                                                        <Tooltip>
+                                                                            <TooltipTrigger asChild>
+                                                                                <p className={cn("truncate text-[13px]", a.outOfLearning ? "font-medium text-gray-900" : "text-gray-700")}>{a.name}</p>
+                                                                            </TooltipTrigger>
+                                                                            <TooltipContent side="top" className="max-w-[360px] break-words text-xs">{a.name}</TooltipContent>
+                                                                        </Tooltip>
+                                                                        <a
+                                                                            href={adsManagerUrl("adset", a.id)}
+                                                                            target="_blank"
+                                                                            rel="noopener noreferrer"
+                                                                            className="flex-shrink-0 text-gray-400 transition-colors hover:text-blue-500"
+                                                                            title="Open in Ads Manager"
+                                                                        >
+                                                                            <ExternalLink className="h-3 w-3" />
+                                                                        </a>
                                                                     </div>
                                                                     <span className="text-xs text-gray-600">
                                                                         {formatBudget(a.dailyBudget, a.lifetimeBudget) || <span className="text-gray-400">—</span>}

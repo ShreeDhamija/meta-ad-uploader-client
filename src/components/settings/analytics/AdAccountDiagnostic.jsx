@@ -281,7 +281,7 @@ function SummarySection({ report }) {
         }
         const worse = mode === "cpr" ? (delta > 0) : (delta < 0)
         tiles.push({
-            label: "Anomaly Detected",
+            label: `Selected Period ${kpiLabel}`,
             value: anomalyKpi != null ? anomalyKpi.toFixed(mode === "cpr" ? 2 : 2) : "—",
             valuePrefix: mode === "cpr" && anomalyKpi != null ? "$" : undefined,
             valueUnit: mode !== "cpr" && anomalyKpi != null ? "×" : undefined,
@@ -290,10 +290,10 @@ function SummarySection({ report }) {
         })
     } else {
         tiles.push({
-            label: "Anomaly Detected",
-            value: "0",
-            desc: `No sustained period of elevated ${kpiLabel} found in the trailing 14 days relative to baseline.`,
-            status: "good",
+            label: `Selected Period ${kpiLabel}`,
+            value: "—",
+            desc: "No delivery data was found for the selected period — try a different date range.",
+            status: "neutral",
         })
     }
 
@@ -302,9 +302,21 @@ function SummarySection({ report }) {
             label: "Contributing Factors",
             value: culprits?.length || 0,
             desc: culprits?.length
-                ? `${culprits.length} ${culprits.length === 1 ? "entity" : "entities"} had meaningful spend swings (>25% of anomaly spend, >15% delta).`
-                : "No individual campaign, adset, or ad explains the anomaly on its own.",
+                ? `${culprits.length} ${culprits.length === 1 ? "entity" : "entities"} with a meaningful share of spend swung 15%+ (campaigns, ad sets) or 25%+ (ads).`
+                : "No individual campaign, ad set, or ad explains the change on its own.",
             status: culprits?.length ? "warn" : "neutral",
+        })
+    }
+
+    const flaggedTraffic = report.trafficChanges?.flagged || []
+    if (report.trafficChanges) {
+        tiles.push({
+            label: "Traffic Metrics Flagged",
+            value: flaggedTraffic.length,
+            desc: flaggedTraffic.length
+                ? `${flaggedTraffic.map(m => TRAFFIC_LABEL[m]).join(", ")} moved more than ${report.trafficChanges.thresholdPct}% vs the comparison period.`
+                : `No traffic metric moved more than ${report.trafficChanges.thresholdPct}% between the periods.`,
+            status: flaggedTraffic.length ? "warn" : "good",
         })
     }
 
@@ -312,7 +324,7 @@ function SummarySection({ report }) {
         label: "Recent Changes",
         value: changes?.length || 0,
         desc: changes?.length
-            ? `${changes.length} significant ${changes.length === 1 ? "change" : "changes"} detected near the evaluation window.`
+            ? `${changes.length} significant ${changes.length === 1 ? "change" : "changes"} from 48 hours before through the selected period.`
             : "No significant budget or targeting changes detected.",
         status: changes?.length ? "neutral" : "good",
     })
@@ -327,6 +339,19 @@ function SummarySection({ report }) {
         })
     }
 
+    if (report.pixelHealth) {
+        const errorCount = report.pixelHealth.issues.filter(i => i.severity === "error").length
+        const issueCount = report.pixelHealth.issues.length
+        tiles.push({
+            label: "Events Manager",
+            value: issueCount,
+            desc: issueCount
+                ? `${issueCount} ${issueCount === 1 ? "issue" : "issues"} to fix in match quality, Conversions API, matching or diagnostics.`
+                : "No Events Manager issues found.",
+            status: errorCount ? "bad" : issueCount ? "warn" : "good",
+        })
+    }
+
     // Headline
     let headline = `Diagnosing ${fmtDateShort(dateRange.since)} — ${fmtDateShort(dateRange.until)}.`
     if (anomalyPeriod && previousPeriod && anomalyPeriod.avgKpi != null && previousPeriod.avgKpi != null) {
@@ -337,14 +362,14 @@ function SummarySection({ report }) {
             : `over ${fmtDateShort(anomalyPeriod.startDate)} — ${fmtDateShort(anomalyPeriod.endDate)} (${anomalyPeriod.days} days)`
         headline = `${kpiLabel} ${worse ? "worsened" : "improved"} from ${fmtKpi(previousPeriod.avgKpi, mode)} to ${fmtKpi(anomalyPeriod.avgKpi, mode)} ${stretch} (${delta > 0 ? "+" : ""}${delta.toFixed(0)}%).`
     } else if (!anomalyPeriod) {
-        headline = `No anomaly detected in the trailing 14 days. ${kpiLabel} held within baseline range.`
+        headline = "No delivery data was found for the selected period."
     }
 
     return (
         <SectionCard id="summary">
             <SectionHeader
                 title="Diagnostic Summary"
-                sub="Trailing 14 days · automated anomaly detection on account-level performance."
+                sub="Trailing 14 days · the period you selected vs the same-length period immediately before it."
             />
 
             <div className="rounded-3xl mb-3" style={{ background: PAPER, border: `1px solid ${ORANGE}`, color: INK, padding: "16px 20px" }}>
@@ -390,15 +415,15 @@ function TrendSection({ dailyData, anomalyPeriod, mode, kpiLabel }) {
         <SectionCard id="trend">
             <SectionHeader
                 title={`Account Spend & ${kpiLabel} — Trailing 14 Days`}
-                sub={`Daily spend (bars) and ${kpiLabel} (line)${anomalyPeriod ? " · Anomaly period highlighted in pink" : ""}.`}
+                sub={`Daily spend (bars) and ${kpiLabel} (line)${anomalyPeriod ? " · Selected period highlighted in pink" : ""}.`}
             />
             <MetricGrid columns={3} className="mb-4">
                 <MetricCard label="Total Spend · 14d" value={fmtCurrency(totalSpend)} />
                 <MetricCard label={`Avg ${kpiLabel} · 14d`} value={fmtKpi(avgKpi, mode)} />
                 <MetricCard
-                    label="Anomaly Days"
+                    label="Selected Days"
                     value={anomalyPeriod ? `${anomalyPeriod.days}` : "0"}
-                    sub={anomalyPeriod ? `${fmtDateShort(anomalyPeriod.startDate)}–${fmtDateShort(anomalyPeriod.endDate)}` : "no anomaly"}
+                    sub={anomalyPeriod ? `${fmtDateShort(anomalyPeriod.startDate)}–${fmtDateShort(anomalyPeriod.endDate)}` : "no delivery"}
                 />
             </MetricGrid>
 
@@ -451,9 +476,9 @@ function AnomalySection({ anomalyPeriod, previousPeriod, culprits, mode, kpiLabe
     if (!anomalyPeriod || !previousPeriod) {
         return (
             <SectionCard id="anomaly">
-                <SectionHeader title="Anomaly Detail" sub="Period-over-period comparison and contributing campaigns / adsets / ads." />
-                <div className="rounded-3xl px-4 py-3 text-sm" style={{ background: GOOD_SOFT, border: `1px solid rgba(34,197,94,0.22)`, color: INK_2 }}>
-                    <span className="font-semibold" style={{ color: GOOD }}>No anomaly detected.</span> {kpiLabel} held within baseline range over the trailing 14 days.
+                <SectionHeader title="Selected Period" sub="Period-over-period comparison and contributing campaigns / ad sets / ads." />
+                <div className="rounded-3xl px-4 py-3 text-sm" style={{ background: PAPER_2, border: `1px solid ${LINE}`, color: INK_2 }}>
+                    <span className="font-semibold">No data for the selected period.</span> No delivery data was found for it — try a different date range.
                 </div>
             </SectionCard>
         )
@@ -462,12 +487,12 @@ function AnomalySection({ anomalyPeriod, previousPeriod, culprits, mode, kpiLabe
     return (
         <SectionCard id="anomaly">
             <SectionHeader
-                title={`Anomaly: ${fmtDateShort(anomalyPeriod.startDate)} — ${fmtDateShort(anomalyPeriod.endDate)} (${anomalyPeriod.days} ${anomalyPeriod.days === 1 ? "day" : "days"})`}
-                sub="Compared against the same-length window immediately before the anomaly."
+                title={`Selected Period: ${fmtDateShort(anomalyPeriod.startDate)} — ${fmtDateShort(anomalyPeriod.endDate)} (${anomalyPeriod.days} ${anomalyPeriod.days === 1 ? "day" : "days"})`}
+                sub="Compared against the same-length window immediately before it."
             />
             <div className="grid grid-cols-2 gap-3 mb-5">
                 <div className="rounded-3xl p-4" style={{ background: ORANGE_SOFT, border: `1px solid rgba(255,72,0,0.24)` }}>
-                    <SmallLabel style={{ color: ORANGE_DEEP, marginBottom: 8 }}>Anomaly period ({anomalyPeriod.days}d)</SmallLabel>
+                    <SmallLabel style={{ color: ORANGE_DEEP, marginBottom: 8 }}>Selected period ({anomalyPeriod.days}d)</SmallLabel>
                     <div className="flex items-baseline gap-6">
                         <div>
                             <SmallLabel style={{ color: ORANGE_DEEP }}>{kpiLabel}</SmallLabel>
@@ -496,7 +521,7 @@ function AnomalySection({ anomalyPeriod, previousPeriod, culprits, mode, kpiLabe
 
             <div className="mb-2">
                 <SmallLabel style={{ marginBottom: 2 }}>Contributing Factors</SmallLabel>
-                <p style={{ fontSize: 11.5, color: MUTED, margin: "0 0 12px" }}>Entities with &gt;25% of anomaly spend and meaningful spend swings (&gt;15%).</p>
+                <p style={{ fontSize: 11.5, color: MUTED, margin: "0 0 12px" }}>Spend swings of 15%+ for campaigns and ad sets and 25%+ for ads, among those carrying a meaningful share of spend in either period. Largest dollar swings first.</p>
             </div>
 
             {culprits.length > 0 ? (
@@ -506,11 +531,11 @@ function AnomalySection({ anomalyPeriod, previousPeriod, culprits, mode, kpiLabe
                             <tr>
                                 <th className="text-left px-3.5 py-2.5 text-[10px] font-semibold text-gray-400">Level</th>
                                 <th className="text-left px-3.5 py-2.5 text-[10px] font-semibold text-gray-400">Name</th>
-                                <th className="text-left px-3.5 py-2.5 text-[10px] font-semibold text-gray-400">Anomaly Spend</th>
+                                <th className="text-left px-3.5 py-2.5 text-[10px] font-semibold text-gray-400">Selected Spend</th>
                                 <th className="text-left px-3.5 py-2.5 text-[10px] font-semibold text-gray-400">Prev Spend</th>
                                 <th className="text-left px-3.5 py-2.5 text-[10px] font-semibold text-gray-400">Spend Change %</th>
                                 <th className="text-left px-3.5 py-2.5 text-[10px] font-semibold text-gray-400">Prev {kpiLabel}</th>
-                                <th className="text-left px-3.5 py-2.5 text-[10px] font-semibold text-gray-400">Anomaly {kpiLabel}</th>
+                                <th className="text-left px-3.5 py-2.5 text-[10px] font-semibold text-gray-400">Selected {kpiLabel}</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50">
@@ -560,7 +585,7 @@ function AnomalySection({ anomalyPeriod, previousPeriod, culprits, mode, kpiLabe
                     </table>
                 </div>
             ) : (
-                <p className="text-sm text-gray-500 italic">No individual campaigns, adsets, or ads had spend swings large enough to explain the anomaly on their own.</p>
+                <p className="text-sm text-gray-500 italic">No campaign, ad set or ad with a meaningful share of spend swung enough (15%+ for campaigns and ad sets, 25%+ for ads) to explain the change on its own.</p>
             )}
         </SectionCard>
     )
@@ -575,7 +600,7 @@ function ChangesSection({ changes, anomalyDetected }) {
         <SectionCard id="changes">
             <SectionHeader
                 title="Account Changes"
-                sub={anomalyDetected ? "Budget shifts >25% and targeting/audience changes near the anomaly period." : "Budget shifts >25% and targeting/audience changes over the last 7 days."}
+                sub={anomalyDetected ? "Budget shifts >25% and ad set targeting changes from 48 hours before the selected period through its last day." : "Budget shifts >25% and ad set targeting changes over the last 7 days."}
             />
             {changes.length > 0 ? (
                 <div className="overflow-x-auto rounded-2xl" style={{ border: `1px solid ${LINE}` }}>
@@ -611,7 +636,7 @@ function ChangesSection({ changes, anomalyDetected }) {
                     </table>
                 </div>
             ) : (
-                <p className="text-sm italic" style={{ color: MUTED }}>No significant budget changes (&gt;25%) or audience targeting changes detected.</p>
+                <p className="text-sm italic" style={{ color: MUTED }}>No budget changes over 25% or ad set targeting changes in this window.</p>
             )}
         </SectionCard>
     )
@@ -901,6 +926,255 @@ function EventHealthSection({ eventHealth }) {
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
+// SECTION 5: TRAFFIC METRIC CHANGES
+// ═════════════════════════════════════════════════════════════════════════════
+
+const TRAFFIC_LABEL = { cpc: "CPC (link)", cpm: "CPM", ctr: "CTR (link)", cr: "Conv. rate" }
+
+function fmtTraffic(metric, v) {
+    if (v === null || v === undefined) return "—"
+    return metric === "ctr" || metric === "cr" ? `${v.toFixed(2)}%` : `$${v.toFixed(2)}`
+}
+function fmtDelta(d) {
+    if (d === null || d === undefined) return "—"
+    return `${d > 0 ? "+" : ""}${d.toFixed(0)}%`
+}
+
+// Link CPC, CPM, link CTR and conversion rate: selected period vs comparison
+// period and, for each that moved more than the threshold, the campaigns that
+// moved the same way. Lower is better for CPC/CPM, higher for CTR and CR.
+function TrafficChangesSection({ traffic, eventLabel }) {
+    if (!traffic) return null
+    const worse = (m, d) => d !== null && d !== undefined && (m === "ctr" || m === "cr" ? d < 0 : d > 0)
+    const toneFor = (m, d, flagged) => (!flagged ? MUTED : worse(m, d) ? BAD : GOOD_DEEP)
+
+    return (
+        <SectionCard id="traffic">
+            <SectionHeader
+                title="Traffic Metric Changes"
+                sub={`Selected period vs comparison period. Metrics that moved more than ${traffic.thresholdPct}% are flagged, with the campaigns that moved the same way. Conversion rate is ${eventLabel} conversions per link click.`}
+            />
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                {traffic.accountMetrics.map((m) => {
+                    const flagged = traffic.flagged.includes(m.metric)
+                    const bad = flagged && worse(m.metric, m.deltaPct)
+                    return (
+                        <div
+                            key={m.metric}
+                            className="rounded-2xl p-3.5"
+                            style={{
+                                background: !flagged ? PAPER_2 : bad ? BAD_SOFT : GOOD_SOFT,
+                                border: `1px solid ${!flagged ? LINE : bad ? "rgba(239,68,68,0.24)" : "rgba(34,197,94,0.22)"}`,
+                            }}
+                        >
+                            <SmallLabel style={{ marginBottom: 6 }}>{TRAFFIC_LABEL[m.metric]}</SmallLabel>
+                            <p className="tabular-nums" style={{ fontSize: 13, color: INK_2, margin: 0 }}>
+                                {fmtTraffic(m.metric, m.prev)} → <span style={{ fontWeight: 700, color: INK }}>{fmtTraffic(m.metric, m.anomaly)}</span>{" "}
+                                <span style={{ color: toneFor(m.metric, m.deltaPct, flagged), fontWeight: flagged ? 700 : 500 }}>({fmtDelta(m.deltaPct)})</span>
+                            </p>
+                        </div>
+                    )
+                })}
+            </div>
+            {traffic.flagged.length === 0 ? (
+                <p className="text-sm italic" style={{ color: MUTED }}>No traffic metric moved more than {traffic.thresholdPct}% between the periods.</p>
+            ) : traffic.campaigns.length === 0 ? (
+                <p className="text-sm italic" style={{ color: MUTED }}>The account-level change isn&apos;t concentrated in any campaign with enough delivery in both periods — it&apos;s spread across them.</p>
+            ) : (
+                <div className="overflow-x-auto rounded-2xl" style={{ border: `1px solid ${LINE}` }}>
+                    <table className="min-w-full text-sm">
+                        <thead style={{ background: PAPER_2 }}>
+                            <tr>
+                                <th className="text-left px-3.5 py-2.5 text-[10px] font-semibold text-gray-400">Campaign</th>
+                                <th className="text-left px-3.5 py-2.5 text-[10px] font-semibold text-gray-400">Spend (prev → selected)</th>
+                                {traffic.flagged.map(m => (
+                                    <th key={m} className="text-left px-3.5 py-2.5 text-[10px] font-semibold text-gray-400">{TRAFFIC_LABEL[m]}</th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-50">
+                            {traffic.campaigns.map((c) => (
+                                <tr key={c.id} className="hover:bg-gray-50/50 transition-colors">
+                                    <td className="px-3.5 py-2.5 max-w-[260px]">
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <p className="text-gray-800 font-medium truncate cursor-default">{c.name}</p>
+                                            </TooltipTrigger>
+                                            <TooltipContent side="top" className="max-w-[360px] break-words">{c.name}</TooltipContent>
+                                        </Tooltip>
+                                    </td>
+                                    <td className="px-3.5 py-2.5 text-gray-600 tabular-nums whitespace-nowrap">{fmtCurrency(c.prevSpend)} → {fmtCurrency(c.anomalySpend)}</td>
+                                    {traffic.flagged.map(m => {
+                                        const v = c.metrics[m]
+                                        const hit = c.impactedBy.includes(m)
+                                        return (
+                                            <td key={m} className="px-3.5 py-2.5 tabular-nums whitespace-nowrap">
+                                                <span className="text-gray-600">{fmtTraffic(m, v.prev)} → {fmtTraffic(m, v.anomaly)}</span>{" "}
+                                                <span style={{ color: hit ? toneFor(m, v.deltaPct, true) : MUTED_2, fontWeight: hit ? 700 : 500 }}>{fmtDelta(v.deltaPct)}</span>
+                                            </td>
+                                        )
+                                    })}
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+        </SectionCard>
+    )
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// SECTION 6: EVENTS MANAGER HEALTH (match quality, Conversions API, matching, diagnostics)
+// ═════════════════════════════════════════════════════════════════════════════
+
+const RATING_STYLE = {
+    Great: { background: GOOD_SOFT, color: GOOD_DEEP },
+    Good: { background: GOOD_SOFT, color: GOOD_DEEP },
+    OK: { background: WARN_SOFT, color: "#b45309" },
+    Poor: { background: BAD_SOFT, color: "#b91c1c" },
+}
+const CAPI_LABEL = {
+    browser_and_server: { text: "Browser and Server", color: GOOD_DEEP },
+    browser_only: { text: "Browser only — Conversions API not sending", color: "#b91c1c" },
+    server_only: { text: "Server only — no browser pixel events", color: "#b45309" },
+    no_events: { text: "No events this week", color: "#b91c1c" },
+}
+
+function PixelHealthSection({ report }) {
+    const [showAll, setShowAll] = useState(false)
+    if (!report) return null
+    const errorsOnly = report.pixels.length === 0 && report.errors.length > 0
+
+    return (
+        <SectionCard id="pixel">
+            <SectionHeader
+                title="Events Manager Health"
+                sub={`Key conversion event: ${report.primaryEvent.name || report.primaryEvent.stored || "not set"}${report.primaryEvent.source === "roas_default" ? " (ROAS account — Purchase by default)" : ""} · Event Match Quality, Conversions API, Automatic Website Matching and diagnostics, read live from Events Manager.`}
+            />
+
+            {report.issues.length > 0 ? (
+                <div className="flex flex-col gap-2 mb-4">
+                    {report.issues.map((issue, idx) => {
+                        const isError = issue.severity === "error"
+                        return (
+                            <div
+                                key={idx}
+                                className="rounded-2xl px-4 py-2.5 text-sm"
+                                style={{
+                                    background: isError ? BAD_SOFT : WARN_SOFT,
+                                    border: `1px solid ${isError ? "rgba(239,68,68,0.24)" : "rgba(245,158,11,0.24)"}`,
+                                    color: isError ? "#991b1b" : "#92400e",
+                                }}
+                            >
+                                {issue.message}
+                                {issue.link && (
+                                    <a href={issue.link} target="_blank" rel="noreferrer" className="ml-2 underline text-xs">Fix in Events Manager</a>
+                                )}
+                            </div>
+                        )
+                    })}
+                </div>
+            ) : !errorsOnly ? (
+                <div className="rounded-2xl px-4 py-2.5 text-sm mb-4" style={{ background: GOOD_SOFT, border: "1px solid rgba(34,197,94,0.22)", color: GOOD_DEEP }}>
+                    No issues found: diagnostics pass, major events rate Good or better, Automatic Website Matching is fully on and the key event fires from Browser and Server.
+                </div>
+            ) : null}
+
+            {report.errors.length > 0 && (
+                <ul className="mb-4 space-y-1" style={{ fontSize: 11.5, color: MUTED }}>
+                    {report.errors.map((e, idx) => <li key={idx}>⚠ {e}</li>)}
+                </ul>
+            )}
+
+            {report.pixels.map((p) => {
+                const major = p.events.filter(e => e.isMajor)
+                const shown = showAll ? p.events : major.length > 0 ? major : p.events.slice(0, 5)
+                const failing = p.diagnostics.filter(d => d.failing)
+                return (
+                    <div key={p.id} className="mb-4 last:mb-0">
+                        {report.pixels.length > 1 && <p className="text-sm font-semibold mb-2" style={{ color: INK }}>{p.name}</p>}
+
+                        <div className="grid gap-x-6 gap-y-1 text-sm sm:grid-cols-2 mb-3" style={{ color: INK_2 }}>
+                            <p style={{ margin: 0 }}>
+                                Conversions API{p.capi ? ` (${p.capi.eventName})` : ""}:{" "}
+                                {p.capi ? (
+                                    <span style={{ fontWeight: 600, color: CAPI_LABEL[p.capi.status].color }}>
+                                        {CAPI_LABEL[p.capi.status].text}
+                                        <span style={{ fontWeight: 400, color: MUTED_2, marginLeft: 4 }}>
+                                            ({p.capi.browser.toLocaleString()} browser / {p.capi.server.toLocaleString()} server, 7 days)
+                                        </span>
+                                    </span>
+                                ) : <span style={{ color: MUTED_2 }}>not checked</span>}
+                            </p>
+                            <p style={{ margin: 0 }}>
+                                Automatic Website Matching:{" "}
+                                {p.automaticMatching ? (
+                                    !p.automaticMatching.enabled ? <span style={{ fontWeight: 600, color: "#b91c1c" }}>off</span>
+                                        : p.automaticMatching.missing.length ? <span style={{ fontWeight: 600, color: "#b45309" }}>on, missing {p.automaticMatching.missing.join(", ")}</span>
+                                            : <span style={{ fontWeight: 600, color: GOOD_DEEP }}>on, every field</span>
+                                ) : <span style={{ color: MUTED_2 }}>not read</span>}
+                            </p>
+                        </div>
+
+                        {p.events.length > 0 && (
+                            <>
+                                <div className="overflow-x-auto rounded-2xl" style={{ border: `1px solid ${LINE}` }}>
+                                    <table className="min-w-full text-sm">
+                                        <thead style={{ background: PAPER_2 }}>
+                                            <tr>
+                                                <th className="text-left px-3.5 py-2.5 text-[10px] font-semibold text-gray-400">Event</th>
+                                                <th className="text-left px-3.5 py-2.5 text-[10px] font-semibold text-gray-400">Match quality</th>
+                                                <th className="text-left px-3.5 py-2.5 text-[10px] font-semibold text-gray-400">Parameters under 50% coverage</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-50">
+                                            {shown.map(e => (
+                                                <tr key={e.eventName} style={e.isPrimary ? { background: BLUE_SOFT } : undefined}>
+                                                    <td className="px-3.5 py-2.5 text-gray-800">
+                                                        {e.eventName}
+                                                        {e.isPrimary && <span className="ml-1.5 text-[10px] font-semibold" style={{ color: BLUE }}>key event</span>}
+                                                    </td>
+                                                    <td className="px-3.5 py-2.5 tabular-nums whitespace-nowrap">
+                                                        {e.score !== null ? (
+                                                            <>
+                                                                <span className="font-semibold text-gray-900">{e.score.toFixed(1)}</span>
+                                                                <span className="text-gray-400">/10</span>
+                                                                {e.rating && <span className="ml-2 rounded-md px-2 py-0.5 text-[10px] font-semibold" style={RATING_STYLE[e.rating]}>{e.rating}</span>}
+                                                            </>
+                                                        ) : <span className="text-gray-300">—</span>}
+                                                    </td>
+                                                    <td className="px-3.5 py-2.5 text-xs text-gray-600">
+                                                        {e.weakParams.length > 0
+                                                            ? e.weakParams.map(w => `${w.label} ${Math.round(w.coverage)}%`).join(" · ")
+                                                            : e.params.length > 0 ? <span className="text-gray-400">all parameters at 50%+</span> : <span className="text-gray-300">—</span>}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                {p.events.length > shown.length && !showAll && (
+                                    <button onClick={() => setShowAll(true)} className="mt-2 text-xs text-gray-500 hover:text-gray-800">
+                                        Show all {p.events.length} events
+                                    </button>
+                                )}
+                            </>
+                        )}
+
+                        {p.diagnostics.length > 0 && (
+                            <p className="mt-3" style={{ fontSize: 11.5, color: MUTED }}>
+                                Events Manager diagnostics: {failing.length === 0 ? `all ${p.diagnostics.length} pass` : `${failing.length} of ${p.diagnostics.length} failing (listed above)`}.
+                            </p>
+                        )}
+                    </div>
+                )
+            })}
+        </SectionCard>
+    )
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
 // MAIN EXPORT
 // ═════════════════════════════════════════════════════════════════════════════
 
@@ -951,6 +1225,10 @@ export function DiagnosticReportView({ report, adAccountId, kpiType, conversionE
                     staticSummaries={perfSummaries}
                     onSummary={onPerfSummary}
                 />
+                <TrafficChangesSection
+                    traffic={report.trafficChanges}
+                    eventLabel={formatEventName(report.eventHealth?.eventName || report.conversionEvent)}
+                />
                 <AnomalySection
                     anomalyPeriod={report.anomalyPeriod}
                     previousPeriod={report.previousPeriod}
@@ -960,6 +1238,7 @@ export function DiagnosticReportView({ report, adAccountId, kpiType, conversionE
                 />
                 <ChangesSection changes={report.changes || []} anomalyDetected={!!report.anomalyPeriod} />
                 <EventHealthSection eventHealth={report.eventHealth} />
+                <PixelHealthSection report={report.pixelHealth} />
             </div>
         </TooltipProvider>
     )
@@ -976,6 +1255,22 @@ export const DIAGNOSTIC_ANIMATION_STYLES = `
     }
 `
 
+const toDateInput = (d) => d.toISOString().split("T")[0]
+// The selectable window: the trailing 14 days, ending yesterday.
+function getPeriodBounds() {
+    const max = new Date(); max.setDate(max.getDate() - 1)
+    const min = new Date(max); min.setDate(min.getDate() - 13)
+    return { min: toDateInput(min), max: toDateInput(max) }
+}
+// Default selected period: the last 3 days, ending yesterday (same as the server).
+function getDefaultPeriod() {
+    const { max } = getPeriodBounds()
+    const start = new Date(max + "T00:00:00"); start.setDate(start.getDate() - 2)
+    return { start: toDateInput(start), end: max }
+}
+
+const DATE_INPUT_CLASS = "h-9 rounded-xl border border-gray-200 bg-white px-3 text-xs font-medium text-gray-700 shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+
 export default function AdAccountDiagnostic({
     open, onOpenChange, adAccountId, adAccountName,
     kpiType = "cpa", conversionEvent = null,
@@ -984,18 +1279,22 @@ export default function AdAccountDiagnostic({
     const [isGenerating, setIsGenerating] = useState(false)
     const [error, setError] = useState(null)
     const [refreshKey, setRefreshKey] = useState(0)
+    const [period, setPeriod] = useState(getDefaultPeriod)
     const perfSummariesRef = useRef({})
+    const bounds = getPeriodBounds()
+    const periodInvalid = !period.start || !period.end || period.start > period.end ||
+        period.start < bounds.min || period.end > bounds.max
 
     useEffect(() => {
-        if (open && adAccountId && !report && !isGenerating) generateReport()
-        if (!open) { setReport(null); setError(null) }
+        if (open && adAccountId && !report && !isGenerating) generateReport(getDefaultPeriod())
+        if (!open) { setReport(null); setError(null); setPeriod(getDefaultPeriod()) }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, adAccountId])
 
-    const generateReport = async () => {
+    const generateReport = async (selected = period) => {
         setIsGenerating(true); setError(null); setReport(null)
         perfSummariesRef.current = {}
-        const params = new URLSearchParams({ adAccountId, kpiType })
+        const params = new URLSearchParams({ adAccountId, kpiType, anomalyStart: selected.start, anomalyEnd: selected.end })
         if (kpiType === "cpa" && conversionEvent) params.set("conversionEvent", conversionEvent)
         try {
             const res = await fetch(`${API_BASE_URL}/api/analytics/diagnostic-report?${params}`, { credentials: "include" })
@@ -1055,12 +1354,6 @@ export default function AdAccountDiagnostic({
                         <DiagnosticReportTitle accountName={adAccountName} reportDate={reportDate} report={report} />
                         <div className="flex items-center gap-2 flex-shrink-0">
                             {report && !isGenerating && (
-                                <Button variant="outline" size="sm" onClick={generateReport} className="rounded-2xl text-xs gap-1.5 h-9">
-                                    <Activity className="w-3.5 h-3.5" />
-                                    Re-run Diagnostic
-                                </Button>
-                            )}
-                            {report && !isGenerating && (
                                 <ReportShareMenu
                                     type="diagnostic"
                                     adAccountId={adAccountId}
@@ -1079,6 +1372,42 @@ export default function AdAccountDiagnostic({
                         </div>
                     </div>
 
+                    {/* Selected period: compared against the same-length period before it */}
+                    <div className="px-6 py-3 border-b border-gray-100 flex items-center gap-3 flex-wrap flex-shrink-0 bg-white">
+                        <span className="text-xs font-semibold text-gray-700">Period to diagnose</span>
+                        <div className="flex items-center gap-2">
+                            <input
+                                type="date"
+                                value={period.start}
+                                min={bounds.min}
+                                max={period.end || bounds.max}
+                                onChange={(e) => setPeriod(prev => ({ ...prev, start: e.target.value }))}
+                                className={DATE_INPUT_CLASS}
+                            />
+                            <span className="text-xs text-gray-400">to</span>
+                            <input
+                                type="date"
+                                value={period.end}
+                                min={period.start || bounds.min}
+                                max={bounds.max}
+                                onChange={(e) => setPeriod(prev => ({ ...prev, end: e.target.value }))}
+                                className={DATE_INPUT_CLASS}
+                            />
+                        </div>
+                        <Button
+                            size="sm"
+                            onClick={() => generateReport()}
+                            disabled={isGenerating || periodInvalid}
+                            className="rounded-2xl text-xs gap-1.5 h-9 bg-blue-600 text-white hover:bg-blue-700"
+                        >
+                            <Activity className="w-3.5 h-3.5" />
+                            {report ? "Re-run Diagnostic" : "Run Diagnostic"}
+                        </Button>
+                        <p className="w-full sm:w-auto sm:flex-1 text-[11px] text-gray-400 m-0">
+                            Pick the dates within the last 14 days you consider the anomaly — they&apos;re compared against an equal-length period immediately before.
+                        </p>
+                    </div>
+
                     <TooltipProvider delayDuration={0}>
                         <div className="flex-1 flex overflow-hidden min-h-0">
                             <div className="flex-1 overflow-y-auto custom-scrollbar min-h-0" style={{ padding: 28, background: PAPER_2, fontFamily: FONT }}>
@@ -1086,14 +1415,14 @@ export default function AdAccountDiagnostic({
                                 <div className="flex flex-col items-center justify-center py-24">
                                     <div style={{ marginBottom: 12 }}><Helix size="44" speed="2.5" color={BLUE} /></div>
                                     <p style={{ fontSize: 13, fontWeight: 600, color: INK_2, margin: 0 }}>Analyzing the last 14 days…</p>
-                                    <p style={{ fontSize: 11.5, color: MUTED, marginTop: 4 }}>Scanning for anomalies, culprits, and account changes</p>
+                                    <p style={{ fontSize: 11.5, color: MUTED, marginTop: 4 }}>Comparing the selected period, finding culprits, account changes and Events Manager health</p>
                                 </div>
                             )}
                             {error && !isGenerating && (
                                 <div style={{ background: PINK_SOFT, border: `1px solid ${PINK_SOFT}`, color: PINK_DEEP, fontSize: 13, borderRadius: 16, padding: "12px 16px" }}>
                                     {error}
                                     <button
-                                        onClick={generateReport}
+                                        onClick={() => generateReport()}
                                         style={{ marginLeft: 12, textDecoration: "underline", color: PINK_DEEP, fontWeight: 600, background: "transparent", border: 0, cursor: "pointer" }}
                                     >
                                         Retry
