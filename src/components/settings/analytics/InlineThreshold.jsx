@@ -60,8 +60,8 @@ export function InlineThresholdInput({ draft, setDraft, apply, prefix, suffix, s
                 onKeyDown={(e) => { if (e.key === "Enter") apply() }}
                 className={cn(
                     width,
-                    "h-8 text-base font-bold text-blue-700 text-center border border-blue-200 rounded-xl bg-blue-50 shadow-sm transition-colors",
-                    "hover:border-blue-300 hover:bg-blue-100/60 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent",
+                    "h-8 text-base font-bold text-blue-700 text-center border-[1.5px] border-blue-200 rounded-xl bg-white shadow-sm transition-colors",
+                    "hover:border-blue-300 focus:outline-none focus:border-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-100",
                     "[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
                     prefix ? "pl-5 pr-2" : "px-2",
                     suffix ? "pr-6" : "",

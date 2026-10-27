@@ -7,6 +7,7 @@ import { Helix } from "ldrs/react"
 import "ldrs/react/Helix.css"
 import { ChevronRight, ExternalLink, Network } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 import { useAppData } from "@/lib/AppContext"
@@ -209,10 +210,10 @@ export default function AccountStructureOverview({ adAccountId, conversionEvent,
                             </div>
 
                             {/* Scrolls both ways: wide on small screens, tall on big accounts. */}
-                            <div className="max-h-[560px] overflow-auto custom-scrollbar pr-1">
-                                <div className="flex min-w-[900px] flex-col gap-2.5">
+                            <ScrollArea viewportClassName="max-h-[560px]">
+                                <div className="flex min-w-[900px] flex-col gap-2.5 pb-3 pr-3">
                                     {/* Column headers: their own rounded row, pinned while scrolling */}
-                                    <div className={cn(GRID, "sticky top-0 z-10 items-center rounded-2xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-[10.5px] font-medium uppercase tracking-wide text-gray-500 shadow-[0_6px_10px_-8px_rgba(0,0,0,0.12)]")}>
+                                    <div className={cn(GRID, "sticky top-0 z-10 items-center rounded-2xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-xs font-semibold text-gray-600 shadow-[0_6px_10px_-8px_rgba(0,0,0,0.12)]")}>
                                         <span className="pl-6">Campaign / Ad set</span>
                                         <span>Budget</span>
                                         <span className="text-right">Spend (7d)</span>
@@ -334,7 +335,7 @@ export default function AccountStructureOverview({ adAccountId, conversionEvent,
                                         )
                                     })}
                                 </div>
-                            </div>
+                            </ScrollArea>
                             <p className="mt-2.5 px-1 text-[11px] text-gray-400">
                                 Progress counts each ad set&apos;s 7-day conversions against the ~{floor} a week Meta needs to exit learning. Meta status is the learning state Meta reports for the ad set today.
                             </p>

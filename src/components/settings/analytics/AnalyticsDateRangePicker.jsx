@@ -24,7 +24,10 @@ function areRangesEqual(left, right) {
         && left?.until === right?.until
 }
 
-export default function AnalyticsDateRangePicker({ value, onChange, compact = false }) {
+// presetKeys limits the presets shown and minDate / maxDate the selectable days
+// (the diagnostic report only looks at the trailing 14 days); all optional.
+export default function AnalyticsDateRangePicker({ value, onChange, compact = false, presetKeys, minDate, maxDate }) {
+    const presets = presetKeys ? ANALYTICS_DATE_PRESETS.filter(p => presetKeys.includes(p.key)) : ANALYTICS_DATE_PRESETS
     const [open, setOpen] = useState(false)
     const [draftRange, setDraftRange] = useState(() => getAnalyticsDateRangeSelection(value))
     const [draftValue, setDraftValue] = useState(value)
@@ -37,7 +40,7 @@ export default function AnalyticsDateRangePicker({ value, onChange, compact = fa
     const activePreset = value?.preset || "custom"
     const rangeSummary = useMemo(() => getAnalyticsDateRangeSummary(value), [value])
     const draftSummary = useMemo(() => getAnalyticsDateRangeSummary(draftValue), [draftValue])
-    const maxSelectableDate = useMemo(() => subDays(new Date(), 1), [])
+    const maxSelectableDate = useMemo(() => maxDate || subDays(new Date(), 1), [maxDate])
     const triggerLabel = activePreset === "custom"
         ? rangeSummary
         : (value?.label || "Last 30 Days")
@@ -108,7 +111,7 @@ export default function AnalyticsDateRangePicker({ value, onChange, compact = fa
 
                         </div>
 
-                        {ANALYTICS_DATE_PRESETS.map((preset) => {
+                        {presets.map((preset) => {
                             const isActive = (draftValue?.preset || "custom") === preset.key
 
                             return (
@@ -139,7 +142,7 @@ export default function AnalyticsDateRangePicker({ value, onChange, compact = fa
                             onSelect={handleRangeSelect}
                             defaultMonth={draftRange?.from || maxSelectableDate}
                             numberOfMonths={2}
-                            disabled={(date) => date > maxSelectableDate}
+                            disabled={(date) => date > maxSelectableDate || (minDate ? date < minDate : false)}
                             className="w-full rounded-2xl bg-white p-4"
                             initialFocus
                         />

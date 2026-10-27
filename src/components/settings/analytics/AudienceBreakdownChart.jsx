@@ -2,7 +2,7 @@
 
 /* eslint-disable react/prop-types */
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useId, useMemo, useRef, useState } from "react"
 import { Helix } from "ldrs/react"
 import "ldrs/react/Helix.css"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
@@ -30,31 +30,48 @@ function formatSpend(v) {
     return `$${v.toFixed(0)}`
 }
 
-const TOP_RADIUS = 10
-const BOTTOM_RADIUS = 4
+const TOP_RADIUS = 18
+const BOTTOM_RADIUS = 6
 
-// A bar segment with rounded corners only where it's the visible edge of the
-// stack: the top of the highest non-zero segment and the bottom of the lowest,
-// so a week where the top segment is $0 still gets a rounded top.
-function StackSegment({ x, y, width, height, fill, payload, dataKey, segments }) {
-    if (!height || height <= 0 || !width) return null
-    const index = segments.indexOf(dataKey)
-    const isTop = segments.slice(index + 1).every(k => !(Number(payload?.[k]) > 0))
-    const isBottom = segments.slice(0, index).every(k => !(Number(payload?.[k]) > 0))
-    const rt = isTop ? Math.min(TOP_RADIUS, width / 2, height) : 0
-    const rb = isBottom ? Math.min(BOTTOM_RADIUS, width / 2, Math.max(height - rt, 0)) : 0
-    const d = [
-        `M${x},${y + rt}`,
-        `Q${x},${y} ${x + rt},${y}`,
-        `L${x + width - rt},${y}`,
-        `Q${x + width},${y} ${x + width},${y + rt}`,
-        `L${x + width},${y + height - rb}`,
-        `Q${x + width},${y + height} ${x + width - rb},${y + height}`,
-        `L${x + rb},${y + height}`,
-        `Q${x},${y + height} ${x},${y + height - rb}`,
+function roundedRectPath(x, top, width, bottom, rt, rb) {
+    return [
+        `M${x},${top + rt}`,
+        `A${rt},${rt} 0 0 1 ${x + rt},${top}`,
+        `L${x + width - rt},${top}`,
+        `A${rt},${rt} 0 0 1 ${x + width},${top + rt}`,
+        `L${x + width},${bottom - rb}`,
+        `A${rb},${rb} 0 0 1 ${x + width - rb},${bottom}`,
+        `L${x + rb},${bottom}`,
+        `A${rb},${rb} 0 0 1 ${x},${bottom - rb}`,
         "Z",
     ].join(" ")
-    return <path d={d} fill={fill} />
+}
+
+// One segment of a stacked column, clipped to the rounded outline of the whole
+// column — so the column reads as one rounded bar however thin its top segment
+// is, and a week where the top segment is $0 is still rounded.
+function StackSegment({ x, y, width, height, fill, payload, index, dataKey, segments, clipPrefix }) {
+    const value = Number(payload?.[dataKey]) || 0
+    if (!height || height <= 0 || !width || !value) return null
+    const pxPerUnit = height / value
+    const position = segments.indexOf(dataKey)
+    const sum = (keys) => keys.reduce((total, key) => total + (Number(payload?.[key]) || 0), 0)
+    const top = y - sum(segments.slice(position + 1)) * pxPerUnit
+    const bottom = y + height + sum(segments.slice(0, position)) * pxPerUnit
+    const columnHeight = bottom - top
+    const rt = Math.min(TOP_RADIUS, width / 2, columnHeight / 2)
+    const rb = Math.min(BOTTOM_RADIUS, width / 2, columnHeight / 2)
+    const clipId = `${clipPrefix}-${position}-${index}`
+    return (
+        <g>
+            <defs>
+                <clipPath id={clipId}>
+                    <path d={roundedRectPath(x, top, width, bottom, rt, rb)} />
+                </clipPath>
+            </defs>
+            <rect x={x} y={y} width={width} height={height} fill={fill} clipPath={`url(#${clipId})`} />
+        </g>
+    )
 }
 
 function CustomTooltip({ active, payload, segments }) {
@@ -89,6 +106,8 @@ export default function AudienceBreakdownChart({ adAccountId, dateRange, granula
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState(null)
     const [viewMode, setViewMode] = useState("dollar")
+    // Unique per chart instance, so each column's clip path id is unique on the page.
+    const clipPrefix = `audience-${useId().replace(/:/g, "")}`
 
     // Session-scoped response cache (see TrendingCreative for rationale).
     const cacheRef = useRef({})
@@ -233,7 +252,7 @@ export default function AudienceBreakdownChart({ adAccountId, dateRange, granula
                                             name={segmentLabel(key)}
                                             stackId="segments"
                                             fill={segmentColor(key)}
-                                            shape={(props) => <StackSegment {...props} dataKey={key} segments={segments} />}
+                                            shape={(props) => <StackSegment {...props} dataKey={key} segments={segments} clipPrefix={clipPrefix} />}
                                             isAnimationActive={false}
                                         />
                                     ))}

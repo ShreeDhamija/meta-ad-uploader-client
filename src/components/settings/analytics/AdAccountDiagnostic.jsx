@@ -13,6 +13,8 @@ import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/comp
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import ReportShareMenu from "./ReportShareMenu"
+import AnalyticsDateRangePicker from "./AnalyticsDateRangePicker"
+import { getAnalyticsDateRangeSummary } from "./dateRangeUtils"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "https://api.withblip.com"
 
@@ -1256,7 +1258,8 @@ export const DIAGNOSTIC_ANIMATION_STYLES = `
 `
 
 const toDateInput = (d) => d.toISOString().split("T")[0]
-// The selectable window: the trailing 14 days, ending yesterday.
+// The selectable window: the trailing 14 days ending yesterday, in UTC like the
+// server's check (dates as YYYY-MM-DD strings).
 function getPeriodBounds() {
     const max = new Date(); max.setDate(max.getDate() - 1)
     const min = new Date(max); min.setDate(min.getDate() - 13)
@@ -1265,11 +1268,17 @@ function getPeriodBounds() {
 // Default selected period: the last 3 days, ending yesterday (same as the server).
 function getDefaultPeriod() {
     const { max } = getPeriodBounds()
-    const start = new Date(max + "T00:00:00"); start.setDate(start.getDate() - 2)
-    return { start: toDateInput(start), end: max }
+    const start = new Date(max + "T00:00:00Z"); start.setUTCDate(start.getUTCDate() - 2)
+    return { preset: "custom", label: "Last 3 Days", since: toDateInput(start), until: max }
 }
-
-const DATE_INPUT_CLASS = "h-9 rounded-xl border border-gray-200 bg-white px-3 text-xs font-medium text-gray-700 shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+// Presets that fit inside the 14-day window.
+const DIAGNOSTIC_PRESETS = ["last_day", "last_7d", "last_14d", "last_week"]
+// Keep a picked range inside the window (a preset can be a day off across time zones).
+function clampPeriod(range, bounds) {
+    const since = range.since < bounds.min ? bounds.min : range.since
+    const until = range.until > bounds.max ? bounds.max : range.until
+    return { ...range, since: since > until ? until : since, until }
+}
 
 export default function AdAccountDiagnostic({
     open, onOpenChange, adAccountId, adAccountName,
@@ -1282,8 +1291,15 @@ export default function AdAccountDiagnostic({
     const [period, setPeriod] = useState(getDefaultPeriod)
     const perfSummariesRef = useRef({})
     const bounds = getPeriodBounds()
-    const periodInvalid = !period.start || !period.end || period.start > period.end ||
-        period.start < bounds.min || period.end > bounds.max
+    // Local-midnight dates of the window's ends, for the calendar.
+    const minPickable = new Date(bounds.min + "T00:00:00")
+    const maxPickable = new Date(bounds.max + "T00:00:00")
+
+    const handlePeriodChange = (next) => {
+        const clamped = clampPeriod(next, bounds)
+        setPeriod(clamped)
+        generateReport(clamped)
+    }
 
     useEffect(() => {
         if (open && adAccountId && !report && !isGenerating) generateReport(getDefaultPeriod())
@@ -1294,7 +1310,7 @@ export default function AdAccountDiagnostic({
     const generateReport = async (selected = period) => {
         setIsGenerating(true); setError(null); setReport(null)
         perfSummariesRef.current = {}
-        const params = new URLSearchParams({ adAccountId, kpiType, anomalyStart: selected.start, anomalyEnd: selected.end })
+        const params = new URLSearchParams({ adAccountId, kpiType, anomalyStart: selected.since, anomalyEnd: selected.until })
         if (kpiType === "cpa" && conversionEvent) params.set("conversionEvent", conversionEvent)
         try {
             const res = await fetch(`${API_BASE_URL}/api/analytics/diagnostic-report?${params}`, { credentials: "include" })
@@ -1375,33 +1391,23 @@ export default function AdAccountDiagnostic({
                     {/* Selected period: compared against the same-length period before it */}
                     <div className="px-6 py-3 border-b border-gray-100 flex items-center gap-3 flex-wrap flex-shrink-0 bg-white">
                         <span className="text-xs font-semibold text-gray-700">Period to diagnose</span>
-                        <div className="flex items-center gap-2">
-                            <input
-                                type="date"
-                                value={period.start}
-                                min={bounds.min}
-                                max={period.end || bounds.max}
-                                onChange={(e) => setPeriod(prev => ({ ...prev, start: e.target.value }))}
-                                className={DATE_INPUT_CLASS}
-                            />
-                            <span className="text-xs text-gray-400">to</span>
-                            <input
-                                type="date"
-                                value={period.end}
-                                min={period.start || bounds.min}
-                                max={bounds.max}
-                                onChange={(e) => setPeriod(prev => ({ ...prev, end: e.target.value }))}
-                                className={DATE_INPUT_CLASS}
-                            />
-                        </div>
+                        <AnalyticsDateRangePicker
+                            value={period}
+                            onChange={handlePeriodChange}
+                            compact
+                            presetKeys={DIAGNOSTIC_PRESETS}
+                            minDate={minPickable}
+                            maxDate={maxPickable}
+                        />
                         <Button
+                            variant="outline"
                             size="sm"
                             onClick={() => generateReport()}
-                            disabled={isGenerating || periodInvalid}
-                            className="rounded-2xl text-xs gap-1.5 h-9 bg-blue-600 text-white hover:bg-blue-700"
+                            disabled={isGenerating}
+                            className="rounded-2xl text-xs gap-1.5 h-9"
                         >
                             <Activity className="w-3.5 h-3.5" />
-                            {report ? "Re-run Diagnostic" : "Run Diagnostic"}
+                            Re-run Diagnostic
                         </Button>
                         <p className="w-full sm:w-auto sm:flex-1 text-[11px] text-gray-400 m-0">
                             Pick the dates within the last 14 days you consider the anomaly — they&apos;re compared against an equal-length period immediately before.
@@ -1414,8 +1420,8 @@ export default function AdAccountDiagnostic({
                             {isGenerating && (
                                 <div className="flex flex-col items-center justify-center py-24">
                                     <div style={{ marginBottom: 12 }}><Helix size="44" speed="2.5" color={BLUE} /></div>
-                                    <p style={{ fontSize: 13, fontWeight: 600, color: INK_2, margin: 0 }}>Analyzing the last 14 days…</p>
-                                    <p style={{ fontSize: 11.5, color: MUTED, marginTop: 4 }}>Comparing the selected period, finding culprits, account changes and Events Manager health</p>
+                                    <p style={{ fontSize: 13, fontWeight: 600, color: INK_2, margin: 0 }}>Diagnosing {getAnalyticsDateRangeSummary(period)}…</p>
+                                    <p style={{ fontSize: 11.5, color: MUTED, marginTop: 4 }}>Comparing it with the same number of days before, and finding culprits, account changes and Events Manager health</p>
                                 </div>
                             )}
                             {error && !isGenerating && (
