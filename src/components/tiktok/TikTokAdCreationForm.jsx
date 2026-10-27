@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import TikTokReauthDialog from "@/components/TikTokReauthDialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -769,6 +770,7 @@ export default function TikTokAdCreationForm({
   const [openCampaign, setOpenCampaign] = useState(false);
   const [openAdGroup, setOpenAdGroup] = useState(false);
   const [openIdentity, setOpenIdentity] = useState(false);
+  const [isIdentityReauthOpen, setIsIdentityReauthOpen] = useState(false);
   const [openCta, setOpenCta] = useState(false);
   const [templateDropdownOpen, setTemplateDropdownOpen] = useState(false);
 
@@ -2786,7 +2788,7 @@ export default function TikTokAdCreationForm({
     }
 
     fetchTikTokIdentities(selectedAdvertiser).then((list) => {
-      const filtered = (list || []).filter((i) => i.identity_type === "BC_AUTH_TT");
+      const filtered = list || [];
       // DISABLED: console.log('[IDENTITY DEBUG] fetchTikTokIdentities .then:', { count: filtered.length, selectedIdentity, ids: filtered.map(i => i.identity_id).slice(0, 3) });
       setIdentities(filtered);
     });
@@ -2795,7 +2797,7 @@ export default function TikTokAdCreationForm({
   // Automatically sync identities from context cache when selectedAdvertiser or context value changes
   useEffect(() => {
     if (selectedAdvertiser && tiktokIdentities[selectedAdvertiser]) {
-      const filtered = tiktokIdentities[selectedAdvertiser].filter((i) => i.identity_type === "BC_AUTH_TT");
+      const filtered = tiktokIdentities[selectedAdvertiser];
       // DISABLED: console.log('[IDENTITY DEBUG] context sync:', { count: filtered.length, selectedIdentity, ids: filtered.map(i => i.identity_id).slice(0, 3) });
       setIdentities(filtered);
     }
@@ -2807,7 +2809,7 @@ export default function TikTokAdCreationForm({
 
     const isFetched = tiktokIdentities[selectedAdvertiser] !== undefined;
     const rawList = tiktokIdentities[selectedAdvertiser] || [];
-    const filteredList = rawList.filter((i) => i.identity_type === "BC_AUTH_TT");
+    const filteredList = rawList;
 
     if (isFetched) {
       if (filteredList.length > 0) {
@@ -3272,7 +3274,7 @@ export default function TikTokAdCreationForm({
     if (!selectedAdvertiser || loadingIdentities) return;
     fetchTikTokIdentities(selectedAdvertiser, true)
       .then((list) => {
-        const filtered = (list || []).filter((i) => i.identity_type === "BC_AUTH_TT");
+        const filtered = list || [];
         setIdentities(filtered);
         if (filtered.length > 0) {
           setSelectedIdentity(filtered[0].identity_id);
@@ -5996,7 +5998,20 @@ export default function TikTokAdCreationForm({
                       placeholder={adType === "NORMAL" ? "Search identities..." : "Search accounts to promote from..."}
                       className="bg-transparent border-none focus:ring-0"
                     />
-                    <CommandEmpty>{adType === "NORMAL" ? "No identities found." : "No accounts found."}</CommandEmpty>
+                    <CommandEmpty className="px-4 py-5 text-center">
+                      <p className="mb-2 text-sm text-gray-500">{adType === "NORMAL" ? "No identities found." : "No accounts found."}</p>
+                      <Button
+                        type="button"
+                        variant="link"
+                        onClick={() => {
+                          setOpenIdentity(false);
+                          setIsIdentityReauthOpen(true);
+                        }}
+                        className="h-auto p-0 text-xs font-medium text-black underline underline-offset-2 hover:text-gray-700"
+                      >
+                        Confirm Blip has access to identities to make ads
+                      </Button>
+                    </CommandEmpty>
                     <CommandList className="max-h-[300px] overflow-y-auto rounded-2xl custom-scrollbar">
                       <CommandGroup>
                         {identities.map((i) => (
@@ -6035,6 +6050,12 @@ export default function TikTokAdCreationForm({
                   </Command>
                 </PopoverContent>
               </Popover>
+              <TikTokReauthDialog
+                open={isIdentityReauthOpen}
+                onOpenChange={setIsIdentityReauthOpen}
+                returnTo="/tiktok-ads"
+                title="Link TikTok Identities"
+              />
               {/* {(!selectedIdentity || selectedIdentity === 'CUSTOMIZED_USER') && (
                 <p className="text-xs text-red-500 font-medium mt-1">
                   {adType === 'NORMAL' ? "Please select an identity" : "Please select an account to Promote From"}

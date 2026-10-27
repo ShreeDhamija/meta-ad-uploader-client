@@ -6,7 +6,8 @@ import TikTokIcon from "@/assets/icons/tiktok.svg"
 import { startTikTokOAuth } from "@/lib/tiktokOAuth"
 
 // TikTok counterpart of FacebookReauthDialog: sends the user through TikTok OAuth
-// again so newly granted advertiser accounts show up in Blip.
+// again so newly granted advertiser accounts show up in Blip. BC_AUTH_TT identities
+// only come back when the Business Center permissions are ticked on TikTok's screen.
 export default function TikTokReauthDialog({
   open,
   onOpenChange,
@@ -42,8 +43,13 @@ export default function TikTokReauthDialog({
           </div>
 
           <div className="space-y-3 text-sm text-gray-600">
-            <p>1. You will have to reauthenticate to add new advertiser accounts</p>
+            <p>1. You will have to reauthenticate to add new advertiser accounts or identities</p>
             <p>2. On TikTok&apos;s authorization screen, select every advertiser account you want Blip to access</p>
+            <p>
+              3. Under <span className="font-medium text-gray-800">Access Your Ad Account For</span>, tick
+              the <span className="font-medium text-gray-800">Business Center</span> box and every box under it,
+              otherwise your TikTok identities won&apos;t show up in Blip
+            </p>
           </div>
 
           <Button

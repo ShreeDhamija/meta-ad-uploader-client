@@ -118,7 +118,7 @@ export default function TikTokAdvertiserSettings({
     const [isReauthOpen, setIsReauthOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const { tiktokIdentities, tiktokIdentitiesLoading, fetchTikTokIdentities } = useAppData();
-    const identities = (tiktokIdentities[selectedAdvertiser] || []).filter(i => i.identity_type === 'BC_AUTH_TT');
+    const identities = tiktokIdentities[selectedAdvertiser] || [];
     const loadingIdentities = tiktokIdentitiesLoading[selectedAdvertiser] || false;
     const [openIdentity, setOpenIdentity] = useState(false);
     const [openCta, setOpenCta] = useState(false);
@@ -877,7 +877,23 @@ export default function TikTokAdvertiserSettings({
                                                     return name.includes(q) || id.includes(q);
                                                 });
                                                 if (filtered.length === 0) {
-                                                    return <div className="py-6 text-center text-xs text-gray-500">No identities found.</div>;
+                                                    return (
+                                                        <div className="px-4 py-5 text-center">
+                                                            <p className="mb-2 text-xs text-gray-500">No identities found.</p>
+                                                            <Button
+                                                                type="button"
+                                                                variant="link"
+                                                                onClick={() => {
+                                                                    setOpenIdentity(false);
+                                                                    setIdentitySearch("");
+                                                                    setIsReauthOpen(true);
+                                                                }}
+                                                                className="h-auto p-0 text-xs font-medium text-black underline underline-offset-2 hover:text-gray-700"
+                                                            >
+                                                                Confirm Blip has access to identities to make ads
+                                                            </Button>
+                                                        </div>
+                                                    );
                                                 }
                                                 return (
                                                     <div className="space-y-0.5">
