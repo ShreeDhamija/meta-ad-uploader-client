@@ -19,11 +19,9 @@ import { toast } from "sonner"
 import {
     Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogOverlay,
 } from "@/components/ui/dialog"
-import {
-    Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
-} from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 import { buildAdsManagerAdUrl } from "./CreativeEnhancementsReport"
+import { InlineThresholdInput } from "./InlineThreshold"
 import scaleIcon from "@/assets/icons/analytics/recommendations/scale.svg"
 import reduceIcon from "@/assets/icons/analytics/recommendations/reduce.svg"
 import pauseIcon from "@/assets/icons/analytics/recommendations/pause.svg"
@@ -195,46 +193,128 @@ const SEVERITY_PILL = {
  */
 
 
+// ── Recommendation criteria ─────────────────────────────
+// Editable in the Recommendation Guide and saved per account under
+// analyticsThresholds. The server keeps the same defaults
+// (REC_THRESHOLD_DEFAULTS in analytics/routes.js); percentages are whole
+// numbers and 0 turns a floor off.
+export const DEFAULT_REC_THRESHOLDS = {
+    recDeviationPct: 10,
+    recPausePct: 50,
+    recPauseProtectSharePct: 20,
+    winnerSpendMultiple: 5,
+    winnerBetterPct: 10,
+    trendMinChangePct: 10,
+    spendShiftMinDollars: 1000,
+    spendShiftAgePct: 40,
+    spendShiftPlacementPct: 50,
+    consolidateMinSharePct: 5,
+    consolidateMaxSharePct: 25,
+}
+
+export function resolveRecThresholds(thresholds) {
+    const resolved = { ...DEFAULT_REC_THRESHOLDS }
+    for (const key of Object.keys(resolved)) {
+        const raw = thresholds?.[key]
+        if (raw === undefined || raw === null || raw === '') continue
+        const value = Number(raw)
+        if (Number.isFinite(value) && value >= 0) resolved[key] = value
+    }
+    return resolved
+}
+
+// One section per recommendation (Scale / Reduce / Pause share their criteria).
+// Text is a function of the metric label (CPA or ROAS). `criteria` are
+// sentences whose { key } parts render as number inputs; `rules` are the fixed
+// parts of the logic, listed for reference.
 const RECOMMENDATION_GUIDE = [
     {
-        type: 'scale',
-        title: 'Scale',
-        trigger: 'Campaign or ad set delivering CPA/ROAS notably better than the account average over a 3-day window.',
+        id: 'budget',
+        title: 'Scale, Reduce & Pause',
+        types: ['scale', 'reduce', 'pause'],
+        intro: (m) => `Compares each active campaign and ad set's ${m} over the last 3 days with the account average and your target, and with the 3 days before. Ad sets with their own budget are checked first; a campaign is only checked when none of its ad sets got a recommendation.`,
+        criteria: (m) => [
+            [`Flag a campaign or ad set when its ${m} is at least `, { key: 'recDeviationPct', suffix: '%' }, ' better or worse than the account average.'],
+            ['Pause instead of reduce when it is at least ', { key: 'recPausePct', suffix: '%' }, ' worse than average.'],
+            ['Never pause anything taking ', { key: 'recPauseProtectSharePct', suffix: '%' }, ' or more of spend — reduce it instead.'],
+        ],
+        results: [
+            {
+                type: 'scale',
+                text: (m) => `Better than average by the gap above, its ${m} hasn't got 20%+ worse vs the 3 days before, and it isn't 20%+ worse than your target. Also shown for one up to 20% worse than average whose ${m} improved 50%+.`,
+            },
+            {
+                type: 'reduce',
+                text: (m) => `Worse than average by the gap above but short of the pause gap. Also shown when it would be paused but is protected (large spend share, improving 25%+, or still beating your target); when it's near average but 20%+ worse than your target; when its ${m} got 50%+ worse vs the 3 days before (25%+ if it's no more than 20% better than average); or when it was 20%+ worse than your target on each of the last 4 days.`,
+            },
+            {
+                type: 'pause',
+                text: () => `At least the pause gap worse than average, under the spend-share limit, not improving 25%+ and not beating your target. Inside a campaign flagged Reduce, its other worse-than-average ad sets (all but the top spender) are flagged Pause too.`,
+            },
+        ],
+        rules: () => [
+            'Budget change, by how far off the average or target it is: under 25% → 20%, 25%+ → 25%, 50%+ → 35%, 75%+ → 40%, 100%+ → 50%.',
+            'Changes driven only by a trend (getting worse or improving fast) are 20%. A reduction is halved (to at least 20%) when it is still beating your target.',
+            'Bigger spenders get smaller changes: the change shrinks toward 10% between 10% and 30% of spend, and is capped at 10% above 30%.',
+            "Campaigns and ad sets with under 5% of the account's daily budget are skipped.",
+        ],
     },
     {
-        type: 'reduce',
-        title: 'Reduce',
-        trigger: 'Campaign or ad set performing moderately worse than account average — trim budget instead of pausing.',
-    },
-    {
-        type: 'pause',
-        title: 'Pause',
-        trigger: 'Campaign or ad set performing severely below account average with no signs of recovery.',
-    },
-    {
-        type: 'scale_winner',
+        id: 'scale_winner',
         title: 'Scale Winner',
-        trigger: 'Individual ad with strong CPA/ROAS and meaningful spend — relaunch it into new ad sets to scale further.',
+        types: ['scale_winner'],
+        intro: (m) => `A new ad doing well enough to relaunch into more ad sets. Uses each active ad's ${m} over the last 14 days.`,
+        criteria: (m) => [
+            [`Its ${m} is at least `, { key: 'winnerBetterPct', suffix: '%' }, ' better than the account average.'],
+            ['It has spent at least ', { key: 'winnerSpendMultiple', suffix: '×', step: '0.5' }, ' the account average CPA.'],
+        ],
+        rules: () => [
+            'Created in the last 14 days, and its creative runs in only one ad set.',
+            "Carousel, Flex and dynamic ads aren't included.",
+            'The account average is the same 3-day average used for Scale, Reduce & Pause.',
+        ],
     },
     {
-        type: 'consolidate',
+        id: 'consolidate',
         title: 'Consolidate',
-        trigger: 'Multiple ad sets in the same campaign with very low budgets — combine them so the algorithm can exit learning.',
+        types: ['consolidate'],
+        intro: (m) => `Only shown when your account's ${m} is 20%+ worse than your target. Lists mid-sized campaigns dragging the account down, so you can pause them and move their budget to better performers.`,
+        criteria: (m) => [
+            ['Include campaigns taking between ', { key: 'consolidateMinSharePct', suffix: '%' }, ' and ', { key: 'consolidateMaxSharePct', suffix: '%' }, ` of spend whose ${m} is 20%+ worse than the account average.`],
+        ],
     },
     {
-        type: 'creative_fatigue',
+        id: 'creative_fatigue',
         title: 'Creative Fatigue',
-        trigger: 'Top-spending ads showing rising frequency with declining CTR or conversion rate — refresh the creative.',
+        types: ['creative_fatigue'],
+        fromMeta: true,
+        intro: () => "Comes straight from Meta: ads it has flagged because people have seen the creative many times and engagement is falling. Meta sets the criteria, so there's nothing to edit here. If Meta hasn't flagged any ads, none show.",
     },
     {
-        type: 'trend_alert',
+        id: 'trend_alert',
         title: 'Trend Alert',
-        trigger: 'Rising frequency, falling CTR, rising CPM, or falling conversion rate detected over recent windows.',
+        types: ['trend_alert'],
+        intro: () => 'Account-wide, over the last 4 complete weeks: frequency rising, CTR falling, CPM rising, or conversion rate (results ÷ link clicks) falling every week.',
+        criteria: () => [
+            ['Only alert when the metric moved at least ', { key: 'trendMinChangePct', suffix: '%' }, ' in total from the first week to the last.'],
+        ],
     },
     {
-        type: 'spend_shift',
+        id: 'spend_shift',
         title: 'Spend Shift',
-        trigger: 'Significant shift in spend distribution across age ranges or placements that may need rebalancing.',
+        types: ['spend_shift'],
+        intro: () => 'Week-over-week spend moves by age range and placement (last 7 days vs the 7 days before).',
+        criteria: () => [
+            ['Ignore segments and moves smaller than ', { key: 'spendShiftMinDollars', prefix: '$', step: '100', width: 'w-[6.5rem]' }, '.'],
+            ['Flag an age range when its spend changes by ', { key: 'spendShiftAgePct', suffix: '%' }, ' or more.'],
+            ['Flag a placement when its spend changes by ', { key: 'spendShiftPlacementPct', suffix: '%' }, ' or more.'],
+        ],
+        rules: () => [
+            'Larger accounts use a bigger floor when it is larger: 3% of average weekly spend for segment size, 5% for the move.',
+            'Also flagged: a segment above the floor whose share of spend moved 10+ points (age) or 15+ points (placement).',
+            'Severity: Medium at 1.5× and High at 2× the % change above, or 2.5× / 5× the dollar floor, or 15 / 20 points of share (age) and 20 / 25 (placement).',
+            'When more than 2 segments move with an account-wide spend change, or spend moves between segments, they are grouped into one card.',
+        ],
     },
 ]
 
@@ -257,60 +337,181 @@ function PoorAdThumbnail({ url, name }) {
     )
 }
 
-function RecommendationGuideTooltip() {
+// Full guide: what triggers each recommendation, with this account's editable
+// criteria inline. Edits stay local until Save, which refetches the recs.
+function RecommendationGuideDialog({ mode, thresholds, onSave }) {
+    const metric = mode === 'roas' ? 'ROAS' : 'CPA'
+    const current = thresholds || DEFAULT_REC_THRESHOLDS
+    const editable = !!onSave
+    const [open, setOpen] = useState(false)
+    const [drafts, setDrafts] = useState({})
+    const [saving, setSaving] = useState(false)
+
+    const toDrafts = (values) => Object.fromEntries(
+        Object.keys(DEFAULT_REC_THRESHOLDS).map(key => [key, String(values[key])])
+    )
+    const openGuide = () => {
+        setDrafts(toDrafts(current))
+        setOpen(true)
+    }
+
+    const parsed = Object.fromEntries(
+        Object.keys(DEFAULT_REC_THRESHOLDS).map(key => [key, parseFloat(drafts[key])])
+    )
+    const hasInvalidNumber = Object.values(parsed).some(value => !Number.isFinite(value) || value < 0)
+    const bandInvalid = !hasInvalidNumber && parsed.consolidateMinSharePct > parsed.consolidateMaxSharePct
+    const isValid = !hasInvalidNumber && !bandInvalid
+    const isDirty = Object.keys(parsed).some(key => parsed[key] !== current[key])
+
+    const save = async () => {
+        if (!editable || !isValid || !isDirty || saving) return
+        setSaving(true)
+        try {
+            const saved = await onSave(parsed)
+            if (saved) {
+                toast.success('Criteria saved — refreshing recommendations')
+                setOpen(false)
+            }
+        } finally {
+            setSaving(false)
+        }
+    }
+
+    const renderSentence = (parts, i) => (
+        <p key={i} className="text-sm text-gray-700 leading-10">
+            {parts.map((part, j) => typeof part === 'string' ? (
+                <span key={j}>{part}</span>
+            ) : (
+                <InlineThresholdInput
+                    key={j}
+                    draft={drafts[part.key] ?? ''}
+                    setDraft={(value) => setDrafts(prev => ({ ...prev, [part.key]: value }))}
+                    apply={save}
+                    prefix={part.prefix}
+                    suffix={part.suffix}
+                    step={part.step}
+                    width={part.width}
+                    disabled={!editable || saving}
+                />
+            ))}
+        </p>
+    )
+
     return (
-        <TooltipProvider delayDuration={150}>
-            <Tooltip>
-                <TooltipTrigger asChild>
-                    <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onPointerDown={(e) => e.preventDefault()}
-                        onClick={(e) => e.preventDefault()}
-                        className="rounded-xl h-9 px-3 flex-shrink-0 gap-1.5"
-                        aria-label="Recommendation guide"
-                    >
-                        <Info className="w-4 h-4" />
-                        <span className="text-xs font-medium">Guide</span>
-                    </Button>
-                </TooltipTrigger>
-                <TooltipContent
-                    side="bottom"
-                    align="end"
-                    className="bg-white text-gray-900 border border-gray-200 shadow-lg rounded-2xl p-4 max-w-[380px]"
-                >
-                    <p className="text-xs font-semibold text-gray-900 mb-2">Recommendation Guide</p>
-                    <p className="text-[11px] text-gray-500 mb-3 leading-snug">
-                        Quick reference for what triggers each recommendation type.
-                    </p>
-                    <div className="space-y-2.5">
-                        {RECOMMENDATION_GUIDE.map(item => {
-                            const cfg = TYPE_CONFIG[item.type]
-                            if (!cfg) return null
-                            return (
-                                <div key={item.type} className="flex items-start gap-2.5">
-                                    <img
-                                        src={cfg.iconSrc}
-                                        alt=""
-                                        aria-hidden="true"
-                                        className="h-5 w-5 flex-shrink-0 mt-0.5"
-                                    />
-                                    <div className="min-w-0">
-                                        <p className={cn("text-xs font-semibold leading-tight", cfg.titleText)}>
-                                            {item.title}
-                                        </p>
-                                        <p className="text-[13px] text-gray-600 leading-snug mt-0.5">
-                                            {item.trigger}
-                                        </p>
+        <>
+            <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={openGuide}
+                className="rounded-xl h-9 px-3 flex-shrink-0 gap-1.5"
+                aria-label="Recommendation guide"
+            >
+                <Info className="w-4 h-4" />
+                <span className="text-xs font-medium">Guide</span>
+            </Button>
+            <Dialog open={open} onOpenChange={setOpen}>
+                <DialogContent className="sm:max-w-[880px] w-[calc(100vw-2rem)] max-h-[88vh] !rounded-[24px] p-0 gap-0 flex flex-col overflow-hidden">
+                    <DialogHeader className="px-6 pt-6 pb-4 border-b border-gray-100 text-left">
+                        <DialogTitle className="text-lg font-semibold text-gray-900">Recommendation Guide</DialogTitle>
+                        <p className="text-sm text-gray-500 mt-1">
+                            What triggers each recommendation for this ad account.
+                            {editable && ' Change the numbers in blue to tune them, then save.'}
+                        </p>
+                    </DialogHeader>
+
+                    <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+                        {RECOMMENDATION_GUIDE.map(section => (
+                            <section key={section.id} className="rounded-2xl border border-gray-200 p-5">
+                                <div className="flex items-center gap-2.5">
+                                    <div className="flex items-center -space-x-1.5">
+                                        {section.types.map(type => (
+                                            <img
+                                                key={type}
+                                                src={TYPE_CONFIG[type].iconSrc}
+                                                alt=""
+                                                aria-hidden="true"
+                                                className="h-7 w-7 flex-shrink-0"
+                                            />
+                                        ))}
                                     </div>
+                                    <h3 className="text-base font-semibold text-gray-900">{section.title}</h3>
+                                    {section.fromMeta && (
+                                        <Badge variant="outline" className="text-[11px] px-2.5 py-0.5 rounded-full bg-gray-50 text-gray-600 border-gray-200">
+                                            From Meta
+                                        </Badge>
+                                    )}
                                 </div>
-                            )
-                        })}
+
+                                <p className="text-sm text-gray-600 mt-2 leading-relaxed">{section.intro(metric)}</p>
+
+                                {section.criteria && (
+                                    <div className="mt-3 rounded-xl border border-blue-100 bg-blue-50/40 px-4 py-1.5">
+                                        {section.criteria(metric).map(renderSentence)}
+                                    </div>
+                                )}
+
+                                {section.results && (
+                                    <div className="mt-4 space-y-3">
+                                        {section.results.map(result => {
+                                            const cfg = TYPE_CONFIG[result.type]
+                                            return (
+                                                <div key={result.type} className="flex items-start gap-2.5">
+                                                    <img src={cfg.iconSrc} alt="" aria-hidden="true" className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                                                    <p className="text-sm text-gray-700 leading-relaxed">
+                                                        <span className={cn("font-semibold", cfg.titleText)}>{cfg.label}: </span>
+                                                        {result.text(metric)}
+                                                    </p>
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                )}
+
+                                {section.rules && (
+                                    <ul className="mt-4 space-y-1.5 list-disc pl-5 text-[13px] text-gray-500 leading-relaxed">
+                                        {section.rules(metric).map((rule, i) => <li key={i}>{rule}</li>)}
+                                    </ul>
+                                )}
+                            </section>
+                        ))}
                     </div>
-                </TooltipContent>
-            </Tooltip>
-        </TooltipProvider>
+
+                    {editable && (
+                        <DialogFooter className="px-6 py-4 border-t border-gray-100 flex-row items-center justify-between sm:justify-between gap-3">
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                onClick={() => setDrafts(toDrafts(DEFAULT_REC_THRESHOLDS))}
+                                disabled={saving}
+                                className="rounded-xl text-gray-600"
+                            >
+                                Reset to defaults
+                            </Button>
+                            <div className="flex items-center gap-2">
+                                {!isValid && (
+                                    <span className="text-xs text-red-600">
+                                        {bandInvalid ? 'Consolidate: the first % must be below the second.' : 'Enter a number of 0 or more in every box.'}
+                                    </span>
+                                )}
+                                <Button type="button" variant="outline" onClick={() => setOpen(false)} className="rounded-xl">
+                                    Cancel
+                                </Button>
+                                <Button
+                                    type="button"
+                                    onClick={save}
+                                    disabled={!isValid || !isDirty || saving}
+                                    className="rounded-xl bg-blue-600 hover:bg-blue-700 gap-1.5"
+                                >
+                                    {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+                                    Save
+                                </Button>
+                            </div>
+                        </DialogFooter>
+                    )}
+                </DialogContent>
+            </Dialog>
+        </>
     )
 }
 
@@ -339,6 +540,8 @@ export default function RecommendationCards({
     onPoorAdsPaused,
     budgetRefreshing = false,
     budgetRefreshToken = null,
+    recThresholds,
+    onSaveRecThresholds,
 }) {
     const navigate = useNavigate()
 
@@ -947,13 +1150,13 @@ export default function RecommendationCards({
                                     Budget Recommendations {recs.length > 0 && <span className="text-base font-normal text-gray-400">({recs.length})</span>}
                                 </h2>
                                 <p className="text-sm text-gray-500 mt-1">
-                                    Compares each campaign and ad set&apos;s {mode === 'roas' ? 'ROAS' : 'CPA'} against the
-                                    spend-weighted account average over 3-day windows. <br></br>Recommends scaling outperformers
-                                    and reducing or pausing underperformers.
+                                    Compares each campaign and ad set&apos;s {mode === 'roas' ? 'ROAS' : 'CPA'} over the last 3 days
+                                    against the account average and your target. <br></br>Recommends scaling outperformers
+                                    and reducing or pausing underperformers. Open the Guide to see and edit the criteria.
                                 </p>
                             </div>
                             <div className="flex items-center gap-2 flex-shrink-0">
-                                <RecommendationGuideTooltip />
+                                <RecommendationGuideDialog mode={mode} thresholds={recThresholds} onSave={onSaveRecThresholds} />
                                 <Button
                                     type="button"
                                     variant="outline"
@@ -1217,7 +1420,7 @@ export default function RecommendationCards({
                                                                             </Badge>
                                                                         </div>
                                                                         <p className="text-sm text-orange-700 mt-1 font-medium">
-                                                                            {fatigueRecs.length} top-spending ads showing creative fatigue — refresh them
+                                                                            {fatigueRecs.length} ads Meta flagged for creative fatigue — refresh them
                                                                         </p>
                                                                     </div>
                                                                 </div>

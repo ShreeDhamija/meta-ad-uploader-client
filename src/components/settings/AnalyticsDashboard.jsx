@@ -24,7 +24,7 @@ import slackColor from "@/assets/icons/analytics/slack-color.svg"
 import KPIChart from "./analytics/KPIChart"
 import WeeklyChart from "./analytics/WeeklyChart"
 import AnalyticsDateRangePicker from "./analytics/AnalyticsDateRangePicker"
-import RecommendationCards from "./analytics/RecommendationCards"
+import RecommendationCards, { resolveRecThresholds } from "./analytics/RecommendationCards"
 import AnalyticsOnboarding from "./analytics/AnalyticsOnboarding"
 import AggregateKPIDialog from "./analytics/AggregateKPIDialog"
 import AdAccountAudit from "./analytics/AdAccountAudit"
@@ -324,6 +324,11 @@ export default function AnalyticsDashboard() {
     const customMetrics = adAccountSettings?.customMetrics ?? NO_CUSTOM_METRICS
     const trendingGrowthPct = resolveAnalyticsThreshold(adAccountSettings?.analyticsThresholds, 'trendingGrowthPct')
     const hitRateWinnerMultiple = resolveAnalyticsThreshold(adAccountSettings?.analyticsThresholds, 'hitRateWinnerMultiple')
+    // Budget recommendation criteria, edited in the Recommendation Guide
+    const recThresholds = useMemo(
+        () => resolveRecThresholds(adAccountSettings?.analyticsThresholds),
+        [adAccountSettings?.analyticsThresholds]
+    )
     const preferencesLoading = Boolean(selectedAdAccount) && adAccountSettingsLoading
 
     // Block all background data loading until first-time onboarding is resolved
@@ -559,6 +564,7 @@ export default function AnalyticsDashboard() {
             if (adAccountSettings?.conversionEvent) {
                 url += `&conversionEvent=${encodeURIComponent(adAccountSettings.conversionEvent)}`
             }
+            url += `&thresholds=${encodeURIComponent(JSON.stringify(recThresholds))}`
             const res = await fetch(url, { credentials: 'include' })
 
             // Discard if user switched accounts while we were fetching
@@ -590,7 +596,7 @@ export default function AnalyticsDashboard() {
             // Only update loading state if we're still on the same account
             if (currentAccountRef.current === accountAtStart) setRecsLoading(false)
         }
-    }, [selectedAdAccount, metricMode, targetCPA, targetROAS, adAccountSettings?.conversionEvent])
+    }, [selectedAdAccount, metricMode, targetCPA, targetROAS, adAccountSettings?.conversionEvent, recThresholds])
 
 
 
@@ -1429,6 +1435,24 @@ export default function AnalyticsDashboard() {
         }
     }, [selectedAdAccount, adAccountSettings?.analyticsThresholds, setAdAccountSettings])
 
+    // Budget recommendation criteria from the Recommendation Guide (several keys
+    // at once). Dropping the cached recs makes the fetch effect rerun with them.
+    const handleSaveRecThresholds = useCallback(async (patch) => {
+        if (!selectedAdAccount) return
+        const analyticsThresholds = { ...(adAccountSettings?.analyticsThresholds || {}), ...patch }
+        try {
+            await saveSettings({ adAccountId: selectedAdAccount, adAccountSettings: { analyticsThresholds } })
+            delete recsCacheRef.current[selectedAdAccount]
+            setRecommendations(null)
+            setAdAccountSettings(prev => ({ ...prev, analyticsThresholds }))
+            return true
+        } catch (err) {
+            console.error('Failed to save recommendation criteria:', err)
+            toast.error('Failed to save criteria')
+            return false
+        }
+    }, [selectedAdAccount, adAccountSettings?.analyticsThresholds, setAdAccountSettings])
+
     // ── Loading / Empty states ──────────────────────────────
     if (adAccountsLoading || globalSettingsLoading) {
         return (
@@ -1972,6 +1996,8 @@ export default function AnalyticsDashboard() {
                                 onPoorAdsPaused={handlePoorAdsPaused}
                                 budgetRefreshing={recsLoading}
                                 budgetRefreshToken={budgetRefreshSignal}
+                                recThresholds={recThresholds}
+                                onSaveRecThresholds={handleSaveRecThresholds}
                             />
                         )
                     )}
