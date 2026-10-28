@@ -396,7 +396,7 @@ function RecommendationGuideDialog({ mode, thresholds, onSave }) {
 
     // White box of criteria sentences inside the grey section
     const renderCriteria = (sentences) => (
-        <div className="mt-3 bg-white rounded-2xl px-4 py-2">
+        <div className="mt-3 bg-white border border-gray-300 rounded-2xl px-4 py-2">
             {sentences.map((parts, i) => (
                 <p key={i} className="text-sm text-zinc-950 leading-[3rem]">
                     {parts.map((part, j) => typeof part === 'string' ? (
