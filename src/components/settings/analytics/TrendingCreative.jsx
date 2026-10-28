@@ -952,7 +952,7 @@ export default function TrendingCreative({ adAccountId, conversionEvent, mode = 
     const subtitle = isSearch
         ? `${data.ads.length}${data.totalMatches > data.ads.length ? ` of ${data.totalMatches}` : ""} matching ads in the last ${days} days. Spend change is vs the ${days} days before.`
         : !showTrending
-            ? `Your best ads by ${TOP_ADS_LABEL[topRankBy] || "spend"} over the last ${days} days${topRankBy !== "spend" && data?.spendThreshold > 0 ? `, among ads that spent at least ${formatSpend(data.spendThreshold)}` : ""}.`
+            ? `Your best ads by ${TOP_ADS_LABEL[topRankBy] || "spend"} over the last ${days} days${data?.spendThreshold > 0 ? `, among ads that spent at least ${formatSpend(data.spendThreshold)}` : ""}.`
             : (
             <>
                 Ads with &gt;
