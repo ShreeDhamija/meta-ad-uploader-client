@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
 import { buildAdsManagerAdUrl } from "./CreativeEnhancementsReport"
-import { InlineThresholdInput } from "./InlineThreshold"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import scaleIcon from "@/assets/icons/analytics/recommendations/scale.svg"
 import reduceIcon from "@/assets/icons/analytics/recommendations/reduce.svg"
 import pauseIcon from "@/assets/icons/analytics/recommendations/pause.svg"
@@ -223,64 +223,56 @@ export function resolveRecThresholds(thresholds) {
     return resolved
 }
 
-// One section per recommendation (Scale / Reduce / Pause share their criteria).
+// One section per recommendation (Scale / Reduce / Pause share a section).
 // Text is a function of the metric label (CPA or ROAS). `criteria` are
-// sentences whose { key } parts render as number inputs; `rules` are the fixed
-// parts of the logic, listed for reference.
+// sentences whose { key } parts render as number inputs.
 const RECOMMENDATION_GUIDE = [
     {
         id: 'budget',
         title: 'Scale, Reduce & Pause',
         types: ['scale', 'reduce', 'pause'],
-        intro: (m) => `Compares each active campaign and ad set's ${m} over the last 3 days with the account average and your target, and with the 3 days before. Ad sets with their own budget are checked first; a campaign is only checked when none of its ad sets got a recommendation.`,
+        intro: (m) => `Compares each campaign and ad set's ${m} over the last 3 days with the account average.`,
         criteria: (m) => [
-            [`Flag a campaign or ad set when its ${m} is at least `, { key: 'recDeviationPct', suffix: '%' }, ' better or worse than the account average.'],
-            ['Pause instead of reduce when it is at least ', { key: 'recPausePct', suffix: '%' }, ' worse than average.'],
-            ['Never pause anything taking ', { key: 'recPauseProtectSharePct', suffix: '%' }, ' or more of spend — reduce it instead.'],
+            [`All three: only when the ${m} is at least `, { key: 'recDeviationPct', suffix: '%' }, ' better or worse than the account average.'],
         ],
         results: [
             {
                 type: 'scale',
-                text: (m) => `Better than average by the gap above, its ${m} hasn't got 20%+ worse vs the 3 days before, and it isn't 20%+ worse than your target. Also shown for one up to 20% worse than average whose ${m} improved 50%+.`,
+                text: (m) => `${m} is better than the account average and isn't getting worse.`,
             },
             {
                 type: 'reduce',
-                text: (m) => `Worse than average by the gap above but short of the pause gap. Also shown when it would be paused but is protected (large spend share, improving 25%+, or still beating your target); when it's near average but 20%+ worse than your target; when its ${m} got 50%+ worse vs the 3 days before (25%+ if it's no more than 20% better than average); or when it was 20%+ worse than your target on each of the last 4 days.`,
+                text: (m) => `${m} is worse than the account average, but not badly enough to pause.`,
+                criteria: () => [
+                    ['Reduce: instead of pausing anything taking ', { key: 'recPauseProtectSharePct', suffix: '%' }, ' or more of spend.'],
+                ],
             },
             {
                 type: 'pause',
-                text: () => `At least the pause gap worse than average, under the spend-share limit, not improving 25%+ and not beating your target. Inside a campaign flagged Reduce, its other worse-than-average ad sets (all but the top spender) are flagged Pause too.`,
+                text: (m) => `${m} is far worse than the account average and isn't recovering.`,
+                criteria: () => [
+                    ['Pause: when it is at least ', { key: 'recPausePct', suffix: '%' }, ' worse than the account average.'],
+                ],
             },
-        ],
-        rules: () => [
-            'Budget change, by how far off the average or target it is: under 25% → 20%, 25%+ → 25%, 50%+ → 35%, 75%+ → 40%, 100%+ → 50%.',
-            'Changes driven only by a trend (getting worse or improving fast) are 20%. A reduction is halved (to at least 20%) when it is still beating your target.',
-            'Bigger spenders get smaller changes: the change shrinks toward 10% between 10% and 30% of spend, and is capped at 10% above 30%.',
-            "Campaigns and ad sets with under 5% of the account's daily budget are skipped.",
         ],
     },
     {
         id: 'scale_winner',
         title: 'Scale Winner',
         types: ['scale_winner'],
-        intro: (m) => `A new ad doing well enough to relaunch into more ad sets. Uses each active ad's ${m} over the last 14 days.`,
+        intro: () => 'A new ad (last 14 days, in one ad set) doing well enough to relaunch into more ad sets.',
         criteria: (m) => [
             [`Its ${m} is at least `, { key: 'winnerBetterPct', suffix: '%' }, ' better than the account average.'],
             ['It has spent at least ', { key: 'winnerSpendMultiple', suffix: '×', step: '0.5' }, ' the account average CPA.'],
-        ],
-        rules: () => [
-            'Created in the last 14 days, and its creative runs in only one ad set.',
-            "Carousel, Flex and dynamic ads aren't included.",
-            'The account average is the same 3-day average used for Scale, Reduce & Pause.',
         ],
     },
     {
         id: 'consolidate',
         title: 'Consolidate',
         types: ['consolidate'],
-        intro: (m) => `Only shown when your account's ${m} is 20%+ worse than your target. Lists mid-sized campaigns dragging the account down, so you can pause them and move their budget to better performers.`,
-        criteria: (m) => [
-            ['Include campaigns taking between ', { key: 'consolidateMinSharePct', suffix: '%' }, ' and ', { key: 'consolidateMaxSharePct', suffix: '%' }, ` of spend whose ${m} is 20%+ worse than the account average.`],
+        intro: (m) => `When the account's ${m} is 20%+ off target: campaigns worth pausing so their budget goes to better performers.`,
+        criteria: () => [
+            ['Campaigns taking between ', { key: 'consolidateMinSharePct', suffix: '%' }, ' and ', { key: 'consolidateMaxSharePct', suffix: '%' }, ' of spend that are 20%+ worse than average.'],
         ],
     },
     {
@@ -288,32 +280,26 @@ const RECOMMENDATION_GUIDE = [
         title: 'Creative Fatigue',
         types: ['creative_fatigue'],
         fromMeta: true,
-        intro: () => "Comes straight from Meta: ads it has flagged because people have seen the creative many times and engagement is falling. Meta sets the criteria, so there's nothing to edit here. If Meta hasn't flagged any ads, none show.",
+        intro: () => "From Meta: ads people have seen too often while engagement falls. Meta sets the criteria, so there's nothing to edit.",
     },
     {
         id: 'trend_alert',
         title: 'Trend Alert',
         types: ['trend_alert'],
-        intro: () => 'Account-wide, over the last 4 complete weeks: frequency rising, CTR falling, CPM rising, or conversion rate (results ÷ link clicks) falling every week.',
+        intro: () => 'Frequency, CTR, CPM or conversion rate getting worse every week for the last 4 weeks.',
         criteria: () => [
-            ['Only alert when the metric moved at least ', { key: 'trendMinChangePct', suffix: '%' }, ' in total from the first week to the last.'],
+            ['Only when it moved at least ', { key: 'trendMinChangePct', suffix: '%' }, ' in total.'],
         ],
     },
     {
         id: 'spend_shift',
         title: 'Spend Shift',
         types: ['spend_shift'],
-        intro: () => 'Week-over-week spend moves by age range and placement (last 7 days vs the 7 days before).',
+        intro: () => 'Big week-over-week spend moves by age range or placement.',
         criteria: () => [
-            ['Ignore segments and moves smaller than ', { key: 'spendShiftMinDollars', prefix: '$', step: '100', width: 'w-[6.5rem]' }, '.'],
-            ['Flag an age range when its spend changes by ', { key: 'spendShiftAgePct', suffix: '%' }, ' or more.'],
-            ['Flag a placement when its spend changes by ', { key: 'spendShiftPlacementPct', suffix: '%' }, ' or more.'],
-        ],
-        rules: () => [
-            'Larger accounts use a bigger floor when it is larger: 3% of average weekly spend for segment size, 5% for the move.',
-            'Also flagged: a segment above the floor whose share of spend moved 10+ points (age) or 15+ points (placement).',
-            'Severity: Medium at 1.5× and High at 2× the % change above, or 2.5× / 5× the dollar floor, or 15 / 20 points of share (age) and 20 / 25 (placement).',
-            'When more than 2 segments move with an account-wide spend change, or spend moves between segments, they are grouped into one card.',
+            ['Ignore moves smaller than ', { key: 'spendShiftMinDollars', prefix: '$', step: '100', width: 'w-28' }, '.'],
+            ['Age range: when spend changes by ', { key: 'spendShiftAgePct', suffix: '%' }, ' or more.'],
+            ['Placement: when spend changes by ', { key: 'spendShiftPlacementPct', suffix: '%' }, ' or more.'],
         ],
     },
 ]
@@ -334,6 +320,37 @@ function PoorAdThumbnail({ url, name }) {
         <div className="w-14 h-14 rounded-xl bg-gray-100 flex items-center justify-center flex-shrink-0">
             <ImageIcon className="w-5 h-5 text-gray-300" />
         </div>
+    )
+}
+
+// Number box for the guide's criteria, styled like the Preferences page inputs.
+function GuideCriteriaInput({ value, onChange, onEnter, prefix, suffix, step = "1", width = "w-20", disabled }) {
+    return (
+        <span className="relative inline-flex items-center align-middle mx-1">
+            {prefix && (
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">{prefix}</span>
+            )}
+            <input
+                type="number"
+                min="0"
+                step={step}
+                value={value}
+                disabled={disabled}
+                onChange={(e) => onChange(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") onEnter() }}
+                className={cn(
+                    width,
+                    "h-9 rounded-2xl border border-gray-300 bg-white shadow text-sm font-medium text-gray-900 text-center",
+                    "focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60",
+                    "[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
+                    prefix ? "pl-6 pr-2" : "px-2",
+                    suffix ? "pr-7" : "",
+                )}
+            />
+            {suffix && (
+                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">{suffix}</span>
+            )}
+        </span>
     )
 }
 
@@ -377,24 +394,29 @@ function RecommendationGuideDialog({ mode, thresholds, onSave }) {
         }
     }
 
-    const renderSentence = (parts, i) => (
-        <p key={i} className="text-sm text-gray-700 leading-10">
-            {parts.map((part, j) => typeof part === 'string' ? (
-                <span key={j}>{part}</span>
-            ) : (
-                <InlineThresholdInput
-                    key={j}
-                    draft={drafts[part.key] ?? ''}
-                    setDraft={(value) => setDrafts(prev => ({ ...prev, [part.key]: value }))}
-                    apply={save}
-                    prefix={part.prefix}
-                    suffix={part.suffix}
-                    step={part.step}
-                    width={part.width}
-                    disabled={!editable || saving}
-                />
+    // Grey box of criteria sentences, matching the Preferences page sections
+    const renderCriteria = (sentences) => (
+        <div className="mt-3 bg-[#f7f7f7] rounded-2xl px-4 py-2">
+            {sentences.map((parts, i) => (
+                <p key={i} className="text-sm text-zinc-950 leading-[3rem]">
+                    {parts.map((part, j) => typeof part === 'string' ? (
+                        <span key={j}>{part}</span>
+                    ) : (
+                        <GuideCriteriaInput
+                            key={j}
+                            value={drafts[part.key] ?? ''}
+                            onChange={(value) => setDrafts(prev => ({ ...prev, [part.key]: value }))}
+                            onEnter={save}
+                            prefix={part.prefix}
+                            suffix={part.suffix}
+                            step={part.step}
+                            width={part.width}
+                            disabled={!editable || saving}
+                        />
+                    ))}
+                </p>
             ))}
-        </p>
+        </div>
     )
 
     return (
@@ -411,71 +433,69 @@ function RecommendationGuideDialog({ mode, thresholds, onSave }) {
                 <span className="text-xs font-medium">Guide</span>
             </Button>
             <Dialog open={open} onOpenChange={setOpen}>
-                <DialogContent className="sm:max-w-[880px] w-[calc(100vw-2rem)] max-h-[88vh] !rounded-[24px] p-0 gap-0 flex flex-col overflow-hidden">
+                <DialogContent
+                    disableSlide
+                    className="sm:max-w-[820px] w-[calc(100vw-2rem)] max-h-[88vh] !rounded-[24px] p-0 gap-0 flex flex-col overflow-hidden data-[state=open]:!zoom-in-100 data-[state=closed]:!zoom-out-100"
+                >
                     <DialogHeader className="px-6 pt-6 pb-4 border-b border-gray-100 text-left">
                         <DialogTitle className="text-lg font-semibold text-gray-900">Recommendation Guide</DialogTitle>
                         <p className="text-sm text-gray-500 mt-1">
-                            What triggers each recommendation for this ad account.
-                            {editable && ' Change the numbers in blue to tune them, then save.'}
+                            What triggers each recommendation.{editable && ' Change the numbers to tune them for this ad account.'}
                         </p>
                     </DialogHeader>
 
-                    <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
-                        {RECOMMENDATION_GUIDE.map(section => (
-                            <section key={section.id} className="rounded-2xl border border-gray-200 p-5">
-                                <div className="flex items-center gap-2.5">
-                                    <div className="flex items-center -space-x-1.5">
-                                        {section.types.map(type => (
-                                            <img
-                                                key={type}
-                                                src={TYPE_CONFIG[type].iconSrc}
-                                                alt=""
-                                                aria-hidden="true"
-                                                className="h-7 w-7 flex-shrink-0"
-                                            />
-                                        ))}
+                    <ScrollArea className="min-h-0" viewportClassName="max-h-[calc(88vh-11rem)]">
+                        <div className="px-6 py-5 space-y-4">
+                            {RECOMMENDATION_GUIDE.map(section => (
+                                <section key={section.id} className="rounded-2xl border border-gray-200 p-5">
+                                    <div className="flex items-center gap-2.5">
+                                        <div className="flex items-center -space-x-1.5">
+                                            {section.types.map(type => (
+                                                <img
+                                                    key={type}
+                                                    src={TYPE_CONFIG[type].iconSrc}
+                                                    alt=""
+                                                    aria-hidden="true"
+                                                    className="h-7 w-7 flex-shrink-0"
+                                                />
+                                            ))}
+                                        </div>
+                                        <h3 className="text-base font-semibold text-gray-900">{section.title}</h3>
+                                        {section.fromMeta && (
+                                            <Badge variant="outline" className="text-[11px] px-2.5 py-0.5 rounded-full bg-gray-50 text-gray-600 border-gray-200">
+                                                From Meta
+                                            </Badge>
+                                        )}
                                     </div>
-                                    <h3 className="text-base font-semibold text-gray-900">{section.title}</h3>
-                                    {section.fromMeta && (
-                                        <Badge variant="outline" className="text-[11px] px-2.5 py-0.5 rounded-full bg-gray-50 text-gray-600 border-gray-200">
-                                            From Meta
-                                        </Badge>
+
+                                    <p className="text-sm text-gray-500 mt-2">{section.intro(metric)}</p>
+
+                                    {section.criteria && renderCriteria(section.criteria(metric))}
+
+                                    {section.results && (
+                                        <div className="mt-4 divide-y divide-gray-100 border-t border-gray-100">
+                                            {section.results.map(result => {
+                                                const cfg = TYPE_CONFIG[result.type]
+                                                return (
+                                                    <div key={result.type} className="py-4 last:pb-0">
+                                                        <div className="flex items-start gap-2.5">
+                                                            <img src={cfg.iconSrc} alt="" aria-hidden="true" className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                                                            <p className="text-sm text-gray-700">
+                                                                <span className={cn("font-semibold", cfg.titleText)}>{cfg.label}</span>
+                                                                <span className="text-gray-400"> — </span>
+                                                                {result.text(metric)}
+                                                            </p>
+                                                        </div>
+                                                        {result.criteria && renderCriteria(result.criteria(metric))}
+                                                    </div>
+                                                )
+                                            })}
+                                        </div>
                                     )}
-                                </div>
-
-                                <p className="text-sm text-gray-600 mt-2 leading-relaxed">{section.intro(metric)}</p>
-
-                                {section.criteria && (
-                                    <div className="mt-3 rounded-xl border border-blue-100 bg-blue-50/40 px-4 py-1.5">
-                                        {section.criteria(metric).map(renderSentence)}
-                                    </div>
-                                )}
-
-                                {section.results && (
-                                    <div className="mt-4 space-y-3">
-                                        {section.results.map(result => {
-                                            const cfg = TYPE_CONFIG[result.type]
-                                            return (
-                                                <div key={result.type} className="flex items-start gap-2.5">
-                                                    <img src={cfg.iconSrc} alt="" aria-hidden="true" className="h-5 w-5 flex-shrink-0 mt-0.5" />
-                                                    <p className="text-sm text-gray-700 leading-relaxed">
-                                                        <span className={cn("font-semibold", cfg.titleText)}>{cfg.label}: </span>
-                                                        {result.text(metric)}
-                                                    </p>
-                                                </div>
-                                            )
-                                        })}
-                                    </div>
-                                )}
-
-                                {section.rules && (
-                                    <ul className="mt-4 space-y-1.5 list-disc pl-5 text-[13px] text-gray-500 leading-relaxed">
-                                        {section.rules(metric).map((rule, i) => <li key={i}>{rule}</li>)}
-                                    </ul>
-                                )}
-                            </section>
-                        ))}
-                    </div>
+                                </section>
+                            ))}
+                        </div>
+                    </ScrollArea>
 
                     {editable && (
                         <DialogFooter className="px-6 py-4 border-t border-gray-100 flex-row items-center justify-between sm:justify-between gap-3">
