@@ -44,8 +44,9 @@ const METRIC_FILTERS = [
 const VIEW_STEPS = [0, 100, 250, 500, 1000, 2500, 5000, 10000, 25000, 50000, 100000]
 const VIEW_MAX_INDEX = VIEW_STEPS.length - 1
 
+// days "" = the view's default window (30 days for Top Ads, 7 for Trending).
 const EMPTY_FILTERS = {
-    days: "7",
+    days: "",
     campaignId: "",
     adsetId: "",
     ...Object.fromEntries(METRIC_FILTERS.flatMap(f => [[`${f.key}Min`, ""], [`${f.key}Max`, ""]])),
@@ -153,6 +154,7 @@ function DeltaBadge({ delta }) {
 const COLUMNS = [
     { key: "spend", label: "Spend", best: "desc", value: a => a.currentSpend, render: a => <>{formatSpend(a.currentSpend)}<DeltaBadge delta={a.spendDelta} /></> },
     { key: "cpa", label: "CPA", best: "asc", value: a => a.cpa, render: a => (a.cpa != null ? `$${Math.round(a.cpa)}` : "—") },
+    { key: "conversions", label: "Conversions", best: "desc", value: a => a.conversions, render: a => formatCount(a.conversions) },
     { key: "roas", label: "ROAS", best: "desc", roasOnly: true, value: a => a.roas, render: a => formatRoas(a.roas) },
     { key: "cpc", label: "CPC", best: "asc", value: a => a.cpc, render: a => formatMoney(a.cpc) },
     { key: "ctr", label: "CTR", best: "desc", value: a => a.ctr, render: a => formatPct(a.ctr) },
@@ -553,7 +555,7 @@ const viewStepIndex = (value, fallback) => {
 }
 const viewStepLabel = (index) => (index >= VIEW_MAX_INDEX ? "100k+" : formatCount(VIEW_STEPS[index]))
 
-function FilterPanel({ applied, onApply, onClose, isRoasMode, getCampaigns, getAdSets }) {
+function FilterPanel({ applied, defaultDays, onApply, onClose, isRoasMode, getCampaigns, getAdSets }) {
     const [draft, setDraft] = useState(applied)
     const [campaignEntry] = useState(() => getCampaigns())
     const [campaigns, setCampaigns] = useState(campaignEntry.data || [])
@@ -634,7 +636,7 @@ function FilterPanel({ applied, onApply, onClose, isRoasMode, getCampaigns, getA
                             onClick={() => set("days", d)}
                             className={cn(
                                 "rounded-full px-3 py-1 text-xs font-medium transition-colors",
-                                draft.days === d ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-800",
+                                (draft.days || defaultDays) === d ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-800",
                             )}
                         >
                             Last {d}d
@@ -808,22 +810,28 @@ export default function TrendingCreative({ adAccountId, conversionEvent, mode = 
     const [view, setView] = useState(() => (readStored(STORAGE_KEYS.view, "table") === "grid" ? "grid" : "table"))
     const isRoasMode = mode === "roas"
 
+    // Each view has its own default window; a different one counts as a filter.
+    const defaultDays = trendingOnly ? "7" : "30"
+    const windowDays = filters.days || defaultDays
+
     // ROAS isn't a column outside ROAS mode, so its filter is dropped there.
     const activeFilters = useMemo(() => Object.fromEntries(
         Object.entries(filters).filter(([key, value]) =>
             value !== ""
-            && !(key === "days" && value === "7")
+            && !(key === "days" && value === defaultDays)
             && (isRoasMode || !key.startsWith("roas"))),
-    ), [filters, isRoasMode])
-    const filterCount = useMemo(() => {
+    ), [filters, isRoasMode, defaultDays])
+    // Campaign / ad set and metric filters turn the card into a creative search;
+    // the window alone keeps Top Ads or Trending.
+    const searchFilterCount = useMemo(() => {
         let count = 0
-        if (activeFilters.days) count++
         if (activeFilters.campaignId || activeFilters.adsetId) count++
         for (const key of [...METRIC_FILTERS.map(f => f.key), "videoViews"]) {
             if (activeFilters[`${key}Min`] || activeFilters[`${key}Max`]) count++
         }
         return count
     }, [activeFilters])
+    const filterCount = searchFilterCount + (activeFilters.days ? 1 : 0)
 
     // Session-scoped response cache. Keyed by accountId + conversionEvent +
     // filters + refreshKey — includes refreshKey so the user's manual refresh
@@ -873,7 +881,7 @@ export default function TrendingCreative({ adAccountId, conversionEvent, mode = 
         // Render the shell immediately; fetch once the conversion event is known.
         if (waiting) { setData(null); setLoading(true); setError(null); return }
         const view = trendingOnly ? "trending" : "top"
-        const cacheKey = `${adAccountId}::${mode}::${conversionEvent || "__auto__"}::${view}::${rankBy}::${JSON.stringify(activeFilters)}::${refreshKey || 0}`
+        const cacheKey = `${adAccountId}::${mode}::${conversionEvent || "__auto__"}::${view}::${rankBy}::${windowDays}::${JSON.stringify(activeFilters)}::${refreshKey || 0}`
 
         // Cache hit — render instantly, no Helix.
         if (cacheRef.current[cacheKey]) {
@@ -887,7 +895,7 @@ export default function TrendingCreative({ adAccountId, conversionEvent, mode = 
         setLoading(true)
         setError(null)
 
-        const params = new URLSearchParams({ adAccountId, mode, view, rankBy, growthPct: "0", ...activeFilters })
+        const params = new URLSearchParams({ adAccountId, mode, view, rankBy, growthPct: "0", ...activeFilters, days: windowDays })
         if (conversionEvent) params.set("conversionEvent", conversionEvent)
         if (refreshKey) params.set("rk", String(refreshKey))
 
@@ -906,7 +914,7 @@ export default function TrendingCreative({ adAccountId, conversionEvent, mode = 
             .finally(() => { if (!cancelled) setLoading(false) })
 
         return () => { cancelled = true }
-    }, [adAccountId, conversionEvent, mode, rankBy, trendingOnly, refreshKey, waiting, activeFilters])
+    }, [adAccountId, conversionEvent, mode, rankBy, trendingOnly, refreshKey, waiting, activeFilters, windowDays])
 
     // Top Ads open sorted by their ranking metric; trending and search by spend.
     const resultMode = data?.mode
@@ -938,18 +946,18 @@ export default function TrendingCreative({ adAccountId, conversionEvent, mode = 
     }
 
     const isSearch = data?.mode === "search"
-    const days = data?.window?.days || Number(filters.days)
-    const showTrending = trendingOnly && filterCount === 0
+    const days = data?.window?.days || Number(windowDays)
+    const showTrending = trendingOnly && searchFilterCount === 0
     const topRankBy = data?.mode === "top" ? data.rankBy : rankBy
     const subtitle = isSearch
         ? `${data.ads.length}${data.totalMatches > data.ads.length ? ` of ${data.totalMatches}` : ""} matching ads in the last ${days} days. Spend change is vs the ${days} days before.`
         : !showTrending
-            ? `Your best ads by ${TOP_ADS_LABEL[topRankBy] || "spend"} over the last 7 days${topRankBy !== "spend" && data?.spendThreshold > 0 ? `, among ads that spent at least ${formatSpend(data.spendThreshold)}` : ""}.`
+            ? `Your best ads by ${TOP_ADS_LABEL[topRankBy] || "spend"} over the last ${days} days${topRankBy !== "spend" && data?.spendThreshold > 0 ? `, among ads that spent at least ${formatSpend(data.spendThreshold)}` : ""}.`
             : (
             <>
                 Ads with &gt;
                 <InlineThresholdInput {...growthDraft} suffix="%" disabled={!onGrowthPctChange} />
-                spend growth over the last 7 days vs the prior 7 days.
+                spend growth over the last {days} days vs the prior {days} days.
                 <InlineThresholdApply {...growthDraft} />
             </>
         )
@@ -961,10 +969,10 @@ export default function TrendingCreative({ adAccountId, conversionEvent, mode = 
                     <div className="mb-4 flex flex-wrap items-start justify-between gap-3 px-1">
                         <div className="min-w-0">
                             <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-900">
-                                {filterCount > 0 || showTrending
+                                {searchFilterCount > 0 || showTrending
                                     ? <TrendingUp className="h-5 w-5 text-blue-500" />
                                     : <Trophy className="h-5 w-5 text-blue-500" />}
-                                {filterCount > 0 ? "Creative Search" : showTrending ? "Trending Creatives" : "Top Ads"}
+                                {searchFilterCount > 0 ? "Creative Search" : showTrending ? "Trending Creatives" : "Top Ads"}
                                 {data?.ads?.length > 0 && (
                                     <span className="text-base font-normal text-gray-400">({data.ads.length})</span>
                                 )}
@@ -1028,10 +1036,16 @@ export default function TrendingCreative({ adAccountId, conversionEvent, mode = 
                                     {filterOpen && (
                                         <FilterPanel
                                             applied={filters}
+                                            defaultDays={defaultDays}
                                             isRoasMode={isRoasMode}
                                             getCampaigns={getCampaigns}
                                             getAdSets={getAdSets}
-                                            onApply={(next) => { setFilters(next); setTrendingOnly(false); setFilterOpen(false) }}
+                                            onApply={(next) => {
+                                                setFilters(next)
+                                                // Search filters replace Trending; a new window alone keeps it.
+                                                if (Object.entries(next).some(([key, value]) => key !== "days" && value !== "")) setTrendingOnly(false)
+                                                setFilterOpen(false)
+                                            }}
                                             onClose={() => setFilterOpen(false)}
                                         />
                                     )}
@@ -1044,17 +1058,17 @@ export default function TrendingCreative({ adAccountId, conversionEvent, mode = 
                     {loading ? (
                         <div className="flex h-[200px] flex-col items-center justify-center gap-3">
                             <Helix size="36" speed="2.5" color={BLUE} />
-                            {filterCount > 0 && <p className="text-xs text-gray-400">Searching ads in this account…</p>}
+                            {searchFilterCount > 0 && <p className="text-xs text-gray-400">Searching ads in this account…</p>}
                         </div>
                     ) : error ? (
                         <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>
                     ) : !data || data.ads.length === 0 ? (
                         <div className="flex h-[160px] items-center justify-center text-sm text-gray-400">
-                            {filterCount > 0
+                            {searchFilterCount > 0
                                 ? "No ads match these filters"
                                 : showTrending
-                                    ? "No trending creatives in the last 7 days"
-                                    : "No ads with enough spend in the last 7 days"}
+                                    ? `No trending creatives in the last ${days} days`
+                                    : `No ads with enough spend in the last ${days} days`}
                         </div>
                     ) : view === "grid" ? (
                         <AdsGrid ads={sortedAds} columns={visibleColumns} />
