@@ -329,6 +329,10 @@ export default function AnalyticsDashboard() {
         () => resolveRecThresholds(adAccountSettings?.analyticsThresholds),
         [adAccountSettings?.analyticsThresholds]
     )
+    // Top Ads ranking: the saved optimization (CPA uses the primary event), else spend
+    const topAdsRankBy = adAccountSettings?.analyticsMode
+        ? (adAccountSettings.analyticsMode === 'roas' ? 'roas' : 'cpa')
+        : 'spend'
     const preferencesLoading = Boolean(selectedAdAccount) && adAccountSettingsLoading
 
     // Block all background data loading until first-time onboarding is resolved
@@ -2041,6 +2045,7 @@ export default function AnalyticsDashboard() {
                     adAccountId={selectedAdAccount}
                     conversionEvent={effectiveConversionEvent}
                     mode={metricMode}
+                    rankBy={topAdsRankBy}
                     refreshKey={chartsRefreshKey}
                     waiting={adAccountSettingsLoading || autoEventPending}
                     growthPct={trendingGrowthPct}

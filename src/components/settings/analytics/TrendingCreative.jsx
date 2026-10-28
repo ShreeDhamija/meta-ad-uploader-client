@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Helix } from "ldrs/react"
 import "ldrs/react/Helix.css"
 import {
-    Image as ImageIcon, ExternalLink, TrendingUp, SlidersHorizontal, XCircle, Info, RotateCcw,
+    Image as ImageIcon, ExternalLink, TrendingUp, Trophy, SlidersHorizontal, XCircle, Info, RotateCcw,
     Columns3, Table2, LayoutGrid, ArrowDown, ArrowUp,
 } from "lucide-react"
 import { Area, AreaChart, ResponsiveContainer, Tooltip as ChartTooltip, XAxis, YAxis } from "recharts"
@@ -779,8 +779,15 @@ function FilterPanel({ applied, onApply, onClose, isRoasMode, getCampaigns, getA
     )
 }
 
-export default function TrendingCreative({ adAccountId, conversionEvent, mode = "cpr", refreshKey, waiting = false, growthPct = 35, onGrowthPctChange, className }) {
+// Top Ads ranking (server rankBy): the column it sorts by and its best direction.
+const TOP_ADS_SORT = { cpa: { key: "cpa", dir: "asc" }, roas: { key: "roas", dir: "desc" }, spend: { key: "spend", dir: "desc" } }
+const TOP_ADS_LABEL = { cpa: "lowest CPA", roas: "highest ROAS", spend: "spend" }
+
+// Top Ads by default (ranked by the account's saved optimization, rankBy);
+// the 🔥 Trending button switches to the spend-growth view.
+export default function TrendingCreative({ adAccountId, conversionEvent, mode = "cpr", rankBy = "spend", refreshKey, waiting = false, growthPct = 35, onGrowthPctChange, className }) {
     const growthDraft = useThresholdDraft(growthPct, onGrowthPctChange)
+    const [trendingOnly, setTrendingOnly] = useState(false)
     // Fetched once without a growth bar; the threshold is applied below, so editing
     // it re-filters instantly instead of re-reading Meta (the server reads the same
     // ads whatever the threshold — growth is only a filter on top).
@@ -855,8 +862,8 @@ export default function TrendingCreative({ adAccountId, conversionEvent, mode = 
         body => body.adSets || [],
     ), [cachedList])
 
-    // Filters belong to one ad account.
-    useEffect(() => { setFilters(EMPTY_FILTERS) }, [adAccountId])
+    // Filters and the Trending toggle belong to one ad account.
+    useEffect(() => { setFilters(EMPTY_FILTERS); setTrendingOnly(false) }, [adAccountId])
 
     useEffect(() => { writeStored(STORAGE_KEYS.hidden, hiddenColumns) }, [hiddenColumns])
     useEffect(() => { writeStored(STORAGE_KEYS.view, view) }, [view])
@@ -865,7 +872,8 @@ export default function TrendingCreative({ adAccountId, conversionEvent, mode = 
         if (!adAccountId) { setData(null); return }
         // Render the shell immediately; fetch once the conversion event is known.
         if (waiting) { setData(null); setLoading(true); setError(null); return }
-        const cacheKey = `${adAccountId}::${mode}::${conversionEvent || "__auto__"}::${JSON.stringify(activeFilters)}::${refreshKey || 0}`
+        const view = trendingOnly ? "trending" : "top"
+        const cacheKey = `${adAccountId}::${mode}::${conversionEvent || "__auto__"}::${view}::${rankBy}::${JSON.stringify(activeFilters)}::${refreshKey || 0}`
 
         // Cache hit — render instantly, no Helix.
         if (cacheRef.current[cacheKey]) {
@@ -879,7 +887,7 @@ export default function TrendingCreative({ adAccountId, conversionEvent, mode = 
         setLoading(true)
         setError(null)
 
-        const params = new URLSearchParams({ adAccountId, mode, growthPct: "0", ...activeFilters })
+        const params = new URLSearchParams({ adAccountId, mode, view, rankBy, growthPct: "0", ...activeFilters })
         if (conversionEvent) params.set("conversionEvent", conversionEvent)
         if (refreshKey) params.set("rk", String(refreshKey))
 
@@ -898,7 +906,21 @@ export default function TrendingCreative({ adAccountId, conversionEvent, mode = 
             .finally(() => { if (!cancelled) setLoading(false) })
 
         return () => { cancelled = true }
-    }, [adAccountId, conversionEvent, mode, refreshKey, waiting, activeFilters])
+    }, [adAccountId, conversionEvent, mode, rankBy, trendingOnly, refreshKey, waiting, activeFilters])
+
+    // Top Ads open sorted by their ranking metric; trending and search by spend.
+    const resultMode = data?.mode
+    const resultRankBy = data?.rankBy
+    useEffect(() => {
+        if (!resultMode) return
+        setSort(resultMode === "top" ? (TOP_ADS_SORT[resultRankBy] || TOP_ADS_SORT.spend) : TOP_ADS_SORT.spend)
+    }, [resultMode, resultRankBy])
+
+    const toggleTrending = () => {
+        // Trending and search are separate views: turning Trending on clears the filters.
+        if (!trendingOnly) setFilters(EMPTY_FILTERS)
+        setTrendingOnly(prev => !prev)
+    }
 
     // Columns that apply to these results: ROAS only in ROAS mode, video columns
     // only when at least one ad has video data.
@@ -917,9 +939,13 @@ export default function TrendingCreative({ adAccountId, conversionEvent, mode = 
 
     const isSearch = data?.mode === "search"
     const days = data?.window?.days || Number(filters.days)
+    const showTrending = trendingOnly && filterCount === 0
+    const topRankBy = data?.mode === "top" ? data.rankBy : rankBy
     const subtitle = isSearch
         ? `${data.ads.length}${data.totalMatches > data.ads.length ? ` of ${data.totalMatches}` : ""} matching ads in the last ${days} days. Spend change is vs the ${days} days before.`
-        : (
+        : !showTrending
+            ? `Your best ads by ${TOP_ADS_LABEL[topRankBy] || "spend"} over the last 7 days${topRankBy !== "spend" && data?.spendThreshold > 0 ? `, among ads that spent at least ${formatSpend(data.spendThreshold)}` : ""}.`
+            : (
             <>
                 Ads with &gt;
                 <InlineThresholdInput {...growthDraft} suffix="%" disabled={!onGrowthPctChange} />
@@ -935,8 +961,10 @@ export default function TrendingCreative({ adAccountId, conversionEvent, mode = 
                     <div className="mb-4 flex flex-wrap items-start justify-between gap-3 px-1">
                         <div className="min-w-0">
                             <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-900">
-                                <TrendingUp className="h-5 w-5 text-blue-500" />
-                                {filterCount > 0 ? "Creative Search" : "Trending Creatives"}
+                                {filterCount > 0 || showTrending
+                                    ? <TrendingUp className="h-5 w-5 text-blue-500" />
+                                    : <Trophy className="h-5 w-5 text-blue-500" />}
+                                {filterCount > 0 ? "Creative Search" : showTrending ? "Trending Creatives" : "Top Ads"}
                                 {data?.ads?.length > 0 && (
                                     <span className="text-base font-normal text-gray-400">({data.ads.length})</span>
                                 )}
@@ -944,6 +972,18 @@ export default function TrendingCreative({ adAccountId, conversionEvent, mode = 
                             <p className="mt-1 text-sm text-gray-500">{subtitle}</p>
                         </div>
                         <div className="flex items-center gap-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={!adAccountId}
+                                onClick={toggleTrending}
+                                aria-pressed={showTrending}
+                                title={showTrending ? "Back to Top Ads" : "Show ads whose spend is growing fastest"}
+                                className={cn("rounded-xl", showTrending && "border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-50 hover:text-orange-700")}
+                            >
+                                <span className="mr-1.5" aria-hidden="true">🔥</span>
+                                Trending
+                            </Button>
                             <ColumnsPicker columns={availableColumns} hidden={hiddenColumns} onChange={setHiddenColumns} />
                             <Popover open={filterOpen} onOpenChange={setFilterOpen}>
                                 <PopoverTrigger asChild>
@@ -991,7 +1031,7 @@ export default function TrendingCreative({ adAccountId, conversionEvent, mode = 
                                             isRoasMode={isRoasMode}
                                             getCampaigns={getCampaigns}
                                             getAdSets={getAdSets}
-                                            onApply={(next) => { setFilters(next); setFilterOpen(false) }}
+                                            onApply={(next) => { setFilters(next); setTrendingOnly(false); setFilterOpen(false) }}
                                             onClose={() => setFilterOpen(false)}
                                         />
                                     )}
@@ -1010,7 +1050,11 @@ export default function TrendingCreative({ adAccountId, conversionEvent, mode = 
                         <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>
                     ) : !data || data.ads.length === 0 ? (
                         <div className="flex h-[160px] items-center justify-center text-sm text-gray-400">
-                            {filterCount > 0 ? "No ads match these filters" : "No trending creatives in the last 7 days"}
+                            {filterCount > 0
+                                ? "No ads match these filters"
+                                : showTrending
+                                    ? "No trending creatives in the last 7 days"
+                                    : "No ads with enough spend in the last 7 days"}
                         </div>
                     ) : view === "grid" ? (
                         <AdsGrid ads={sortedAds} columns={visibleColumns} />
