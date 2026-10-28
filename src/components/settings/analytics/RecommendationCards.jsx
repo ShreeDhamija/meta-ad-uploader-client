@@ -244,7 +244,7 @@ const RECOMMENDATION_GUIDE = [
                 type: 'reduce',
                 text: (m) => `${m} is worse than the account average, but not badly enough to pause.`,
                 criteria: () => [
-                    ['Reduce: instead of pausing anything taking ', { key: 'recPauseProtectSharePct', suffix: '%' }, ' or more of spend.'],
+                    ['Reduce: anything taking ',{ key: 'recPauseProtectSharePct', suffix: '%' }, ' or more of spend.'],
                 ],
             },
             {
@@ -297,7 +297,7 @@ const RECOMMENDATION_GUIDE = [
         types: ['spend_shift'],
         intro: () => 'Big week-over-week spend moves by age range or placement.',
         criteria: () => [
-            ['Ignore moves smaller than ', { key: 'spendShiftMinDollars', prefix: '$', step: '100', width: 'w-28' }, '.'],
+            ['Ignore moves smaller than ', { key: 'spendShiftMinDollars', prefix: '$', step: '100', width: 'w-28' }],
             ['Age range: when spend changes by ', { key: 'spendShiftAgePct', suffix: '%' }, ' or more.'],
             ['Placement: when spend changes by ', { key: 'spendShiftPlacementPct', suffix: '%' }, ' or more.'],
         ],
@@ -394,9 +394,9 @@ function RecommendationGuideDialog({ mode, thresholds, onSave }) {
         }
     }
 
-    // Grey box of criteria sentences, matching the Preferences page sections
+    // White box of criteria sentences inside the grey section
     const renderCriteria = (sentences) => (
-        <div className="mt-3 bg-[#f7f7f7] rounded-2xl px-4 py-2">
+        <div className="mt-3 bg-white rounded-2xl px-4 py-2">
             {sentences.map((parts, i) => (
                 <p key={i} className="text-sm text-zinc-950 leading-[3rem]">
                     {parts.map((part, j) => typeof part === 'string' ? (
@@ -435,6 +435,7 @@ function RecommendationGuideDialog({ mode, thresholds, onSave }) {
             <Dialog open={open} onOpenChange={setOpen}>
                 <DialogContent
                     disableSlide
+                    overlayClassName="bg-black/35"
                     className="sm:max-w-[820px] w-[calc(100vw-2rem)] max-h-[88vh] !rounded-[24px] p-0 gap-0 flex flex-col overflow-hidden data-[state=open]:!zoom-in-100 data-[state=closed]:!zoom-out-100"
                 >
                     <DialogHeader className="px-6 pt-6 pb-4 border-b border-gray-100 text-left">
@@ -447,7 +448,7 @@ function RecommendationGuideDialog({ mode, thresholds, onSave }) {
                     <ScrollArea className="min-h-0" viewportClassName="max-h-[calc(88vh-11rem)]">
                         <div className="px-6 py-5 space-y-4">
                             {RECOMMENDATION_GUIDE.map(section => (
-                                <section key={section.id} className="rounded-2xl border border-gray-200 p-5">
+                                <section key={section.id} className="rounded-2xl bg-[#f7f7f7] p-5">
                                     <div className="flex items-center gap-2.5">
                                         <div className="flex items-center -space-x-1.5">
                                             {section.types.map(type => (
@@ -473,7 +474,7 @@ function RecommendationGuideDialog({ mode, thresholds, onSave }) {
                                     {section.criteria && renderCriteria(section.criteria(metric))}
 
                                     {section.results && (
-                                        <div className="mt-4 divide-y divide-gray-100 border-t border-gray-100">
+                                        <div className="mt-2">
                                             {section.results.map(result => {
                                                 const cfg = TYPE_CONFIG[result.type]
                                                 return (
