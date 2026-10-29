@@ -5,11 +5,12 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react"
 import { Helix } from "ldrs/react"
 import "ldrs/react/Helix.css"
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
-import { Users } from "lucide-react"
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
+import { Users, ChartColumn, ChartLine } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
-import { formatBucketLabel, formatBucketTooltipTitle } from "./dateRangeUtils"
+import AnalyticsDateRangePicker from "./AnalyticsDateRangePicker"
+import { formatBucketLabel, formatBucketTooltipTitle, resolveAllowedGranularity } from "./dateRangeUtils"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "https://api.withblip.com"
 
@@ -101,11 +102,19 @@ function CustomTooltip({ active, payload, segments }) {
     )
 }
 
-export default function AudienceBreakdownChart({ adAccountId, dateRange, granularity = "weekly", refreshKey, className }) {
+// The chart follows the dashboard's date range until its own picker is used;
+// changing the dashboard's range again resets it.
+export default function AudienceBreakdownChart({ adAccountId, dateRange: dashboardRange, granularity: dashboardGranularity = "weekly", refreshKey, className }) {
     const [data, setData] = useState(null)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState(null)
     const [viewMode, setViewMode] = useState("dollar")
+    const [chartType, setChartType] = useState("bar")
+    const [ownRange, setOwnRange] = useState(null)
+    useEffect(() => { setOwnRange(null) }, [dashboardRange?.since, dashboardRange?.until])
+    const dateRange = ownRange || dashboardRange
+    // The dashboard's breakdown, unless it doesn't fit this chart's own range (e.g. monthly over 7 days).
+    const granularity = ownRange ? resolveAllowedGranularity(dashboardGranularity, ownRange) : dashboardGranularity
     // Unique per chart instance, so each column's clip path id is unique on the page.
     const clipPrefix = `audience-${useId().replace(/:/g, "")}`
 
@@ -177,21 +186,42 @@ export default function AudienceBreakdownChart({ adAccountId, dateRange, granula
                             Spend by Meta audience segment, as defined in the ad account&apos;s advertising settings.
                         </p>
                     </div>
-                    <div className="flex items-center gap-0.5 rounded-xl bg-gray-100 p-0.5">
-                        {[{ key: "dollar", label: "$" }, { key: "percent", label: "%" }].map(opt => (
-                            <button
-                                key={opt.key}
-                                onClick={() => setViewMode(opt.key)}
-                                className={cn(
-                                    "min-w-[28px] rounded-lg px-3 py-1.5 text-[11px] font-medium transition-all",
-                                    viewMode === opt.key
-                                        ? "bg-white text-gray-900 shadow-xs ring-1 ring-black/5"
-                                        : "text-gray-500 hover:text-gray-700",
-                                )}
-                            >
-                                {opt.label}
-                            </button>
-                        ))}
+                    <div className="flex flex-wrap items-center gap-2">
+                        <AnalyticsDateRangePicker value={dateRange} onChange={setOwnRange} compact />
+                        <div className="flex items-center gap-0.5 rounded-xl bg-gray-100 p-0.5">
+                            {[{ key: "bar", label: "Bar chart", Icon: ChartColumn }, { key: "line", label: "Line chart", Icon: ChartLine }].map(({ key, label, Icon }) => (
+                                <button
+                                    key={key}
+                                    onClick={() => setChartType(key)}
+                                    aria-label={label}
+                                    title={label}
+                                    className={cn(
+                                        "rounded-lg px-2.5 py-1.5 transition-all",
+                                        chartType === key
+                                            ? "bg-white text-gray-900 shadow-xs ring-1 ring-black/5"
+                                            : "text-gray-500 hover:text-gray-700",
+                                    )}
+                                >
+                                    <Icon className="h-3.5 w-3.5" />
+                                </button>
+                            ))}
+                        </div>
+                        <div className="flex items-center gap-0.5 rounded-xl bg-gray-100 p-0.5">
+                            {[{ key: "dollar", label: "$" }, { key: "percent", label: "%" }].map(opt => (
+                                <button
+                                    key={opt.key}
+                                    onClick={() => setViewMode(opt.key)}
+                                    className={cn(
+                                        "min-w-[28px] rounded-lg px-3 py-1.5 text-[11px] font-medium transition-all",
+                                        viewMode === opt.key
+                                            ? "bg-white text-gray-900 shadow-xs ring-1 ring-black/5"
+                                            : "text-gray-500 hover:text-gray-700",
+                                    )}
+                                >
+                                    {opt.label}
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 </div>
 
@@ -227,36 +257,71 @@ export default function AudienceBreakdownChart({ adAccountId, dateRange, granula
 
                         <div className="[&_*:focus]:outline-none [&_*:focus-visible]:outline-none">
                             <ResponsiveContainer width="100%" height={260}>
-                                <BarChart data={chartData} margin={{ top: 5, right: 0, left: -10, bottom: 5 }}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
-                                    <XAxis
-                                        dataKey="label"
-                                        tick={{ fontSize: 10, fill: "#9ca3af" }}
-                                        tickLine={false}
-                                        axisLine={{ stroke: "#e5e7eb" }}
-                                        interval="preserveStartEnd"
-                                    />
-                                    <YAxis
-                                        tick={{ fontSize: 10, fill: "#9ca3af" }}
-                                        tickLine={false}
-                                        axisLine={false}
-                                        domain={viewMode === "percent" ? [0, 100] : undefined}
-                                        tickFormatter={(v) => (viewMode === "percent" ? `${v.toFixed(0)}%` : formatSpend(v))}
-                                        width={52}
-                                    />
-                                    <Tooltip content={<CustomTooltip segments={segments} />} cursor={{ fill: "rgba(0,0,0,0.03)" }} />
-                                    {segments.map((key) => (
-                                        <Bar
-                                            key={key}
-                                            dataKey={key}
-                                            name={segmentLabel(key)}
-                                            stackId="segments"
-                                            fill={segmentColor(key)}
-                                            shape={(props) => <StackSegment {...props} dataKey={key} segments={segments} clipPrefix={clipPrefix} />}
-                                            isAnimationActive={false}
+                                {chartType === "line" ? (
+                                    <LineChart data={chartData} margin={{ top: 5, right: 8, left: -10, bottom: 5 }}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+                                        <XAxis
+                                            dataKey="label"
+                                            tick={{ fontSize: 10, fill: "#9ca3af" }}
+                                            tickLine={false}
+                                            axisLine={{ stroke: "#e5e7eb" }}
+                                            interval="preserveStartEnd"
                                         />
-                                    ))}
-                                </BarChart>
+                                        <YAxis
+                                            tick={{ fontSize: 10, fill: "#9ca3af" }}
+                                            tickLine={false}
+                                            axisLine={false}
+                                            domain={viewMode === "percent" ? [0, 100] : undefined}
+                                            tickFormatter={(v) => (viewMode === "percent" ? `${v.toFixed(0)}%` : formatSpend(v))}
+                                            width={52}
+                                        />
+                                        <Tooltip content={<CustomTooltip segments={segments} />} cursor={{ stroke: "#e5e7eb" }} />
+                                        {segments.map((key) => (
+                                            <Line
+                                                key={key}
+                                                dataKey={key}
+                                                name={segmentLabel(key)}
+                                                type="monotone"
+                                                stroke={segmentColor(key)}
+                                                strokeWidth={2}
+                                                dot={false}
+                                                activeDot={{ r: 4 }}
+                                                isAnimationActive={false}
+                                            />
+                                        ))}
+                                    </LineChart>
+                                ) : (
+                                    <BarChart data={chartData} margin={{ top: 5, right: 0, left: -10, bottom: 5 }}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+                                        <XAxis
+                                            dataKey="label"
+                                            tick={{ fontSize: 10, fill: "#9ca3af" }}
+                                            tickLine={false}
+                                            axisLine={{ stroke: "#e5e7eb" }}
+                                            interval="preserveStartEnd"
+                                        />
+                                        <YAxis
+                                            tick={{ fontSize: 10, fill: "#9ca3af" }}
+                                            tickLine={false}
+                                            axisLine={false}
+                                            domain={viewMode === "percent" ? [0, 100] : undefined}
+                                            tickFormatter={(v) => (viewMode === "percent" ? `${v.toFixed(0)}%` : formatSpend(v))}
+                                            width={52}
+                                        />
+                                        <Tooltip content={<CustomTooltip segments={segments} />} cursor={{ fill: "rgba(0,0,0,0.03)" }} />
+                                        {segments.map((key) => (
+                                            <Bar
+                                                key={key}
+                                                dataKey={key}
+                                                name={segmentLabel(key)}
+                                                stackId="segments"
+                                                fill={segmentColor(key)}
+                                                shape={(props) => <StackSegment {...props} dataKey={key} segments={segments} clipPrefix={clipPrefix} />}
+                                                isAnimationActive={false}
+                                            />
+                                        ))}
+                                    </BarChart>
+                                )}
                             </ResponsiveContainer>
                         </div>
                     </>
