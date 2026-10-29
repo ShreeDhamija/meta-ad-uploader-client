@@ -773,15 +773,18 @@ function PostSelectorInline({
                                             </Button>
                                         </PopoverTrigger>
                                         <PopoverContent
-                                            className="!w-auto !max-w-none p-0 bg-white shadow-lg rounded-2xl"
+                                            className="!w-auto !max-w-none p-0 bg-white shadow-lg rounded-2xl flex flex-col"
                                             align="start"
                                             sideOffset={4}
                                             side="bottom"
                                             avoidCollisions={false}
+                                            collisionPadding={16}
                                             style={{
                                                 minWidth: "var(--radix-popover-trigger-width)",
                                                 width: "max-content",
                                                 maxWidth: "min(calc(100vw - 2rem), 48rem)",
+                                                // Stop short of the viewport bottom so the list scrolls instead of clipping
+                                                maxHeight: "var(--radix-popover-content-available-height)",
                                             }}
                                         >
                                             <Command loop={false}>
@@ -856,15 +859,18 @@ function PostSelectorInline({
                                             </Button>
                                         </PopoverTrigger>
                                         <PopoverContent
-                                            className="!w-auto !max-w-none p-0 bg-white shadow-lg rounded-2xl"
+                                            className="!w-auto !max-w-none p-0 bg-white shadow-lg rounded-2xl flex flex-col"
                                             align="start"
                                             sideOffset={4}
                                             side="bottom"
                                             avoidCollisions={false}
+                                            collisionPadding={16}
                                             style={{
                                                 minWidth: "var(--radix-popover-trigger-width)",
                                                 width: "max-content",
                                                 maxWidth: "min(calc(100vw - 2rem), 48rem)",
+                                                // Stop short of the viewport bottom so the list scrolls instead of clipping
+                                                maxHeight: "var(--radix-popover-content-available-height)",
                                             }}
                                         >
                                             <Command loop={false}>
