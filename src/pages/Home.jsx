@@ -667,7 +667,7 @@ export default function Home() {
     const formCacheValuesRef = useRef(null);
     formCacheValuesRef.current = {
         adAccountId: selectedAdAccount, pageId, instagramAccountId, link, customLink, showCustomLink, cta, headlines, descriptions, messages,
-        hasVariants: variants.length > 1,
+        adNameFormulaV2, hasVariants: variants.length > 1,
     };
     const renderCountRef = useRef(0);
     renderCountRef.current += 1;
@@ -758,7 +758,11 @@ export default function Home() {
             websitePixelId: adAccountSettings.pixelTracking?.websitePixelId || null,
             offlineDatasetId: adAccountSettings.pixelTracking?.offlineDatasetId || null,
         });
-        setAdNameFormulaV2(adAccountSettings.adNameFormulaV2 || { rawInput: "" });
+        setAdNameFormulaV2(
+            adAccountSettings.adNameFormulaV2?.rawInput?.trim() || !cachedForm?.adNameFormulaV2?.rawInput?.trim()
+                ? adAccountSettings.adNameFormulaV2 || { rawInput: "" }
+                : cachedForm.adNameFormulaV2,
+        );
 
         const formula = adAccountSettings.adNameFormula;
         if (!formula || Object.keys(formula).length === 0) {
