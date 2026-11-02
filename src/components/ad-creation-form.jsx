@@ -105,6 +105,7 @@ const META_ACTION_REQUIRED_MESSAGE = "Meta requires you to take certain steps to
 const LEGACY_TEMPLATE_AD_NAME_USER_ID = "929470643071391";
 const PIXEL_TRACKING_FORM_ALLOWED_USER_IDS = ["10236978990363167", "10234447959963619", "10162737276661695", "10165258246808665", "10163704737102804", "28883613861256118", "10235270203720983"];
 const INSTANT_EXPERIENCE_USER_IDS = ["10236978990363167", "2901368380250453"];
+const PROMO_CODE_USER_IDS = ["10236978990363167", "10237991305022107", "25691565587159361"];
 const LOWERCASE_FILE_NAME_FORMULA_USER_IDS = ["27431350269900471"];
 const AD_SET_NAME_VARIABLE_TEAM_IDS = ["team_1777190523537_hmh1srk8j", "team_1787061148847_j1tmrxprb"];
 const PER_AD_SET_NAME_PLACEHOLDER = "__BLIP_PER_AD_SET_NAME__";
@@ -5643,6 +5644,7 @@ export default function AdCreationForm({
       return adSet?.destination_type === "ON_AD";
     });
   }, [adSets, duplicateAdSet, selectedAdSets]);
+  const supportsPromoCode = PROMO_CODE_USER_IDS.includes(String(userId || ""));
   const supportsInstantExperience =
     INSTANT_EXPERIENCE_USER_IDS.includes(String(userId || "")) &&
     !isCatalogueAd &&
@@ -9469,7 +9471,7 @@ export default function AdCreationForm({
         ...job,
         adCount: job.adCount * (1 + jobExtraLandingPages.length),
         showVariantLabel: shouldShowVariantLabel,
-        formData: { ...job.formData, promoCodeAutoDetect, extraLandingPages: jobExtraLandingPages },
+        formData: { ...job.formData, promoCodeAutoDetect: supportsPromoCode && promoCodeAutoDetect, extraLandingPages: jobExtraLandingPages },
       };
     });
 
@@ -12882,6 +12884,7 @@ export default function AdCreationForm({
               </Label>
             </div>
           )}
+          {supportsPromoCode && (
           <div className="space-y-1">
             <div className="flex items-center space-x-2 rounded-xl transition-colors duration-150">
               <Checkbox
@@ -12901,6 +12904,7 @@ export default function AdCreationForm({
               </p>
             )}
           </div>
+          )}
         </form>
       </CardContent>
       {showSaveNewDialog && (

@@ -37,6 +37,22 @@ import { useTikTokAuth } from "@/lib/TikTokAuthContext"
 import { getRequiredSelectionPlatforms } from "@/lib/accountSelection"
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 const HOME_CACHE_KEY = 'home_adAccountSettings_cache';
+// Last-entered page, link, CTA and copy for one ad account. Restored per field only
+// where the ad account's saved preferences don't set a value.
+const HOME_FORM_CACHE_KEY = 'home_adCreationForm_cache';
+
+function readHomeFormCache(adAccountId) {
+    try {
+        const data = JSON.parse(localStorage.getItem(HOME_FORM_CACHE_KEY) || "null");
+        if (!data || data.adAccountId !== adAccountId) return null;
+        if (Date.now() - data.timestamp > 24 * 60 * 60 * 1000) return null;
+        return data;
+    } catch {
+        return null;
+    }
+}
+
+const hasText = (values) => Array.isArray(values) && values.some((value) => typeof value === "string" && value.trim());
 const MEDIA_PREVIEW_LAUNCH_DURATION_MS = 560;
 const EMPTY_PIXEL_TRACKING_OVERRIDE = {
     websitePixelId: null,
@@ -646,6 +662,37 @@ export default function Home() {
     ]);
 
 
+    // Save the form fields when leaving the page (e.g. to Preferences) or reloading.
+    // With variants set up nothing is remembered, since their media isn't stored either.
+    const formCacheValuesRef = useRef(null);
+    formCacheValuesRef.current = {
+        adAccountId: selectedAdAccount, pageId, instagramAccountId, link, customLink, showCustomLink, cta, headlines, descriptions, messages,
+        hasVariants: variants.length > 1,
+    };
+    const renderCountRef = useRef(0);
+    renderCountRef.current += 1;
+    useEffect(() => {
+        const mountRenderCount = renderCountRef.current;
+        const saveFormCache = () => {
+            const { hasVariants, ...values } = formCacheValuesRef.current || {};
+            try {
+                if (!values.adAccountId || hasVariants) {
+                    localStorage.removeItem(HOME_FORM_CACHE_KEY);
+                    return;
+                }
+                localStorage.setItem(HOME_FORM_CACHE_KEY, JSON.stringify({ ...values, timestamp: Date.now() }));
+            } catch {
+                // Storage unavailable: the form just starts from preferences next time.
+            }
+        };
+        window.addEventListener("pagehide", saveFormCache);
+        return () => {
+            window.removeEventListener("pagehide", saveFormCache);
+            // StrictMode re-runs effects right after mount with no render in between; that isn't a real exit.
+            if (renderCountRef.current !== mountRenderCount) saveFormCache();
+        };
+    }, []);
+
     useEffect(() => {
         const checkSettings = async () => {
             try {
@@ -686,15 +733,27 @@ export default function Home() {
     useEffect(() => {
         if (!selectedAdAccount) return;
 
-        setPageId(adAccountSettings.defaultPage?.id || "");
-        setInstagramAccountId(adAccountSettings.defaultInstagram?.id || "");
+        const cachedForm = readHomeFormCache(selectedAdAccount);
+        if (adAccountSettings.defaultPage?.id || !cachedForm?.pageId) {
+            setPageId(adAccountSettings.defaultPage?.id || "");
+            setInstagramAccountId(adAccountSettings.defaultInstagram?.id || "");
+        } else {
+            setPageId(cachedForm.pageId);
+            setInstagramAccountId(cachedForm.instagramAccountId || "");
+        }
 
         const defaultLink = adAccountSettings.links?.find(link => link.isDefault);
         const linkToUse = defaultLink?.url || adAccountSettings.links?.[0]?.url || "";
-        setLink([linkToUse]);
+        if (linkToUse || !hasText(cachedForm?.link)) {
+            setLink([linkToUse]);
+        } else {
+            setLink(cachedForm.link);
+            setCustomLink(cachedForm.customLink || "");
+            setShowCustomLink(Boolean(cachedForm.showCustomLink));
+        }
         setDisplayLink(adAccountSettings.displayLinks?.[0] || "");
 
-        setCta(adAccountSettings.defaultCTA || "LEARN_MORE");
+        setCta(adAccountSettings.defaultCTA || cachedForm?.cta || "LEARN_MORE");
         setPixelTrackingOverride({
             websitePixelId: adAccountSettings.pixelTracking?.websitePixelId || null,
             offlineDatasetId: adAccountSettings.pixelTracking?.offlineDatasetId || null,
@@ -734,10 +793,11 @@ export default function Home() {
         const keys = Object.keys(templates);
 
         if (keys.length === 0) {
+            const cachedForm = readHomeFormCache(selectedAdAccount);
             setSelectedTemplate(undefined);
-            setMessages([""]);
-            setHeadlines([""]);
-            setDescriptions([""]);
+            setMessages(hasText(cachedForm?.messages) ? cachedForm.messages : [""]);
+            setHeadlines(hasText(cachedForm?.headlines) ? cachedForm.headlines : [""]);
+            setDescriptions(hasText(cachedForm?.descriptions) ? cachedForm.descriptions : [""]);
             return;
         }
 
