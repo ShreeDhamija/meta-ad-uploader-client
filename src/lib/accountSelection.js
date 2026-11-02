@@ -43,3 +43,7 @@ export function getRequiredSelectionPlatforms({
 export function normalizeCheckoutPlanType(planType) {
   return planType === "agency" ? "pro" : planType
 }
+
+// Set by Billing after a plan change to a plan with an account limit, so Settings
+// asks the user to pick their ad accounts again once the page reloads.
+export const RESELECT_ACCOUNTS_STORAGE_KEY = "blip:reselectAdAccountsAfterPlanChange"

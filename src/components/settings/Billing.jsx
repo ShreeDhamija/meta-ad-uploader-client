@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/dialog"
 import useSubscription from "@/lib/useSubscriptionSettings"
 import PropTypes from "prop-types"
-import { normalizeCheckoutPlanType } from "@/lib/accountSelection"
+import { getPlanAccountLimit, normalizeCheckoutPlanType, RESELECT_ACCOUNTS_STORAGE_KEY } from "@/lib/accountSelection"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "https://api.withblip.com"
 const PLANS = [
@@ -320,6 +320,13 @@ export default function BillingSettings({ platform = "meta" }) {
 
             const data = await response.json()
             if (data.success) {
+                if (Number.isFinite(getPlanAccountLimit(normalizeCheckoutPlanType(data.newPlanType || pendingPlanChange)))) {
+                    try {
+                        sessionStorage.setItem(RESELECT_ACCOUNTS_STORAGE_KEY, "1")
+                    } catch {
+                        // Storage unavailable: the popup just won't reopen automatically.
+                    }
+                }
                 toast.success(`Plan changed to ${getPlanMeta(pendingPlanChange).name}. Reloading...`)
                 setTimeout(() => {
                     window.location.reload()

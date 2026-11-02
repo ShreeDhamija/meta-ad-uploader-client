@@ -32,6 +32,7 @@ import DesktopIcon from '@/assets/Desktop.webp';
 import {
     getRequiredSelectionPlatforms,
     META_PLATFORM,
+    RESELECT_ACCOUNTS_STORAGE_KEY,
     TIKTOK_PLATFORM,
 } from "@/lib/accountSelection"
 import "../settings.css"
@@ -195,6 +196,19 @@ export default function Settings({ platform = "meta" }) {
         subscriptionLoading,
         tiktokLoading,
     ])
+
+    // After a plan change (Billing reloads the page), ask for the ad accounts again under the new limit.
+    useEffect(() => {
+        if (loading || subscriptionLoading || tiktokLoading) return;
+        try {
+            if (sessionStorage.getItem(RESELECT_ACCOUNTS_STORAGE_KEY) !== "1") return
+            sessionStorage.removeItem(RESELECT_ACCOUNTS_STORAGE_KEY)
+        } catch {
+            return
+        }
+        setPopupPlatforms(isTikTokLoggedIn ? [META_PLATFORM, TIKTOK_PLATFORM] : [META_PLATFORM])
+        setShowAdAccountPopup(true)
+    }, [isTikTokLoggedIn, loading, subscriptionLoading, tiktokLoading])
 
     if (authLoading || (isTikTok && tiktokLoading)) return null
     if (!isLoggedIn) return <Navigate to="/login" />

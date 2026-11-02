@@ -455,15 +455,28 @@ export default function Home() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [useExistingPosts, selectedAdAccount]);
 
+    // Variants only live in this page's state, so leaving the page loses them.
+    const hasVariantsSetUp = variants.length > 1;
+
     const blocker = useBlocker(({ currentLocation, nextLocation }) => {
-        if (!adLaunchInProgress) return false;
+        if (!adLaunchInProgress && !hasVariantsSetUp) return false;
         const currentPath = `${currentLocation.pathname}${currentLocation.search}${currentLocation.hash}`;
         const nextPath = `${nextLocation.pathname}${nextLocation.search}${nextLocation.hash}`;
         return currentPath !== nextPath;
     });
 
+    // In-app navigation away with variants set up: native confirm (the launch dialog below covers launches).
     useEffect(() => {
-        if (!adLaunchInProgress) return;
+        if (blocker.state !== "blocked" || adLaunchInProgress) return;
+        if (window.confirm("You have variants set up. If you leave this page you will lose all progress. Leave anyway?")) {
+            blocker.proceed();
+        } else {
+            blocker.reset();
+        }
+    }, [blocker, adLaunchInProgress]);
+
+    useEffect(() => {
+        if (!adLaunchInProgress && !hasVariantsSetUp) return;
 
         const handleBeforeUnload = (event) => {
             event.preventDefault();
@@ -472,7 +485,7 @@ export default function Home() {
 
         window.addEventListener("beforeunload", handleBeforeUnload);
         return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-    }, [adLaunchInProgress]);
+    }, [adLaunchInProgress, hasVariantsSetUp]);
 
     const handleStayOnLaunchPage = useCallback(() => {
         if (blocker.state === "blocked") {
@@ -2582,7 +2595,7 @@ export default function Home() {
                 selectedTikTokAdvertiserIds={selectedTikTokAdvertiserIds}
             />
 
-            {blocker.state === "blocked" && (
+            {blocker.state === "blocked" && adLaunchInProgress && (
                 <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4">
                     <div
                         role="dialog"
