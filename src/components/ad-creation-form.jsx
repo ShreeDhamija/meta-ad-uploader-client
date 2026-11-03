@@ -50,6 +50,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuth } from "@/lib/AuthContext";
+import { CTA_OPTIONS } from "@/lib/ctaOptions";
 import usePartnershipAdPartners from "@/lib/usePartnershipAdPartners";
 import { deleteCopyTemplates } from "@/lib/deleteCopyTemplate";
 import { cleanupPublishedDraftMedia, createDraftShareUrl, listDrafts, refreshDraftMediaUrl } from "@/lib/draftApi";
@@ -3142,24 +3143,7 @@ export default function AdCreationForm({
     }
   }
 
-  const ctaOptions = [
-    { value: "LEARN_MORE", label: "Learn More" },
-    { value: "SHOP_NOW", label: "Shop Now" },
-    { value: "SIGN_UP", label: "Sign Up" },
-    { value: "SUBSCRIBE", label: "Subscribe" },
-    { value: "GET_OFFER", label: "Get Offer" },
-    { value: "CONTACT_US", label: "Contact Us" },
-    { value: "DOWNLOAD", label: "Download" },
-    { value: "BOOK_NOW", label: "Book Now" },
-    { value: "SEE_MORE", label: "See More" },
-    { value: "APPLY_NOW", label: "Apply Now" },
-    { value: "INSTALL_MOBILE_APP", label: "Install Now" },
-    { value: "CALL_NOW", label: "Call Now" },
-    { value: "SEE_DETAILS", label: "See Details" },
-    { value: "LISTEN_NOW", label: "Listen Now" },
-    { value: "WATCH_MORE", label: "Watch More" },
-    { value: "GET_QUOTE", label: "Get Quote" },
-  ];
+  const ctaOptions = CTA_OPTIONS;
 
   const selectedCtaLabel = ctaOptions.find((option) => option.value === cta)?.label;
   const lowerCtaSearch = ctaSearch.toLowerCase();
@@ -13009,8 +12993,9 @@ export default function AdCreationForm({
                 <li>
                   Columns Supported: <strong>Campaign Name</strong>, <strong>Ad Set Name</strong>, <strong>Ad Name</strong>,{" "}
                   <strong>Facebook Page</strong>, <strong>URL</strong>, <strong>Google Drive Link</strong>, <strong>Primary Text</strong>,{" "}
-                  <strong>Headlines</strong> and <strong>Descriptions</strong> 1 through 5.
+                  <strong>Headlines</strong> and <strong>Descriptions</strong> 1 through 5, and <strong>CTA</strong>.
                 </li>
+                <li>CTA takes any call to action from the form's CTA list, e.g. Shop Now or Learn More.</li>
                 <li>Ad Name and Facebook Page are suggested to be setup in preferences.</li>
                 <li>All other columns are optional and can be omitted.</li>
                 <li>
