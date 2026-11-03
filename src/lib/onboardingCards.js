@@ -96,7 +96,7 @@ export const ONBOARDING_CARDS = [
         body: "Account overview, audience breakdowns, top & underperforming copy, advanced ad performance filters, custom budget recommendation tuning, new reports & Slack alerts.",
         addedAt: "2026-11-03",
         existingUsersOnly: true,
-        bodyMaxWidth: 504,
+        bodyMaxWidth: 540,
         singleCardAction: {
             label: "Go to Analytics",
             path: "/analytics",
