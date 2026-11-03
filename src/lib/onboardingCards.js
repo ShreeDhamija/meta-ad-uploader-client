@@ -93,9 +93,10 @@ export const ONBOARDING_CARDS = [
         title: "Analytics Update",
         image: AnalyticsUpdate,
         heading: "Analytics Just Got a Big Upgrade",
-        body: "Account overview, audience breakdowns, top & underperforming copy, advanced ad filters, custom budget cut-offs, 2 new reports and new Slack alerts.",
+        body: "Account overview, audience breakdowns, top & underperforming copy, advanced ad performance filters, custom budget recommendation tuning, new reports & Slack alerts.",
         addedAt: "2026-11-03",
         existingUsersOnly: true,
+        bodyMaxWidth: 504,
         singleCardAction: {
             label: "Go to Analytics",
             path: "/analytics",
