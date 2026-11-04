@@ -9,7 +9,7 @@ import { useAppData } from "@/lib/AppContext";
 import { useAuth } from "@/lib/AuthContext";
 import { creativeApi } from "@/lib/creativeApi";
 import { cn } from "@/lib/utils";
-import { BookOpen, Box, Flame, FlaskConical, Heart, Layers, LogOut, MousePointerClick, SearchCheck, Zap } from "lucide-react";
+import { BookOpen, Box, CalendarRange, Flame, FlaskConical, Heart, Layers, LogOut, MousePointerClick, SearchCheck, Zap } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Toaster } from "sonner";
 import { createPortal } from "react-dom";
@@ -28,11 +28,13 @@ import ProductsView from "./views/ProductsView";
 import ResearchView from "./views/ResearchView";
 import WeeklyView from "./views/WeeklyView";
 import ModelsView from "./views/ModelsView";
+import MonthlyReviewView from "./views/MonthlyReviewView";
 
 const NAV = [
   { key: "brands", label: "Accounts", icon: Layers },
   { key: "products", label: "Products", icon: Box },
   { key: "intelligence", label: "Insights", icon: Zap },
+  { key: "monthly", label: "Monthly Review", icon: CalendarRange },
   { key: "library", label: "Library", icon: BookOpen },
   { key: "generate", label: "Generate", icon: Flame },
   { key: "inspiration", label: "Inspiration", icon: Heart },
@@ -46,6 +48,7 @@ const DESCRIPTIONS = {
   brands: "View and manage connected Meta ad accounts.",
   products: "Create and manage products for the selected account.",
   intelligence: "Run Meta ad analysis and review analyzed creatives + the strategy audit.",
+  monthly: "Each month's launched concepts, their winning variants, and what the winners had in common.",
   research: "Run the 7-phase research agent → personas, brand deep dive, language bank.",
   library: "Generate draft hooks, headlines, and primary text from personas and analyzed ads.",
   generate: "Generate static image ads, video scripts, and creative briefs from brand/product context.",
@@ -252,6 +255,8 @@ export default function CreativeStrategyLayout() {
         return <ProductsView ctx={ctx} />;
       case "intelligence":
         return <IntelligenceView ctx={ctx} />;
+      case "monthly":
+        return <MonthlyReviewView ctx={ctx} />;
       case "research":
         return <ResearchView ctx={ctx} />;
       case "library":

@@ -9,7 +9,7 @@ import { creativeApi } from "@/lib/creativeApi";
 import RunModelControls from "../RunModelControls";
 import { useRunModels } from "../useRunModels";
 import { RUN_OPERATIONS } from "../run-model-operations";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -388,7 +388,7 @@ export default function GenerateView({ ctx }) {
                     label="Format"
                     value={formatSlug || "auto"}
                     onChange={(value) => { setFormatSlug(value === "auto" ? "" : value); setUserInputs({}); }}
-                    options={[{ key: "auto", label: "Auto format" }, ...formats.map((format) => ({ key: format.slug, label: format.category }))]}
+                    options={[{ key: "auto", label: "Auto format" }, ...formats.map((format) => ({ key: format.slug, label: format.category, group: format.groupLabel }))]}
                   />
                 ))}
                 <SidebarNumber label="Variations" value={variationCount} min={1} max={8} onChange={setVariationCount} />
@@ -706,6 +706,13 @@ function GenerateLoading({ label }) {
 }
 
 function SidebarSelect({ label, value, onChange, options }) {
+  // Options carrying a `group` render under headed groups, in first-seen order.
+  const groups = [];
+  for (const option of options) {
+    const last = groups[groups.length - 1];
+    if (last && last.label === (option.group || null)) last.options.push(option);
+    else groups.push({ label: option.group || null, options: [option] });
+  }
   return (
     <Field label={label}>
       <Select value={value} onValueChange={onChange}>
@@ -713,7 +720,12 @@ function SidebarSelect({ label, value, onChange, options }) {
           <SelectValue />
         </SelectTrigger>
         <SelectContent className="cs-select-content bg-white">
-          {options.map((option) => <SelectItem key={option.key} value={option.key}>{option.label}</SelectItem>)}
+          {groups.map((group, index) => group.label ? (
+            <SelectGroup key={`${group.label}-${index}`}>
+              <SelectLabel className="cs-select-group-label">{group.label}</SelectLabel>
+              {group.options.map((option) => <SelectItem key={option.key} value={option.key}>{option.label}</SelectItem>)}
+            </SelectGroup>
+          ) : group.options.map((option) => <SelectItem key={option.key} value={option.key}>{option.label}</SelectItem>))}
         </SelectContent>
       </Select>
     </Field>

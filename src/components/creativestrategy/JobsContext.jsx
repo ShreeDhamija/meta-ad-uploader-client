@@ -215,11 +215,15 @@ const PHASE_LABELS = {
   building_briefing: "Building the strategy briefing", saving_concepts: "Saving concept cards",
   scraping_and_extracting: "Scraping + extracting", analyzing: "Analyzing reference",
   analyzing_batch: "Analyzing",
+  // monthly_review
+  reading_analysis: "Reading stored analysis", learning_naming: "Learning ad naming", writing_summaries: "Writing month summaries",
+  synthesizing_knowledge: "Finding patterns across accounts", curating_hooks: "Saving proven hooks",
 };
 const KIND_LABEL = {
   research: "Product research", analyze_ads: "Ad analysis + trending",
   generate_ad: "Static ad generation", generate_library: "Copy library generation", weekly_strategy: "Weekly strategy",
   ingest_context: "Ingestion", inspo_analyze: "Reference analysis", trending_creative: "Trending creative",
+  monthly_review: "Monthly review", cross_account_knowledge: "Cross-account learnings",
 };
 
 // Returns { title, detail, pct } for a job record. pct is best-effort (null when unknown).
@@ -234,6 +238,7 @@ export function describeJob(job) {
     const detail = type === "analyze_ads" ? `Completed · ${result.analyzed ?? 0} analyzed · ${result.metricsUpdated ?? 0} refreshed${result.failed ? ` · ${result.failed} failed` : ""}`
       : type === "generate_ad" ? `Completed · ${result.saved ?? 0} ads saved`
       : type === "weekly_strategy" ? `Completed · ${result.ideas_generated ?? 0} concepts`
+      : type === "monthly_review" && result.status === "ok" ? `Completed · ${result.concepts ?? 0} concepts`
       : "Completed";
     const errors = Array.isArray(result.errors) ? result.errors.join("; ") : "";
     return { title, detail: errors ? `${detail} · ${errors}` : detail, pct: 100 };

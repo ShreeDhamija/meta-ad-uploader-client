@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import PropTypes from "prop-types";
-import { ImagePlus, Upload, Loader2 } from "lucide-react";
+import { ImagePlus, Upload, Loader2, X } from "lucide-react";
 import { creativeApi } from "@/lib/creativeApi";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ErrorBanner } from "../ui";
@@ -11,7 +11,7 @@ const TABS = [
   { key: "concepts", label: "Concept reference", limit: 8 },
 ];
 const HELP = {
-  examples: "Past Meta image ads, ranked by spend. Select up to 6 to guide typography, colors, and photography. Only your selections will be used.",
+  examples: "Past Meta image ads, ranked by spend, plus any examples you upload. Select up to 6 to guide typography, colors, and photography. Only your selections will be used.",
   products: "Select up to 4 images of your actual product. These guide product appearance, packaging, or UI fidelity.",
   concepts: "Choose saved inspiration or upload a reference ad. References guide layout and style, never product identity. Multiple references rotate across variations; choose at least as many variations to use each one.",
 };
@@ -86,16 +86,31 @@ export default function VisualInspiration({ productId, clientId, onChange }) {
         if (uploadTab === "products") {
           const response = await creativeApi.uploadAsset(productId, { dataBase64, assetType: "hero_product", description: file.name });
           added = { ...response.asset, imageUrl: response.asset.imageUrl || dataBase64 };
+        } else if (uploadTab === "examples") {
+          const response = await creativeApi.uploadBrandExample(productId, { dataBase64, fileName: file.name });
+          added = { ...response.example, imageUrl: response.example.imageUrl || dataBase64 };
         } else {
           const response = await creativeApi.uploadInspo({ clientId, productId, dataBase64, fileName: file.name, fileType: "image", source: "static_generator" });
           added = { id: response.fileId, productId, fileName: file.name, fileType: "image", imageUrl: dataBase64 };
         }
         if (!mounted.current) return;
         setLoadError(false);
-        setSources((current) => ({ ...current, [uploadTab]: [...current[uploadTab], added] }));
+        setSources((current) => ({ ...current, [uploadTab]: uploadTab === "examples" ? [added, ...current[uploadTab]] : [...current[uploadTab], added] }));
         const limit = TABS.find((item) => item.key === uploadTab).limit;
         setSelected((current) => ({ ...current, [uploadTab]: [added.id, ...current[uploadTab]].slice(0, limit) }));
       }
+    } catch (err) { if (mounted.current) setError(err.message); }
+    finally { if (mounted.current) setBusy(false); }
+  };
+
+  const removeExample = async (id) => {
+    if (busy) return;
+    setBusy(true); setError(null);
+    try {
+      await creativeApi.deleteBrandExample(id);
+      if (!mounted.current) return;
+      setSources((current) => ({ ...current, examples: current.examples.filter((item) => item.id !== id) }));
+      setSelected((current) => ({ ...current, examples: current.examples.filter((value) => value !== id) }));
     } catch (err) { if (mounted.current) setError(err.message); }
     finally { if (mounted.current) setBusy(false); }
   };
@@ -157,7 +172,7 @@ export default function VisualInspiration({ productId, clientId, onChange }) {
           <p className="text-sm text-stone-600">{HELP[tab]}</p>
           <ErrorBanner message={error} />
           {error && <button type="button" className="cs-library-action" disabled={busy} onClick={() => setRetry((value) => value + 1)}>Reload sources</button>}
-          {tab !== "examples" && <>
+          <>
             <input ref={fileInput} type="file" accept="image/png,image/jpeg,image/webp" multiple hidden disabled={busy || loading} onChange={(event) => { upload(Array.from(event.target.files || [])); event.target.value = ""; }} />
             <button type="button" className={`cs-visual-upload ${dragging ? "is-dragging" : ""}`} disabled={busy || loading}
               onClick={() => fileInput.current?.click()}
@@ -165,9 +180,9 @@ export default function VisualInspiration({ productId, clientId, onChange }) {
               onDragLeave={() => setDragging(false)}
               onDrop={(event) => { event.preventDefault(); setDragging(false); if (!busy && !loading) upload(Array.from(event.dataTransfer.files)); }}>
               {busy ? <Loader2 size={28} className="animate-spin" /> : <Upload size={28} />}
-              <span>{busy ? "Uploading…" : "Drag & drop files here, or click to select files"}</span>
+              <span>{busy ? "Uploading…" : tab === "examples" ? "Upload brand ads that show your typography and look — handy before any ads are analyzed" : "Drag & drop files here, or click to select files"}</span>
             </button>
-          </>}
+          </>
           {tab === "products" && <div className="cs-visual-scraper">
             <label htmlFor="visual-product-url">Import from a product page</label>
             <div className="cs-visual-scraper-row">
@@ -183,7 +198,7 @@ export default function VisualInspiration({ productId, clientId, onChange }) {
               <button type="button" className="cs-library-action self-start" disabled={scrapeBusy || busy || !scrapedSelected.length} onClick={saveScraped}>Save selected images ({scrapedSelected.length})</button>
             </>}
           </div>}
-          {loading ? <p className="py-8 text-center text-sm">Loading visual sources…</p> : sources[tab].length === 0 ? (tab === "examples" ? <p className="py-8 text-center text-sm text-stone-500">No analyzed image ads yet. Run Insights analysis for this brand to add examples.</p> : null) : <div className="cs-visual-grid">
+          {loading ? <p className="py-8 text-center text-sm">Loading visual sources…</p> : sources[tab].length === 0 ? (tab === "examples" ? <p className="py-8 text-center text-sm text-stone-500">No analyzed image ads yet. Upload a few brand ads above, or run Insights analysis for this brand.</p> : null) : <div className="cs-visual-grid">
             {sources[tab].map((item) => {
               const checked = selected[tab].includes(item.id);
               const name = item.name || item.description || item.fileName || "Untitled image";
@@ -191,7 +206,8 @@ export default function VisualInspiration({ productId, clientId, onChange }) {
               return <label key={item.id} className={`cs-visual-card ${checked ? "is-selected" : ""} ${disabled ? "is-disabled" : ""}`}>
                 <img src={item.imageUrl} alt={name} loading="lazy" />
                 <input type="checkbox" className="cs-visual-checkbox" aria-label={`Select ${name}`} checked={checked} disabled={disabled} onChange={() => toggle(item.id)} />
-                <span className="cs-visual-name" title={name}>{name}</span>
+                <span className="cs-visual-name" title={name}>{item.uploaded ? `Uploaded · ${name}` : name}</span>
+                {item.uploaded && <button type="button" className="cs-visual-remove" aria-label={`Remove ${name}`} disabled={busy} onClick={(event) => { event.preventDefault(); removeExample(item.id); }}><X size={12} /></button>}
               </label>;
             })}
           </div>}
