@@ -17,4 +17,5 @@ export const CTA_OPTIONS = [
   { value: "LISTEN_NOW", label: "Listen Now" },
   { value: "WATCH_MORE", label: "Watch More" },
   { value: "GET_QUOTE", label: "Get Quote" },
+  { value: "ORDER_NOW", label: "Order Now" },
 ];
