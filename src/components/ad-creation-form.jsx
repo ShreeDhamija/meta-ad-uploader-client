@@ -50,6 +50,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuth } from "@/lib/AuthContext";
+import { CTA_OPTIONS } from "@/lib/ctaOptions";
 import usePartnershipAdPartners from "@/lib/usePartnershipAdPartners";
 import { deleteCopyTemplates } from "@/lib/deleteCopyTemplate";
 import { cleanupPublishedDraftMedia, createDraftShareUrl, listDrafts, refreshDraftMediaUrl } from "@/lib/draftApi";
@@ -105,6 +106,7 @@ const META_ACTION_REQUIRED_MESSAGE = "Meta requires you to take certain steps to
 const LEGACY_TEMPLATE_AD_NAME_USER_ID = "929470643071391";
 const PIXEL_TRACKING_FORM_ALLOWED_USER_IDS = ["10236978990363167", "10234447959963619", "10162737276661695", "10165258246808665", "10163704737102804", "28883613861256118", "10235270203720983"];
 const INSTANT_EXPERIENCE_USER_IDS = ["10236978990363167", "2901368380250453"];
+const PROMO_CODE_USER_IDS = ["10236978990363167", "10237991305022107", "25691565587159361"];
 const LOWERCASE_FILE_NAME_FORMULA_USER_IDS = ["27431350269900471"];
 const AD_SET_NAME_VARIABLE_TEAM_IDS = ["team_1777190523537_hmh1srk8j", "team_1787061148847_j1tmrxprb"];
 const PER_AD_SET_NAME_PLACEHOLDER = "__BLIP_PER_AD_SET_NAME__";
@@ -1439,6 +1441,10 @@ export default function AdCreationForm({
   const [delayedInvalidLink, setDelayedInvalidLink] = useState("");
   // const [isPostSelectorOpen, setIsPostSelectorOpen] = useState(false)
   const [linkCustomStates, setLinkCustomStates] = useState({}); // Track which carousel links are custom
+  const [promoCodeAutoDetect, setPromoCodeAutoDetect] = useState(false);
+  // Staging only: extra landing pages. Every ad is also launched once per extra landing page.
+  const [testMultipleLps, setTestMultipleLps] = useState(false);
+  const [extraLandingPages, setExtraLandingPages] = useState([]); // [{ url, custom }]
   const [instantExperiences, setInstantExperiences] = useState([]);
   const [instantExperiencesLoading, setInstantExperiencesLoading] = useState(false);
   const [instantExperiencesError, setInstantExperiencesError] = useState("");
@@ -3137,24 +3143,7 @@ export default function AdCreationForm({
     }
   }
 
-  const ctaOptions = [
-    { value: "LEARN_MORE", label: "Learn More" },
-    { value: "SHOP_NOW", label: "Shop Now" },
-    { value: "SIGN_UP", label: "Sign Up" },
-    { value: "SUBSCRIBE", label: "Subscribe" },
-    { value: "GET_OFFER", label: "Get Offer" },
-    { value: "CONTACT_US", label: "Contact Us" },
-    { value: "DOWNLOAD", label: "Download" },
-    { value: "BOOK_NOW", label: "Book Now" },
-    { value: "SEE_MORE", label: "See More" },
-    { value: "APPLY_NOW", label: "Apply Now" },
-    { value: "INSTALL_MOBILE_APP", label: "Install Now" },
-    { value: "CALL_NOW", label: "Call Now" },
-    { value: "SEE_DETAILS", label: "See Details" },
-    { value: "LISTEN_NOW", label: "Listen Now" },
-    { value: "WATCH_MORE", label: "Watch More" },
-    { value: "GET_QUOTE", label: "Get Quote" },
-  ];
+  const ctaOptions = CTA_OPTIONS;
 
   const selectedCtaLabel = ctaOptions.find((option) => option.value === cta)?.label;
   const lowerCtaSearch = ctaSearch.toLowerCase();
@@ -5639,6 +5628,7 @@ export default function AdCreationForm({
       return adSet?.destination_type === "ON_AD";
     });
   }, [adSets, duplicateAdSet, selectedAdSets]);
+  const supportsPromoCode = PROMO_CODE_USER_IDS.includes(String(userId || ""));
   const supportsInstantExperience =
     INSTANT_EXPERIENCE_USER_IDS.includes(String(userId || "")) &&
     !isCatalogueAd &&
@@ -6107,6 +6097,8 @@ export default function AdCreationForm({
       adScheduleEndTime,
       phoneNumber,
       adSets,
+      promoCodeAutoDetect: jobPromoCodeAutoDetect = false,
+      extraLandingPages: jobExtraLandingPages = [],
     } = jobData.formData;
 
     const isCatalogueJob = adType === "catalogue";
@@ -7696,6 +7688,7 @@ export default function AdCreationForm({
       };
       const queueCreateAdPromise = (formData, metadata = {}) => {
         if (isPoliticalAd) formData.append("isPoliticalAd", "true");
+        if (jobPromoCodeAutoDetect) formData.append("promoCodeAutoDetect", "true");
         const queuedAdName = formData.get("adName");
         if (typeof queuedAdName === "string" && queuedAdName.includes(PER_AD_SET_NAME_PLACEHOLDER)) {
           const queuedAdSetId = formData.get("adSetId");
@@ -7723,6 +7716,34 @@ export default function AdCreationForm({
           ...metadata,
           draftMediaRefs: draftMediaForRequest(formData),
         });
+
+        // Test multiple LPs: the same ad again for each extra landing page (existing posts keep their own link).
+        if (jobExtraLandingPages.length > 0 && formData.has("link") && !formData.has("postId") && !formData.has("creativeId")) {
+          const slugOf = (url) => {
+            const path = (url || "").replace(/^https?:\/\//, "");
+            const lastSlashIndex = path.lastIndexOf("/");
+            return lastSlashIndex > 0 && lastSlashIndex < path.length - 1 ? path.substring(lastSlashIndex + 1) : "";
+          };
+          const usesUrlSlug = /\{\{URL Slug\}\}/i.test(jobData.formData.adNameFormulaV2?.rawInput || "");
+          const baseSlug = slugOf(link[0]);
+          jobExtraLandingPages.forEach((landingPage) => {
+            const lpFormData = new FormData();
+            for (const [key, value] of formData.entries()) lpFormData.append(key, value);
+            lpFormData.set("link", JSON.stringify([landingPage]));
+            lpFormData.set("clientRequestId", uuidv4());
+            const lpAdName = formData.get("adName");
+            if (usesUrlSlug && baseSlug && typeof lpAdName === "string") {
+              lpFormData.set("adName", lpAdName.replaceAll(baseSlug, slugOf(landingPage)));
+            }
+            promises.push(createAdApiCall(lpFormData, API_BASE_URL, signal));
+            promiseMetadata.push({
+              adSetId: lpFormData.get("adSetId"),
+              adName: lpFormData.get("adName"),
+              ...metadata,
+              draftMediaRefs: draftMediaForRequest(lpFormData),
+            });
+          });
+        }
       };
 
       // Pre-compute common JSON strings and values
@@ -9412,11 +9433,31 @@ export default function AdCreationForm({
       return;
     }
 
+    const extraLandingPageUrls = IS_STAGING && testMultipleLps ? extraLandingPages.map((entry) => entry.url.trim()).filter(Boolean) : [];
+    if (IS_STAGING && testMultipleLps) {
+      if (extraLandingPageUrls.length === 0) {
+        toast.error("Add at least one more landing page, or turn off Test multiple LPs");
+        return;
+      }
+      const invalidLandingPage = extraLandingPageUrls.find((url) => !isValidDomainLink(url));
+      if (invalidLandingPage) {
+        toast.error(`${invalidLandingPage} is not a valid URL`);
+        return;
+      }
+    }
+
     const shouldShowVariantLabel = newJobs.some((job) => job.variantId !== "default");
-    const queuedJobs = newJobs.map((job) => ({
-      ...job,
-      showVariantLabel: shouldShowVariantLabel,
-    }));
+    const queuedJobs = newJobs.map((job) => {
+      // Extra landing pages only apply to a single website link (not per-card carousel links).
+      const jobExtraLandingPages =
+        !isCatalogueAd && job.formData.destinationType === "website" && job.formData.link?.length === 1 ? extraLandingPageUrls : [];
+      return {
+        ...job,
+        adCount: job.adCount * (1 + jobExtraLandingPages.length),
+        showVariantLabel: shouldShowVariantLabel,
+        formData: { ...job.formData, promoCodeAutoDetect: supportsPromoCode && promoCodeAutoDetect, extraLandingPages: jobExtraLandingPages },
+      };
+    });
 
     // All form/media snapshots above are captured before any network request.
     const prepareSharedAdSet = shareNewAdSet && variants.length > 1 && queuedJobs.some((job) => job.formData.duplicateAdSet);
@@ -11573,25 +11614,108 @@ export default function AdCreationForm({
                               </div>
                             )}
 
-                            {/* Checkbox toggle - only show if they have saved links */}
-                            {availableLinks.length > 0 && (
-                              <div className="flex items-center space-x-2">
-                                <Checkbox
-                                  id="custom-link-toggle"
-                                  checked={showCustomLink}
-                                  onCheckedChange={(checked) => {
-                                    setShowCustomLink(checked);
-                                    if (!checked) {
-                                      setCustomLink("");
-                                      const dropdownValue = defaultLink?.url || "";
-                                      handleSavedLinkSelect(dropdownValue);
-                                    }
-                                  }}
-                                  className="border-gray-300 w-4 h-4 rounded-md"
-                                />
-                                <label htmlFor="custom-link-toggle" className="text-xs font-medium text-gray-600">
-                                  Enter custom link
-                                </label>
+                            {(availableLinks.length > 0 || IS_STAGING) && (
+                              <div className="flex items-center justify-between gap-3">
+                                {/* Checkbox toggle - only show if they have saved links */}
+                                {availableLinks.length > 0 && (
+                                  <div className="flex items-center space-x-2">
+                                    <Checkbox
+                                      id="custom-link-toggle"
+                                      checked={showCustomLink}
+                                      onCheckedChange={(checked) => {
+                                        setShowCustomLink(checked);
+                                        if (!checked) {
+                                          setCustomLink("");
+                                          const dropdownValue = defaultLink?.url || "";
+                                          handleSavedLinkSelect(dropdownValue);
+                                        }
+                                      }}
+                                      className="border-gray-300 w-4 h-4 rounded-md"
+                                    />
+                                    <label htmlFor="custom-link-toggle" className="text-xs font-medium text-gray-600">
+                                      Enter custom link
+                                    </label>
+                                  </div>
+                                )}
+                                {IS_STAGING && (
+                                  <div className="flex items-center space-x-2">
+                                    <Checkbox
+                                      id="test-multiple-lps"
+                                      checked={testMultipleLps}
+                                      onCheckedChange={(checked) => {
+                                        setTestMultipleLps(checked === true);
+                                        setExtraLandingPages(checked === true ? [{ url: "", custom: availableLinks.length === 0 }] : []);
+                                      }}
+                                      disabled={!isLoggedIn}
+                                      className="border-gray-300 w-4 h-4 rounded-md"
+                                    />
+                                    <label htmlFor="test-multiple-lps" className="text-xs font-medium text-gray-600">
+                                      Test multiple LPs
+                                    </label>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {IS_STAGING && testMultipleLps && (
+                              <div className="space-y-2">
+                                {extraLandingPages.map((entry, index) => {
+                                  const updateEntry = (patch) =>
+                                    setExtraLandingPages((previous) => previous.map((item, i) => (i === index ? { ...item, ...patch } : item)));
+                                  return (
+                                    <div key={index} className="flex items-center gap-2">
+                                      <div className="flex-1 min-w-0">
+                                        {availableLinks.length > 0 && !entry.custom ? (
+                                          <SavedLinkSelector
+                                            links={availableLinks}
+                                            value={entry.url}
+                                            onValueChange={(url) => updateEntry({ url })}
+                                            disabled={!isLoggedIn}
+                                            className={formFieldChrome}
+                                          />
+                                        ) : (
+                                          <Input
+                                            type="text"
+                                            value={entry.url}
+                                            onChange={(e) => updateEntry({ url: e.target.value })}
+                                            className={cn("w-full", formInputChrome)}
+                                            placeholder="https://example.com"
+                                            disabled={!isLoggedIn}
+                                          />
+                                        )}
+                                      </div>
+                                      {availableLinks.length > 0 && (
+                                        <button
+                                          type="button"
+                                          onClick={() => updateEntry({ custom: !entry.custom, url: "" })}
+                                          className="text-xs font-medium text-gray-500 hover:text-gray-700 whitespace-nowrap"
+                                        >
+                                          {entry.custom ? "Saved" : "Custom"}
+                                        </button>
+                                      )}
+                                      <button
+                                        type="button"
+                                        onClick={() => setExtraLandingPages((previous) => previous.filter((_, i) => i !== index))}
+                                        className="p-0.5 rounded-full text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                                        title="Remove landing page"
+                                      >
+                                        <X className="w-3.5 h-3.5" />
+                                      </button>
+                                    </div>
+                                  );
+                                })}
+                                <button
+                                  type="button"
+                                  onClick={() => setExtraLandingPages((previous) => [...previous, { url: "", custom: availableLinks.length === 0 }])}
+                                  disabled={!isLoggedIn}
+                                  className="flex items-center text-xs font-medium text-gray-600 hover:text-gray-800"
+                                >
+                                  <Plus className="mr-1 h-3.5 w-3.5" />
+                                  Add landing page
+                                </button>
+                                <p className="text-gray-500 text-[12px]">
+                                  You're making {1 + extraLandingPages.length} ads per creative, one for each landing page.
+                                </p>
                               </div>
                             )}
                           </div>
@@ -12744,6 +12868,27 @@ export default function AdCreationForm({
               </Label>
             </div>
           )}
+          {supportsPromoCode && (
+          <div className="space-y-1">
+            <div className="flex items-center space-x-2 rounded-xl transition-colors duration-150">
+              <Checkbox
+                id="promoCodeAutoDetect"
+                checked={promoCodeAutoDetect}
+                onCheckedChange={(checked) => setPromoCodeAutoDetect(checked === true)}
+                disabled={!isLoggedIn}
+                className="rounded-md focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+              />
+              <Label htmlFor="promoCodeAutoDetect" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                Promo code
+              </Label>
+            </div>
+            {promoCodeAutoDetect && (
+              <p className="text-gray-500 text-[12px] pl-6">
+                This only works if Meta can auto-detect a promo code in your primary text.
+              </p>
+            )}
+          </div>
+          )}
         </form>
       </CardContent>
       {showSaveNewDialog && (
@@ -12848,8 +12993,9 @@ export default function AdCreationForm({
                 <li>
                   Columns Supported: <strong>Campaign Name</strong>, <strong>Ad Set Name</strong>, <strong>Ad Name</strong>,{" "}
                   <strong>Facebook Page</strong>, <strong>URL</strong>, <strong>Google Drive Link</strong>, <strong>Primary Text</strong>,{" "}
-                  <strong>Headlines</strong> and <strong>Descriptions</strong> 1 through 5.
+                  <strong>Headlines</strong> and <strong>Descriptions</strong> 1 through 5, and <strong>CTA</strong>.
                 </li>
+                <li>CTA takes any call to action from the form's CTA list, e.g. Shop Now or Learn More.</li>
                 <li>Ad Name and Facebook Page are suggested to be setup in preferences.</li>
                 <li>All other columns are optional and can be omitted.</li>
                 <li>

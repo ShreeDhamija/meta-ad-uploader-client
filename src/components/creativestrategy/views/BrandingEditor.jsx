@@ -15,6 +15,7 @@ const EMPTY = {
   primaryColors: [], secondaryColors: [], accentColors: [], fonts: [],
   logoUrl: "", logoUsageRules: "", toneOfVoice: "", writingStyle: "",
   bannedWords: [], preferredVocabulary: [], reviewLanguageSnippets: [], copyDocText: "",
+  complianceNotes: "", complianceProhibitedPhrases: [],
 };
 const ASSET_TYPES = ["hero_product", "ui_screenshot", "phone_mockup", "illustration", "brand_mark", "lifestyle"];
 const INPUT = "w-full rounded-xl border border-[#6c3403]/15 bg-white px-3 py-2.5 text-sm text-neutral-800 outline-none transition placeholder:text-neutral-400 focus:border-[#6c3403]/45 focus:ring-2 focus:ring-[#6c3403]/10";
@@ -66,6 +67,7 @@ export default function BrandingEditor({ clientId, productId, productName }) {
         toneOfVoice: gd.toneOfVoice || "", writingStyle: gd.writingStyle || "",
         bannedWords: gd.bannedWords || [], preferredVocabulary: gd.preferredVocabulary || [],
         reviewLanguageSnippets: snippetRows(gd.reviewLanguageSnippets), copyDocText: gd.copyDocText || "",
+        complianceNotes: gd.complianceNotes || "", complianceProhibitedPhrases: gd.complianceProhibitedPhrases || [],
       };
       setG(next);
       setLoadedGuidelines(next);
@@ -206,6 +208,13 @@ export default function BrandingEditor({ clientId, productId, productName }) {
             <div className="grid gap-4">
               <TagsField label="Preferred vocabulary" placeholder="clinically tested, everyday confidence, built to last" values={g.preferredVocabulary} onChange={(v) => setG({ ...g, preferredVocabulary: v })} />
               <TagsField label="Banned words and phrases" placeholder="miracle, guaranteed, cheap" values={g.bannedWords} onChange={(v) => setG({ ...g, bannedWords: v })} />
+            </div>
+          </GuidelineCard>
+
+          <GuidelineCard icon={ShieldCheck} title="Compliance (regulated brands)" description="Optional. Legal claim limits every copy and image generator must follow.">
+            <div className="grid gap-4">
+              <Field label="What the brand may and may not claim"><textarea rows={4} value={g.complianceNotes} onChange={(e) => setG({ ...g, complianceNotes: e.target.value })} placeholder="Can say clinically studied. Cannot claim it cures, treats or is FDA approved…" className={INPUT} /></Field>
+              <TagsField label="Hard-blocked phrases" placeholder="cure, guaranteed results, FDA approved" values={g.complianceProhibitedPhrases} onChange={(v) => setG({ ...g, complianceProhibitedPhrases: v })} />
             </div>
           </GuidelineCard>
 

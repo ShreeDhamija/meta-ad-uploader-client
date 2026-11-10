@@ -26,6 +26,7 @@ const CTA_OPTIONS = [
     { label: "Listen Now", value: "LISTEN_NOW" },
     { label: "Watch More", value: "WATCH_MORE" },
     { label: "Get Quote", value: "GET_QUOTE" },
+    { label: "Order Now", value: "ORDER_NOW" },
 ];
 
 function DefaultCTA({ defaultCTA, setDefaultCTA }) {

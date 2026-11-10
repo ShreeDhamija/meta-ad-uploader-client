@@ -5,6 +5,7 @@ import AIGroupingImage from "@/assets/onboarding/AIGrouping.webp"
 import JobQueueingImage from "@/assets/onboarding/JobQueueing.webp"
 import AnalyticsPopup from "@/assets/onboarding/AnalyticsPopup.webp"
 import TikTok from "@/assets/onboarding/TikTok.webp"
+import AnalyticsUpdate from "@/assets/onboarding/Analytics_Update.webp"
 
 // Cards added on/before this date are treated as already-seen for users who
 // completed legacy onboarding (hasSeenOnboarding=true). Only future cards
@@ -86,6 +87,20 @@ export const ONBOARDING_CARDS = [
         body: "Launch ads for your tiktok account just like Meta by linking it through preferences!",
         addedAt: "2026-09-28",
         existingUsersOnly: false,
+    },
+    {
+        id: "analyticsUpdate",
+        title: "Analytics Update",
+        image: AnalyticsUpdate,
+        heading: "Analytics Just Got a Big Upgrade",
+        body: "Account overview, audience breakdowns, top & underperforming copy, advanced ad performance filters, custom budget recommendation tuning, new reports & Slack alerts.",
+        addedAt: "2026-11-03",
+        existingUsersOnly: true,
+        bodyMaxWidth: 540,
+        singleCardAction: {
+            label: "Go to Analytics",
+            path: "/analytics",
+        },
     },
 ]
 

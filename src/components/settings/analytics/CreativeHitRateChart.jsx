@@ -12,6 +12,7 @@ import { Image as ImageIcon, Trophy, ExternalLink, ChevronDown, BadgePercent } f
 import { Card, CardContent } from "@/components/ui/card"
 import { Tooltip as ShadTooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
+import { InlineThresholdApply, InlineThresholdInput, useThresholdDraft } from "./InlineThreshold"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "https://api.withblip.com"
 
@@ -164,8 +165,26 @@ function MonthTabSwitcher({ months, selectedMonth, onSelect }) {
     )
 }
 
-export default function CreativeHitRateChart({ adAccountId, conversionEvent, refreshKey, className }) {
-    const [data, setData] = useState(null)
+export default function CreativeHitRateChart({ adAccountId, conversionEvent, refreshKey, winnerMultiple = 10, onWinnerMultipleChange, className }) {
+    const winnerDraft = useThresholdDraft(winnerMultiple, onWinnerMultipleChange)
+    // Fetched once; winners are worked out here from each creative's spend and the
+    // account's average CPA, so editing the multiple re-scores instantly instead of
+    // re-reading six months of ads from Meta.
+    const [fetchedData, setData] = useState(null)
+    const data = useMemo(() => {
+        if (!fetchedData?.months) return fetchedData
+        const winnerThreshold = fetchedData.accountAvgCPA ? fetchedData.accountAvgCPA * winnerMultiple : null
+        const creativesByMonth = {}
+        const months = fetchedData.months.map(m => {
+            const creatives = (fetchedData.creativesByMonth?.[m.month] || [])
+                .map(c => ({ ...c, isWinner: winnerThreshold != null && c.spend >= winnerThreshold }))
+                .sort((a, b) => (a.isWinner !== b.isWinner ? (a.isWinner ? -1 : 1) : b.spend - a.spend))
+            creativesByMonth[m.month] = creatives
+            const winners = creatives.filter(c => c.isWinner).length
+            return { ...m, winners, hitRate: m.launches > 0 ? Math.round((winners / m.launches) * 1000) / 10 : null }
+        })
+        return { ...fetchedData, winnerThreshold, winnerCpaMultiple: winnerMultiple, months, creativesByMonth }
+    }, [fetchedData, winnerMultiple])
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState(null)
     const [selectedMonth, setSelectedMonth] = useState(null)
@@ -261,8 +280,11 @@ export default function CreativeHitRateChart({ adAccountId, conversionEvent, ref
                             )}
                         </h2>
                         <p className="mt-1 text-sm text-gray-500">
-                            Unique creative launches per month. Winners reach 10× the account&apos;s average CPA in spend within 90 days of launch.
+                            Unique creative launches per month. Winners reach
+                            <InlineThresholdInput {...winnerDraft} suffix="×" step="0.5" disabled={!onWinnerMultipleChange} />
+                            the account&apos;s average CPA in spend within 90 days of launch.
                             {hasMaturingMonth && " Recent months still maturing."}
+                            <InlineThresholdApply {...winnerDraft} />
                         </p>
                     </div>
 

@@ -36,7 +36,7 @@ const META_COUNTRIES = [{ "value": "AD", "label": "Andorra" }, { "value": "AE", 
 
 // Add constant
 const ADVANTAGE_PLUS_TYPES = ["AUTOMATED_SHOPPING_ADS", "SMART_APP_PROMOTION"];
-const ACTIVE_ONLY_DROPDOWN_USER_IDS = ["10236978990363167", "10235270203720983"];
+const ACTIVE_ONLY_DROPDOWN_USER_IDS = ["10235270203720983"];
 const DROPDOWN_MAX_WIDTH = "min(calc(100vw - 2rem), 850px)";
 const dropdownContentStyle = {
   minWidth: "var(--radix-popover-trigger-width)",

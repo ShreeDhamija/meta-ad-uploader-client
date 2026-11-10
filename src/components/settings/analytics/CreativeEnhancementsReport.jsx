@@ -1036,9 +1036,7 @@ export default function CreativeEnhancementsReport({ open, onOpenChange, adAccou
                                             </p>
                                         </div>
                                     ) : (
-                                        <p className="text-sm" style={{ color: MUTED, margin: 0 }}>
-                                            Switch an enhancement off to queue a change
-                                        </p>
+                                        <span />
                                     )}
                                     <div className="flex items-center gap-2 flex-shrink-0">
                                         <Button
@@ -1047,7 +1045,7 @@ export default function CreativeEnhancementsReport({ open, onOpenChange, adAccou
                                             onClick={() => setConfirmBulk(true)}
                                             disabled={isApplying || loadedEnabledCount === 0}
                                         >
-                                            Turn off all on loaded ads
+                                            Turn off all Enhancements for all loaded ads
                                         </Button>
                                         <Button
                                             size="sm"

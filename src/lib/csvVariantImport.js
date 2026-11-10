@@ -3,8 +3,8 @@
 // Parses a campaign/ad-set/copy CSV and turns each row into a "variant" snapshot
 // (the same shape Home.jsx captures for its variant tabs). Campaign and ad-set
 // NAMES from the CSV are fuzzy-matched to the real IDs in the selected ad
-// account; copy, links and optional Facebook Page overrides come from the row;
-// Instagram, CTA, UTMs and everything else are inherited from the current form
+// account; copy, links and optional Facebook Page and CTA overrides come from the
+// row; Instagram, UTMs and everything else are inherited from the current form
 // state (the base snapshot). Optionally, a Google Drive file link found in any
 // cell is fetched and auto-assigned to that row's variant.
 //
@@ -12,6 +12,7 @@
 // state + setters it needs via `ctx`, so Home.jsx stays a thin wrapper.
 
 import Papa from "papaparse";
+import { CTA_OPTIONS } from "./ctaOptions";
 
 // --- name normalisation + fuzzy matching ------------------------------------
 
@@ -164,7 +165,23 @@ const CSV_COLUMNS = {
   description: ["Description", "Descriptions"],
   facebookPage: ["Facebook Page", "Facebook Page Name", "Page Name", "Page"],
   websiteUrl: ["Website URL", "Website", "Destination URL", "URL"],
+  cta: ["CTA", "Call To Action", "Call-To-Action"],
 };
+
+// Resolve a CSV CTA cell ("Shop Now", "shop now", "SHOP_NOW", one small typo)
+// to the form's CTA value, matching either its label or its value. Returns
+// null when nothing matches unambiguously.
+const normalizeCta = (value = "") => String(value).toLowerCase().replace(/[^a-z0-9]/g, "");
+export function resolveCtaValue(input) {
+  const wanted = normalizeCta(input);
+  if (!wanted) return null;
+  const exact = CTA_OPTIONS.find((option) => normalizeCta(option.label) === wanted || normalizeCta(option.value) === wanted);
+  if (exact) return exact.value;
+  const close = CTA_OPTIONS.filter((option) =>
+    [option.label, option.value].some((name) => levenshtein(wanted, normalizeCta(name)) <= 1)
+  );
+  return close.length === 1 ? close[0].value : null;
+}
 
 export function extractRowFields(row) {
   const primaryTexts = readNumberedFields(row, CSV_COLUMNS.primaryText);
@@ -182,6 +199,7 @@ export function extractRowFields(row) {
     // The ad's destination. (The CSV's "Display Link" is an ad-account-level
     // setting, not a per-variant field, so it isn't imported here.)
     websiteUrl: readField(row, CSV_COLUMNS.websiteUrl),
+    cta: readField(row, CSV_COLUMNS.cta),
   };
 }
 
@@ -302,6 +320,7 @@ export async function importVariantsFromCsv(file, ctx) {
         fields.adName ||
         fields.facebookPage ||
         fields.websiteUrl ||
+        fields.cta ||
         driveFileId
     );
 
@@ -426,6 +445,12 @@ export async function importVariantsFromCsv(file, ctx) {
       snap.link = [fields.websiteUrl];
       snap.customLink = fields.websiteUrl;
       snap.showCustomLink = true;
+    }
+    if (fields.cta) {
+      // An unrecognised CTA keeps the form's current CTA.
+      const ctaValue = resolveCtaValue(fields.cta);
+      if (ctaValue) snap.cta = ctaValue;
+      else addWarning("CTA", `Row ${rowNum}: CTA "${fields.cta}" is not one of the form's CTA options`);
     }
 
     if (fields.campaignName) {
