@@ -336,10 +336,12 @@ const getPlacementLabel = (id) =>
   TIKTOK_PLACEMENT_OPTIONS.find((p) => p.id === id)?.label ||
   id.replace(/^PLACEMENT_/, "").toLowerCase().replace(/(^|_)(\w)/g, (_, sep, c) => (sep ? " " : "") + c.toUpperCase());
 
-// Placements an ad group runs on. Automatic placement (or no placement data) means all of them.
+// Placements an ad group runs on. TikTok lists them even for automatic placement
+// (e.g. TikTok + Pangle for a website campaign); with no placement data, assume all of them.
+// Must match TikTokDuplicationService.applyPlacementExclusions on the server.
 const getAdGroupPlacements = (adGroup) => {
   const placements = Array.isArray(adGroup?.placements) ? adGroup.placements : [];
-  if (adGroup?.placement_type === "PLACEMENT_TYPE_AUTOMATIC" || placements.length === 0) {
+  if (placements.length === 0) {
     return TIKTOK_PLACEMENT_OPTIONS.map((p) => p.id);
   }
   return placements;
@@ -2197,7 +2199,8 @@ export default function TikTokAdCreationForm({
             ad_count: 0,
             operation_status: "DISABLE",
             secondary_status: "DISABLE",
-            ...(excludedAdGroupPlacements?.length > 0 && {
+            // Mirrors the server: exclusions or an automatic source make the copy manual placement
+            ...((excludedAdGroupPlacements?.length > 0 || sourceAg.placement_type === "PLACEMENT_TYPE_AUTOMATIC") && {
               placement_type: "PLACEMENT_TYPE_NORMAL",
               placements: getAdGroupPlacements(sourceAg).filter((id) => !excludedAdGroupPlacements.includes(id)),
             }),
