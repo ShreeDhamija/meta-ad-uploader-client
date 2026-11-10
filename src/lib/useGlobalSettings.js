@@ -11,6 +11,7 @@ export default function useGlobalSettings() {
     const [hasSeenPowerupPopup, setHasSeenPowerupPopup] = useState(false);
     const [hasImportedCsv, setHasImportedCsv] = useState(false);
     const [hasSeenCsvImportGuide, setHasSeenCsvImportGuide] = useState(false);
+    const [hasSeenVariantsGuide, setHasSeenVariantsGuide] = useState(false);
     const [seenOnboardingCards, setSeenOnboardingCards] = useState([]);
     const [selectedAdAccountIds, setSelectedAdAccountIds] = useState([])
     const [selectedTikTokAdvertiserIds, setSelectedTikTokAdvertiserIds] = useState([])
@@ -41,6 +42,7 @@ export default function useGlobalSettings() {
             setHasImportedCsv(data?.settings?.hasImportedCsv || false);
             const csvImportGuideSeen = data?.settings?.hasSeenCsvImportGuide || false;
             setHasSeenCsvImportGuide(csvImportGuideSeen);
+            setHasSeenVariantsGuide(data?.settings?.hasSeenVariantsGuide || false);
             setSeenOnboardingCards(
                 Array.isArray(data?.settings?.seenOnboardingCards)
                     ? data.settings.seenOnboardingCards
@@ -70,6 +72,8 @@ export default function useGlobalSettings() {
             setHasSeenPowerupPopup(false);
             setHasImportedCsv(false);
             setHasSeenCsvImportGuide(false);
+            // Don't pop the variants guide on a failed load; it shows once settings load.
+            setHasSeenVariantsGuide(true);
             setSeenOnboardingCards([]);
             setUploadSources(['local', 'drive', 'dropbox']);
         } finally {
@@ -123,6 +127,8 @@ export default function useGlobalSettings() {
         setHasImportedCsv,
         hasSeenCsvImportGuide,
         setHasSeenCsvImportGuide,
+        hasSeenVariantsGuide,
+        setHasSeenVariantsGuide,
         seenOnboardingCards,
         setSeenOnboardingCards,
         effectiveSeenOnboardingIds,

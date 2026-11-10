@@ -1604,7 +1604,28 @@ export default function AdCreationForm({
     setHasImportedCsv,
     hasSeenCsvImportGuide,
     setHasSeenCsvImportGuide,
+    hasSeenVariantsGuide,
+    setHasSeenVariantsGuide,
+    loading: globalSettingsLoading,
   } = useGlobalSettings();
+  // One-time guide shown over the variant pill the first time a user splits ad data into variants.
+  const [variantsGuideDismissed, setVariantsGuideDismissed] = useState(false);
+  const showVariantsGuide = variants.length > 1 && !globalSettingsLoading && !hasSeenVariantsGuide && !variantsGuideDismissed;
+  const dismissVariantsGuide = useCallback(() => {
+    setVariantsGuideDismissed(true);
+    setHasSeenVariantsGuide(true);
+    void saveSettings({ globalSettings: { hasSeenVariantsGuide: true } }).catch((err) => {
+      console.error("Failed to save variants guide flag:", err);
+    });
+  }, [setHasSeenVariantsGuide]);
+  useEffect(() => {
+    if (!showVariantsGuide) return undefined;
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") dismissVariantsGuide();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [showVariantsGuide, dismissVariantsGuide]);
   const [uploadSources, setUploadSourcesLocal] = useState(globalUploadSources);
   const [uploadSourcesDirty, setUploadSourcesDirty] = useState(false);
   const [uploadSourcesOpen, setUploadSourcesOpen] = useState(false);
@@ -9580,6 +9601,33 @@ export default function AdCreationForm({
     if (!importedActivePost) return;
     setImportedPostAdNames((prev) => ({ ...prev, [importedActiveKey]: value }));
   };
+  const hasMediaForAdPreview =
+    files.length > 0 ||
+    driveFiles.length > 0 ||
+    dropboxFiles.length > 0 ||
+    frameioFiles.length > 0 ||
+    oneDriveFiles.length > 0 ||
+    importedFiles.length > 0 ||
+    importedPosts.length > 0 ||
+    selectedIgOrganicPosts.length > 0;
+  // Shortcuts into "Split Ad Data" (variants) from the fields people most often want to vary per ad.
+  // Same rule as the media preview's Split Ad Data button: shown once media is added and before any split.
+  const canStartVariantsFromForm =
+    variants.length === 1 && hasMediaForAdPreview && !showImportedPostMode && typeof handleAddVariant === "function";
+  const renderStartVariantsLink = (label, className = "") =>
+    canStartVariantsFromForm ? (
+      <button
+        type="button"
+        onClick={handleAddVariant}
+        disabled={!isLoggedIn}
+        className={cn(
+          "shrink-0 whitespace-nowrap text-xs text-gray-700 underline decoration-dotted decoration-gray-500 underline-offset-[3px] transition hover:text-black disabled:cursor-not-allowed disabled:opacity-50",
+          className,
+        )}
+      >
+        {label}
+      </button>
+    ) : null;
   const adNameSection = (
     <div id="adName" className="space-y-1">
       <Label htmlFor="adName" className="flex items-center justify-between w-full">
@@ -9622,20 +9670,14 @@ export default function AdCreationForm({
       />
 
       {!showImportedPostMode && (
-        <div className="mt-1">
-          <Label className="text-xs text-gray-500">
+        <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          <Label className="min-w-0 text-xs text-gray-500 [overflow-wrap:anywhere]">
             Ad Name Preview:{" "}
-            {files.length > 0 ||
-              driveFiles.length > 0 ||
-              dropboxFiles.length > 0 ||
-              frameioFiles.length > 0 ||
-              oneDriveFiles.length > 0 ||
-              importedFiles.length > 0 ||
-              importedPosts.length > 0 ||
-              selectedIgOrganicPosts.length > 0
+            {hasMediaForAdPreview
               ? computeAdNameFromFormula(adNamePreviewFile, 0, link[0], null, adType)
               : "Upload a file to see example"}
           </Label>
+          {renderStartVariantsLink("Customize Ad Name per Ad", "ml-auto")}
         </div>
       )}
     </div>
@@ -11218,7 +11260,7 @@ export default function AdCreationForm({
                     </div>}
 
                     {!isCarouselAd && (!isProfileDestinationEngagement || profileSupportsDescriptions) && (
-                      <div className="flex items-center space-x-2 pt-1">
+                      <div className="flex items-center gap-2 pt-1">
                         <Checkbox
                           id="addDescriptions"
                           checked={addDescriptions}
@@ -11229,6 +11271,8 @@ export default function AdCreationForm({
                         <label htmlFor="addDescriptions" className="text-xs text-gray-600 cursor-pointer">
                           Add Descriptions
                         </label>
+                        {/* With descriptions on, this link moves below the last description field. */}
+                        {!addDescriptions && renderStartVariantsLink("Customize Copy Per Ad", "ml-auto")}
                       </div>
                     )}
 
@@ -11368,6 +11412,9 @@ export default function AdCreationForm({
                             </>
                           )}
                         </div>
+                        {canStartVariantsFromForm && (
+                          <div className="flex justify-end">{renderStartVariantsLink("Customize Copy Per Ad")}</div>
+                        )}
                       </div>
                     )}
 
@@ -13179,8 +13226,56 @@ export default function AdCreationForm({
           </Button>
         </div>
       )}
+      {showVariantsGuide && (
+        <>
+          <div
+            aria-hidden="true"
+            className="fixed inset-0 z-[60] bg-black/60 animate-in fade-in duration-200"
+            onClick={dismissVariantsGuide}
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="variants-guide-title"
+            className="fixed bottom-[6.5rem] left-1/2 z-[62] w-[min(24rem,calc(100vw-2rem))] -translate-x-1/2 rounded-3xl bg-white p-5 pr-10 text-gray-900 shadow-2xl animate-in fade-in slide-in-from-bottom-2 duration-300"
+          >
+            <button
+              type="button"
+              onClick={dismissVariantsGuide}
+              aria-label="Close variants guide"
+              className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-full text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
+            >
+              <X className="h-4 w-4" />
+            </button>
+            <h2 id="variants-guide-title" className="sr-only">About variants</h2>
+            <ol className="space-y-3 text-sm leading-snug">
+              {[
+                "You are now creating 'variants' of the ad data.",
+                "You can then assign the different media files to different variants on the right panel.",
+                "In each variant you can change the copy, ad name, ad set posted to, landing page URL and more!",
+              ].map((text, index) => (
+                <li key={index} className="flex gap-3">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-[11px] font-semibold text-white">
+                    {index + 1}
+                  </span>
+                  <span>{text}</span>
+                </li>
+              ))}
+            </ol>
+            {/* Pointer toward the variant pill below */}
+            <span aria-hidden="true" className="absolute -bottom-1.5 left-1/2 h-3 w-3 -translate-x-1/2 rotate-45 bg-white" />
+          </div>
+        </>
+      )}
       {variants.length > 1 && (
-        <div className="fixed bottom-6 left-1/2 z-40 flex max-w-[calc(100vw-1rem)] -translate-x-1/2 items-center gap-2 rounded-full border border-black bg-black px-2 py-2 text-white shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-300">
+        <div
+          // Raised above the guide's overlay so the pill stays visible; any click on it also closes the guide.
+          onClickCapture={showVariantsGuide ? dismissVariantsGuide : undefined}
+          className={cn(
+            "fixed bottom-6 left-1/2 flex max-w-[calc(100vw-1rem)] -translate-x-1/2 items-center gap-2 rounded-full border border-black bg-black px-2 py-2 text-white shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-300",
+            showVariantsGuide ? "z-[61]" : "z-40",
+          )}
+        >
           <ScrollArea type="always" className={cn("rounded-full", shouldScrollVariantPicker && "w-[34rem] max-w-[calc(100vw-9rem)] pb-2")}>
             <div className="flex w-max items-center gap-1 pr-1">
               {variants.map((variant) => {
