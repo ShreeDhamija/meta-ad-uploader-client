@@ -13043,6 +13043,10 @@ export default function AdCreationForm({
                   <strong>Headlines</strong> and <strong>Descriptions</strong> 1 through 5, and <strong>CTA</strong>.
                 </li>
                 <li>CTA takes any call to action from the form's CTA list, e.g. Shop Now or Learn More.</li>
+                <li>
+                  For a placement-customized ad, fill <strong>Google Drive Link 2</strong> and <strong>3</strong> (optional) with the other
+                  sizes of the same creative. The 2–3 files in one row become one ad.
+                </li>
                 <li>Ad Name and Facebook Page are suggested to be setup in preferences.</li>
                 <li>All other columns are optional and can be omitted.</li>
                 <li>

@@ -5,8 +5,9 @@
 // NAMES from the CSV are fuzzy-matched to the real IDs in the selected ad
 // account; copy, links and optional Facebook Page and CTA overrides come from the
 // row; Instagram, UTMs and everything else are inherited from the current form
-// state (the base snapshot). Optionally, a Google Drive file link found in any
-// cell is fetched and auto-assigned to that row's variant.
+// state (the base snapshot). Optionally, Google Drive file links found in the
+// row's cells (up to 3, e.g. "Google Drive Link 1-3") are fetched and assigned
+// to that row's variant; 2-3 files become one placement-customized ad.
 //
 // Everything here is framework-agnostic: the orchestrator receives the React
 // state + setters it needs via `ctx`, so Home.jsx stays a thin wrapper.
@@ -219,17 +220,25 @@ function extractDriveFileId(text) {
   return null;
 }
 
-// Scan every cell for a Google Drive/Docs URL and return the first file id found.
-// (Column-name agnostic — the link may sit inside a cell with other text.)
-function findDriveFileIdInRow(row) {
+// A row can hold up to 3 Drive files (Google Drive Link 1-3); together they make
+// one placement-customized ad, the same as repeating the row once per file.
+export const MAX_DRIVE_LINKS_PER_ROW = 3;
+
+// Scan every cell, in column order, for Google Drive/Docs URLs and return the
+// unique file ids found. (Column-name agnostic — a link may sit inside a cell
+// with other text.)
+function findDriveFileIdsInRow(row) {
+  const ids = [];
   for (const value of Object.values(row)) {
     if (typeof value !== "string") continue;
     if (!/https?:\/\/(?:drive|docs)\.google\.com/i.test(value)) continue;
-    const urlMatch = value.match(/https?:\/\/(?:drive|docs)\.google\.com\/[^\s",]+/i);
-    const id = extractDriveFileId(urlMatch ? urlMatch[0] : value);
-    if (id) return id;
+    const urls = value.match(/https?:\/\/(?:drive|docs)\.google\.com\/[^\s",]+/gi) || [value];
+    for (const url of urls) {
+      const id = extractDriveFileId(url);
+      if (id && !ids.includes(id)) ids.push(id);
+    }
   }
-  return null;
+  return ids;
 }
 
 // --- orchestrator ------------------------------------------------------------
@@ -309,9 +318,9 @@ export async function importVariantsFromCsv(file, ctx) {
   }
 
   const rows = (parsed.data || [])
-    .map((raw) => ({ fields: extractRowFields(raw), driveFileId: findDriveFileIdInRow(raw) }))
+    .map((raw) => ({ fields: extractRowFields(raw), driveFileIds: findDriveFileIdsInRow(raw) }))
     .filter(
-      ({ fields, driveFileId }) =>
+      ({ fields, driveFileIds }) =>
         fields.primaryTexts.length > 0 ||
         fields.headlines.length > 0 ||
         fields.descriptions.length > 0 ||
@@ -321,7 +330,7 @@ export async function importVariantsFromCsv(file, ctx) {
         fields.facebookPage ||
         fields.websiteUrl ||
         fields.cta ||
-        driveFileId
+        driveFileIds.length > 0
     );
 
   if (rows.length === 0) {
@@ -402,15 +411,20 @@ export async function importVariantsFromCsv(file, ctx) {
   };
 
   for (let idx = 0; idx < rows.length; idx++) {
-    const { fields, driveFileId } = rows[idx];
+    const { fields } = rows[idx];
     const rowNum = idx + 1;
+    let { driveFileIds } = rows[idx];
+    if (driveFileIds.length > MAX_DRIVE_LINKS_PER_ROW) {
+      addWarning("Google Drive Link", `Row ${rowNum}: only the first ${MAX_DRIVE_LINKS_PER_ROW} Drive links are used for one placement-customized ad`);
+      driveFileIds = driveFileIds.slice(0, MAX_DRIVE_LINKS_PER_ROW);
+    }
 
     // If an earlier row had the exact same columns (Drive link aside), don't build
     // a second variant — just attach this row's Drive file to the existing one.
     const signature = JSON.stringify(fields);
     const mergeIntoVariantId = signatureToVariantId.get(signature);
     if (mergeIntoVariantId) {
-      attachDriveFile(driveFileId, mergeIntoVariantId, rowNum);
+      driveFileIds.forEach((fileId) => attachDriveFile(fileId, mergeIntoVariantId, rowNum));
       continue;
     }
 
@@ -497,7 +511,7 @@ export async function importVariantsFromCsv(file, ctx) {
     const variantId = idx === 0 ? "default" : makeId();
     signatureToVariantId.set(signature, variantId);
 
-    attachDriveFile(driveFileId, variantId, rowNum);
+    driveFileIds.forEach((fileId) => attachDriveFile(fileId, variantId, rowNum));
 
     if (idx === 0) {
       defaultSnapshot = snap;
