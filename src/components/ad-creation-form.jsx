@@ -8545,6 +8545,9 @@ export default function AdCreationForm({
                 currentGroupIndex: groupIndex + 1,
                 videoMetadata: groupVideoMetadata,
               });
+              // Diagnostics only (the server logs it when the 2-4 asset check fails): the group's file IDs
+              // as the form saw them, to compare with the files that actually reached the server.
+              formData.append("diagnosticGroupFileIds", JSON.stringify(group));
 
               // Append shop destination
               appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
