@@ -78,7 +78,8 @@ CheckMark.propTypes = { checked: PropTypes.bool }
  * `isOwnerRow` → the owner always keeps invite + billing, so only the sync
  * source radio is selectable. A member who pays for the team keeps billing.
  */
-export function MemberPermissionsMenu({ permissions, isOwnerRow, saving, onChange }) {
+export function MemberPermissionsMenu({ permissions, isOwnerRow, savingKey, onChange }) {
+    const saving = !!savingKey
     const isSyncSource = !!permissions?.isSyncSource
     const canInvite = isOwnerRow || !!permissions?.canInviteMembers
     const canBill = isOwnerRow || !!permissions?.canManageBilling
@@ -97,7 +98,6 @@ export function MemberPermissionsMenu({ permissions, isOwnerRow, saving, onChang
                     type="button"
                     className="flex items-center gap-1.5 rounded-[14px] border border-black/10 bg-white px-3 py-1.5 text-[13px] font-medium text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none"
                 >
-                    {saving && <Loader className="h-3.5 w-3.5 animate-spin" />}
                     Permissions
                     <ChevronDown className="h-3.5 w-3.5 text-gray-500" />
                 </button>
@@ -116,7 +116,10 @@ export function MemberPermissionsMenu({ permissions, isOwnerRow, saving, onChang
                 >
                     <RadioMark checked={isSyncSource} />
                     <div className="space-y-0.5">
-                        <p className="text-sm font-medium text-gray-900">Ad Account Sync Source</p>
+                        <p className="flex items-center gap-1.5 text-sm font-medium text-gray-900">
+                            Ad Account Sync Source
+                            {savingKey === "syncSource" && <Loader className="h-3.5 w-3.5 animate-spin text-gray-500" />}
+                        </p>
                         <p className="text-xs leading-4 text-gray-500">
                             This user&apos;s ad account preferences will be inherited by all team members if team sync is turned on
                         </p>
@@ -131,7 +134,10 @@ export function MemberPermissionsMenu({ permissions, isOwnerRow, saving, onChang
                     className="cursor-pointer items-start gap-2.5 rounded-xl px-3 py-2.5 focus:bg-neutral-100"
                 >
                     <CheckMark checked={canInvite} />
-                    <p className="text-sm font-medium text-gray-900">Invite More Team Members</p>
+                    <p className="flex items-center gap-1.5 text-sm font-medium text-gray-900">
+                        Invite More Team Members
+                        {savingKey === "canInviteMembers" && <Loader className="h-3.5 w-3.5 animate-spin text-gray-500" />}
+                    </p>
                 </DropdownMenuItem>
 
                 <DropdownMenuItem
@@ -141,7 +147,10 @@ export function MemberPermissionsMenu({ permissions, isOwnerRow, saving, onChang
                 >
                     <CheckMark checked={canBill} />
                     <div className="space-y-0.5">
-                        <p className="text-sm font-medium text-gray-900">Handle Billing</p>
+                        <p className="flex items-center gap-1.5 text-sm font-medium text-gray-900">
+                            Handle Billing
+                            {savingKey === "canManageBilling" && <Loader className="h-3.5 w-3.5 animate-spin text-gray-500" />}
+                        </p>
                         {!isOwnerRow && permissions?.isBillingOwner && (
                             <p className="text-xs leading-4 text-gray-500">Pays for the team&apos;s subscription</p>
                         )}
@@ -166,6 +175,6 @@ MemberPermissionsMenu.propTypes = {
         isBillingOwner: PropTypes.bool,
     }),
     isOwnerRow: PropTypes.bool,
-    saving: PropTypes.bool,
+    savingKey: PropTypes.oneOf(["syncSource", "canInviteMembers", "canManageBilling", null]),
     onChange: PropTypes.func.isRequired,
 }

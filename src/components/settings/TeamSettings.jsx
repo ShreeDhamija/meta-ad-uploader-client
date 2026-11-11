@@ -258,7 +258,8 @@ export default function TeamSettings() {
     }
 
     const handlePermissionChange = async (memberId, change) => {
-        setSavingPermissionsFor(memberId)
+        // Which row and which option is saving, so the spinner sits next to that option
+        setSavingPermissionsFor({ memberId, key: Object.keys(change)[0] })
         try {
             const res = await fetch(`${API_BASE_URL}/api/teams/permissions`, {
                 method: "POST",
@@ -572,7 +573,7 @@ export default function TeamSettings() {
                                                 <MemberPermissionsMenu
                                                     permissions={member.permissions}
                                                     isOwnerRow={!!member.isOwner}
-                                                    saving={savingPermissionsFor === member.id}
+                                                    savingKey={savingPermissionsFor?.memberId === member.id ? savingPermissionsFor.key : null}
                                                     onChange={(change) => handlePermissionChange(member.id, change)}
                                                 />
                                             )}
@@ -598,7 +599,7 @@ export default function TeamSettings() {
 
                         <Dialog open={!!syncConfirmAction} onOpenChange={(open) => !open && setSyncConfirmAction(null)}>
                             <DialogOverlay className="bg-black/50 !-mt-[20px]" />
-                            <DialogContent className="sm:max-w-[425px] !rounded-[30px]">
+                            <DialogContent disableSlide className="sm:max-w-[425px] !rounded-[30px]">
                                 <DialogHeader>
                                     <DialogTitle className="flex items-center gap-2">
                                         <CloudSync className="h-5 w-5 text-[#003CFF]" />
@@ -612,11 +613,9 @@ export default function TeamSettings() {
                                 </DialogHeader>
                                 <DialogFooter className="flex gap-2">
                                     <Button
-                                        variant="outline"
                                         onClick={() => setSyncConfirmAction(null)}
-                                        className="flex-1 rounded-[20px] border-2 border-[#003CFF] bg-white text-[#003CFF] hover:bg-[#003CFF]/5"
+                                        className="flex-1 rounded-[20px] bg-[#F00D55] text-white hover:bg-[#cf0b48]"
                                     >
-                                        <CancelIcon className="h-4 w-4" />
                                         Cancel
                                     </Button>
                                     <Button
