@@ -1,6 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { LEGACY_FLAG_TO_CARD_ID, ONBOARDING_CARDS, WIZARD_LAUNCH_DATE } from "./onboardingCards";
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
+// The variants (Split Ad Data) guide is only shown to users who signed up on or after this date (UTC).
+export const VARIANTS_GUIDE_SIGNUP_CUTOFF = "2026-11-11T00:00:00Z";
+const signedUpOnOrAfter = (createdAt, cutoff) => {
+    const created = createdAt ? new Date(createdAt).getTime() : NaN;
+    return Number.isFinite(created) && created >= new Date(cutoff).getTime();
+};
 
 export default function useGlobalSettings() {
     const [loading, setLoading] = useState(true);
@@ -42,7 +48,11 @@ export default function useGlobalSettings() {
             setHasImportedCsv(data?.settings?.hasImportedCsv || false);
             const csvImportGuideSeen = data?.settings?.hasSeenCsvImportGuide || false;
             setHasSeenCsvImportGuide(csvImportGuideSeen);
-            setHasSeenVariantsGuide(data?.settings?.hasSeenVariantsGuide || false);
+            // Users who signed up before the cutoff (or with no signup date) are treated as having seen it.
+            setHasSeenVariantsGuide(
+                Boolean(data?.settings?.hasSeenVariantsGuide) ||
+                !signedUpOnOrAfter(data?.userCreatedAt, VARIANTS_GUIDE_SIGNUP_CUTOFF)
+            );
             setSeenOnboardingCards(
                 Array.isArray(data?.settings?.seenOnboardingCards)
                     ? data.settings.seenOnboardingCards
