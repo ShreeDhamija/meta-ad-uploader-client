@@ -16,9 +16,12 @@ import DeleteIcon from "@/assets/icons/Team/Delete.svg?react"
 import SendIcon from "@/assets/icons/Team/send.svg?react"
 import AddIcon from "@/assets/icons/Team/Add.svg?react"
 import TrashIcon from "@/assets/icons/Team/Trash.svg?react"
-import { Loader, AlertTriangle } from "lucide-react"
+import { Loader, AlertTriangle, CloudSync } from "lucide-react"
 import { toast } from "sonner"
 import useSubscription from "@/lib/useSubscriptionSettings"
+import useTeamSync from "@/lib/useTeamSync"
+import { Switch } from "@/components/ui/switch"
+import { MemberAvatar, MemberPermissionsMenu } from "@/components/settings/TeamMemberPermissions"
 import {
     Dialog,
     DialogContent,
@@ -54,17 +57,31 @@ export default function TeamSettings() {
     const [currentEmail, setCurrentEmail] = useState("")
     const [isSendingInvites, setIsSendingInvites] = useState(false)
     const [deletingMemberId, setDeletingMemberId] = useState(null)
+    const [savingPermissionsFor, setSavingPermissionsFor] = useState(null)
+    const [syncConfirmAction, setSyncConfirmAction] = useState(null) // "enable" | "disable" | null
+
+    const {
+        syncEnabled,
+        toggling: syncToggling,
+        enableSync,
+        disableSync,
+        refetch: refetchSyncStatus,
+    } = useTeamSync()
+
+    const fetchTeamInfo = () =>
+        fetch(`${API_BASE_URL}/api/teams/info`, { credentials: "include" })
+            .then((res) => res.json())
+            .then((data) => {
+                setTeamData(data)
+                setTeamMode(subscriptionData.isTeamOwner ? "owner" : "member")
+            })
+            .catch((err) => console.error("Failed to fetch team info:", err))
 
     useEffect(() => {
         if (subscriptionData.teamId) {
-            fetch(`${API_BASE_URL}/api/teams/info`, { credentials: "include" })
-                .then((res) => res.json())
-                .then((data) => {
-                    setTeamData(data)
-                    setTeamMode(subscriptionData.isTeamOwner ? "owner" : "member")
-                })
-                .catch((err) => console.error("Failed to fetch team info:", err))
+            fetchTeamInfo()
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [subscriptionData.teamId, subscriptionData.isTeamOwner])
 
     if (loading || (subscriptionData.teamId && !teamData)) {
@@ -230,7 +247,8 @@ export default function TeamSettings() {
                     members: prev.members.filter((member) => member.id !== memberId),
                 }))
             } else {
-                toast.error("Failed to remove member")
+                const error = await res.json().catch(() => ({}))
+                toast.error(error.error || "Failed to remove member")
             }
         } catch {
             toast.error("Failed to remove member")
@@ -239,7 +257,77 @@ export default function TeamSettings() {
         }
     }
 
-    const wrapperClass = teamMode === "owner" && teamData
+    const handlePermissionChange = async (memberId, change) => {
+        setSavingPermissionsFor(memberId)
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/teams/permissions`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify({ memberId, ...change }),
+            })
+            const data = await res.json().catch(() => ({}))
+
+            if (!res.ok) {
+                toast.error(data.error || "Failed to update permissions")
+                return
+            }
+
+            if (change.syncSource) {
+                toast.success(
+                    syncEnabled
+                        ? "Sync source updated. The team keeps its current settings and their drafts are now shared."
+                        : "Sync source updated. Their settings and drafts will be shared when team sync is turned on."
+                )
+            } else {
+                toast.success("Permissions updated")
+            }
+            await fetchTeamInfo()
+        } catch {
+            toast.error("Failed to update permissions")
+        } finally {
+            setSavingPermissionsFor(null)
+        }
+    }
+
+    const handleSyncConfirm = async () => {
+        const action = syncConfirmAction
+        setSyncConfirmAction(null)
+        const result = action === "enable" ? await enableSync() : await disableSync()
+        if (result.success) {
+            toast.success(
+                action === "enable"
+                    ? result.message || "Team sync turned on"
+                    : "Team sync turned off. Each member will use their personal settings."
+            )
+        } else {
+            toast.error(result.error || "Failed to update team sync")
+        }
+        refetchSyncStatus()
+    }
+
+    const isTeamCreator = teamMode === "owner"
+    const canInviteMembers = isTeamCreator || !!teamData?.viewerPermissions?.canInviteMembers
+    const syncSourceId = teamData?.syncSourceId || teamData?.ownerId
+    const ownerRow = teamData
+        ? {
+            id: teamData.ownerId,
+            name: teamData.ownerName,
+            picture: teamData.ownerPicture,
+            isOwner: true,
+            permissions: {
+                canInviteMembers: true,
+                canManageBilling: true,
+                isSyncSource: syncSourceId === teamData.ownerId,
+                isBillingOwner: teamData.billingOwnerId === teamData.ownerId,
+            },
+        }
+        : null
+    const memberRows = teamData
+        ? [ownerRow, ...(teamData.members || [])].filter((row) => row && row.id)
+        : []
+
+    const wrapperClass = (isTeamCreator || canInviteMembers) && teamData
         ? "bg-[#f7f7f7] rounded-3xl p-4 space-y-4"
         : "p-0"
 
@@ -323,8 +411,9 @@ export default function TeamSettings() {
                     </div>
                 )}
 
-                {teamMode === "owner" && teamData && (
+                {(isTeamCreator || canInviteMembers) && teamData && (
                     <div className="space-y-5">
+                        {isTeamCreator && (
                         <div className="flex items-center justify-between gap-4">
                             <div>
                                 <div className="flex items-center gap-2 text-[22px] font-semibold text-black">
@@ -343,6 +432,7 @@ export default function TeamSettings() {
                                 Delete Team
                             </Button>
                         </div>
+                        )}
 
                         <div className="flex flex-wrap items-center justify-start gap-3 rounded-2xl bg-[#FFD1AD] px-3 py-1">
                             <span className="text-sm font-medium text-[#BC4500]">
@@ -432,36 +522,112 @@ export default function TeamSettings() {
                             </Button>
                         </div>
 
-                        {teamData.members?.length > 0 && (
+                        {isTeamCreator && (
+                            <div className="flex items-start justify-between gap-4 rounded-[24px] bg-white p-4">
+                                <div className="space-y-1">
+                                    <div className="flex items-center gap-2 text-sm font-medium text-gray-900">
+                                        <CloudSync className="h-4 w-4" />
+                                        <span>Team Sync</span>
+                                    </div>
+                                    <p className="text-xs leading-5 text-gray-500">
+                                        Everyone on the team inherits the ad account settings of the member marked as
+                                        {" "}<span className="font-medium text-gray-700">Ad Account Sync Source</span>
+                                        {memberRows.find((row) => row.permissions?.isSyncSource)?.name
+                                            ? ` (currently ${memberRows.find((row) => row.permissions?.isSyncSource).name})`
+                                            : ""}
+                                        . Change it from the Permissions menu below.
+                                    </p>
+                                </div>
+                                <div className="flex items-center gap-2 pt-0.5">
+                                    {syncToggling && <Loader className="h-4 w-4 animate-spin text-gray-400" />}
+                                    <Switch
+                                        checked={!!syncEnabled}
+                                        disabled={syncToggling}
+                                        onCheckedChange={(checked) => setSyncConfirmAction(checked ? "enable" : "disable")}
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        {memberRows.length > 0 && (
                             <div className="space-y-2">
-                                {teamData.members.map((member) => (
+                                {memberRows.map((member) => (
                                     <div key={member.id} className="flex items-center gap-2">
-                                        <div className="flex flex-1 items-center justify-between rounded-[20px] bg-white px-4 py-3">
-                                            <div className="flex items-center gap-3">
-                                                <img
-                                                    src={member.picture || "/default-avatar.png"}
-                                                    alt={member.name}
-                                                    className="h-8 w-8 rounded-full object-cover"
-                                                />
-                                                <span className="text-sm font-medium text-[#1f1f1f]">{member.name}</span>
+                                        <div className="flex flex-1 items-center justify-between gap-3 rounded-[20px] bg-white px-4 py-3">
+                                            <div className="flex min-w-0 items-center gap-3">
+                                                <MemberAvatar src={member.picture} name={member.name} />
+                                                <span className="truncate text-sm font-medium text-[#1f1f1f]">{member.name}</span>
+                                                {member.isOwner && (
+                                                    <span className="flex-shrink-0 rounded-full bg-[#E5ECFF] px-2 py-0.5 text-[11px] font-semibold text-[#003CFF]">
+                                                        Owner
+                                                    </span>
+                                                )}
+                                                {syncEnabled && member.permissions?.isSyncSource && (
+                                                    <span className="flex-shrink-0 rounded-full bg-[#E2FFC8] px-2 py-0.5 text-[11px] font-semibold text-[#2A6B43]">
+                                                        Sync Source
+                                                    </span>
+                                                )}
                                             </div>
-                                        </div>
-                                        <Button
-                                            onClick={() => handleRemoveMember(member.id)}
-                                            size="icon"
-                                            className="h-[45px] w-[45px] rounded-[20px] bg-[#F00D55] p-0 text-white hover:bg-[#cf0b48]"
-                                            disabled={deletingMemberId === member.id}
-                                        >
-                                            {deletingMemberId === member.id ? (
-                                                <Loader className="h-4 w-4 animate-spin" />
-                                            ) : (
-                                                <TrashIcon className="h-4 w-4" />
+                                            {isTeamCreator && (
+                                                <MemberPermissionsMenu
+                                                    permissions={member.permissions}
+                                                    isOwnerRow={!!member.isOwner}
+                                                    saving={savingPermissionsFor === member.id}
+                                                    onChange={(change) => handlePermissionChange(member.id, change)}
+                                                />
                                             )}
-                                        </Button>
+                                        </div>
+                                        {isTeamCreator && !member.isOwner && (
+                                            <Button
+                                                onClick={() => handleRemoveMember(member.id)}
+                                                size="icon"
+                                                className="h-[45px] w-[45px] rounded-[20px] bg-[#F00D55] p-0 text-white hover:bg-[#cf0b48]"
+                                                disabled={deletingMemberId === member.id}
+                                            >
+                                                {deletingMemberId === member.id ? (
+                                                    <Loader className="h-4 w-4 animate-spin" />
+                                                ) : (
+                                                    <TrashIcon className="h-4 w-4" />
+                                                )}
+                                            </Button>
+                                        )}
                                     </div>
                                 ))}
                             </div>
                         )}
+
+                        <Dialog open={!!syncConfirmAction} onOpenChange={(open) => !open && setSyncConfirmAction(null)}>
+                            <DialogOverlay className="bg-black/50 !-mt-[20px]" />
+                            <DialogContent className="sm:max-w-[425px] !rounded-[30px]">
+                                <DialogHeader>
+                                    <DialogTitle className="flex items-center gap-2">
+                                        <CloudSync className="h-5 w-5 text-[#003CFF]" />
+                                        {syncConfirmAction === "enable" ? "Turn on Team Sync" : "Turn off Team Sync"}
+                                    </DialogTitle>
+                                    <DialogDescription className="pt-3 text-sm text-gray-600">
+                                        {syncConfirmAction === "enable"
+                                            ? "Every team member will share one set of ad account settings, starting from the Ad Account Sync Source's settings, and the Sync Source's drafts will be shared with the team. Changes anyone saves will apply to the whole team."
+                                            : "The shared team settings will be copied to each member's personal settings, and every shared draft goes back to the member who created it. From then on everyone edits their own settings separately."}
+                                    </DialogDescription>
+                                </DialogHeader>
+                                <DialogFooter className="flex gap-2">
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => setSyncConfirmAction(null)}
+                                        className="flex-1 rounded-[20px] border-2 border-[#003CFF] bg-white text-[#003CFF] hover:bg-[#003CFF]/5"
+                                    >
+                                        <CancelIcon className="h-4 w-4" />
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        onClick={handleSyncConfirm}
+                                        className="flex-1 rounded-[20px] bg-[#003CFF] text-white hover:bg-[#002fd1]"
+                                    >
+                                        {syncConfirmAction === "enable" ? "Turn On" : "Turn Off"}
+                                    </Button>
+                                </DialogFooter>
+                            </DialogContent>
+                        </Dialog>
 
                         <Dialog open={showDeleteTeamDialog} onOpenChange={setShowDeleteTeamDialog}>
                             <DialogOverlay className="bg-black/50 !-mt-[20px]" />

@@ -153,7 +153,10 @@ export default function BillingSettings({ platform = "meta" }) {
     const [updatingPayment, setUpdatingPayment] = useState(false)
 
     const hasUsedRetentionDiscount = subscriptionData?.hasUsedRetentionDiscount || false
-    const isTeamMember = subscriptionData.teamId && !subscriptionData.isTeamOwner
+    // Members the team owner gave "Handle Billing" get the full billing page.
+    // Older API responses without the flag fall back to the owner check.
+    const canManageBilling = subscriptionData.canManageBilling ?? (!subscriptionData.teamId || subscriptionData.isTeamOwner)
+    const isTeamMember = subscriptionData.teamId && !canManageBilling
     const hasPaidPlan = isPaidSubscriber() || isPastDue()
     const currentPlan = hasPaidPlan
         ? (getPlanMeta(subscriptionData.planType) || PLANS[0])
@@ -224,7 +227,12 @@ export default function BillingSettings({ platform = "meta" }) {
                 }),
             })
 
-            const { url } = await response.json()
+            const { url, error } = await response.json()
+            if (!response.ok || !url) {
+                toast.error(error || "Failed to start upgrade process")
+                setCheckoutLoadingPlan(null)
+                return
+            }
             window.location.href = url
         } catch {
             toast.error("Failed to start upgrade process")
