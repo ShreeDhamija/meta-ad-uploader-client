@@ -1058,10 +1058,12 @@ const extractFolderId = (url) => {
 };
 
 const PROFILE_DESTINATION_TYPES = new Set(["FACEBOOK_PAGE", "INSTAGRAM_PROFILE", "INSTAGRAM_PROFILE_AND_FACEBOOK_PAGE"]);
+// Meta supports profile visit ads under both objectives; the creative payload is identical.
+const PROFILE_DESTINATION_OBJECTIVES = new Set(["OUTCOME_ENGAGEMENT", "OUTCOME_TRAFFIC"]);
 
-// Engagement ad sets that send people to a profile have a fixed CTA.
+// Engagement/Traffic ad sets that send people to a profile have a fixed CTA.
 const getProfileDestinationType = ({ campaignObjective, duplicateAdSet, selectedAdSets = [], adSets = [] }) => {
-  if (!campaignObjective?.length || !campaignObjective.every((objective) => objective === "OUTCOME_ENGAGEMENT")) return null;
+  if (!campaignObjective?.length || !campaignObjective.every((objective) => PROFILE_DESTINATION_OBJECTIVES.has(objective))) return null;
 
   const targetAdSetIds = duplicateAdSet ? [duplicateAdSet] : selectedAdSets;
   if (targetAdSetIds.length === 0) return null;
