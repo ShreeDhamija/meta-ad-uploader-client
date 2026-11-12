@@ -8,7 +8,8 @@ import { useIntercom } from '@/lib/useIntercom'
 import useTikTokAdvertiserSettings from '@/lib/useTikTokAdvertiserSettings'
 import { saveTikTokSettings } from '@/lib/saveTikTokSettings'
 import { Loader2 } from "lucide-react"
-import React, { useCallback, useEffect, useRef, useState } from "react"
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { isSmartPlusSelection } from "@/lib/tiktokSmartPlus"
 import { useNavigate } from 'react-router-dom'
 import { toast, Toaster } from 'sonner'
 import { v4 as uuidv4 } from "uuid"
@@ -1189,6 +1190,12 @@ export default function TikTokAds() {
     })
   }, [files, driveFiles, dropboxFiles])
 
+  // "Create group ads" is offered only for Smart+ campaigns.
+  const isSmartCampaignSelected = useMemo(
+    () => isSmartPlusSelection({ campaigns, selectedCampaign, adGroups, selectedAdGroup, showDuplicateAdGroupBlock, duplicateAdGroup }),
+    [campaigns, selectedCampaign, adGroups, selectedAdGroup, showDuplicateAdGroupBlock, duplicateAdGroup]
+  )
+
   useEffect(() => {
     const validGroupIds = new Set(fileGroups.map((group) => group.id))
     setGroupVariantMap((prev) => {
@@ -1339,6 +1346,10 @@ export default function TikTokAds() {
               setPostVariantMap={setPostVariantMap}
               selectedFiles={selectedFiles}
               setSelectedFiles={setSelectedFiles}
+              fileGroups={fileGroups}
+              setFileGroups={setFileGroups}
+              groupAdsEnabled={enablePlacementCustomization}
+              setGroupAdsEnabled={setEnablePlacementCustomization}
               onBeforeMediaClear={triggerMediaPreviewLaunch}
             />
           </div>
@@ -1383,6 +1394,7 @@ export default function TikTokAds() {
                 setGroupVariantMap={setGroupVariantMap}
                 postVariantMap={postVariantMap}
                 setPostVariantMap={setPostVariantMap}
+                isSmartCampaign={isSmartCampaignSelected}
                 hasSeenPowerupPopup={hasSeenPowerupPopup}
                 setShowPowerupPopup={setShowPowerupPopup}
                 isLaunchingMedia={isLaunchingMediaPreview}

@@ -15,6 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import Groupads from '@/assets/icons/groupads.svg?react';
 import { v4 as uuidv4 } from 'uuid';
+import { MAX_SMART_PLUS_GROUP_CREATIVES } from '@/lib/tiktokSmartPlus';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 function withUniqueId(file) {
@@ -507,7 +508,8 @@ export default function MediaPreview({
   setGroupVariantMap,
   postVariantMap,
   setPostVariantMap,
-  isLaunchingMedia = false
+  isLaunchingMedia = false,
+  isSmartCampaign = false
 }) {
   const [isAIGrouping, setIsAIGrouping] = useState(false);
   const [isFlexAutoGrouping, setIsFlexAutoGrouping] = useState(false);
@@ -569,7 +571,8 @@ export default function MediaPreview({
   }, [files, driveFiles, dropboxFiles, frameioFiles, importedFiles, importedPosts, selectedIgOrganicPosts]);
 
   const canGroupFiles = useMemo(() => {
-    const maxGroupSize = (adType === 'flexible' || isCarouselAd) ? 10 : 3;
+    // "Create group ads": one Smart+ ad holds up to 50 creatives.
+    const maxGroupSize = (adType === 'flexible' || isCarouselAd) ? 10 : MAX_SMART_PLUS_GROUP_CREATIVES;
     if (selectedFiles.size >= 2 && selectedFiles.size <= maxGroupSize) return true;
     // Exactly 2 total files and fewer than 2 selected — allow one-click grouping
     if (enablePlacementCustomization && totalFileCount === 2 && ungroupedFiles.length === 2 && selectedFiles.size === 0) return true;
@@ -707,7 +710,9 @@ export default function MediaPreview({
     return false;
   }, [selectedAdSets, adSets, duplicateAdSet]);
 
-  const showPlacementCustomizationRow = false;
+  // TikTok reuses the placement-customization row as "Create group ads": Smart+ campaigns
+  // only, for uploaded files (Spark posts are not groupable here).
+  const showPlacementCustomizationRow = isSmartCampaign && adType !== 'SPARK';
   const showVariantSetupButton = variants.length > 1 || totalFileCount >= 1;
   const isSingleMediaSplit = totalFileCount === 1;
   const showVariantButtonInPlacementRow = showVariantSetupButton && showPlacementCustomizationRow;
@@ -807,7 +812,7 @@ export default function MediaPreview({
     const hasAssignments = Object.keys(fileVariantMap).length > 0 || Object.keys(groupVariantMap).length > 0;
 
     if (checked !== enablePlacementCustomization && variants.length > 1 && hasAssignments) {
-      const confirmed = window.confirm('Changing placement customization will clear all variant media assignments. Continue?');
+      const confirmed = window.confirm('Changing group ads will clear all variant media assignments. Continue?');
       if (!confirmed) return;
       setFileVariantMap({});
       setGroupVariantMap({});
@@ -819,6 +824,15 @@ export default function MediaPreview({
       setSelectedFiles(new Set());
     }
   }, [enablePlacementCustomization, fileVariantMap, groupVariantMap, setEnablePlacementCustomization, setFileGroups, setFileVariantMap, setGroupVariantMap, setSelectedFiles, variants.length]);
+
+  // Turn grouping off (and drop the groups) once the selection is no longer a Smart+ campaign.
+  useEffect(() => {
+    if (!showPlacementCustomizationRow && enablePlacementCustomization) {
+      setEnablePlacementCustomization(false);
+      setFileGroups([]);
+      setSelectedFiles(new Set());
+    }
+  }, [showPlacementCustomizationRow, enablePlacementCustomization]);
 
   // Auto-disable placement customization when a dynamic ad set is selected
   useEffect(() => {
@@ -865,7 +879,7 @@ export default function MediaPreview({
       return;
     }
 
-    if (selectedFiles.size >= 2 && selectedFiles.size <= 3) {
+    if (selectedFiles.size >= 2 && selectedFiles.size <= MAX_SMART_PLUS_GROUP_CREATIVES) {
       const newGroup = Array.from(selectedFiles);
       setFileGroups(prev => [...prev, createFileGroup(newGroup)]);
 
@@ -1256,7 +1270,8 @@ export default function MediaPreview({
                         Group Ads
                       </Button>
 
-                      {adType !== 'flexible' && !isCarouselAd && (
+                      {/* TikTok "Create group ads" is grouped by hand only, no AI Auto Group. */}
+                      {adType !== 'flexible' && !isCarouselAd && !enablePlacementCustomization && (
                         <Button
                           variant="outline"
                           size="sm"
@@ -1352,7 +1367,7 @@ export default function MediaPreview({
                         htmlFor="placementCustomization"
                         className={`text-sm font-medium leading-none ${hasAnyDynamicCreativeAdSets ? 'cursor-not-allowed opacity-50' : 'peer-disabled:cursor-not-allowed peer-disabled:opacity-70'}`}
                       >
-                        Enable placement customization
+                        Create group ads
                         {hasAnyDynamicCreativeAdSets && (
                           <span className="text-xs text-gray-400 ml-1">(not available for dynamic creative ad sets)</span>
                         )}
@@ -1367,7 +1382,7 @@ export default function MediaPreview({
                   </div>
                   {enablePlacementCustomization && (
                     <span className="block text-xs leading-tight text-gray-500 mt-0">
-                      AI Auto Group only works for images
+                      Select files and click Group Ads. Each group becomes one Smart+ ad with up to {MAX_SMART_PLUS_GROUP_CREATIVES} creatives.
                     </span>
                   )}
                 </div>
@@ -1443,7 +1458,7 @@ export default function MediaPreview({
                             ? 'bg-blue-500'
                             : 'bg-orange-500'
                             }`}>
-                            {isCarouselAd ? `Carousel Ad ${groupIndex + 1}` : `Group ${groupIndex + 1}`}
+                            {isCarouselAd ? `Carousel Ad ${groupIndex + 1}` : `Group ${groupIndex + 1} · ${getGroupFileIds(group).length} creatives`}
                           </div>
 
                           {isCarouselAd ? (

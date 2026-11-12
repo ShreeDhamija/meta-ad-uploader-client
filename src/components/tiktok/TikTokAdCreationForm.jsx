@@ -23,6 +23,7 @@ import { useAppData } from "@/lib/AppContext";
 import { readCache, writeCache } from "@/lib/dataCache";
 import { deleteTikTokCopyTemplate, saveTikTokSettings } from "@/lib/saveTikTokSettings";
 import { useTikTokAuth } from "@/lib/TikTokAuthContext";
+import { isSmartPlusSelection } from "@/lib/tiktokSmartPlus";
 import { cn } from "@/lib/utils";
 import axios from "axios";
 import {
@@ -650,6 +651,12 @@ export default function TikTokAdCreationForm({
   postVariantMap,
   setPostVariantMap,
 
+  // "Create group ads" (Smart+ only): each group of files becomes one Smart+ ad
+  fileGroups = [],
+  setFileGroups,
+  groupAdsEnabled = false,
+  setGroupAdsEnabled,
+
   // Lifted Product States
   productName,
   setProductName,
@@ -1014,43 +1021,10 @@ export default function TikTokAdCreationForm({
   // Detect if any selected campaign or ad group belongs to a Smart+ campaign
   // Smart+ campaigns use a different API endpoint (/smart_plus/ad/create/)
   // and support up to 5 ad texts via ad_text_list
-  const isSmartCampaign = useMemo(() => {
-    const isSmartObj = (c) => {
-      if (!c) return false;
-      return Boolean(
-        c.is_smart_performance_campaign === true ||
-        c.is_smart_performance_campaign === "true" ||
-        c.is_smart_performance_campaign === 1 ||
-        c.campaign_automation_type === "UPGRADED_SMART_PLUS" ||
-        c.campaign_automation_type === "SMART_PLUS" ||
-        c.campaign_automation_type === "SMART_PERFORMANCE_CAMPAIGN" ||
-        c.is_smart === true ||
-        c.is_smart === "true",
-      );
-    };
-
-    if (selectedCampaign && selectedCampaign.length > 0) {
-      const hasSmart = selectedCampaign.some((campId) => {
-        const c = campaigns.find((x) => x.campaign_id === campId);
-        return isSmartObj(c);
-      });
-      if (hasSmart) return true;
-    }
-
-    const activeAdGroups = showDuplicateAdGroupBlock && duplicateAdGroup ? [duplicateAdGroup] : selectedAdGroup || [];
-
-    if (activeAdGroups.length > 0) {
-      return activeAdGroups.some((agId) => {
-        const agObj = adGroups.find((g) => g.adgroup_id === agId);
-        if (!agObj) return false;
-        const campId = agObj.campaignId || agObj.campaign_id;
-        const c = campaigns.find((x) => x.campaign_id === campId);
-        return isSmartObj(c);
-      });
-    }
-
-    return false;
-  }, [selectedCampaign, campaigns, selectedAdGroup, showDuplicateAdGroupBlock, duplicateAdGroup, adGroups]);
+  const isSmartCampaign = useMemo(
+    () => isSmartPlusSelection({ campaigns, selectedCampaign, adGroups, selectedAdGroup, showDuplicateAdGroupBlock, duplicateAdGroup }),
+    [selectedCampaign, campaigns, selectedAdGroup, showDuplicateAdGroupBlock, duplicateAdGroup, adGroups],
+  );
 
   // Campaign objects behind the current selection — Smart+ keeps the catalog on the
   // campaign, so the ad group tells us nothing about it.
@@ -1638,6 +1612,8 @@ export default function TikTokAdCreationForm({
     groupVariantMap,
     postVariantMap,
     adGroups,
+    fileGroups,
+    groupAdsEnabled,
     liveVariantSnapshot: {
       adName,
       adTexts,
@@ -1702,12 +1678,23 @@ export default function TikTokAdCreationForm({
       (s.importedPosts || []).length;
     const isSingleMediaSplit = totalMediaCount === 1;
 
+    // "Create group ads": a grouped file belongs to its group's variant, not its own.
+    const activeFileGroups =
+      s.groupAdsEnabled && s.adType !== "SPARK" ? (s.fileGroups || []).filter((g) => (g?.fileIds || []).length > 0) : [];
+    const fileGroupIdByFileId = new Map();
+    activeFileGroups.forEach((g) => g.fileIds.forEach((id) => fileGroupIdByFileId.set(id, g.id)));
+    const groupVariantOf = (groupId) => (s.groupVariantMap || {})[groupId] || "default";
+    const variantOfFile = (fileId) => {
+      const groupId = fileGroupIdByFileId.get(fileId);
+      return groupId ? groupVariantOf(groupId) : (s.fileVariantMap || {})[fileId] || "default";
+    };
+
     const filterFiles = (items, mapper = (item) => item) =>
       items.filter((item) => {
         if (isSingleMediaSplit) return true;
         const file = mapper(item);
         const fileId = getFileId(file);
-        return ((s.fileVariantMap || {})[fileId] || "default") === variantId;
+        return variantOfFile(fileId) === variantId;
       });
 
     const filterPosts = (items) =>
@@ -1738,6 +1725,9 @@ export default function TikTokAdCreationForm({
       dropboxFiles: [...variantDropboxFiles],
       tiktokLibraryFiles: [...variantLibraryFiles],
       importedPosts: [...variantImportedPosts],
+      fileGroups: activeFileGroups
+        .filter((g) => groupVariantOf(g.id) === variantId)
+        .map((g) => ({ id: g.id, fileIds: [...g.fileIds] })),
 
       selectedAdvertiser: s.selectedAdvertiser,
       selectedCampaign: [...(variantState.selectedCampaign || [])],
@@ -1774,6 +1764,11 @@ export default function TikTokAdCreationForm({
     let fileCount = formData.files.length + formData.driveFiles.length + formData.dropboxFiles.length + formData.tiktokLibraryFiles.length;
     if (formData.adType === "SPARK") {
       fileCount = formData.importedPosts.length;
+    } else {
+      // Each group becomes a single ad however many files it holds.
+      formData.fileGroups.forEach((g) => {
+        fileCount -= g.fileIds.length - 1;
+      });
     }
 
     const activeAdGroups = formData.selectedAdGroup || [];
@@ -1848,8 +1843,14 @@ export default function TikTokAdCreationForm({
       setFileVariantMap({});
       setGroupVariantMap({});
       setPostVariantMap({});
+      // Bring grouped ads back as groups, so a retry does not split them into single ads.
+      const retryGroups = d.fileGroups || [];
+      if (setFileGroups) setFileGroups(retryGroups.map((g) => ({ id: g.id, fileIds: [...g.fileIds] })));
+      if (setGroupAdsEnabled) setGroupAdsEnabled(retryGroups.length > 0);
     },
     [
+      setFileGroups,
+      setGroupAdsEnabled,
       setAdName,
       setAdTexts,
       setCta,
@@ -1935,9 +1936,15 @@ export default function TikTokAdCreationForm({
       formStoreProductId: jobFormStoreProductId,
       formStoreProductName: jobFormStoreProductName,
       formStoreCatalogId: jobFormStoreCatalogId,
+      fileGroups: jobFileGroups = [],
     } = jobToProcess.formData;
 
     const campaignObj = campaigns.find((c) => c.campaign_id === selectedCampaign[0]);
+
+    // "Create group ads": file id → group id. Every file of a group goes into one Smart+ ad.
+    const groupIdByFileId = new Map();
+    (adType === "SPARK" ? [] : jobFileGroups).forEach((g) => (g.fileIds || []).forEach((id) => groupIdByFileId.set(id, g.id)));
+    const groupAdNames = new Map();
 
     setProgress(0);
     setProgressMessage("Starting TikTok ad creation...");
@@ -1965,7 +1972,11 @@ export default function TikTokAdCreationForm({
       (tiktokLibraryFiles || []).forEach((f) => itemsToUpload.push({ type: "library", file: f }));
     }
 
-    let totalCount = itemsToUpload.length * (isDuplicatingAdGroupMode ? 1 : selectedAdGroup.length);
+    // A group of files is one ad.
+    const groupedMemberCount = itemsToUpload.filter((item) => groupIdByFileId.has(getFileId(item.file))).length;
+    const groupedUnitCount = new Set(itemsToUpload.map((item) => groupIdByFileId.get(getFileId(item.file))).filter(Boolean)).size;
+    const adUnitCount = itemsToUpload.length - groupedMemberCount + groupedUnitCount;
+    let totalCount = adUnitCount * (isDuplicatingAdGroupMode ? 1 : selectedAdGroup.length);
 
     setLiveProgress({
       completed: 0,
@@ -2233,6 +2244,12 @@ export default function TikTokAdCreationForm({
 
         const finalAdName = computeAdNameFromFormula(item.file, idx, landingUrl, jobAdNameFormula, adType, adName);
 
+        // A grouped ad is named after the first of its files.
+        const fileGroupId = groupIdByFileId.get(getFileId(item.file)) || null;
+        if (fileGroupId && !groupAdNames.has(fileGroupId)) {
+          groupAdNames.set(fileGroupId, finalAdName);
+        }
+
         const sourceAgForDuplication = isDuplicatingAdGroupMode ? jobAdGroups.find((ag) => ag.adgroup_id === duplicateAdGroup) : null;
 
         for (const adgroupId of adGroupIdsToSubmit) {
@@ -2435,6 +2452,13 @@ export default function TikTokAdCreationForm({
           };
           if (currentIdentityId) creative.identity_id = currentIdentityId;
           if (currentIdentityAuthorizedBcId) creative.identity_authorized_bc_id = currentIdentityAuthorizedBcId;
+
+          // Grouping is Smart+ only; in any other ad group the files stay one ad each.
+          if (fileGroupId && isSmartForThisCampaign) {
+            creative.groupKey = fileGroupId;
+            creative.groupAdName = groupAdNames.get(fileGroupId);
+            creative.fileName = item.file?.name || finalAdName;
+          }
 
           if (isShoppingAg) {
             if (!skipCatalogFields) {
@@ -4147,6 +4171,7 @@ export default function TikTokAdCreationForm({
     setGroupVariantMap({});
     setPostVariantMap({});
     if (setSelectedFiles) setSelectedFiles(new Set());
+    if (setFileGroups) setFileGroups([]);
   };
 
   // Submit form handler to queue background jobs
@@ -4197,9 +4222,11 @@ export default function TikTokAdCreationForm({
         }
 
         const adsToBeCreated = fileCount;
+        // Grouped files are fewer ads, but every file is still uploaded, so the cap stays on files.
+        const countLabel = fd.fileGroups?.length > 0 ? "files" : "ads";
 
         if (adsToBeCreated > 50) {
-          toast.error(`${variant.name}: you cannot launch more than 50 ads at once (current selection: ${adsToBeCreated} ads).`);
+          toast.error(`${variant.name}: you cannot launch more than 50 ${countLabel} at once (current selection: ${adsToBeCreated} ${countLabel}).`);
           return;
         }
 
