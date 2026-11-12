@@ -148,8 +148,8 @@ export default function Analytics() {
                     }}
                     canExtendTrial={canExtendTrial()}
                     onExtendTrial={handleExtendTrial}
-                    isTeamOwner={!!subscriptionData.isTeamOwner && !!subscriptionData.teamId}
-                    isTeamMember={!subscriptionData.isTeamOwner && !!subscriptionData.teamId}
+                    isTeamOwner={!!(subscriptionData.canManageBilling ?? subscriptionData.isTeamOwner) && !!subscriptionData.teamId}
+                    isTeamMember={!(subscriptionData.canManageBilling ?? subscriptionData.isTeamOwner) && !!subscriptionData.teamId}
                     isPastDue={isPastDue()}
                     onUpdatePayment={handleUpdatePayment}
                 />
