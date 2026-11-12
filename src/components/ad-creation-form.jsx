@@ -4269,14 +4269,14 @@ export default function AdCreationForm({
 
   const [frameioPickerOpen, setFrameioPickerOpen] = useState(false);
 
-  const launchFrameioAuthPopup = useCallback(() => {
+  const launchFrameioAuthPopup = useCallback(({ switchAccount = false } = {}) => {
     const width = 600;
     const height = 750;
     const left = window.screenX + (window.outerWidth - width) / 2;
     const top = window.screenY + (window.outerHeight - height) / 2;
 
     const authWindow = window.open(
-      `${API_BASE_URL}/auth/frame?popup=true`,
+      `${API_BASE_URL}/auth/frame?popup=true${switchAccount ? "&switchAccount=true" : ""}`,
       "frameio-auth",
       `width=${width},height=${height},left=${left},top=${top}`,
     );
@@ -12337,7 +12337,12 @@ export default function AdCreationForm({
                   })()}
                 </div>
 
-                <FrameioPickerModal open={frameioPickerOpen} onOpenChange={setFrameioPickerOpen} onConfirm={handleFrameioFilesSelected} />
+                <FrameioPickerModal
+                  open={frameioPickerOpen}
+                  onOpenChange={setFrameioPickerOpen}
+                  onConfirm={handleFrameioFilesSelected}
+                  onSwitchAccount={() => launchFrameioAuthPopup({ switchAccount: true })}
+                />
 
                 {/* Flex Ads import modal — opened by the "Get Top Ads For Flex"
                     button. mode defaults to 'cpr' since the form doesn't track

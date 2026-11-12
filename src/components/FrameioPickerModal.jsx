@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { ChevronRight, Film, Image as ImageIcon, Loader2, ArrowLeft, Search, X } from "lucide-react";
+import { ChevronRight, Film, Image as ImageIcon, Loader2, ArrowLeft, Search, UserX, X } from "lucide-react";
 import FrameHeaderImage from "@/assets/icons/Frame.webp";
 import BlueFolderIcon from "@/assets/icons/BlueFolder.svg?react";
 import { toast } from "sonner";
@@ -22,7 +22,19 @@ const ROOT_STACK = [{ kind: "accounts", name: "Accounts" }];
  *  - accessToken: string (unused — backend uses session cookie, but kept for symmetry)
  *  - onConfirm: (Array<{frameioId, frameioAccountId, name, mimeType, size, thumbnailUrl, width, height}>) => void
  */
-export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
+// Errors keep the HTTP status so a Frame.io 401 can show account guidance instead of raw text.
+function frameRequestError(message, status = null, debugId = null) {
+  const err = new Error(`${message}${debugId ? ` — reference ${debugId}` : ""}`);
+  err.status = status;
+  err.debugId = debugId;
+  return err;
+}
+
+function toErrorState(err, fallback) {
+  return { message: err?.message || fallback, status: err?.status || null, debugId: err?.debugId || null };
+}
+
+export default function FrameioPickerModal({ open, onOpenChange, onConfirm, onSwitchAccount }) {
   // Navigation stack: each entry = { kind: 'accounts'|'workspaces'|'projects'|'folder', accountId?, workspaceId?, projectId?, folderId?, name }
   const [stack, setStack] = useState(ROOT_STACK);
   const current = stack[stack.length - 1];
@@ -133,12 +145,12 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
         if (requestId !== latestRequestRef.current) return;
         if (!projRes.ok) {
           const failure = await projRes.json().catch(() => ({}));
-          throw new Error(`Failed to load project (${projRes.status})${failure.debugId ? ` — reference ${failure.debugId}` : ""}`);
+          throw frameRequestError(`Failed to load project (${projRes.status})`, projRes.status, failure.debugId);
         }
         const projData = await projRes.json();
         if (requestId !== latestRequestRef.current) return;
         const rootFolderId = projData?.project?.root_folder_id || projData?.root_folder_id || projData?.data?.root_folder_id;
-        if (!rootFolderId) throw new Error(`Project has no root folder${projData.debugId ? ` — reference ${projData.debugId}` : ""}`);
+        if (!rootFolderId) throw frameRequestError("Project has no root folder", null, projData.debugId);
         // Replace current stack entry with a 'folder' entry pointing to root
         setStack(prev => {
           if (requestId !== latestRequestRef.current || prev.length === 0) return prev;
@@ -159,7 +171,7 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
       if (requestId !== latestRequestRef.current) return;
       if (!res.ok) {
         const failure = await res.json().catch(() => ({}));
-        throw new Error(`Request failed (${res.status})${failure.debugId ? ` — reference ${failure.debugId}` : ""}`);
+        throw frameRequestError(`Request failed (${res.status})`, res.status, failure.debugId);
       }
       const data = await res.json();
       if (requestId !== latestRequestRef.current) return;
@@ -172,7 +184,7 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
       setNextAfter(next);
     } catch (e) {
       if (requestId !== latestRequestRef.current) return;
-      setError(e.message || "Failed to load");
+      setError(toErrorState(e, "Failed to load"));
     } finally {
       if (requestId === latestRequestRef.current) {
         if (append) setLoadingMore(false); else setLoading(false);
@@ -294,7 +306,7 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
       const res = await fetch(`${API_BASE_URL}/api/frameio/search?${params}`, { credentials: "include", signal: controller.signal });
       const data = await res.json();
       if (searchRequestRef.current !== controller) return;
-      if (!res.ok) throw new Error(`${data.error || "Search failed"}${data.debugId ? ` — reference ${data.debugId}` : ""}`);
+      if (!res.ok) throw frameRequestError(data.error || "Search failed", res.status, data.debugId);
       setSearch(prev => ({
         query: submittedQuery,
         items: Array.from(new Map([...(after ? prev.items : []), ...(data.items || [])].map(item => [item.id, item])).values()),
@@ -305,7 +317,7 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
       }));
     } catch (err) {
       if (searchRequestRef.current !== controller || controller.signal.aborted) return;
-      setSearch(prev => ({ ...prev, loading: false, loadingMore: false, error: err.message || "Search failed" }));
+      setSearch(prev => ({ ...prev, loading: false, loadingMore: false, error: toErrorState(err, "Search failed") }));
     } finally {
       if (searchRequestRef.current === controller) searchRequestRef.current = null;
     }
@@ -331,6 +343,19 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
     }
     onOpenChange(nextOpen);
   }, [onOpenChange, stack]);
+
+  // A different Adobe account means different Frame.io accounts, so restart browsing from the top.
+  const handleSwitchAccount = useCallback(() => {
+    lastViewedStackRef.current = ROOT_STACK;
+    setStack(ROOT_STACK);
+    setSelected({});
+    setError(null);
+    clearSearch();
+    setSearchOpen(false);
+    onOpenChange(false);
+    // Called synchronously inside the click so the sign-in popup isn't blocked.
+    onSwitchAccount?.();
+  }, [clearSearch, onOpenChange, onSwitchAccount]);
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -498,7 +523,11 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
               )}
 
               {visibleError && !visibleLoading && (
-                <div role="alert" className="p-4 text-sm text-red-600">{visibleError}</div>
+                visibleError.status === 401 && onSwitchAccount ? (
+                  <FrameioAccessError debugId={visibleError.debugId} onSwitchAccount={handleSwitchAccount} />
+                ) : (
+                  <div role="alert" className="p-4 text-sm text-red-600">{visibleError.message}</div>
+                )
               )}
 
               {!visibleLoading && !visibleError && visibleItems.length === 0 && (
@@ -620,6 +649,44 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
     </Dialog>
+  );
+}
+
+// Shown when Frame.io rejects the signed-in Adobe identity (401): the sign-in itself worked,
+// but that Adobe account has no Frame.io access.
+function FrameioAccessError({ debugId, onSwitchAccount }) {
+  return (
+    <div role="alert" className="flex flex-col items-center px-6 py-10 text-center">
+      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white shadow-[0_1px_2px_rgba(17,17,17,0.06)]">
+        <UserX className="h-5 w-5 text-[#6B7280]" />
+      </div>
+      <h3 className="mt-4 text-base font-semibold tracking-[-0.01em] text-[#111111]">Frame.io didn't accept this account</h3>
+      <p className="mt-1.5 max-w-md text-sm text-[#5F5F5F]">
+        You're signed in to Adobe, but this account doesn't have access to Frame.io. This usually means you signed in with a
+        different Google or Adobe account than the one that owns your Frame.io workspace, or your older Frame.io account isn't
+        linked to Adobe yet.
+      </p>
+      <div className="mt-4 w-full max-w-md rounded-2xl bg-white p-4 text-left text-sm text-[#4D4D4D] ring-1 ring-[#E2E2E2]">
+        <p className="font-medium text-[#111111]">How to fix it</p>
+        <ol className="mt-2 list-decimal space-y-1.5 pl-5">
+          <li>Sign in again with the account you use for Frame.io.</li>
+          <li>
+            Older Frame.io account? In Frame.io go to{" "}
+            <span className="font-medium text-[#111111]">Avatar → Settings → Profile → Authentication</span> and connect Adobe
+            Authentication. Your Adobe and Frame.io emails must match.
+          </li>
+          <li>No Connect option? Google sign-in or SSO is on for your Frame.io account. Turn it off, connect Adobe, then try again.</li>
+        </ol>
+      </div>
+      <Button
+        type="button"
+        onClick={onSwitchAccount}
+        className="mt-5 h-11 rounded-full bg-[#111111] px-6 text-white hover:bg-[#2563EB]"
+      >
+        Use a different account
+      </Button>
+      {debugId && <p className="mt-3 text-xs text-[#9CA3AF]">Reference {debugId}</p>}
+    </div>
   );
 }
 
