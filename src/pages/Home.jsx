@@ -307,7 +307,7 @@ export default function Home() {
     const [importedFiles, setImportedFiles] = useState([]);
     const [videoThumbs, setVideoThumbs] = useState({})
     const { adAccounts, setAdAccounts, pages, setPages, pagesLoading, adAccountsLoading, refetchAdAccounts } = useAppData()
-    const { settings: adAccountSettings, loading: adAccountSettingsLoading, documentExists, refetchCopyTemplates } = useAdAccountSettings(selectedAdAccount)
+    const { settings: adAccountSettings, setSettings: setAdAccountSettings, loading: adAccountSettingsLoading, documentExists, refetchCopyTemplates } = useAdAccountSettings(selectedAdAccount)
     const [hasAnyAdAccountSettings, setHasAnyAdAccountSettings] = useState(false);
     const [selectedShopDestination, setSelectedShopDestination] = useState("")
     const [selectedShopDestinationType, setSelectedShopDestinationType] = useState("")
@@ -2487,6 +2487,7 @@ export default function Home() {
                             fileGroups={fileGroups}
                             setFileGroups={setFileGroups}
                             adAccountSettings={adAccountSettings}
+                            setAdAccountSettings={setAdAccountSettings}
                             refreshAdSets={refreshAdSets}
                             adNameFormulaV2={adNameFormulaV2}
                             setAdNameFormulaV2={setAdNameFormulaV2}
@@ -2638,8 +2639,8 @@ export default function Home() {
                     }}
                     canExtendTrial={canExtendTrial()}
                     onExtendTrial={handleExtendTrial}
-                    isTeamOwner={!!subscriptionData.isTeamOwner && !!subscriptionData.teamId}
-                    isTeamMember={!subscriptionData.isTeamOwner && !!subscriptionData.teamId}
+                    isTeamOwner={!!(subscriptionData.canManageBilling ?? subscriptionData.isTeamOwner) && !!subscriptionData.teamId}
+                    isTeamMember={!(subscriptionData.canManageBilling ?? subscriptionData.isTeamOwner) && !!subscriptionData.teamId}
                     isPastDue={isPastDue()}
                     onUpdatePayment={handleUpdatePayment}
                 />
