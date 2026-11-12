@@ -992,7 +992,7 @@ export default function BillingSettings({ platform = "meta" }) {
 
             <Dialog open={showChangePlanDialog} onOpenChange={setShowChangePlanDialog}>
                 <DialogOverlay className="bg-black/50 !-mt-[20px]" />
-                <DialogContent className="space-y-6 p-8 sm:max-w-[425px] !rounded-[30px]">
+                <DialogContent disableSlide className="space-y-5 px-8 pt-8 pb-6 sm:max-w-[425px] !rounded-[30px]">
                     <DialogHeader className="space-y-4">
                         <DialogTitle className="text-xl">Change Plan</DialogTitle>
                         <DialogDescription className="text-base leading-relaxed">
@@ -1001,20 +1001,19 @@ export default function BillingSettings({ platform = "meta" }) {
                         </DialogDescription>
                     </DialogHeader>
 
-                    <DialogFooter className="flex flex-col gap-3 pt-4 sm:flex-row">
+                    <DialogFooter className="flex flex-col gap-3 pt-1 sm:flex-row">
                         <Button
-                            variant="outline"
                             onClick={() => {
                                 setShowChangePlanDialog(false)
                                 setPendingPlanChange(null)
                             }}
-                            className="flex-1 rounded-2xl"
+                            className="h-[50px] flex-1 rounded-[20px] bg-[#F00D55] text-base text-white hover:bg-[#cf0b48]"
                         >
                             Cancel
                         </Button>
                         <Button
                             onClick={confirmChangePlan}
-                            className="flex-1 rounded-2xl bg-blue-600 hover:bg-blue-700"
+                            className="h-[50px] flex-1 rounded-[20px] bg-[#003CFF] text-base text-white hover:bg-[#002fd1]"
                         >
                             Yes, Switch Plan
                         </Button>
