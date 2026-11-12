@@ -87,6 +87,7 @@ import {
   RotateCcw,
   Save,
   Trash2,
+  Type,
   Upload,
   Users,
   X,
@@ -1168,6 +1169,17 @@ function detectFastestS3Region() {
   return _fastestRegionPromise;
 }
 
+// The Website / Instant Experience tabs above the link field are hidden for now. Flip this to
+// bring them back — all the destinationType handling is still in place.
+const SHOW_DESTINATION_TYPE_SWITCHER = false;
+
+// Partnership ad codes entered in "Enter Partnership Code" mode. Each code becomes its own ad
+// (the creator's post) in every selected ad set.
+const getPartnershipAdCodes = (formData) =>
+  formData?.isPartnershipAd && formData?.partnershipSource === "code"
+    ? (formData.partnershipAdCodes || []).map((code) => String(code || "").trim()).filter(Boolean)
+    : [];
+
 export default function AdCreationForm({
   isLoading,
   setIsLoading,
@@ -1280,6 +1292,7 @@ export default function AdCreationForm({
   fileGroups,
   setFileGroups,
   adAccountSettings,
+  setAdAccountSettings,
   adNameFormulaV2,
   setAdNameFormulaV2,
   teamId: teamIdProp,
@@ -1858,6 +1871,18 @@ export default function AdCreationForm({
     setOpenPartnerSelector(false);
   };
 
+  // "creator" = pick an approved partner from the dropdown; "code" = paste partnership ad codes.
+  const [partnershipSource, setPartnershipSource] = useState("creator");
+  const [partnershipAdCodes, setPartnershipAdCodes] = useState([""]);
+  const activePartnershipCodes = useMemo(
+    () => getPartnershipAdCodes({ isPartnershipAd, partnershipSource, partnershipAdCodes }),
+    [isPartnershipAd, partnershipSource, partnershipAdCodes],
+  );
+  const updatePartnershipAdCode = (index, value) =>
+    setPartnershipAdCodes((prev) => prev.map((code, i) => (i === index ? value : code)));
+  const removePartnershipAdCode = (index) =>
+    setPartnershipAdCodes((prev) => (prev.length > 1 ? prev.filter((_, i) => i !== index) : [""]));
+
   // Handle partnership toggle
   const handlePartnershipToggle = (checked) => {
     setIsPartnershipAd(checked);
@@ -1865,6 +1890,7 @@ export default function AdCreationForm({
       setPartnerIgAccountId("");
       setPartnerFbPageId("");
       setPartnerName?.("");
+      setPartnershipAdCodes([""]);
     }
   };
 
@@ -1938,6 +1964,8 @@ export default function AdCreationForm({
       partnerName,
       partnershipIdentityMode,
       partnershipPrimaryIdentity,
+      partnershipSource,
+      partnershipAdCodes,
       adNameFormulaV2,
       adValues,
       adScheduleStartTime,
@@ -1983,6 +2011,8 @@ export default function AdCreationForm({
       partnerName,
       partnershipIdentityMode,
       partnershipPrimaryIdentity,
+      partnershipSource,
+      partnershipAdCodes,
       adNameFormulaV2,
       adValues,
       adScheduleStartTime,
@@ -2027,7 +2057,7 @@ export default function AdCreationForm({
     [],
   );
 
-  const computeAdCount = useCallback(
+  const computeMediaAdCount = useCallback(
     (formData) => {
       if (!hasMediaInFormData(formData)) return 0;
 
@@ -2102,6 +2132,12 @@ export default function AdCreationForm({
       );
     },
     [hasMediaInFormData],
+  );
+
+  // Partnership ad codes add one ad per code per ad set on top of any uploaded media.
+  const computeAdCount = useCallback(
+    (formData) => computeMediaAdCount(formData) + getPartnershipAdCodes(formData).length * (formData.selectedAdSets?.length || 1),
+    [computeMediaAdCount],
   );
 
   const countFilesForVariant = useCallback(
@@ -2450,6 +2486,8 @@ export default function AdCreationForm({
         partnerFbPageId: variantState.partnerFbPageId || "",
         partnershipIdentityMode: variantState.partnershipIdentityMode || "dynamic",
         partnershipPrimaryIdentity: variantState.partnershipPrimaryIdentity || "brand",
+        partnershipSource: variantState.partnershipSource || "creator",
+        partnershipAdCodes: [...(variantState.partnershipAdCodes || [])],
         adNameFormulaV2: variantState.adNameFormulaV2
           ? {
             ...variantState.adNameFormulaV2,
@@ -5506,10 +5544,35 @@ export default function AdCreationForm({
   );
 
   const adNamePreviewFile = useMemo(() => {
-    const directFile = files[0] || driveFiles[0] || dropboxFiles[0] || frameioFiles[0] || oneDriveFiles[0] || importedFiles[0];
+    // With split ad data, preview the first media assigned to the variant being viewed
+    // (same assignment rules as captureFormDataAsJob).
+    const isSplit = variants.length > 1;
+    const totalMediaCount =
+      files.length + driveFiles.length + dropboxFiles.length + (frameioFiles?.length || 0) + (oneDriveFiles?.length || 0) +
+      importedFiles.length + importedPosts.length + selectedIgOrganicPosts.length;
+    const isSingleMediaSplit = totalMediaCount === 1;
+    const isFileInActiveVariant = (file) => {
+      if (!isSplit || isSingleMediaSplit || isSingleGroupSplit) return true;
+      const fileId = getFileId(file);
+      const owningGroup = fileGroups.find((group) => getGroupFileIds(group).includes(fileId));
+      if (owningGroup) return (groupVariantMap[owningGroup.id] || "default") === activeVariantId;
+      if (isFlexLikeAdType && fileGroups.length > 0) return false;
+      if (isCarouselAd) return activeVariantId === "default";
+      return (fileVariantMap[fileId] || "default") === activeVariantId;
+    };
+    const isPostInActiveVariant = (key) => !isSplit || isSingleMediaSplit || (postVariantMap[key] || "default") === activeVariantId;
+    const firstInVariant = (items, mapper = (item) => item) => items.find((item) => isFileInActiveVariant(mapper(item)));
+
+    const directFile =
+      firstInVariant(files) ||
+      firstInVariant(driveFiles, (file) => ({ ...file, isDrive: true })) ||
+      firstInVariant(dropboxFiles, (file) => ({ ...file, isDropbox: true })) ||
+      firstInVariant(frameioFiles || [], (file) => ({ ...file, isFrameio: true })) ||
+      firstInVariant(oneDriveFiles || [], (file) => ({ ...file, isOneDrive: true })) ||
+      firstInVariant(importedFiles, (file) => ({ ...file, isMetaLibrary: true }));
     if (directFile) return directFile;
 
-    const existingPost = importedPosts[0];
+    const existingPost = importedPosts.find((post) => isPostInActiveVariant(`post:${post.id}`));
     if (existingPost) {
       return {
         name: existingPost.ad_name || existingPost.name || "Existing ad",
@@ -5517,7 +5580,7 @@ export default function AdCreationForm({
       };
     }
 
-    const instagramPost = selectedIgOrganicPosts[0];
+    const instagramPost = selectedIgOrganicPosts.find((post) => isPostInActiveVariant(`igpost:${post.source_instagram_media_id}`));
     if (instagramPost) {
       return {
         name: instagramPost.caption || "Instagram post",
@@ -5526,7 +5589,11 @@ export default function AdCreationForm({
     }
 
     return null;
-  }, [driveFiles, dropboxFiles, files, frameioFiles, oneDriveFiles, importedFiles, importedPosts, selectedIgOrganicPosts]);
+  }, [
+    driveFiles, dropboxFiles, files, frameioFiles, oneDriveFiles, importedFiles, importedPosts, selectedIgOrganicPosts,
+    variants.length, activeVariantId, isSingleGroupSplit, fileGroups, groupVariantMap, fileVariantMap, postVariantMap,
+    isFlexLikeAdType, isCarouselAd,
+  ]);
 
   useEffect(() => {
     const computedAdName = computeAdNameFromFormula(adNamePreviewFile, 0, link[0], null, adType);
@@ -5947,6 +6014,66 @@ export default function AdCreationForm({
     }
   };
 
+  // ── Save a typed custom link to the ad account's saved links (mirrors "Save as New Template") ──
+  const [showSaveLinkDialog, setShowSaveLinkDialog] = useState(false);
+  const [newLinkTitleInput, setNewLinkTitleInput] = useState("");
+  const [isSavingLink, setIsSavingLink] = useState(false);
+  const customLinkToSave = (customLink || "").trim();
+  const isCustomLinkInputVisible =
+    !isCatalogueAd &&
+    !showPhoneNumberField &&
+    destinationType !== "instant_experience" &&
+    (!isCarouselAd || link.length === 1) &&
+    (showCustomLink || availableLinks.length === 0);
+  const existingSavedLink = useMemo(
+    () => (customLinkToSave ? availableLinks.find((saved) => (saved.url || "").trim() === customLinkToSave) || null : null),
+    [availableLinks, customLinkToSave],
+  );
+  const canOfferSaveLinkRaw = Boolean(selectedAdAccount && isCustomLinkInputVisible && customLinkToSave && isValidDomainLink(customLinkToSave));
+  const [canOfferSaveLink, setCanOfferSaveLink] = useState(false);
+
+  useEffect(() => {
+    if (!canOfferSaveLinkRaw) {
+      setCanOfferSaveLink(false);
+      return;
+    }
+    const timer = setTimeout(() => setCanOfferSaveLink(true), 300);
+    return () => clearTimeout(timer);
+  }, [canOfferSaveLinkRaw, customLinkToSave]);
+
+  const closeSaveLinkDialog = () => {
+    setShowSaveLinkDialog(false);
+    setNewLinkTitleInput("");
+  };
+
+  const handleSaveCustomLink = async () => {
+    const url = customLinkToSave;
+    if (!url || existingSavedLink || !selectedAdAccount) return;
+    setIsSavingLink(true);
+    try {
+      const newLink = {
+        url,
+        title: newLinkTitleInput.trim(),
+        createdAt: new Date().toISOString(),
+        isDefault: availableLinks.length === 0,
+      };
+      const nextLinks = [...availableLinks, newLink];
+      await saveSettings({ adAccountId: selectedAdAccount, adAccountSettings: { links: nextLinks } });
+      setAdAccountSettings?.((previous) => ({ ...previous, links: nextLinks }));
+      // Switch back to the saved-link dropdown with the new link selected.
+      setShowCustomLink(false);
+      setCustomLink("");
+      handleSavedLinkSelect(url);
+      toast.success("Link saved!");
+      closeSaveLinkDialog();
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to save link");
+    } finally {
+      setIsSavingLink(false);
+    }
+  };
+
   const sortedFilteredTemplates = useMemo(() => {
     const entries = sortTemplates(copyTemplates, sortMode, defaultTemplateName).filter(([name]) => name.toLowerCase().includes(templateSearch.toLowerCase().trim()));
 
@@ -6106,7 +6233,8 @@ export default function AdCreationForm({
       productExtensionProductSetId: jobProductExtensionProductSetId,
       selectedForm,
       //partnership ads
-      isPartnershipAd,
+      isPartnershipAd: jobIsPartnershipAd,
+      partnershipSource: jobPartnershipSource,
       partnerIgAccountId,
       partnerFbPageId,
       partnershipIdentityMode,
@@ -6121,6 +6249,11 @@ export default function AdCreationForm({
       promoCodeAutoDetect: jobPromoCodeAutoDetect = false,
       extraLandingPages: jobExtraLandingPages = [],
     } = jobData.formData;
+
+    // In "Enter Partnership Code" mode the codes make their own ads, so any uploaded media in the
+    // same job goes out as regular (non-partnership) ads.
+    const isPartnershipAd = jobIsPartnershipAd && jobPartnershipSource !== "code";
+    const jobPartnershipAdCodes = getPartnershipAdCodes(jobData.formData);
 
     const isCatalogueJob = adType === "catalogue";
     const getJobAdSetProductSetId = (adSetId) => {
@@ -6155,7 +6288,8 @@ export default function AdCreationForm({
       oneDriveFiles.length === 0 &&
       importedPosts.length === 0 &&
       importedFiles.length === 0 &&
-      (!selectedIgOrganicPosts || selectedIgOrganicPosts.length === 0)
+      (!selectedIgOrganicPosts || selectedIgOrganicPosts.length === 0) &&
+      jobPartnershipAdCodes.length === 0
     ) {
       toast.error("Please upload at least one file or import from Drive");
       throw new Error("Please upload at least one file or import from Drive");
@@ -7990,6 +8124,53 @@ export default function AdCreationForm({
         });
       }
 
+      // ============================================================================
+      // SECTION: PARTNERSHIP AD CODE ADS (one ad per code per ad set)
+      // ============================================================================
+      if (jobPartnershipAdCodes.length > 0) {
+        const adSetIdsToUse = [...dynamicAdSetIds, ...nonDynamicAdSetIds];
+
+        adSetIdsToUse.forEach((adSetId) => {
+          jobPartnershipAdCodes.forEach((adCode, codeIndex) => {
+            const formData = new FormData();
+
+            const adName = computeAdNameFromFormula(null, codeIndex, link[0], jobData.formData.adNameFormulaV2, null);
+            formData.append("adName", adName);
+            formData.append("adAccountId", selectedAdAccount);
+            formData.append("adSetId", adSetId);
+            formData.append("pageId", pageId);
+            formData.append("instagramAccountId", instagramAccountId || "");
+            const selectedPage = pages.find((page) => String(page.id) === String(pageId));
+            const selectedInstagramAccount = [selectedPage?.instagramAccount, ...(selectedPage?.additionalInstagramAccounts || [])].find(
+              (account) => String(account?.id) === String(instagramAccountId),
+            );
+            if (selectedInstagramAccount?.username) formData.append("instagramUsername", selectedInstagramAccount.username);
+            if (selectedInstagramAccount?.igId) formData.append("instagramAppUserId", selectedInstagramAccount.igId);
+            formData.append("launchPaused", launchPaused);
+            formData.append("discloseAiMedia", String(Boolean(discloseAiMedia)));
+            formData.append("jobId", frontendJobId);
+            formData.append("cta", resolveCtaForServer(cta || "LEARN_MORE"));
+            if (usePhoneNumberField || usesWebsiteAndPhoneCallDestination(adSetId)) {
+              formData.append("phoneNumber", phoneNumber);
+            }
+            if ((!usePhoneNumberField || usesWebsiteAndPhoneCallDestination(adSetId)) && !usesOnAdLeadFormDestination(adSetId)) {
+              formData.append("link", JSON.stringify(link));
+            }
+            if (usesOnAdLeadFormDestination(adSetId) && selectedForm) formData.append("leadgenFormId", selectedForm);
+
+            // Partnership code specific — the server maps the identity mode to Meta's ad_format
+            formData.append("partnershipAdCode", adCode);
+            formData.append("partnershipIdentityMode", partnershipIdentityMode || "dynamic");
+            formData.append("adType", "partnership_code");
+
+            if (adScheduleStartTime) formData.append("adScheduleStartTime", adScheduleStartTime);
+            if (adScheduleEndTime) formData.append("adScheduleEndTime", adScheduleEndTime);
+
+            queueCreateAdPromise(formData, { fileName: adName });
+          });
+        });
+      }
+
       if (!isCatalogueJob && isCarouselAd && dynamicAdSetIds.length === 0) {
         if (selectedAdSets.length === 0 && !duplicateAdSet) {
           toast.error("Please select at least one ad set for carousel");
@@ -9405,7 +9586,8 @@ export default function AdCreationForm({
       oneDriveFiles.length === 0 &&
       importedPosts.length === 0 &&
       importedFiles.length === 0 &&
-      selectedIgOrganicPosts.length === 0
+      selectedIgOrganicPosts.length === 0 &&
+      activePartnershipCodes.length === 0
     ) {
       toast.error("Please upload at least one file");
       return;
@@ -9419,7 +9601,7 @@ export default function AdCreationForm({
 
     for (const variant of orderedVariants) {
       const job = captureFormDataAsJob(variant.id);
-      if (!job || job.adCount === 0 || !hasMediaInFormData(job.formData)) {
+      if (!job || job.adCount === 0 || (!hasMediaInFormData(job.formData) && getPartnershipAdCodes(job.formData).length === 0)) {
         continue;
       }
 
@@ -9559,7 +9741,8 @@ export default function AdCreationForm({
         oneDriveFiles.length === 0 &&
         importedPosts.length === 0 &&
         importedFiles.length === 0 &&
-        selectedIgOrganicPosts.length === 0) ||
+        selectedIgOrganicPosts.length === 0 &&
+        activePartnershipCodes.length === 0) ||
       hasCatalogueInvalidMedia ||
       selectedFiles.size > 0 ||
       (!isCarouselAd && hasDuplicates)
@@ -9572,7 +9755,8 @@ export default function AdCreationForm({
         oneDriveFiles.length === 0 &&
         importedPosts.length === 0 &&
         importedFiles.length === 0 &&
-        selectedIgOrganicPosts.length === 0) ||
+        selectedIgOrganicPosts.length === 0 &&
+        activePartnershipCodes.length === 0) ||
       (duplicateAdSet && (!newAdSetName || newAdSetName.trim() === "")) ||
       (adType === "carousel" && files.length + driveFiles.length + importedFiles.length + dropboxFiles.length + frameioFiles.length + oneDriveFiles.length < 2) ||
       (isFlexLikeAdType &&
@@ -10558,11 +10742,63 @@ export default function AdCreationForm({
 
                           {/* Partner Instagram Selector */}
                           <div className="space-y-2">
-                            <Label className="flex items-center gap-2 text-sm text-gray-600">
-                              {renderDiffMark("partnerIgAccountId")}
-                              <InstagramIcon className="w-4 h-4" />
-                              Partner Instagram Account
-                            </Label>
+                            <div className="flex items-center justify-between gap-2">
+                              <Label className="flex items-center gap-2 text-sm text-gray-600">
+                                {renderDiffMark("partnerIgAccountId")}
+                                <InstagramIcon className="w-4 h-4" />
+                                {partnershipSource === "code" ? "Enter Partnership Ad Codes" : "Partner Instagram Account"}
+                              </Label>
+                              <Tabs value={partnershipSource} onValueChange={setPartnershipSource} className="shrink-0">
+                                <TabsList className="h-auto rounded-2xl border border-gray-200 bg-gray-100 p-1">
+                                  <TabsTrigger
+                                    value="creator"
+                                    className="rounded-xl px-2.5 py-1 text-[11px] font-semibold text-gray-500 hover:text-black data-[state=active]:bg-white data-[state=active]:text-black data-[state=active]:shadow-sm"
+                                  >
+                                    Choose Creator
+                                  </TabsTrigger>
+                                  <TabsTrigger
+                                    value="code"
+                                    className="rounded-xl px-2.5 py-1 text-[11px] font-semibold text-gray-500 hover:text-black data-[state=active]:bg-white data-[state=active]:text-black data-[state=active]:shadow-sm"
+                                  >
+                                    Enter Partnership Code
+                                  </TabsTrigger>
+                                </TabsList>
+                              </Tabs>
+                            </div>
+                            {partnershipSource === "code" ? (
+                              <div className="space-y-2">
+                                {partnershipAdCodes.map((code, index) => (
+                                  <div key={index} className="flex items-center gap-2">
+                                    <Input
+                                      value={code}
+                                      onChange={(e) => updatePartnershipAdCode(index, e.target.value)}
+                                      placeholder="Paste partnership ad code"
+                                      aria-label={`Partnership ad code ${index + 1}`}
+                                      className="rounded-2xl bg-white"
+                                    />
+                                    {partnershipAdCodes.length > 1 && (
+                                      <button
+                                        type="button"
+                                        aria-label={`Remove partnership ad code ${index + 1}`}
+                                        onClick={() => removePartnershipAdCode(index)}
+                                        className="shrink-0 rounded-full p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+                                      >
+                                        <X className="h-4 w-4" />
+                                      </button>
+                                    )}
+                                  </div>
+                                ))}
+                                <Button
+                                  type="button"
+                                  onClick={() => setPartnershipAdCodes((prev) => [...prev, ""])}
+                                  className="w-full rounded-xl bg-black text-white hover:bg-gray-800"
+                                >
+                                  <Plus className="mr-1 h-4 w-4" />
+                                  Add another code
+                                </Button>
+                                <p className="text-xs text-gray-500">Each code creates its own ad in every selected ad set.</p>
+                              </div>
+                            ) : (
                             <Popover open={openPartnerSelector} onOpenChange={setOpenPartnerSelector}>
                               <PopoverTrigger asChild>
                                 <Button
@@ -10629,10 +10865,11 @@ export default function AdCreationForm({
                                 </Command>
                               </PopoverContent>
                             </Popover>
+                            )}
                           </div>
 
                           {/* Partner FB Page ID (auto-filled, read-only) */}
-                          {partnerFbPageId && (
+                          {partnershipSource === "creator" && partnerFbPageId && (
                             <div className="space-y-2">
                               <Label className="flex items-center gap-2 text-sm text-gray-600">
                                 {renderDiffMark("partnerFbPageId")}
@@ -10673,20 +10910,20 @@ export default function AdCreationForm({
                                       <RadioGroupItem
                                         value="first_identity_only"
                                         id="identity-first"
-                                        disabled={!partnerFbPageId && partnerIgAccountId}
+                                        disabled={partnershipSource === "creator" && !partnerFbPageId && partnerIgAccountId}
                                       />
                                       <Label
                                         htmlFor="identity-first"
                                         className={cn(
                                           "text-sm font-normal cursor-pointer",
-                                          !partnerFbPageId && partnerIgAccountId && "text-gray-400 cursor-not-allowed",
+                                          partnershipSource === "creator" && !partnerFbPageId && partnerIgAccountId && "text-gray-400 cursor-not-allowed",
                                         )}
                                       >
                                         First identity only
                                       </Label>
                                     </div>
                                   </TooltipTrigger>
-                                  {!partnerFbPageId && partnerIgAccountId && (
+                                  {partnershipSource === "creator" && !partnerFbPageId && partnerIgAccountId && (
                                     <TooltipContent side="right" className="max-w-xs text-xs">
                                       You can't choose first identity only without an approved Facebook page for the partner
                                     </TooltipContent>
@@ -10702,8 +10939,9 @@ export default function AdCreationForm({
                             </RadioGroup>
                           </div>
 
-                          {/* Primary identity picker — only for "Both identities" */}
-                          {partnershipIdentityMode === "both_identities" && (
+                          {/* Primary identity picker — only for "Both identities" with a chosen creator
+                              (an ad code always shows the creator's post, so there's no primary to pick) */}
+                          {partnershipSource === "creator" && partnershipIdentityMode === "both_identities" && (
                             <div className="space-y-2">
                               <Label className="text-sm text-gray-600">
                                 <span className="inline-flex items-center gap-1">
@@ -11512,7 +11750,8 @@ export default function AdCreationForm({
                             : "Link (URL)"}
                       </Label>
                       <div className="ml-auto flex flex-wrap items-center justify-end gap-3">
-                        {supportsInstantExperience && (
+                        {/* Website / Instant Experience switcher hidden from the UI; destinationType logic is unchanged. */}
+                        {SHOW_DESTINATION_TYPE_SWITCHER && supportsInstantExperience && (
                           <Tabs
                             value={destinationType}
                             onValueChange={(nextDestinationType) => {
@@ -11565,7 +11804,9 @@ export default function AdCreationForm({
                         )}
                       </div>
                     </div>
-                    <p className="text-gray-500 text-[12px] font-regular">
+                    {/* Fixed-height row so the Save Link button appearing doesn't shift the input below. */}
+                    <div className="flex min-h-6 items-center justify-between gap-2">
+                    <p className="min-w-0 text-gray-500 text-[12px] font-regular">
                       {!isCatalogueAd && showPhoneNumberField ? (
                         <>
                           This phone number will be used for your call ads. <span className="font-semibold">Please add country code as well</span>
@@ -11578,6 +11819,23 @@ export default function AdCreationForm({
                         "Your UTMs will be auto applied from Preferences"
                       )}
                     </p>
+                    {canOfferSaveLink && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={!!existingSavedLink}
+                        onClick={() => setShowSaveLinkDialog(true)}
+                        className="h-6 shrink-0 rounded-full border-gray-300 bg-zinc-800 px-2.5 py-0 text-[11px] text-white hover:bg-zinc-900 hover:text-white animate-in fade-in slide-in-from-bottom-1 duration-500 ease-out fill-mode-both"
+                      >
+                        {existingSavedLink
+                          ? existingSavedLink.title?.trim()
+                            ? `Already saved as "${existingSavedLink.title.trim()}"`
+                            : "Already saved"
+                          : "Save Link"}
+                      </Button>
+                    )}
+                    </div>
 
                     {isCatalogueAd ? (
                       <Input
@@ -13003,6 +13261,73 @@ export default function AdCreationForm({
                 ) : (
                   "Save"
                 )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showSaveLinkDialog && (
+        // Appears instantly — no entry animation on the overlay or the dialog.
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center"
+          style={{ position: "fixed", top: -20, left: 0, right: 0, bottom: 0 }}
+        >
+          <div className="absolute inset-0 bg-black/30" onClick={closeSaveLinkDialog} />
+          <div
+            className="relative bg-white rounded-2xl shadow-xl border border-gray-200 w-[400px] p-6 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div>
+              <h3 className="text-lg font-semibold">Save Link</h3>
+              <p className="text-sm text-gray-500 mt-1">Add it to this ad account's saved links.</p>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="save-link-title" className="flex items-center gap-1.5 text-xs text-gray-600">
+                <Type className="h-3.5 w-3.5" aria-hidden="true" />
+                Title (optional)
+              </Label>
+              <Input
+                id="save-link-title"
+                value={newLinkTitleInput}
+                onChange={(e) => setNewLinkTitleInput(e.target.value)}
+                placeholder="e.g. Summer Sale LP"
+                className={formFieldChrome}
+                autoFocus
+                onKeyDown={(e) => e.key === "Enter" && !isSavingLink && handleSaveCustomLink()}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="save-link-url" className="flex items-center gap-1.5 text-xs text-gray-600">
+                <Link2 className="h-3.5 w-3.5" aria-hidden="true" />
+                Link
+              </Label>
+              <TooltipProvider delayDuration={200}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Input
+                      id="save-link-url"
+                      value={customLinkToSave}
+                      readOnly
+                      tabIndex={-1}
+                      className={cn("w-[352px] truncate cursor-default", formFieldChrome, "text-black")}
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent className="z-[10000] max-w-sm break-all rounded-xl bg-zinc-800 px-3 py-2 text-white">
+                    {customLinkToSave}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            <div className="grid grid-cols-2 gap-2 pt-2">
+              <Button variant="outline" className="w-full rounded-xl" onClick={closeSaveLinkDialog}>
+                Cancel
+              </Button>
+              <Button
+                className="w-full bg-blue-600 text-white rounded-xl hover:bg-blue-700"
+                disabled={isSavingLink || !customLinkToSave || !!existingSavedLink}
+                onClick={handleSaveCustomLink}
+              >
+                {isSavingLink ? "Saving..." : "Save"}
               </Button>
             </div>
           </div>
