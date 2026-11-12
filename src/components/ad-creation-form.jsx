@@ -1168,6 +1168,13 @@ function detectFastestS3Region() {
   return _fastestRegionPromise;
 }
 
+// Partnership ad codes entered in "Enter Partnership Code" mode. Each code becomes its own ad
+// (the creator's post) in every selected ad set.
+const getPartnershipAdCodes = (formData) =>
+  formData?.isPartnershipAd && formData?.partnershipSource === "code"
+    ? (formData.partnershipAdCodes || []).map((code) => String(code || "").trim()).filter(Boolean)
+    : [];
+
 export default function AdCreationForm({
   isLoading,
   setIsLoading,
@@ -1858,6 +1865,18 @@ export default function AdCreationForm({
     setOpenPartnerSelector(false);
   };
 
+  // "creator" = pick an approved partner from the dropdown; "code" = paste partnership ad codes.
+  const [partnershipSource, setPartnershipSource] = useState("creator");
+  const [partnershipAdCodes, setPartnershipAdCodes] = useState([""]);
+  const activePartnershipCodes = useMemo(
+    () => getPartnershipAdCodes({ isPartnershipAd, partnershipSource, partnershipAdCodes }),
+    [isPartnershipAd, partnershipSource, partnershipAdCodes],
+  );
+  const updatePartnershipAdCode = (index, value) =>
+    setPartnershipAdCodes((prev) => prev.map((code, i) => (i === index ? value : code)));
+  const removePartnershipAdCode = (index) =>
+    setPartnershipAdCodes((prev) => (prev.length > 1 ? prev.filter((_, i) => i !== index) : [""]));
+
   // Handle partnership toggle
   const handlePartnershipToggle = (checked) => {
     setIsPartnershipAd(checked);
@@ -1865,6 +1884,7 @@ export default function AdCreationForm({
       setPartnerIgAccountId("");
       setPartnerFbPageId("");
       setPartnerName?.("");
+      setPartnershipAdCodes([""]);
     }
   };
 
@@ -1938,6 +1958,8 @@ export default function AdCreationForm({
       partnerName,
       partnershipIdentityMode,
       partnershipPrimaryIdentity,
+      partnershipSource,
+      partnershipAdCodes,
       adNameFormulaV2,
       adValues,
       adScheduleStartTime,
@@ -1983,6 +2005,8 @@ export default function AdCreationForm({
       partnerName,
       partnershipIdentityMode,
       partnershipPrimaryIdentity,
+      partnershipSource,
+      partnershipAdCodes,
       adNameFormulaV2,
       adValues,
       adScheduleStartTime,
@@ -2027,7 +2051,7 @@ export default function AdCreationForm({
     [],
   );
 
-  const computeAdCount = useCallback(
+  const computeMediaAdCount = useCallback(
     (formData) => {
       if (!hasMediaInFormData(formData)) return 0;
 
@@ -2102,6 +2126,12 @@ export default function AdCreationForm({
       );
     },
     [hasMediaInFormData],
+  );
+
+  // Partnership ad codes add one ad per code per ad set on top of any uploaded media.
+  const computeAdCount = useCallback(
+    (formData) => computeMediaAdCount(formData) + getPartnershipAdCodes(formData).length * (formData.selectedAdSets?.length || 1),
+    [computeMediaAdCount],
   );
 
   const countFilesForVariant = useCallback(
@@ -2450,6 +2480,8 @@ export default function AdCreationForm({
         partnerFbPageId: variantState.partnerFbPageId || "",
         partnershipIdentityMode: variantState.partnershipIdentityMode || "dynamic",
         partnershipPrimaryIdentity: variantState.partnershipPrimaryIdentity || "brand",
+        partnershipSource: variantState.partnershipSource || "creator",
+        partnershipAdCodes: [...(variantState.partnershipAdCodes || [])],
         adNameFormulaV2: variantState.adNameFormulaV2
           ? {
             ...variantState.adNameFormulaV2,
@@ -6106,7 +6138,8 @@ export default function AdCreationForm({
       productExtensionProductSetId: jobProductExtensionProductSetId,
       selectedForm,
       //partnership ads
-      isPartnershipAd,
+      isPartnershipAd: jobIsPartnershipAd,
+      partnershipSource: jobPartnershipSource,
       partnerIgAccountId,
       partnerFbPageId,
       partnershipIdentityMode,
@@ -6121,6 +6154,11 @@ export default function AdCreationForm({
       promoCodeAutoDetect: jobPromoCodeAutoDetect = false,
       extraLandingPages: jobExtraLandingPages = [],
     } = jobData.formData;
+
+    // In "Enter Partnership Code" mode the codes make their own ads, so any uploaded media in the
+    // same job goes out as regular (non-partnership) ads.
+    const isPartnershipAd = jobIsPartnershipAd && jobPartnershipSource !== "code";
+    const jobPartnershipAdCodes = getPartnershipAdCodes(jobData.formData);
 
     const isCatalogueJob = adType === "catalogue";
     const getJobAdSetProductSetId = (adSetId) => {
@@ -6155,7 +6193,8 @@ export default function AdCreationForm({
       oneDriveFiles.length === 0 &&
       importedPosts.length === 0 &&
       importedFiles.length === 0 &&
-      (!selectedIgOrganicPosts || selectedIgOrganicPosts.length === 0)
+      (!selectedIgOrganicPosts || selectedIgOrganicPosts.length === 0) &&
+      jobPartnershipAdCodes.length === 0
     ) {
       toast.error("Please upload at least one file or import from Drive");
       throw new Error("Please upload at least one file or import from Drive");
@@ -7990,6 +8029,53 @@ export default function AdCreationForm({
         });
       }
 
+      // ============================================================================
+      // SECTION: PARTNERSHIP AD CODE ADS (one ad per code per ad set)
+      // ============================================================================
+      if (jobPartnershipAdCodes.length > 0) {
+        const adSetIdsToUse = [...dynamicAdSetIds, ...nonDynamicAdSetIds];
+
+        adSetIdsToUse.forEach((adSetId) => {
+          jobPartnershipAdCodes.forEach((adCode, codeIndex) => {
+            const formData = new FormData();
+
+            const adName = computeAdNameFromFormula(null, codeIndex, link[0], jobData.formData.adNameFormulaV2, null);
+            formData.append("adName", adName);
+            formData.append("adAccountId", selectedAdAccount);
+            formData.append("adSetId", adSetId);
+            formData.append("pageId", pageId);
+            formData.append("instagramAccountId", instagramAccountId || "");
+            const selectedPage = pages.find((page) => String(page.id) === String(pageId));
+            const selectedInstagramAccount = [selectedPage?.instagramAccount, ...(selectedPage?.additionalInstagramAccounts || [])].find(
+              (account) => String(account?.id) === String(instagramAccountId),
+            );
+            if (selectedInstagramAccount?.username) formData.append("instagramUsername", selectedInstagramAccount.username);
+            if (selectedInstagramAccount?.igId) formData.append("instagramAppUserId", selectedInstagramAccount.igId);
+            formData.append("launchPaused", launchPaused);
+            formData.append("discloseAiMedia", String(Boolean(discloseAiMedia)));
+            formData.append("jobId", frontendJobId);
+            formData.append("cta", resolveCtaForServer(cta || "LEARN_MORE"));
+            if (usePhoneNumberField || usesWebsiteAndPhoneCallDestination(adSetId)) {
+              formData.append("phoneNumber", phoneNumber);
+            }
+            if ((!usePhoneNumberField || usesWebsiteAndPhoneCallDestination(adSetId)) && !usesOnAdLeadFormDestination(adSetId)) {
+              formData.append("link", JSON.stringify(link));
+            }
+            if (usesOnAdLeadFormDestination(adSetId) && selectedForm) formData.append("leadgenFormId", selectedForm);
+
+            // Partnership code specific — the server maps the identity mode to Meta's ad_format
+            formData.append("partnershipAdCode", adCode);
+            formData.append("partnershipIdentityMode", partnershipIdentityMode || "dynamic");
+            formData.append("adType", "partnership_code");
+
+            if (adScheduleStartTime) formData.append("adScheduleStartTime", adScheduleStartTime);
+            if (adScheduleEndTime) formData.append("adScheduleEndTime", adScheduleEndTime);
+
+            queueCreateAdPromise(formData, { fileName: adName });
+          });
+        });
+      }
+
       if (!isCatalogueJob && isCarouselAd && dynamicAdSetIds.length === 0) {
         if (selectedAdSets.length === 0 && !duplicateAdSet) {
           toast.error("Please select at least one ad set for carousel");
@@ -9402,7 +9488,8 @@ export default function AdCreationForm({
       oneDriveFiles.length === 0 &&
       importedPosts.length === 0 &&
       importedFiles.length === 0 &&
-      selectedIgOrganicPosts.length === 0
+      selectedIgOrganicPosts.length === 0 &&
+      activePartnershipCodes.length === 0
     ) {
       toast.error("Please upload at least one file");
       return;
@@ -9416,7 +9503,7 @@ export default function AdCreationForm({
 
     for (const variant of orderedVariants) {
       const job = captureFormDataAsJob(variant.id);
-      if (!job || job.adCount === 0 || !hasMediaInFormData(job.formData)) {
+      if (!job || job.adCount === 0 || (!hasMediaInFormData(job.formData) && getPartnershipAdCodes(job.formData).length === 0)) {
         continue;
       }
 
@@ -9556,7 +9643,8 @@ export default function AdCreationForm({
         oneDriveFiles.length === 0 &&
         importedPosts.length === 0 &&
         importedFiles.length === 0 &&
-        selectedIgOrganicPosts.length === 0) ||
+        selectedIgOrganicPosts.length === 0 &&
+        activePartnershipCodes.length === 0) ||
       hasCatalogueInvalidMedia ||
       selectedFiles.size > 0 ||
       (!isCarouselAd && hasDuplicates)
@@ -9569,7 +9657,8 @@ export default function AdCreationForm({
         oneDriveFiles.length === 0 &&
         importedPosts.length === 0 &&
         importedFiles.length === 0 &&
-        selectedIgOrganicPosts.length === 0) ||
+        selectedIgOrganicPosts.length === 0 &&
+        activePartnershipCodes.length === 0) ||
       (duplicateAdSet && (!newAdSetName || newAdSetName.trim() === "")) ||
       (adType === "carousel" && files.length + driveFiles.length + importedFiles.length + dropboxFiles.length + frameioFiles.length + oneDriveFiles.length < 2) ||
       (isFlexLikeAdType &&
@@ -10513,6 +10602,7 @@ export default function AdCreationForm({
                       {/* Partner Selector (only shown when toggle is ON) */}
                       {isPartnershipAd && (
                         <div className="space-y-4 p-4 bg-gray-50 rounded-2xl border border-gray-200">
+                          {partnershipSource === "creator" && (
                           <div className="flex items-center justify-between gap-2">
                             <div className="min-w-0 space-y-0.5">
                               <Label className="block text-sm font-medium leading-5 text-gray-700">Select Partner Creator</Label>
@@ -10545,8 +10635,9 @@ export default function AdCreationForm({
                               />
                             </button>
                           </div>
+                          )}
 
-                          {partnersError && (
+                          {partnershipSource === "creator" && partnersError && (
                             <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 p-2 rounded-lg">
                               <AlertTriangle className="w-4 h-4" />
                               <span>{partnersError}</span>
@@ -10555,11 +10646,67 @@ export default function AdCreationForm({
 
                           {/* Partner Instagram Selector */}
                           <div className="space-y-2">
-                            <Label className="flex items-center gap-2 text-sm text-gray-600">
-                              {renderDiffMark("partnerIgAccountId")}
-                              <InstagramIcon className="w-4 h-4" />
-                              Partner Instagram Account
-                            </Label>
+                            <div className="flex items-center justify-between gap-2">
+                              <Label className="flex items-center gap-2 text-sm text-gray-600">
+                                {renderDiffMark("partnerIgAccountId")}
+                                <InstagramIcon className="w-4 h-4" />
+                                Partner Instagram Account
+                              </Label>
+                              <div role="radiogroup" aria-label="Partner source" className="inline-flex shrink-0 rounded-full border border-gray-200 bg-white p-0.5">
+                                {[
+                                  ["creator", "Choose Creator"],
+                                  ["code", "Enter Partnership Code"],
+                                ].map(([value, label]) => (
+                                  <button
+                                    key={value}
+                                    type="button"
+                                    role="radio"
+                                    aria-checked={partnershipSource === value}
+                                    onClick={() => setPartnershipSource(value)}
+                                    className={cn(
+                                      "rounded-full px-2.5 py-1 text-xs font-medium transition-colors",
+                                      partnershipSource === value ? "bg-black text-white" : "text-gray-600 hover:text-gray-900",
+                                    )}
+                                  >
+                                    {label}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                            {partnershipSource === "code" ? (
+                              <div className="space-y-2">
+                                {partnershipAdCodes.map((code, index) => (
+                                  <div key={index} className="flex items-center gap-2">
+                                    <Input
+                                      value={code}
+                                      onChange={(e) => updatePartnershipAdCode(index, e.target.value)}
+                                      placeholder="Paste partnership ad code"
+                                      aria-label={`Partnership ad code ${index + 1}`}
+                                      className="rounded-xl bg-white"
+                                    />
+                                    {partnershipAdCodes.length > 1 && (
+                                      <button
+                                        type="button"
+                                        aria-label={`Remove partnership ad code ${index + 1}`}
+                                        onClick={() => removePartnershipAdCode(index)}
+                                        className="shrink-0 rounded-full p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+                                      >
+                                        <X className="h-4 w-4" />
+                                      </button>
+                                    )}
+                                  </div>
+                                ))}
+                                <Button
+                                  type="button"
+                                  onClick={() => setPartnershipAdCodes((prev) => [...prev, ""])}
+                                  className="w-full rounded-xl bg-black text-white hover:bg-gray-800"
+                                >
+                                  <Plus className="mr-1 h-4 w-4" />
+                                  Add another code
+                                </Button>
+                                <p className="text-xs text-gray-500">Each code creates its own ad in every selected ad set.</p>
+                              </div>
+                            ) : (
                             <Popover open={openPartnerSelector} onOpenChange={setOpenPartnerSelector}>
                               <PopoverTrigger asChild>
                                 <Button
@@ -10626,10 +10773,11 @@ export default function AdCreationForm({
                                 </Command>
                               </PopoverContent>
                             </Popover>
+                            )}
                           </div>
 
                           {/* Partner FB Page ID (auto-filled, read-only) */}
-                          {partnerFbPageId && (
+                          {partnershipSource === "creator" && partnerFbPageId && (
                             <div className="space-y-2">
                               <Label className="flex items-center gap-2 text-sm text-gray-600">
                                 {renderDiffMark("partnerFbPageId")}
@@ -10670,20 +10818,20 @@ export default function AdCreationForm({
                                       <RadioGroupItem
                                         value="first_identity_only"
                                         id="identity-first"
-                                        disabled={!partnerFbPageId && partnerIgAccountId}
+                                        disabled={partnershipSource === "creator" && !partnerFbPageId && partnerIgAccountId}
                                       />
                                       <Label
                                         htmlFor="identity-first"
                                         className={cn(
                                           "text-sm font-normal cursor-pointer",
-                                          !partnerFbPageId && partnerIgAccountId && "text-gray-400 cursor-not-allowed",
+                                          partnershipSource === "creator" && !partnerFbPageId && partnerIgAccountId && "text-gray-400 cursor-not-allowed",
                                         )}
                                       >
                                         First identity only
                                       </Label>
                                     </div>
                                   </TooltipTrigger>
-                                  {!partnerFbPageId && partnerIgAccountId && (
+                                  {partnershipSource === "creator" && !partnerFbPageId && partnerIgAccountId && (
                                     <TooltipContent side="right" className="max-w-xs text-xs">
                                       You can't choose first identity only without an approved Facebook page for the partner
                                     </TooltipContent>
@@ -10699,8 +10847,9 @@ export default function AdCreationForm({
                             </RadioGroup>
                           </div>
 
-                          {/* Primary identity picker — only for "Both identities" */}
-                          {partnershipIdentityMode === "both_identities" && (
+                          {/* Primary identity picker — only for "Both identities" with a chosen creator
+                              (an ad code always shows the creator's post, so there's no primary to pick) */}
+                          {partnershipSource === "creator" && partnershipIdentityMode === "both_identities" && (
                             <div className="space-y-2">
                               <Label className="text-sm text-gray-600">
                                 <span className="inline-flex items-center gap-1">
