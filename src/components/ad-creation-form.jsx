@@ -87,6 +87,7 @@ import {
   RotateCcw,
   Save,
   Trash2,
+  Type,
   Upload,
   Users,
   X,
@@ -10748,13 +10749,13 @@ export default function AdCreationForm({
                                 <TabsList className="h-auto rounded-2xl border border-gray-200 bg-gray-100 p-1">
                                   <TabsTrigger
                                     value="creator"
-                                    className="rounded-xl px-3 py-1.5 text-xs font-semibold text-gray-500 hover:text-black data-[state=active]:bg-white data-[state=active]:text-black data-[state=active]:shadow-sm"
+                                    className="rounded-xl px-2.5 py-1 text-[11px] font-semibold text-gray-500 hover:text-black data-[state=active]:bg-white data-[state=active]:text-black data-[state=active]:shadow-sm"
                                   >
                                     Choose Creator
                                   </TabsTrigger>
                                   <TabsTrigger
                                     value="code"
-                                    className="rounded-xl px-3 py-1.5 text-xs font-semibold text-gray-500 hover:text-black data-[state=active]:bg-white data-[state=active]:text-black data-[state=active]:shadow-sm"
+                                    className="rounded-xl px-2.5 py-1 text-[11px] font-semibold text-gray-500 hover:text-black data-[state=active]:bg-white data-[state=active]:text-black data-[state=active]:shadow-sm"
                                   >
                                     Enter Partnership Code
                                   </TabsTrigger>
@@ -10770,7 +10771,7 @@ export default function AdCreationForm({
                                       onChange={(e) => updatePartnershipAdCode(index, e.target.value)}
                                       placeholder="Paste partnership ad code"
                                       aria-label={`Partnership ad code ${index + 1}`}
-                                      className="rounded-xl bg-white"
+                                      className="rounded-2xl bg-white"
                                     />
                                     {partnershipAdCodes.length > 1 && (
                                       <button
@@ -11822,7 +11823,7 @@ export default function AdCreationForm({
                         variant="outline"
                         disabled={!!existingSavedLink}
                         onClick={() => setShowSaveLinkDialog(true)}
-                        className="h-6 shrink-0 rounded-lg border-gray-300 bg-zinc-800 px-2.5 py-0 text-[11px] text-white hover:bg-zinc-900 hover:text-white animate-in fade-in slide-in-from-bottom-1 duration-500 ease-out fill-mode-both"
+                        className="h-6 shrink-0 rounded-full border-gray-300 bg-zinc-800 px-2.5 py-0 text-[11px] text-white hover:bg-zinc-900 hover:text-white animate-in fade-in slide-in-from-bottom-1 duration-500 ease-out fill-mode-both"
                       >
                         {existingSavedLink
                           ? existingSavedLink.title?.trim()
@@ -13278,7 +13279,8 @@ export default function AdCreationForm({
               <p className="text-sm text-gray-500 mt-1">Add it to this ad account's saved links.</p>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="save-link-title" className="text-xs text-gray-600">
+              <Label htmlFor="save-link-title" className="flex items-center gap-1.5 text-xs text-gray-600">
+                <Type className="h-3.5 w-3.5" aria-hidden="true" />
                 Title (optional)
               </Label>
               <Input
@@ -13292,7 +13294,8 @@ export default function AdCreationForm({
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="save-link-url" className="text-xs text-gray-600">
+              <Label htmlFor="save-link-url" className="flex items-center gap-1.5 text-xs text-gray-600">
+                <Link2 className="h-3.5 w-3.5" aria-hidden="true" />
                 Link
               </Label>
               <TooltipProvider delayDuration={200}>
@@ -13303,7 +13306,7 @@ export default function AdCreationForm({
                       value={customLinkToSave}
                       readOnly
                       tabIndex={-1}
-                      className={cn("w-[352px] truncate bg-gray-50 text-gray-600 cursor-default", formFieldChrome)}
+                      className={cn("w-[352px] truncate cursor-default", formFieldChrome, "text-black")}
                     />
                   </TooltipTrigger>
                   <TooltipContent className="z-[10000] max-w-sm break-all rounded-xl bg-zinc-800 px-3 py-2 text-white">
@@ -13312,12 +13315,12 @@ export default function AdCreationForm({
                 </Tooltip>
               </TooltipProvider>
             </div>
-            <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" className="w-24 rounded-xl" onClick={closeSaveLinkDialog}>
+            <div className="grid grid-cols-2 gap-2 pt-2">
+              <Button variant="outline" className="w-full rounded-xl" onClick={closeSaveLinkDialog}>
                 Cancel
               </Button>
               <Button
-                className="w-24 bg-blue-600 text-white rounded-xl hover:bg-blue-700"
+                className="w-full bg-blue-600 text-white rounded-xl hover:bg-blue-700"
                 disabled={isSavingLink || !customLinkToSave || !!existingSavedLink}
                 onClick={handleSaveCustomLink}
               >
