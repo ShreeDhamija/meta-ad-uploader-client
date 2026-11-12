@@ -10696,7 +10696,6 @@ export default function AdCreationForm({
                       {/* Partner Selector (only shown when toggle is ON) */}
                       {isPartnershipAd && (
                         <div className="space-y-4 p-4 bg-gray-50 rounded-2xl border border-gray-200">
-                          {partnershipSource === "creator" && (
                           <div className="flex items-center justify-between gap-2">
                             <div className="min-w-0 space-y-0.5">
                               <Label className="block text-sm font-medium leading-5 text-gray-700">Select Partner Creator</Label>
@@ -10729,9 +10728,8 @@ export default function AdCreationForm({
                               />
                             </button>
                           </div>
-                          )}
 
-                          {partnershipSource === "creator" && partnersError && (
+                          {partnersError && (
                             <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 p-2 rounded-lg">
                               <AlertTriangle className="w-4 h-4" />
                               <span>{partnersError}</span>
@@ -10744,28 +10742,24 @@ export default function AdCreationForm({
                               <Label className="flex items-center gap-2 text-sm text-gray-600">
                                 {renderDiffMark("partnerIgAccountId")}
                                 <InstagramIcon className="w-4 h-4" />
-                                Partner Instagram Account
+                                {partnershipSource === "code" ? "Enter Partnership Ad Codes" : "Partner Instagram Account"}
                               </Label>
-                              <div role="radiogroup" aria-label="Partner source" className="inline-flex shrink-0 rounded-full border border-gray-200 bg-white p-0.5">
-                                {[
-                                  ["creator", "Choose Creator"],
-                                  ["code", "Enter Partnership Code"],
-                                ].map(([value, label]) => (
-                                  <button
-                                    key={value}
-                                    type="button"
-                                    role="radio"
-                                    aria-checked={partnershipSource === value}
-                                    onClick={() => setPartnershipSource(value)}
-                                    className={cn(
-                                      "rounded-full px-2.5 py-1 text-xs font-medium transition-colors",
-                                      partnershipSource === value ? "bg-black text-white" : "text-gray-600 hover:text-gray-900",
-                                    )}
+                              <Tabs value={partnershipSource} onValueChange={setPartnershipSource} className="shrink-0">
+                                <TabsList className="h-auto rounded-2xl border border-gray-200 bg-gray-100 p-1">
+                                  <TabsTrigger
+                                    value="creator"
+                                    className="rounded-xl px-3 py-1.5 text-xs font-semibold text-gray-500 hover:text-black data-[state=active]:bg-white data-[state=active]:text-black data-[state=active]:shadow-sm"
                                   >
-                                    {label}
-                                  </button>
-                                ))}
-                              </div>
+                                    Choose Creator
+                                  </TabsTrigger>
+                                  <TabsTrigger
+                                    value="code"
+                                    className="rounded-xl px-3 py-1.5 text-xs font-semibold text-gray-500 hover:text-black data-[state=active]:bg-white data-[state=active]:text-black data-[state=active]:shadow-sm"
+                                  >
+                                    Enter Partnership Code
+                                  </TabsTrigger>
+                                </TabsList>
+                              </Tabs>
                             </div>
                             {partnershipSource === "code" ? (
                               <div className="space-y-2">
@@ -11752,24 +11746,6 @@ export default function AdCreationForm({
                             : "Link (URL)"}
                       </Label>
                       <div className="ml-auto flex flex-wrap items-center justify-end gap-3">
-                        {canOfferSaveLink && (
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            disabled={isSavingLink || !!existingSavedLink}
-                            onClick={() => setShowSaveLinkDialog(true)}
-                            className="text-xs px-3 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900 animate-in fade-in slide-in-from-bottom-1 duration-500 ease-out fill-mode-both"
-                          >
-                            {isSavingLink ? (
-                              <Loader className="w-3 h-3 animate-spin" />
-                            ) : existingSavedLink ? (
-                              existingSavedLink.title?.trim() ? `Already saved as "${existingSavedLink.title.trim()}"` : "Already saved"
-                            ) : (
-                              "Save Link"
-                            )}
-                          </Button>
-                        )}
                         {/* Website / Instant Experience switcher hidden from the UI; destinationType logic is unchanged. */}
                         {SHOW_DESTINATION_TYPE_SWITCHER && supportsInstantExperience && (
                           <Tabs
@@ -11824,7 +11800,9 @@ export default function AdCreationForm({
                         )}
                       </div>
                     </div>
-                    <p className="text-gray-500 text-[12px] font-regular">
+                    {/* Fixed-height row so the Save Link button appearing doesn't shift the input below. */}
+                    <div className="flex min-h-6 items-center justify-between gap-2">
+                    <p className="min-w-0 text-gray-500 text-[12px] font-regular">
                       {!isCatalogueAd && showPhoneNumberField ? (
                         <>
                           This phone number will be used for your call ads. <span className="font-semibold">Please add country code as well</span>
@@ -11837,6 +11815,23 @@ export default function AdCreationForm({
                         "Your UTMs will be auto applied from Preferences"
                       )}
                     </p>
+                    {canOfferSaveLink && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={!!existingSavedLink}
+                        onClick={() => setShowSaveLinkDialog(true)}
+                        className="h-6 shrink-0 rounded-lg border-gray-300 bg-zinc-800 px-2.5 py-0 text-[11px] text-white hover:bg-zinc-900 hover:text-white animate-in fade-in slide-in-from-bottom-1 duration-500 ease-out fill-mode-both"
+                      >
+                        {existingSavedLink
+                          ? existingSavedLink.title?.trim()
+                            ? `Already saved as "${existingSavedLink.title.trim()}"`
+                            : "Already saved"
+                          : "Save Link"}
+                      </Button>
+                    )}
+                    </div>
 
                     {isCatalogueAd ? (
                       <Input
@@ -13318,22 +13313,15 @@ export default function AdCreationForm({
               </TooltipProvider>
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" className="rounded-xl" onClick={closeSaveLinkDialog}>
+              <Button variant="outline" className="w-24 rounded-xl" onClick={closeSaveLinkDialog}>
                 Cancel
               </Button>
               <Button
-                className="bg-blue-600 text-white rounded-xl hover:bg-blue-700 min-w-[80px]"
+                className="w-24 bg-blue-600 text-white rounded-xl hover:bg-blue-700"
                 disabled={isSavingLink || !customLinkToSave || !!existingSavedLink}
                 onClick={handleSaveCustomLink}
               >
-                {isSavingLink ? (
-                  <>
-                    <Loader className="w-3 h-3 animate-spin mr-1" />
-                    Saving Link...
-                  </>
-                ) : (
-                  "Save"
-                )}
+                {isSavingLink ? "Saving..." : "Save"}
               </Button>
             </div>
           </div>
