@@ -728,6 +728,8 @@ export default function MediaPreview({
   setSelectedFiles,
   selectedIgOrganicPosts = [],
   setSelectedIgOrganicPosts,
+  partnershipCodePosts = [],
+  onRemovePartnershipCode,
   variants,
   activeVariantId,
   handleAddVariant,
@@ -1821,7 +1823,8 @@ export default function MediaPreview({
       (oneDriveFiles?.length || 0) > 0 ||
       importedPosts.length > 0 ||
       importedFiles.length > 0 ||
-      selectedIgOrganicPosts.length > 0 ? (
+      selectedIgOrganicPosts.length > 0 ||
+      partnershipCodePosts.length > 0 ? (
         <>
           <style>{`
             @keyframes mediaPreviewSlingshot {
@@ -2414,6 +2417,42 @@ export default function MediaPreview({
                           </div>
                         );
                       })}
+
+                      {/* Creator posts resolved from partnership ad codes (one ad per code). */}
+                      {partnershipCodePosts.map((post) => (
+                        <div
+                          key={`partnership-code-${post.code}`}
+                          className={`relative group ${isLaunchingMedia ? "media-preview-launch-item" : ""}`}
+                          title={post.caption || post.code}
+                        >
+                          <div className="overflow-hidden rounded-xl shadow-lg border border-gray-200 relative">
+                            <img
+                              src={post.thumbnailUrl || "https://api.withblip.com/thumbnail.jpg"}
+                              alt={post.authorName ? `Post by @${post.authorName}` : "Partnership post"}
+                              className="w-full h-auto object-cover"
+                              onError={(e) => {
+                                e.target.onerror = null;
+                                e.target.src = "https://api.withblip.com/thumbnail.jpg";
+                              }}
+                            />
+                            {onRemovePartnershipCode && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                className="absolute top-1.5 right-1.5 border border-gray-400 rounded-lg bg-white shadow-xs h-7 w-7 p-3 z-30 opacity-90"
+                                style={{ backgroundColor: "white" }}
+                                onClick={() => onRemovePartnershipCode(post.code)}
+                              >
+                                <Trash className="h-2 w-2" />
+                              </Button>
+                            )}
+                          </div>
+                          {/* creator handle where the file name usually goes */}
+                          <p className="mt-1 ml-1 text-sm truncate max-w-full">
+                            {post.authorName ? `@${post.authorName}` : "Partnership post"}
+                          </p>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </SortableContext>

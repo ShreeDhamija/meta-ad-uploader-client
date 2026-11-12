@@ -1321,6 +1321,14 @@ export default function AdCreationForm({
   setPartnershipIdentityMode,
   partnershipPrimaryIdentity,
   setPartnershipPrimaryIdentity,
+  partnershipSource = "creator",
+  setPartnershipSource,
+  partnershipAdCodes = [""],
+  setPartnershipAdCodes,
+  partnershipCodeLookups = {},
+  setPartnershipCodeLookups,
+  partnershipCodeCaptions = {},
+  setPartnershipCodeCaptions,
   adScheduleStartTime,
   setAdScheduleStartTime,
   adScheduleEndTime,
@@ -1874,12 +1882,61 @@ export default function AdCreationForm({
   };
 
   // "creator" = pick an approved partner from the dropdown; "code" = paste partnership ad codes.
-  const [partnershipSource, setPartnershipSource] = useState("creator");
-  const [partnershipAdCodes, setPartnershipAdCodes] = useState([""]);
+  // Codes, their looked-up posts and edited captions live in Home so the media preview can show them.
   const activePartnershipCodes = useMemo(
     () => getPartnershipAdCodes({ isPartnershipAd, partnershipSource, partnershipAdCodes }),
     [isPartnershipAd, partnershipSource, partnershipAdCodes],
   );
+
+  // Looked-up results belong to one brand account; start over when it changes.
+  useEffect(() => {
+    setPartnershipCodeLookups({});
+  }, [selectedAdAccount, instagramAccountId, setPartnershipCodeLookups]);
+
+  // Auto-verify codes shortly after they're pasted or typed (Meta documents no fixed code length).
+  useEffect(() => {
+    if (!selectedAdAccount || !instagramAccountId) return;
+    const pending = [...new Set(activePartnershipCodes)].filter((code) => !partnershipCodeLookups[code]);
+    if (pending.length === 0) return;
+
+    const timer = setTimeout(async () => {
+      setPartnershipCodeLookups((prev) => ({ ...prev, ...Object.fromEntries(pending.map((code) => [code, { status: "loading" }])) }));
+      try {
+        const response = await fetch(`${API_BASE_URL}/auth/partnership-ads/resolve-codes`, {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ adAccountId: selectedAdAccount, pageId, instagramAccountId, codes: pending }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || "Failed to look up partnership codes");
+        setPartnershipCodeLookups((prev) => ({ ...prev, ...(data.results || {}) }));
+      } catch (error) {
+        setPartnershipCodeLookups((prev) => ({
+          ...prev,
+          ...Object.fromEntries(pending.map((code) => [code, { status: "error", error: error.message || "Couldn't verify this code" }])),
+        }));
+      }
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [activePartnershipCodes, partnershipCodeLookups, selectedAdAccount, instagramAccountId, pageId, setPartnershipCodeLookups]);
+
+  const resolvedPartnershipCodePosts = useMemo(
+    () =>
+      [...new Set(activePartnershipCodes)]
+        .filter((code) => partnershipCodeLookups[code]?.status === "ok")
+        .map((code) => ({ code, ...partnershipCodeLookups[code].post })),
+    [activePartnershipCodes, partnershipCodeLookups],
+  );
+  // Code posts bring their own captions, so swap the copy section for a caption switcher —
+  // only when they're the only media (uploaded files still need the normal copy fields).
+  const showPartnershipCodeCopy =
+    resolvedPartnershipCodePosts.length > 0 &&
+    files.length === 0 && driveFiles.length === 0 && dropboxFiles.length === 0 && (frameioFiles?.length || 0) === 0 &&
+    (oneDriveFiles?.length || 0) === 0 && importedFiles.length === 0 && importedPosts.length === 0 && selectedIgOrganicPosts.length === 0;
+  const [activeCodeCaptionIndex, setActiveCodeCaptionIndex] = useState(0);
+  const safeCodeCaptionIndex = Math.min(activeCodeCaptionIndex, Math.max(resolvedPartnershipCodePosts.length - 1, 0));
+  const activeCodePost = resolvedPartnershipCodePosts[safeCodeCaptionIndex] || null;
   const updatePartnershipAdCode = (index, value) =>
     setPartnershipAdCodes((prev) => prev.map((code, i) => (i === index ? value : code)));
   const removePartnershipAdCode = (index) =>
@@ -1968,6 +2025,7 @@ export default function AdCreationForm({
       partnershipPrimaryIdentity,
       partnershipSource,
       partnershipAdCodes,
+      partnershipCodeCaptions,
       adNameFormulaV2,
       adValues,
       adScheduleStartTime,
@@ -2015,6 +2073,7 @@ export default function AdCreationForm({
       partnershipPrimaryIdentity,
       partnershipSource,
       partnershipAdCodes,
+      partnershipCodeCaptions,
       adNameFormulaV2,
       adValues,
       adScheduleStartTime,
@@ -2490,6 +2549,7 @@ export default function AdCreationForm({
         partnershipPrimaryIdentity: variantState.partnershipPrimaryIdentity || "brand",
         partnershipSource: variantState.partnershipSource || "creator",
         partnershipAdCodes: [...(variantState.partnershipAdCodes || [])],
+        partnershipCodeCaptions: { ...(variantState.partnershipCodeCaptions || {}) },
         adNameFormulaV2: variantState.adNameFormulaV2
           ? {
             ...variantState.adNameFormulaV2,
@@ -6155,6 +6215,12 @@ export default function AdCreationForm({
     : headlines
   ).some((value) => value.length > 255);
 
+  // Placement-customized carousels send each card headline as asset_feed_spec.titles[].text,
+  // which Meta caps at 255 characters (regular carousels don't hit this limit).
+  const isPlacementCarousel = isCarouselAd && enablePlacementCustomization;
+  const isOverlongCarouselHeadline = (value) => isPlacementCarousel && (value || "").length > 255;
+  const hasOverlongCarouselHeadlines = isPlacementCarousel && messages.some((value) => isOverlongCarouselHeadline(value));
+
   const duplicateFileNameWarnings = useMemo(() => {
     const mediaFileEntries = buildMediaFileEntries({
       files,
@@ -8163,6 +8229,9 @@ export default function AdCreationForm({
             // Partnership code specific — the server maps the identity mode to Meta's ad_format
             formData.append("partnershipAdCode", adCode);
             formData.append("partnershipIdentityMode", partnershipIdentityMode || "dynamic");
+            // Only an edited caption is sent; otherwise Meta uses the creator's own caption.
+            const editedCaption = jobData.formData.partnershipCodeCaptions?.[adCode];
+            if (typeof editedCaption === "string" && editedCaption.trim()) formData.append("partnershipCaption", editedCaption);
             formData.append("adType", "partnership_code");
 
             if (adScheduleStartTime) formData.append("adScheduleStartTime", adScheduleStartTime);
@@ -9775,7 +9844,7 @@ export default function AdCreationForm({
     const snapshot = getVariantState(variant.id);
     return snapshot?.duplicateAdSet && (snapshot.newAdSetName || "").length > 400;
   });
-  const publishDisabled = hasOverlongAdSetName || hasOverlongHeadlines || hasPublishBlockingIssueBeforePage || isAdSetMissing || isPageMissing || Boolean(adSetTimingIssue);
+  const publishDisabled = hasOverlongAdSetName || hasOverlongHeadlines || hasOverlongCarouselHeadlines || hasPublishBlockingIssueBeforePage || isAdSetMissing || isPageMissing || Boolean(adSetTimingIssue);
 
   const showImportedPostMode = isDuplicationMode && importedPosts.length > 0;
   const importedSafeIndex = showImportedPostMode ? Math.min(activeImportedPostIndex, importedPosts.length - 1) : 0;
@@ -10769,27 +10838,52 @@ export default function AdCreationForm({
                             </div>
                             {partnershipSource === "code" ? (
                               <div className="space-y-2">
-                                {partnershipAdCodes.map((code, index) => (
-                                  <div key={index} className="flex items-center gap-2">
-                                    <Input
-                                      value={code}
-                                      onChange={(e) => updatePartnershipAdCode(index, e.target.value)}
-                                      placeholder="Paste partnership ad code"
-                                      aria-label={`Partnership ad code ${index + 1}`}
-                                      className="rounded-2xl bg-white"
-                                    />
-                                    {partnershipAdCodes.length > 1 && (
-                                      <button
-                                        type="button"
-                                        aria-label={`Remove partnership ad code ${index + 1}`}
-                                        onClick={() => removePartnershipAdCode(index)}
-                                        className="shrink-0 rounded-full p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
-                                      >
-                                        <X className="h-4 w-4" />
-                                      </button>
-                                    )}
-                                  </div>
-                                ))}
+                                {partnershipAdCodes.map((code, index) => {
+                                  const lookup = partnershipCodeLookups[code.trim()];
+                                  const lookupError =
+                                    lookup?.status === "error"
+                                      ? lookup.error
+                                      : lookup?.status === "ok" && lookup.post?.eligible === false
+                                        ? lookup.post.eligibilityMessage || "This post isn't eligible for a partnership ad"
+                                        : null;
+                                  return (
+                                    <div key={index} className="space-y-1">
+                                      <div className="flex items-center gap-2">
+                                        <div className="relative w-full">
+                                          <Input
+                                            value={code}
+                                            onChange={(e) => updatePartnershipAdCode(index, e.target.value)}
+                                            placeholder="Paste partnership ad code"
+                                            aria-label={`Partnership ad code ${index + 1}`}
+                                            className={cn("rounded-2xl bg-white pr-9", lookupError && "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]")}
+                                          />
+                                          {code.trim() && lookup && (
+                                            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2">
+                                              {lookup.status === "loading" ? (
+                                                <Loader className="h-4 w-4 animate-spin text-gray-400" aria-label="Verifying code" />
+                                              ) : lookupError ? (
+                                                <AlertTriangle className="h-4 w-4 text-red-500" aria-label="Code problem" />
+                                              ) : (
+                                                <Check className="h-4 w-4 text-green-600" aria-label="Code verified" />
+                                              )}
+                                            </span>
+                                          )}
+                                        </div>
+                                        {partnershipAdCodes.length > 1 && (
+                                          <button
+                                            type="button"
+                                            aria-label={`Remove partnership ad code ${index + 1}`}
+                                            onClick={() => removePartnershipAdCode(index)}
+                                            className="shrink-0 rounded-full p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+                                          >
+                                            <X className="h-4 w-4" />
+                                          </button>
+                                        )}
+                                      </div>
+                                      {lookupError && <p className="pl-1 text-xs text-red-500">{lookupError}</p>}
+                                    </div>
+                                  );
+                                })}
                                 <Button
                                   type="button"
                                   onClick={() => setPartnershipAdCodes((prev) => [...prev, ""])}
@@ -11003,7 +11097,7 @@ export default function AdCreationForm({
 
                 {adNameSection}
 
-                {selectedIgOrganicPosts.length === 0 ? (
+                {selectedIgOrganicPosts.length === 0 && !showPartnershipCodeCopy ? (
                   <div className="space-y-3">
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
@@ -11316,7 +11410,7 @@ export default function AdCreationForm({
                                     multiline
                                     minRows={2}
                                     maxRows={10}
-                                    className={`${formTextareaChrome} ${duplicateIndices.messages.has(index) ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]" : ""
+                                    className={`${formTextareaChrome} ${duplicateIndices.messages.has(index) || isOverlongCarouselHeadline(value) ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]" : ""
                                       }`}
                                     style={{
                                       scrollbarWidth: "thin",
@@ -11337,13 +11431,18 @@ export default function AdCreationForm({
                                     disabled={!isLoggedIn}
                                     minRows={2}
                                     maxRows={10}
-                                    className={`${formTextareaChrome} ${duplicateIndices.messages.has(index) ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]" : ""
+                                    className={`${formTextareaChrome} ${duplicateIndices.messages.has(index) || isOverlongCarouselHeadline(value) ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]" : ""
                                       }`}
                                     style={{
                                       scrollbarWidth: "thin",
                                       scrollbarColor: "#c7c7c7 transparent",
                                     }}
                                   />
+                                )}
+                                {isOverlongCarouselHeadline(value) && (
+                                  <p className="text-xs text-red-500 mt-1">
+                                    Carousel headlines with placement customization must be 255 characters or fewer ({value.length}/255).
+                                  </p>
                                 )}
                                 {duplicateIndices.messages.has(index) && (
                                   <p className="text-xs text-red-500 mt-1">Duplicate values can cause errors when making ads</p>
@@ -11667,7 +11766,7 @@ export default function AdCreationForm({
                       </div>
                     )}
                   </div>
-                ) : (
+                ) : selectedIgOrganicPosts.length > 0 ? (
                   <div className="space-y-2">
                     <Label className="flex items-center gap-2">
                       <TemplateIcon className="w-4 h-4" />
@@ -11714,6 +11813,62 @@ export default function AdCreationForm({
                     />
                     <div className="px-3 py-2 bg-blue-50 border border-blue-200 rounded-xl">
                       <p className="text-xs text-blue-700">Ad copy will be sourced from the selected Instagram posts.</p>
+                    </div>
+                  </div>
+                ) : (
+                  // Partnership code posts: same caption switcher as Instagram posts, but editable.
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      <TemplateIcon className="w-4 h-4" />
+                      <span>Ad Copy</span>
+                      {resolvedPartnershipCodePosts.length > 1 && (
+                        <div className="flex items-center gap-1 ml-auto">
+                          <span className="text-xs text-gray-600">
+                            {safeCodeCaptionIndex + 1}/{resolvedPartnershipCodePosts.length}
+                          </span>
+                          <button
+                            type="button"
+                            aria-label="Previous post caption"
+                            disabled={safeCodeCaptionIndex === 0}
+                            onClick={() => setActiveCodeCaptionIndex(safeCodeCaptionIndex - 1)}
+                            className={`p-0.5 rounded transition-colors ${safeCodeCaptionIndex === 0 ? "text-gray-300 cursor-not-allowed" : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                              }`}
+                          >
+                            <ChevronLeft className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            aria-label="Next post caption"
+                            disabled={safeCodeCaptionIndex === resolvedPartnershipCodePosts.length - 1}
+                            onClick={() => setActiveCodeCaptionIndex(safeCodeCaptionIndex + 1)}
+                            className={`p-0.5 rounded transition-colors ${safeCodeCaptionIndex === resolvedPartnershipCodePosts.length - 1
+                              ? "text-gray-300 cursor-not-allowed"
+                              : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                              }`}
+                          >
+                            <ChevronRight className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
+                    </Label>
+                    <TextareaAutosize
+                      value={activeCodePost ? partnershipCodeCaptions[activeCodePost.code] ?? activeCodePost.caption ?? "" : ""}
+                      onChange={(e) => {
+                        if (!activeCodePost) return;
+                        const nextValue = e.target.value;
+                        setPartnershipCodeCaptions((prev) => ({ ...prev, [activeCodePost.code]: nextValue }));
+                      }}
+                      minRows={2}
+                      maxRows={10}
+                      className={formTextareaChrome}
+                      style={{
+                        scrollbarWidth: "thin",
+                        scrollbarColor: "#c7c7c7 transparent",
+                      }}
+                      placeholder="No caption available"
+                    />
+                    <div className="px-3 py-2 bg-blue-50 border border-blue-200 rounded-xl">
+                      <p className="text-xs text-blue-700">Ad copy starts from each creator post's caption. Edit it here to change the ad's text.</p>
                     </div>
                   </div>
                 )}
@@ -12904,6 +13059,12 @@ export default function AdCreationForm({
             {hasOverlongHeadlines && (
               <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
                 Headlines must be 255 characters or fewer. Please shorten them before publishing.
+              </div>
+            )}
+
+            {hasOverlongCarouselHeadlines && (
+              <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                Carousel headlines must be 255 characters or fewer when placement customization is on. Please shorten them before publishing.
               </div>
             )}
 

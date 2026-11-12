@@ -334,6 +334,11 @@ export default function Home() {
     const [partnerName, setPartnerName] = useState("");
     const [partnershipIdentityMode, setPartnershipIdentityMode] = useState("dynamic");
     const [partnershipPrimaryIdentity, setPartnershipPrimaryIdentity] = useState("brand");
+    // Partnership ad codes: shared by the ad form (inputs, copy) and the media preview (thumbnails).
+    const [partnershipSource, setPartnershipSource] = useState("creator");
+    const [partnershipAdCodes, setPartnershipAdCodes] = useState([""]);
+    const [partnershipCodeLookups, setPartnershipCodeLookups] = useState({}); // { [code]: { status, post?, error? } }
+    const [partnershipCodeCaptions, setPartnershipCodeCaptions] = useState({}); // { [code]: edited caption }
     const [adScheduleStartTime, setAdScheduleStartTime] = useState(null);
     const [adScheduleEndTime, setAdScheduleEndTime] = useState(null);
 
@@ -2515,6 +2520,14 @@ export default function Home() {
                             setPartnershipIdentityMode={setPartnershipIdentityMode}
                             partnershipPrimaryIdentity={partnershipPrimaryIdentity}
                             setPartnershipPrimaryIdentity={setPartnershipPrimaryIdentity}
+                            partnershipSource={partnershipSource}
+                            setPartnershipSource={setPartnershipSource}
+                            partnershipAdCodes={partnershipAdCodes}
+                            setPartnershipAdCodes={setPartnershipAdCodes}
+                            partnershipCodeLookups={partnershipCodeLookups}
+                            setPartnershipCodeLookups={setPartnershipCodeLookups}
+                            partnershipCodeCaptions={partnershipCodeCaptions}
+                            setPartnershipCodeCaptions={setPartnershipCodeCaptions}
                             adScheduleStartTime={adScheduleStartTime}
                             setAdScheduleStartTime={setAdScheduleStartTime}
                             adScheduleEndTime={adScheduleEndTime}
@@ -2591,6 +2604,19 @@ export default function Home() {
                                 postVariantMap={postVariantMap}
                                 setPostVariantMap={setPostVariantMap}
                                 isLaunchingMedia={isLaunchingMediaPreview}
+                                partnershipCodePosts={
+                                    isPartnershipAd && partnershipSource === "code"
+                                        ? [...new Set(partnershipAdCodes.map((code) => code.trim()).filter(Boolean))]
+                                            .filter((code) => partnershipCodeLookups[code]?.status === "ok")
+                                            .map((code) => ({ code, ...partnershipCodeLookups[code].post }))
+                                        : []
+                                }
+                                onRemovePartnershipCode={(code) =>
+                                    setPartnershipAdCodes((prev) => {
+                                        const next = prev.filter((value) => value.trim() !== code);
+                                        return next.length > 0 ? next : [""];
+                                    })
+                                }
                             />
                         </ErrorBoundary>
 
