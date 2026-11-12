@@ -1168,6 +1168,10 @@ function detectFastestS3Region() {
   return _fastestRegionPromise;
 }
 
+// The Website / Instant Experience tabs above the link field are hidden for now. Flip this to
+// bring them back — all the destinationType handling is still in place.
+const SHOW_DESTINATION_TYPE_SWITCHER = false;
+
 // Partnership ad codes entered in "Enter Partnership Code" mode. Each code becomes its own ad
 // (the creator's post) in every selected ad set.
 const getPartnershipAdCodes = (formData) =>
@@ -1287,6 +1291,7 @@ export default function AdCreationForm({
   fileGroups,
   setFileGroups,
   adAccountSettings,
+  setAdAccountSettings,
   adNameFormulaV2,
   setAdNameFormulaV2,
   teamId: teamIdProp,
@@ -5538,10 +5543,35 @@ export default function AdCreationForm({
   );
 
   const adNamePreviewFile = useMemo(() => {
-    const directFile = files[0] || driveFiles[0] || dropboxFiles[0] || frameioFiles[0] || oneDriveFiles[0] || importedFiles[0];
+    // With split ad data, preview the first media assigned to the variant being viewed
+    // (same assignment rules as captureFormDataAsJob).
+    const isSplit = variants.length > 1;
+    const totalMediaCount =
+      files.length + driveFiles.length + dropboxFiles.length + (frameioFiles?.length || 0) + (oneDriveFiles?.length || 0) +
+      importedFiles.length + importedPosts.length + selectedIgOrganicPosts.length;
+    const isSingleMediaSplit = totalMediaCount === 1;
+    const isFileInActiveVariant = (file) => {
+      if (!isSplit || isSingleMediaSplit || isSingleGroupSplit) return true;
+      const fileId = getFileId(file);
+      const owningGroup = fileGroups.find((group) => getGroupFileIds(group).includes(fileId));
+      if (owningGroup) return (groupVariantMap[owningGroup.id] || "default") === activeVariantId;
+      if (isFlexLikeAdType && fileGroups.length > 0) return false;
+      if (isCarouselAd) return activeVariantId === "default";
+      return (fileVariantMap[fileId] || "default") === activeVariantId;
+    };
+    const isPostInActiveVariant = (key) => !isSplit || isSingleMediaSplit || (postVariantMap[key] || "default") === activeVariantId;
+    const firstInVariant = (items, mapper = (item) => item) => items.find((item) => isFileInActiveVariant(mapper(item)));
+
+    const directFile =
+      firstInVariant(files) ||
+      firstInVariant(driveFiles, (file) => ({ ...file, isDrive: true })) ||
+      firstInVariant(dropboxFiles, (file) => ({ ...file, isDropbox: true })) ||
+      firstInVariant(frameioFiles || [], (file) => ({ ...file, isFrameio: true })) ||
+      firstInVariant(oneDriveFiles || [], (file) => ({ ...file, isOneDrive: true })) ||
+      firstInVariant(importedFiles, (file) => ({ ...file, isMetaLibrary: true }));
     if (directFile) return directFile;
 
-    const existingPost = importedPosts[0];
+    const existingPost = importedPosts.find((post) => isPostInActiveVariant(`post:${post.id}`));
     if (existingPost) {
       return {
         name: existingPost.ad_name || existingPost.name || "Existing ad",
@@ -5549,7 +5579,7 @@ export default function AdCreationForm({
       };
     }
 
-    const instagramPost = selectedIgOrganicPosts[0];
+    const instagramPost = selectedIgOrganicPosts.find((post) => isPostInActiveVariant(`igpost:${post.source_instagram_media_id}`));
     if (instagramPost) {
       return {
         name: instagramPost.caption || "Instagram post",
@@ -5558,7 +5588,11 @@ export default function AdCreationForm({
     }
 
     return null;
-  }, [driveFiles, dropboxFiles, files, frameioFiles, oneDriveFiles, importedFiles, importedPosts, selectedIgOrganicPosts]);
+  }, [
+    driveFiles, dropboxFiles, files, frameioFiles, oneDriveFiles, importedFiles, importedPosts, selectedIgOrganicPosts,
+    variants.length, activeVariantId, isSingleGroupSplit, fileGroups, groupVariantMap, fileVariantMap, postVariantMap,
+    isFlexLikeAdType, isCarouselAd,
+  ]);
 
   useEffect(() => {
     const computedAdName = computeAdNameFromFormula(adNamePreviewFile, 0, link[0], null, adType);
@@ -5976,6 +6010,66 @@ export default function AdCreationForm({
       toast.error("Failed to update template");
     } finally {
       setIsUpdatingTemplate(false);
+    }
+  };
+
+  // ── Save a typed custom link to the ad account's saved links (mirrors "Save as New Template") ──
+  const [showSaveLinkDialog, setShowSaveLinkDialog] = useState(false);
+  const [newLinkTitleInput, setNewLinkTitleInput] = useState("");
+  const [isSavingLink, setIsSavingLink] = useState(false);
+  const customLinkToSave = (customLink || "").trim();
+  const isCustomLinkInputVisible =
+    !isCatalogueAd &&
+    !showPhoneNumberField &&
+    destinationType !== "instant_experience" &&
+    (!isCarouselAd || link.length === 1) &&
+    (showCustomLink || availableLinks.length === 0);
+  const existingSavedLink = useMemo(
+    () => (customLinkToSave ? availableLinks.find((saved) => (saved.url || "").trim() === customLinkToSave) || null : null),
+    [availableLinks, customLinkToSave],
+  );
+  const canOfferSaveLinkRaw = Boolean(selectedAdAccount && isCustomLinkInputVisible && customLinkToSave && isValidDomainLink(customLinkToSave));
+  const [canOfferSaveLink, setCanOfferSaveLink] = useState(false);
+
+  useEffect(() => {
+    if (!canOfferSaveLinkRaw) {
+      setCanOfferSaveLink(false);
+      return;
+    }
+    const timer = setTimeout(() => setCanOfferSaveLink(true), 300);
+    return () => clearTimeout(timer);
+  }, [canOfferSaveLinkRaw, customLinkToSave]);
+
+  const closeSaveLinkDialog = () => {
+    setShowSaveLinkDialog(false);
+    setNewLinkTitleInput("");
+  };
+
+  const handleSaveCustomLink = async () => {
+    const url = customLinkToSave;
+    if (!url || existingSavedLink || !selectedAdAccount) return;
+    setIsSavingLink(true);
+    try {
+      const newLink = {
+        url,
+        title: newLinkTitleInput.trim(),
+        createdAt: new Date().toISOString(),
+        isDefault: availableLinks.length === 0,
+      };
+      const nextLinks = [...availableLinks, newLink];
+      await saveSettings({ adAccountId: selectedAdAccount, adAccountSettings: { links: nextLinks } });
+      setAdAccountSettings?.((previous) => ({ ...previous, links: nextLinks }));
+      // Switch back to the saved-link dropdown with the new link selected.
+      setShowCustomLink(false);
+      setCustomLink("");
+      handleSavedLinkSelect(url);
+      toast.success("Link saved!");
+      closeSaveLinkDialog();
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to save link");
+    } finally {
+      setIsSavingLink(false);
     }
   };
 
@@ -11658,7 +11752,26 @@ export default function AdCreationForm({
                             : "Link (URL)"}
                       </Label>
                       <div className="ml-auto flex flex-wrap items-center justify-end gap-3">
-                        {supportsInstantExperience && (
+                        {canOfferSaveLink && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={isSavingLink || !!existingSavedLink}
+                            onClick={() => setShowSaveLinkDialog(true)}
+                            className="text-xs px-3 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900 animate-in fade-in slide-in-from-bottom-1 duration-500 ease-out fill-mode-both"
+                          >
+                            {isSavingLink ? (
+                              <Loader className="w-3 h-3 animate-spin" />
+                            ) : existingSavedLink ? (
+                              existingSavedLink.title?.trim() ? `Already saved as "${existingSavedLink.title.trim()}"` : "Already saved"
+                            ) : (
+                              "Save Link"
+                            )}
+                          </Button>
+                        )}
+                        {/* Website / Instant Experience switcher hidden from the UI; destinationType logic is unchanged. */}
+                        {SHOW_DESTINATION_TYPE_SWITCHER && supportsInstantExperience && (
                           <Tabs
                             value={destinationType}
                             onValueChange={(nextDestinationType) => {
@@ -13145,6 +13258,78 @@ export default function AdCreationForm({
                   <>
                     <Loader className="w-3 h-3 animate-spin mr-1" />
                     Saving Template...
+                  </>
+                ) : (
+                  "Save"
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showSaveLinkDialog && (
+        // Appears instantly — no entry animation on the overlay or the dialog.
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center"
+          style={{ position: "fixed", top: -20, left: 0, right: 0, bottom: 0 }}
+        >
+          <div className="absolute inset-0 bg-black/30" onClick={closeSaveLinkDialog} />
+          <div
+            className="relative bg-white rounded-2xl shadow-xl border border-gray-200 w-[400px] p-6 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div>
+              <h3 className="text-lg font-semibold">Save Link</h3>
+              <p className="text-sm text-gray-500 mt-1">Add it to this ad account's saved links.</p>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="save-link-title" className="text-xs text-gray-600">
+                Title (optional)
+              </Label>
+              <Input
+                id="save-link-title"
+                value={newLinkTitleInput}
+                onChange={(e) => setNewLinkTitleInput(e.target.value)}
+                placeholder="e.g. Summer Sale LP"
+                className={formFieldChrome}
+                autoFocus
+                onKeyDown={(e) => e.key === "Enter" && !isSavingLink && handleSaveCustomLink()}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="save-link-url" className="text-xs text-gray-600">
+                Link
+              </Label>
+              <TooltipProvider delayDuration={200}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Input
+                      id="save-link-url"
+                      value={customLinkToSave}
+                      readOnly
+                      tabIndex={-1}
+                      className={cn("w-[352px] truncate bg-gray-50 text-gray-600 cursor-default", formFieldChrome)}
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent className="z-[10000] max-w-sm break-all rounded-xl bg-zinc-800 px-3 py-2 text-white">
+                    {customLinkToSave}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" className="rounded-xl" onClick={closeSaveLinkDialog}>
+                Cancel
+              </Button>
+              <Button
+                className="bg-blue-600 text-white rounded-xl hover:bg-blue-700 min-w-[80px]"
+                disabled={isSavingLink || !customLinkToSave || !!existingSavedLink}
+                onClick={handleSaveCustomLink}
+              >
+                {isSavingLink ? (
+                  <>
+                    <Loader className="w-3 h-3 animate-spin mr-1" />
+                    Saving Link...
                   </>
                 ) : (
                   "Save"
