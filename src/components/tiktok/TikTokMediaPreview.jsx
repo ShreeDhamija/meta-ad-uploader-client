@@ -579,6 +579,17 @@ export default function MediaPreview({
     return false;
   }, [selectedFiles.size, adType, isCarouselAd, enablePlacementCustomization, totalFileCount, ungroupedFiles.length]);
 
+  // Why Group Ads is disabled, shown as a tooltip on the button (same pattern as Meta's
+  // disabled variant-assignment button). Null when grouping is possible.
+  const groupAdsDisabledReason = useMemo(() => {
+    if (canGroupFiles) return null;
+    const maxGroupSize = (adType === 'flexible' || isCarouselAd) ? 10 : MAX_SMART_PLUS_GROUP_CREATIVES;
+    if (selectedFiles.size > maxGroupSize) {
+      return `A group can hold at most ${maxGroupSize} ${isCarouselAd ? 'cards' : 'creatives'}. You've selected ${selectedFiles.size}, so deselect ${selectedFiles.size - maxGroupSize}.`;
+    }
+    return `Select at least 2 files to group them into one ad.`;
+  }, [canGroupFiles, adType, isCarouselAd, selectedFiles.size]);
+
   const canAIGroup = useMemo(() => {
     const allFiles = [
       ...files,
@@ -1259,16 +1270,30 @@ export default function MediaPreview({
                 <div className="flex shrink-0 gap-2">
                   {(enablePlacementCustomization || adType === 'flexible' || isCarouselAd) && (
                     <>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleGroupAds}
-                        disabled={!canGroupFiles}
-                        className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 rounded-xl"
-                      >
-                        <Groupads />
-                        Group Ads
-                      </Button>
+                      <TooltipProvider delayDuration={0}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            {/* Disabled buttons get no hover events, so the span carries the tooltip */}
+                            <span className="inline-flex" tabIndex={groupAdsDisabledReason ? 0 : undefined}>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleGroupAds}
+                                disabled={!canGroupFiles}
+                                className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 rounded-xl"
+                              >
+                                <Groupads />
+                                Group Ads
+                              </Button>
+                            </span>
+                          </TooltipTrigger>
+                          {groupAdsDisabledReason && (
+                            <TooltipContent className="max-w-xs">
+                              {groupAdsDisabledReason}
+                            </TooltipContent>
+                          )}
+                        </Tooltip>
+                      </TooltipProvider>
 
                       {/* TikTok "Create group ads" is grouped by hand only, no AI Auto Group. */}
                       {adType !== 'flexible' && !isCarouselAd && !enablePlacementCustomization && (
