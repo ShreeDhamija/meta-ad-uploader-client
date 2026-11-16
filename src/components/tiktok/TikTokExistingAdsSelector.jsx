@@ -5,7 +5,6 @@ import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { Input } from "@/components/ui/input"
 import { Loader, ChevronDown, ChevronRight, ImageOff, RefreshCw, Search } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -181,8 +180,8 @@ function TikTokExistingAdsSelector({
     </Tooltip>
   )
 
-  const renderThumbnail = (url) => (
-    <div className="w-12 h-12 rounded-md overflow-hidden bg-gray-100 flex-shrink-0">
+  const renderThumbnail = (url, sizeClass = "w-12 h-12 rounded-md") => (
+    <div className={cn("overflow-hidden bg-gray-100 flex-shrink-0", sizeClass)}>
       {url ? (
         <img
           src={url}
@@ -209,22 +208,35 @@ function TikTokExistingAdsSelector({
     )
   }
 
-  const rowClass = (isSelected) =>
-    cn(
-      "grid gap-2 items-center p-3 rounded-xl border cursor-pointer transition-colors",
-      GRID_COLS,
-      isSelected ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-gray-300 hover:bg-gray-50",
-    )
-
+  // One creative tile in the parent ad's horizontal strip: thumbnail with checkbox, name below
   const renderCreative = (creative) => {
     const isSelected = selectedIds.has(creative.ad_material_id)
+    const status = getStatusMeta(creative.operation_status)
     return (
-      <label key={creative.ad_material_id} className={cn(rowClass(isSelected), "ml-6")}>
-        <Checkbox checked={isSelected} onCheckedChange={() => setSelected([creative], !isSelected)} />
-        <div />
-        {renderThumbnail(creative.thumbnail_url)}
-        <div className="min-w-0">{renderNameTooltip(creative.name)}</div>
-        {renderStatus(creative.operation_status)}
+      <label key={creative.ad_material_id} className="group w-24 flex-shrink-0 cursor-pointer">
+        <div
+          className={cn(
+            "relative rounded-lg border-2 transition-colors",
+            isSelected ? "border-blue-500" : "border-transparent group-hover:border-gray-300",
+          )}
+        >
+          {renderThumbnail(creative.thumbnail_url, "w-full h-32 rounded-md")}
+          <Checkbox
+            checked={isSelected}
+            onCheckedChange={() => setSelected([creative], !isSelected)}
+            className="absolute top-1.5 left-1.5 bg-white"
+          />
+          <span
+            title={status.label}
+            className={cn(
+              "absolute top-1.5 right-1.5 h-2.5 w-2.5 rounded-full ring-2 ring-white",
+              isActive(creative.operation_status) ? "bg-green-500" : "bg-gray-400",
+            )}
+          />
+        </div>
+        <p className="mt-1 px-0.5 text-[11px] leading-tight text-gray-700 truncate" title={creative.name}>
+          {creative.name}
+        </p>
       </label>
     )
   }
@@ -236,8 +248,14 @@ function TikTokExistingAdsSelector({
     const selectedCount = getSelectedCount(ad)
     const allSelected = count > 0 && selectedCount === count
     return (
-      <div key={ad.smart_plus_ad_id} className="space-y-1.5">
-        <label className={rowClass(allSelected)}>
+      <div
+        key={ad.smart_plus_ad_id}
+        className={cn(
+          "rounded-xl border transition-colors",
+          allSelected ? "border-blue-500 bg-blue-50" : selectedCount > 0 ? "border-blue-300" : "border-gray-200 hover:border-gray-300",
+        )}
+      >
+        <label className={cn("grid gap-2 items-center p-3 cursor-pointer", GRID_COLS)}>
           <Checkbox checked={allSelected} disabled={count === 0} onCheckedChange={() => toggleAd(ad)} />
           <button
             type="button"
@@ -263,7 +281,14 @@ function TikTokExistingAdsSelector({
           </div>
           {renderStatus(ad.operation_status)}
         </label>
-        {isExpanded && ad.creatives.map(renderCreative)}
+        {isExpanded && count > 0 && (
+          <div className="border-t border-gray-200 px-3 pt-3 pb-2">
+            {/* w-0 + min-w-full: fill the card but never widen the form column, so long rows scroll */}
+            <div className="flex w-0 min-w-full gap-3 overflow-x-auto pb-2 custom-scrollbar">
+              {ad.creatives.map(renderCreative)}
+            </div>
+          </div>
+        )}
       </div>
     )
   }
@@ -359,11 +384,11 @@ function TikTokExistingAdsSelector({
       )}
 
       {!isLoading && displayedAds.length > 0 && (
-        <ScrollArea className="h-[550px] outline-none focus:outline-none">
+        <div className="max-h-[550px] overflow-y-auto pr-1 custom-scrollbar">
           <TooltipProvider delayDuration={150}>
             <div className="space-y-1.5">{displayedAds.map(renderAd)}</div>
           </TooltipProvider>
-        </ScrollArea>
+        </div>
       )}
     </div>
   )
