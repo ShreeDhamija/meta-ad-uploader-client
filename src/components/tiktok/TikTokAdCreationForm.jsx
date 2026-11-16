@@ -635,6 +635,7 @@ export default function TikTokAdCreationForm({
   setIdentities,
   files,
   setFiles,
+  onUpdateExistingAdsChange,
 
   // Variants Props
   variants,
@@ -1043,6 +1044,11 @@ export default function TikTokAdCreationForm({
   useEffect(() => {
     if (!canUpdateExistingAds && updateExistingAds) setUpdateExistingAds(false);
   }, [canUpdateExistingAds, updateExistingAds]);
+
+  // Let the page know, so the media preview can hide "Create group ads" in this mode
+  useEffect(() => {
+    onUpdateExistingAdsChange?.(updateExistingAds);
+  }, [updateExistingAds, onUpdateExistingAdsChange]);
 
   const [isUpdatingExistingAds, setIsUpdatingExistingAds] = useState(false);
   // Bumped after a successful update so the existing-ads list refetches the new creatives
@@ -6280,7 +6286,7 @@ export default function TikTokAdCreationForm({
                         Updating Ads...
                       </div>
                     ) : (
-                      "Publish Ads"
+                      "Update Ads"
                     )}
                   </Button>
                   {selectedExistingAds.length === 0 ? (

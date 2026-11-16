@@ -509,7 +509,8 @@ export default function MediaPreview({
   postVariantMap,
   setPostVariantMap,
   isLaunchingMedia = false,
-  isSmartCampaign = false
+  isSmartCampaign = false,
+  hideVariantSetup = false // "Update existing ads" mode: no Split Ad Data
 }) {
   const [isAIGrouping, setIsAIGrouping] = useState(false);
   const [isFlexAutoGrouping, setIsFlexAutoGrouping] = useState(false);
@@ -724,7 +725,7 @@ export default function MediaPreview({
   // TikTok reuses the placement-customization row as "Create group ads": Smart+ campaigns
   // only, for uploaded files (Spark posts are not groupable here).
   const showPlacementCustomizationRow = isSmartCampaign && adType !== 'SPARK';
-  const showVariantSetupButton = variants.length > 1 || totalFileCount >= 1;
+  const showVariantSetupButton = !hideVariantSetup && (variants.length > 1 || totalFileCount >= 1);
   const isSingleMediaSplit = totalFileCount === 1;
   const showVariantButtonInPlacementRow = showVariantSetupButton && showPlacementCustomizationRow;
   const showVariantButtonInHeader = showVariantSetupButton && !showPlacementCustomizationRow;

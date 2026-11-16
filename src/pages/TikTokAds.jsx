@@ -204,6 +204,9 @@ export default function TikTokAds() {
   const [videoThumbs, setVideoThumbs] = useState({})
   const [isCarouselAd, setIsCarouselAd] = useState(false)
   const [enablePlacementCustomization, setEnablePlacementCustomization] = useState(false)
+  // Mirrors the form's "Update existing ads" toggle; that mode adds creatives to existing ads,
+  // so "Create group ads" doesn't apply and is hidden in the media preview.
+  const [isUpdateExistingAdsMode, setIsUpdateExistingAdsMode] = useState(false)
   const [fileGroups, setFileGroups] = useState([])
   const [selectedAdSets, setSelectedAdSets] = useState([])
   const [adSets, setAdSets] = useState([])
@@ -1351,6 +1354,7 @@ export default function TikTokAds() {
               groupAdsEnabled={enablePlacementCustomization}
               setGroupAdsEnabled={setEnablePlacementCustomization}
               onBeforeMediaClear={triggerMediaPreviewLaunch}
+              onUpdateExistingAdsChange={setIsUpdateExistingAdsMode}
             />
           </div>
 
@@ -1394,7 +1398,8 @@ export default function TikTokAds() {
                 setGroupVariantMap={setGroupVariantMap}
                 postVariantMap={postVariantMap}
                 setPostVariantMap={setPostVariantMap}
-                isSmartCampaign={isSmartCampaignSelected}
+                isSmartCampaign={isSmartCampaignSelected && !isUpdateExistingAdsMode}
+                hideVariantSetup={isUpdateExistingAdsMode}
                 hasSeenPowerupPopup={hasSeenPowerupPopup}
                 setShowPowerupPopup={setShowPowerupPopup}
                 isLaunchingMedia={isLaunchingMediaPreview}
