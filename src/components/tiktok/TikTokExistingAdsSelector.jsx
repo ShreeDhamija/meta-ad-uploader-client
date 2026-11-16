@@ -26,8 +26,8 @@ const SORT_OPTIONS = [
   { value: "name_az", label: "Alphabetical (A→Z)" },
 ]
 
-// checkbox | chevron | thumbnail | ad name | ad group | status
-const GRID_COLS = "grid-cols-[20px_16px_48px_minmax(0,1fr)_minmax(0,0.72fr)_90px]"
+// checkbox | chevron | thumbnail | ad name | status
+const GRID_COLS = "grid-cols-[20px_16px_48px_minmax(0,1fr)_90px]"
 
 const isActive = (status) => String(status || "").toUpperCase() === "ENABLE"
 
@@ -241,9 +241,6 @@ function TikTokExistingAdsSelector({
         <div />
         {renderThumbnail(creative.thumbnail_url)}
         <div className="min-w-0">{renderNameTooltip(creative.name)}</div>
-        <div className="min-w-0">
-          <span className="text-xs text-gray-400">—</span>
-        </div>
         {renderStatus(creative.operation_status)}
       </label>
     )
@@ -281,7 +278,6 @@ function TikTokExistingAdsSelector({
               {selectedCount > 0 && !allSelected && ` · ${selectedCount} of ${count} selected`}
             </span>
           </div>
-          <div className="min-w-0">{renderNameTooltip(ad.adgroup_name)}</div>
           {renderStatus(ad.operation_status)}
         </label>
         {isExpanded && ad.creatives.map(renderCreative)}
@@ -360,12 +356,11 @@ function TikTokExistingAdsSelector({
             <div></div>
             <div></div>
             <div className="-ml-2">Thumbnail</div>
-            <div>Ad Name</div>
-            <div>Ad Group</div>
-            <div className="text-right whitespace-nowrap">
+            <div className="flex items-center justify-between gap-2 min-w-0">
+              <span>Ad Name</span>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button type="button" className="flex items-center gap-1 ml-auto hover:opacity-80 transition-opacity">
+                  <button type="button" className="flex items-center gap-1 whitespace-nowrap hover:opacity-80 transition-opacity">
                     <span>{sortLabel}</span>
                     <ChevronDown className="h-3 w-3" />
                   </button>
@@ -383,6 +378,7 @@ function TikTokExistingAdsSelector({
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
+            <div className="text-right pr-1">Status</div>
           </div>
         )}
       </div>
