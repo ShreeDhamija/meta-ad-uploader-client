@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label";
 import TikTokReorderAdNameParts from "@/components/ui/TikTokReorderAdNameParts";
 import { useNavigate } from "react-router-dom";
 import TikTokPostSelectorInline from "./TikTokPostSelectorInline";
+import TikTokExistingAdsSelector from "./TikTokExistingAdsSelector";
+import { Switch } from "@/components/ui/switch";
 
 import CheckBlackIcon from "@/assets/icons/CheckBlack.svg?react";
 import CTAIcon from "@/assets/icons/cta.svg?react";
@@ -806,6 +808,19 @@ export default function TikTokAdCreationForm({
 
   // Duplication local states
   const [duplicateIncludeAds, setDuplicateIncludeAds] = useState(false);
+  // "Update existing ads" mode: pick ads from the selected campaign/ad groups instead of creating new ones
+  const [updateExistingAds, setUpdateExistingAds] = useState(false);
+  const [selectedExistingAds, setSelectedExistingAds] = useState([]);
+  const canUpdateExistingAds = !duplicateCampaign && !showDuplicateAdGroupBlock;
+
+  // Existing ads only make sense for an existing campaign + ad group
+  useEffect(() => {
+    if (!canUpdateExistingAds && updateExistingAds) setUpdateExistingAds(false);
+  }, [canUpdateExistingAds, updateExistingAds]);
+
+  useEffect(() => {
+    setSelectedExistingAds([]);
+  }, [selectedAdvertiser]);
   const [isDuplicating, setIsDuplicating] = useState(false);
   const [openDuplicateCampaign, setOpenDuplicateCampaign] = useState(false);
   const [duplicateCampaignSearchValue, setDuplicateCampaignSearchValue] = useState("");
@@ -5898,6 +5913,27 @@ export default function TikTokAdCreationForm({
                 </div>
               )}
             </div>
+
+            {/* 4. Update existing ads toggle */}
+            <div>
+              <div className="flex items-center space-x-2">
+                <label htmlFor="update-existing-ads" className="text-sm text-gray-700">
+                  Update existing ads
+                </label>
+                <Switch
+                  id="update-existing-ads"
+                  checked={updateExistingAds}
+                  onCheckedChange={setUpdateExistingAds}
+                  disabled={!canUpdateExistingAds}
+                />
+              </div>
+              {!canUpdateExistingAds && (
+                <p className="text-xs text-gray-500 mt-1">Available only when launching into an existing campaign and ad group</p>
+              )}
+              {updateExistingAds && !selectedAdvertiser && (
+                <p className="text-xs text-amber-600 mt-1">Select an advertiser to fetch ads</p>
+              )}
+            </div>
           </CardContent>
         </Card>
 
@@ -5960,6 +5996,16 @@ export default function TikTokAdCreationForm({
             </CardTitle>
           </CardHeader>
           <CardContent className="p-6 pt-0 space-y-4">
+            {updateExistingAds ? (
+              <TikTokExistingAdsSelector
+                advertiserId={selectedAdvertiser}
+                campaignIds={selectedCampaign}
+                adGroupIds={selectedAdGroup}
+                selectedAds={selectedExistingAds}
+                onSelectionChange={setSelectedExistingAds}
+              />
+            ) : (
+            <>
             {/* 2. Identity / Promote From (Linked Account) */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
@@ -7606,6 +7652,8 @@ export default function TikTokAdCreationForm({
                 </div>
               </div>
             </div>
+            </>
+            )}
           </CardContent>
         </Card>
 
