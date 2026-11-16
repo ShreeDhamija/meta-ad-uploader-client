@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Loader, ChevronDown, ChevronRight, ImageOff, RefreshCw, Search } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
 import { useTikTokAuth } from "@/lib/TikTokAuthContext"
 
@@ -263,10 +264,11 @@ function TikTokExistingAdsSelector({
         </label>
         {isExpanded && count > 0 && (
           <div className="border-t border-gray-200 px-3 pt-3 pb-2">
-            {/* w-0 + min-w-full: fill the card but never widen the form column, so long rows scroll */}
-            <div className="flex w-0 min-w-full gap-3 overflow-x-auto pb-2 custom-scrollbar">
-              {ad.creatives.map(renderCreative)}
-            </div>
+            {/* shadcn ScrollArea (horizontal). w-0 + min-w-full: fill the card but never widen
+                the form column, so a long row scrolls instead */}
+            <ScrollArea className="w-0 min-w-full">
+              <div className="flex w-max gap-3 pb-3">{ad.creatives.map(renderCreative)}</div>
+            </ScrollArea>
           </div>
         )}
       </div>

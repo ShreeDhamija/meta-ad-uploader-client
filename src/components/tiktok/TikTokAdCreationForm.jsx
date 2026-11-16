@@ -1050,12 +1050,10 @@ export default function TikTokAdCreationForm({
     onUpdateExistingAdsChange?.(updateExistingAds);
   }, [updateExistingAds, onUpdateExistingAdsChange]);
 
-  const [isUpdatingExistingAds, setIsUpdatingExistingAds] = useState(false);
-  // Bumped after a successful update so the existing-ads list refetches the new creatives
+  // Bumped when an "Update existing ads" job finishes so the list refetches the new creatives
   const [existingAdsRefreshKey, setExistingAdsRefreshKey] = useState(0);
 
   const SMART_PLUS_MAX_CREATIVES = 50;
-  const existingAdsMediaCount = (files?.length || 0) + (driveFiles?.length || 0) + (dropboxFiles?.length || 0);
   const isImageMedia = (file) =>
     Boolean(
       file?.type?.startsWith("image/") ||
@@ -1063,149 +1061,24 @@ export default function TikTokAdCreationForm({
       /\.(png|jpe?g|gif|webp|bmp)($|\?)/i.test(file?.name || ""),
     );
 
-  // "Update existing ads": upload the new videos once, then add them to every selected Smart+ ad
-  const handleUpdateExistingAds = async () => {
-    if (selectedExistingAds.length === 0) {
-      toast.error("Select at least one ad to update");
-      return;
-    }
-
-    const items = [
-      ...(files || []).map((file) => ({ type: "local", file })),
-      ...(driveFiles || []).map((file) => ({ type: "drive", file })),
-      ...(dropboxFiles || []).map((file) => ({ type: "dropbox", file })),
-    ];
-    if (items.length === 0) {
-      toast.error("Add at least one video to upload");
-      return;
-    }
-    if (items.some((item) => isImageMedia(item.file))) {
-      toast.error("Only videos can be added to existing Smart+ ads. Remove the images and try again.");
-      return;
-    }
-    const overLimit = selectedExistingAds.find((ad) => (ad.creatives?.length || 0) + items.length > SMART_PLUS_MAX_CREATIVES);
+  // Checks for "Update existing ads". The create-ad checks (identity, ad text, CTA, URL) don't
+  // apply: the selected ads keep their own settings and only get new videos.
+  const updateExistingAdsErrors = useMemo(() => {
+    if (!updateExistingAds) return [];
+    const errors = [];
+    const media = [...(files || []), ...(driveFiles || []), ...(dropboxFiles || [])];
+    if (selectedExistingAds.length === 0) errors.push("Select at least one ad to update");
+    if (media.length === 0) errors.push("At least one media item is required");
+    if (media.some(isImageMedia)) errors.push("Only videos can be added to existing Smart+ ads. Remove the images.");
+    const overLimit = selectedExistingAds.find((ad) => (ad.creatives?.length || 0) + media.length > SMART_PLUS_MAX_CREATIVES);
     if (overLimit) {
-      const total = (overLimit.creatives?.length || 0) + items.length;
-      toast.error(
+      const total = (overLimit.creatives?.length || 0) + media.length;
+      errors.push(
         `"${overLimit.ad_name || overLimit.smart_plus_ad_id}" would have ${total} creatives. Smart+ ads allow up to ${SMART_PLUS_MAX_CREATIVES}.`,
       );
-      return;
     }
-
-    setIsUpdatingExistingAds(true);
-    const toastId = toast.loading(`Uploading ${items.length} video${items.length === 1 ? "" : "s"}...`);
-
-    try {
-      // 1. Upload every video to the advertiser's creative library (same endpoints as ad creation)
-      const limit = pLimit(3);
-      const uploads = await Promise.allSettled(
-        items.map((item) =>
-          limit(async () => {
-            if (item.type === "local") {
-              const result = await uploadVideoToTikTok(item.file);
-              if (!result?.videoId) throw new Error(`Video upload failed for "${item.file.name}"`);
-              return { video_id: result.videoId, file_name: item.file.name };
-            }
-
-            const params = new URLSearchParams({ advertiserId: selectedAdvertiser });
-            const isDrive = item.type === "drive";
-            const res = await tiktokFetch(
-              `${API_BASE_URL}/api/tiktok/${isDrive ? "upload-from-drive" : "upload-from-dropbox"}?${params}`,
-              {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(
-                  isDrive
-                    ? {
-                      driveFileUrl: `https://www.googleapis.com/drive/v3/files/${item.file.id}?alt=media`,
-                      fileName: item.file.name,
-                      mimeType: item.file.mimeType,
-                      googleAccessToken: item.file.accessToken || item.file.googleAccessToken,
-                      size: item.file.size,
-                    }
-                    : {
-                      fileId: item.file.dropboxId || item.file.id,
-                      fileName: item.file.name,
-                      directLink: item.file.directLink || item.file.link,
-                      link: item.file.link,
-                      dropboxAccessToken: item.file.accessToken || item.file.dropboxAccessToken,
-                    },
-                ),
-              },
-            );
-            const data = await res.json();
-            if (!res.ok || !data.success || !data.videoId) {
-              throw new Error(data.error || `Upload failed for "${item.file.name}"`);
-            }
-            return { video_id: data.videoId, file_name: item.file.name };
-          }),
-        ),
-      );
-
-      const uploaded = uploads.filter((u) => u.status === "fulfilled").map((u) => u.value);
-      const uploadErrors = uploads.filter((u) => u.status === "rejected").map((u) => u.reason?.message || "Upload failed");
-      if (uploaded.length === 0) {
-        throw new Error(uploadErrors[0] || "No videos could be uploaded");
-      }
-
-      // 2. Add the uploaded videos to each selected ad
-      toast.loading(
-        `Adding ${uploaded.length} video${uploaded.length === 1 ? "" : "s"} to ${selectedExistingAds.length} ad${selectedExistingAds.length === 1 ? "" : "s"}...`,
-        { id: toastId },
-      );
-      const res = await tiktokFetch(`${API_BASE_URL}/api/tiktok/smart-plus/ad/add-creatives`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          advertiserId: selectedAdvertiser,
-          ads: selectedExistingAds.map((ad) => ({ smart_plus_ad_id: ad.smart_plus_ad_id, adgroup_id: ad.adgroup_id })),
-          newCreatives: uploaded,
-        }),
-      });
-      const data = await res.json();
-      const results = data.results || [];
-      const failedResults = results.filter((r) => !r.success);
-      const succeeded = results.length - failedResults.length;
-      if (!results.length) throw new Error(data.error || "Failed to update ads");
-
-      if (succeeded > 0) {
-        toast.success(
-          `Added ${uploaded.length} video${uploaded.length === 1 ? "" : "s"} to ${succeeded} ad${succeeded === 1 ? "" : "s"}`,
-          { id: toastId },
-        );
-        // Clear the uploaded media and refresh the list so the new creatives show up
-        setFiles?.([]);
-        setDriveFiles?.([]);
-        setDropboxFiles?.([]);
-        setVideoFile?.(null);
-        setSelectedExistingAds([]);
-        setExistingAdsRefreshKey((k) => k + 1);
-      } else {
-        toast.error(failedResults[0]?.error || "Failed to update ads", { id: toastId });
-      }
-
-      // Existing creatives are always kept in the ad; flag it if TikTok rebuilt them under new material IDs
-      const rebuilt = results.filter(
-        (r) => r.success && typeof r.existing_kept_count === "number" && r.existing_kept_count < r.existing_count,
-      );
-      if (rebuilt.length > 0) {
-        toast.warning(
-          `Existing videos are still in ${rebuilt.length === 1 ? "the ad" : "the ads"}, but TikTok re-created ${rebuilt.length === 1 ? "them" : "some of them"} with new material IDs.`,
-        );
-      }
-
-      failedResults.forEach((r) => {
-        const ad = selectedExistingAds.find((a) => a.smart_plus_ad_id === r.smart_plus_ad_id);
-        if (succeeded > 0) toast.error(`"${ad?.ad_name || r.smart_plus_ad_id}": ${r.error}`);
-      });
-      uploadErrors.forEach((message) => toast.error(message));
-    } catch (err) {
-      console.error("Failed to update existing TikTok ads:", err);
-      toast.error(err.message || "Failed to update ads", { id: toastId });
-    } finally {
-      setIsUpdatingExistingAds(false);
-    }
-  };
+    return errors;
+  }, [updateExistingAds, selectedExistingAds, files, driveFiles, dropboxFiles]);
 
   // Campaign objects behind the current selection — Smart+ keeps the catalog on the
   // campaign, so the ad group tells us nothing about it.
@@ -1746,6 +1619,8 @@ export default function TikTokAdCreationForm({
   // Keep formStateRef in sync with every render so captureFormDataAsJob always
   // reads the absolutely latest values — not stale useCallback closure values.
   formStateRef.current = {
+    updateExistingAds,
+    selectedExistingAds,
     adName,
     adTexts,
     cta,
@@ -1952,6 +1827,26 @@ export default function TikTokAdCreationForm({
       });
     }
 
+    // "Update existing ads": the job adds every uploaded video to each selected Smart+ ad,
+    // so one ad is one unit of work for the job tracker.
+    if (s.updateExistingAds) {
+      formData.updateExistingAds = true;
+      formData.existingAds = (s.selectedExistingAds || []).map((ad) => ({
+        smart_plus_ad_id: ad.smart_plus_ad_id,
+        adgroup_id: ad.adgroup_id,
+        ad_name: ad.ad_name || "",
+        creativeCount: ad.creatives?.length || 0,
+      }));
+      // Split Ad Data / grouping don't apply here: every uploaded file goes into this one job
+      formData.files = [...(s.files || [])];
+      formData.driveFiles = (s.driveFiles || []).map((f) => ({ ...f, isDrive: true }));
+      formData.dropboxFiles = (s.dropboxFiles || []).map((f) => ({ ...f, isDropbox: true }));
+      formData.tiktokLibraryFiles = [];
+      formData.importedPosts = [];
+      formData.adType = "NORMAL";
+      formData.fileGroups = [];
+    }
+
     const activeAdGroups = formData.selectedAdGroup || [];
     const adGroupDisplayName = formData.isDuplicatingAdGroupMode
       ? formData.newAdGroupName || "New Ad Group"
@@ -1963,7 +1858,9 @@ export default function TikTokAdCreationForm({
       id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       variantId,
       variantName: (s.variants || []).find((v) => v.id === variantId)?.name || "Default",
-      adCount: fileCount * (formData.selectedAdGroup?.length || 1),
+      adCount: formData.updateExistingAds
+        ? formData.existingAds.length
+        : fileCount * (formData.selectedAdGroup?.length || 1),
       adGroupDisplayName,
       formData,
     };
@@ -2157,7 +2054,11 @@ export default function TikTokAdCreationForm({
     const groupedMemberCount = itemsToUpload.filter((item) => groupIdByFileId.has(getFileId(item.file))).length;
     const groupedUnitCount = new Set(itemsToUpload.map((item) => groupIdByFileId.get(getFileId(item.file))).filter(Boolean)).size;
     const adUnitCount = itemsToUpload.length - groupedMemberCount + groupedUnitCount;
-    let totalCount = adUnitCount * (isDuplicatingAdGroupMode ? 1 : selectedAdGroup.length);
+    // "Update existing ads" job: each selected Smart+ ad is one unit of work
+    const isUpdateJob = Boolean(jobToProcess.formData.updateExistingAds);
+    let totalCount = isUpdateJob
+      ? (jobToProcess.formData.existingAds || []).length
+      : adUnitCount * (isDuplicatingAdGroupMode ? 1 : selectedAdGroup.length);
 
     setLiveProgress({
       completed: 0,
@@ -2289,7 +2190,8 @@ export default function TikTokAdCreationForm({
               }
               console.error(`Upload failed for ${item.file.name}:`, err);
               const errDetail = err.message || "Upload failed";
-              const failedAdCount = isDuplicatingAdGroupMode ? 1 : selectedAdGroup.length;
+              // In an update job a failed upload isn't a failed ad: the ads still get the other videos
+              const failedAdCount = isUpdateJob ? 0 : isDuplicatingAdGroupMode ? 1 : selectedAdGroup.length;
 
               setLiveProgress((prev) => ({
                 ...prev,
@@ -2339,6 +2241,42 @@ export default function TikTokAdCreationForm({
             s3Url: null,
           });
         });
+      }
+
+      // "Update existing ads": add the uploaded videos to the selected Smart+ ads instead of
+      // creating new ads. The server reports progress on this job ID, so the job tracker and
+      // the SSE completion listener below work exactly as they do for ad creation.
+      if (isUpdateJob) {
+        const newCreatives = uploadedItems
+          .filter((u) => u.videoId)
+          .map((u) => ({ video_id: u.videoId, file_name: u.item.file?.name || "" }));
+        if (newCreatives.length === 0) {
+          throw new Error(uploadErrors[0]?.error || "No videos could be uploaded");
+        }
+
+        isInPromisePhase.current = true;
+        setJobId(jobToProcess.id);
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        setProgressMessage("Adding new creatives to the selected ads...");
+
+        const updateRes = await tiktokFetch(`${API_BASE_URL}/api/tiktok/smart-plus/ad/add-creatives`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            advertiserId: selectedAdvertiser,
+            jobId: jobToProcess.id,
+            ads: jobToProcess.formData.existingAds || [],
+            newCreatives,
+            initialErrorMessages: uploadErrors.map((e) => ({ error: e.error, fileName: e.fileName })),
+            s3Urls: uploadedItems.map((u) => u.s3Url).filter(Boolean),
+          }),
+          signal,
+        });
+        const updateData = await updateRes.json();
+        if (!updateRes.ok || !updateData.success) {
+          throw new Error(updateData.error || "Updating ads failed");
+        }
+        return;
       }
 
       // Connect SSE tracking now that uploading is finished/skipped
@@ -2859,18 +2797,28 @@ export default function TikTokAdCreationForm({
         errorMessages: errorMessages.map((msg) => (typeof msg === "string" ? { error: msg } : msg)),
       };
 
+      const isUpdateJob = Boolean(currentJob.formData?.updateExistingAds);
+
       if (trackedStatus === "complete" || trackedStatus === "partial-success") {
         const isPartial = trackedStatus === "partial-success";
+        const verb = isUpdateJob ? "updated in" : "posted to";
         completedJob.status = isPartial ? "partial-success" : "success";
         completedJob.message = isPartial
-          ? `${successCount} Ad${successCount !== 1 ? "s" : ""} successfully posted to ${currentJob.adGroupDisplayName} (with ${failureCount} failure${failureCount !== 1 ? "s" : ""})`
-          : `${currentJob.adCount || 1} Ad${currentJob.adCount !== 1 ? "s" : ""} successfully posted to ${currentJob.adGroupDisplayName}`;
+          ? `${successCount} Ad${successCount !== 1 ? "s" : ""} successfully ${verb} ${currentJob.adGroupDisplayName} (with ${failureCount} failure${failureCount !== 1 ? "s" : ""})`
+          : `${currentJob.adCount || 1} Ad${currentJob.adCount !== 1 ? "s" : ""} successfully ${verb} ${currentJob.adGroupDisplayName}`;
 
         if (isPartial) toast.warning(completedJob.message);
 
+        // Updated ads already exist: no new ads for the ad_count badge, just reload the list
+        // so the new creatives show up
+        if (isUpdateJob) {
+          setSelectedExistingAds([]);
+          setExistingAdsRefreshKey((k) => k + 1);
+        }
+
         // 1. Immediately update ad_count badge in state
         const effectiveCount = successCount > 0 ? successCount : currentJob.adCount || 1;
-        if (setAdGroups && effectiveCount > 0) {
+        if (!isUpdateJob && setAdGroups && effectiveCount > 0) {
           const targetAdGroups = currentJob.formData?.selectedAdGroup || [];
           const adGroupCount = targetAdGroups.length || 1;
           const perAdGroup = Math.max(1, Math.round(effectiveCount / adGroupCount));
@@ -4365,6 +4313,30 @@ export default function TikTokAdCreationForm({
     setIsQueueingJobs(true);
 
     try {
+      // "Update existing ads": one job that adds the uploaded videos to the selected Smart+ ads.
+      // It goes through the same queue, upload stage and job tracker as creating ads.
+      if (updateExistingAds) {
+        if (updateExistingAdsErrors.length > 0) {
+          toast.error(updateExistingAdsErrors[0]);
+          return;
+        }
+        const job = captureFormDataAsJob("default");
+        if (!job || !hasMediaInFormData(job.formData)) {
+          toast.error("At least one media item is required");
+          return;
+        }
+        setJobQueue((prev) => [...prev, { ...job, showVariantLabel: false }]);
+        if (!preserveMedia) {
+          try {
+            await onBeforeMediaClear?.();
+          } catch (error) {
+            console.error("Failed to launch media preview animation:", error);
+          }
+          clearQueuedMedia();
+        }
+        return;
+      }
+
       const orderedVariants = [
         variants.find((variant) => variant.id === "default"),
         ...variants.filter((variant) => variant.id !== "default"),
@@ -5061,7 +5033,7 @@ export default function TikTokAdCreationForm({
     formProductSetId,
   ]);
 
-  const validationErrors = getValidationErrors();
+  const validationErrors = updateExistingAds ? updateExistingAdsErrors : getValidationErrors();
   const isFormValid = validationErrors.length === 0;
   const publishDisabled = !isFormValid || loadingAdGroups || (selectedFiles && selectedFiles.size > 0);
   const isAdvertiserLocked = variants.length > 1 && activeVariantId !== "default";
@@ -6283,32 +6255,29 @@ export default function TikTokAdCreationForm({
                 {/* New creatives to add to the selected ads (videos only) */}
                 {uploadMediaSection}
 
+                {/* Same Publish Ads button as the create form; submitting queues an update job
+                    that runs through the normal job tracker (see handleQueueJob) */}
                 <div className="space-y-1">
                   <Button
-                    type="button"
-                    onClick={handleUpdateExistingAds}
-                    disabled={isUpdatingExistingAds || selectedExistingAds.length === 0 || existingAdsMediaCount === 0}
-                    className="w-full h-12 bg-neutral-950 hover:bg-zinc-800 text-white rounded-2xl font-semibold transition-all duration-150"
+                    type="submit"
+                    disabled={isQueueingJobs || publishDisabled}
+                    className="w-full h-12 bg-neutral-950 hover:bg-blue-700 text-white rounded-2xl font-semibold transition-all duration-150"
                   >
-                    {isUpdatingExistingAds ? (
+                    {isQueueingJobs ? (
                       <div className="flex items-center justify-center gap-2">
                         <Loader className="w-5 h-5 animate-spin" />
-                        Updating Ads...
+                        Publishing Ads...
                       </div>
                     ) : (
-                      "Update Ads"
+                      "Publish Ads"
                     )}
                   </Button>
-                  {selectedExistingAds.length === 0 ? (
-                    <p className="text-xs text-gray-500 px-1">Select the ads you want to add creatives to</p>
-                  ) : existingAdsMediaCount === 0 ? (
-                    <p className="text-xs text-gray-500 px-1">Upload the videos you want to add</p>
-                  ) : (
-                    <p className="text-xs text-gray-500 px-1">
-                      {existingAdsMediaCount} new video{existingAdsMediaCount === 1 ? "" : "s"} will be added to{" "}
-                      {selectedExistingAds.length} ad{selectedExistingAds.length === 1 ? "" : "s"}. Existing creatives stay as they are.
-                    </p>
-                  )}
+
+                  {updateExistingAdsErrors.map((message) => (
+                    <div key={message} className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                      {message}
+                    </div>
+                  ))}
                 </div>
               </div>
             ) : (
