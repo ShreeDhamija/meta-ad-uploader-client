@@ -26,32 +26,6 @@ const SORT_OPTIONS = [
   { value: "name_az", label: "Alphabetical (A→Z)" },
 ]
 
-// Fields requested from /fetch-ads (TikTok /ad/get/) for the existing-ads table
-const AD_FIELDS = [
-  "ad_id",
-  "ad_id_v2",
-  "smart_plus_ad_id",
-  "campaign_automation_type",
-  "ad_name",
-  "adgroup_id",
-  "adgroup_name",
-  "campaign_id",
-  "campaign_name",
-  "ad_format",
-  "video_id",
-  "image_ids",
-  "tiktok_item_id",
-  "identity_id",
-  "identity_type",
-  "ad_text",
-  "call_to_action",
-  "landing_page_url",
-  "operation_status",
-  "secondary_status",
-  "create_time",
-  "modify_time",
-]
-
 // checkbox | chevron | thumbnail | ad name | ad group | status
 const GRID_COLS = "grid-cols-[20px_16px_48px_minmax(0,1fr)_minmax(0,0.72fr)_90px]"
 
@@ -64,13 +38,14 @@ const parseTikTokTime = (value) => {
   return Number.isFinite(t) ? t : 0
 }
 
-// Works on both ads and groups: each has name, status and create_time
-const sortRows = (items, sortMode) => {
+const getAdName = (ad) => ad.ad_name || `Smart+ ad ${ad.smart_plus_ad_id}`
+
+const sortAds = (items, sortMode) => {
   const sorted = [...items]
   sorted.sort((a, b) => {
-    const activeDelta = Number(isActive(b.status)) - Number(isActive(a.status))
+    const activeDelta = Number(isActive(b.operation_status)) - Number(isActive(a.operation_status))
     if (activeDelta !== 0) return activeDelta
-    if (sortMode === "name_az") return (a.name || "").localeCompare(b.name || "")
+    if (sortMode === "name_az") return getAdName(a).localeCompare(getAdName(b))
     if (sortMode === "date_oldest") return parseTikTokTime(a.create_time) - parseTikTokTime(b.create_time)
     return parseTikTokTime(b.create_time) - parseTikTokTime(a.create_time)
   })
@@ -90,45 +65,13 @@ const truncateText = (text, maxLength = 75) => {
   return text.length <= maxLength ? text : text.substring(0, maxLength) + "..."
 }
 
-const toRow = (ad) => ({ ...ad, name: ad.ad_name, status: ad.operation_status })
-
-/**
- * Upgraded Smart+ ads come back from /ad/get/ as one row per creative, linked to
- * their parent ad by smart_plus_ad_id. Fold those into one group per parent;
- * every other ad is its own single-ad group.
- */
-const buildGroups = (ads) => {
-  const groups = new Map()
-  for (const ad of ads) {
-    const parentId = ad.smart_plus_ad_id
-    const key = parentId ? `sp:${parentId}` : `ad:${ad.ad_id}`
-    if (!groups.has(key)) {
-      groups.set(key, { key, parentId: parentId || null, isGroup: Boolean(parentId), creatives: [] })
-    }
-    groups.get(key).creatives.push(toRow(ad))
-  }
-
-  return [...groups.values()].map((g) => {
-    const first = g.creatives[0]
-    // Single ad: sort/filter fields on the wrapper, the ad itself stays in creatives[0]
-    if (!g.isGroup) return { ...g, name: first.name, status: first.status, create_time: first.create_time, ad_id: first.ad_id }
-    const times = g.creatives.map((c) => parseTikTokTime(c.create_time))
-    const newest = g.creatives[times.indexOf(Math.max(...times))]
-    return {
-      ...g,
-      name: first.smart_plus_ad_name || `Smart+ ad ${g.parentId}`,
-      status:
-        first.smart_plus_operation_status ||
-        (g.creatives.some((c) => isActive(c.status)) ? "ENABLE" : first.status),
-      create_time: newest?.create_time,
-      adgroup_name: first.adgroup_name,
-      thumbnail_url: g.creatives.find((c) => c.thumbnail_url)?.thumbnail_url || null,
-    }
-  })
-}
-
 const matches = (q, ...values) => values.some((v) => String(v || "").toLowerCase().includes(q))
 
+/**
+ * Lists Smart+ ads (from /smart_plus/ad/get/) in the selected ad groups. Each ad is a
+ * parent row; its chevron opens the creatives in its creative_list. Selection is per
+ * creative (keyed by ad_material_id); a parent's checkbox selects all of its creatives.
+ */
 function TikTokExistingAdsSelector({
   advertiserId,
   campaignIds = [],
@@ -143,14 +86,15 @@ function TikTokExistingAdsSelector({
   const [hasFetched, setHasFetched] = useState(false)
   const [sortMode, setSortMode] = useState("date_newest")
   const [filterQuery, setFilterQuery] = useState("")
-  const [expandedKeys, setExpandedKeys] = useState(new Set())
+  const [expandedIds, setExpandedIds] = useState(new Set())
 
   // Only the latest request may write results
   const requestIdRef = useRef(0)
 
-  const selectedIds = useMemo(() => new Set(selectedAds.map((ad) => ad.ad_id)), [selectedAds])
+  const selectedIds = useMemo(() => new Set(selectedAds.map((c) => c.ad_material_id)), [selectedAds])
 
-  // Stable key so the fetch effect only re-runs when the actual ad group selection changes
+  // Stable keys so the fetch only re-runs when the actual selection changes
+  const campaignKey = useMemo(() => [...campaignIds].sort().join(","), [campaignIds])
   const adGroupKey = useMemo(() => [...adGroupIds].sort().join(","), [adGroupIds])
   const canFetch = Boolean(advertiserId && adGroupKey)
 
@@ -168,16 +112,10 @@ function TikTokExistingAdsSelector({
     setError(null)
 
     try {
-      // Ad groups already belong to the selected campaign(s), so filtering by ad group is enough
-      const params = new URLSearchParams({
-        advertiserId,
-        adgroupIds: JSON.stringify(adGroupKey.split(",")),
-        fields: JSON.stringify(AD_FIELDS),
-        includeThumbnails: "true",
-        includeSmartPlusParents: "true",
-      })
+      const params = new URLSearchParams({ advertiserId, adgroupIds: JSON.stringify(adGroupKey.split(",")) })
+      if (campaignKey) params.append("campaignIds", JSON.stringify(campaignKey.split(",")))
 
-      const res = await tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-ads?${params}`)
+      const res = await tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-smart-plus-ads?${params}`)
       const data = await res.json()
       if (requestId !== requestIdRef.current) return
       if (!res.ok) throw new Error(data.error || "Failed to fetch ads")
@@ -186,78 +124,68 @@ function TikTokExistingAdsSelector({
       setHasFetched(true)
     } catch (err) {
       if (requestId !== requestIdRef.current) return
-      console.error("Error fetching existing TikTok ads:", err)
+      console.error("Error fetching Smart+ ads:", err)
       const message = err.message || "Failed to fetch ads"
       setError(message)
       toast.error(message)
     } finally {
       if (requestId === requestIdRef.current) setIsLoading(false)
     }
-  }, [advertiserId, adGroupKey, canFetch, tiktokFetch])
+  }, [advertiserId, campaignKey, adGroupKey, canFetch, tiktokFetch])
 
   useEffect(() => {
     fetchAds()
   }, [fetchAds])
 
-  // Drop selections for ads that are no longer in the selected campaign/ad groups
+  // Drop selections for creatives that are no longer in the selected ad groups
   useEffect(() => {
     if (!hasFetched || isLoading) return
-    const availableIds = new Set(ads.map((ad) => ad.ad_id))
-    const stillValid = selectedAds.filter((ad) => availableIds.has(ad.ad_id))
+    const availableIds = new Set(ads.flatMap((ad) => ad.creatives.map((c) => c.ad_material_id)))
+    const stillValid = selectedAds.filter((c) => availableIds.has(c.ad_material_id))
     if (stillValid.length !== selectedAds.length) onSelectionChange(stillValid)
   }, [ads, hasFetched, isLoading, selectedAds, onSelectionChange])
 
-  const groups = useMemo(() => buildGroups(ads), [ads])
-
   const query = filterQuery.trim().toLowerCase()
 
-  // A group whose own name/ID matches keeps all its creatives; otherwise only matching creatives stay
-  const displayedGroups = useMemo(() => {
-    const filtered = groups
-      .map((g) => {
-        if (!query) return g
-        if (!g.isGroup) return matches(query, g.name, g.ad_id) ? g : null
-        if (matches(query, g.name, g.parentId)) return g
-        const creatives = g.creatives.filter((c) => matches(query, c.name, c.ad_id))
-        return creatives.length > 0 ? { ...g, creatives } : null
+  // An ad whose own name/ID matches keeps all its creatives; otherwise only matching creatives stay
+  const displayedAds = useMemo(() => {
+    const filtered = ads
+      .map((ad) => {
+        if (!query || matches(query, getAdName(ad), ad.smart_plus_ad_id)) return ad
+        const creatives = ad.creatives.filter((c) => matches(query, c.name, c.ad_material_id, c.tiktok_item_id))
+        return creatives.length > 0 ? { ...ad, creatives } : null
       })
       .filter(Boolean)
-      .map((g) => (g.isGroup ? { ...g, creatives: sortRows(g.creatives, sortMode) } : g))
-    return sortRows(filtered, sortMode)
-  }, [groups, query, sortMode])
+    return sortAds(filtered, sortMode)
+  }, [ads, query, sortMode])
 
-  // Every selectable ad currently visible (single ads + creatives inside groups)
-  const displayedAds = useMemo(
-    () => displayedGroups.flatMap((g) => g.creatives),
-    [displayedGroups],
-  )
+  const displayedCreatives = useMemo(() => displayedAds.flatMap((ad) => ad.creatives), [displayedAds])
 
-  const setSelected = (adsToChange, checked) => {
-    const ids = new Set(adsToChange.map((ad) => ad.ad_id))
+  const setSelected = (creatives, checked) => {
+    const ids = new Set(creatives.map((c) => c.ad_material_id))
     if (checked) {
-      onSelectionChange([...selectedAds, ...adsToChange.filter((ad) => !selectedIds.has(ad.ad_id))])
+      onSelectionChange([...selectedAds, ...creatives.filter((c) => !selectedIds.has(c.ad_material_id))])
     } else {
-      onSelectionChange(selectedAds.filter((ad) => !ids.has(ad.ad_id)))
+      onSelectionChange(selectedAds.filter((c) => !ids.has(c.ad_material_id)))
     }
   }
 
-  const toggleAd = (ad) => setSelected([ad], !selectedIds.has(ad.ad_id))
+  const getSelectedCount = (ad) => ad.creatives.filter((c) => selectedIds.has(c.ad_material_id)).length
 
-  const getSelectedCount = (group) => group.creatives.filter((c) => selectedIds.has(c.ad_id)).length
+  // Partially or fully selected → clear the ad; otherwise select every creative in it
+  const toggleAd = (ad) => setSelected(ad.creatives, getSelectedCount(ad) === 0)
 
-  // Partially or fully selected → clear the group; otherwise select every creative in it
-  const toggleGroup = (group) => setSelected(group.creatives, getSelectedCount(group) === 0)
-
-  const toggleExpanded = (key) => {
-    setExpandedKeys((prev) => {
+  const toggleExpanded = (id) => {
+    setExpandedIds((prev) => {
       const next = new Set(prev)
-      if (next.has(key)) next.delete(key)
-      else next.add(key)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
       return next
     })
   }
 
-  const allDisplayedSelected = displayedAds.length > 0 && displayedAds.every((ad) => selectedIds.has(ad.ad_id))
+  const allDisplayedSelected =
+    displayedCreatives.length > 0 && displayedCreatives.every((c) => selectedIds.has(c.ad_material_id))
 
   const renderNameTooltip = (value, className = "text-gray-900") => (
     <Tooltip>
@@ -275,7 +203,7 @@ function TikTokExistingAdsSelector({
       {url ? (
         <img
           src={url}
-          alt="Ad thumbnail"
+          alt="Creative thumbnail"
           className="w-full h-full object-cover"
           onError={(e) => {
             e.target.style.display = "none"
@@ -305,57 +233,58 @@ function TikTokExistingAdsSelector({
       isSelected ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-gray-300 hover:bg-gray-50",
     )
 
-  const renderSingleAd = (ad, { nested = false } = {}) => {
-    const isSelected = selectedIds.has(ad.ad_id)
+  const renderCreative = (creative) => {
+    const isSelected = selectedIds.has(creative.ad_material_id)
     return (
-      <label key={ad.ad_id} className={cn(rowClass(isSelected), nested && "ml-6")}>
-        <Checkbox checked={isSelected} onCheckedChange={() => toggleAd(ad)} />
+      <label key={creative.ad_material_id} className={cn(rowClass(isSelected), "ml-6")}>
+        <Checkbox checked={isSelected} onCheckedChange={() => setSelected([creative], !isSelected)} />
         <div />
-        {renderThumbnail(ad.thumbnail_url)}
-        <div className="min-w-0">{renderNameTooltip(ad.name)}</div>
+        {renderThumbnail(creative.thumbnail_url)}
+        <div className="min-w-0">{renderNameTooltip(creative.name)}</div>
         <div className="min-w-0">
-          {nested ? <span className="text-xs text-gray-400">—</span> : renderNameTooltip(ad.adgroup_name)}
+          <span className="text-xs text-gray-400">—</span>
         </div>
-        {renderStatus(ad.status)}
+        {renderStatus(creative.operation_status)}
       </label>
     )
   }
 
-  const renderGroup = (group) => {
-    // Show creatives while filtering so matches inside a group aren't hidden
-    const isExpanded = Boolean(query) || expandedKeys.has(group.key)
-    const count = group.creatives.length
-    const selectedCount = getSelectedCount(group)
-    const allSelected = selectedCount === count
+  const renderAd = (ad) => {
+    // Show creatives while filtering so matches inside an ad aren't hidden
+    const isExpanded = Boolean(query) || expandedIds.has(ad.smart_plus_ad_id)
+    const count = ad.creatives.length
+    const selectedCount = getSelectedCount(ad)
+    const allSelected = count > 0 && selectedCount === count
     return (
-      <div key={group.key} className="space-y-1.5">
+      <div key={ad.smart_plus_ad_id} className="space-y-1.5">
         <label className={rowClass(allSelected)}>
-          <Checkbox checked={allSelected} onCheckedChange={() => toggleGroup(group)} />
+          <Checkbox checked={allSelected} disabled={count === 0} onCheckedChange={() => toggleAd(ad)} />
           <button
             type="button"
             aria-label={isExpanded ? "Hide creatives" : "Show creatives"}
             aria-expanded={isExpanded}
+            disabled={count === 0}
             onClick={(e) => {
               e.preventDefault()
               e.stopPropagation()
-              toggleExpanded(group.key)
+              toggleExpanded(ad.smart_plus_ad_id)
             }}
-            className="flex h-4 w-4 items-center justify-center text-gray-600 hover:text-black"
+            className="flex h-4 w-4 items-center justify-center text-gray-600 hover:text-black disabled:opacity-30"
           >
             {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
           </button>
-          {renderThumbnail(group.thumbnail_url)}
+          {renderThumbnail(ad.creatives.find((c) => c.thumbnail_url)?.thumbnail_url)}
           <div className="min-w-0">
-            {renderNameTooltip(group.name, "text-gray-900 font-medium")}
+            {renderNameTooltip(getAdName(ad), "text-gray-900 font-medium")}
             <span className="text-[11px] text-gray-500">
               {count} creative{count === 1 ? "" : "s"}
               {selectedCount > 0 && !allSelected && ` · ${selectedCount} of ${count} selected`}
             </span>
           </div>
-          <div className="min-w-0">{renderNameTooltip(group.adgroup_name)}</div>
-          {renderStatus(group.status)}
+          <div className="min-w-0">{renderNameTooltip(ad.adgroup_name)}</div>
+          {renderStatus(ad.operation_status)}
         </label>
-        {isExpanded && group.creatives.map((creative) => renderSingleAd(creative, { nested: true }))}
+        {isExpanded && ad.creatives.map(renderCreative)}
       </div>
     )
   }
@@ -366,7 +295,9 @@ function TikTokExistingAdsSelector({
     <div className="flex flex-col">
       <div className="flex-shrink-0 space-y-3 pb-2">
         <div className="flex items-center justify-between">
-          <span className="text-sm text-gray-500">{selectedIds.size} selected</span>
+          <span className="text-sm text-gray-500">
+            {selectedIds.size} creative{selectedIds.size === 1 ? "" : "s"} selected
+          </span>
           <Button
             type="button"
             size="sm"
@@ -387,7 +318,7 @@ function TikTokExistingAdsSelector({
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
               <Input
                 type="text"
-                placeholder="Filter returned ads by name or ID..."
+                placeholder="Filter by ad or creative name or ID..."
                 value={filterQuery}
                 onChange={(e) => setFilterQuery(e.target.value)}
                 className="pl-8 h-9 text-sm rounded-xl border-gray-300 focus:border-blue-500 focus:ring-blue-500"
@@ -420,7 +351,7 @@ function TikTokExistingAdsSelector({
 
         {canFetch && hasFetched && !isLoading && !error && ads.length === 0 && (
           <div className="flex items-center justify-center py-8 text-gray-500 border border-gray-200 rounded-lg flex-shrink-0">
-            No ads found in the selected ad group{adGroupIds.length > 1 ? "s" : ""}
+            No Smart+ ads found in the selected ad group{adGroupIds.length > 1 ? "s" : ""}
           </div>
         )}
 
@@ -456,23 +387,24 @@ function TikTokExistingAdsSelector({
         )}
       </div>
 
-      {!isLoading && displayedAds.length > 0 && (
+      {!isLoading && displayedCreatives.length > 0 && (
         <label className="flex items-center gap-2 px-3 py-2 text-sm font-medium cursor-pointer">
-          <Checkbox checked={allDisplayedSelected} onCheckedChange={(checked) => setSelected(displayedAds, Boolean(checked))} />
+          <Checkbox
+            checked={allDisplayedSelected}
+            onCheckedChange={(checked) => setSelected(displayedCreatives, Boolean(checked))}
+          />
           Select all
         </label>
       )}
 
-      {!isLoading && ads.length > 0 && displayedGroups.length === 0 && (
+      {!isLoading && ads.length > 0 && displayedAds.length === 0 && (
         <div className="flex items-center justify-center py-6 text-gray-400 text-sm">No ads match your filter</div>
       )}
 
-      {!isLoading && displayedGroups.length > 0 && (
+      {!isLoading && displayedAds.length > 0 && (
         <ScrollArea className="h-[550px] outline-none focus:outline-none">
           <TooltipProvider delayDuration={150}>
-            <div className="space-y-1.5">
-              {displayedGroups.map((g) => (g.isGroup ? renderGroup(g) : renderSingleAd(g.creatives[0])))}
-            </div>
+            <div className="space-y-1.5">{displayedAds.map(renderAd)}</div>
           </TooltipProvider>
         </ScrollArea>
       )}
