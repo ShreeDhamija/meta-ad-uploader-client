@@ -1044,6 +1044,153 @@ export default function TikTokAdCreationForm({
     if (!canUpdateExistingAds && updateExistingAds) setUpdateExistingAds(false);
   }, [canUpdateExistingAds, updateExistingAds]);
 
+  const [isUpdatingExistingAds, setIsUpdatingExistingAds] = useState(false);
+  // Bumped after a successful update so the existing-ads list refetches the new creatives
+  const [existingAdsRefreshKey, setExistingAdsRefreshKey] = useState(0);
+
+  const SMART_PLUS_MAX_CREATIVES = 50;
+  const existingAdsMediaCount = (files?.length || 0) + (driveFiles?.length || 0) + (dropboxFiles?.length || 0);
+  const isImageMedia = (file) =>
+    Boolean(
+      file?.type?.startsWith("image/") ||
+      file?.mimeType?.startsWith("image/") ||
+      /\.(png|jpe?g|gif|webp|bmp)($|\?)/i.test(file?.name || ""),
+    );
+
+  // "Update existing ads": upload the new videos once, then add them to every selected Smart+ ad
+  const handleUpdateExistingAds = async () => {
+    if (selectedExistingAds.length === 0) {
+      toast.error("Select at least one ad to update");
+      return;
+    }
+
+    const items = [
+      ...(files || []).map((file) => ({ type: "local", file })),
+      ...(driveFiles || []).map((file) => ({ type: "drive", file })),
+      ...(dropboxFiles || []).map((file) => ({ type: "dropbox", file })),
+    ];
+    if (items.length === 0) {
+      toast.error("Add at least one video to upload");
+      return;
+    }
+    if (items.some((item) => isImageMedia(item.file))) {
+      toast.error("Only videos can be added to existing Smart+ ads. Remove the images and try again.");
+      return;
+    }
+    const overLimit = selectedExistingAds.find((ad) => (ad.creatives?.length || 0) + items.length > SMART_PLUS_MAX_CREATIVES);
+    if (overLimit) {
+      const total = (overLimit.creatives?.length || 0) + items.length;
+      toast.error(
+        `"${overLimit.ad_name || overLimit.smart_plus_ad_id}" would have ${total} creatives. Smart+ ads allow up to ${SMART_PLUS_MAX_CREATIVES}.`,
+      );
+      return;
+    }
+
+    setIsUpdatingExistingAds(true);
+    const toastId = toast.loading(`Uploading ${items.length} video${items.length === 1 ? "" : "s"}...`);
+
+    try {
+      // 1. Upload every video to the advertiser's creative library (same endpoints as ad creation)
+      const limit = pLimit(3);
+      const uploads = await Promise.allSettled(
+        items.map((item) =>
+          limit(async () => {
+            if (item.type === "local") {
+              const result = await uploadVideoToTikTok(item.file);
+              if (!result?.videoId) throw new Error(`Video upload failed for "${item.file.name}"`);
+              return { video_id: result.videoId, file_name: item.file.name };
+            }
+
+            const params = new URLSearchParams({ advertiserId: selectedAdvertiser });
+            const isDrive = item.type === "drive";
+            const res = await tiktokFetch(
+              `${API_BASE_URL}/api/tiktok/${isDrive ? "upload-from-drive" : "upload-from-dropbox"}?${params}`,
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(
+                  isDrive
+                    ? {
+                      driveFileUrl: `https://www.googleapis.com/drive/v3/files/${item.file.id}?alt=media`,
+                      fileName: item.file.name,
+                      mimeType: item.file.mimeType,
+                      googleAccessToken: item.file.accessToken || item.file.googleAccessToken,
+                      size: item.file.size,
+                    }
+                    : {
+                      fileId: item.file.dropboxId || item.file.id,
+                      fileName: item.file.name,
+                      directLink: item.file.directLink || item.file.link,
+                      link: item.file.link,
+                      dropboxAccessToken: item.file.accessToken || item.file.dropboxAccessToken,
+                    },
+                ),
+              },
+            );
+            const data = await res.json();
+            if (!res.ok || !data.success || !data.videoId) {
+              throw new Error(data.error || `Upload failed for "${item.file.name}"`);
+            }
+            return { video_id: data.videoId, file_name: item.file.name };
+          }),
+        ),
+      );
+
+      const uploaded = uploads.filter((u) => u.status === "fulfilled").map((u) => u.value);
+      const uploadErrors = uploads.filter((u) => u.status === "rejected").map((u) => u.reason?.message || "Upload failed");
+      if (uploaded.length === 0) {
+        throw new Error(uploadErrors[0] || "No videos could be uploaded");
+      }
+
+      // 2. Add the uploaded videos to each selected ad
+      toast.loading(
+        `Adding ${uploaded.length} video${uploaded.length === 1 ? "" : "s"} to ${selectedExistingAds.length} ad${selectedExistingAds.length === 1 ? "" : "s"}...`,
+        { id: toastId },
+      );
+      const res = await tiktokFetch(`${API_BASE_URL}/api/tiktok/smart-plus/ad/add-creatives`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          advertiserId: selectedAdvertiser,
+          ads: selectedExistingAds.map((ad) => ({ smart_plus_ad_id: ad.smart_plus_ad_id, adgroup_id: ad.adgroup_id })),
+          newCreatives: uploaded,
+        }),
+      });
+      const data = await res.json();
+      const results = data.results || [];
+      const failedResults = results.filter((r) => !r.success);
+      const succeeded = results.length - failedResults.length;
+      if (!results.length) throw new Error(data.error || "Failed to update ads");
+
+      if (succeeded > 0) {
+        toast.success(
+          `Added ${uploaded.length} video${uploaded.length === 1 ? "" : "s"} to ${succeeded} ad${succeeded === 1 ? "" : "s"}`,
+          { id: toastId },
+        );
+        // Clear the uploaded media and refresh the list so the new creatives show up
+        setFiles?.([]);
+        setDriveFiles?.([]);
+        setDropboxFiles?.([]);
+        setVideoFile?.(null);
+        setSelectedExistingAds([]);
+        setExistingAdsRefreshKey((k) => k + 1);
+      } else {
+        toast.error(failedResults[0]?.error || "Failed to update ads", { id: toastId });
+      }
+
+      failedResults.forEach((r) => {
+        const ad = selectedExistingAds.find((a) => a.smart_plus_ad_id === r.smart_plus_ad_id);
+        if (succeeded > 0) toast.error(`"${ad?.ad_name || r.smart_plus_ad_id}": ${r.error}`);
+      });
+      uploadErrors.forEach((message) => toast.error(message));
+    } catch (err) {
+      console.error("Failed to update existing TikTok ads:", err);
+      toast.error(err.message || "Failed to update ads", { id: toastId });
+    } finally {
+      setIsUpdatingExistingAds(false);
+    }
+  };
+
   // Campaign objects behind the current selection — Smart+ keeps the catalog on the
   // campaign, so the ad group tells us nothing about it.
   const activeCampaignObjects = useMemo(() => {
@@ -4913,6 +5060,111 @@ export default function TikTokAdCreationForm({
   );
   const creativeAuthorizedDisabled = adType === "SPARK" || isSmartPlusCampaignSelected;
 
+  // Upload area + source buttons, shared by the new-ad form and "Update existing ads"
+  const uploadMediaSection = (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <Label className="flex items-center gap-2">
+          {renderDiffMark("videoFile")}
+          Upload Media
+        </Label>
+        <Popover open={uploadSourcesOpen} onOpenChange={handleUploadSourcesOpenChange}>
+          <PopoverTrigger asChild>
+            <Button
+              type="button"
+              size="sm"
+              className={cn("h-9 px-3 flex items-center gap-1.5 text-black hover:bg-white border !border-gray-200", formFieldChrome)}
+            >
+              <CloudUpload className="h-4 w-4" />
+              Manage Upload Sources
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent
+            align="end"
+            side="bottom"
+            avoidCollisions={false}
+            className="bg-white rounded-xl p-2 w-64 border border-gray-200 shadow-lg"
+          >
+            <div className="flex flex-col">
+              {UPLOAD_SOURCE_OPTIONS.map((src) => {
+                const checked = uploadSources.includes(src.id);
+                return (
+                  <label key={src.id} className="flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer hover:bg-gray-100">
+                    <Checkbox checked={checked} onCheckedChange={() => toggleUploadSource(src.id)} />
+                    <img src={src.icon} alt="" className={"h-4 w-4 object-contain"} />
+                    <span className="text-sm text-gray-800">{src.compactLabel}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </PopoverContent>
+        </Popover>
+      </div>
+
+      {uploadSources.includes("local") && (
+        <div
+          {...getRootProps()}
+          className={`group cursor-pointer border-2 border-dashed rounded-2xl p-6 text-center transition-colors ${isDragActive ? "border-primary bg-primary/5" : "border-gray-300 hover:border-primary/50"
+            }`}
+        >
+          <input {...getInputProps({ accept: TIKTOK_FILE_INPUT_ACCEPT })} />
+          <div className="flex flex-col items-center gap-2">
+            <Upload className="h-6 w-6 text-gray-500 group-hover:text-black" />
+            {isDragActive ? (
+              <p className="text-sm text-gray-500 group-hover:text-black">Drop files here ...</p>
+            ) : (
+              <p className="text-sm text-gray-500 group-hover:text-black">Drag & drop files here, or click to select files</p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Cloud Source Buttons */}
+      {(() => {
+        const rowSources = uploadSources.filter((s) => s !== "local");
+        if (rowSources.length === 0) return null;
+
+        const hasFastUploadSource = rowSources.some((id) => ["drive", "dropbox"].includes(id));
+
+        return (
+          <div className="space-y-1">
+            <div className={cn("grid gap-2", rowSources.length === 1 ? "grid-cols-1" : "grid-cols-2")}>
+              {rowSources.map((id) => {
+                const src = UPLOAD_SOURCE_OPTIONS.find((o) => o.id === id);
+                if (!src) return null;
+
+                let onClick;
+                if (id === "drive") onClick = handleDriveClick;
+                else if (id === "dropbox") onClick = handleDropboxClick;
+
+                return (
+                  <Button
+                    key={id}
+                    type="button"
+                    onClick={onClick}
+                    className="bg-black hover:bg-zinc-800 text-white rounded-2xl h-[48px] flex items-center justify-center gap-2 px-3 transition-all active:scale-95"
+                  >
+                    <img
+                      src={typeof src.icon === "string" ? src.icon : undefined}
+                      alt={src.name}
+                      className="h-4 w-4 object-contain"
+                      style={typeof src.icon !== "string" ? { display: "none" } : {}}
+                    />
+                    {typeof src.icon === "function" && <src.icon className="h-4 w-4" />}
+                    <span className="truncate text-xs font-semibold">{src.fullLabel}</span>
+                  </Button>
+                );
+              })}
+            </div>
+            {hasFastUploadSource && (
+              <p className="px-1 text-[11px] leading-tight text-gray-500">Google Drive/Dropbox files upload 5X faster</p>
+            )}
+          </div>
+        );
+      })()}
+    </div>
+  );
+
   return (
     <>
       <form onSubmit={handleQueueJob} className="space-y-4">
@@ -6002,13 +6254,47 @@ export default function TikTokAdCreationForm({
           </CardHeader>
           <CardContent className="p-6 pt-0 space-y-4">
             {updateExistingAds ? (
-              <TikTokExistingAdsSelector
-                advertiserId={selectedAdvertiser}
-                campaignIds={selectedCampaign}
-                adGroupIds={selectedAdGroup}
-                selectedAds={selectedExistingAds}
-                onSelectionChange={setSelectedExistingAds}
-              />
+              <div className="space-y-6">
+                <TikTokExistingAdsSelector
+                  advertiserId={selectedAdvertiser}
+                  campaignIds={selectedCampaign}
+                  adGroupIds={selectedAdGroup}
+                  selectedAds={selectedExistingAds}
+                  onSelectionChange={setSelectedExistingAds}
+                  refreshKey={existingAdsRefreshKey}
+                />
+
+                {/* New creatives to add to the selected ads (videos only) */}
+                {uploadMediaSection}
+
+                <div className="space-y-1">
+                  <Button
+                    type="button"
+                    onClick={handleUpdateExistingAds}
+                    disabled={isUpdatingExistingAds || selectedExistingAds.length === 0 || existingAdsMediaCount === 0}
+                    className="w-full h-12 bg-neutral-950 hover:bg-zinc-800 text-white rounded-2xl font-semibold transition-all duration-150"
+                  >
+                    {isUpdatingExistingAds ? (
+                      <div className="flex items-center justify-center gap-2">
+                        <Loader className="w-5 h-5 animate-spin" />
+                        Updating Ads...
+                      </div>
+                    ) : (
+                      "Publish Ads"
+                    )}
+                  </Button>
+                  {selectedExistingAds.length === 0 ? (
+                    <p className="text-xs text-gray-500 px-1">Select the ads you want to add creatives to</p>
+                  ) : existingAdsMediaCount === 0 ? (
+                    <p className="text-xs text-gray-500 px-1">Upload the videos you want to add</p>
+                  ) : (
+                    <p className="text-xs text-gray-500 px-1">
+                      {existingAdsMediaCount} new video{existingAdsMediaCount === 1 ? "" : "s"} will be added to{" "}
+                      {selectedExistingAds.length} ad{selectedExistingAds.length === 1 ? "" : "s"}. Existing creatives stay as they are.
+                    </p>
+                  )}
+                </div>
+              </div>
             ) : (
             <>
             {/* 2. Identity / Promote From (Linked Account) */}
@@ -7300,113 +7586,7 @@ export default function TikTokAdCreationForm({
               )}
 
               {/* 6. Media Section or Spark Info Card */}
-              {adType !== "SPARK" && (
-                <div>
-                  {
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <Label className="flex items-center gap-2">
-                          {renderDiffMark("videoFile")}
-                          Upload Media
-                        </Label>
-                        <Popover open={uploadSourcesOpen} onOpenChange={handleUploadSourcesOpenChange}>
-                          <PopoverTrigger asChild>
-                            <Button
-                              type="button"
-                              size="sm"
-                              className={cn("h-9 px-3 flex items-center gap-1.5 text-black hover:bg-white border !border-gray-200", formFieldChrome)}
-                            >
-                              <CloudUpload className="h-4 w-4" />
-                              Manage Upload Sources
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent
-                            align="end"
-                            side="bottom"
-                            avoidCollisions={false}
-                            className="bg-white rounded-xl p-2 w-64 border border-gray-200 shadow-lg"
-                          >
-                            <div className="flex flex-col">
-                              {UPLOAD_SOURCE_OPTIONS.map((src) => {
-                                const checked = uploadSources.includes(src.id);
-                                return (
-                                  <label key={src.id} className="flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer hover:bg-gray-100">
-                                    <Checkbox checked={checked} onCheckedChange={() => toggleUploadSource(src.id)} />
-                                    <img src={src.icon} alt="" className={"h-4 w-4 object-contain"} />
-                                    <span className="text-sm text-gray-800">{src.compactLabel}</span>
-                                  </label>
-                                );
-                              })}
-                            </div>
-                          </PopoverContent>
-                        </Popover>
-                      </div>
-
-                      {uploadSources.includes("local") && (
-                        <div
-                          {...getRootProps()}
-                          className={`group cursor-pointer border-2 border-dashed rounded-2xl p-6 text-center transition-colors ${isDragActive ? "border-primary bg-primary/5" : "border-gray-300 hover:border-primary/50"
-                            }`}
-                        >
-                          <input {...getInputProps({ accept: TIKTOK_FILE_INPUT_ACCEPT })} />
-                          <div className="flex flex-col items-center gap-2">
-                            <Upload className="h-6 w-6 text-gray-500 group-hover:text-black" />
-                            {isDragActive ? (
-                              <p className="text-sm text-gray-500 group-hover:text-black">Drop files here ...</p>
-                            ) : (
-                              <p className="text-sm text-gray-500 group-hover:text-black">Drag & drop files here, or click to select files</p>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Cloud Source Buttons */}
-                      {(() => {
-                        const rowSources = uploadSources.filter((s) => s !== "local");
-                        if (rowSources.length === 0) return null;
-
-                        const hasFastUploadSource = rowSources.some((id) => ["drive", "dropbox"].includes(id));
-
-                        return (
-                          <div className="space-y-1">
-                            <div className={cn("grid gap-2", rowSources.length === 1 ? "grid-cols-1" : "grid-cols-2")}>
-                              {rowSources.map((id) => {
-                                const src = UPLOAD_SOURCE_OPTIONS.find((o) => o.id === id);
-                                if (!src) return null;
-
-                                let onClick;
-                                if (id === "drive") onClick = handleDriveClick;
-                                else if (id === "dropbox") onClick = handleDropboxClick;
-
-                                return (
-                                  <Button
-                                    key={id}
-                                    type="button"
-                                    onClick={onClick}
-                                    className="bg-black hover:bg-zinc-800 text-white rounded-2xl h-[48px] flex items-center justify-center gap-2 px-3 transition-all active:scale-95"
-                                  >
-                                    <img
-                                      src={typeof src.icon === "string" ? src.icon : undefined}
-                                      alt={src.name}
-                                      className="h-4 w-4 object-contain"
-                                      style={typeof src.icon !== "string" ? { display: "none" } : {}}
-                                    />
-                                    {typeof src.icon === "function" && <src.icon className="h-4 w-4" />}
-                                    <span className="truncate text-xs font-semibold">{src.fullLabel}</span>
-                                  </Button>
-                                );
-                              })}
-                            </div>
-                            {hasFastUploadSource && (
-                              <p className="px-1 text-[11px] leading-tight text-gray-500">Google Drive/Dropbox files upload 5X faster</p>
-                            )}
-                          </div>
-                        );
-                      })()}
-                    </div>
-                  }
-                </div>
-              )}
+              {adType !== "SPARK" && <div>{uploadMediaSection}</div>}
 
               {/* Submit Button */}
               <div className="space-y-4">

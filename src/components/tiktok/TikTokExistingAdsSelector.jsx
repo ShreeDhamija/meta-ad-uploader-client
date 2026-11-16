@@ -66,6 +66,7 @@ function TikTokExistingAdsSelector({
   adGroupIds = [],
   selectedAds = [],
   onSelectionChange,
+  refreshKey = 0, // bumped by the parent after an update to refetch the ads
 }) {
   const { tiktokFetch } = useTikTokAuth()
   const [ads, setAds] = useState([])
@@ -122,7 +123,7 @@ function TikTokExistingAdsSelector({
 
   useEffect(() => {
     fetchAds()
-  }, [fetchAds])
+  }, [fetchAds, refreshKey])
 
   // Drop selections for ads that are no longer in the selected ad groups
   useEffect(() => {
