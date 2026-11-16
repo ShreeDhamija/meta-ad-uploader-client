@@ -8,23 +8,11 @@ import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Input } from "@/components/ui/input"
 import { Loader, ChevronDown, ChevronRight, ImageOff, RefreshCw, Search } from "lucide-react"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 import { useTikTokAuth } from "@/lib/TikTokAuthContext"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "https://api.withblip.com"
-
-const SORT_OPTIONS = [
-  { value: "date_newest", label: "Newest first" },
-  { value: "date_oldest", label: "Oldest first" },
-  { value: "name_az", label: "Alphabetical (A→Z)" },
-]
 
 // checkbox | chevron | thumbnail | ad name | status
 const GRID_COLS = "grid-cols-[20px_16px_48px_minmax(0,1fr)_90px]"
@@ -40,17 +28,13 @@ const parseTikTokTime = (value) => {
 
 const getAdName = (ad) => ad.ad_name || `Smart+ ad ${ad.smart_plus_ad_id}`
 
-const sortAds = (items, sortMode) => {
-  const sorted = [...items]
-  sorted.sort((a, b) => {
+// Fixed order: active ads first, then newest first
+const sortAds = (items) =>
+  [...items].sort((a, b) => {
     const activeDelta = Number(isActive(b.operation_status)) - Number(isActive(a.operation_status))
     if (activeDelta !== 0) return activeDelta
-    if (sortMode === "name_az") return getAdName(a).localeCompare(getAdName(b))
-    if (sortMode === "date_oldest") return parseTikTokTime(a.create_time) - parseTikTokTime(b.create_time)
     return parseTikTokTime(b.create_time) - parseTikTokTime(a.create_time)
   })
-  return sorted
-}
 
 const getStatusMeta = (status) => {
   const op = String(status || "").toUpperCase()
@@ -84,7 +68,6 @@ function TikTokExistingAdsSelector({
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
   const [hasFetched, setHasFetched] = useState(false)
-  const [sortMode, setSortMode] = useState("date_newest")
   const [filterQuery, setFilterQuery] = useState("")
   const [expandedIds, setExpandedIds] = useState(new Set())
 
@@ -156,8 +139,8 @@ function TikTokExistingAdsSelector({
         return creatives.length > 0 ? { ...ad, creatives } : null
       })
       .filter(Boolean)
-    return sortAds(filtered, sortMode)
-  }, [ads, query, sortMode])
+    return sortAds(filtered)
+  }, [ads, query])
 
   const displayedCreatives = useMemo(() => displayedAds.flatMap((ad) => ad.creatives), [displayedAds])
 
@@ -285,7 +268,6 @@ function TikTokExistingAdsSelector({
     )
   }
 
-  const sortLabel = SORT_OPTIONS.find((o) => o.value === sortMode)?.label || "Newest first"
 
   return (
     <div className="flex flex-col">
@@ -356,28 +338,7 @@ function TikTokExistingAdsSelector({
             <div></div>
             <div></div>
             <div className="-ml-2">Thumbnail</div>
-            <div className="flex items-center justify-between gap-2 min-w-0">
-              <span>Ad Name</span>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button type="button" className="flex items-center gap-1 whitespace-nowrap hover:opacity-80 transition-opacity">
-                    <span>{sortLabel}</span>
-                    <ChevronDown className="h-3 w-3" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="bg-white rounded-xl">
-                  {SORT_OPTIONS.map((option) => (
-                    <DropdownMenuItem
-                      key={option.value}
-                      onClick={() => setSortMode(option.value)}
-                      className={sortMode === option.value ? "bg-gray-100" : ""}
-                    >
-                      {option.label}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+            <div>Ad Name</div>
             <div className="text-right pr-1">Status</div>
           </div>
         )}
