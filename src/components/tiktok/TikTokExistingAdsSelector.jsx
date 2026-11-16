@@ -13,8 +13,8 @@ import { useTikTokAuth } from "@/lib/TikTokAuthContext"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "https://api.withblip.com"
 
-// checkbox | chevron | thumbnail | ad name | status
-const GRID_COLS = "grid-cols-[20px_16px_48px_minmax(0,1fr)_90px]"
+// checkbox | thumbnail | ad name | status | chevron
+const GRID_COLS = "grid-cols-[20px_48px_minmax(0,1fr)_90px_16px]"
 
 const isActive = (status) => String(status || "").toUpperCase() === "ENABLE"
 
@@ -211,7 +211,6 @@ function TikTokExistingAdsSelector({
   // One creative tile in the parent ad's horizontal strip: thumbnail with checkbox, name below
   const renderCreative = (creative) => {
     const isSelected = selectedIds.has(creative.ad_material_id)
-    const status = getStatusMeta(creative.operation_status)
     return (
       <label key={creative.ad_material_id} className="group w-24 flex-shrink-0 cursor-pointer">
         <div
@@ -225,13 +224,6 @@ function TikTokExistingAdsSelector({
             checked={isSelected}
             onCheckedChange={() => setSelected([creative], !isSelected)}
             className="absolute top-1.5 left-1.5 bg-white"
-          />
-          <span
-            title={status.label}
-            className={cn(
-              "absolute top-1.5 right-1.5 h-2.5 w-2.5 rounded-full ring-2 ring-white",
-              isActive(creative.operation_status) ? "bg-green-500" : "bg-gray-400",
-            )}
           />
         </div>
         <p className="mt-1 px-0.5 text-[11px] leading-tight text-gray-700 truncate" title={creative.name}>
@@ -257,6 +249,15 @@ function TikTokExistingAdsSelector({
       >
         <label className={cn("grid gap-2 items-center p-3 cursor-pointer", GRID_COLS)}>
           <Checkbox checked={allSelected} disabled={count === 0} onCheckedChange={() => toggleAd(ad)} />
+          {renderThumbnail(ad.creatives.find((c) => c.thumbnail_url)?.thumbnail_url)}
+          <div className="min-w-0">
+            {renderNameTooltip(getAdName(ad), "text-gray-900 font-medium")}
+            <span className="text-[11px] text-gray-500">
+              {count} creative{count === 1 ? "" : "s"}
+              {selectedCount > 0 && !allSelected && ` · ${selectedCount} of ${count} selected`}
+            </span>
+          </div>
+          {renderStatus(ad.operation_status)}
           <button
             type="button"
             aria-label={isExpanded ? "Hide creatives" : "Show creatives"}
@@ -271,15 +272,6 @@ function TikTokExistingAdsSelector({
           >
             {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
           </button>
-          {renderThumbnail(ad.creatives.find((c) => c.thumbnail_url)?.thumbnail_url)}
-          <div className="min-w-0">
-            {renderNameTooltip(getAdName(ad), "text-gray-900 font-medium")}
-            <span className="text-[11px] text-gray-500">
-              {count} creative{count === 1 ? "" : "s"}
-              {selectedCount > 0 && !allSelected && ` · ${selectedCount} of ${count} selected`}
-            </span>
-          </div>
-          {renderStatus(ad.operation_status)}
         </label>
         {isExpanded && count > 0 && (
           <div className="border-t border-gray-200 px-3 pt-3 pb-2">
@@ -359,12 +351,17 @@ function TikTokExistingAdsSelector({
         )}
 
         {!isLoading && ads.length > 0 && (
-          <div className={cn("grid gap-2 px-2 py-2 text-xs font-medium text-white bg-blue-500 rounded-xl items-center", GRID_COLS)}>
+          <div
+            className={cn(
+              "grid gap-2 px-3 py-2.5 text-xs font-semibold text-white bg-zinc-800 rounded-xl items-center shadow-sm",
+              GRID_COLS,
+            )}
+          >
             <div></div>
-            <div></div>
-            <div className="-ml-2">Thumbnail</div>
+            <div>Thumbnail</div>
             <div>Ad Name</div>
-            <div className="text-right pr-1">Status</div>
+            <div className="text-right">Status</div>
+            <div></div>
           </div>
         )}
       </div>
