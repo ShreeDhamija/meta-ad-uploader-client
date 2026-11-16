@@ -1184,6 +1184,16 @@ export default function TikTokAdCreationForm({
         toast.error(failedResults[0]?.error || "Failed to update ads", { id: toastId });
       }
 
+      // Existing creatives are always kept in the ad; flag it if TikTok rebuilt them under new material IDs
+      const rebuilt = results.filter(
+        (r) => r.success && typeof r.existing_kept_count === "number" && r.existing_kept_count < r.existing_count,
+      );
+      if (rebuilt.length > 0) {
+        toast.warning(
+          `Existing videos are still in ${rebuilt.length === 1 ? "the ad" : "the ads"}, but TikTok re-created ${rebuilt.length === 1 ? "them" : "some of them"} with new material IDs.`,
+        );
+      }
+
       failedResults.forEach((r) => {
         const ad = selectedExistingAds.find((a) => a.smart_plus_ad_id === r.smart_plus_ad_id);
         if (succeeded > 0) toast.error(`"${ad?.ad_name || r.smart_plus_ad_id}": ${r.error}`);

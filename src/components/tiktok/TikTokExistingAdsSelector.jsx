@@ -17,7 +17,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || "https://api.withblip.com"
 // (thumbnail column is wider than the 48px image so the "Thumbnail" header label fits)
 const GRID_COLS = "grid-cols-[20px_64px_minmax(0,1fr)_90px_16px]"
 
-// Black when checked, to match the dark header and selected-card border
+// Black when checked, to match the dark header
 const CHECKBOX_CLASS =
   "border-zinc-400 data-[state=checked]:bg-zinc-900 data-[state=checked]:border-zinc-900 data-[state=checked]:text-white"
 
@@ -233,7 +233,7 @@ function TikTokExistingAdsSelector({
         key={ad.smart_plus_ad_id}
         className={cn(
           "rounded-xl border transition-colors",
-          isSelected ? "border-zinc-800 bg-zinc-50" : "border-gray-200 hover:border-gray-300",
+          isSelected ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-gray-300",
         )}
       >
         <label className={cn("grid gap-2 items-center p-3 cursor-pointer", GRID_COLS)}>
