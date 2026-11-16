@@ -1061,28 +1061,35 @@ const PROFILE_DESTINATION_TYPES = new Set(["FACEBOOK_PAGE", "INSTAGRAM_PROFILE",
 // Meta supports profile visit ads under both objectives; the creative payload is identical.
 const PROFILE_DESTINATION_OBJECTIVES = new Set(["OUTCOME_ENGAGEMENT", "OUTCOME_TRAFFIC"]);
 
-// Engagement/Traffic ad sets that send people to a profile have a fixed CTA.
-const getProfileDestinationType = ({ campaignObjective, duplicateAdSet, selectedAdSets = [], adSets = [] }) => {
-  if (!campaignObjective?.length || !campaignObjective.every((objective) => PROFILE_DESTINATION_OBJECTIVES.has(objective))) return null;
+// Click-to-WhatsApp ad sets (destination_type WHATSAPP) are supported under these objectives.
+const WHATSAPP_DESTINATION_OBJECTIVES = new Set(["OUTCOME_ENGAGEMENT", "OUTCOME_TRAFFIC", "OUTCOME_SALES", "OUTCOME_LEADS"]);
 
+// Ad sets that send people to a profile or a WhatsApp chat have a fixed CTA and no website link.
+const getProfileDestinationType = ({ campaignObjective, duplicateAdSet, selectedAdSets = [], adSets = [] }) => {
   const targetAdSetIds = duplicateAdSet ? [duplicateAdSet] : selectedAdSets;
-  if (targetAdSetIds.length === 0) return null;
+  if (!campaignObjective?.length || targetAdSetIds.length === 0) return null;
 
   const destinations = targetAdSetIds
     .map((adSetId) => adSets.find((adSet) => String(adSet.id) === String(adSetId))?.destination_type)
     .filter(Boolean);
-  if (destinations.length !== targetAdSetIds.length || !destinations.every((destination) => PROFILE_DESTINATION_TYPES.has(destination))) return null;
-
   const uniqueDestinations = [...new Set(destinations)];
-  return uniqueDestinations.length === 1 ? uniqueDestinations[0] : null;
+  if (destinations.length !== targetAdSetIds.length || uniqueDestinations.length !== 1) return null;
+
+  const [destination] = uniqueDestinations;
+  const objectives = destination === "WHATSAPP"
+    ? WHATSAPP_DESTINATION_OBJECTIVES
+    : PROFILE_DESTINATION_TYPES.has(destination) ? PROFILE_DESTINATION_OBJECTIVES : null;
+  return objectives && campaignObjective.every((objective) => objectives.has(objective)) ? destination : null;
 };
 
 const getFixedProfileCtaLabel = (profileDestinationType) =>
-  profileDestinationType === "INSTAGRAM_PROFILE_AND_FACEBOOK_PAGE"
-    ? "Visit Page"
-    : profileDestinationType === "FACEBOOK_PAGE"
-      ? "Visit Facebook Page"
-      : "View Instagram Profile";
+  profileDestinationType === "WHATSAPP"
+    ? "Send WhatsApp Message"
+    : profileDestinationType === "INSTAGRAM_PROFILE_AND_FACEBOOK_PAGE"
+      ? "Visit Page"
+      : profileDestinationType === "FACEBOOK_PAGE"
+        ? "Visit Facebook Page"
+        : "View Instagram Profile";
 
 const ErrorFileName = ({ adName, fileName }) => {
   const [expanded, setExpanded] = useState(false);
@@ -1465,6 +1472,7 @@ export default function AdCreationForm({
   // const [isPostSelectorOpen, setIsPostSelectorOpen] = useState(false)
   const [linkCustomStates, setLinkCustomStates] = useState({}); // Track which carousel links are custom
   const [promoCodeAutoDetect, setPromoCodeAutoDetect] = useState(false);
+  const [whatsAppWelcomeMessage, setWhatsAppWelcomeMessage] = useState("");
   // Staging only: extra landing pages. Every ad is also launched once per extra landing page.
   const [testMultipleLps, setTestMultipleLps] = useState(false);
   const [extraLandingPages, setExtraLandingPages] = useState([]); // [{ url, custom }]
@@ -5741,8 +5749,15 @@ export default function AdCreationForm({
   const profileSupportsDescriptions = isProfileDestinationEngagement;
   const profileHeadlineLimit = 5;
   const profilePrimaryTextLimit = 5;
-  const fixedProfileCta = profileDestinationType === "FACEBOOK_PAGE" ? "VISIT_PROFILE" : "VIEW_INSTAGRAM_PROFILE";
+  const isWhatsAppDestination = profileDestinationType === "WHATSAPP";
+  const fixedProfileCta = isWhatsAppDestination ? "WHATSAPP_MESSAGE" : profileDestinationType === "FACEBOOK_PAGE" ? "VISIT_PROFILE" : "VIEW_INSTAGRAM_PROFILE";
   const fixedProfileCtaLabel = getFixedProfileCtaLabel(profileDestinationType);
+  // Prefer the number promoted on the ad set; otherwise Meta uses the Page's linked WhatsApp number.
+  const whatsAppPhoneNumbers = isWhatsAppDestination
+    ? [...new Set((duplicateAdSet ? [duplicateAdSet] : selectedAdSets)
+      .map((adSetId) => adSets.find((adSet) => String(adSet.id) === String(adSetId))?.promoted_object?.whatsapp_phone_number)
+      .filter(Boolean))]
+    : [];
 
   useEffect(() => {
     if (isProfileDestinationEngagement) {
@@ -5752,7 +5767,7 @@ export default function AdCreationForm({
       return;
     }
 
-    if (profileCtaAutoAppliedRef.current && ["VIEW_INSTAGRAM_PROFILE", "VISIT_PROFILE"].includes(cta)) {
+    if (profileCtaAutoAppliedRef.current && ["VIEW_INSTAGRAM_PROFILE", "VISIT_PROFILE", "WHATSAPP_MESSAGE"].includes(cta)) {
       profileCtaAutoAppliedRef.current = false;
       setCta(adAccountSettings?.defaultCTA || "LEARN_MORE");
     }
@@ -6316,6 +6331,7 @@ export default function AdCreationForm({
       adSets,
       promoCodeAutoDetect: jobPromoCodeAutoDetect = false,
       extraLandingPages: jobExtraLandingPages = [],
+      whatsAppWelcomeMessage: jobWhatsAppWelcomeMessage = "",
     } = jobData.formData;
 
     // In "Enter Partnership Code" mode the codes make their own ads, so any uploaded media in the
@@ -7912,6 +7928,7 @@ export default function AdCreationForm({
       const queueCreateAdPromise = (formData, metadata = {}) => {
         if (isPoliticalAd) formData.append("isPoliticalAd", "true");
         if (jobPromoCodeAutoDetect) formData.append("promoCodeAutoDetect", "true");
+        if (jobWhatsAppWelcomeMessage) formData.append("whatsAppWelcomeMessage", jobWhatsAppWelcomeMessage);
         const queuedAdName = formData.get("adName");
         if (typeof queuedAdName === "string" && queuedAdName.includes(PER_AD_SET_NAME_PLACEHOLDER)) {
           const queuedAdSetId = formData.get("adSetId");
@@ -8789,6 +8806,57 @@ export default function AdCreationForm({
                 aspectRatioMap,
                 importedFiles,
               });
+
+              // A file whose upload failed above (e.g. a large video that never reached S3) is silently left out
+              // by appendGroupMediaFiles. Don't send a placement ad with missing files: mark this group as failed,
+              // naming the file that didn't upload, so the user can retry just this group.
+              const attachedMediaCount = ["mediaFiles", "driveFiles", "dropboxFiles", "frameioFiles", "oneDriveFiles", "s3VideoUrls", "metaImageHashes", "metaVideoIds"]
+                .reduce((count, key) => count + formData.getAll(key).length, 0);
+              if (attachedMediaCount < group.length) {
+                const groupFileName = (fileId) =>
+                  (
+                    files.find((f) => getFileId(f) === fileId) ||
+                    driveFiles.find((f) => f.id === fileId) ||
+                    dropboxFiles.find((f) => f.dropboxId === fileId) ||
+                    (frameioFiles || []).find((f) => f.frameioId === fileId) ||
+                    (oneDriveFiles || []).find((f) => f.oneDriveId === fileId) ||
+                    (importedFiles || []).find((f) => (f.type === "image" ? f.hash : f.id) === fileId)
+                  )?.name || "a file";
+                const readyNames = [
+                  ...formData.getAll("mediaFiles").map((file) => file?.name),
+                  ...["driveFiles", "dropboxFiles", "frameioFiles", "oneDriveFiles"].flatMap((key) =>
+                    formData.getAll(key).map((value) => {
+                      try {
+                        return JSON.parse(value).name;
+                      } catch {
+                        return null;
+                      }
+                    }),
+                  ),
+                  ...formData.getAll("s3VideoNames"),
+                  ...formData.getAll("metaImageNames"),
+                  ...formData.getAll("metaVideoNames"),
+                ].filter(Boolean);
+                const unmatchedReady = [...readyNames];
+                const missingNames = group.map(groupFileName).filter((name) => {
+                  const readyIndex = unmatchedReady.indexOf(name);
+                  if (readyIndex === -1) return true;
+                  unmatchedReady.splice(readyIndex, 1);
+                  return false;
+                });
+                const quote = (names) => names.map((name) => `"${name}"`).join(", ");
+                const message =
+                  `${missingNames.length ? quote(missingNames) : `${group.length - attachedMediaCount} file(s)`} didn't finish uploading, ` +
+                  `so this placement customized ad wasn't created.` +
+                  (readyNames.length ? ` Only ${quote(readyNames)} ${readyNames.length === 1 ? "was" : "were"} ready.` : "") +
+                  " Retry this group (check your connection, and re-add the file if it still fails).";
+                const skipped = Promise.reject(Object.assign(new Error(message), { response: { status: 400, data: { error: message } } }));
+                skipped.catch(() => {}); // Handled when the job's results are collected.
+                promises.push(skipped);
+                promiseMetadata.push({ adSetId, adName: groupedAdNames[groupIndex], fileName: groupedAdNames[groupIndex] });
+                localIterationIndex++;
+                return;
+              }
 
               // Append placement customization fields
               appendPlacementCustomizationFields(formData, {
@@ -9732,7 +9800,10 @@ export default function AdCreationForm({
         ...job,
         adCount: job.adCount * (1 + jobExtraLandingPages.length),
         showVariantLabel: shouldShowVariantLabel,
-        formData: { ...job.formData, promoCodeAutoDetect: supportsPromoCode && promoCodeAutoDetect, extraLandingPages: jobExtraLandingPages },
+        formData: {
+          ...job.formData, promoCodeAutoDetect: supportsPromoCode && promoCodeAutoDetect, extraLandingPages: jobExtraLandingPages,
+          whatsAppWelcomeMessage: isWhatsAppDestination ? whatsAppWelcomeMessage.trim() : "",
+        },
       };
     });
 
@@ -11760,6 +11831,27 @@ export default function AdCreationForm({
                       </div>
                     )}
 
+                    {isWhatsAppDestination && (
+                      <div className="space-y-2">
+                        <Label htmlFor="whatsapp-welcome-message">WhatsApp Welcome Message (optional)</Label>
+                        <TextareaAutosize
+                          id="whatsapp-welcome-message"
+                          value={whatsAppWelcomeMessage}
+                          onChange={(e) => setWhatsAppWelcomeMessage(e.target.value)}
+                          minRows={2}
+                          maxRows={10}
+                          className={formTextareaChrome}
+                          style={{
+                            scrollbarWidth: "thin",
+                            scrollbarColor: "#c7c7c7 transparent",
+                          }}
+                          placeholder="Hi! Thanks for reaching out. How can we help?"
+                          disabled={!isLoggedIn}
+                        />
+                        <p className="text-xs text-gray-500">Sent in the chat when someone taps your ad. Leave empty to use WhatsApp's default.</p>
+                      </div>
+                    )}
+
                     {hasCatalogueStaticCardVariableWarning && (
                       <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
                         Catalog variables in the headline or description work on product cards, but they will not resolve on the uploaded static card.
@@ -12296,7 +12388,24 @@ export default function AdCreationForm({
                         Destination
                       </Label>
                       <div className={cn("grid gap-2", isUnifiedProfileDestination && "sm:grid-cols-2")}>
-                        {profileDestinationType !== "INSTAGRAM_PROFILE" && (
+                        {isWhatsAppDestination && (
+                          <div className="flex min-w-0 items-center gap-2 rounded-2xl border border-gray-200 bg-white px-3 py-2 shadow">
+                            <img
+                              src={selectedProfilePage?.profilePicture || "https://api.withblip.com/backup_page_image.png"}
+                              alt={selectedProfilePage?.name || "WhatsApp"}
+                              className="h-6 w-6 rounded-full border border-gray-300 object-cover"
+                            />
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-medium">
+                                {whatsAppPhoneNumbers.length ? whatsAppPhoneNumbers.join(", ") : selectedProfilePage?.name || pageId}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {whatsAppPhoneNumbers.length ? "WhatsApp" : "WhatsApp number linked to this Page"}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                        {!isWhatsAppDestination && profileDestinationType !== "INSTAGRAM_PROFILE" && (
                           <div className="flex min-w-0 items-center gap-2 rounded-2xl border border-gray-200 bg-white px-3 py-2 shadow">
                             <img
                               src={selectedProfilePage?.profilePicture || "https://api.withblip.com/backup_page_image.png"}
@@ -12309,7 +12418,7 @@ export default function AdCreationForm({
                             </div>
                           </div>
                         )}
-                        {profileDestinationType !== "FACEBOOK_PAGE" && (
+                        {!isWhatsAppDestination && profileDestinationType !== "FACEBOOK_PAGE" && (
                           <div className="flex min-w-0 items-center gap-2 rounded-2xl border border-gray-200 bg-white px-3 py-2 shadow">
                             <img
                               src={selectedProfileInstagram?.profilePictureUrl || "https://api.withblip.com/backup_page_image.png"}
