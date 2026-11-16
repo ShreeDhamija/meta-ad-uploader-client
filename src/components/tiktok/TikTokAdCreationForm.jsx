@@ -811,12 +811,6 @@ export default function TikTokAdCreationForm({
   // "Update existing ads" mode: pick ads from the selected campaign/ad groups instead of creating new ones
   const [updateExistingAds, setUpdateExistingAds] = useState(false);
   const [selectedExistingAds, setSelectedExistingAds] = useState([]);
-  const canUpdateExistingAds = !duplicateCampaign && !showDuplicateAdGroupBlock;
-
-  // Existing ads only make sense for an existing campaign + ad group
-  useEffect(() => {
-    if (!canUpdateExistingAds && updateExistingAds) setUpdateExistingAds(false);
-  }, [canUpdateExistingAds, updateExistingAds]);
 
   useEffect(() => {
     setSelectedExistingAds([]);
@@ -1040,6 +1034,15 @@ export default function TikTokAdCreationForm({
     () => isSmartPlusSelection({ campaigns, selectedCampaign, adGroups, selectedAdGroup, showDuplicateAdGroupBlock, duplicateAdGroup }),
     [selectedCampaign, campaigns, selectedAdGroup, showDuplicateAdGroupBlock, duplicateAdGroup, adGroups],
   );
+
+  // "Update existing ads" is offered only for Smart+ campaigns, and only when
+  // launching into an existing campaign + ad group (not a new/duplicated one)
+  const showUpdateExistingAdsToggle = isSmartCampaign;
+  const canUpdateExistingAds = isSmartCampaign && !duplicateCampaign && !showDuplicateAdGroupBlock;
+
+  useEffect(() => {
+    if (!canUpdateExistingAds && updateExistingAds) setUpdateExistingAds(false);
+  }, [canUpdateExistingAds, updateExistingAds]);
 
   // Campaign objects behind the current selection — Smart+ keeps the catalog on the
   // campaign, so the ad group tells us nothing about it.
@@ -5914,7 +5917,8 @@ export default function TikTokAdCreationForm({
               )}
             </div>
 
-            {/* 4. Update existing ads toggle */}
+            {/* 4. Update existing ads toggle (Smart+ campaigns only) */}
+            {showUpdateExistingAdsToggle && (
             <div>
               <div className="flex items-center space-x-2">
                 <label htmlFor="update-existing-ads" className="text-sm text-gray-700">
@@ -5934,6 +5938,7 @@ export default function TikTokAdCreationForm({
                 <p className="text-xs text-amber-600 mt-1">Select an advertiser to fetch ads</p>
               )}
             </div>
+            )}
           </CardContent>
         </Card>
 
