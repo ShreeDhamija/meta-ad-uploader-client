@@ -14,7 +14,12 @@ import { useTikTokAuth } from "@/lib/TikTokAuthContext"
 const API_BASE_URL = import.meta.env.VITE_API_URL || "https://api.withblip.com"
 
 // checkbox | thumbnail | ad name | status | chevron
-const GRID_COLS = "grid-cols-[20px_48px_minmax(0,1fr)_90px_16px]"
+// (thumbnail column is wider than the 48px image so the "Thumbnail" header label fits)
+const GRID_COLS = "grid-cols-[20px_64px_minmax(0,1fr)_90px_16px]"
+
+// Black when checked, to match the dark header and selected-card border
+const CHECKBOX_CLASS =
+  "border-zinc-400 data-[state=checked]:bg-zinc-900 data-[state=checked]:border-zinc-900 data-[state=checked]:text-white"
 
 const isActive = (status) => String(status || "").toUpperCase() === "ENABLE"
 
@@ -52,8 +57,8 @@ const matches = (q, ...values) => values.some((v) => String(v || "").toLowerCase
 
 /**
  * Lists Smart+ ads (from /smart_plus/ad/get/) in the selected ad groups. Each ad is a
- * parent row; its chevron opens the creatives in its creative_list. Selection is per
- * creative (keyed by ad_material_id); a parent's checkbox selects all of its creatives.
+ * parent row; its chevron opens the creatives in its creative_list (display only).
+ * Selection is per ad (keyed by smart_plus_ad_id); selected ads carry all their creatives.
  */
 function TikTokExistingAdsSelector({
   advertiserId,
@@ -73,7 +78,7 @@ function TikTokExistingAdsSelector({
   // Only the latest request may write results
   const requestIdRef = useRef(0)
 
-  const selectedIds = useMemo(() => new Set(selectedAds.map((c) => c.ad_material_id)), [selectedAds])
+  const selectedIds = useMemo(() => new Set(selectedAds.map((ad) => ad.smart_plus_ad_id)), [selectedAds])
 
   // Stable keys so the fetch only re-runs when the actual selection changes
   const campaignKey = useMemo(() => [...campaignIds].sort().join(","), [campaignIds])
@@ -119,13 +124,16 @@ function TikTokExistingAdsSelector({
     fetchAds()
   }, [fetchAds])
 
-  // Drop selections for creatives that are no longer in the selected ad groups
+  // Drop selections for ads that are no longer in the selected ad groups
   useEffect(() => {
     if (!hasFetched || isLoading) return
-    const availableIds = new Set(ads.flatMap((ad) => ad.creatives.map((c) => c.ad_material_id)))
-    const stillValid = selectedAds.filter((c) => availableIds.has(c.ad_material_id))
+    const availableIds = new Set(ads.map((ad) => ad.smart_plus_ad_id))
+    const stillValid = selectedAds.filter((ad) => availableIds.has(ad.smart_plus_ad_id))
     if (stillValid.length !== selectedAds.length) onSelectionChange(stillValid)
   }, [ads, hasFetched, isLoading, selectedAds, onSelectionChange])
+
+  // Full ad records by ID — the filter can trim an ad's creatives, but a selection always keeps them all
+  const adsById = useMemo(() => new Map(ads.map((ad) => [ad.smart_plus_ad_id, ad])), [ads])
 
   const query = filterQuery.trim().toLowerCase()
 
@@ -141,21 +149,17 @@ function TikTokExistingAdsSelector({
     return sortAds(filtered)
   }, [ads, query])
 
-  const displayedCreatives = useMemo(() => displayedAds.flatMap((ad) => ad.creatives), [displayedAds])
-
-  const setSelected = (creatives, checked) => {
-    const ids = new Set(creatives.map((c) => c.ad_material_id))
+  const setSelected = (adsToChange, checked) => {
+    const ids = new Set(adsToChange.map((ad) => ad.smart_plus_ad_id))
     if (checked) {
-      onSelectionChange([...selectedAds, ...creatives.filter((c) => !selectedIds.has(c.ad_material_id))])
+      const toAdd = [...ids].filter((id) => !selectedIds.has(id)).map((id) => adsById.get(id)).filter(Boolean)
+      onSelectionChange([...selectedAds, ...toAdd])
     } else {
-      onSelectionChange(selectedAds.filter((c) => !ids.has(c.ad_material_id)))
+      onSelectionChange(selectedAds.filter((ad) => !ids.has(ad.smart_plus_ad_id)))
     }
   }
 
-  const getSelectedCount = (ad) => ad.creatives.filter((c) => selectedIds.has(c.ad_material_id)).length
-
-  // Partially or fully selected → clear the ad; otherwise select every creative in it
-  const toggleAd = (ad) => setSelected(ad.creatives, getSelectedCount(ad) === 0)
+  const toggleAd = (ad) => setSelected([ad], !selectedIds.has(ad.smart_plus_ad_id))
 
   const toggleExpanded = (id) => {
     setExpandedIds((prev) => {
@@ -167,7 +171,7 @@ function TikTokExistingAdsSelector({
   }
 
   const allDisplayedSelected =
-    displayedCreatives.length > 0 && displayedCreatives.every((c) => selectedIds.has(c.ad_material_id))
+    displayedAds.length > 0 && displayedAds.every((ad) => selectedIds.has(ad.smart_plus_ad_id))
 
   const renderNameTooltip = (value, className = "text-gray-900") => (
     <Tooltip>
@@ -208,53 +212,36 @@ function TikTokExistingAdsSelector({
     )
   }
 
-  // One creative tile in the parent ad's horizontal strip: thumbnail with checkbox, name below
-  const renderCreative = (creative) => {
-    const isSelected = selectedIds.has(creative.ad_material_id)
-    return (
-      <label key={creative.ad_material_id} className="group w-24 flex-shrink-0 cursor-pointer">
-        <div
-          className={cn(
-            "relative rounded-lg border-2 transition-colors",
-            isSelected ? "border-blue-500" : "border-transparent group-hover:border-gray-300",
-          )}
-        >
-          {renderThumbnail(creative.thumbnail_url, "w-full h-32 rounded-md")}
-          <Checkbox
-            checked={isSelected}
-            onCheckedChange={() => setSelected([creative], !isSelected)}
-            className="absolute top-1.5 left-1.5 bg-white"
-          />
-        </div>
-        <p className="mt-1 px-0.5 text-[11px] leading-tight text-gray-700 truncate" title={creative.name}>
-          {creative.name}
-        </p>
-      </label>
-    )
-  }
+  // One creative tile in the parent ad's horizontal strip (display only): thumbnail, name below
+  const renderCreative = (creative) => (
+    <div key={creative.ad_material_id} className="w-24 flex-shrink-0">
+      {renderThumbnail(creative.thumbnail_url, "w-full h-32 rounded-lg")}
+      <p className="mt-1 px-0.5 text-[11px] leading-tight text-gray-700 truncate" title={creative.name}>
+        {creative.name}
+      </p>
+    </div>
+  )
 
   const renderAd = (ad) => {
     // Show creatives while filtering so matches inside an ad aren't hidden
     const isExpanded = Boolean(query) || expandedIds.has(ad.smart_plus_ad_id)
     const count = ad.creatives.length
-    const selectedCount = getSelectedCount(ad)
-    const allSelected = count > 0 && selectedCount === count
+    const isSelected = selectedIds.has(ad.smart_plus_ad_id)
     return (
       <div
         key={ad.smart_plus_ad_id}
         className={cn(
           "rounded-xl border transition-colors",
-          allSelected ? "border-blue-500 bg-blue-50" : selectedCount > 0 ? "border-blue-300" : "border-gray-200 hover:border-gray-300",
+          isSelected ? "border-zinc-800 bg-zinc-50" : "border-gray-200 hover:border-gray-300",
         )}
       >
         <label className={cn("grid gap-2 items-center p-3 cursor-pointer", GRID_COLS)}>
-          <Checkbox checked={allSelected} disabled={count === 0} onCheckedChange={() => toggleAd(ad)} />
+          <Checkbox checked={isSelected} onCheckedChange={() => toggleAd(ad)} className={CHECKBOX_CLASS} />
           {renderThumbnail(ad.creatives.find((c) => c.thumbnail_url)?.thumbnail_url)}
           <div className="min-w-0">
             {renderNameTooltip(getAdName(ad), "text-gray-900 font-medium")}
             <span className="text-[11px] text-gray-500">
               {count} creative{count === 1 ? "" : "s"}
-              {selectedCount > 0 && !allSelected && ` · ${selectedCount} of ${count} selected`}
             </span>
           </div>
           {renderStatus(ad.operation_status)}
@@ -291,7 +278,7 @@ function TikTokExistingAdsSelector({
       <div className="flex-shrink-0 space-y-3 pb-2">
         <div className="flex items-center justify-between">
           <span className="text-sm text-gray-500">
-            {selectedIds.size} creative{selectedIds.size === 1 ? "" : "s"} selected
+            {selectedIds.size} ad{selectedIds.size === 1 ? "" : "s"} selected
           </span>
           <Button
             type="button"
@@ -366,11 +353,12 @@ function TikTokExistingAdsSelector({
         )}
       </div>
 
-      {!isLoading && displayedCreatives.length > 0 && (
+      {!isLoading && displayedAds.length > 0 && (
         <label className="flex items-center gap-2 px-3 py-2 text-sm font-medium cursor-pointer">
           <Checkbox
             checked={allDisplayedSelected}
-            onCheckedChange={(checked) => setSelected(displayedCreatives, Boolean(checked))}
+            onCheckedChange={(checked) => setSelected(displayedAds, Boolean(checked))}
+            className={CHECKBOX_CLASS}
           />
           Select all
         </label>
