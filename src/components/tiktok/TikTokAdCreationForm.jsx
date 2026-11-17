@@ -25,7 +25,7 @@ import { useAppData } from "@/lib/AppContext";
 import { readCache, writeCache } from "@/lib/dataCache";
 import { deleteTikTokCopyTemplate, saveTikTokSettings } from "@/lib/saveTikTokSettings";
 import { useTikTokAuth } from "@/lib/TikTokAuthContext";
-import { isSmartPlusSelection } from "@/lib/tiktokSmartPlus";
+import { isSmartPlusSelection, isSmartPlusCampaign } from "@/lib/tiktokSmartPlus";
 import { cn } from "@/lib/utils";
 import axios from "axios";
 import {
@@ -1044,6 +1044,19 @@ export default function TikTokAdCreationForm({
   useEffect(() => {
     if (!canUpdateExistingAds && updateExistingAds) setUpdateExistingAds(false);
   }, [canUpdateExistingAds, updateExistingAds]);
+
+  // Only Smart+ ad groups (their campaign is Smart+) appear in the existing-ads view;
+  // a selected non-Smart+ ad group gets no row at all, not even "No ads yet"
+  const smartPlusSelectedAdGroupIds = useMemo(
+    () =>
+      (selectedAdGroup || []).filter((agId) => {
+        const ag = adGroups.find((g) => g.adgroup_id === agId);
+        if (!ag) return false;
+        const campaign = campaigns.find((c) => c.campaign_id === (ag.campaignId || ag.campaign_id));
+        return isSmartPlusCampaign(campaign) || isSmartPlusCampaign(ag);
+      }),
+    [selectedAdGroup, adGroups, campaigns],
+  );
 
   // Let the page know, so the media preview can hide "Create group ads" in this mode
   useEffect(() => {
@@ -6249,7 +6262,7 @@ export default function TikTokAdCreationForm({
                 <TikTokExistingAdsSelector
                   advertiserId={selectedAdvertiser}
                   campaignIds={selectedCampaign}
-                  adGroupIds={selectedAdGroup}
+                  adGroupIds={smartPlusSelectedAdGroupIds}
                   adGroups={adGroups}
                   selectedAds={selectedExistingAds}
                   onSelectionChange={setSelectedExistingAds}

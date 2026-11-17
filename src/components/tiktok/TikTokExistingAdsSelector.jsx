@@ -362,7 +362,7 @@ function TikTokExistingAdsSelector({
 
         {!canFetch && (
           <div className="flex items-center justify-center py-6 text-gray-400 text-sm flex-shrink-0">
-            {campaignIds.length === 0 ? "Select a campaign to get started" : "Select an ad group to view its ads"}
+            {campaignIds.length === 0 ? "Select a campaign to get started" : "Select a Smart+ ad group to view its ads"}
           </div>
         )}
 
