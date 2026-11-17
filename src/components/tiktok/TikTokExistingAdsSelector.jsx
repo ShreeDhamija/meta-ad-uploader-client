@@ -421,9 +421,11 @@ function TikTokExistingAdsSelector({
       )}
 
       {!isLoading && !error && rows.length > 0 && (
-        // shadcn ScrollArea (vertical). The height cap goes on the viewport; Radix's inner
+        // shadcn ScrollArea (vertical). Height follows the screen like the Spark posts list
+        // (which is clamp(400px, 100vh - 400px, 600px) including its search and header), so
+        // only a few rows show and the rest scroll. The cap goes on the viewport; Radix's inner
         // wrapper is display:table by default, forced to block so ad names still truncate
-        <ScrollArea viewportClassName="max-h-[550px] [&>div]:!block">
+        <ScrollArea viewportClassName="max-h-[clamp(240px,calc(100vh_-_560px),440px)] [&>div]:!block">
           <TooltipProvider delayDuration={150}>
             <div className="space-y-1.5 pr-3">
               {rows.map((row) => (row.type === "ad" ? renderAd(row.ad) : renderEmptyAdGroup(row.adGroupId)))}
