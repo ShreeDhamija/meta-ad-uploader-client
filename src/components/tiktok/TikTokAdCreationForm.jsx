@@ -6277,7 +6277,8 @@ export default function TikTokAdCreationForm({
                     )}
                   </Button>
 
-                  {updateExistingAdsErrors.map((message) => (
+                  {/* Missing media still disables Publish, but isn't spelled out here (same as normal creation) */}
+                  {updateExistingAdsErrors.filter((message) => message !== "At least one media item is required").map((message) => (
                     <div key={message} className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
                       {message}
                     </div>
