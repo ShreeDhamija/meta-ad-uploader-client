@@ -1,4 +1,4 @@
-import { StrictMode } from "react";
+import { StrictMode, Suspense, lazy } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
 import { AuthProvider, useAuth } from "./lib/AuthContext";
@@ -29,6 +29,10 @@ import TikTokLogin from "./pages/TikTokLogin.jsx";
 import QaReview from "./pages/QaReview.jsx";
 import SharedReport from "./pages/SharedReport.jsx";
 import { getMcpReview } from "./lib/draftApi";
+
+// Asset library: only routed where VITE_ENABLE_DAM is "true"; loaded on demand.
+const DAM_ENABLED = import.meta.env.VITE_ENABLE_DAM === "true";
+const Library = DAM_ENABLED ? lazy(() => import("./pages/Library.jsx")) : null;
 
 function TikTokRoute({ children, requireConnection = false }) {
   const location = useLocation()
@@ -75,6 +79,7 @@ const router = createBrowserRouter([
         element: <TikTokRoute><TikTokCallback /></TikTokRoute>,
       },
       { path: "creative-strategy", element: <CreativeStrategy /> },
+      ...(DAM_ENABLED ? [{ path: "library/*", element: <Suspense fallback={null}><Library /></Suspense> }] : []),
       { path: "terms-of-service", element: <TermsOfService /> },
       { path: "privacy-policy", element: <PrivacyPolicy /> },
       { path: "qa/:token", element: <QaReview /> },

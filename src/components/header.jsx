@@ -3,7 +3,7 @@
 import { useState } from "react"
 import PropTypes from "prop-types"
 import { Button } from "@/components/ui/button"
-import { LogOutIcon, Settings, Clock, Bell } from "lucide-react"
+import { LogOutIcon, Settings, Clock, Bell, FolderOpen } from "lucide-react"
 import ZapIcon from "@/assets/icons/Zap.svg?react"
 import ChatIcon from "@/assets/icons/chat.svg?react"
 import AnalyticsIcon from "@/assets/icons/Analytics.svg?react"
@@ -218,6 +218,19 @@ export default function Header({ showMessenger }) {
           <span className="hidden min-[1000px]:inline text-[14px] text-gray-900 font-medium">Analytics</span>
         </button>
         <div className="hidden min-[1000px]:block h-8 w-px bg-gray-300  " />
+        {import.meta.env.VITE_ENABLE_DAM === "true" && (
+          <>
+            <button
+              onClick={() => navigate("/library")}
+              title="Library"
+              className="flex items-center gap-1.5 rounded-full transition-colors px-2 py-2 bg-transparent hover:bg-gray-100 focus:bg-transparent active:bg-transparent cursor-pointer"
+            >
+              <FolderOpen className="size-5 text-black" />
+              <span className="hidden min-[1000px]:inline text-[14px] text-gray-900 font-medium">Library</span>
+            </button>
+            <div className="hidden min-[1000px]:block h-8 w-px bg-gray-300" />
+          </>
+        )}
         {/* Chat Support Button */}
         <button
           onClick={handleChatToggle}
