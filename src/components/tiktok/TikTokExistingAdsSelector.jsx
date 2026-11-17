@@ -17,6 +17,8 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || "https://api.withblip.com"
 // checkbox | thumbnail | ad name | status | chevron
 // (thumbnail column is wider than the 48px image so the "Thumbnail" header label fits)
 const GRID_COLS = "grid-cols-[20px_64px_minmax(0,1fr)_90px_16px]"
+// Same, plus an ad group column, used when more than one ad group is selected
+const GRID_COLS_MULTI = "grid-cols-[20px_64px_minmax(0,1.4fr)_minmax(0,1fr)_90px_16px]"
 
 // Black when checked, to match the dark header
 const CHECKBOX_CLASS =
@@ -65,6 +67,7 @@ function TikTokExistingAdsSelector({
   advertiserId,
   campaignIds = [],
   adGroupIds = [],
+  adGroups = [], // ad group records ({ adgroup_id, adgroup_name }) for the names in the Ad Group column
   selectedAds = [],
   onSelectionChange,
   refreshKey = 0, // bumped by the parent after an update to refetch the ads
@@ -150,6 +153,34 @@ function TikTokExistingAdsSelector({
       .filter(Boolean)
     return sortAds(filtered)
   }, [ads, query])
+
+  // With several ad groups selected, ads are listed ad group by ad group (in the order they
+  // were selected) and an ad group without ads gets its own "No ads yet" row
+  const isMultiAdGroup = adGroupIds.length > 1
+  const gridCols = isMultiAdGroup ? GRID_COLS_MULTI : GRID_COLS
+
+  const adGroupNameById = useMemo(() => {
+    const names = new Map()
+    ads.forEach((ad) => ad.adgroup_name && names.set(String(ad.adgroup_id), ad.adgroup_name))
+    adGroups.forEach((ag) => ag?.adgroup_name && names.set(String(ag.adgroup_id), ag.adgroup_name))
+    return names
+  }, [ads, adGroups])
+  const getAdGroupName = (id) => adGroupNameById.get(String(id)) || String(id)
+
+  const rows = useMemo(() => {
+    if (!isMultiAdGroup) return displayedAds.map((ad) => ({ type: "ad", ad }))
+    const out = []
+    adGroupIds.forEach((adGroupId) => {
+      const id = String(adGroupId)
+      const groupAds = displayedAds.filter((ad) => String(ad.adgroup_id) === id)
+      if (groupAds.length > 0) {
+        groupAds.forEach((ad) => out.push({ type: "ad", ad }))
+      } else if (!query && !ads.some((ad) => String(ad.adgroup_id) === id)) {
+        out.push({ type: "empty", adGroupId: id })
+      }
+    })
+    return out
+  }, [isMultiAdGroup, displayedAds, adGroupIds, ads, query])
 
   const setSelected = (adsToChange, checked) => {
     const ids = new Set(adsToChange.map((ad) => ad.smart_plus_ad_id))
@@ -237,7 +268,7 @@ function TikTokExistingAdsSelector({
           isSelected ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-gray-300",
         )}
       >
-        <label className={cn("grid gap-2 items-center p-3 cursor-pointer", GRID_COLS)}>
+        <label className={cn("grid gap-2 items-center p-3 cursor-pointer", gridCols)}>
           <Checkbox checked={isSelected} onCheckedChange={() => toggleAd(ad)} className={CHECKBOX_CLASS} />
           {renderThumbnail(ad.creatives.find((c) => c.thumbnail_url)?.thumbnail_url)}
           <div className="min-w-0">
@@ -246,6 +277,7 @@ function TikTokExistingAdsSelector({
               {count} creative{count === 1 ? "" : "s"}
             </span>
           </div>
+          {isMultiAdGroup && <div className="min-w-0">{renderNameTooltip(getAdGroupName(ad.adgroup_id), "text-gray-600")}</div>}
           {renderStatus(ad.operation_status)}
           <button
             type="button"
@@ -275,6 +307,22 @@ function TikTokExistingAdsSelector({
     )
   }
 
+  // An ad group with no Smart+ ads: its own row, nothing to select
+  const renderEmptyAdGroup = (adGroupId) => (
+    <div
+      key={`empty-${adGroupId}`}
+      className={cn("grid gap-2 items-center p-3 rounded-xl border border-dashed border-gray-200 bg-gray-50", gridCols)}
+    >
+      <div></div>
+      <div className="w-12 h-12 rounded-md bg-gray-100 flex items-center justify-center">
+        <ImageOff className="h-5 w-5 text-gray-300" />
+      </div>
+      <span className="text-xs text-gray-400">No ads yet</span>
+      <div className="min-w-0">{renderNameTooltip(getAdGroupName(adGroupId), "text-gray-600")}</div>
+      <div></div>
+      <div></div>
+    </div>
+  )
 
   return (
     <div className="flex flex-col">
@@ -334,22 +382,23 @@ function TikTokExistingAdsSelector({
           </div>
         )}
 
-        {canFetch && hasFetched && !isLoading && !error && ads.length === 0 && (
+        {canFetch && hasFetched && !isLoading && !error && ads.length === 0 && !isMultiAdGroup && (
           <div className="flex items-center justify-center py-8 text-gray-500 border border-gray-200 rounded-lg flex-shrink-0">
             No Smart+ ads found in the selected ad group{adGroupIds.length > 1 ? "s" : ""}
           </div>
         )}
 
-        {!isLoading && ads.length > 0 && (
+        {!isLoading && !error && rows.length > 0 && (
           <div
             className={cn(
               "grid gap-2 px-3 py-2.5 text-xs font-semibold text-white bg-zinc-800 rounded-xl items-center shadow-sm",
-              GRID_COLS,
+              gridCols,
             )}
           >
             <div></div>
             <div>Thumbnail</div>
             <div>Ad Name</div>
+            {isMultiAdGroup && <div>Ad Group</div>}
             <div className="text-right">Status</div>
             <div></div>
           </div>
@@ -371,10 +420,12 @@ function TikTokExistingAdsSelector({
         <div className="flex items-center justify-center py-6 text-gray-400 text-sm">No ads match your filter</div>
       )}
 
-      {!isLoading && displayedAds.length > 0 && (
+      {!isLoading && !error && rows.length > 0 && (
         <div className="max-h-[550px] overflow-y-auto pr-1 custom-scrollbar">
           <TooltipProvider delayDuration={150}>
-            <div className="space-y-1.5">{displayedAds.map(renderAd)}</div>
+            <div className="space-y-1.5">
+              {rows.map((row) => (row.type === "ad" ? renderAd(row.ad) : renderEmptyAdGroup(row.adGroupId)))}
+            </div>
           </TooltipProvider>
         </div>
       )}

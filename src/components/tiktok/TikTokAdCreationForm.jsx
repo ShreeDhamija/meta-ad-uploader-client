@@ -6247,6 +6247,7 @@ export default function TikTokAdCreationForm({
                   advertiserId={selectedAdvertiser}
                   campaignIds={selectedCampaign}
                   adGroupIds={selectedAdGroup}
+                  adGroups={adGroups}
                   selectedAds={selectedExistingAds}
                   onSelectionChange={setSelectedExistingAds}
                   refreshKey={existingAdsRefreshKey}
