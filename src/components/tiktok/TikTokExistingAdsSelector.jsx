@@ -421,13 +421,15 @@ function TikTokExistingAdsSelector({
       )}
 
       {!isLoading && !error && rows.length > 0 && (
-        <div className="max-h-[550px] overflow-y-auto pr-1 custom-scrollbar">
+        // shadcn ScrollArea (vertical). The height cap goes on the viewport; Radix's inner
+        // wrapper is display:table by default, forced to block so ad names still truncate
+        <ScrollArea viewportClassName="max-h-[550px] [&>div]:!block">
           <TooltipProvider delayDuration={150}>
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 pr-3">
               {rows.map((row) => (row.type === "ad" ? renderAd(row.ad) : renderEmptyAdGroup(row.adGroupId)))}
             </div>
           </TooltipProvider>
-        </div>
+        </ScrollArea>
       )}
     </div>
   )

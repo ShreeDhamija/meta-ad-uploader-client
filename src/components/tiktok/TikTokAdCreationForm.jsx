@@ -1847,7 +1847,10 @@ export default function TikTokAdCreationForm({
       formData.fileGroups = [];
     }
 
-    const activeAdGroups = formData.selectedAdGroup || [];
+    // An update job only touches the ad groups its selected ads live in, not every selected ad group
+    const activeAdGroups = formData.updateExistingAds
+      ? [...new Set(formData.existingAds.map((ad) => ad.adgroup_id).filter(Boolean))]
+      : formData.selectedAdGroup || [];
     const adGroupDisplayName = formData.isDuplicatingAdGroupMode
       ? formData.newAdGroupName || "New Ad Group"
       : activeAdGroups.length === 1
