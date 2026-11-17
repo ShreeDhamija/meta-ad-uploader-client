@@ -1075,14 +1075,13 @@ export default function TikTokAdCreationForm({
     );
 
   // Checks for "Update existing ads". The create-ad checks (identity, ad text, CTA, URL) don't
-  // apply: the selected ads keep their own settings and only get new videos.
+  // apply: the selected ads keep their own settings and only get new videos/images.
   const updateExistingAdsErrors = useMemo(() => {
     if (!updateExistingAds) return [];
     const errors = [];
     const media = [...(files || []), ...(driveFiles || []), ...(dropboxFiles || [])];
     if (selectedExistingAds.length === 0) errors.push("Select at least one ad to update");
     if (media.length === 0) errors.push("At least one media item is required");
-    if (media.some(isImageMedia)) errors.push("Only videos can be added to existing Smart+ ads. Remove the images.");
     const overLimit = selectedExistingAds.find((ad) => (ad.creatives?.length || 0) + media.length > SMART_PLUS_MAX_CREATIVES);
     if (overLimit) {
       const total = (overLimit.creatives?.length || 0) + media.length;
@@ -2263,11 +2262,16 @@ export default function TikTokAdCreationForm({
       // creating new ads. The server reports progress on this job ID, so the job tracker and
       // the SSE completion listener below work exactly as they do for ad creation.
       if (isUpdateJob) {
+        // Upload endpoints return the TikTok image_id in videoId for images, so tag them here
         const newCreatives = uploadedItems
           .filter((u) => u.videoId)
-          .map((u) => ({ video_id: u.videoId, file_name: u.item.file?.name || "" }));
+          .map((u) =>
+            u.item.type !== "library" && isImageMedia(u.item.file)
+              ? { image_id: u.videoId, file_name: u.item.file?.name || "" }
+              : { video_id: u.videoId, file_name: u.item.file?.name || "" },
+          );
         if (newCreatives.length === 0) {
-          throw new Error(uploadErrors[0]?.error || "No videos could be uploaded");
+          throw new Error(uploadErrors[0]?.error || "No media could be uploaded");
         }
 
         isInPromisePhase.current = true;
@@ -3787,14 +3791,21 @@ export default function TikTokAdCreationForm({
     return map[ext] || "application/octet-stream";
   };
 
-  // Supported TikTok file types — video only; image ads are blocked until they're supported
+  // Supported TikTok file types — videos everywhere; JPG/PNG images only when adding creatives
+  // to existing Smart+ ads ("Update existing ads"). New-ad creation stays video only.
   const TIKTOK_SUPPORTED_EXTENSIONS = /\.(mp4|mov|webm)$/i;
   const TIKTOK_SUPPORTED_MIME = /^video\/(mp4|quicktime|webm)$/;
-  const TIKTOK_FILE_INPUT_ACCEPT = "video/mp4,video/quicktime,video/webm,.mp4,.mov,.webm";
+  const TIKTOK_IMAGE_EXTENSIONS = /\.(png|jpe?g)$/i;
+  const TIKTOK_IMAGE_MIME = /^image\/(png|jpeg)$/;
+  const TIKTOK_FILE_INPUT_ACCEPT = updateExistingAds
+    ? "video/mp4,video/quicktime,video/webm,.mp4,.mov,.webm,image/jpeg,image/png,.jpg,.jpeg,.png"
+    : "video/mp4,video/quicktime,video/webm,.mp4,.mov,.webm";
 
   const isTikTokSupportedFile = (file) => {
-    const nameOk = TIKTOK_SUPPORTED_EXTENSIONS.test(file.name);
-    const mimeOk = file.type ? TIKTOK_SUPPORTED_MIME.test(file.type) : nameOk;
+    const nameOk = TIKTOK_SUPPORTED_EXTENSIONS.test(file.name) || (updateExistingAds && TIKTOK_IMAGE_EXTENSIONS.test(file.name));
+    const mimeOk = file.type
+      ? TIKTOK_SUPPORTED_MIME.test(file.type) || (updateExistingAds && TIKTOK_IMAGE_MIME.test(file.type))
+      : nameOk;
     return nameOk || mimeOk;
   };
 
@@ -3802,7 +3813,9 @@ export default function TikTokAdCreationForm({
     const isImage = file.type?.startsWith("image/") || /\.(png|jpe?g|gif|webp|bmp|heic)$/i.test(file.name);
     toast.error(
       isImage
-        ? `Image ads aren't supported on TikTok yet — please upload a video. (${file.name})`
+        ? updateExistingAds
+          ? `Only JPG and PNG images are supported. (${file.name})`
+          : `Images can only be added to existing Smart+ ads (turn on "Update existing ads"). Please upload a video. (${file.name})`
         : `Job Failed: The type of file is not supported. (${file.name})`,
       { duration: 6000 },
     );
@@ -3925,7 +3938,7 @@ export default function TikTokAdCreationForm({
         setVideoPreview(URL.createObjectURL(taggedFiles[0]));
       }
     },
-    [setFiles, setVideoFile, setVideoPreview],
+    [setFiles, setVideoFile, setVideoPreview, updateExistingAds],
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -3990,6 +4003,7 @@ export default function TikTokAdCreationForm({
         "video/mp4",
         "video/webm",
         "video/quicktime",
+        ...(updateExistingAds ? ["image/jpeg", "image/png"] : []),
       ].join(",");
 
       let mainView;
@@ -4061,7 +4075,7 @@ export default function TikTokAdCreationForm({
       pickerInstanceRef.current = picker;
       picker.setVisible(true);
     },
-    [setDriveFiles, setVideoFile, setDropboxFiles],
+    [setDriveFiles, setVideoFile, setDropboxFiles, updateExistingAds],
   );
 
   const openPicker = useCallback(
@@ -4149,7 +4163,7 @@ export default function TikTokAdCreationForm({
     const folderId = link.match(/folders\/([a-zA-Z0-9-_]+)/) ? link.match(/folders\/([a-zA-Z0-9-_]+)/)[1] : null;
     if (!folderId) return toast.error("Invalid Google Drive link");
     createPicker(googleAuthStatus.accessToken, folderId);
-  }, [folderLinkValue, googleAuthStatus.accessToken, createPicker, setDriveFiles, setVideoFile]);
+  }, [folderLinkValue, googleAuthStatus.accessToken, createPicker, setDriveFiles, setVideoFile, updateExistingAds]);
 
   // Dropbox Logic
   useEffect(() => {
@@ -4184,10 +4198,10 @@ export default function TikTokAdCreationForm({
         },
         linkType: "direct",
         multiselect: true,
-        extensions: [".mp4", ".mov", ".webm"],
+        extensions: [".mp4", ".mov", ".webm", ...(updateExistingAds ? [".jpg", ".jpeg", ".png"] : [])],
       });
     },
-    [setDropboxFiles, setVideoFile],
+    [setDropboxFiles, setVideoFile, updateExistingAds],
   );
 
   const handleDropboxClick = useCallback(async () => {
@@ -4941,6 +4955,10 @@ export default function TikTokAdCreationForm({
         (tiktokLibraryFiles && tiktokLibraryFiles.length > 0);
       if (!hasMedia) {
         errors.push("At least one media item is required");
+      }
+      // Images are only accepted for "Update existing ads"; they can be left over after switching it off
+      if ([...(files || []), ...(driveFiles || []), ...(dropboxFiles || [])].some(isImageMedia)) {
+        errors.push('Images can only be added to existing Smart+ ads. Remove the images or turn on "Update existing ads".');
       }
       const activeTexts = adTexts ? adTexts.filter((t) => t.trim() !== "") : [];
       if (activeTexts.length === 0) {
