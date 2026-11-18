@@ -45,11 +45,12 @@ const trackMeta = (track) => [track.author, track.style, formatDuration(track.du
 /**
  * Music track picker for TikTok image ads. Image ads on manual Reach, Traffic and Lead
  * Generation campaigns are created as CAROUSEL_ADS, which TikTok requires a music_id for —
- * and only music listed for the CAROUSEL_ADS scene is accepted.
+ * and only music listed for the CAROUSEL_ADS scene is accepted. On Smart+ Traffic the track
+ * is optional (`optional`): image ads there can be created without music.
  *
- * @param {{ advertiserId: string, value: Object|null, onChange: (track: Object|null) => void }} props
+ * @param {{ advertiserId: string, value: Object|null, onChange: (track: Object|null) => void, optional?: boolean }} props
  */
-export default function TikTokMusicPicker({ advertiserId, value, onChange }) {
+export default function TikTokMusicPicker({ advertiserId, value, onChange, optional = false }) {
   const { tiktokFetch } = useTikTokAuth();
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState("keyword");
@@ -183,9 +184,16 @@ export default function TikTokMusicPicker({ advertiserId, value, onChange }) {
         <Label className="flex items-center gap-2 font-semibold text-sm">
           <Music className="w-4 h-4" />
           Music for image ads
+          {optional && (
+            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+              Optional
+            </span>
+          )}
         </Label>
         <span className="text-xs text-gray-500 leading-relaxed">
-          TikTok plays a music track over image ads. The track you pick is used for every image in this batch.
+          {optional
+            ? "Smart+ Traffic image ads can run without music. Pick a track to add one to every image in this batch."
+            : "TikTok plays a music track over image ads. The track you pick is used for every image in this batch."}
         </span>
       </div>
 
@@ -216,7 +224,7 @@ export default function TikTokMusicPicker({ advertiserId, value, onChange }) {
                 {trackMeta(value) && <span className="text-xs text-gray-400 truncate">{trackMeta(value)}</span>}
               </div>
             ) : (
-              <span className="text-sm font-normal text-gray-500">Select a music track</span>
+              <span className="text-sm font-normal text-gray-500">{optional ? "No music" : "Select a music track"}</span>
             )}
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
@@ -371,6 +379,19 @@ export default function TikTokMusicPicker({ advertiserId, value, onChange }) {
         <div className="flex items-center gap-2 text-xs text-gray-500 px-1">
           {renderPlay(value, "h-6 w-6")}
           <span>Preview the selected track</span>
+          {optional && (
+            <button
+              type="button"
+              onClick={() => {
+                stopPreview();
+                onChange(null);
+              }}
+              className="ml-auto inline-flex items-center gap-1 font-medium text-gray-500 hover:text-gray-900"
+            >
+              <X className="h-3.5 w-3.5" />
+              Remove track
+            </button>
+          )}
         </div>
       )}
     </div>

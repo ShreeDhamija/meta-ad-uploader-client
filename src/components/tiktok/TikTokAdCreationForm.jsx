@@ -1119,7 +1119,7 @@ export default function TikTokAdCreationForm({
   // ── Image ads ────────────────────────────────────────────────────────────
   // Image ads only work on some campaign types (tested against TikTok):
   //   manual Reach / Traffic / Lead Generation → created as CAROUSEL_ADS, a music track is required
-  //   Smart+ Traffic                            → created without music, so no picker
+  //   Smart+ Traffic                            → music optional (Ads Manager allows none)
   //   Sales (catalog, store/showcase), Smart+ Lead Generation, everything else → videos only
   const hasImageMedia = useMemo(
     () => [...(files || []), ...(driveFiles || []), ...(dropboxFiles || [])].some(isTikTokImageFile),
@@ -1130,6 +1130,7 @@ export default function TikTokAdCreationForm({
     const MUSIC_OBJECTIVES = { REACH: "Reach", TRAFFIC: "Traffic", LEAD_GENERATION: "Lead Generation", LANDING_PAGE: "Reach" };
     const OBJECTIVE_LABELS = { ...MUSIC_OBJECTIVES, PRODUCT_SALES: "Sales", WEB_CONVERSIONS: "Sales", CATALOG_SALES: "Sales", APP_PROMOTION: "App Promotion", VIDEO_VIEWS: "Video Views", ENGAGEMENT: "Community Interaction", RF_REACH: "Reach & Frequency" };
     let musicRequired = false;
+    let musicOptional = false;
     const unsupported = [];
 
     activeCampaignObjects.forEach((c) => {
@@ -1143,7 +1144,7 @@ export default function TikTokAdCreationForm({
       if (!smart && !productAds && MUSIC_OBJECTIVES[effective]) {
         musicRequired = true;
       } else if (smart && !productAds && effective === "TRAFFIC") {
-        // Smart+ Traffic accepts images without music
+        musicOptional = true;
       } else {
         const label = `${smart ? "Smart+ " : ""}${OBJECTIVE_LABELS[effective] || "this"}`;
         if (!unsupported.includes(label)) unsupported.push(label);
@@ -1153,7 +1154,8 @@ export default function TikTokAdCreationForm({
     // Catalog, store and showcase ad groups are product ads, which are videos only
     if ((isCatalogAdGroup || showStoreProductSelection) && !unsupported.includes("Sales")) unsupported.push("Sales");
 
-    return { musicRequired: musicRequired && unsupported.length === 0, unsupported };
+    const supported = unsupported.length === 0;
+    return { musicRequired: supported && musicRequired, musicOptional: supported && !musicRequired && musicOptional, unsupported };
   }, [activeCampaignObjects, isCatalogAdGroup, showStoreProductSelection]);
 
   const [imageAdMusic, setImageAdMusic] = useState(null);
@@ -1164,8 +1166,8 @@ export default function TikTokAdCreationForm({
 
   const isCreateMode = !updateExistingAds && adType !== "SPARK";
   const isImageCampaignUnsupported = isCreateMode && hasImageMedia && imageCampaignSupport.unsupported.length > 0;
-  const showImageMusicPicker = isCreateMode && hasImageMedia && imageCampaignSupport.musicRequired;
-  const isImageMusicMissing = showImageMusicPicker && !imageAdMusic?.music_id;
+  const showImageMusicPicker = isCreateMode && hasImageMedia && (imageCampaignSupport.musicRequired || imageCampaignSupport.musicOptional);
+  const isImageMusicMissing = showImageMusicPicker && imageCampaignSupport.musicRequired && !imageAdMusic?.music_id;
   const imageCampaignUnsupportedMessage = `Image ads aren't supported on ${imageCampaignSupport.unsupported.join(", ")} campaigns. Use videos, or choose a manual Reach, Traffic or Lead Generation campaign.`;
 
   // A Smart+ campaign with catalog_enabled still needs a product selection on every ad,
@@ -7683,9 +7685,15 @@ export default function TikTokAdCreationForm({
               {/* 6. Media Section or Spark Info Card */}
               {adType !== "SPARK" && <div>{uploadMediaSection}</div>}
 
-              {/* 7. Music for image ads — manual Reach / Traffic / Lead Generation only */}
+              {/* 7. Music for image ads — required on manual Reach / Traffic / Lead Generation,
+                  optional on Smart+ Traffic */}
               {showImageMusicPicker && (
-                <TikTokMusicPicker advertiserId={selectedAdvertiser} value={imageAdMusic} onChange={setImageAdMusic} />
+                <TikTokMusicPicker
+                  advertiserId={selectedAdvertiser}
+                  value={imageAdMusic}
+                  onChange={setImageAdMusic}
+                  optional={!imageCampaignSupport.musicRequired}
+                />
               )}
 
               {/* Submit Button */}
