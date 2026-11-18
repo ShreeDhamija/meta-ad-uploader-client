@@ -16,6 +16,12 @@ const POLL_MS = 2000;
 const JobsContext = createContext(null);
 const ACTIVE = (status) => status === "queued" || status === "running" || status == null;
 const millis = (value) => value ? new Date(value).getTime() : 0;
+// Steps the backend runs on its own between user-visible jobs (e.g. refreshing
+// brand learnings between ad analysis and weekly strategy). They're still
+// polled, so the jobs chained after them are picked up, but never shown,
+// toasted or counted as unread.
+const BACKGROUND_KINDS = new Set(["learning_truths"]);
+const isVisible = (job) => !BACKGROUND_KINDS.has(job.type || job.meta?.kind);
 
 export function jobOutcome(job) {
   if (job.status === "failed") return "failed";
@@ -48,7 +54,7 @@ export function JobsProvider({ children, userId }) {
 
   const resultKey = (job) => `${job.id}:${jobOutcome(job)}`;
   const unreadResults = Object.values(jobs).filter((job) =>
-    jobOutcome(job) && isCurrentSessionResult(job, sessionStartedAt.current, sessionJobs.current) && !readResults.has(resultKey(job)));
+    isVisible(job) && jobOutcome(job) && isCurrentSessionResult(job, sessionStartedAt.current, sessionJobs.current) && !readResults.has(resultKey(job)));
   const unreadStatus = unreadResults.some((job) => jobOutcome(job) === "failed") ? "failed" : unreadResults.length ? "completed" : null;
   const markResultsRead = useCallback(() => {
     setReadResults((current) => {
@@ -65,7 +71,7 @@ export function JobsProvider({ children, userId }) {
   useEffect(() => {
     for (const job of Object.values(jobs)) {
       const previous = previousStatuses.current[job.id];
-      if (previous && ACTIVE(previous) && (job.status === "failed" || job.status === "completed")) {
+      if (isVisible(job) && previous && ACTIVE(previous) && (job.status === "failed" || job.status === "completed")) {
         const description = describeJob(job);
         if (jobOutcome(job) === "failed") toast.error(description.title, { description: description.detail, id: `job:${job.id}` });
         else toast.success(description.title, { description: description.detail, id: `job:${job.id}` });
@@ -147,7 +153,8 @@ export function JobsProvider({ children, userId }) {
     return () => { cancelled = true; clearInterval(interval); };
   }, [mergeJobs, track]);
 
-  const value = useMemo(() => ({ jobs, track, historyLoading, historyError, nextOffset, loadMore, refreshHistory, unreadStatus, markResultsRead }), [jobs, track, historyLoading, historyError, nextOffset, loadMore, refreshHistory, unreadStatus, markResultsRead]);
+  const visibleJobs = useMemo(() => Object.fromEntries(Object.entries(jobs).filter(([, job]) => isVisible(job))), [jobs]);
+  const value = useMemo(() => ({ jobs: visibleJobs, track, historyLoading, historyError, nextOffset, loadMore, refreshHistory, unreadStatus, markResultsRead }), [visibleJobs, track, historyLoading, historyError, nextOffset, loadMore, refreshHistory, unreadStatus, markResultsRead]);
   return <JobsContext.Provider value={value}>{children}</JobsContext.Provider>;
 }
 JobsProvider.propTypes = { children: PropTypes.node, userId: PropTypes.string };
