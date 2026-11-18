@@ -1067,15 +1067,9 @@ export default function TikTokAdCreationForm({
   const [existingAdsRefreshKey, setExistingAdsRefreshKey] = useState(0);
 
   const SMART_PLUS_MAX_CREATIVES = 50;
-  const isImageMedia = (file) =>
-    Boolean(
-      file?.type?.startsWith("image/") ||
-      file?.mimeType?.startsWith("image/") ||
-      /\.(png|jpe?g|gif|webp|bmp)($|\?)/i.test(file?.name || ""),
-    );
 
   // Checks for "Update existing ads". The create-ad checks (identity, ad text, CTA, URL) don't
-  // apply: the selected ads keep their own settings and only get new videos/images.
+  // apply: the selected ads keep their own settings and only get new creatives.
   const updateExistingAdsErrors = useMemo(() => {
     if (!updateExistingAds) return [];
     const errors = [];
@@ -2262,16 +2256,11 @@ export default function TikTokAdCreationForm({
       // creating new ads. The server reports progress on this job ID, so the job tracker and
       // the SSE completion listener below work exactly as they do for ad creation.
       if (isUpdateJob) {
-        // Upload endpoints return the TikTok image_id in videoId for images, so tag them here
         const newCreatives = uploadedItems
           .filter((u) => u.videoId)
-          .map((u) =>
-            u.item.type !== "library" && isImageMedia(u.item.file)
-              ? { image_id: u.videoId, file_name: u.item.file?.name || "" }
-              : { video_id: u.videoId, file_name: u.item.file?.name || "" },
-          );
+          .map((u) => ({ video_id: u.videoId, file_name: u.item.file?.name || "" }));
         if (newCreatives.length === 0) {
-          throw new Error(uploadErrors[0]?.error || "No media could be uploaded");
+          throw new Error(uploadErrors[0]?.error || "No videos could be uploaded");
         }
 
         isInPromisePhase.current = true;
@@ -2567,7 +2556,7 @@ export default function TikTokAdCreationForm({
 
           const creative = {
             adFormat: isSparkPhotoPost ? "CAROUSEL_ADS" : isImage ? "SINGLE_IMAGE" : "SINGLE_VIDEO",
-            ...(isImage ? { image_ids: [videoId] } : { video_id: videoId }),
+            ...(isImage ? { image_ids: videoId } : { video_id: videoId }),
             ad_text: finalCaptions[0] || "",
             ad_texts: finalCaptions,
             call_to_action: creativeCTAs,
@@ -3791,7 +3780,7 @@ export default function TikTokAdCreationForm({
     return map[ext] || "application/octet-stream";
   };
 
-  // Supported TikTok file types — MP4/MOV/WEBM videos and JPG/PNG images
+  // Supported TikTok file types — videos and JPG/PNG images
   const TIKTOK_SUPPORTED_EXTENSIONS = /\.(mp4|mov|webm|png|jpe?g)$/i;
   const TIKTOK_SUPPORTED_MIME = /^(video\/(mp4|quicktime|webm)|image\/(png|jpeg))$/;
   const TIKTOK_FILE_INPUT_ACCEPT = "video/mp4,video/quicktime,video/webm,.mp4,.mov,.webm,image/jpeg,image/png,.jpg,.jpeg,.png";
@@ -6275,7 +6264,7 @@ export default function TikTokAdCreationForm({
                   refreshKey={existingAdsRefreshKey}
                 />
 
-                {/* New creatives to add to the selected ads (videos and images) */}
+                {/* New creatives to add to the selected ads */}
                 {uploadMediaSection}
 
                 {/* Same Publish Ads button as the create form; submitting queues an update job
