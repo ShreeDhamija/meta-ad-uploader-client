@@ -1,4 +1,4 @@
-import { ChevronDown } from "lucide-react"
+import { ChevronDown, Lightbulb } from "lucide-react"
 import PropTypes from "prop-types"
 import { useNavigate } from "react-router-dom"
 import MetaIcon from "@/assets/icons/meta.svg"
@@ -23,6 +23,11 @@ const PROVIDERS = {
   },
 }
 
+// Creative Strategy is only routed on staging, dev and local hosts (see main.jsx).
+const CREATIVE_STRATEGY_ENABLED = ["staging.withblip.com", "dev.withblip.com", "localhost", "127.0.0.1"].some((host) =>
+  window.location.hostname.includes(host),
+)
+
 export default function LauncherSwitcher({
   platform,
   displayName,
@@ -33,6 +38,7 @@ export default function LauncherSwitcher({
   const navigate = useNavigate()
   const currentProvider = PROVIDERS[platform]
   const otherProvider = platform === "tiktok" ? PROVIDERS.meta : PROVIDERS.tiktok
+  const showMenu = canSwitch || CREATIVE_STRATEGY_ENABLED
 
   return (
     <div className={`flex items-center gap-3 rounded-[20px] border border-black/10 bg-white px-3 py-2 shadow-[0px_1px_2px_rgba(0,0,0,0.06)] ${className}`}>
@@ -45,7 +51,7 @@ export default function LauncherSwitcher({
         {displayName}
       </span>
 
-      {canSwitch && (
+      {showMenu && (
         <>
           <div className="h-8 w-px bg-gray-300" aria-hidden="true" />
           <DropdownMenu>
@@ -65,14 +71,26 @@ export default function LauncherSwitcher({
               className="w-52 rounded-2xl bg-white p-2"
               style={{ backgroundColor: "#ffffff" }}
             >
-              <DropdownMenuItem
-                onSelect={() => navigate(otherProvider.route)}
-                className="cursor-pointer rounded-xl bg-white px-3 py-2.5 focus:bg-neutral-100"
-                style={{ backgroundColor: "#ffffff" }}
-              >
-                <img src={otherProvider.icon} alt="" className="h-5 w-5" />
-                <span className="font-medium">{otherProvider.label}</span>
-              </DropdownMenuItem>
+              {canSwitch && (
+                <DropdownMenuItem
+                  onSelect={() => navigate(otherProvider.route)}
+                  className="cursor-pointer rounded-xl bg-white px-3 py-2.5 focus:bg-neutral-100"
+                  style={{ backgroundColor: "#ffffff" }}
+                >
+                  <img src={otherProvider.icon} alt="" className="h-5 w-5" />
+                  <span className="font-medium">{otherProvider.label}</span>
+                </DropdownMenuItem>
+              )}
+              {CREATIVE_STRATEGY_ENABLED && (
+                <DropdownMenuItem
+                  onSelect={() => navigate("/creative-strategy")}
+                  className="cursor-pointer rounded-xl bg-white px-3 py-2.5 focus:bg-neutral-100"
+                  style={{ backgroundColor: "#ffffff" }}
+                >
+                  <Lightbulb className="h-5 w-5 text-neutral-700" />
+                  <span className="font-medium">Creative Strategy</span>
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </>
