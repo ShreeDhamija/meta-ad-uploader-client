@@ -218,7 +218,8 @@ export default function Header({ showMessenger }) {
           <span className="hidden min-[1000px]:inline text-[14px] text-gray-900 font-medium">Analytics</span>
         </button>
         <div className="hidden min-[1000px]:block h-8 w-px bg-gray-300  " />
-        {import.meta.env.VITE_ENABLE_DAM === "true" && (
+        {import.meta.env.VITE_ENABLE_DAM === "true" &&
+          ["staging.withblip.com", "dev.withblip.com", "localhost", "127.0.0.1"].some((host) => window.location.hostname.includes(host)) && (
           <>
             <button
               onClick={() => navigate("/library")}
