@@ -71,6 +71,14 @@ import LabelIcon from "@/assets/icons/label.svg?react";
 import ConfigIcon from "@/assets/icons/plus.svg?react";
 import TikTokIconUrl from "@/assets/icons/tiktok.svg";
 import TikTokJobQueue from "./TikTokJobQueue";
+import {
+  filterTikTokImagesBySize,
+  getDriveImageSize,
+  isSupportedTikTokImageSize,
+  isTikTokImageFile,
+  readImageSize,
+  tiktokImageSizeError,
+} from "./tiktokImageSizes";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "https://api.withblip.com";
 const TIKTOK_PINK = "#FE2C55";
@@ -3801,16 +3809,25 @@ export default function TikTokAdCreationForm({
     );
   };
 
-  const handleVideoSelect = (e) => {
-    const selectedFiles = Array.from(e.target.files);
+  // Drops images that aren't one of TikTok's supported sizes, with a toast for each
+  const keepSupportedImageSizes = async (candidates, getSize) => {
+    const { kept, errors } = await filterTikTokImagesBySize(candidates, getSize);
+    errors.forEach((msg) => toast.error(msg, { duration: 8000 }));
+    return kept;
+  };
+
+  const handleVideoSelect = async (e) => {
+    const input = e.target;
+    const selectedFiles = Array.from(input.files);
+    input.value = "";
     if (selectedFiles.length === 0) return;
 
     // Filter out unsupported file types
-    const supportedFiles = [];
+    const typeOkFiles = [];
     const rejectedFiles = [];
     selectedFiles.forEach((file) => {
       if (isTikTokSupportedFile(file)) {
-        supportedFiles.push(file);
+        typeOkFiles.push(file);
       } else {
         rejectedFiles.push(file);
       }
@@ -3818,10 +3835,8 @@ export default function TikTokAdCreationForm({
 
     rejectedFiles.forEach(rejectUnsupportedFile);
 
-    if (supportedFiles.length === 0) {
-      e.target.value = "";
-      return;
-    }
+    const supportedFiles = await keepSupportedImageSizes(typeOkFiles);
+    if (supportedFiles.length === 0) return;
 
     supportedFiles.forEach((file) => {
       if (file.type.startsWith("video/") || /\.(mp4|mov|webm)$/i.test(file.name)) {
@@ -3859,19 +3874,18 @@ export default function TikTokAdCreationForm({
       setVideoFile(taggedFiles[0]);
       setVideoPreview(URL.createObjectURL(taggedFiles[0]));
     }
-    e.target.value = "";
   };
 
   const onDrop = useCallback(
-    (acceptedFiles) => {
+    async (acceptedFiles) => {
       if (acceptedFiles.length === 0) return;
 
       // Filter out unsupported file types and show error for rejected ones
-      const supportedFiles = [];
+      const typeOkFiles = [];
       const rejectedFiles = [];
       acceptedFiles.forEach((file) => {
         if (isTikTokSupportedFile(file)) {
-          supportedFiles.push(file);
+          typeOkFiles.push(file);
         } else {
           rejectedFiles.push(file);
         }
@@ -3879,6 +3893,7 @@ export default function TikTokAdCreationForm({
 
       rejectedFiles.forEach(rejectUnsupportedFile);
 
+      const supportedFiles = await keepSupportedImageSizes(typeOkFiles);
       if (supportedFiles.length === 0) return;
 
       supportedFiles.forEach((file) => {
@@ -4019,9 +4034,9 @@ export default function TikTokAdCreationForm({
         .enableFeature(google.picker.Feature.SUPPORT_DRIVES)
         .hideTitleBar()
         .setAppId("102886794705")
-        .setCallback((data) => {
+        .setCallback(async (data) => {
           if (data.action === "picked") {
-            const selected = data.docs.map((doc) => {
+            const picked = data.docs.map((doc) => {
               const thumb = doc.thumbnails && doc.thumbnails.length > 0 ? doc.thumbnails[doc.thumbnails.length - 1].url : null;
 
               return {
@@ -4034,6 +4049,7 @@ export default function TikTokAdCreationForm({
                 pickerThumbnail: thumb,
               };
             });
+            const selected = await keepSupportedImageSizes(picked, (f) => getDriveImageSize(f.id, token));
             setDriveFiles((prev) => [...prev, ...selected]);
             if (selected.length > 0) {
               setVideoFile(null);
@@ -4110,14 +4126,26 @@ export default function TikTokAdCreationForm({
     if (fileId) {
       try {
         setIsImportingFolder(true);
-        const response = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?fields=id,name,mimeType,size,thumbnailLink`, {
-          headers: { Authorization: `Bearer ${googleAuthStatus.accessToken}` },
-        });
+        const response = await fetch(
+          `https://www.googleapis.com/drive/v3/files/${fileId}?fields=id,name,mimeType,size,thumbnailLink,imageMediaMetadata(width,height,rotation)&supportsAllDrives=true`,
+          {
+            headers: { Authorization: `Bearer ${googleAuthStatus.accessToken}` },
+          },
+        );
         if (!response.ok) throw new Error("File not found or permission denied.");
         const data = await response.json();
         if (!isTikTokSupportedFile({ name: data.name || "", type: data.mimeType })) {
           rejectUnsupportedFile({ name: data.name || "", type: data.mimeType });
           return;
+        }
+        const meta = data.imageMediaMetadata;
+        if (isTikTokImageFile({ name: data.name, mimeType: data.mimeType }) && meta?.width && meta?.height) {
+          const turned = meta.rotation === 1 || meta.rotation === 3;
+          const size = turned ? { width: meta.height, height: meta.width } : { width: meta.width, height: meta.height };
+          if (!isSupportedTikTokImageSize(size)) {
+            toast.error(tiktokImageSizeError(data.name, size), { duration: 8000 });
+            return;
+          }
         }
         const newFile = {
           id: data.id,
@@ -4160,8 +4188,8 @@ export default function TikTokAdCreationForm({
   const openDropboxChooser = useCallback(
     (accessToken) => {
       window.Dropbox.choose({
-        success: (selectedFiles) => {
-          const dropboxFilesData = selectedFiles.map((file) => ({
+        success: async (selectedFiles) => {
+          const chosen = selectedFiles.map((file) => ({
             dropboxId: file.id,
             name: file.name,
             link: file.link,
@@ -4171,6 +4199,7 @@ export default function TikTokAdCreationForm({
             mimeType: getMimeFromName(file.name),
             accessToken,
           }));
+          const dropboxFilesData = await keepSupportedImageSizes(chosen, (f) => readImageSize(f.directLink));
           setDropboxFiles((prev) => [...prev, ...dropboxFilesData]);
           if (dropboxFilesData.length > 0) {
             setVideoFile(null);

@@ -16,6 +16,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import Groupads from '@/assets/icons/groupads.svg?react';
 import { v4 as uuidv4 } from 'uuid';
 import { MAX_SMART_PLUS_GROUP_CREATIVES } from '@/lib/tiktokSmartPlus';
+import { isSupportedTikTokImageSize, readImageSize, tiktokImageSizeError } from './tiktokImageSizes';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 function withUniqueId(file) {
@@ -42,6 +43,12 @@ const validateDroppedFiles = async (droppedFiles) => {
       const MAX_SIZE = 100 * 1024 * 1024;
       if (file.size > MAX_SIZE) {
         errors.push(`"${file.name}" exceeds the 100MB size limit.`);
+        continue;
+      }
+
+      const size = await readImageSize(file);
+      if (size && !isSupportedTikTokImageSize(size)) {
+        errors.push(tiktokImageSizeError(file.name, size));
         continue;
       }
     }
