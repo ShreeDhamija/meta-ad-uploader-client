@@ -143,6 +143,32 @@ const hasCatalogBinding = (c) => {
   return String(c.campaign_product_source || "").toUpperCase() === "CATALOG";
 };
 
+// Image ads work on manual Reach/Traffic/Lead Gen and Smart+ Traffic; other campaigns get videos only.
+const IMAGE_AD_OBJECTIVES = { REACH: "Reach", TRAFFIC: "Traffic", LEAD_GENERATION: "Lead Generation", LANDING_PAGE: "Reach" };
+const OBJECTIVE_LABELS = {
+  ...IMAGE_AD_OBJECTIVES,
+  PRODUCT_SALES: "Sales",
+  WEB_CONVERSIONS: "Sales",
+  CATALOG_SALES: "Sales",
+  APP_PROMOTION: "App Promotion",
+  VIDEO_VIEWS: "Video Views",
+  ENGAGEMENT: "Community Interaction",
+  RF_REACH: "Reach & Frequency",
+};
+const PRODUCT_AD_SOURCES = new Set(["CATALOG", "STORE", "SHOWCASE"]);
+
+const getImageAdSupport = (campaign, adGroupObjs = []) => {
+  const objective = String(campaign?.objective_type || campaign?.objective || "").toUpperCase();
+  const smart = isSmartPlusCampaign(campaign);
+  const productAds =
+    isCatalogSourcedCampaign(campaign) ||
+    isSalesObjective(campaign) ||
+    adGroupObjs.some((ag) => PRODUCT_AD_SOURCES.has(String(ag?.product_source || "").toUpperCase()));
+  const typeLabel = `${smart ? "Smart+ " : ""}${productAds ? "Sales" : OBJECTIVE_LABELS[objective] || "Other"}`;
+  const supported = !productAds && (smart ? objective === "TRAFFIC" : Boolean(IMAGE_AD_OBJECTIVES[objective]));
+  return { supported, typeLabel };
+};
+
 const CTA_ASSET_MAPPING = {
   LEARN_MORE: {
     asset_content: "Learn more ",
@@ -1117,56 +1143,42 @@ export default function TikTokAdCreationForm({
   }, [selectedCampaign, campaigns, selectedAdGroup, adGroups, showDuplicateAdGroupBlock, duplicateAdGroup]);
 
   // ── Image ads ────────────────────────────────────────────────────────────
-  // Image ads only work on some campaign types (tested against TikTok):
-  //   manual Reach / Traffic / Lead Generation → created as CAROUSEL_ADS, a music track is required
-  //   Smart+ Traffic                            → created as CAROUSEL_ADS, a music track is required
-  //   Sales (catalog, store/showcase), Smart+ Lead Generation, everything else → videos only
   const hasImageMedia = useMemo(
     () => [...(files || []), ...(driveFiles || []), ...(dropboxFiles || [])].some(isTikTokImageFile),
     [files, driveFiles, dropboxFiles],
   );
+  const hasVideoMedia = useMemo(
+    () =>
+      [...(files || []), ...(driveFiles || []), ...(dropboxFiles || [])].some((f) => !isTikTokImageFile(f)) ||
+      (tiktokLibraryFiles || []).length > 0,
+    [files, driveFiles, dropboxFiles, tiktokLibraryFiles],
+  );
 
-  const imageCampaignSupport = useMemo(() => {
-    const MUSIC_OBJECTIVES = { REACH: "Reach", TRAFFIC: "Traffic", LEAD_GENERATION: "Lead Generation", LANDING_PAGE: "Reach" };
-    const OBJECTIVE_LABELS = { ...MUSIC_OBJECTIVES, PRODUCT_SALES: "Sales", WEB_CONVERSIONS: "Sales", CATALOG_SALES: "Sales", APP_PROMOTION: "App Promotion", VIDEO_VIEWS: "Video Views", ENGAGEMENT: "Community Interaction", RF_REACH: "Reach & Frequency" };
-    let musicRequired = false;
-    const unsupported = [];
-
-    activeCampaignObjects.forEach((c) => {
-      const objective = String(c.objective_type || "").toUpperCase();
-      // Some Reach campaigns only report the legacy objective (LANDING_PAGE)
-      const legacy = String(c.objective || "").toUpperCase();
-      const effective = objective || legacy;
-      const smart = isSmartPlusCampaign(c);
-      const productAds = isCatalogSourcedCampaign(c) || isSalesObjective(c);
-
-      if (!smart && !productAds && MUSIC_OBJECTIVES[effective]) {
-        musicRequired = true;
-      } else if (smart && !productAds && effective === "TRAFFIC") {
-        musicRequired = true;
-      } else {
-        const label = `${smart ? "Smart+ " : ""}${OBJECTIVE_LABELS[effective] || "this"}`;
-        if (!unsupported.includes(label)) unsupported.push(label);
-      }
-    });
-
-    // Catalog, store and showcase ad groups are product ads, which are videos only
-    if ((isCatalogAdGroup || showStoreProductSelection) && !unsupported.includes("Sales")) unsupported.push("Sales");
-
-    return { musicRequired: musicRequired && unsupported.length === 0, unsupported };
-  }, [activeCampaignObjects, isCatalogAdGroup, showStoreProductSelection]);
+  const imageAdTargets = useMemo(() => {
+    const activeAdGroupIds = showDuplicateAdGroupBlock && duplicateAdGroup ? [duplicateAdGroup] : selectedAdGroup || [];
+    const activeAdGroupObjs = activeAdGroupIds.map((id) => adGroups.find((g) => g.adgroup_id === id)).filter(Boolean);
+    return activeCampaignObjects.map((c) => ({
+      campaignId: c.campaign_id,
+      name: c.campaign_name || c.campaign_id,
+      ...getImageAdSupport(
+        c,
+        activeAdGroupObjs.filter((ag) => (ag.campaignId || ag.campaign_id) === c.campaign_id),
+      ),
+    }));
+  }, [activeCampaignObjects, selectedAdGroup, adGroups, showDuplicateAdGroupBlock, duplicateAdGroup]);
 
   const [imageAdMusic, setImageAdMusic] = useState(null);
-  // Music belongs to the advertiser's library, so a new advertiser needs a new pick
   useEffect(() => {
     setImageAdMusic(null);
   }, [selectedAdvertiser]);
 
   const isCreateMode = !updateExistingAds && adType !== "SPARK";
-  const isImageCampaignUnsupported = isCreateMode && hasImageMedia && imageCampaignSupport.unsupported.length > 0;
-  const showImageMusicPicker = isCreateMode && hasImageMedia && imageCampaignSupport.musicRequired;
+  const imagesGoSomewhere = imageAdTargets.some((t) => t.supported);
+  const showImageAdTargets = isCreateMode && hasImageMedia && imageAdTargets.some((t) => !t.supported);
+  const showImageMusicPicker = isCreateMode && hasImageMedia && imagesGoSomewhere;
   const isImageMusicMissing = showImageMusicPicker && !imageAdMusic?.music_id;
-  const imageCampaignUnsupportedMessage = `Image ads aren't supported on ${imageCampaignSupport.unsupported.join(", ")} campaigns. Use videos, or choose a Reach, Traffic or Lead Generation campaign, or a Smart+ Traffic campaign.`;
+  const isImageAdsNowhere = isCreateMode && hasImageMedia && !hasVideoMedia && imageAdTargets.length > 0 && !imagesGoSomewhere;
+  const imageAdsNowhereMessage = "None of the selected campaigns accept image ads. Add a video or pick another campaign.";
 
   // A Smart+ campaign with catalog_enabled still needs a product selection on every ad,
   // even though none of the ad-group-level shopping fields are set.
@@ -1686,6 +1698,7 @@ export default function TikTokAdCreationForm({
   // Keep formStateRef in sync with every render so captureFormDataAsJob always
   // reads the absolutely latest values — not stale useCallback closure values.
   formStateRef.current = {
+    campaigns,
     updateExistingAds,
     selectedExistingAds,
     adName,
@@ -1926,13 +1939,31 @@ export default function TikTokAdCreationForm({
         ? variantAdGroups.find((ag) => ag.adgroup_id === activeAdGroups[0])?.adgroup_name || "selected ad group"
         : `${activeAdGroups.length} ad groups`;
 
+    let skippedImageAds = 0;
+    if (!formData.updateExistingAds && formData.adType !== "SPARK") {
+      const groupedIds = new Set(formData.fileGroups.flatMap((g) => g.fileIds));
+      const ungroupedImages = [...formData.files, ...formData.driveFiles, ...formData.dropboxFiles].filter(
+        (f) => isTikTokImageFile(f) && !groupedIds.has(getFileId(f)),
+      ).length;
+      if (ungroupedImages > 0) {
+        const targetAgIds = formData.isDuplicatingAdGroupMode ? [formData.duplicateAdGroup] : formData.selectedAdGroup || [];
+        targetAgIds.forEach((agId) => {
+          const ag = variantAdGroups.find((g) => g.adgroup_id === agId);
+          const campaign = (s.campaigns || []).find(
+            (c) => c.campaign_id === (ag?.campaignId || ag?.campaign_id || formData.selectedCampaign[0]),
+          );
+          if (campaign && !getImageAdSupport(campaign, ag ? [ag] : []).supported) skippedImageAds += ungroupedImages;
+        });
+      }
+    }
+
     return {
       id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       variantId,
       variantName: (s.variants || []).find((v) => v.id === variantId)?.name || "Default",
       adCount: formData.updateExistingAds
         ? formData.existingAds.length
-        : fileCount * (formData.selectedAdGroup?.length || 1),
+        : Math.max(0, fileCount * (formData.selectedAdGroup?.length || 1) - skippedImageAds),
       adGroupDisplayName,
       formData,
     };
@@ -2454,6 +2485,8 @@ export default function TikTokAdCreationForm({
           const currentAgCampaignId = adGroupObj?.campaignId || adGroupObj?.campaign_id || selectedCampaign[0];
           const targetCampaignObj = campaigns.find((c) => c.campaign_id === currentAgCampaignId) || campaignObj;
 
+          if (isImage && !getImageAdSupport(targetCampaignObj, adGroupObj ? [adGroupObj] : []).supported) continue;
+
           const isSmartForThisCampaign = Boolean(
             targetCampaignObj?.is_smart_performance_campaign === true ||
             targetCampaignObj?.is_smart_performance_campaign === "true" ||
@@ -2621,8 +2654,6 @@ export default function TikTokAdCreationForm({
           const creative = {
             adFormat: isSparkPhotoPost || isImage ? "CAROUSEL_ADS" : "SINGLE_VIDEO",
             ...(isImage ? { image_ids: [videoId] } : { video_id: videoId }),
-            // Image ads on manual Reach / Traffic / Lead Generation are built as CAROUSEL_ADS by
-            // the server, which needs this track
             ...(isImage && jobImageAdMusicId ? { music_id: jobImageAdMusicId } : {}),
             ad_text: finalCaptions[0] || "",
             ad_texts: finalCaptions,
@@ -3868,7 +3899,6 @@ export default function TikTokAdCreationForm({
     );
   };
 
-  // Drops images that aren't one of TikTok's supported sizes, with a toast for each
   const keepSupportedImageSizes = async (candidates, getSize) => {
     const { kept, errors } = await filterTikTokImagesBySize(candidates, getSize);
     errors.forEach((msg) => toast.error(msg, { duration: 8000 }));
@@ -5037,8 +5067,8 @@ export default function TikTokAdCreationForm({
       if (isSmartCampaign && hasDuplicates) {
         errors.push("Duplicate values found in ad texts");
       }
-      if (isImageCampaignUnsupported) {
-        errors.push(imageCampaignUnsupportedMessage);
+      if (isImageAdsNowhere) {
+        errors.push(imageAdsNowhereMessage);
       }
       if (isImageMusicMissing) {
         errors.push("Select a music track for your image ads");
@@ -5136,8 +5166,7 @@ export default function TikTokAdCreationForm({
     requiresProductSelection,
     formProductId,
     formProductSetId,
-    isImageCampaignUnsupported,
-    imageCampaignUnsupportedMessage,
+    isImageAdsNowhere,
     isImageMusicMissing,
   ]);
 
@@ -7680,14 +7709,47 @@ export default function TikTokAdCreationForm({
                 </div>
               )}
 
-              {/* 6. Media Section or Spark Info Card */}
-              {adType !== "SPARK" && <div>{uploadMediaSection}</div>}
+              {/* 6. Image ads */}
+              {showImageAdTargets && (
+                <div className="rounded-2xl border border-gray-200 bg-gray-50 p-3 space-y-2">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900">
+                        Images go to {imageAdTargets.filter((t) => t.supported).length} of {imageAdTargets.length} campaigns
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {hasVideoMedia
+                          ? "Some campaigns don't support image ads. They get your videos only."
+                          : "Some campaigns don't support image ads. No ads are created there."}
+                      </p>
+                    </div>
+                  </div>
+                  <ul className="space-y-1">
+                    {imageAdTargets.map((t) => (
+                      <li key={t.campaignId} className="flex items-center gap-2 rounded-xl bg-white border border-gray-100 px-2.5 py-1.5 text-xs">
+                        {t.supported ? (
+                          <Check className="h-3.5 w-3.5 shrink-0 text-green-600" />
+                        ) : (
+                          <X className="h-3.5 w-3.5 shrink-0 text-red-500" />
+                        )}
+                        <span className="font-medium text-gray-900 truncate">{t.name}</span>
+                        <span className="text-gray-400 shrink-0">{t.typeLabel}</span>
+                        <span className={cn("ml-auto shrink-0 font-medium", t.supported ? "text-green-700" : "text-gray-500")}>
+                          {t.supported ? (hasVideoMedia ? "Images & videos" : "Images") : hasVideoMedia ? "Videos only" : "No ads"}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
-              {/* 7. Music for image ads — required on manual Reach / Traffic / Lead Generation
-                  and Smart+ Traffic */}
               {showImageMusicPicker && (
                 <TikTokMusicPicker advertiserId={selectedAdvertiser} value={imageAdMusic} onChange={setImageAdMusic} />
               )}
+
+              {/* 7. Media Section or Spark Info Card */}
+              {adType !== "SPARK" && <div>{uploadMediaSection}</div>}
 
               {/* Submit Button */}
               <div className="space-y-4">
@@ -7707,9 +7769,9 @@ export default function TikTokAdCreationForm({
                     )}
                   </Button>
 
-                  {isImageCampaignUnsupported && (
+                  {isImageAdsNowhere && (
                     <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
-                      {imageCampaignUnsupportedMessage}
+                      {imageAdsNowhereMessage}
                     </div>
                   )}
 

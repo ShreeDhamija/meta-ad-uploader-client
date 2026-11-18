@@ -1,16 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Check, ChevronsUpDown, Loader, Music, Pause, Play, RefreshCcw, Search, X } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, Loader, Music, Pause, Play, RefreshCcw, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTikTokAuth } from "@/lib/TikTokAuthContext";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "https://api.withblip.com";
 const PAGE_SIZE = 50;
+const COLLAPSED_COUNT = 3;
 const SEARCH_DEBOUNCE_MS = 400;
 
-// TikTok only lists carousel music through a search, so these are the ways in (see /api/tiktok/music)
 const TABS = [
   { id: "keyword", label: "Search" },
   { id: "liked", label: "Liked" },
@@ -23,7 +22,7 @@ const EMPTY_TEXT = {
   history: "No recently used tracks yet.",
   uploaded: "No music uploaded to this account yet.",
 };
-const SUGGESTIONS = ["Pop", "Upbeat", "Chill", "Happy", "Hip Hop", "Electronic", "Acoustic", "Cinematic"];
+const MOODS = ["Pop", "Upbeat", "Chill", "Happy", "Hip Hop", "Electronic", "Acoustic", "Cinematic"];
 
 const formatDuration = (seconds) => {
   if (!seconds && seconds !== 0) return null;
@@ -31,7 +30,6 @@ const formatDuration = (seconds) => {
   return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
 };
 
-// Library file names read like "bgm_track_0998_pop_rock_emotive_piano" — make them legible
 const prettyName = (name) => {
   const cleaned = String(name || "")
     .replace(/^bgm_track_\d+_/i, "")
@@ -42,22 +40,14 @@ const prettyName = (name) => {
 
 const trackMeta = (track) => [track.author, track.style, formatDuration(track.duration)].filter(Boolean).join(" · ");
 
-/**
- * Music track picker for TikTok image ads. Image ads on manual Reach, Traffic and Lead
- * Generation campaigns are created as CAROUSEL_ADS, which TikTok requires a music_id for —
- * and only music listed for the CAROUSEL_ADS scene is accepted. Smart+ Traffic image ads are
- * CAROUSEL_ADS too and need a track the same way (sent as creative_info.music_info).
- *
- * @param {{ advertiserId: string, value: Object|null, onChange: (track: Object|null) => void }} props
- */
+// Music picker for image ads (CAROUSEL_ADS need a music_id); each tab shows 3 tracks until expanded.
 export default function TikTokMusicPicker({ advertiserId, value, onChange }) {
   const { tiktokFetch } = useTikTokAuth();
-  const [open, setOpen] = useState(false);
   const [tab, setTab] = useState("keyword");
   const [searchInput, setSearchInput] = useState("");
-  const [keyword, setKeyword] = useState("");
-  // One result list per tab + keyword, so switching tabs doesn't refetch
+  const [keyword, setKeyword] = useState(MOODS[0]);
   const [results, setResults] = useState({});
+  const [expanded, setExpanded] = useState({});
   const [loading, setLoading] = useState(false);
   const [playingId, setPlayingId] = useState(null);
   const audioRef = useRef(null);
@@ -65,6 +55,8 @@ export default function TikTokMusicPicker({ advertiserId, value, onChange }) {
 
   const resultKey = tab === "keyword" ? `keyword:${keyword.toLowerCase()}` : tab;
   const current = results[resultKey];
+  const isExpanded = Boolean(expanded[resultKey]);
+  const activeMood = tab === "keyword" && !searchInput.trim() ? MOODS.find((m) => m.toLowerCase() === keyword.toLowerCase()) : null;
 
   const stopPreview = useCallback(() => {
     if (audioRef.current) {
@@ -76,15 +68,16 @@ export default function TikTokMusicPicker({ advertiserId, value, onChange }) {
 
   useEffect(() => stopPreview, [stopPreview]);
 
-  // Music is per advertiser: a new advertiser starts from a clean slate
   useEffect(() => {
     setResults({});
+    setExpanded({});
     stopPreview();
   }, [advertiserId, stopPreview]);
 
-  // Debounce typing into a search
   useEffect(() => {
-    const t = setTimeout(() => setKeyword(searchInput.trim()), SEARCH_DEBOUNCE_MS);
+    const term = searchInput.trim();
+    if (!term) return;
+    const t = setTimeout(() => setKeyword(term), SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(t);
   }, [searchInput]);
 
@@ -117,12 +110,11 @@ export default function TikTokMusicPicker({ advertiserId, value, onChange }) {
     [advertiserId, tiktokFetch],
   );
 
-  // Fetch the current tab's list the first time it's shown
   useEffect(() => {
-    if (!open || !advertiserId || results[resultKey]) return;
+    if (!advertiserId || results[resultKey]) return;
     if (tab === "keyword" && !keyword) return;
     load(resultKey, tab, keyword, 1);
-  }, [open, advertiserId, tab, keyword, resultKey, results, load]);
+  }, [advertiserId, tab, keyword, resultKey, results, load]);
 
   const togglePreview = (track) => {
     if (playingId === track.music_id) {
@@ -138,9 +130,9 @@ export default function TikTokMusicPicker({ advertiserId, value, onChange }) {
     setPlayingId(track.music_id);
   };
 
-  const choose = (track) => {
-    onChange(track);
-    setOpen(false);
+  const pickMood = (mood) => {
+    setSearchInput("");
+    setKeyword(mood);
     stopPreview();
   };
 
@@ -176,7 +168,7 @@ export default function TikTokMusicPicker({ advertiserId, value, onChange }) {
   };
 
   const tracks = current?.tracks || [];
-  const showSuggestions = tab === "keyword" && !keyword;
+  const visibleTracks = isExpanded ? tracks : tracks.slice(0, COLLAPSED_COUNT);
 
   return (
     <div className="space-y-2">
@@ -190,190 +182,178 @@ export default function TikTokMusicPicker({ advertiserId, value, onChange }) {
         </span>
       </div>
 
-      <Popover
-        open={open}
-        onOpenChange={(next) => {
-          setOpen(next);
-          if (!next) stopPreview();
-        }}
-      >
-        <PopoverTrigger asChild>
-          <Button
-            type="button"
-            variant="outline"
-            disabled={!advertiserId}
-            className="w-full justify-between border border-gray-300 rounded-2xl bg-white shadow flex items-center hover:bg-white px-3 py-4.5"
-          >
-            {value ? (
-              <div className="flex items-center gap-2 min-w-0">
-                {value.cover_url ? (
-                  <img src={value.cover_url} alt="" className="h-6 w-6 shrink-0 rounded-md object-cover" />
-                ) : (
-                  <span className="h-6 w-6 shrink-0 rounded-full bg-black text-white flex items-center justify-center">
-                    <Music className="h-3.5 w-3.5" />
-                  </span>
-                )}
-                <span className="text-sm font-medium text-gray-900 truncate">{prettyName(value.name)}</span>
-                {trackMeta(value) && <span className="text-xs text-gray-400 truncate">{trackMeta(value)}</span>}
+      <div className="rounded-2xl border border-gray-300 bg-white shadow overflow-hidden">
+        <div className={cn("flex items-center gap-3 px-3 py-2.5 border-b border-gray-100", value ? "bg-gray-50" : "bg-white")}>
+          {value ? (
+            <>
+              {renderPlay(value)}
+              <div className="flex-1 min-w-0">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Selected track</p>
+                <p className="text-sm font-semibold text-gray-900 truncate">
+                  {prettyName(value.name)}
+                  {trackMeta(value) && <span className="ml-2 text-xs font-normal text-gray-400">{trackMeta(value)}</span>}
+                </p>
               </div>
-            ) : (
-              <span className="text-sm font-normal text-gray-500">Select a music track</span>
-            )}
-            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent
-          align="start"
-          className="w-[var(--radix-popover-trigger-width)] !max-w-none p-0 rounded-xl bg-white border border-gray-100 shadow-xl"
-        >
-          <div className="flex flex-col overflow-hidden rounded-xl bg-white text-gray-900">
-            {/* Source tabs */}
-            <div className="mx-2 mt-2 grid grid-cols-4 gap-1 rounded-2xl bg-gray-100 p-1">
-              {TABS.map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => {
-                    setTab(t.id);
-                    stopPreview();
-                  }}
-                  className={cn(
-                    "rounded-xl py-1.5 text-xs font-semibold transition-colors",
-                    tab === t.id ? "bg-white text-gray-900 shadow" : "text-gray-500 hover:text-gray-800",
-                  )}
-                >
-                  {t.label}
-                </button>
-              ))}
-            </div>
+              <Check className="h-4 w-4 shrink-0 text-gray-900" />
+            </>
+          ) : (
+            <p className="text-sm text-gray-500">No track selected yet. Pick one below.</p>
+          )}
+        </div>
 
-            {tab === "keyword" && (
-              <div className="mx-2 mt-2 mb-1 flex items-center rounded-2xl border border-gray-300 bg-white px-3 shadow">
+        <div className="p-2 space-y-2">
+          <div className="grid grid-cols-4 gap-1 rounded-2xl bg-gray-100 p-1">
+            {TABS.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => {
+                  setTab(t.id);
+                  stopPreview();
+                }}
+                className={cn(
+                  "rounded-xl py-1.5 text-xs font-semibold transition-colors",
+                  tab === t.id ? "bg-white text-gray-900 shadow" : "text-gray-500 hover:text-gray-800",
+                )}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+
+          {tab === "keyword" && (
+            <>
+              <div className="flex items-center rounded-2xl border border-gray-300 bg-white px-3 shadow">
                 <Search className="mr-2 h-4 w-4 shrink-0 opacity-50 text-gray-500" />
                 <input
                   type="text"
-                  autoFocus
                   placeholder="Search TikTok's music library..."
                   value={searchInput}
-                  onChange={(e) => setSearchInput(e.target.value)}
+                  onChange={(e) => {
+                    setSearchInput(e.target.value);
+                    if (!e.target.value.trim()) setKeyword(MOODS[0]);
+                  }}
                   onKeyDown={(e) => {
-                    // Enter searches now instead of submitting the ad form
                     if (e.key === "Enter") {
                       e.preventDefault();
-                      setKeyword(searchInput.trim());
+                      if (searchInput.trim()) setKeyword(searchInput.trim());
                     }
                   }}
-                  className="flex h-11 w-full bg-transparent py-3 text-sm outline-none placeholder:text-gray-400 text-gray-900 border-none focus:ring-0"
+                  className="flex h-10 w-full bg-transparent py-2 text-sm outline-none placeholder:text-gray-400 text-gray-900 border-none focus:ring-0"
                 />
                 {searchInput && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSearchInput("");
-                      setKeyword("");
-                    }}
-                    aria-label="Clear search"
-                    className="text-gray-400 hover:text-gray-700"
-                  >
+                  <button type="button" onClick={() => pickMood(MOODS[0])} aria-label="Clear search" className="text-gray-400 hover:text-gray-700">
                     <X className="h-4 w-4" />
                   </button>
                 )}
               </div>
+
+              <div className="flex flex-wrap gap-1.5">
+                {MOODS.map((mood) => (
+                  <button
+                    key={mood}
+                    type="button"
+                    onClick={() => pickMood(mood)}
+                    className={cn(
+                      "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                      activeMood === mood ? "border-black bg-black text-white" : "border-gray-200 bg-white text-gray-700 hover:bg-gray-100",
+                    )}
+                  >
+                    {mood}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+
+          <div>
+            {current?.error && tracks.length === 0 ? (
+              <div className="py-5 px-3 text-center space-y-2">
+                <p className="text-xs text-red-600">{current.error}</p>
+                <Button type="button" variant="outline" size="sm" className="rounded-xl" onClick={() => load(resultKey, tab, keyword, 1)}>
+                  <RefreshCcw className="h-3.5 w-3.5 mr-1" /> Try again
+                </Button>
+              </div>
+            ) : !current || (loading && tracks.length === 0) ? (
+              <div className="py-5 flex items-center justify-center gap-2 text-xs text-gray-500">
+                <Loader className="h-4 w-4 animate-spin" /> Loading music...
+              </div>
+            ) : tracks.length === 0 ? (
+              <div className="py-5 text-center text-xs text-gray-500">{EMPTY_TEXT[tab]}</div>
+            ) : (
+              <div className="space-y-0.5">
+                {visibleTracks.map((track) => {
+                  const selected = value?.music_id === track.music_id;
+                  return (
+                    <div
+                      key={track.music_id}
+                      role="option"
+                      aria-selected={selected}
+                      tabIndex={0}
+                      onClick={() => onChange(track)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          onChange(track);
+                        }
+                      }}
+                      className={cn(
+                        "w-full text-left px-2 py-1.5 cursor-pointer rounded-xl transition-colors duration-150 hover:bg-gray-100 flex items-center gap-3 outline-none focus-visible:bg-gray-100",
+                        selected && "bg-gray-100",
+                      )}
+                    >
+                      {renderPlay(track)}
+                      <div className="flex-1 min-w-0">
+                        <p className={cn("text-sm text-gray-900 truncate", selected ? "font-semibold" : "font-medium")}>
+                          {prettyName(track.name)}
+                        </p>
+                        {trackMeta(track) && <p className="text-xs text-gray-400 truncate">{trackMeta(track)}</p>}
+                      </div>
+                      {selected ? (
+                        <Check className="h-4 w-4 shrink-0 text-gray-900" />
+                      ) : (
+                        <span className="text-xs font-medium text-gray-400 shrink-0">Use</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             )}
 
-            <div className="max-h-[340px] overflow-y-auto rounded-xl p-1 mt-1">
-              {showSuggestions ? (
-                <div className="px-2 py-3 space-y-2">
-                  <p className="text-xs text-gray-500">Search by mood, genre or name, or try one of these:</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {SUGGESTIONS.map((s) => (
-                      <button
-                        key={s}
-                        type="button"
-                        onClick={() => {
-                          setSearchInput(s);
-                          setKeyword(s);
-                        }}
-                        className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-100"
-                      >
-                        {s}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ) : current?.error && tracks.length === 0 ? (
-                <div className="py-6 px-3 text-center space-y-2">
-                  <p className="text-xs text-red-600">{current.error}</p>
-                  <Button type="button" variant="outline" size="sm" className="rounded-xl" onClick={() => load(resultKey, tab, keyword, 1)}>
-                    <RefreshCcw className="h-3.5 w-3.5 mr-1" /> Try again
-                  </Button>
-                </div>
-              ) : !current || (loading && tracks.length === 0) ? (
-                <div className="py-6 flex items-center justify-center gap-2 text-xs text-gray-500">
-                  <Loader className="h-4 w-4 animate-spin" /> Loading music...
-                </div>
-              ) : tracks.length === 0 ? (
-                <div className="py-6 text-center text-xs text-gray-500">{EMPTY_TEXT[tab]}</div>
-              ) : (
-                <div className="space-y-0.5">
-                  {tracks.map((track) => {
-                    const selected = value?.music_id === track.music_id;
-                    return (
-                      <div
-                        key={track.music_id}
-                        role="option"
-                        aria-selected={selected}
-                        tabIndex={0}
-                        onClick={() => choose(track)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            choose(track);
-                          }
-                        }}
-                        className={cn(
-                          "w-full text-left px-2 py-1.5 cursor-pointer rounded-xl transition-colors duration-150 hover:bg-gray-100 flex items-center gap-3 outline-none focus-visible:bg-gray-100",
-                          selected && "bg-gray-50",
-                        )}
-                      >
-                        {renderPlay(track)}
-                        <div className="flex-1 min-w-0">
-                          <p className={cn("text-sm text-gray-900 truncate", selected ? "font-semibold" : "font-medium")}>
-                            {prettyName(track.name)}
-                          </p>
-                          {trackMeta(track) && <p className="text-xs text-gray-400 truncate">{trackMeta(track)}</p>}
-                        </div>
-                        {selected && <Check className="h-4 w-4 shrink-0 text-gray-900" />}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {!showSuggestions && current?.hasMore && tracks.length > 0 && (
-                <div className="p-1">
+            {tracks.length > COLLAPSED_COUNT && (
+              <div className="flex items-center gap-2 pt-1">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setExpanded((prev) => ({ ...prev, [resultKey]: !isExpanded }))}
+                  className="flex-1 rounded-xl text-xs text-gray-600"
+                >
+                  {isExpanded ? (
+                    <>
+                      <ChevronUp className="h-3.5 w-3.5 mr-1" /> Show fewer
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown className="h-3.5 w-3.5 mr-1" /> Show more ({tracks.length - COLLAPSED_COUNT})
+                    </>
+                  )}
+                </Button>
+                {isExpanded && current?.hasMore && (
                   <Button
                     type="button"
                     variant="ghost"
                     disabled={loading}
                     onClick={() => load(resultKey, tab, keyword, (current.page || 1) + 1)}
-                    className="w-full rounded-xl text-xs text-gray-600"
+                    className="flex-1 rounded-xl text-xs text-gray-600"
                   >
                     {loading ? <Loader className="h-3.5 w-3.5 animate-spin" /> : "Load more tracks"}
                   </Button>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
           </div>
-        </PopoverContent>
-      </Popover>
-
-      {value && (
-        <div className="flex items-center gap-2 text-xs text-gray-500 px-1">
-          {renderPlay(value, "h-6 w-6")}
-          <span>Preview the selected track</span>
         </div>
-      )}
+      </div>
     </div>
   );
 }

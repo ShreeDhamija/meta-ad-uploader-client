@@ -1,5 +1,4 @@
-// TikTok image ad sizes. Images at any other size can't be delivered to the TikTok placement.
-// 720x1152 is left out on purpose: TikTok only accepts it in search ad campaigns.
+// Sizes TikTok accepts for image ads (720x1152 is search-ads only, so it's left out).
 export const TIKTOK_IMAGE_SIZES = [
   { width: 1200, height: 628 },
   { width: 640, height: 640 },
@@ -21,7 +20,6 @@ export const isSupportedTikTokImageSize = ({ width, height }) =>
 export const tiktokImageSizeError = (name, { width, height }) =>
   `"${name}" is ${width}×${height}. TikTok image ads must be ${SIZES_LABEL}.`;
 
-// Reads an image's pixel size from a File/Blob or a URL. Resolves null when it can't be read.
 export const readImageSize = (source) =>
   new Promise((resolve) => {
     const isBlob = typeof Blob !== "undefined" && source instanceof Blob;
@@ -37,8 +35,6 @@ export const readImageSize = (source) =>
     img.src = url;
   });
 
-// Pixel size of a Google Drive image from its metadata (no download). Resolves null when Drive
-// doesn't report it. rotation 1/3 means the stored image is turned 90°, so width/height swap.
 export const getDriveImageSize = async (fileId, accessToken) => {
   try {
     const res = await fetch(
@@ -55,9 +51,6 @@ export const getDriveImageSize = async (fileId, accessToken) => {
   }
 };
 
-// Keeps videos and correctly sized images. getSize(file) returns {width, height} or null;
-// an image whose size can't be read is kept and left for TikTok to judge.
-// Returns { kept, errors } — errors are ready-to-show messages for the dropped images.
 export const filterTikTokImagesBySize = async (files, getSize = readImageSize) => {
   const results = await Promise.all(
     files.map(async (file) => {
