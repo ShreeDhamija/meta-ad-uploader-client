@@ -71,6 +71,7 @@ import LabelIcon from "@/assets/icons/label.svg?react";
 import ConfigIcon from "@/assets/icons/plus.svg?react";
 import TikTokIconUrl from "@/assets/icons/tiktok.svg";
 import TikTokJobQueue from "./TikTokJobQueue";
+import TikTokMusicPicker from "./TikTokMusicPicker";
 import {
   filterTikTokImagesBySize,
   getDriveImageSize,
@@ -1115,6 +1116,58 @@ export default function TikTokAdCreationForm({
     return out;
   }, [selectedCampaign, campaigns, selectedAdGroup, adGroups, showDuplicateAdGroupBlock, duplicateAdGroup]);
 
+  // ── Image ads ────────────────────────────────────────────────────────────
+  // Image ads only work on some campaign types (tested against TikTok):
+  //   manual Reach / Traffic / Lead Generation → created as CAROUSEL_ADS, a music track is required
+  //   Smart+ Traffic                            → created without music, so no picker
+  //   Sales (catalog, store/showcase), Smart+ Lead Generation, everything else → videos only
+  const hasImageMedia = useMemo(
+    () => [...(files || []), ...(driveFiles || []), ...(dropboxFiles || [])].some(isTikTokImageFile),
+    [files, driveFiles, dropboxFiles],
+  );
+
+  const imageCampaignSupport = useMemo(() => {
+    const MUSIC_OBJECTIVES = { REACH: "Reach", TRAFFIC: "Traffic", LEAD_GENERATION: "Lead Generation", LANDING_PAGE: "Reach" };
+    const OBJECTIVE_LABELS = { ...MUSIC_OBJECTIVES, PRODUCT_SALES: "Sales", WEB_CONVERSIONS: "Sales", CATALOG_SALES: "Sales", APP_PROMOTION: "App Promotion", VIDEO_VIEWS: "Video Views", ENGAGEMENT: "Community Interaction", RF_REACH: "Reach & Frequency" };
+    let musicRequired = false;
+    const unsupported = [];
+
+    activeCampaignObjects.forEach((c) => {
+      const objective = String(c.objective_type || "").toUpperCase();
+      // Some Reach campaigns only report the legacy objective (LANDING_PAGE)
+      const legacy = String(c.objective || "").toUpperCase();
+      const effective = objective || legacy;
+      const smart = isSmartPlusCampaign(c);
+      const productAds = isCatalogSourcedCampaign(c) || isSalesObjective(c);
+
+      if (!smart && !productAds && MUSIC_OBJECTIVES[effective]) {
+        musicRequired = true;
+      } else if (smart && !productAds && effective === "TRAFFIC") {
+        // Smart+ Traffic accepts images without music
+      } else {
+        const label = `${smart ? "Smart+ " : ""}${OBJECTIVE_LABELS[effective] || "this"}`;
+        if (!unsupported.includes(label)) unsupported.push(label);
+      }
+    });
+
+    // Catalog, store and showcase ad groups are product ads, which are videos only
+    if ((isCatalogAdGroup || showStoreProductSelection) && !unsupported.includes("Sales")) unsupported.push("Sales");
+
+    return { musicRequired: musicRequired && unsupported.length === 0, unsupported };
+  }, [activeCampaignObjects, isCatalogAdGroup, showStoreProductSelection]);
+
+  const [imageAdMusic, setImageAdMusic] = useState(null);
+  // Music belongs to the advertiser's library, so a new advertiser needs a new pick
+  useEffect(() => {
+    setImageAdMusic(null);
+  }, [selectedAdvertiser]);
+
+  const isCreateMode = !updateExistingAds && adType !== "SPARK";
+  const isImageCampaignUnsupported = isCreateMode && hasImageMedia && imageCampaignSupport.unsupported.length > 0;
+  const showImageMusicPicker = isCreateMode && hasImageMedia && imageCampaignSupport.musicRequired;
+  const isImageMusicMissing = showImageMusicPicker && !imageAdMusic?.music_id;
+  const imageCampaignUnsupportedMessage = `Image ads aren't supported on ${imageCampaignSupport.unsupported.join(", ")} campaigns. Use videos, or choose a manual Reach, Traffic or Lead Generation campaign.`;
+
   // A Smart+ campaign with catalog_enabled still needs a product selection on every ad,
   // even though none of the ad-group-level shopping fields are set.
   const isSmartCatalogCampaign = useMemo(() => {
@@ -1684,6 +1737,7 @@ export default function TikTokAdCreationForm({
     adGroups,
     fileGroups,
     groupAdsEnabled,
+    imageAdMusic,
     liveVariantSnapshot: {
       adName,
       adTexts,
@@ -1810,6 +1864,7 @@ export default function TikTokAdCreationForm({
       excludedAdGroupPlacements: [...(variantState.excludedAdGroupPlacements || [])],
       selectedIdentity: variantState.selectedIdentity || "",
       launchPaused: Boolean(variantState.launchPaused),
+      imageAdMusicId: s.imageAdMusic?.music_id || null,
 
       productName: variantState.productName ?? "",
       productImageUrl: variantState.productImageUrl ?? "",
@@ -2019,6 +2074,7 @@ export default function TikTokAdCreationForm({
       excludedAdGroupPlacements,
       selectedIdentity,
       launchPaused,
+      imageAdMusicId: jobImageAdMusicId = null,
       adNameFormulaV2: jobAdNameFormula,
       formCatalogId: jobFormCatalogId,
       formCatalogName: jobFormCatalogName,
@@ -2564,7 +2620,10 @@ export default function TikTokAdCreationForm({
 
           const creative = {
             adFormat: isSparkPhotoPost ? "CAROUSEL_ADS" : isImage ? "SINGLE_IMAGE" : "SINGLE_VIDEO",
-            ...(isImage ? { image_ids: videoId } : { video_id: videoId }),
+            ...(isImage ? { image_ids: [videoId] } : { video_id: videoId }),
+            // Image ads on manual Reach / Traffic / Lead Generation are built as CAROUSEL_ADS by
+            // the server, which needs this track
+            ...(isImage && jobImageAdMusicId ? { music_id: jobImageAdMusicId } : {}),
             ad_text: finalCaptions[0] || "",
             ad_texts: finalCaptions,
             call_to_action: creativeCTAs,
@@ -4978,6 +5037,12 @@ export default function TikTokAdCreationForm({
       if (isSmartCampaign && hasDuplicates) {
         errors.push("Duplicate values found in ad texts");
       }
+      if (isImageCampaignUnsupported) {
+        errors.push(imageCampaignUnsupportedMessage);
+      }
+      if (isImageMusicMissing) {
+        errors.push("Select a music track for your image ads");
+      }
     }
 
     const hasFormula = adNameFormulaV2?.rawInput?.trim();
@@ -5071,9 +5136,12 @@ export default function TikTokAdCreationForm({
     requiresProductSelection,
     formProductId,
     formProductSetId,
+    isImageCampaignUnsupported,
+    imageCampaignUnsupportedMessage,
+    isImageMusicMissing,
   ]);
 
-  const validationErrors = updateExistingAds ? updateExistingAdsErrors : getValidationErrors();
+  const validationErrors =updateExistingAds ? updateExistingAdsErrors : getValidationErrors();
   const isFormValid = validationErrors.length === 0;
   const publishDisabled = !isFormValid || loadingAdGroups || (selectedFiles && selectedFiles.size > 0);
   const isAdvertiserLocked = variants.length > 1 && activeVariantId !== "default";
@@ -7615,6 +7683,11 @@ export default function TikTokAdCreationForm({
               {/* 6. Media Section or Spark Info Card */}
               {adType !== "SPARK" && <div>{uploadMediaSection}</div>}
 
+              {/* 7. Music for image ads — manual Reach / Traffic / Lead Generation only */}
+              {showImageMusicPicker && (
+                <TikTokMusicPicker advertiserId={selectedAdvertiser} value={imageAdMusic} onChange={setImageAdMusic} />
+              )}
+
               {/* Submit Button */}
               <div className="space-y-4">
                 <div className="space-y-1">
@@ -7632,6 +7705,18 @@ export default function TikTokAdCreationForm({
                       "Publish Ads"
                     )}
                   </Button>
+
+                  {isImageCampaignUnsupported && (
+                    <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                      {imageCampaignUnsupportedMessage}
+                    </div>
+                  )}
+
+                  {isImageMusicMissing && (
+                    <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                      Please select a music track for your image ads
+                    </div>
+                  )}
 
                   {hasDuplicateTexts && (
                     <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
