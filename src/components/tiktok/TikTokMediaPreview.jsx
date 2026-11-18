@@ -25,22 +25,6 @@ function withUniqueId(file) {
   return file;
 }
 
-const getImageDimensions = (file) => {
-  return new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = () => {
-      URL.revokeObjectURL(url);
-      resolve({ width: img.naturalWidth, height: img.naturalHeight });
-    };
-    img.onerror = (err) => {
-      URL.revokeObjectURL(url);
-      reject(err);
-    };
-    img.src = url;
-  });
-};
-
 const validateDroppedFiles = async (droppedFiles) => {
   const validFiles = [];
   const errors = [];
@@ -58,26 +42,6 @@ const validateDroppedFiles = async (droppedFiles) => {
       const MAX_SIZE = 100 * 1024 * 1024;
       if (file.size > MAX_SIZE) {
         errors.push(`"${file.name}" exceeds the 100MB size limit.`);
-        continue;
-      }
-
-      try {
-        const dimensions = await getImageDimensions(file);
-        const isValidResolution = [
-          { w: 720, h: 1280 },
-          { w: 1200, h: 628 },
-          { w: 640, h: 640 },
-          { w: 640, h: 100 },
-          { w: 600, h: 500 },
-          { w: 640, h: 200 }
-        ].some(res => res.w === dimensions.width && res.h === dimensions.height);
-
-        if (!isValidResolution) {
-          errors.push(`"${file.name}" has an unsupported resolution (${dimensions.width}x${dimensions.height}). Supported resolutions: 720x1280, 1200x628, 640x640, 640x100, 600x500, 640x200.`);
-          continue;
-        }
-      } catch (err) {
-        errors.push(`Could not read dimensions of image "${file.name}".`);
         continue;
       }
     }
