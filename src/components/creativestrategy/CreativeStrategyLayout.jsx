@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAppData } from "@/lib/AppContext";
 import { useAuth } from "@/lib/AuthContext";
 import { creativeApi } from "@/lib/creativeApi";
+import { saveSettings } from "@/lib/saveSettings";
+import useGlobalSettings from "@/lib/useGlobalSettings";
 import { cn } from "@/lib/utils";
 import { BookOpen, Box, CalendarRange, Flame, FlaskConical, Heart, Layers, LogOut, MousePointerClick, SearchCheck, Zap } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -15,6 +17,7 @@ import { Toaster } from "sonner";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import CostTracker from "./CostTracker";
+import CreativeStrategyOnboarding from "./CreativeStrategyOnboarding";
 import "./creative-strategy.css";
 import { JobsProvider } from "./JobsContext";
 import JobsIndicator from "./JobsIndicator";
@@ -60,6 +63,19 @@ export default function CreativeStrategyLayout() {
   const navigate = useNavigate();
   const { isLoggedIn, userId, userName, profilePicUrl, handleLogout } = useAuth();
   const { adAccounts, adAccountsLoading, refetchAdAccounts } = useAppData();
+  const {
+    loading: globalSettingsLoading,
+    hasSeenCreativeStrategyOnboarding,
+    setHasSeenCreativeStrategyOnboarding,
+  } = useGlobalSettings();
+  // One-time, unskippable walkthrough the first time a user opens Creative Strategy.
+  const showOnboarding = !globalSettingsLoading && !hasSeenCreativeStrategyOnboarding;
+  const finishOnboarding = useCallback(() => {
+    setHasSeenCreativeStrategyOnboarding(true);
+    void saveSettings({ globalSettings: { hasSeenCreativeStrategyOnboarding: true } })
+      .then(() => window.dispatchEvent(new Event("globalSettingsUpdated")))
+      .catch((err) => console.error("Failed to save Creative Strategy onboarding flag:", err));
+  }, [setHasSeenCreativeStrategyOnboarding]);
 
   const [activeTab, setActiveTab] = useState("brands");
   const [creativeClients, setCreativeClients] = useState([]);
@@ -282,6 +298,7 @@ export default function CreativeStrategyLayout() {
     <JobsProvider key={userId} userId={userId}>
       <Toaster richColors position="bottom-left" closeButton />
       <div className="creative-strategy flex min-h-screen">
+        {showOnboarding && <CreativeStrategyOnboarding onFinish={finishOnboarding} />}
         {/* Sidebar */}
         <aside className="relative z-10 flex h-screen w-[290px] flex-col overflow-hidden px-4 py-6 max-lg:w-[80px] max-lg:min-w-[80px] max-lg:px-2">
           <img

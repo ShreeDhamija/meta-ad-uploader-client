@@ -3327,3 +3327,100 @@ html body #root .creative-strategy button.cs-monthly-filter-button:hover { borde
 .cs-visual-remove { position: absolute; left: 9px; top: 9px; display: flex; width: 22px; height: 22px; align-items: center; justify-content: center; border-radius: 999px; color: #6f4930; background: rgba(255, 255, 255, 0.92); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15); }
 .cs-visual-remove:hover { color: #b91c1c; }
 .cs-select-content .cs-select-group-label { padding: 8px 8px 4px; color: #8a746c; font-size: 10.5px; font-weight: 600; letter-spacing: .02em; text-transform: uppercase; }
+
+/* First-run onboarding (CreativeStrategyOnboarding.jsx) — matches the research
+ * modal's cream surface, warm border and CTA. */
+.cs-onboarding {
+  border: 1.5px solid rgba(59, 23, 11, 0.72);
+  border-radius: 30px;
+  background-color: var(--cs-cream, #fffaf4);
+  box-shadow: 0 24px 70px rgba(36, 16, 8, 0.28);
+  animation: cs-research-modal-in 150ms cubic-bezier(0.2, 0.75, 0.25, 1) both;
+}
+
+.cs-onboarding__step {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid rgba(108, 52, 3, 0.24);
+  border-radius: 999px;
+  background: var(--cs-peach, #ffe9d6);
+  color: var(--cs-orange-ink, #6c3403);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.cs-onboarding__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(108, 52, 3, 0.18);
+  transition: width 180ms ease, background-color 180ms ease;
+}
+
+.cs-onboarding__dot.is-done {
+  background: rgba(108, 52, 3, 0.45);
+}
+
+.cs-onboarding__dot.is-active {
+  width: 20px;
+  background: var(--cs-orange-ink, #6c3403);
+}
+
+.cs-onboarding__eyebrow {
+  color: var(--cs-orange-ink, #6c3403);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.cs-onboarding__note {
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: rgba(255, 233, 214, 0.6);
+  color: var(--cs-orange-ink, #6c3403);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.cs-onboarding__media {
+  overflow: hidden;
+  border: 1.5px dashed rgba(108, 52, 3, 0.28);
+  border-radius: 22px;
+  background: rgba(255, 233, 214, 0.45);
+}
+
+.cs-onboarding__back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  padding: 0 20px;
+  border: 1px solid #d4d4d4;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: var(--cs-shadow-sm);
+  color: var(--cs-ink, #1d1d1d);
+  font-size: 14px;
+  font-weight: 600;
+  transition: background-color 180ms ease;
+}
+
+.cs-onboarding__back:hover {
+  background: #fafafa;
+}
+
+.cs-onboarding__swap {
+  animation: cs-onboarding-fade 220ms ease-out both;
+}
+
+@keyframes cs-onboarding-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

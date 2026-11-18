@@ -18,6 +18,7 @@ export default function useGlobalSettings() {
     const [hasImportedCsv, setHasImportedCsv] = useState(false);
     const [hasSeenCsvImportGuide, setHasSeenCsvImportGuide] = useState(false);
     const [hasSeenVariantsGuide, setHasSeenVariantsGuide] = useState(false);
+    const [hasSeenCreativeStrategyOnboarding, setHasSeenCreativeStrategyOnboarding] = useState(false);
     const [seenOnboardingCards, setSeenOnboardingCards] = useState([]);
     const [selectedAdAccountIds, setSelectedAdAccountIds] = useState([])
     const [selectedTikTokAdvertiserIds, setSelectedTikTokAdvertiserIds] = useState([])
@@ -53,6 +54,11 @@ export default function useGlobalSettings() {
                 Boolean(data?.settings?.hasSeenVariantsGuide) ||
                 !signedUpOnOrAfter(data?.userCreatedAt, VARIANTS_GUIDE_SIGNUP_CUTOFF)
             );
+            // The Creative Strategy walkthrough is unskippable, so only show it when
+            // settings actually loaded (new users get `settings: null` with a 200).
+            setHasSeenCreativeStrategyOnboarding(
+                res.ok ? Boolean(data?.settings?.hasSeenCreativeStrategyOnboarding) : true
+            );
             setSeenOnboardingCards(
                 Array.isArray(data?.settings?.seenOnboardingCards)
                     ? data.settings.seenOnboardingCards
@@ -84,6 +90,8 @@ export default function useGlobalSettings() {
             setHasSeenCsvImportGuide(false);
             // Don't pop the variants guide on a failed load; it shows once settings load.
             setHasSeenVariantsGuide(true);
+            // Same for the unskippable Creative Strategy walkthrough.
+            setHasSeenCreativeStrategyOnboarding(true);
             setSeenOnboardingCards([]);
             setUploadSources(['local', 'drive', 'dropbox']);
         } finally {
@@ -139,6 +147,8 @@ export default function useGlobalSettings() {
         setHasSeenCsvImportGuide,
         hasSeenVariantsGuide,
         setHasSeenVariantsGuide,
+        hasSeenCreativeStrategyOnboarding,
+        setHasSeenCreativeStrategyOnboarding,
         seenOnboardingCards,
         setSeenOnboardingCards,
         effectiveSeenOnboardingIds,
