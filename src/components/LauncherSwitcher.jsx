@@ -3,6 +3,7 @@ import PropTypes from "prop-types"
 import { useNavigate } from "react-router-dom"
 import MetaIcon from "@/assets/icons/meta.svg"
 import TikTokIcon from "@/assets/icons/tiktok.svg"
+import { IS_STAGING } from "@/lib/environment"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,10 +24,8 @@ const PROVIDERS = {
   },
 }
 
-// Creative Strategy is only routed on staging, dev and local hosts (see main.jsx).
-const CREATIVE_STRATEGY_ENABLED = ["staging.withblip.com", "dev.withblip.com", "localhost", "127.0.0.1"].some((host) =>
-  window.location.hostname.includes(host),
-)
+// Creative Strategy is only routed on staging (see main.jsx).
+const CREATIVE_STRATEGY_ENABLED = IS_STAGING
 
 export default function LauncherSwitcher({
   platform,

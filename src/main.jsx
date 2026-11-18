@@ -29,11 +29,11 @@ import TikTokLogin from "./pages/TikTokLogin.jsx";
 import QaReview from "./pages/QaReview.jsx";
 import SharedReport from "./pages/SharedReport.jsx";
 import { getMcpReview } from "./lib/draftApi";
+import { IS_STAGING } from "./lib/environment";
 
-// Library and Creative Strategy are not released yet: only routed on staging, dev and local hosts.
-const IS_PRERELEASE_HOST = ["staging.withblip.com", "dev.withblip.com", "localhost", "127.0.0.1"].some((host) => window.location.hostname.includes(host));
+// Library and Creative Strategy are not released yet: only routed on staging (see lib/environment).
 // Asset library: only routed where VITE_ENABLE_DAM is "true" (and off production); loaded on demand.
-const DAM_ENABLED = import.meta.env.VITE_ENABLE_DAM === "true" && IS_PRERELEASE_HOST;
+const DAM_ENABLED = import.meta.env.VITE_ENABLE_DAM === "true" && IS_STAGING;
 const Library = DAM_ENABLED ? lazy(() => import("./pages/Library.jsx")) : null;
 
 function TikTokRoute({ children, requireConnection = false }) {
@@ -80,7 +80,7 @@ const router = createBrowserRouter([
         path: "tiktok-callback",
         element: <TikTokRoute><TikTokCallback /></TikTokRoute>,
       },
-      ...(IS_PRERELEASE_HOST ? [{ path: "creative-strategy", element: <CreativeStrategy /> }] : []),
+      ...(IS_STAGING ? [{ path: "creative-strategy", element: <CreativeStrategy /> }] : []),
       ...(DAM_ENABLED ? [{ path: "library/*", element: <Suspense fallback={null}><Library /></Suspense> }] : []),
       { path: "terms-of-service", element: <TermsOfService /> },
       { path: "privacy-policy", element: <PrivacyPolicy /> },

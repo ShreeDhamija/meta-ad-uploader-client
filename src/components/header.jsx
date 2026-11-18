@@ -9,6 +9,7 @@ import ChatIcon from "@/assets/icons/chat.svg?react"
 import AnalyticsIcon from "@/assets/icons/Analytics.svg?react"
 import RocketBtn from "@/assets/rocket2.webp"
 import { useAuth } from "@/lib/AuthContext"
+import { IS_STAGING } from "@/lib/environment"
 import { useTikTokAuth } from "@/lib/TikTokAuthContext"
 import LauncherSwitcher from "@/components/LauncherSwitcher"
 import { useLocation, useNavigate } from "react-router-dom"
@@ -218,8 +219,7 @@ export default function Header({ showMessenger }) {
           <span className="hidden min-[1000px]:inline text-[14px] text-gray-900 font-medium">Analytics</span>
         </button>
         <div className="hidden min-[1000px]:block h-8 w-px bg-gray-300  " />
-        {import.meta.env.VITE_ENABLE_DAM === "true" &&
-          ["staging.withblip.com", "dev.withblip.com", "localhost", "127.0.0.1"].some((host) => window.location.hostname.includes(host)) && (
+        {import.meta.env.VITE_ENABLE_DAM === "true" && IS_STAGING && (
           <>
             <button
               onClick={() => navigate("/library")}
