@@ -47,7 +47,7 @@ export default function NewWorkspaceDialog() {
 
   return (
     <Dialog open={newWorkspaceOpen} onOpenChange={setNewWorkspaceOpen}>
-      <DialogContent className="max-w-md rounded-2xl">
+      <DialogContent className="max-w-md">
         <form onSubmit={submit} className="flex flex-col gap-4">
           <DialogHeader>
             <DialogTitle>New workspace</DialogTitle>

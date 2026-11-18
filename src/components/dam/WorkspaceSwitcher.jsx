@@ -39,7 +39,7 @@ export default function WorkspaceSwitcher({ workspaceId }) {
           <ChevronsUpDown className="size-4 shrink-0 text-neutral-400" />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-[260px] rounded-xl">
+      <DropdownMenuContent align="start" className="w-[260px]">
         <DropdownMenuLabel className="text-xs font-medium text-neutral-500">Workspaces</DropdownMenuLabel>
         <div className="max-h-[320px] overflow-y-auto">
           {workspaces.map((w) => (

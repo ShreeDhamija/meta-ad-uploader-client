@@ -6187,8 +6187,16 @@ export default function AdCreationForm({
     });
   }, []);
 
+  // Ads from existing posts (imported posts, IG organic posts, partnership codes) keep their own copy,
+  // so the form's text fields aren't sent and shouldn't block publishing.
+  const usesOnlyExistingPosts =
+    !isCatalogueAd &&
+    files.length === 0 && driveFiles.length === 0 && dropboxFiles.length === 0 && (frameioFiles?.length || 0) === 0 &&
+    (oneDriveFiles?.length || 0) === 0 && importedFiles.length === 0 &&
+    (importedPosts.length > 0 || selectedIgOrganicPosts.length > 0 || activePartnershipCodes.length > 0);
+
   const duplicateIndices = useMemo(() => {
-    if (isCarouselAd) return { messages: new Set(), headlines: new Set(), descriptions: new Set() };
+    if (isCarouselAd || usesOnlyExistingPosts) return { messages: new Set(), headlines: new Set(), descriptions: new Set() };
 
     const findDupes = (arr) => {
       const dupes = new Set();
@@ -6218,7 +6226,7 @@ export default function AdCreationForm({
       headlines: findDupes(activeHeadlines),
       descriptions: findDupes(activeDescriptions),
     };
-  }, [descriptions, enablePlacementCustomization, headlines, isCarouselAd, isProfileDestinationEngagement, messages, profileHeadlineLimit, profilePrimaryTextLimit, profileSupportsDescriptions]);
+  }, [descriptions, enablePlacementCustomization, headlines, isCarouselAd, isProfileDestinationEngagement, messages, profileHeadlineLimit, profilePrimaryTextLimit, profileSupportsDescriptions, usesOnlyExistingPosts]);
 
   const hasDuplicates = useMemo(
     () => duplicateIndices.messages.size > 0 || duplicateIndices.headlines.size > 0 || duplicateIndices.descriptions.size > 0,
