@@ -2621,7 +2621,7 @@ export default function TikTokAdCreationForm({
           const isSparkPhotoPost = adType === "SPARK" && item.file.itemType === "CAROUSEL";
 
           const creative = {
-            adFormat: isSparkPhotoPost ? "CAROUSEL_ADS" : isImage ? "SINGLE_IMAGE" : "SINGLE_VIDEO",
+            adFormat: isSparkPhotoPost || isImage ? "CAROUSEL_ADS" : "SINGLE_VIDEO",
             ...(isImage ? { image_ids: [videoId] } : { video_id: videoId }),
             // Image ads on manual Reach / Traffic / Lead Generation are built as CAROUSEL_ADS by
             // the server, which needs this track
