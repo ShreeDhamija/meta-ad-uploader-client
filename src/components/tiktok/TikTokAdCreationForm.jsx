@@ -145,16 +145,6 @@ const hasCatalogBinding = (c) => {
 
 // Image ads work on manual Reach/Traffic/Lead Gen and Smart+ Traffic; other campaigns get videos only.
 const IMAGE_AD_OBJECTIVES = { REACH: "Reach", TRAFFIC: "Traffic", LEAD_GENERATION: "Lead Generation", LANDING_PAGE: "Reach" };
-const OBJECTIVE_LABELS = {
-  ...IMAGE_AD_OBJECTIVES,
-  PRODUCT_SALES: "Sales",
-  WEB_CONVERSIONS: "Sales",
-  CATALOG_SALES: "Sales",
-  APP_PROMOTION: "App Promotion",
-  VIDEO_VIEWS: "Video Views",
-  ENGAGEMENT: "Community Interaction",
-  RF_REACH: "Reach & Frequency",
-};
 const PRODUCT_AD_SOURCES = new Set(["CATALOG", "STORE", "SHOWCASE"]);
 
 const getImageAdSupport = (campaign, adGroupObjs = []) => {
@@ -164,9 +154,8 @@ const getImageAdSupport = (campaign, adGroupObjs = []) => {
     isCatalogSourcedCampaign(campaign) ||
     isSalesObjective(campaign) ||
     adGroupObjs.some((ag) => PRODUCT_AD_SOURCES.has(String(ag?.product_source || "").toUpperCase()));
-  const typeLabel = `${smart ? "Smart+ " : ""}${productAds ? "Sales" : OBJECTIVE_LABELS[objective] || "Other"}`;
   const supported = !productAds && (smart ? objective === "TRAFFIC" : Boolean(IMAGE_AD_OBJECTIVES[objective]));
-  return { supported, typeLabel };
+  return { supported };
 };
 
 const CTA_ASSET_MAPPING = {
@@ -7710,40 +7699,6 @@ export default function TikTokAdCreationForm({
               )}
 
               {/* 6. Image ads */}
-              {showImageAdTargets && (
-                <div className="rounded-2xl border border-gray-200 bg-gray-50 p-3 space-y-2">
-                  <div className="flex items-start gap-2">
-                    <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-semibold text-gray-900">
-                        Images go to {imageAdTargets.filter((t) => t.supported).length} of {imageAdTargets.length} campaigns
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {hasVideoMedia
-                          ? "Some campaigns don't support image ads. They get your videos only."
-                          : "Some campaigns don't support image ads. No ads are created there."}
-                      </p>
-                    </div>
-                  </div>
-                  <ul className="space-y-1">
-                    {imageAdTargets.map((t) => (
-                      <li key={t.campaignId} className="flex items-center gap-2 rounded-xl bg-white border border-gray-100 px-2.5 py-1.5 text-xs">
-                        {t.supported ? (
-                          <Check className="h-3.5 w-3.5 shrink-0 text-green-600" />
-                        ) : (
-                          <X className="h-3.5 w-3.5 shrink-0 text-red-500" />
-                        )}
-                        <span className="font-medium text-gray-900 truncate">{t.name}</span>
-                        <span className="text-gray-400 shrink-0">{t.typeLabel}</span>
-                        <span className={cn("ml-auto shrink-0 font-medium", t.supported ? "text-green-700" : "text-gray-500")}>
-                          {t.supported ? (hasVideoMedia ? "Images & videos" : "Images") : hasVideoMedia ? "Videos only" : "No ads"}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
               {showImageMusicPicker && (
                 <TikTokMusicPicker advertiserId={selectedAdvertiser} value={imageAdMusic} onChange={setImageAdMusic} />
               )}
@@ -7772,6 +7727,12 @@ export default function TikTokAdCreationForm({
                   {isImageAdsNowhere && (
                     <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
                       {imageAdsNowhereMessage}
+                    </div>
+                  )}
+
+                  {showImageAdTargets && !isImageAdsNowhere && (
+                    <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                      Image ads are not supported in {imageAdTargets.filter((t) => !t.supported).map((t) => t.name).join(", ")}
                     </div>
                   )}
 
