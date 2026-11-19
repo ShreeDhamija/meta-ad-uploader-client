@@ -16,7 +16,7 @@ import { RUN_OPERATIONS } from "../run-model-operations";
 import { ArrowLeft, Box, Brain, Check, ChevronDown, ExternalLink, Image as ImageIcon, Pencil, Plus, Route, Star } from "lucide-react";
 import PropTypes from "prop-types";
 import { useCallback, useEffect, useState } from "react";
-import { JobBadge, useJobRunner, useJobs } from "../JobsContext";
+import { useJobRunner, useJobs } from "../JobsContext";
 import { EmptyState, ErrorBanner, ViewLoading } from "../ui";
 import BrandingEditor from "./BrandingEditor";
 
@@ -341,7 +341,6 @@ function ContextEditor({ productId, productName, productUrl, renderHeaderActions
     <div className="space-y-6">
       {renderHeaderActions(
         <div className="flex items-center gap-3">
-          <JobBadge job={ingestJob} />
           <button
             type="button"
             onClick={ingest}

@@ -11,7 +11,7 @@ import { creativeApi } from "@/lib/creativeApi";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { EmptyState, ErrorBanner, ProgressiveSection } from "../ui";
-import { JobBadge, useJobRunner } from "../JobsContext";
+import { useJobRunner } from "../JobsContext";
 
 const money = (v) => (v >= 1000 ? `$${(v / 1000).toFixed(1)}K` : `$${Math.round(v || 0)}`);
 const NAME_FILTER_MAX = 100;
@@ -101,7 +101,6 @@ export default function MonthlyReviewView({ ctx }) {
     <div className="space-y-5">
       {renderHeaderActions(
         <div className="flex items-center gap-3">
-          <JobBadge job={job} />
           <div className="flex flex-col items-end gap-2">
             <button type="button" onClick={run} disabled={!selectedProductId || jobActive} className="cs-primary-button">
               {jobActive && <Loader2 className="h-4 w-4 animate-spin" />}

@@ -8,7 +8,7 @@ import RunModelControls from "../RunModelControls";
 import { useRunModels } from "../useRunModels";
 import { RUN_OPERATIONS } from "../run-model-operations";
 import { ViewLoading, EmptyState, ErrorBanner } from "../ui";
-import { useJobRunner, JobBadge } from "../JobsContext";
+import { useJobRunner } from "../JobsContext";
 
 const TYPES = [
   { key: "hook", label: "Hooks", description: "Opening lines and scroll-stopping ideas" },
@@ -96,7 +96,6 @@ export default function LibraryView({ ctx }) {
     <div className="space-y-5">
       {renderHeaderActions(
         <div className="flex flex-wrap items-center gap-3">
-          <JobBadge job={job} />
           <button type="button" onClick={run} disabled={!selectedProductId || jobActive} className="cs-primary-button">
             {jobActive ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
             {jobActive ? "Generating…" : "Generate Library"}

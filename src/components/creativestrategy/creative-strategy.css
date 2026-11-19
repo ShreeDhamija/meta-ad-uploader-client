@@ -1749,9 +1749,204 @@ textarea.cs-research-input {
 }
 
 .cs-persona-refine {
-  margin-top: 6px;
-  padding-top: 18px;
+  margin-top: 22px;
+  padding-top: 20px;
   border-top: 1px solid rgba(108, 52, 3, 0.18);
+}
+
+/* Persona card: summary above angles */
+.cs-persona-card__badges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.cs-persona-card__summary {
+  margin-bottom: 16px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid rgba(108, 52, 3, 0.16);
+}
+
+.cs-persona-card__summary p {
+  display: -webkit-box;
+  overflow: hidden;
+  color: #4f423c;
+  font-size: 12.5px;
+  line-height: 1.55;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+}
+
+.cs-persona-card__summary small {
+  display: block;
+  margin-top: 7px;
+  color: #9a6038;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+/* Full persona dialog (source app layout, our visual language) */
+.cs-persona-modal__header {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cs-persona-modal__title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-right: 28px;
+}
+
+.cs-persona-modal__title h2 {
+  padding-right: 0;
+}
+
+.cs-persona-modal__number {
+  flex-shrink: 0;
+  padding: 3px 9px;
+  border: 1px solid rgba(108, 52, 3, 0.3);
+  border-radius: 999px;
+  color: #6c3403;
+  background: var(--cs-peach);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.cs-persona-modal__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.cs-persona-modal__badges span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border: 1px solid rgba(108, 52, 3, 0.28);
+  border-radius: 999px;
+  color: #6c3403;
+  background: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.cs-research-modal__header p.cs-persona-modal__summary {
+  max-width: 72ch;
+  color: #4f423c;
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+
+.cs-research-modal__header p.cs-persona-modal__evidence {
+  color: #9a6038;
+  font-size: 11.5px;
+  font-weight: 500;
+}
+
+.cs-persona-profile {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-top: 22px;
+}
+
+.cs-persona-profile__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+
+.cs-persona-block {
+  min-width: 0;
+  padding: 16px 18px 18px;
+  border: 1px solid rgba(108, 52, 3, 0.16);
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(59, 23, 11, 0.05);
+}
+
+.cs-persona-block > h4 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 11px;
+  color: #6c3403;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.cs-persona-block > h4 svg {
+  flex-shrink: 0;
+  color: #c2611a;
+}
+
+.cs-persona-block .cs-research-value-list {
+  gap: 8px;
+  color: #4f423c;
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.cs-persona-block .cs-research-value-list strong {
+  color: #3b170b;
+  font-weight: 650;
+}
+
+.cs-persona-why {
+  color: #7d6d66;
+}
+
+.cs-persona-pairs {
+  display: grid;
+  gap: 10px;
+}
+
+.cs-persona-pairs li {
+  display: grid;
+  gap: 6px;
+  padding: 11px 13px;
+  border-radius: 12px;
+  background: var(--cs-cream);
+  color: #4f423c;
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.cs-persona-pairs p span {
+  display: inline-block;
+  min-width: 62px;
+  margin-right: 8px;
+  color: #9a6038;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.cs-persona-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.cs-persona-chips span {
+  padding: 5px 11px;
+  border: 1px solid rgba(108, 52, 3, 0.24);
+  border-radius: 999px;
+  color: #6c3403;
+  background: var(--cs-peach);
+  font-size: 11.5px;
+  font-weight: 550;
 }
 
 .cs-research-intel-list {
@@ -3023,7 +3218,8 @@ html body #root .creative-strategy button.cs-intel-ad-card.is-active {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .cs-persona-grid {
+  .cs-persona-grid,
+  .cs-persona-profile__grid {
     grid-template-columns: minmax(0, 1fr);
   }
 

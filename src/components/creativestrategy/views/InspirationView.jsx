@@ -11,7 +11,7 @@ import { useRunModels } from "../useRunModels";
 import { RUN_OPERATIONS } from "../run-model-operations";
 import { Button } from "@/components/ui/button";
 import { ViewLoading, EmptyState, ErrorBanner } from "../ui";
-import { useJobRunner, JobBadge } from "../JobsContext";
+import { useJobRunner } from "../JobsContext";
 
 function fileToDataUrl(file) {
   return new Promise((resolve, reject) => {
@@ -43,13 +43,12 @@ export default function InspirationView({ ctx }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedBrandId, selectedProductId]);
 
-  const { job, start } = useJobRunner({
+  const { start } = useJobRunner({
     kind: "inspo_analyze", brandId: selectedBrandId, onComplete: () => load(selectedBrandId),
   });
 
   const headerAction = renderHeaderActions(
     <div className="flex items-center gap-3">
-      <JobBadge job={job} />
       <Button onClick={() => fileRef.current?.click()} disabled={!selectedBrandId || busy} size="sm" className="rounded-xl gap-1.5">
         <Upload className="w-4 h-4" />{busy ? "Uploading…" : "Upload Reference"}
       </Button>

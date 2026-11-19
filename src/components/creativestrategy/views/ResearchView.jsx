@@ -2,7 +2,10 @@
 // persona previews, detailed persona dialogs, and expandable research rows.
 import { useCallback, useEffect, useRef, useState } from "react";
 import PropTypes from "prop-types";
-import { Box, Loader2, Plus } from "lucide-react";
+import {
+  AlertTriangle, BadgeCheck, Box, Compass, FileSearch, Flame, Heart, Loader2, Plus, Smile, Sparkles,
+  Star, Target, TrendingUp, Trophy, Zap,
+} from "lucide-react";
 import { creativeApi } from "@/lib/creativeApi";
 import RunModelControls from "../RunModelControls";
 import { useRunModels } from "../useRunModels";
@@ -10,7 +13,7 @@ import { RUN_OPERATIONS } from "../run-model-operations";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { humanize } from "../JsonView";
 import { EmptyState, ErrorBanner, PartialResultsNotice, ProgressiveSection } from "../ui";
-import { JobBadge, useJobRunner } from "../JobsContext";
+import { useJobRunner } from "../JobsContext";
 import redditIcon from "@/assets/icons/signup/reddit.svg";
 
 const ORDER = [
@@ -31,7 +34,24 @@ const PROGRESSIVE_RESEARCH_SECTIONS = [
   { type: "persona_summary_table", title: "Persona summary table", phase: 6 },
 ];
 
-const PERSONA_IDENTITY_KEYS = new Set(["label", "name", "title", "source"]);
+// Full-persona dialog: the source app's PersonaCards layout. List sections in
+// a two-column grid, then the full-width paired/long-form sections.
+const PERSONA_GRID_SECTIONS = [
+  { key: "core_beliefs", label: "Core beliefs", icon: Heart },
+  { key: "dreams", label: "Dreams", icon: Sparkles },
+  { key: "desires", label: "Desires", icon: Target },
+  { key: "key_usps", label: "Key USPs for this persona", icon: Star },
+  { key: "life_force_8", label: "Life Force 8 emotions", icon: Flame },
+  { key: "learned_desires", label: "9 learned desires", icon: TrendingUp },
+  { key: "emotions", label: "Emotions the product creates", icon: Smile },
+  { key: "common_objections", label: "Common objections", icon: AlertTriangle },
+];
+// Shown in the header, the dedicated sections, or not at all (bookkeeping).
+const PERSONA_HANDLED_KEYS = new Set([
+  "label", "name", "title", "source", "description", "human_edited", "ad_evidence", "client_named",
+  "created_at", "updated_at", "created_by", "problems_solutions", "angles", "angle_outcomes", "evidence_for_persona",
+  ...PERSONA_GRID_SECTIONS.map((section) => section.key),
+]);
 const PERSONA_SUMMARY_FIELDS = [
   ["description", "Description"], ["core_beliefs", "Core beliefs"], ["dreams", "Dreams"],
   ["desires", "Desires"], ["common_objections", "Common objections"], ["key_usps", "Key USPs"],
@@ -166,7 +186,6 @@ export default function ResearchView({ ctx }) {
     <div className="space-y-5">
       {renderHeaderActions(
         <div className="flex items-center gap-3">
-        <JobBadge job={researchJob} />
         <button type="button" onClick={run} disabled={!selectedProductId || researchActive} className="cs-primary-button">
           {researchActive && <Loader2 className="h-4 w-4 animate-spin" />}
           {researchActive ? "Running Research…" : "Run Research"}
@@ -276,17 +295,52 @@ export default function ResearchView({ ctx }) {
   );
 }
 
+function personaName(persona, index) {
+  return persona?.label || persona?.name || persona?.title || (index != null ? `Persona ${index + 1}` : "Persona");
+}
+
+/** Source and validation tags, as on the source app's persona cards. */
+function personaBadges(persona) {
+  const badges = [];
+  if (persona.source === "ad_derived") badges.push({ label: "From ads", title: "Found in this brand's live ads by the Insights audit; no research persona matched it" });
+  if (persona.source === "custom") badges.push({ label: "Custom", title: "Added by your team" });
+  if (persona.source === "client") badges.push({ label: "From client", title: "Described by the client" });
+  if (persona.source !== "ad_derived" && persona.ad_evidence) badges.push({ label: "Validated by ads", title: "The latest Insights audit found live ads reaching this persona", check: true });
+  if (persona.human_edited) badges.push({ label: "Edited", title: "Edited by a person; research re-runs keep this version" });
+  return badges;
+}
+
+function adEvidenceLine(evidence) {
+  if (!evidence) return null;
+  const count = evidence.ad_count ?? evidence.ad_names?.length ?? 0;
+  const parts = [`Seen in ${count} ad${count === 1 ? "" : "s"}`];
+  if (evidence.total_spend) parts.push(`$${Math.round(evidence.total_spend).toLocaleString()} spend`);
+  if (evidence.last_seen_at) parts.push(`last audit ${new Date(evidence.last_seen_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}`);
+  return parts.join(" · ");
+}
+
 function PersonaCard({ persona, index, orange, onOpen }) {
   const angles = toDisplayList(findValue(persona, ["angles", "angle"]));
-  const name = persona.label || persona.name || persona.title || `Persona ${index + 1}`;
+  const name = personaName(persona, index);
+  const summary = typeof persona.description === "string" ? persona.description.trim() : "";
+  const evidence = adEvidenceLine(persona.ad_evidence);
 
   return (
     <article className={`cs-persona-card ${orange ? "is-orange" : ""}`}>
       <header className="cs-persona-card__header">
         <h3>{name}</h3>
-        {persona.source === "custom" && <span>Custom</span>}
+        <div className="cs-persona-card__badges">
+          {personaBadges(persona).map((badge) => <span key={badge.label} title={badge.title}>{badge.label}</span>)}
+        </div>
       </header>
       <div className="cs-persona-card__body">
+        {(summary || evidence) && (
+          <div className="cs-persona-card__summary">
+            <h4>Summary</h4>
+            {summary && <p>{summary}</p>}
+            {evidence && <small>{evidence}</small>}
+          </div>
+        )}
         <h4>Angles</h4>
         {angles.length > 0 ? (
           <ul>{angles.map((angle, angleIndex) => <li key={angleIndex}>{angle}</li>)}</ul>
@@ -302,7 +356,9 @@ function PersonaCard({ persona, index, orange, onOpen }) {
 function PersonaDialog({ persona, index, busy, onOpenChange, onRefine, models }) {
   const [refining, setRefining] = useState(false);
   const [instructions, setInstructions] = useState("");
-  const name = persona?.label || persona?.name || persona?.title || (index != null ? `Persona ${index + 1}` : "Persona");
+  const name = personaName(persona, index);
+  const description = typeof persona?.description === "string" ? persona.description.trim() : "";
+  const evidence = adEvidenceLine(persona?.ad_evidence);
 
   useEffect(() => {
     setRefining(false);
@@ -316,13 +372,26 @@ function PersonaDialog({ persona, index, busy, onOpenChange, onRefine, models })
         overlayClassName="bg-black/35 backdrop-blur-[1px]"
         className="cs-research-modal sm:max-w-[900px]"
       >
-        <DialogHeader className="cs-research-modal__header">
-          <DialogTitle>{name}</DialogTitle>
-          <DialogDescription>Complete persona research profile</DialogDescription>
+        <DialogHeader className="cs-research-modal__header cs-persona-modal__header">
+          <div className="cs-persona-modal__title">
+            {index != null && <span className="cs-persona-modal__number">P{index + 1}</span>}
+            <DialogTitle>{name}</DialogTitle>
+          </div>
+          {persona && personaBadges(persona).length > 0 && (
+            <div className="cs-persona-modal__badges">
+              {personaBadges(persona).map((badge) => (
+                <span key={badge.label} title={badge.title}>{badge.check && <BadgeCheck className="h-3 w-3" />}{badge.label}</span>
+              ))}
+            </div>
+          )}
+          <DialogDescription className={description ? "cs-persona-modal__summary" : undefined}>
+            {description || "Complete persona research profile"}
+          </DialogDescription>
+          {evidence && <p className="cs-persona-modal__evidence">{evidence}</p>}
         </DialogHeader>
         {persona && (
           <div className="cs-research-modal__scroll">
-            <ResearchDetails data={persona} exclude={PERSONA_IDENTITY_KEYS} />
+            <PersonaProfile persona={persona} />
             <div className="cs-persona-refine">
               <button type="button" onClick={() => setRefining((current) => !current)} className="cs-research-add-button">
                 {refining ? "Cancel Refine" : "Refine Persona"}
@@ -348,6 +417,91 @@ function PersonaDialog({ persona, index, busy, onOpenChange, onRefine, models })
         )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+/** The full persona, laid out like the source app's expanded PersonaCards. */
+function PersonaProfile({ persona }) {
+  const pairs = (Array.isArray(persona.problems_solutions) ? persona.problems_solutions : [])
+    .map((item) => typeof item === "string" ? { problem: item, solution: "" } : { problem: item?.problem ?? "", solution: item?.solution ?? "" })
+    .filter((item) => item.problem || item.solution);
+  const angles = toDisplayList(persona.angles);
+  const outcomes = toDisplayList(persona.angle_outcomes);
+  const extra = Object.fromEntries(Object.entries(persona).filter(([key, value]) => !PERSONA_HANDLED_KEYS.has(key) && value != null && value !== ""));
+  const hasEvidence = persona.evidence_for_persona && (typeof persona.evidence_for_persona !== "object" || Object.keys(persona.evidence_for_persona).length > 0);
+
+  return (
+    <div className="cs-persona-profile">
+      <div className="cs-persona-profile__grid">
+        {PERSONA_GRID_SECTIONS.map((section) => (
+          <PersonaListSection key={section.key} icon={section.icon} label={section.label} items={persona[section.key]} />
+        ))}
+      </div>
+
+      {pairs.length > 0 && (
+        <PersonaBlock icon={Zap} label="Problems → solutions">
+          <ol className="cs-persona-pairs">
+            {pairs.map((pair, index) => (
+              <li key={index}>
+                {pair.problem && <p><span>Problem</span>{pair.problem}</p>}
+                {pair.solution && <p><span>Solution</span>{pair.solution}</p>}
+              </li>
+            ))}
+          </ol>
+        </PersonaBlock>
+      )}
+
+      {angles.length > 0 && (
+        <PersonaBlock icon={Compass} label="Angles">
+          <div className="cs-persona-chips">{angles.map((angle, index) => <span key={index}>{angle}</span>)}</div>
+        </PersonaBlock>
+      )}
+
+      {outcomes.length > 0 && (
+        <PersonaBlock icon={Trophy} label="Angle → outcomes (ad angles for this persona)">
+          <ul className="cs-research-value-list">{outcomes.map((outcome, index) => <li key={index}>{outcome}</li>)}</ul>
+        </PersonaBlock>
+      )}
+
+      {hasEvidence && (
+        <PersonaBlock icon={FileSearch} label="Research evidence">
+          <ResearchValue data={persona.evidence_for_persona} />
+        </PersonaBlock>
+      )}
+
+      {Object.keys(extra).length > 0 && (
+        <PersonaBlock icon={FileSearch} label="More details">
+          <ResearchDetails data={extra} />
+        </PersonaBlock>
+      )}
+    </div>
+  );
+}
+
+function PersonaBlock({ icon: Icon, label, children }) {
+  return (
+    <section className="cs-persona-block">
+      <h4><Icon className="h-3.5 w-3.5" aria-hidden="true" />{label}</h4>
+      {children}
+    </section>
+  );
+}
+
+function PersonaListSection({ icon, label, items }) {
+  const list = (Array.isArray(items) ? items : toDisplayList(items)).filter((item) => item != null && item !== "");
+  if (list.length === 0) return null;
+  return (
+    <PersonaBlock icon={icon} label={label}>
+      <ul className="cs-research-value-list">
+        {list.map((item, index) => (
+          <li key={index}>
+            {item && typeof item === "object" && "emotion" in item
+              ? <><strong>{item.emotion}</strong>{item.why && <span className="cs-persona-why"> {item.why}</span>}</>
+              : typeof item === "object" ? <ResearchValue data={item} /> : String(item)}
+          </li>
+        ))}
+      </ul>
+    </PersonaBlock>
   );
 }
 
@@ -574,6 +728,9 @@ PersonaDialog.propTypes = {
   onOpenChange: PropTypes.func.isRequired,
   onRefine: PropTypes.func.isRequired,
 };
+PersonaProfile.propTypes = { persona: PropTypes.object.isRequired };
+PersonaBlock.propTypes = { icon: PropTypes.elementType.isRequired, label: PropTypes.string.isRequired, children: PropTypes.node };
+PersonaListSection.propTypes = { icon: PropTypes.elementType.isRequired, label: PropTypes.string.isRequired, items: PropTypes.any };
 ResearchIntelRow.propTypes = { title: PropTypes.string.isRequired, data: PropTypes.any, icon: PropTypes.string };
 PersonaSummaryTable.propTypes = { data: PropTypes.object.isRequired };
 ResearchDetails.propTypes = { data: PropTypes.any, exclude: PropTypes.instanceOf(Set) };

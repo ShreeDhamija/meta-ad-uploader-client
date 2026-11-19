@@ -161,10 +161,32 @@ export function JobsProvider({ children, userId }) {
   }, [mergeJobs, track]);
 
   const visibleJobs = useMemo(() => Object.fromEntries(Object.entries(jobs).filter(([, job]) => isVisible(job))), [jobs]);
+  // Steps a running job will start next (e.g. product setup: research → ad
+  // analysis → library → weekly strategy), shown as "waiting" so the whole
+  // plan is visible from the start. They are replaced by the real jobs as the
+  // chain advances, and vanish if a step fails (the chain stops there).
+  const waitingJobs = useMemo(() => {
+    const out = {};
+    const all = Object.values(jobs);
+    const realActive = all.filter((job) => ACTIVE(job.status));
+    for (const parent of realActive) {
+      (Array.isArray(parent.upcoming) ? parent.upcoming : []).forEach((step, index) => {
+        if (BACKGROUND_KINDS.has(step.type)) return;
+        const sameRunning = realActive.some((job) => job.type === step.type && (job.only || null) === (step.only || null)
+          && job.meta?.brandId === parent.meta?.brandId && (step.type === "weekly_strategy" || job.meta?.productId === parent.meta?.productId));
+        if (sameRunning) return;
+        const id = `waiting:${parent.id}:${index}`;
+        out[id] = { id, type: step.type, only: step.only, status: "waiting", progress: {}, waitingOrder: index,
+          startedAt: parent.startedAt, meta: { ...parent.meta, kind: step.type } };
+      });
+    }
+    return out;
+  }, [jobs]);
   // Same list minus finished jobs the user cleared; active jobs always show.
-  const trackerJobs = useMemo(() => Object.fromEntries(Object.entries(visibleJobs).filter(([, job]) =>
-    ACTIVE(job.status) || Math.max(job.finishedAt || 0, job.startedAt || 0) > clearedAt)), [visibleJobs, clearedAt]);
-  const value = useMemo(() => ({ jobs: visibleJobs, trackerJobs, clearHistory, track, historyLoading, historyError, nextOffset, loadMore, refreshHistory, unreadStatus, markResultsRead }), [visibleJobs, trackerJobs, clearHistory, track, historyLoading, historyError, nextOffset, loadMore, refreshHistory, unreadStatus, markResultsRead]);
+  const trackerJobs = useMemo(() => ({ ...Object.fromEntries(Object.entries(visibleJobs).filter(([, job]) =>
+    ACTIVE(job.status) || Math.max(job.finishedAt || 0, job.startedAt || 0) > clearedAt)), ...waitingJobs }), [visibleJobs, waitingJobs, clearedAt]);
+  const unreadErrors = unreadResults.filter((job) => jobOutcome(job) === "failed").length;
+  const value = useMemo(() => ({ jobs: visibleJobs, trackerJobs, clearHistory, track, historyLoading, historyError, nextOffset, loadMore, refreshHistory, unreadStatus, unreadErrors, markResultsRead }), [visibleJobs, trackerJobs, clearHistory, track, historyLoading, historyError, nextOffset, loadMore, refreshHistory, unreadStatus, unreadErrors, markResultsRead]);
   return <JobsContext.Provider value={value}>{children}</JobsContext.Provider>;
 }
 JobsProvider.propTypes = { children: PropTypes.node, userId: PropTypes.string };
@@ -217,32 +239,33 @@ export function useJobRunner({ kind, brandId, productId, enabled = true, restore
 
 // ── Milestones ────────────────────────────────────────────────────────────────
 const RESEARCH_PHASES = [
-  "Brand deep dive", "Review mining", "Competitor & market",
-  "Sentiment alignment", "Consumer research report", "Persona building", "Persona cross-map",
+  "Studying your brand", "Reading customer reviews", "Researching competitors",
+  "Checking customer sentiment", "Writing the research report", "Building personas", "Mapping personas to your ads",
 ];
+// Plain-English step names for the tracker. Unknown steps show "Working on it",
+// never the internal phase key.
 const PHASE_LABELS = {
   // analyze_ads
-  fetching_meta: "Fetching Meta ads", metrics: "Pulling metrics", analyze: "Analyzing creatives",
-  audit: "Building strategy audit", ingest: "Indexing for search",
-  // generate_ad
-  gathering_context: "Gathering brand context", planning_concepts: "Planning static concepts", generating: "Generating",
-  trending: "Refreshing trending creatives",
-  // others
-  running_strategist: "Running the strategist", mining_reddit: "Mining Reddit threads",
-  building_briefing: "Building the strategy briefing", saving_concepts: "Saving concept cards",
-  scraping_and_extracting: "Scraping + extracting", analyzing: "Analyzing reference",
-  analyzing_batch: "Analyzing",
-  // generate_scripts / generate_brief / weekly_brief
+  ingest: "Fetching your ads from Meta", fetching_meta: "Fetching your ads from Meta", metrics: "Updating ad results",
+  analyze: "Analyzing ads", audit: "Writing the strategy audit", audit_wave_1: "Writing the strategy audit",
+  audit_wave_2: "Finishing the strategy audit", trending: "Finding trending creatives", curating_hooks: "Saving your best hooks",
+  // generate_ad / scripts / briefs
+  gathering_context: "Gathering brand context", planning_concepts: "Planning ad concepts", generating: "Creating images",
   picking_concept: "Picking a concept", writing_brief: "Writing the brief", writing_hooks: "Writing hooks",
   writing_script: "Writing the script", saving: "Saving",
-  // monthly_review
-  reading_analysis: "Reading stored analysis", learning_naming: "Learning ad naming", writing_summaries: "Writing month summaries",
-  synthesizing_knowledge: "Finding patterns across accounts", curating_hooks: "Saving proven hooks",
+  // weekly strategy
+  building_briefing: "Reviewing your account", running_strategist: "Writing this week's concepts", saving_concepts: "Saving concepts",
+  // research / ingestion / inspiration
+  mining_reddit: "Reading Reddit discussions", scraping_and_extracting: "Reading your website",
+  analyzing: "Analyzing the reference", analyzing_batch: "Analyzing references",
+  // monthly review / cross-account
+  reading_analysis: "Reading saved analysis", learning_naming: "Learning your ad naming", writing_summaries: "Writing monthly summaries",
+  synthesizing_knowledge: "Finding patterns across accounts",
 };
 const KIND_LABEL = {
-  research: "Product research", analyze_ads: "Ad analysis + trending",
+  research: "Product research", analyze_ads: "Ad analysis",
   generate_ad: "Static ad generation", generate_library: "Copy library generation", weekly_strategy: "Weekly strategy",
-  ingest_context: "Ingestion", inspo_analyze: "Reference analysis", trending_creative: "Trending creative",
+  ingest_context: "Reading your website", inspo_analyze: "Reference analysis", trending_creative: "Trending creatives",
   monthly_review: "Monthly review", cross_account_knowledge: "Cross-account learnings",
   generate_scripts: "Video scripts", generate_brief: "Creative brief", weekly_brief: "Concept brief",
 };
@@ -251,13 +274,14 @@ const KIND_LABEL = {
 export function describeJob(job) {
   if (!job) return null;
   const type = job.type || job.meta?.kind;
-  const title = KIND_LABEL[type] || job.meta?.label || type || "Job";
+  const title = type === "research" && job.only === "cross_map" ? "Persona mapping" : KIND_LABEL[type] || job.meta?.label || "Background task";
   const p = job.progress || {};
   const timing = timeProgress(job);
-  if (job.status === "queued" || job.status == null) return { title, detail: "Queued", pct: 0, eta: timing.label };
+  if (job.status === "waiting") return { title, detail: "Waiting · starts after the step above", pct: null, eta: timeProgress({ ...job, status: "queued" }).label };
+  if (job.status === "queued" || job.status == null) return { title, detail: "Queued · starting soon", pct: 0, eta: timing.label };
   if (job.status === "completed") {
     const result = job.result || {};
-    const detail = type === "analyze_ads" ? `Completed · ${result.analyzed ?? 0} analyzed · ${result.metricsUpdated ?? 0} refreshed${result.failed ? ` · ${result.failed} failed` : ""}`
+    const detail = type === "analyze_ads" ? `Completed · ${result.analyzed ?? 0} ads analyzed${result.reused ? ` · ${result.reused} matched an analyzed ad` : ""}${result.failed ? ` · ${result.failed} couldn't be analyzed` : ""}${result.deferred ? ` · ${result.deferred} left for the next run` : ""}`
       : type === "generate_ad" ? `Completed · ${result.saved ?? 0} ads saved`
       : type === "weekly_strategy" ? `Completed · ${result.ideas_generated ?? 0} concepts`
       : type === "monthly_review" && result.status === "ok" ? `Completed · ${result.concepts ?? 0} concepts`
@@ -275,7 +299,7 @@ export function describeJob(job) {
     const total = p.total || 7;
     const done = p.status === "done" ? p.phase : p.phase - 1;
     const name = RESEARCH_PHASES[p.phase - 1] || `Phase ${p.phase}`;
-    return { title, detail: `Phase ${p.phase}/${total} · ${name}`, pct: Math.round((done / total) * 100), eta: timing.label };
+    return { title, detail: `Step ${p.phase} of ${total} · ${name}`, pct: Math.round((done / total) * 100), eta: timing.label };
   }
   // Jobs that report their own percentage (scripts and briefs) win over the
   // time-based estimate; everything else shows elapsed share of its estimate.
@@ -284,8 +308,9 @@ export function describeJob(job) {
     const of = p.total ? ` · ${p.done ?? 0}/${p.total} variations` : "";
     return { title, detail: `${PHASE_LABELS[p.phase] || "Generating"}${of} · ${p.saved ?? 0} saved`, pct, eta: timing.label };
   }
-  const phaseLabel = PHASE_LABELS[p.phase] || (typeof p.phase === "string" ? p.phase : "Working");
-  const count = type === "generate_scripts" && p.total > 1 ? ` · ${p.done ?? 0}/${p.total} done` : "";
+  const phaseLabel = PHASE_LABELS[p.phase] || "Working on it";
+  const count = (type === "generate_scripts" && p.total > 1) || (type === "analyze_ads" && p.phase === "analyze" && p.total)
+    ? ` · ${p.done ?? 0} of ${p.total}` : "";
   return { title, detail: `${phaseLabel}${count}`, pct, eta: timing.label };
 }
 

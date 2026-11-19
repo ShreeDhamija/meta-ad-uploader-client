@@ -12,7 +12,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Badge } from "@/components/ui/badge";
 import { humanize } from "../JsonView";
 import { EmptyState, ErrorBanner, PartialResultsNotice, ProgressiveSection } from "../ui";
-import { useJobRunner, JobBadge } from "../JobsContext";
+import { useJobRunner } from "../JobsContext";
+import { SpendCpaChart, TopPerformers } from "./InsightsPerformance";
 
 const money = (n) => `$${Math.round(n || 0).toLocaleString()}`;
 const mean = (arr) => (arr.length ? arr.reduce((s, x) => s + x, 0) / arr.length : null);
@@ -118,7 +119,6 @@ export default function IntelligenceView({ ctx }) {
     <div className="space-y-5">
       {renderHeaderActions(
         <div className="flex items-center gap-3">
-        <JobBadge job={analyzeJob} />
         <div className="flex flex-col items-end gap-2">
         <button type="button" onClick={run} disabled={!selectedProductId || analyzeActive} className="cs-primary-button">
           {analyzeActive && <Loader2 className="h-4 w-4 animate-spin" />}
@@ -150,7 +150,6 @@ export default function IntelligenceView({ ctx }) {
           Creative analysis covers {analyzedSpending.length} of {spendingAds.length} spending ads ({Math.round(spendCoverage * 100)}% of spend). Performance metrics include all saved ads. Each refresh reuses completed analyses and processes remaining spending ads, subject to configured limits and available budget.
           {a.analysis_coverage?.sampled_ads != null && <> Strategy insights use {a.analysis_coverage.sampled_ads} analyzed ads{a.analysis_coverage.sample_method === "spend_and_evidence_diversity" ? ", selected for spend and distinct creative evidence" : ""}.</>}
           {a.analysis_coverage?.cluster_coverage?.persona_ad_mapping?.unassigned_ads > 0 && <p className="mt-1">{a.analysis_coverage.cluster_coverage.persona_ad_mapping.unassigned_ads} ads in the strategy analysis could not be assigned to a supported persona.</p>}
-          {!analyzeActive && analyzeJob?.progress?.deferred > 0 && <p className="mt-1">The last run left {analyzeJob.progress.deferred} ads for later analysis.</p>}
           {a.analysis_coverage?.stale_sections?.length > 0 && <p className="mt-1">Some insight sections are from the previous analysis while their refresh is incomplete.</p>}
         </div>
       )}
@@ -161,9 +160,12 @@ export default function IntelligenceView({ ctx }) {
         ? <MessagingThemesSection themes={a.messaging_themes} ads={ads} />
         : <ProgressiveSection title="Messaging themes" active={auditWorkActive} cards={2} />}
       {ads.length > 0 ? <FunnelBalanceSection ads={ads} /> : <ProgressiveSection title="Funnel balance" active={adWorkActive} />}
+      {ads.length > 0 && <SpendCpaChart ads={ads} />}
       {Array.isArray(a.persona_ad_mapping) && a.persona_ad_mapping.length > 0
         ? <PersonaPerformanceSection mappings={a.persona_ad_mapping} ads={ads} />
         : <ProgressiveSection title="Customer persona performance" active={auditWorkActive} cards={2} />}
+
+      {ads.length > 0 && <TopPerformers key={selectedProductId} ads={ads} />}
 
       <Block title="Trending creative · rising spend / new, last 7d" noDivider>
         {trendingAds.length > 0 ? (

@@ -11,7 +11,7 @@ import { useRunModels } from "../useRunModels";
 import { RUN_OPERATIONS } from "../run-model-operations";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { EmptyState, ErrorBanner, PartialResultsNotice, ProgressiveSection } from "../ui";
-import { useJobRunner, useJobs, JobBadge } from "../JobsContext";
+import { useJobRunner, useJobs } from "../JobsContext";
 
 const isActive = (job) => job.status == null || job.status === "queued" || job.status === "running";
 
@@ -200,7 +200,6 @@ export default function WeeklyView({ ctx }) {
     <div className="space-y-5">
       {renderHeaderActions(
         <div className="flex flex-wrap items-center gap-3">
-          <JobBadge job={weeklyJob} />
           <div className="flex flex-col items-end gap-2">
           <button type="button" onClick={runStrategy} disabled={!selectedBrandId || jobActive} className="cs-primary-button">
             {jobActive && <Loader2 className="h-4 w-4 animate-spin" />}

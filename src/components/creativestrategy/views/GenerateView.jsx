@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ErrorBanner } from "../ui";
-import { useJobRunner, describeJob } from "../JobsContext";
+import { useJobRunner } from "../JobsContext";
 import { toast } from "sonner";
 
 const CREATIVITY = [
@@ -88,13 +88,6 @@ function useGenerationHistory(productId, kind) {
 }
 
 const isJobActive = (job) => Boolean(job) && (job.status == null || job.status === "queued" || job.status === "running");
-
-/** "Writing the script · 35%" while a job runs; the fallback before it reports. */
-function jobLabel(job, fallback) {
-  const d = isJobActive(job) ? describeJob(job) : null;
-  if (!d || d.detail === "Queued") return fallback;
-  return `${d.detail}${d.pct != null ? ` · ${d.pct}%` : ""}`;
-}
 
 export default function GenerateView({ ctx }) {
   const { selectedProductId } = ctx;
@@ -545,7 +538,7 @@ function ScriptsPanel({ productId }) {
       ) : history.loading && batches.length === 0 ? (
         <GenerateLoading label="Loading saved scripts…" />
       ) : busy ? (
-        <GenerateLoading label={jobLabel(job, `Writing ${runningCount} video script${runningCount === 1 ? "" : "s"}…`)} />
+        <GenerateLoading label={`Writing ${runningCount} video script${runningCount === 1 ? "" : "s"}…`} />
       ) : batches.length === 0 ? (
         <WorkspaceEmpty icon={FileText} title="Video script generation" hint="Generate a concept-led video ad script with three opening hooks." />
       ) : (
@@ -643,7 +636,7 @@ function BriefPanel({ productId }) {
       ) : history.loading && batches.length === 0 ? (
         <GenerateLoading label="Loading saved briefs…" />
       ) : busy ? (
-        <GenerateLoading label={jobLabel(job, "Building the creative brief…")} />
+        <GenerateLoading label={"Building the creative brief…"} />
       ) : batches.length === 0 ? (
         <WorkspaceEmpty icon={ClipboardList} title="No brief generated yet" hint="Choose a format and add optional direction in the sidebar." />
       ) : (
