@@ -158,6 +158,9 @@ const getImageAdSupport = (campaign, adGroupObjs = []) => {
   return { supported };
 };
 
+// Grouped ads only exist on Smart+; elsewhere each file in a group posts as its own ad.
+const allowsGroupedAds = (campaign) => isSmartPlusCampaign(campaign);
+
 // Ads a job creates: one per file or group in each ad group, minus image-only ads where images aren't supported.
 const planTikTokAds = ({
   files = [],
@@ -174,18 +177,10 @@ const planTikTokAds = ({
   const groupOf = new Map();
   fileGroups.forEach((g) => (g.fileIds || []).forEach((id) => groupOf.set(id, g.id)));
 
-  const units = new Map();
   const media = [
     ...[...files, ...driveFiles, ...dropboxFiles].map((file) => ({ file, image: isTikTokImageFile(file) })),
     ...libraryFiles.map((file) => ({ file, image: false })),
   ];
-  media.forEach(({ file, image }, i) => {
-    const key = groupOf.get(getFileId(file)) || `file-${i}`;
-    const unit = units.get(key) || { hasImage: false, hasVideo: false };
-    if (image) unit.hasImage = true;
-    else unit.hasVideo = true;
-    units.set(key, unit);
-  });
 
   let adCount = 0;
   const adGroupsWithAds = [];
@@ -193,6 +188,15 @@ const planTikTokAds = ({
     const ag = adGroups.find((g) => g.adgroup_id === agId);
     const campaign = campaigns.find((c) => c.campaign_id === (ag?.campaignId || ag?.campaign_id || fallbackCampaignId));
     const imagesOk = !campaign || getImageAdSupport(campaign, ag ? [ag] : []).supported;
+    const grouped = !campaign || allowsGroupedAds(campaign);
+    const units = new Map();
+    media.forEach(({ file, image }, i) => {
+      const key = (grouped && groupOf.get(getFileId(file))) || `file-${i}`;
+      const unit = units.get(key) || { hasImage: false, hasVideo: false };
+      if (image) unit.hasImage = true;
+      else unit.hasVideo = true;
+      units.set(key, unit);
+    });
     let count = 0;
     units.forEach((u) => {
       if (u.hasVideo || (imagesOk && u.hasImage)) count += 1;
@@ -2728,8 +2732,7 @@ export default function TikTokAdCreationForm({
           if (currentIdentityId) creative.identity_id = currentIdentityId;
           if (currentIdentityAuthorizedBcId) creative.identity_authorized_bc_id = currentIdentityAuthorizedBcId;
 
-          // Grouping is Smart+ only; in any other ad group the files stay one ad each.
-          if (fileGroupId && isSmartForThisCampaign) {
+          if (fileGroupId && allowsGroupedAds(targetCampaignObj)) {
             creative.groupKey = fileGroupId;
             creative.groupAdName = groupAdNames.get(fileGroupId);
             creative.fileName = item.file?.name || finalAdName;
