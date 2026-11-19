@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ErrorBanner } from "../ui";
-import { useJobRunner } from "../JobsContext";
+import { useJobRunner, describeJob } from "../JobsContext";
 import { toast } from "sonner";
 
 const CREATIVITY = [
@@ -84,13 +84,16 @@ function useGenerationHistory(productId, kind) {
     }
   };
 
-  const addBatch = (batch) => {
-    if (!batch?.id || !batch?.createdAt) throw new Error("The server did not return a saved generation.");
-    setBatches((current) => [batch, ...current.filter((item) => item.id !== batch.id)]);
-    setNextOffset((offset) => offset == null ? null : offset + 1);
-  };
+  return { batches, loading, error, nextOffset, loadMore, retry: () => setReload((value) => value + 1) };
+}
 
-  return { batches, loading, error, nextOffset, loadMore, addBatch, retry: () => setReload((value) => value + 1) };
+const isJobActive = (job) => Boolean(job) && (job.status == null || job.status === "queued" || job.status === "running");
+
+/** "Writing the script · 35%" while a job runs; the fallback before it reports. */
+function jobLabel(job, fallback) {
+  const d = isJobActive(job) ? describeJob(job) : null;
+  if (!d || d.detail === "Queued") return fallback;
+  return `${d.detail}${d.pct != null ? ` · ${d.pct}%` : ""}`;
 }
 
 export default function GenerateView({ ctx }) {
@@ -458,10 +461,18 @@ function ScriptsPanel({ productId }) {
   const [avatar, setAvatar] = useState("");
   const [count, setCount] = useState(3);
   const [notes, setNotes] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [starting, setStarting] = useState(false);
   const history = useGenerationHistory(productId, "scripts");
   const { batches } = history;
   const [err, setErr] = useState(null);
+  // Runs as a background job: progress and the result message show in the job
+  // tracker; the saved scripts load into the history when it finishes.
+  const { job, start } = useJobRunner({
+    kind: "generate_scripts", productId, enabled: Boolean(productId), restoreFinished: false,
+    onComplete: () => history.retry(),
+  });
+  const busy = starting || isJobActive(job);
+  const runningCount = job?.progress?.total || count;
 
   useEffect(() => {
     if (!productId) { setPersonas([]); setPersonasLoading(false); return; }
@@ -477,21 +488,21 @@ function ScriptsPanel({ productId }) {
 
   const run = async () => {
     if (!productId) return;
-    setErr(null); setBusy(true);
+    setErr(null); setStarting(true);
     try {
-      const response = await creativeApi.generateVideoScripts({
+      const { jobId } = await creativeApi.generateVideoScripts({
         productId,
         count,
         aiSelections: models.forRun(RUN_OPERATIONS.scripts),
         selectedAvatar: avatar || undefined,
         notes: notes || undefined,
       });
+      start(jobId);
       models.reset(RUN_OPERATIONS.scripts);
-      history.addBatch(response.batch);
     } catch (error) {
       setErr(error.message);
     } finally {
-      setBusy(false);
+      setStarting(false);
     }
   };
 
@@ -522,7 +533,7 @@ function ScriptsPanel({ productId }) {
             />
           </div>
           <button type="button" onClick={run} disabled={!productId || busy || personasLoading || history.loading || Boolean(history.error)} className="cs-primary-button mt-auto w-full">
-            {busy ? `Writing ${count} Script${count === 1 ? "" : "s"}…` : `Generate ${count} Video Script${count === 1 ? "" : "s"}`}
+            {busy ? `Writing ${runningCount} Script${runningCount === 1 ? "" : "s"}…` : `Generate ${count} Video Script${count === 1 ? "" : "s"}`}
           </button>
         </>
       )}
@@ -534,7 +545,7 @@ function ScriptsPanel({ productId }) {
       ) : history.loading && batches.length === 0 ? (
         <GenerateLoading label="Loading saved scripts…" />
       ) : busy ? (
-        <GenerateLoading label={`Writing ${count} video script${count === 1 ? "" : "s"}…`} />
+        <GenerateLoading label={jobLabel(job, `Writing ${runningCount} video script${runningCount === 1 ? "" : "s"}…`)} />
       ) : batches.length === 0 ? (
         <WorkspaceEmpty icon={FileText} title="Video script generation" hint="Generate a concept-led video ad script with three opening hooks." />
       ) : (
@@ -585,22 +596,27 @@ function BriefPanel({ productId }) {
   const models = useRunModels(productId);
   const [format, setFormat] = useState("");
   const [notes, setNotes] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [starting, setStarting] = useState(false);
   const history = useGenerationHistory(productId, "briefs");
   const { batches } = history;
   const [err, setErr] = useState(null);
+  const { job, start } = useJobRunner({
+    kind: "generate_brief", productId, enabled: Boolean(productId), restoreFinished: false,
+    onComplete: () => history.retry(),
+  });
+  const busy = starting || isJobActive(job);
 
   const run = async () => {
     if (!productId) return;
-    setErr(null); setBusy(true);
+    setErr(null); setStarting(true);
     try {
-      const data = await creativeApi.generateConceptBrief({ productId, format: format || undefined, notes: notes || undefined, aiSelections: models.forRun(RUN_OPERATIONS.brief) });
+      const { jobId } = await creativeApi.generateConceptBrief({ productId, format: format || undefined, notes: notes || undefined, aiSelections: models.forRun(RUN_OPERATIONS.brief) });
+      start(jobId);
       models.reset(RUN_OPERATIONS.brief);
-      history.addBatch(data.batch);
     } catch (error) {
       setErr(error.message);
     } finally {
-      setBusy(false);
+      setStarting(false);
     }
   };
 
@@ -627,7 +643,7 @@ function BriefPanel({ productId }) {
       ) : history.loading && batches.length === 0 ? (
         <GenerateLoading label="Loading saved briefs…" />
       ) : busy ? (
-        <GenerateLoading label="Building the creative brief…" />
+        <GenerateLoading label={jobLabel(job, "Building the creative brief…")} />
       ) : batches.length === 0 ? (
         <WorkspaceEmpty icon={ClipboardList} title="No brief generated yet" hint="Choose a format and add optional direction in the sidebar." />
       ) : (

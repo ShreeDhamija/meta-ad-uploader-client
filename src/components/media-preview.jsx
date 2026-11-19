@@ -974,7 +974,7 @@ export default function MediaPreview({
   }, [selectedAdSets, adSets, duplicateAdSet]);
 
   const hasProfileVisitDestinationAdSets = useMemo(() => {
-    const profileDestinations = new Set(["FACEBOOK_PAGE", "INSTAGRAM_PROFILE", "INSTAGRAM_PROFILE_AND_FACEBOOK_PAGE"]);
+    const profileDestinations = new Set(["FACEBOOK_PAGE", "INSTAGRAM_PROFILE", "INSTAGRAM_PROFILE_AND_FACEBOOK_PAGE", "WHATSAPP"]);
     const targetAdSetIds = duplicateAdSet ? [duplicateAdSet] : selectedAdSets;
     return targetAdSetIds.some((id) => {
       const adSet = adSets.find((entry) => String(entry.id) === String(id));

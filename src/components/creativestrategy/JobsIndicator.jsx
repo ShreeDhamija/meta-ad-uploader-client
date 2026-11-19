@@ -9,7 +9,7 @@ const dateLabel = (value) => value ? new Date(value).toLocaleString(undefined, {
 const startedTime = (job) => new Date(job.executionStartedAt || job.createdAt || job.startedAt || 0).getTime();
 
 export default function JobsIndicator() {
-  const { jobs, historyLoading, historyError, nextOffset, loadMore, refreshHistory, unreadStatus, markResultsRead } = useJobs();
+  const { trackerJobs: jobs, clearHistory, historyLoading, historyError, nextOffset, loadMore, refreshHistory, unreadStatus, markResultsRead } = useJobs();
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const trigger = useRef(null);
@@ -38,7 +38,11 @@ export default function JobsIndicator() {
     {open && <section id="cs-job-history" aria-label="Job history" className="absolute right-0 mt-2 w-[420px] max-w-[85vw] max-h-[520px] overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-lg p-4 z-50">
       <div className="mb-3 flex h-5 items-center justify-between gap-3">
         <h2 className="text-sm font-semibold text-stone-800">Job history</h2>
-        <span className="text-xs text-stone-500">Last 7 days</span>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-stone-500">Last 7 days</span>
+          <button type="button" onClick={clearHistory} disabled={!list.some((job) => !ACTIVE(job.status))}
+            className="text-xs font-medium text-[#854413] hover:underline disabled:cursor-default disabled:text-stone-300 disabled:no-underline">Clear</button>
+        </div>
       </div>
       <ScrollArea viewportClassName="!h-auto max-h-[min(454px,calc(100dvh-166px))]">
       <div className="space-y-3 pr-3">
@@ -57,13 +61,16 @@ export default function JobsIndicator() {
                   {job.meta?.productId && <><span aria-hidden="true">·</span><span className="truncate text-stone-500" title={job.meta.productName}>{job.meta.productName || `Product ${job.meta.productId.slice(0, 8)}`}</span></>}
                 </div>
                 <p className={`mt-1 text-xs break-words ${failed ? "text-red-700" : "text-stone-600"}`}>{description.detail}</p>
-                <p className="mt-2 text-[11px] text-stone-400">{job.executionStartedAt ? `Started ${dateLabel(job.executionStartedAt)}` : "Not started yet"}</p>
-                {description.pct != null && !done && !failed && <div className="mt-2 h-1 rounded-full bg-stone-200 overflow-hidden"><div className="h-full bg-blue-500" style={{ width: `${description.pct}%` }} /></div>}
+                <p className="mt-2 text-[11px] text-stone-400">
+                  {job.executionStartedAt ? `Started ${dateLabel(job.executionStartedAt)}` : "Not started yet"}
+                  {!done && !failed && description.eta && <> · {description.eta}</>}
+                </p>
+                {description.pct != null && !done && !failed && <div className="mt-2 h-1 rounded-full bg-stone-200 overflow-hidden"><div className="h-full bg-blue-500 transition-[width] duration-700" style={{ width: `${description.pct}%` }} /></div>}
               </div>
             </div>
           </article>;
         })}
-        {!list.length && <p className="py-6 text-center text-xs text-stone-500">{historyLoading ? "Loading history…" : "No jobs in the last 7 days."}</p>}
+        {!list.length && <p className="py-6 text-center text-xs text-stone-500">{historyLoading ? "Loading history…" : "No jobs to show."}</p>}
         {nextOffset != null && <button type="button" onClick={loadMore} disabled={historyLoading} className="cs-library-action w-full">{historyLoading ? "Loading…" : "Load more jobs"}</button>}
       </div>
       </ScrollArea>

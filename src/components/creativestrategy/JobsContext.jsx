@@ -7,20 +7,36 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import PropTypes from "prop-types";
-import { Loader2, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { creativeApi } from "@/lib/creativeApi";
-import { toast } from "sonner";
 import { isCurrentSessionResult } from "./job-notifications";
+import { timeProgress } from "./job-estimates";
 
 const POLL_MS = 2000;
 const JobsContext = createContext(null);
 const ACTIVE = (status) => status === "queued" || status === "running" || status == null;
 const millis = (value) => value ? new Date(value).getTime() : 0;
+// Steps the backend runs on its own between user-visible jobs (e.g. refreshing
+// brand learnings between ad analysis and weekly strategy). They're still
+// polled, so the jobs chained after them are picked up, but never shown or
+// counted as unread.
+const BACKGROUND_KINDS = new Set(["learning_truths"]);
+const isVisible = (job) => !BACKGROUND_KINDS.has(job.type || job.meta?.kind);
 
 export function jobOutcome(job) {
   if (job.status === "failed") return "failed";
   if (job.status !== "completed") return null;
-  return (Array.isArray(job.result?.errors) && job.result.errors.length) || job.result?.failed > 0 ? "failed" : "completed";
+  return (Array.isArray(job.result?.errors) && job.result.errors.length) || job.result?.failed > 0 || partialErrors(job).length ? "failed" : "completed";
+}
+
+// Parts of a finished job that failed while the rest succeeded (research phases
+// and the Reddit pass). Reported in the tracker, never in the view.
+function partialErrors(job) {
+  const result = job.result || {};
+  const errors = (Array.isArray(result.phases) ? result.phases : [])
+    .filter((phase) => phase && phase.ok === false).map((phase) => `Phase ${phase.phase}: ${phase.error || "failed"}`);
+  if (result.reddit?.ok === false) errors.push(`Reddit research: ${result.reddit.error || "failed"}`);
+  return errors;
 }
 
 function normalizeJob(job) {
@@ -38,9 +54,18 @@ export function JobsProvider({ children, userId }) {
   const jobsRef = useRef(jobs);
   const olderLoaded = useRef(false);
   const loadingOlder = useRef(false);
-  const previousStatuses = useRef({});
   const sessionStartedAt = useRef(Date.now());
   const sessionJobs = useRef(new Set());
+  // Finished jobs up to this moment are hidden from the tracker (per browser).
+  const clearedKey = `cs-jobs-cleared:${userId}`;
+  const [clearedAt, setClearedAt] = useState(() => {
+    try { return Number(localStorage.getItem(clearedKey)) || 0; } catch { return 0; }
+  });
+  const clearHistory = useCallback(() => {
+    const now = Date.now();
+    setClearedAt(now);
+    try { localStorage.setItem(clearedKey, String(now)); } catch { /* Keep session state. */ }
+  }, [clearedKey]);
   const [readResults, setReadResults] = useState(() => {
     try { return new Set(JSON.parse(localStorage.getItem(`cs-read-jobs:${userId}`) || "[]")); } catch { return new Set(); }
   });
@@ -48,7 +73,7 @@ export function JobsProvider({ children, userId }) {
 
   const resultKey = (job) => `${job.id}:${jobOutcome(job)}`;
   const unreadResults = Object.values(jobs).filter((job) =>
-    jobOutcome(job) && isCurrentSessionResult(job, sessionStartedAt.current, sessionJobs.current) && !readResults.has(resultKey(job)));
+    isVisible(job) && jobOutcome(job) && Math.max(job.finishedAt || 0, job.startedAt || 0) > clearedAt && isCurrentSessionResult(job, sessionStartedAt.current, sessionJobs.current) && !readResults.has(resultKey(job)));
   const unreadStatus = unreadResults.some((job) => jobOutcome(job) === "failed") ? "failed" : unreadResults.length ? "completed" : null;
   const markResultsRead = useCallback(() => {
     setReadResults((current) => {
@@ -61,18 +86,6 @@ export function JobsProvider({ children, userId }) {
       return next;
     });
   }, [jobs, userId]);
-
-  useEffect(() => {
-    for (const job of Object.values(jobs)) {
-      const previous = previousStatuses.current[job.id];
-      if (previous && ACTIVE(previous) && (job.status === "failed" || job.status === "completed")) {
-        const description = describeJob(job);
-        if (jobOutcome(job) === "failed") toast.error(description.title, { description: description.detail, id: `job:${job.id}` });
-        else toast.success(description.title, { description: description.detail, id: `job:${job.id}` });
-      }
-      previousStatuses.current[job.id] = job.status || "queued";
-    }
-  }, [jobs]);
 
   const mergeJobs = useCallback((rows) => {
     for (const row of rows) if (ACTIVE(row.status)) sessionJobs.current.add(row.id);
@@ -147,7 +160,11 @@ export function JobsProvider({ children, userId }) {
     return () => { cancelled = true; clearInterval(interval); };
   }, [mergeJobs, track]);
 
-  const value = useMemo(() => ({ jobs, track, historyLoading, historyError, nextOffset, loadMore, refreshHistory, unreadStatus, markResultsRead }), [jobs, track, historyLoading, historyError, nextOffset, loadMore, refreshHistory, unreadStatus, markResultsRead]);
+  const visibleJobs = useMemo(() => Object.fromEntries(Object.entries(jobs).filter(([, job]) => isVisible(job))), [jobs]);
+  // Same list minus finished jobs the user cleared; active jobs always show.
+  const trackerJobs = useMemo(() => Object.fromEntries(Object.entries(visibleJobs).filter(([, job]) =>
+    ACTIVE(job.status) || Math.max(job.finishedAt || 0, job.startedAt || 0) > clearedAt)), [visibleJobs, clearedAt]);
+  const value = useMemo(() => ({ jobs: visibleJobs, trackerJobs, clearHistory, track, historyLoading, historyError, nextOffset, loadMore, refreshHistory, unreadStatus, markResultsRead }), [visibleJobs, trackerJobs, clearHistory, track, historyLoading, historyError, nextOffset, loadMore, refreshHistory, unreadStatus, markResultsRead]);
   return <JobsContext.Provider value={value}>{children}</JobsContext.Provider>;
 }
 JobsProvider.propTypes = { children: PropTypes.node, userId: PropTypes.string };
@@ -215,6 +232,9 @@ const PHASE_LABELS = {
   building_briefing: "Building the strategy briefing", saving_concepts: "Saving concept cards",
   scraping_and_extracting: "Scraping + extracting", analyzing: "Analyzing reference",
   analyzing_batch: "Analyzing",
+  // generate_scripts / generate_brief / weekly_brief
+  picking_concept: "Picking a concept", writing_brief: "Writing the brief", writing_hooks: "Writing hooks",
+  writing_script: "Writing the script", saving: "Saving",
   // monthly_review
   reading_analysis: "Reading stored analysis", learning_naming: "Learning ad naming", writing_summaries: "Writing month summaries",
   synthesizing_knowledge: "Finding patterns across accounts", curating_hooks: "Saving proven hooks",
@@ -224,6 +244,7 @@ const KIND_LABEL = {
   generate_ad: "Static ad generation", generate_library: "Copy library generation", weekly_strategy: "Weekly strategy",
   ingest_context: "Ingestion", inspo_analyze: "Reference analysis", trending_creative: "Trending creative",
   monthly_review: "Monthly review", cross_account_knowledge: "Cross-account learnings",
+  generate_scripts: "Video scripts", generate_brief: "Creative brief", weekly_brief: "Concept brief",
 };
 
 // Returns { title, detail, pct } for a job record. pct is best-effort (null when unknown).
@@ -232,15 +253,19 @@ export function describeJob(job) {
   const type = job.type || job.meta?.kind;
   const title = KIND_LABEL[type] || job.meta?.label || type || "Job";
   const p = job.progress || {};
-  if (job.status === "queued" || job.status == null) return { title, detail: "queued", pct: 0 };
+  const timing = timeProgress(job);
+  if (job.status === "queued" || job.status == null) return { title, detail: "Queued", pct: 0, eta: timing.label };
   if (job.status === "completed") {
     const result = job.result || {};
     const detail = type === "analyze_ads" ? `Completed · ${result.analyzed ?? 0} analyzed · ${result.metricsUpdated ?? 0} refreshed${result.failed ? ` · ${result.failed} failed` : ""}`
       : type === "generate_ad" ? `Completed · ${result.saved ?? 0} ads saved`
       : type === "weekly_strategy" ? `Completed · ${result.ideas_generated ?? 0} concepts`
       : type === "monthly_review" && result.status === "ok" ? `Completed · ${result.concepts ?? 0} concepts`
+      : type === "generate_scripts" ? `Completed · ${result.count ?? 0} script${result.count === 1 ? "" : "s"} saved to Scripts`
+      : type === "generate_brief" ? "Completed · saved to Briefs"
+      : type === "weekly_brief" ? "Completed · brief added to the concept card"
       : "Completed";
-    const errors = Array.isArray(result.errors) ? result.errors.join("; ") : "";
+    const errors = [...(Array.isArray(result.errors) ? result.errors : []), ...partialErrors(job)].join("; ");
     return { title, detail: errors ? `${detail} · ${errors}` : detail, pct: 100 };
   }
   if (job.status === "failed") return { title, detail: job.error || "failed", pct: null };
@@ -250,29 +275,30 @@ export function describeJob(job) {
     const total = p.total || 7;
     const done = p.status === "done" ? p.phase : p.phase - 1;
     const name = RESEARCH_PHASES[p.phase - 1] || `Phase ${p.phase}`;
-    return { title, detail: `Phase ${p.phase}/${total} · ${name}`, pct: Math.round((done / total) * 100) };
+    return { title, detail: `Phase ${p.phase}/${total} · ${name}`, pct: Math.round((done / total) * 100), eta: timing.label };
   }
+  // Jobs that report their own percentage (scripts and briefs) win over the
+  // time-based estimate; everything else shows elapsed share of its estimate.
+  const pct = typeof p.pct === "number" ? p.pct : timing.pct;
   if (type === "generate_ad" && (p.generated != null || p.saved != null)) {
-    return { title, detail: `${PHASE_LABELS[p.phase] || "Generating"} · ${p.saved ?? 0} saved`, pct: null };
+    const of = p.total ? ` · ${p.done ?? 0}/${p.total} variations` : "";
+    return { title, detail: `${PHASE_LABELS[p.phase] || "Generating"}${of} · ${p.saved ?? 0} saved`, pct, eta: timing.label };
   }
   const phaseLabel = PHASE_LABELS[p.phase] || (typeof p.phase === "string" ? p.phase : "Working");
-  return { title, detail: phaseLabel, pct: null };
+  const count = type === "generate_scripts" && p.total > 1 ? ` · ${p.done ?? 0}/${p.total} done` : "";
+  return { title, detail: `${phaseLabel}${count}`, pct, eta: timing.label };
 }
 
 // ── Inline badge (used next to a view's Run button) ───────────────────────────
+// Only while the job runs: success and error results live in the job tracker,
+// so a view never keeps showing an old outcome after it reopens.
 export function JobBadge({ job, className = "" }) {
+  if (!job || !ACTIVE(job.status)) return null;
   const d = describeJob(job);
-  if (!d) return null;
-  const failed = job.status === "failed";
-  const done = job.status === "completed";
   return (
     <span className={`inline-flex items-center gap-1.5 text-sm ${className}`}>
-      {done ? <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-        : failed ? <AlertTriangle className="w-4 h-4 text-red-600" />
-          : <Loader2 className="w-4 h-4 animate-spin text-blue-600" />}
-      <span className={done ? "text-emerald-600" : failed ? "text-red-600" : "text-neutral-600"}>
-        {d.detail}
-      </span>
+      <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+      <span className="text-neutral-600">{d.detail}{d.pct != null ? ` · ${d.pct}%` : ""}</span>
     </span>
   );
 }
