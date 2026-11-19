@@ -158,6 +158,51 @@ const getImageAdSupport = (campaign, adGroupObjs = []) => {
   return { supported };
 };
 
+// Ads a job creates: one per file or group in each ad group, minus image-only ads where images aren't supported.
+const planTikTokAds = ({
+  files = [],
+  driveFiles = [],
+  dropboxFiles = [],
+  libraryFiles = [],
+  fileGroups = [],
+  getFileId,
+  targetAdGroupIds = [],
+  adGroups = [],
+  campaigns = [],
+  fallbackCampaignId,
+}) => {
+  const groupOf = new Map();
+  fileGroups.forEach((g) => (g.fileIds || []).forEach((id) => groupOf.set(id, g.id)));
+
+  const units = new Map();
+  const media = [
+    ...[...files, ...driveFiles, ...dropboxFiles].map((file) => ({ file, image: isTikTokImageFile(file) })),
+    ...libraryFiles.map((file) => ({ file, image: false })),
+  ];
+  media.forEach(({ file, image }, i) => {
+    const key = groupOf.get(getFileId(file)) || `file-${i}`;
+    const unit = units.get(key) || { hasImage: false, hasVideo: false };
+    if (image) unit.hasImage = true;
+    else unit.hasVideo = true;
+    units.set(key, unit);
+  });
+
+  let adCount = 0;
+  const adGroupsWithAds = [];
+  targetAdGroupIds.forEach((agId) => {
+    const ag = adGroups.find((g) => g.adgroup_id === agId);
+    const campaign = campaigns.find((c) => c.campaign_id === (ag?.campaignId || ag?.campaign_id || fallbackCampaignId));
+    const imagesOk = !campaign || getImageAdSupport(campaign, ag ? [ag] : []).supported;
+    let count = 0;
+    units.forEach((u) => {
+      if (u.hasVideo || (imagesOk && u.hasImage)) count += 1;
+    });
+    adCount += count;
+    if (count > 0) adGroupsWithAds.push(agId);
+  });
+  return { adCount, adGroupsWithAds };
+};
+
 const CTA_ASSET_MAPPING = {
   LEARN_MORE: {
     asset_content: "Learn more ",
@@ -1918,33 +1963,33 @@ export default function TikTokAdCreationForm({
       formData.fileGroups = [];
     }
 
+    const plan =
+      formData.updateExistingAds || formData.adType === "SPARK"
+        ? null
+        : planTikTokAds({
+            files: formData.files,
+            driveFiles: formData.driveFiles,
+            dropboxFiles: formData.dropboxFiles,
+            libraryFiles: formData.tiktokLibraryFiles,
+            fileGroups: formData.fileGroups,
+            getFileId,
+            targetAdGroupIds: formData.isDuplicatingAdGroupMode ? [formData.duplicateAdGroup] : formData.selectedAdGroup || [],
+            adGroups: variantAdGroups,
+            campaigns: s.campaigns || [],
+            fallbackCampaignId: formData.selectedCampaign[0],
+          });
+
     // An update job only touches the ad groups its selected ads live in, not every selected ad group
     const activeAdGroups = formData.updateExistingAds
       ? [...new Set(formData.existingAds.map((ad) => ad.adgroup_id).filter(Boolean))]
-      : formData.selectedAdGroup || [];
+      : plan && !formData.isDuplicatingAdGroupMode
+        ? plan.adGroupsWithAds
+        : formData.selectedAdGroup || [];
     const adGroupDisplayName = formData.isDuplicatingAdGroupMode
       ? formData.newAdGroupName || "New Ad Group"
       : activeAdGroups.length === 1
         ? variantAdGroups.find((ag) => ag.adgroup_id === activeAdGroups[0])?.adgroup_name || "selected ad group"
         : `${activeAdGroups.length} ad groups`;
-
-    let skippedImageAds = 0;
-    if (!formData.updateExistingAds && formData.adType !== "SPARK") {
-      const groupedIds = new Set(formData.fileGroups.flatMap((g) => g.fileIds));
-      const ungroupedImages = [...formData.files, ...formData.driveFiles, ...formData.dropboxFiles].filter(
-        (f) => isTikTokImageFile(f) && !groupedIds.has(getFileId(f)),
-      ).length;
-      if (ungroupedImages > 0) {
-        const targetAgIds = formData.isDuplicatingAdGroupMode ? [formData.duplicateAdGroup] : formData.selectedAdGroup || [];
-        targetAgIds.forEach((agId) => {
-          const ag = variantAdGroups.find((g) => g.adgroup_id === agId);
-          const campaign = (s.campaigns || []).find(
-            (c) => c.campaign_id === (ag?.campaignId || ag?.campaign_id || formData.selectedCampaign[0]),
-          );
-          if (campaign && !getImageAdSupport(campaign, ag ? [ag] : []).supported) skippedImageAds += ungroupedImages;
-        });
-      }
-    }
 
     return {
       id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -1952,7 +1997,9 @@ export default function TikTokAdCreationForm({
       variantName: (s.variants || []).find((v) => v.id === variantId)?.name || "Default",
       adCount: formData.updateExistingAds
         ? formData.existingAds.length
-        : Math.max(0, fileCount * (formData.selectedAdGroup?.length || 1) - skippedImageAds),
+        : plan
+          ? plan.adCount
+          : fileCount * (formData.selectedAdGroup?.length || 1),
       adGroupDisplayName,
       formData,
     };
@@ -2151,7 +2198,20 @@ export default function TikTokAdCreationForm({
     const isUpdateJob = Boolean(jobToProcess.formData.updateExistingAds);
     let totalCount = isUpdateJob
       ? (jobToProcess.formData.existingAds || []).length
-      : adUnitCount * (isDuplicatingAdGroupMode ? 1 : selectedAdGroup.length);
+      : adType === "SPARK"
+        ? adUnitCount * (isDuplicatingAdGroupMode ? 1 : selectedAdGroup.length)
+        : planTikTokAds({
+            files,
+            driveFiles,
+            dropboxFiles,
+            libraryFiles: tiktokLibraryFiles,
+            fileGroups: jobFileGroups,
+            getFileId,
+            targetAdGroupIds: isDuplicatingAdGroupMode ? [duplicateAdGroup] : selectedAdGroup,
+            adGroups: jobAdGroups,
+            campaigns,
+            fallbackCampaignId: selectedCampaign[0],
+          }).adCount;
 
     setLiveProgress({
       completed: 0,
