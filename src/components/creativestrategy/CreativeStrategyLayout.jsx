@@ -231,8 +231,11 @@ export default function CreativeStrategyLayout() {
   const selectedBrand = brands.find((b) => b.id === selectedBrandId) || null;
   const selectedProduct = products.find((p) => p.id === selectedProductId) || null;
   const selectorsDisabled = activeTab === "brands";
+  // Products lists every connected account (that's where an account gets its
+  // first product); other tabs only list accounts with products.
+  const showAllAccounts = activeTab === "products";
   const showProductSelector = activeTab !== "products" && activeTab !== "weekly";
-  const selectorBrands = accountsWithProducts;
+  const selectorBrands = showAllAccounts ? brands : accountsWithProducts;
   const renderHeaderActions = useCallback(
     (actions) => (headerActionsTarget ? createPortal(actions, headerActionsTarget) : null),
     [headerActionsTarget],
@@ -371,7 +374,7 @@ export default function CreativeStrategyLayout() {
                     <SelectValue placeholder={brandsLoading ? "Loading Accounts…" : "Select Account"} />
                   </SelectTrigger>
                   <SelectContent className="cs-select-content bg-white">
-                    <p className="px-3 py-2 text-xs text-neutral-500">Only accounts with active products show up here.</p>
+                    {!showAllAccounts && <p className="px-3 py-2 text-xs text-neutral-500">Only accounts with active products show up here.</p>}
                     {selectorBrands.map((brand) => (
                       <SelectItem key={brand.id} value={brand.id}>{brand.name}</SelectItem>
                     ))}
