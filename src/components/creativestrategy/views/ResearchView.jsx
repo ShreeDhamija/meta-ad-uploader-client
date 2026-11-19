@@ -161,9 +161,6 @@ export default function ResearchView({ ctx }) {
   const extraSectionTypes = sectionTypes.filter((type) => !progressiveTypes.has(type));
   const readyCount = PROGRESSIVE_RESEARCH_SECTIONS.filter((section) => researchIntel[section.type]).length + (personas.length > 0 ? 1 : 0);
   const stageActive = (phase) => researchActive && String(researchPhase) === String(phase);
-  const phaseErrors = researchActive ? [] : (researchJob?.result?.phases || [])
-    .filter((phase) => !phase.ok).map((phase) => `Research phase ${phase.phase}: ${phase.error || "failed"}`);
-  if (!researchActive && researchJob?.result?.reddit?.ok === false) phaseErrors.push(`Reddit research: ${researchJob.result.reddit.error}`);
 
   return (
     <div className="space-y-5">
@@ -180,7 +177,6 @@ export default function ResearchView({ ctx }) {
 
       {selectedProductId && <RunModelControls models={models} operations={RUN_OPERATIONS.research} disabled={Boolean(researchActive)} />}
       <ErrorBanner message={err} />
-      <ErrorBanner message={phaseErrors.length ? `${phaseErrors.join("; ")}. Previously saved sections remain available. Retry Research to refresh the failed sections.` : null} />
       <PartialResultsNotice active={researchActive} completed={readyCount} total={PROGRESSIVE_RESEARCH_SECTIONS.length + 1} label="research sections" />
 
       {!selectedProductId ? (

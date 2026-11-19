@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import PropTypes from "prop-types";
 import {
-  CircleCheck, CircleX, ClipboardList, Loader2, MousePointerClick, X,
+  CircleCheck, CircleX, ClipboardList, Loader2, MousePointerClick,
 } from "lucide-react";
 import { creativeApi } from "@/lib/creativeApi";
 import RunModelControls from "../RunModelControls";
@@ -11,7 +11,9 @@ import { useRunModels } from "../useRunModels";
 import { RUN_OPERATIONS } from "../run-model-operations";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { EmptyState, ErrorBanner, PartialResultsNotice, ProgressiveSection } from "../ui";
-import { useJobRunner, JobBadge } from "../JobsContext";
+import { useJobRunner, useJobs, JobBadge } from "../JobsContext";
+
+const isActive = (job) => job.status == null || job.status === "queued" || job.status === "running";
 
 const TIERS = [
   { key: "all", label: "All" },
@@ -30,7 +32,7 @@ const STATUSES = [
 
 export default function WeeklyView({ ctx }) {
   const {
-    selectedBrandId, renderHeaderActions, renderHeaderStatus,
+    selectedBrandId, renderHeaderActions,
   } = ctx;
   const models = useRunModels(selectedBrandId);
   const currentBrand = useRef(selectedBrandId);
@@ -43,30 +45,9 @@ export default function WeeklyView({ ctx }) {
   const [tier, setTier] = useState("all");
   const [status, setStatusFilter] = useState("pending");
   const [filters, setFilters] = useState({ persona: "all", angle: "all", format: "all", awareness: "all" });
-  const [briefs, setBriefs] = useState({});
-  const [briefing, setBriefing] = useState(null);
+  const [startingBrief, setStartingBrief] = useState(null);
   const [loading, setLoading] = useState(false);
   const [updating, setUpdating] = useState(null);
-  const [completionNotice, setCompletionNotice] = useState(null);
-  const seenRun = useRef(null);
-
-  useEffect(() => {
-    if (!selectedBrandId || !run?.id || run.status !== "completed" || run.summary?.status !== "completed") return;
-    if (seenRun.current === run.id) return;
-    seenRun.current = run.id;
-    const storageKey = `cs:weekly-seen-run:${selectedBrandId}`;
-    try {
-      if (window.localStorage.getItem(storageKey) === run.id) return;
-      window.localStorage.setItem(storageKey, run.id);
-    } catch { /* The in-memory ref still prevents repeats when storage is unavailable. */ }
-    setCompletionNotice({ id: run.id, count: run.summary.generated?.total ?? 0 });
-  }, [run, selectedBrandId]);
-
-  useEffect(() => {
-    if (!completionNotice) return undefined;
-    const timeout = window.setTimeout(() => setCompletionNotice(null), 10000);
-    return () => window.clearTimeout(timeout);
-  }, [completionNotice]);
 
   const load = useCallback(async (brandId, { silent = false } = {}) => {
     const request = ++loadRequest.current;
@@ -86,7 +67,6 @@ export default function WeeklyView({ ctx }) {
   }, []);
 
   useEffect(() => {
-    setBriefs({});
     setIdeas([]);
     setRun(null);
     setSchedule(null);
@@ -112,7 +92,6 @@ export default function WeeklyView({ ctx }) {
   const runStrategy = async () => {
     if (!selectedBrandId) return;
     setErr(null);
-    setCompletionNotice(null);
     try {
       const { jobId } = await creativeApi.runWeekly(selectedBrandId, models.forRun(RUN_OPERATIONS.weekly));
       startWeekly(jobId); models.reset(RUN_OPERATIONS.weekly);
@@ -145,18 +124,33 @@ export default function WeeklyView({ ctx }) {
     }
   };
 
+  // Concept briefs run as weekly_brief jobs (progress and results show in the
+  // job tracker). Several can run at once; each card shows its own spinner and
+  // the board reloads when one finishes, since the brief is saved on the idea.
+  const { jobs: allJobs, track } = useJobs();
+  const briefJobs = Object.values(allJobs).filter((job) => job.meta?.kind === "weekly_brief" && job.meta?.brandId === selectedBrandId);
+  const briefing = new Set(briefJobs.filter(isActive).map((job) => job.ideaId || job.meta?.ideaId).filter(Boolean));
+  if (startingBrief) briefing.add(startingBrief);
+  const watchedBriefs = useRef(new Set());
+  const finishedBriefKey = briefJobs.filter((job) => !isActive(job) && watchedBriefs.current.has(job.id)).map((job) => job.id).join(",");
+  for (const job of briefJobs) if (isActive(job)) watchedBriefs.current.add(job.id);
+  useEffect(() => {
+    if (!finishedBriefKey || !selectedBrandId) return;
+    for (const id of finishedBriefKey.split(",")) watchedBriefs.current.delete(id);
+    load(selectedBrandId, { silent: true });
+  }, [finishedBriefKey, load, selectedBrandId]);
+
   const makeBrief = async (id) => {
     setErr(null);
-    setBriefing(id);
+    setStartingBrief(id);
     try {
-      const { brief } = await creativeApi.generateBrief(id, undefined, models.forRun(RUN_OPERATIONS.weeklyBrief));
+      const { jobId } = await creativeApi.generateBrief(id, undefined, models.forRun(RUN_OPERATIONS.weeklyBrief));
       models.reset(RUN_OPERATIONS.weeklyBrief);
-      if (currentBrand.current !== selectedBrandId) return;
-      setBriefs((current) => ({ ...current, [id]: brief }));
+      track(jobId, { kind: "weekly_brief", brandId: selectedBrandId, ideaId: id });
     } catch (error) {
       setErr(error.message);
     } finally {
-      setBriefing(null);
+      setStartingBrief(null);
     }
   };
 
@@ -204,16 +198,9 @@ export default function WeeklyView({ ctx }) {
 
   return (
     <div className="space-y-5">
-      {completionNotice && !jobActive && renderHeaderStatus(
-        <div role="status" className="mt-2 flex items-center gap-1.5 text-sm text-emerald-600">
-          <CircleCheck className="h-4 w-4" />
-          <span>Completed · {completionNotice.count} concepts</span>
-          <button type="button" onClick={() => setCompletionNotice(null)} aria-label="Dismiss completion message" className="ml-1 rounded p-1 text-neutral-400 hover:text-neutral-600"><X className="h-3.5 w-3.5" /></button>
-        </div>
-      )}
       {renderHeaderActions(
         <div className="flex flex-wrap items-center gap-3">
-          <JobBadge job={weeklyJob?.status === "completed" ? null : weeklyJob} />
+          <JobBadge job={weeklyJob} />
           <div className="flex flex-col items-end gap-2">
           <button type="button" onClick={runStrategy} disabled={!selectedBrandId || jobActive} className="cs-primary-button">
             {jobActive && <Loader2 className="h-4 w-4 animate-spin" />}
@@ -229,7 +216,7 @@ export default function WeeklyView({ ctx }) {
       {ideas.length === 0 && !loading && !jobActive && !err && <p className="text-xs font-normal text-neutral-400">Needs analyzed ads and completed research</p>}
 
       {selectedBrandId && <RunModelControls models={models} operations={RUN_OPERATIONS.weekly} disabled={Boolean(jobActive)} />}
-      {ideas.length > 0 && <RunModelControls models={models} operations={RUN_OPERATIONS.weeklyBrief} title="Models for the next idea brief" disabled={Boolean(briefing)} />}
+      {ideas.length > 0 && <RunModelControls models={models} operations={RUN_OPERATIONS.weeklyBrief} title="Models for the next idea brief" disabled={Boolean(startingBrief)} />}
       <ErrorBanner message={err} />
       <PartialResultsNotice active={Boolean(jobActive)} completed={0} total={1} label="concept board" />
 
@@ -284,7 +271,7 @@ export default function WeeklyView({ ctx }) {
                         <ConceptCard
                           key={idea.id}
                           idea={idea}
-                          brief={briefs[idea.id] || idea.sourceEvidence?.brief_copy}
+                          brief={idea.sourceEvidence?.brief_copy}
                           briefing={briefing}
                           updating={updating}
                           approve={approve}
@@ -317,6 +304,7 @@ function SegmentedFilter({ items, value, onChange, counts, compact = false }) {
 }
 
 function ConceptCard({ idea, brief, briefing, updating, approve, updateStatus, makeBrief }) {
+  const writing = briefing.has(idea.id);
   const approved = idea.status === "approved" || idea.status === "sent_to_inspo";
   const rejected = idea.status === "rejected";
   const approving = updating === `${idea.id}:approved`;
@@ -347,9 +335,9 @@ function ConceptCard({ idea, brief, briefing, updating, approve, updateStatus, m
         </div>
 
         <div className="mt-5 flex flex-wrap items-center gap-3">
-          <button type="button" onClick={() => makeBrief(idea.id)} disabled={Boolean(briefing)} className="cs-weekly-brief-button">
-            {briefing === idea.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <ClipboardList className="h-4 w-4" />}
-            {briefing === idea.id ? "Writing…" : idea.format === "static" ? (brief ? "Regenerate Brief" : "Generate Brief") : (brief ? "Regenerate Script" : "Generate Script")}
+          <button type="button" onClick={() => makeBrief(idea.id)} disabled={writing} className="cs-weekly-brief-button">
+            {writing ? <Loader2 className="h-4 w-4 animate-spin" /> : <ClipboardList className="h-4 w-4" />}
+            {writing ? "Writing…" : idea.format === "static" ? (brief ? "Regenerate Brief" : "Generate Brief") : (brief ? "Regenerate Script" : "Generate Script")}
           </button>
           <span className="flex-1" />
           {!approved && (
@@ -399,7 +387,7 @@ SegmentedFilter.propTypes = { items: PropTypes.array.isRequired, value: PropType
 ConceptCard.propTypes = {
   idea: PropTypes.object.isRequired,
   brief: PropTypes.object,
-  briefing: PropTypes.string,
+  briefing: PropTypes.instanceOf(Set).isRequired,
   updating: PropTypes.string,
   approve: PropTypes.func.isRequired,
   updateStatus: PropTypes.func.isRequired,
