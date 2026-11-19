@@ -143,7 +143,7 @@ const hasCatalogBinding = (c) => {
   return String(c.campaign_product_source || "").toUpperCase() === "CATALOG";
 };
 
-// Image ads work on manual Reach/Traffic/Lead Gen and Smart+ Traffic; other campaigns get videos only.
+// Image ads work on manual Reach/Traffic/Lead Gen and Smart+ Reach/Traffic; other campaigns get videos only.
 const IMAGE_AD_OBJECTIVES = { REACH: "Reach", TRAFFIC: "Traffic", LEAD_GENERATION: "Lead Generation", LANDING_PAGE: "Reach" };
 const PRODUCT_AD_SOURCES = new Set(["CATALOG", "STORE", "SHOWCASE"]);
 
@@ -154,7 +154,7 @@ const getImageAdSupport = (campaign, adGroupObjs = []) => {
     isCatalogSourcedCampaign(campaign) ||
     isSalesObjective(campaign) ||
     adGroupObjs.some((ag) => PRODUCT_AD_SOURCES.has(String(ag?.product_source || "").toUpperCase()));
-  const supported = !productAds && (smart ? objective === "TRAFFIC" : Boolean(IMAGE_AD_OBJECTIVES[objective]));
+  const supported = !productAds && (smart ? objective === "TRAFFIC" || objective === "REACH" :Boolean(IMAGE_AD_OBJECTIVES[objective]));
   return { supported };
 };
 
