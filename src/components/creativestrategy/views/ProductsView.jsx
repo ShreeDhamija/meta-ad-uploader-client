@@ -250,15 +250,16 @@ export default function ProductsView({ ctx }) {
       </TabsContent>
 
       <TabsContent value="context" className="mt-0">
-        <ProductEditorNav onBack={() => setTab("products")} />
+        <ProductEditorNav onBack={() => { if (!ctx.confirmLeave || ctx.confirmLeave()) setTab("products"); }} />
         <ContextEditor
           productId={selectedProductId}
           productName={selectedProduct?.name}
           productUrl={selectedProduct?.url}
           renderHeaderActions={renderHeaderActions}
+          setUnsavedChanges={ctx.setUnsavedChanges}
         />
         <div className="mt-7">
-          <BrandingEditor clientId={selectedBrandId} productId={selectedProductId} productName={selectedProduct?.name} />
+          <BrandingEditor clientId={selectedBrandId} productId={selectedProductId} productName={selectedProduct?.name} setUnsavedChanges={ctx.setUnsavedChanges} />
         </div>
       </TabsContent>
     </Tabs>
@@ -284,7 +285,7 @@ ProductEditorNav.propTypes = { onBack: PropTypes.func.isRequired };
 
 // Context editor — per-category manual intel + "Run ingestion" (scrape the
 // product URL to auto-fill).
-function ContextEditor({ productId, productName, productUrl, renderHeaderActions }) {
+function ContextEditor({ productId, productName, productUrl, renderHeaderActions, setUnsavedChanges }) {
   const models = useRunModels(productId);
   const [intel, setIntel] = useState({});
   const [drafts, setDrafts] = useState({});
@@ -313,6 +314,11 @@ function ContextEditor({ productId, productName, productUrl, renderHeaderActions
   }, [load]);
 
   const { job: ingestJob, start: startIngest } = useJobRunner({ kind: "ingest_context", productId, onComplete: load });
+  const anyDirty = CONTEXT_ORDER.some((t) => (drafts[t] ?? "") !== (intel[t]?.contentText || ""));
+  useEffect(() => {
+    setUnsavedChanges?.("product-context", anyDirty ? "You have unsaved product context edits. Leave without saving?" : null);
+  }, [anyDirty, setUnsavedChanges]);
+  useEffect(() => () => setUnsavedChanges?.("product-context", null), [setUnsavedChanges]);
 
   const save = async (type) => {
     setErr(null);
@@ -411,4 +417,5 @@ ContextEditor.propTypes = {
   productName: PropTypes.string,
   productUrl: PropTypes.string,
   renderHeaderActions: PropTypes.func.isRequired,
+  setUnsavedChanges: PropTypes.func,
 };

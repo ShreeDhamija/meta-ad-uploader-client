@@ -15,7 +15,7 @@ import { BookOpen, Box, CalendarRange, Flame, FlaskConical, Heart, Layers, LogOu
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Toaster } from "sonner";
 import { createPortal } from "react-dom";
-import { useNavigate } from "react-router-dom";
+import { useBlocker, useNavigate } from "react-router-dom";
 import CostTracker from "./CostTracker";
 import CreativeStrategyOnboarding from "./CreativeStrategyOnboarding";
 import "./creative-strategy.css";
@@ -78,6 +78,37 @@ export default function CreativeStrategyLayout() {
   }, [setHasSeenCreativeStrategyOnboarding]);
 
   const [activeTab, setActiveTab] = useState("brands");
+  // Unsaved edits, by source (e.g. brand guidelines). Leaving the tab, switching
+  // account/product, navigating away or closing the page asks first.
+  const unsavedRef = useRef(new Map());
+  const unsavedMessage = () => [...unsavedRef.current.values()][0] || null;
+  const setUnsavedChanges = useCallback((key, message) => {
+    if (message) unsavedRef.current.set(key, message); else unsavedRef.current.delete(key);
+  }, []);
+  const confirmLeave = useCallback(() => {
+    const message = [...unsavedRef.current.values()][0];
+    return !message || window.confirm(message);
+  }, []);
+  useEffect(() => {
+    const onBeforeUnload = (e) => {
+      if (!unsavedRef.current.size) return;
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, []);
+  const blocker = useBlocker(useCallback(({ currentLocation, nextLocation }) =>
+    unsavedRef.current.size > 0 && currentLocation.pathname !== nextLocation.pathname, []));
+  useEffect(() => {
+    if (blocker.state !== "blocked") return;
+    if (window.confirm(unsavedMessage() || "Leave without saving your changes?")) blocker.proceed();
+    else blocker.reset();
+  }, [blocker]);
+  const switchTab = useCallback((key) => {
+    if (key !== activeTab && !confirmLeave()) return;
+    setActiveTab(key);
+  }, [activeTab, confirmLeave]);
   const [creativeClients, setCreativeClients] = useState([]);
   const [creativeClientsLoading, setCreativeClientsLoading] = useState(false);
   const [selectedBrandId, setSelectedBrandId] = useState(null);
@@ -259,7 +290,9 @@ export default function CreativeStrategyLayout() {
     selectedProductId,
     setSelectedProductId,
     reloadProducts: () => loadProducts(selectedBrandId),
-    goTo: setActiveTab,
+    goTo: switchTab,
+    confirmLeave,
+    setUnsavedChanges,
     renderHeaderActions,
     renderHeaderStatus,
   };
@@ -326,7 +359,7 @@ export default function CreativeStrategyLayout() {
                 {NAV.map(({ key, label, icon: Icon }) => (
                   <button
                     key={key}
-                    onClick={() => setActiveTab(key)}
+                    onClick={() => switchTab(key)}
                     className={cn(
                       "relative flex h-10 w-full items-center justify-start gap-2 rounded-2xl px-4 py-2 transition-all max-lg:justify-center max-lg:px-2",
                       activeTab === key
@@ -367,7 +400,7 @@ export default function CreativeStrategyLayout() {
               <div className="cs-global-selector-card__selectors">
                 <Select
                   value={selectedBrandId || ""}
-                  onValueChange={(value) => setSelectedBrandId(value || null)}
+                  onValueChange={(value) => { if (confirmLeave()) setSelectedBrandId(value || null); }}
                   disabled={selectorsDisabled}
                 >
                   <SelectTrigger className="cs-pill-control w-[230px] px-4">
@@ -383,7 +416,7 @@ export default function CreativeStrategyLayout() {
                 {showProductSelector && (
                   <Select
                     value={selectedProductId || ""}
-                    onValueChange={(value) => setSelectedProductId(value || null)}
+                    onValueChange={(value) => { if (confirmLeave()) setSelectedProductId(value || null); }}
                     disabled={selectorsDisabled || !selectedBrandId || productsLoading}
                   >
                     <SelectTrigger className="cs-pill-control w-[230px] px-4">
