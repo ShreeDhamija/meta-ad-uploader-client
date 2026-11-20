@@ -56,6 +56,9 @@ const TITLE_KEYS = [
   "ad_derived_persona", "research_persona", "phase", "concept_name", "question", "request",
 ];
 
+/** How crowded the market's claims are (Eugene Schwartz's five stages). */
+const SOPHISTICATION_HINT = "Schwartz scale: 1 = a new claim works on its own, 5 = buyers have heard every claim; win on identity and experience";
+
 // ── Primitives ──────────────────────────────────────────────────────────────
 
 function Block({ icon: Icon, label, tone, children }) {
@@ -305,7 +308,8 @@ function genericBlocks(data, handled = [], options = {}) {
 }
 
 /** Ingested product context is stored as { text }: bullets, or a markdown table. */
-function contextTextBlocks(value, { label, icon, quotes } = {}) {
+/** Single-list sections render bare: the section header already names them. */
+function contextTextBlocks(value, { quotes, testimonial } = {}) {
   const body = text(value);
   if (!body) return [];
   const lines = body.split(/\n+/).map((line) => line.trim()).filter(Boolean);
@@ -316,26 +320,24 @@ function contextTextBlocks(value, { label, icon, quotes } = {}) {
       .filter((cells) => !cells.every((cell) => /^:?-{2,}:?$/.test(cell)));
     const [head, ...bodyRows] = rows;
     return [block("context-table", (
-      <Block icon={icon} label={label}>
+        <div className="cs-research-bare">
         <div className="cs-research-table-wrap">
           <table className="cs-research-table">
             <thead><tr>{head.map((cell, index) => <th key={index} scope="col">{cell}</th>)}</tr></thead>
             <tbody>{bodyRows.map((cells, rowIndex) => <tr key={rowIndex}>{cells.map((cell, index) => <td key={index}>{cell}</td>)}</tr>)}</tbody>
           </table>
         </div>
-      </Block>
+        </div>
     ), { key: true, wide: true })];
   }
   const items = strings(body);
   if (quotes) {
     return [block("context-quotes", (
-      <Block icon={icon} label={label}>
-        <div className="cs-research-quotes">{items.map((item, index) => <QuoteCard key={index} quote={item} />)}</div>
-      </Block>
+      <div className={`cs-research-quotes ${testimonial ? "is-testimonials" : ""}`}>{items.map((item, index) => <QuoteCard key={index} quote={item} />)}</div>
     ), { key: true, wide: true })];
   }
-  if (items.length > 1) return [listBlock("context-list", label, icon, items, { key: true, wide: true })];
-  return [textBlock("context-text", label, icon, body, { key: true, wide: true })];
+  if (items.length > 1) return [block("context-list", <div className="cs-research-bare"><SmartList items={items} /></div>, { key: true, wide: true })];
+  return [block("context-text", <div className="cs-research-bare"><Para value={body} /></div>, { key: true, wide: true })];
 }
 
 const leadBlock = (value, tags) => (text(value) ? block("lead", <Lead tags={tags}>{text(value)}</Lead>, { key: true, wide: true }) : null);
@@ -445,7 +447,7 @@ function marketBlocks(data, options = {}) {
   const keyed = (extra) => ({ ...options, ...extra });
   return [
     statsBlock([
-      { label: "Sophistication", value: level != null && level !== "" ? `Stage ${level} of 5` : null },
+      { label: "Sophistication", value: level != null && level !== "" ? `Stage ${level} of 5` : null, hint: SOPHISTICATION_HINT },
       { label: "Competition", value: words(data.competitive_density) },
     ], { id: "market-stats", ...options }),
     textBlock("landscape", "Market landscape", MapIcon, data.market_landscape, keyed({ wide: true })),
@@ -487,7 +489,7 @@ function brandDeepDiveBlocks(data, { full }) {
     leadBlock(data.summary),
     statsBlock([
       { label: "Market", value: text(data.detected_market) },
-      { label: "Sophistication", value: level != null && level !== "" ? `Stage ${level} of 5` : null },
+      { label: "Sophistication", value: level != null && level !== "" ? `Stage ${level} of 5` : null, hint: SOPHISTICATION_HINT },
       { label: "Competition", value: words(market.competitive_density) },
       { label: "Starts at", value: text(data.pricing?.starts_at) },
     ]),
@@ -891,32 +893,68 @@ function itemsBlocks(type, data) {
     benefits: { label: "Benefits", icon: Sparkles },
     objections: { label: "Objections", icon: ShieldAlert },
     pain_points: { label: "Pain points", icon: Zap },
-    testimonials: { label: "Testimonials", icon: Quote, quotes: true },
+    testimonials: { label: "Testimonials", icon: Quote, quotes: true, testimonial: true },
   }[type] || { label: humanize(type), icon: FileSearch };
   if (typeof data?.text === "string") return contextTextBlocks(data.text, config);
   const items = list(data?.items);
   if (items.length === 0) return genericBlocks(data, [], { key: true });
   if (items.some((item) => item && typeof item === "object")) {
     return [
-      statsBlock([{ label: config.label, value: items.length }]),
-      block("items", <Block icon={config.icon} label={config.label}><Items>{type === "pain_points" ? painCards(items) : items.map((item, index) => <GenericCard key={index} item={item} />)}</Items></Block>, { key: true, wide: true }),
+      block("items", <Items>{type === "pain_points" ? painCards(items) : items.map((item, index) => <GenericCard key={index} item={item} />)}</Items>, { key: true, wide: true }),
     ];
   }
-  if (config.chips) return [listBlock("items", `${config.label} (${items.length})`, config.icon, items, { key: true, wide: true, chips: true })];
-  return [block("items", (
-    <Block icon={config.icon} label={`${config.label} (${items.length})`}>
-      <div className="cs-research-tiles">{strings(items).map((item, index) => <p key={index}><span>{index + 1}</span>{item}</p>)}</div>
-    </Block>
-  ), { key: true, wide: true })];
+  if (config.chips) return [block("items", <div className="cs-research-bare"><Chips items={items} /></div>, { key: true, wide: true })];
+  return [block("items", <div className="cs-research-tiles">{strings(items).map((item, index) => <p key={index}><span>{index + 1}</span>{item}</p>)}</div>, { key: true, wide: true })];
 }
 
-function brandingBlocks(data) {
-  if (typeof data.text === "string") return contextTextBlocks(data.text, { label: "Branding", icon: Palette });
+/** Colors and fonts saved by product ingestion (brand guidelines). */
+function brandKitBlock(guidelines) {
+  const g = guidelines || {};
+  const colors = [["Primary", g.primaryColors], ["Secondary", g.secondaryColors], ["Accent", g.accentColors]]
+    .flatMap(([role, rows]) => list(rows).map((row) => (typeof row === "string" ? { hex: row } : row || {}))
+      .map((row) => ({ role, hex: row.hex || row.hex_code || row.color || "", name: row.name || "", usage: row.usage || "" })))
+    .filter((c) => /^#?[0-9a-f]{3,8}$/i.test(c.hex));
+  const fonts = list(g.fonts).map((row) => (typeof row === "string" ? { family: row } : row || {}))
+    .map((row) => ({ family: row.family || row.font_family || row.name || "", weight: row.weight || "", usage: row.usage || "" }))
+    .filter((f) => f.family);
+  if (!colors.length && !fonts.length) return null;
+  return block("brand-kit", (
+    <Block icon={Palette} label="Colors and typography">
+      <div className="cs-brand-kit">
+        {colors.length > 0 && (
+          <div className="cs-brand-kit__colors">
+            {colors.map((c, index) => (
+              <div key={`${c.hex}-${index}`} className="cs-brand-kit__swatch" title={c.usage || undefined}>
+                <i style={{ background: c.hex.startsWith("#") ? c.hex : `#${c.hex}` }} />
+                <div><strong>{c.name || c.hex.toUpperCase()}</strong><span>{c.role}{c.name ? ` · ${c.hex.toUpperCase()}` : ""}</span></div>
+              </div>
+            ))}
+          </div>
+        )}
+        {fonts.length > 0 && (
+          <div className="cs-brand-kit__fonts">
+            {fonts.map((f, index) => (
+              <div key={`${f.family}-${index}`}>
+                <strong style={{ fontFamily: `"${f.family}", inherit` }}>{f.family}</strong>
+                <span>{[f.weight, f.usage].filter(Boolean).join(" · ")}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </Block>
+  ), { key: true, wide: true });
+}
+
+function brandingBlocks(data, { guidelines } = {}) {
+  const kit = brandKitBlock(guidelines);
+  if (typeof data.text === "string") return [kit, ...contextTextBlocks(data.text, { label: "Branding", icon: Palette })];
   const tones = typeof data.tone_of_voice === "string" ? data.tone_of_voice.split(/\s*,\s*/).filter(Boolean) : strings(data.tone_of_voice);
   return [
+    kit,
     statsBlock([
       { label: "Market", value: text(data.detected_market) },
-      { label: "Sophistication", value: data.market_sophistication != null && data.market_sophistication !== "" ? `Stage ${data.market_sophistication} of 5` : null },
+      { label: "Sophistication", value: data.market_sophistication != null && data.market_sophistication !== "" ? `Stage ${data.market_sophistication} of 5` : null, hint: SOPHISTICATION_HINT },
     ]),
     tones.length > 0 || text(data.writing_style) ? block("voice", (
       <Block icon={Mic} label="Voice">
@@ -1038,7 +1076,7 @@ const SECTION_BLOCKS = {
   persona_summary_table: personaSummaryBlocks,
   market_analysis: (data) => marketBlocks(data, { key: true }),
   pricing: (data) => pricingBlocks(data),
-  branding: brandingBlocks,
+  branding: (data, options) => brandingBlocks(data, options),
   persona_cross_map: crossMapBlocks,
   secondary_audience_signals: secondarySignalsBlocks,
   customer_avatars: avatarsBlocks,
@@ -1084,11 +1122,11 @@ export function researchSectionMeta(type, data) {
     review_mining: () => [count(data.pain_points, "pain point"), count(data.objections, "objection")],
     language_bank: () => [list(data.entries).length ? count(data.entries, "phrase") : "No phrases captured"],
     competitor_scan: () => [count(data.competitors, "competitor"), count(data.untapped_angles, "untapped angle")],
-    sentiment_alignment: () => ["Copy guardrails", count(data.brand_avoids, "register to avoid", "registers to avoid")],
+    sentiment_alignment: () => ["What copy can and can't say for this brand", count(data.brand_avoids, "tone to avoid", "tones to avoid")],
     consumer_research_report: () => [count(data.purchase_drivers, "purchase driver"), count(data.common_objections, "objection")],
     persona_summary_table: () => [count(data.columns, "persona"), count(data.rows, "field")],
     persona_cross_map: () => [data.coverage_summary?.coverage_percentage != null ? `${percent(data.coverage_summary.coverage_percentage)} coverage` : null, count(data.matched_personas, "match", "matches")],
-    secondary_audience_signals: () => [count(data.items, "audience signal")],
+    secondary_audience_signals: () => ["Audiences with some evidence, not enough for a full persona", count(data.items, "audience")],
     customer_avatars: () => [count(data.personas, "persona")],
     market_analysis: () => [data.sophistication_level != null ? `Stage ${data.sophistication_level} sophistication` : null, words(data.competitive_density)],
     pricing: () => [text(data.starts_at) && text(data.starts_at).length <= 40 ? `From ${text(data.starts_at)}` : null, count(data.tiers, "tier")],
@@ -1102,10 +1140,10 @@ export function researchSectionMeta(type, data) {
  * Expanded body of one research section: the key blocks, then every block once
  * "View Full Details" is clicked.
  */
-export function ResearchSectionBody({ type, data, renderPersona }) {
+export function ResearchSectionBody({ type, data, renderPersona, guidelines }) {
   const [full, setFull] = useState(false);
   const toggleRef = useRef(null);
-  const blocks = sectionBlocks(type, data, { full, renderPersona });
+  const blocks = sectionBlocks(type, data, { full, renderPersona, guidelines });
   const hasMore = full || blocks.some((entry) => !entry.key);
   const visible = (full ? blocks : blocks.filter((entry) => entry.key)).filter((entry) => !entry.placeholder);
 
@@ -1154,4 +1192,4 @@ SmartValue.propTypes = { value: PropTypes.any };
 GenericCard.propTypes = { item: PropTypes.any };
 CompetitorCard.propTypes = { competitor: PropTypes.object.isRequired, index: PropTypes.number.isRequired, full: PropTypes.bool };
 SummaryCell.propTypes = { value: PropTypes.any };
-ResearchSectionBody.propTypes = { type: PropTypes.string.isRequired, data: PropTypes.any, renderPersona: PropTypes.func };
+ResearchSectionBody.propTypes = { type: PropTypes.string.isRequired, data: PropTypes.any, renderPersona: PropTypes.func, guidelines: PropTypes.object };

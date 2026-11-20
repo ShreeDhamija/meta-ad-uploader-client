@@ -21,11 +21,13 @@ const ORDER = [
   "reddit_sentiment", "brand_deep_dive", "consumer_research_report", "review_mining", "language_bank",
   "sentiment_alignment", "competitor_scan", "persona_cross_map", "secondary_audience_signals",
   "persona_summary_table", "market_analysis", "features", "benefits", "pricing",
-  "branding", "pain_points", "objections", "testimonials", "customer_avatars",
+  "branding", "pain_points", "objections", "testimonials",
 ];
 // Stored per product but owned by other pages: personas render above, trending
 // creative on Inspiration, and the ad audit on Insights.
-const NON_RESEARCH_TYPES = new Set(["personas", "trending_creative", "creative_strategy_audit"]);
+// customer_avatars (the website ingest's persona list) repeats the personas
+// shown at the top of the page, so it isn't listed again.
+const NON_RESEARCH_TYPES = new Set(["personas", "trending_creative", "creative_strategy_audit", "customer_avatars"]);
 
 const PROGRESSIVE_RESEARCH_SECTIONS = [
   { type: "reddit_sentiment", title: "Reddit sentiment", phase: "mining_reddit", icon: redditIcon },
@@ -67,6 +69,14 @@ export default function ResearchView({ ctx }) {
   const {
     selectedProduct, selectedProductId, renderHeaderActions,
   } = ctx;
+  // Brand guidelines from product ingestion (colors, fonts) for the Branding section.
+  const [guidelines, setGuidelines] = useState(null);
+  useEffect(() => {
+    let active = true;
+    setGuidelines(null);
+    if (ctx.selectedBrandId) creativeApi.getBranding(ctx.selectedBrandId).then((r) => { if (active) setGuidelines(r.guidelines || null); }).catch(() => {});
+    return () => { active = false; };
+  }, [ctx.selectedBrandId]);
   const models = useRunModels(selectedProductId);
   const [intel, setIntel] = useState({});
   const [types, setTypes] = useState([]);
@@ -280,7 +290,7 @@ export default function ResearchView({ ctx }) {
                       <ProgressiveSection title={section.title} active={stageActive(section.phase)} lines={2} className={`rounded-[20px] ${section.icon ? "[&_h3]:pl-7" : ""}`} />
                     </div>
                   ))}
-                {extraSectionTypes.map((type) => <ResearchIntelRow key={type} type={type} title={humanize(type)} data={intel[type]} />)}
+                {extraSectionTypes.map((type) => <ResearchIntelRow key={type} type={type} title={humanize(type)} data={intel[type]} guidelines={guidelines} />)}
               </div>
               {!intel.persona_cross_map && <p className="mt-3 text-xs text-neutral-500">Persona cross-map compares research personas with audiences found in your ads. Run ad analysis, then Research, to build it. The persona summary table above works from research alone.</p>}
           </section>
@@ -514,7 +524,7 @@ function PersonaListSection({ icon, label, items }) {
   );
 }
 
-function ResearchIntelRow({ type, title, data, icon }) {
+function ResearchIntelRow({ type, title, data, icon, guidelines }) {
   const [open, setOpen] = useState(false);
   const [headerStuck, setHeaderStuck] = useState(false);
   const stickySentinelRef = useRef(null);
@@ -567,7 +577,7 @@ function ResearchIntelRow({ type, title, data, icon }) {
       </button>
       {open && (
         <div className="cs-research-intel__body">
-          <ResearchSectionBody type={type} data={data} renderPersona={renderAvatarProfile} />
+          <ResearchSectionBody type={type} data={data} renderPersona={renderAvatarProfile} guidelines={guidelines} />
         </div>
       )}
     </article>
@@ -677,6 +687,6 @@ PersonaDialog.propTypes = {
 PersonaProfile.propTypes = { persona: PropTypes.object.isRequired };
 PersonaBlock.propTypes = { icon: PropTypes.elementType.isRequired, label: PropTypes.string.isRequired, children: PropTypes.node };
 PersonaListSection.propTypes = { icon: PropTypes.elementType.isRequired, label: PropTypes.string.isRequired, items: PropTypes.any };
-ResearchIntelRow.propTypes = { type: PropTypes.string.isRequired, title: PropTypes.string.isRequired, data: PropTypes.any, icon: PropTypes.string };
+ResearchIntelRow.propTypes = { type: PropTypes.string.isRequired, title: PropTypes.string.isRequired, data: PropTypes.any, icon: PropTypes.string, guidelines: PropTypes.object };
 ResearchDetails.propTypes = { data: PropTypes.any, exclude: PropTypes.instanceOf(Set) };
 ResearchValue.propTypes = { data: PropTypes.any };
