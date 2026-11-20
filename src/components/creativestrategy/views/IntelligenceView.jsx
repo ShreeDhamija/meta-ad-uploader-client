@@ -2,7 +2,8 @@
 // creative_strategy_audit aggregates plus per-ad ad_creative_insights evidence.
 import { useCallback, useEffect, useRef, useState } from "react";
 import PropTypes from "prop-types";
-import { AlertTriangle, ChevronDown, ChevronRight, Loader2, Zap } from "lucide-react";
+import { AlertTriangle, ChevronDown, ChevronRight, Filter, Loader2, X, Zap } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { matchInsightAds, funnelBuckets } from "../insight-metrics";
 import { creativeApi } from "@/lib/creativeApi";
 import RunModelControls from "../RunModelControls";
@@ -34,6 +35,7 @@ export default function IntelligenceView({ ctx }) {
   currentProduct.current = selectedProductId;
   const requestId = useRef(0);
   const [trending, setTrending] = useState(null);
+  const [adNameFilter, setAdNameFilter] = useState(null);
 
   const load = useCallback(async (pid, { silent = false } = {}) => {
     const request = ++requestId.current;
@@ -43,6 +45,7 @@ export default function IntelligenceView({ ctx }) {
       const [r, ang] = await Promise.all([creativeApi.getInsights(pid), creativeApi.getAngles(pid).catch(() => ({ angles: [] }))]);
       if (currentProduct.current !== pid || request !== requestId.current) return;
       setUpdatedAt(r.updatedAt || null);
+      setAdNameFilter(r.adNameFilter ?? null);
       setAds(r.ads || []); setAudit(r.audit || null); setAngles(ang.angles || []); setTrending(r.trending || null);
     } catch (e) { if (!silent && currentProduct.current === pid) setErr(e.message); } finally { if (!silent && currentProduct.current === pid) setLoading(false); }
   }, []);
@@ -130,6 +133,11 @@ export default function IntelligenceView({ ctx }) {
       )}
       {selectedProductId && <>
         <RunModelControls models={models} operations={RUN_OPERATIONS.intelligence} disabled={Boolean(analyzeActive)} />
+        <AdNameScopeControl current={adNameFilter} busy={Boolean(analyzeActive)} onSave={async (value) => {
+          const saved = await creativeApi.saveAdNameFilter(selectedProductId, value);
+          setAdNameFilter(saved.adNameFilter ?? null);
+          await load(selectedProductId, { silent: true });
+        }} />
         <p className="text-xs text-neutral-500">Model choices apply to new analyses and the next audit. Completed ad analyses are reused.</p>
       </>}
       <ErrorBanner message={err} />
@@ -763,3 +771,55 @@ function isActiveJob(job) {
 }
 
 IntelligenceView.propTypes = { ctx: PropTypes.object.isRequired };
+
+/**
+ * Per-product "ad name contains" scope for accounts that run several products
+ * (as in the source app). Insights, the audit, trending, Monthly Review and
+ * brand examples then cover only this product's ads. Takes effect on the next
+ * Run Analysis.
+ */
+function AdNameScopeControl({ current, busy, onSave }) {
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+  const trimmed = draft.trim();
+  const save = async (value) => {
+    setSaving(true); setError(null);
+    try { await onSave(value); setOpen(false); } catch (e) { setError(e.message); } finally { setSaving(false); }
+  };
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <Popover open={open} onOpenChange={(o) => { setOpen(o); if (o) { setDraft(current ?? ""); setError(null); } }}>
+        <PopoverTrigger asChild>
+          <button type="button" disabled={busy} className="cs-monthly-filter-button">
+            <Filter className="h-3.5 w-3.5" />
+            {current ? <>Ads named &ldquo;<strong>{current}</strong>&rdquo;</> : "All ads in account"}
+          </button>
+        </PopoverTrigger>
+        <PopoverContent align="start" className="w-80 space-y-3 bg-white">
+          <div className="space-y-1">
+            <p className="text-sm font-semibold text-neutral-800">This product&apos;s ads</p>
+            <p className="text-xs leading-relaxed text-neutral-500">
+              If this ad account runs more than one product, enter text every ad for this product has in its name. Insights, the audit, trending, Monthly Review and brand examples will then only use those ads. Run Analysis afterwards to rebuild.
+            </p>
+          </div>
+          <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); if (trimmed && trimmed !== current) save(trimmed); }}>
+            <input autoFocus value={draft} maxLength={100} placeholder="e.g. FC2" onChange={(e) => setDraft(e.target.value)} className="cs-generate-control h-9 min-w-0 flex-1 px-3 text-sm" />
+            <button type="submit" disabled={!trimmed || trimmed === current || saving} className="cs-primary-button !h-9 !px-4">
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
+            </button>
+          </form>
+          {current && (
+            <button type="button" disabled={saving} onClick={() => save(null)} className="flex w-full items-center justify-center gap-1.5 text-xs text-neutral-600 hover:text-neutral-900">
+              <X className="h-3.5 w-3.5" />Use all ads in the account
+            </button>
+          )}
+          {error && <p className="text-xs text-red-600">{error}</p>}
+        </PopoverContent>
+      </Popover>
+      {current && <span className="text-[11px] text-neutral-500">Run Analysis to rebuild with this scope.</span>}
+    </div>
+  );
+}
+AdNameScopeControl.propTypes = { current: PropTypes.string, busy: PropTypes.bool, onSave: PropTypes.func.isRequired };

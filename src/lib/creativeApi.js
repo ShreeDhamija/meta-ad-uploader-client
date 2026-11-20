@@ -74,6 +74,7 @@ export const creativeApi = {
   getMonthlyReview: (productId) => request(`/monthly-review?productId=${encodeURIComponent(productId)}`),
   runMonthlyReview: (productId) => request("/monthly-review/run", { method: "POST", body: { productId } }),
   saveMonthlyReviewNameFilter: (productId, value) => request("/monthly-review/name-filter", { method: "PUT", body: { productId, value } }),
+  saveAdNameFilter: (productId, filter) => request("/insights/ad-name-filter", { method: "PATCH", body: { productId, filter } }),
   getLearnings: (clientId) => request(`/learnings?clientId=${encodeURIComponent(clientId)}`),
   createLearning: (body) => request("/learnings", { method: "POST", body }),
   updateLearning: (id, body) => request(`/learnings/${encodeURIComponent(id)}`, { method: "PATCH", body }),

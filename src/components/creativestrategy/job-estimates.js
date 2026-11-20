@@ -9,7 +9,10 @@
 export const JOB_ESTIMATE_MINUTES = {
   ingest_context: { first: 2, repeat: 2 },
   research: { first: 10, repeat: 8 },
-  analyze_ads: { first: 10, repeat: 4 },
+  // Measured 2026-11-20 (FC2, 641 spending ads): first run 10.3 min — ingest
+  // ~1, 67 ads analyzed at 8 at a time ~6.7, audit ~2.5. Later runs analyze
+  // only ads new to the top set but still ingest and re-audit.
+  analyze_ads: { first: 11, repeat: 5 },
   generate_library: { first: 10, repeat: 5 },
   weekly_strategy: { first: 10, repeat: 6 },
   monthly_review: { first: 10, repeat: 5 },
