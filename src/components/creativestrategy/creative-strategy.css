@@ -404,7 +404,7 @@
   line-height: 1.55;
 }
 
-.cs-brand-card {
+.cs-guide-card {
   display: grid;
   align-content: start;
   gap: 16px;
@@ -415,7 +415,7 @@
   box-shadow: 0 2px 6px rgba(29, 29, 29, 0.04);
 }
 
-.cs-brand-card__icon {
+.cs-guide-card__icon {
   display: flex;
   flex-shrink: 0;
   padding: 8px;
@@ -426,14 +426,14 @@
   box-shadow: 0 2px 5px rgba(29, 29, 29, 0.06);
 }
 
-.cs-brand-card__title {
+.cs-guide-card__title {
   color: #262626;
   font-size: 15px;
   font-weight: 600;
   line-height: 1.35;
 }
 
-.cs-brand-card__hint {
+.cs-guide-card__hint {
   margin-top: 2px;
   color: #737373;
   font-size: 12px;
@@ -607,19 +607,24 @@ textarea.cs-brand-input { resize: vertical; }
 .cs-brand-dropzone strong { color: #262626; font-size: 13.5px; font-weight: 600; }
 .cs-brand-dropzone span { color: #8a8a8a; font-size: 12px; }
 
-/* Images keep their own aspect ratio: CSS columns, never a fixed-height crop. */
+/* Four per row; each image keeps its own aspect ratio (no fixed-height crop). */
 .cs-brand-masonry {
-  columns: 2 170px;
-  column-gap: 12px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: start;
+  gap: 12px;
 }
 
-.cs-brand-masonry.is-dense { columns: 3 120px; column-gap: 10px; }
+.cs-brand-masonry.is-dense { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 720px) {
+  .cs-brand-masonry { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cs-brand-masonry.is-dense { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
 
 .cs-brand-tile {
   position: relative;
   display: block;
   width: 100%;
-  margin-bottom: 12px;
   overflow: hidden;
   break-inside: avoid;
   border: 1px solid #e5e5e5;
@@ -628,7 +633,7 @@ textarea.cs-brand-input { resize: vertical; }
   box-shadow: 0 2px 6px rgba(29, 29, 29, 0.05);
 }
 
-.cs-brand-masonry.is-dense .cs-brand-tile { margin-bottom: 10px; border-radius: 13px; }
+.cs-brand-masonry.is-dense .cs-brand-tile { border-radius: 13px; }
 .cs-brand-tile img { display: block; width: 100%; height: auto; }
 
 .cs-brand-tile.is-pickable { cursor: pointer; transition: border-color 150ms ease, box-shadow 150ms ease; }
@@ -2117,7 +2122,6 @@ textarea.cs-research-input {
 .cs-research-nested .cs-research-nested {
   margin-top: 7px;
   padding-left: 12px;
-  border-left: 1px solid rgba(108, 52, 3, 0.18);
 }
 
 .cs-research-muted {
@@ -2494,7 +2498,6 @@ html body #root .creative-strategy .cs-research-intel.is-open.is-stuck button.cs
   justify-items: start;
   padding: 16px 20px;
   border: 1px solid rgba(194, 97, 26, 0.24);
-  border-left: 4px solid #e8812c;
   border-radius: 16px;
   background: #fff3e6;
 }
@@ -2755,8 +2758,8 @@ html body #root .creative-strategy .cs-research-intel.is-open.is-stuck button.cs
 .cs-research-quote {
   margin: 0;
   padding: 9px 12px 9px 13px;
-  border-left: 3px solid var(--cs-orange);
-  border-radius: 0 12px 12px 0;
+  border: 1px solid rgba(108, 52, 3, 0.12);
+  border-radius: 12px;
   background: #fff;
 }
 

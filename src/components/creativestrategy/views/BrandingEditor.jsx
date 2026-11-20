@@ -296,7 +296,7 @@ function ProductImageLibrary({ productId, productName, models }) {
 
       {!productId ? <p className="text-sm text-neutral-400">Select a product above to manage its images.</p> : (
         <div className="grid gap-5">
-          <div className="cs-brand-card">
+          <div className="cs-guide-card">
             <header className="flex flex-wrap items-center justify-between gap-3">
               <div className="cs-weekly-switcher is-compact" role="tablist" aria-label="Add images">
                 {ADD_MODES.map(({ key, label, icon: Icon }) => (
@@ -418,10 +418,10 @@ ProductImageLibrary.propTypes = { productId: PropTypes.string, productName: Prop
 
 function GuidelineCard({ icon: Icon, title, description, children, className = "" }) {
   return (
-    <section className={`cs-brand-card ${className}`}>
+    <section className={`cs-guide-card ${className}`}>
       <header className="flex items-start gap-3">
-        <span className="cs-brand-card__icon"><Icon className="h-4 w-4" /></span>
-        <div><h3 className="cs-brand-card__title">{title}</h3>{description && <p className="cs-brand-card__hint">{description}</p>}</div>
+        <span className="cs-guide-card__icon"><Icon className="h-4 w-4" /></span>
+        <div><h3 className="cs-guide-card__title">{title}</h3>{description && <p className="cs-guide-card__hint">{description}</p>}</div>
       </header>
       {children}
     </section>
