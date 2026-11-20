@@ -15,6 +15,19 @@ import { useJobRunner, useJobs } from "../JobsContext";
 
 const isActive = (job) => job.status == null || job.status === "queued" || job.status === "running";
 
+// Production shape from the strategist (required on every concept): who has
+// to make it, and does it need a camera? Ported from the source app.
+const PRODUCTION_NOTES = {
+  edit_only: { label: "Edit only", hint: "Makeable from footage and assets we already have — no creator needed." },
+  partial_reshoot: { label: "Partial reshoot", hint: "Mostly existing material, but one new beat has to be captured." },
+  new_shoot: { label: "New shoot", hint: "Needs a content creator to film new footage before editing." },
+};
+const UGC_FILTER = "__ugc__";
+const productionKey = (value) => String(value ?? "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+/** "UGC" = a new shoot whose output isn't a static (a creator in front of a camera). */
+const isUgcShoot = (idea) => productionKey(idea.productionNote) === "new_shoot" && !/static|image|carousel/i.test(idea.format ?? "");
+const ALL_FILTERS = { persona: "all", angle: "all", format: "all", awareness: "all", production: "all" };
+
 const TIERS = [
   { key: "all", label: "All" },
   { key: "iteration", label: "Iterations" },
@@ -44,7 +57,7 @@ export default function WeeklyView({ ctx }) {
   const [err, setErr] = useState(null);
   const [tier, setTier] = useState("all");
   const [status, setStatusFilter] = useState("pending");
-  const [filters, setFilters] = useState({ persona: "all", angle: "all", format: "all", awareness: "all" });
+  const [filters, setFilters] = useState(ALL_FILTERS);
   const [startingBrief, setStartingBrief] = useState(null);
   const [loading, setLoading] = useState(false);
   const [updating, setUpdating] = useState(null);
@@ -174,13 +187,16 @@ export default function WeeklyView({ ctx }) {
     angle: unique("suggestedAngle"),
     format: unique("format"),
     awareness: unique("awarenessStage"),
+    production: [...Object.keys(PRODUCTION_NOTES).filter((key) => ideas.some((idea) => productionKey(idea.productionNote) === key)),
+      ...(ideas.some(isUgcShoot) ? [UGC_FILTER] : [])],
   };
   const shown = byStatus.filter((idea) =>
     (tier === "all" || idea.tier === tier) &&
     (filters.persona === "all" || idea.targetPersona === filters.persona) &&
     (filters.angle === "all" || idea.suggestedAngle === filters.angle) &&
     (filters.format === "all" || idea.format === filters.format) &&
-    (filters.awareness === "all" || idea.awarenessStage === filters.awareness));
+    (filters.awareness === "all" || idea.awarenessStage === filters.awareness) &&
+    (filters.production === "all" || (filters.production === UGC_FILTER ? isUgcShoot(idea) : productionKey(idea.productionNote) === filters.production)));
   const conceptColumns = [
     shown.filter((_, index) => index % 2 === 0),
     shown.filter((_, index) => index % 2 === 1),
@@ -243,6 +259,7 @@ export default function WeeklyView({ ctx }) {
                     ["angle", "Angle", options.angle],
                     ["format", "Format", options.format],
                     ["awareness", "Awareness", options.awareness],
+                    ["production", "Production", options.production],
                   ].map(([key, label, values]) => (
                     <Select key={key} value={filters[key]} onValueChange={(value) => setFilters((current) => ({ ...current, [key]: value }))}>
                       <SelectTrigger className="cs-weekly-filter-select w-full px-3">
@@ -250,12 +267,12 @@ export default function WeeklyView({ ctx }) {
                       </SelectTrigger>
                       <SelectContent className="cs-select-content bg-white">
                         <SelectItem value="all">{label}: All</SelectItem>
-                        {values.map((value) => <SelectItem key={value} value={value}>{value}</SelectItem>)}
+                        {values.map((value) => <SelectItem key={value} value={value}>{key === "production" ? (value === UGC_FILTER ? "UGC (creator shoot)" : PRODUCTION_NOTES[value]?.label ?? value) : value}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   ))}
                   {filtersActive && (
-                    <button type="button" onClick={() => setFilters({ persona: "all", angle: "all", format: "all", awareness: "all" })} className="cs-weekly-clear">Clear filters</button>
+                    <button type="button" onClick={() => setFilters(ALL_FILTERS)} className="cs-weekly-clear">Clear filters</button>
                   )}
                 </div>
               </div>
@@ -331,6 +348,11 @@ function ConceptCard({ idea, brief, briefing, updating, approve, updateStatus, m
           {idea.format && <span className="cs-weekly-pill">{idea.format}</span>}
           {idea.awarenessStage && <span className="cs-weekly-pill">{idea.awarenessStage}</span>}
           {idea.targetPersona && <span className="cs-weekly-pill">{idea.targetPersona}</span>}
+          {PRODUCTION_NOTES[productionKey(idea.productionNote)] && (
+            <span className={`cs-weekly-pill is-production is-${productionKey(idea.productionNote)}`} title={PRODUCTION_NOTES[productionKey(idea.productionNote)].hint}>
+              {PRODUCTION_NOTES[productionKey(idea.productionNote)].label}
+            </span>
+          )}
         </div>
 
         <div className="mt-5 flex flex-wrap items-center gap-3">

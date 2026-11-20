@@ -382,7 +382,7 @@ function TopHooksSection({ hooks }) {
       const open = expanded === index;
       const formula = hook.hookFormula || {};
       const primaryCopy = hook.adsManagerCopy || {};
-      const transcriptSections = parseTranscriptSections(hook.transcript);
+      const transcript = parseTranscript(hook.transcript, hook.firstSpokenSentence);
       return <div key={`${hook.adId}-${index}`} className="cs-intel-accordion-card">
         <button type="button" onClick={() => setExpanded(open ? null : index)} className="cs-intel-hook-trigger">
           <span className="cs-intel-list-index">{index + 1}</span>
@@ -392,19 +392,30 @@ function TopHooksSection({ hooks }) {
           {open ? <ChevronDown className="h-3.5 w-3.5 text-neutral-400" /> : <ChevronRight className="h-3.5 w-3.5 text-neutral-400" />}
         </button>
         {open && <div className="cs-intel-hook-details">
-          <section className="cs-intel-detail-section is-first">
-            <p className="cs-intel-field-label">Ad name</p>
-            <strong className="cs-intel-ad-name">{hook.adName || "Unnamed"}</strong>
-            <div className="cs-intel-stat-line">
-              {[
-                hook.purchases > 0 && `${hook.purchases} purchases`,
-                hook.ctr != null && `${Number(hook.ctr).toFixed(2)}% CTR`,
-                hook.cpm != null && `${money(hook.cpm)} CPM`,
-                hook.hookRate > 0 && `${(hook.hookRate * 100).toFixed(1)}% hook rate`,
-                hook.avgWatchTime > 0 && `${Number(hook.avgWatchTime).toFixed(1)}s avg watch`,
-                hook.frequency > 0 && `${Number(hook.frequency).toFixed(1)}x frequency`,
-                hook.funnelPosition && humanize(hook.funnelPosition),
-              ].filter(Boolean).map((stat) => <span key={stat}>{stat}</span>)}
+          <section className="cs-intel-detail-section is-first cs-hook-overview">
+            <div className="cs-hook-overview__thumb">
+              <CreativeThumbnail src={hook.imageUrl || hook.thumbnailUrl} variant="card" />
+            </div>
+            <div className="cs-hook-overview__body">
+              <p className="cs-intel-field-label">Ad name</p>
+              <strong className="cs-intel-ad-name">{hook.adName || "Unnamed"}</strong>
+              <div className="cs-intel-stat-line">
+                {[
+                  hook.purchases > 0 && `${hook.purchases} conversions`,
+                  hook.ctr != null && `${Number(hook.ctr).toFixed(2)}% CTR`,
+                  hook.cpm != null && `${money(hook.cpm)} CPM`,
+                  hook.hookRate > 0 && `${(hook.hookRate * 100).toFixed(1)}% hook rate`,
+                  hook.avgWatchTime > 0 && `${Number(hook.avgWatchTime).toFixed(1)}s avg watch`,
+                  hook.frequency > 0 && `${Number(hook.frequency).toFixed(1)}x frequency`,
+                  hook.funnelPosition && humanize(hook.funnelPosition),
+                ].filter(Boolean).map((stat) => <span key={stat}>{stat}</span>)}
+              </div>
+              {hook.gradeRationale && <p className="cs-hook-overview__read">{hook.gradeRationale}</p>}
+              <div className="cs-intel-tag-row">{[
+                hook.primaryAngle && `Angle: ${hook.primaryAngle}`, hook.hookStyle && `Style: ${hook.hookStyle}`,
+                hook.emotionalTrigger && `Emotion: ${hook.emotionalTrigger}`, hook.awarenessStage && `Awareness: ${plainLabel(hook.awarenessStage)}`,
+                hook.benefitType && `Benefit: ${plainLabel(hook.benefitType)}`, hook.conceptClassification && `Bucket: ${plainLabel(hook.conceptClassification)}`,
+              ].filter(Boolean).map((tag, tagIndex) => <span key={tag} className={`cs-intel-attribute-pill is-tone-${tagIndex % 4}`}>{tag}</span>)}</div>
             </div>
           </section>
           {(formula.pattern_interrupt || formula.qualifier || formula.gap) && <section className="cs-intel-detail-section">
@@ -412,31 +423,33 @@ function TopHooksSection({ hooks }) {
             <div className="cs-intel-formula-grid">{[["Pattern interrupt", formula.pattern_interrupt], ["Qualifier", formula.qualifier], ["Gap", formula.gap]].filter(([, value]) => value).map(([label, value]) =>
               <div key={label} className="cs-intel-formula-card"><small>{label}</small><p>{value}</p></div>)}</div>
           </section>}
-          <section className="cs-intel-detail-section">
-            <div className="cs-intel-tag-row">{[
-              hook.primaryAngle && `Angle: ${hook.primaryAngle}`, hook.hookStyle && `Style: ${hook.hookStyle}`,
-              hook.emotionalTrigger && `Emotion: ${hook.emotionalTrigger}`, hook.awarenessStage && `Awareness: ${hook.awarenessStage}`,
-              hook.benefitType && `Benefit: ${hook.benefitType}`, hook.conceptClassification && `Bucket: ${hook.conceptClassification}`,
-            ].filter(Boolean).map((tag, tagIndex) => <span key={tag} className={`cs-intel-attribute-pill is-tone-${tagIndex % 4}`}>{tag}</span>)}</div>
-            {hook.buildingBlocks?.length > 0 && <DetailList label="Building blocks" items={hook.buildingBlocks} />}
-            {hook.lifeForce8?.length > 0 && <DetailList label="Core desires" items={hook.lifeForce8} />}
-          </section>
+          {hook.whyItWorks && <section className="cs-intel-detail-section">
+            <h3 className="cs-intel-subsection-title">Why it works</h3>
+            <p className="cs-hook-why">{hook.whyItWorks}</p>
+          </section>}
+          {(hook.buildingBlocks?.length > 0 || hook.lifeForce8?.length > 0) && <section className="cs-intel-detail-section">
+            {hook.buildingBlocks?.length > 0 && <DetailList label="Building blocks" items={hook.buildingBlocks.map(plainLabel)} />}
+            {hook.lifeForce8?.length > 0 && <DetailList label="Core desires" items={hook.lifeForce8.map(plainLabel)} />}
+          </section>}
           {(primaryCopy.primary_text || primaryCopy.headline || hook.headlineText || primaryCopy.cta || hook.ctaType) && <section className="cs-intel-detail-section">
             <h3 className="cs-intel-subsection-title">Ad copy</h3>
             <div className="cs-intel-copy-grid">
               {primaryCopy.primary_text && <LabeledCopy label="Primary text">{primaryCopy.primary_text}</LabeledCopy>}
               {(primaryCopy.headline || hook.headlineText) && <LabeledCopy label="Headline">{primaryCopy.headline || hook.headlineText}</LabeledCopy>}
-              {(primaryCopy.cta || hook.ctaType) && <LabeledCopy label="Call to action">{primaryCopy.cta || hook.ctaType}</LabeledCopy>}
+              {(primaryCopy.cta || hook.ctaType) && <LabeledCopy label="Call to action">{plainLabel(primaryCopy.cta || hook.ctaType)}</LabeledCopy>}
             </div>
           </section>}
-          {hook.transcript && hook.mediaType === "video" && <section className="cs-intel-detail-section">
-            <h3 className="cs-intel-subsection-title">Transcript</h3>
-            {transcriptSections.length > 1 ? <div className="cs-intel-transcript-grid">{transcriptSections.map((section) => <LabeledCopy key={section.label} label={section.label}>{section.value}</LabeledCopy>)}</div>
-              : <CsScrollArea className="cs-intel-transcript" viewportClassName="max-h-[190px]"><p>{hook.transcript}</p></CsScrollArea>}
-          </section>}
-          {(hook.whyItWorks || hook.gradeRationale) && <section className="cs-intel-detail-section cs-intel-copy-grid">
-            {hook.whyItWorks && <LabeledCopy label="Why it works">{hook.whyItWorks}</LabeledCopy>}
-            {hook.gradeRationale && <LabeledCopy label="Performance read">{hook.gradeRationale}</LabeledCopy>}
+          {transcript.full && hook.mediaType === "video" && <section className="cs-intel-detail-section">
+            <div className="cs-hook-transcript-head">
+              <h3 className="cs-intel-subsection-title">Transcript</h3>
+              {transcript.speechQuality && <span className="cs-hook-chip">Speech: {transcript.speechQuality}</span>}
+              {transcript.wordCount && <span className="cs-hook-chip">First sentence: {transcript.wordCount} words</span>}
+            </div>
+            <CsScrollArea className="cs-intel-transcript" viewportClassName="max-h-[190px]">
+              <p>{transcript.highlight
+                ? <>{transcript.full.slice(0, transcript.highlight[0])}<mark className="cs-hook-mark" title="Opening hook (0–8s)">{transcript.full.slice(transcript.highlight[0], transcript.highlight[1])}</mark>{transcript.full.slice(transcript.highlight[1])}</>
+                : <>{transcript.firstSentence && <><mark className="cs-hook-mark" title="Opening hook (0–8s)">{transcript.firstSentence}</mark>{"\n\n"}</>}{transcript.full}</>}</p>
+            </CsScrollArea>
           </section>}
         </div>}
       </div>;
@@ -647,22 +660,45 @@ function LabeledCopy({ label, children }) {
 }
 LabeledCopy.propTypes = { label: PropTypes.string.isRequired, children: PropTypes.node };
 
-const TRANSCRIPT_LABELS = ["Speech quality", "First sentence word count", "Quality", "Full transcript"];
+/** "most_aware" / "pattern_interrupt" → "most aware" / "pattern interrupt". */
+const plainLabel = (value) => String(value ?? "").replace(/_/g, " ").replace(/\s+/g, " ").trim();
 
-function parseTranscriptSections(transcript) {
-  const lines = String(transcript || "").split(/\r?\n/);
-  const sections = [];
+const TRANSCRIPT_LABEL = /^(full transcript|first (?:hook )?sentence(?:\s*\([^)]*\))?|speech quality|quality|first sentence word count|word count)\s*:?\s*(.*)$/i;
+
+/**
+ * Split the stored transcript (FULL TRANSCRIPT / FIRST HOOK SENTENCE (0-8s) /
+ * SPEECH QUALITY / word-count sections) into the spoken text plus the opening
+ * hook, which is highlighted inside the text rather than shown as its own row.
+ */
+function parseTranscript(transcript, fallbackFirstSentence) {
+  const out = { full: "", firstSentence: "", speechQuality: "", wordCount: "", highlight: null };
+  const raw = String(transcript || "").trim();
+  if (!raw) return out;
+  const sections = {};
   let active = null;
-  lines.forEach((rawLine) => {
-    const line = rawLine.trim();
-    if (!line) return;
-    const match = line.match(/^(Speech quality|First sentence word count|Quality|Full transcript)\s*:?\s*(.*)$/i);
+  let sawLabel = false;
+  for (const rawLine of raw.split(/\r?\n/)) {
+    const line = rawLine.replace(/^[#*\s-]+|\*+$/g, "").trim();
+    if (!line) continue;
+    const match = line.match(TRANSCRIPT_LABEL);
     if (match) {
-      active = { label: TRANSCRIPT_LABELS.find((label) => label.toLowerCase() === match[1].toLowerCase()) || match[1], value: match[2] || "" };
-      sections.push(active);
-    } else if (active) active.value = active.value ? `${active.value}\n${line}` : line;
-  });
-  return sections.filter((section) => section.value);
+      sawLabel = true;
+      const label = match[1].toLowerCase();
+      active = label.includes("word count") ? "wordCount" : label.includes("quality") ? "speechQuality" : label.startsWith("first") ? "firstSentence" : "full";
+      sections[active] = match[2] ? [match[2].replace(/\*+/g, "").trim()] : [];
+    } else if (active) sections[active].push(line);
+    else (sections.full ??= []).push(line);
+  }
+  out.full = (sawLabel ? sections.full ?? [] : raw.split(/\r?\n/)).join("\n").trim();
+  out.firstSentence = (sections.firstSentence ?? []).join(" ").replace(/^["“]|["”]$/g, "").trim() || String(fallbackFirstSentence || "").trim();
+  if (/^none\b/i.test(out.firstSentence)) out.firstSentence = "";
+  out.speechQuality = (sections.speechQuality ?? []).join(" ").split(/[.;—-]/)[0].trim().slice(0, 40);
+  out.wordCount = ((sections.wordCount ?? []).join(" ").match(/\d+/) || [""])[0];
+  if (out.firstSentence && out.full) {
+    const at = out.full.toLowerCase().indexOf(out.firstSentence.toLowerCase());
+    if (at >= 0) out.highlight = [at, at + out.firstSentence.length];
+  }
+  return out;
 }
 
 function CreativeThumbnail({ src, variant = "compact" }) {

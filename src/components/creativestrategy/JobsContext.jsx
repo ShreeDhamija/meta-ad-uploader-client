@@ -254,7 +254,7 @@ const PHASE_LABELS = {
   picking_concept: "Picking a concept", writing_brief: "Writing the brief", writing_hooks: "Writing hooks",
   writing_script: "Writing the script", saving: "Saving",
   // weekly strategy
-  building_briefing: "Reviewing your account", running_strategist: "Writing this week's concepts", saving_concepts: "Saving concepts",
+  refreshing_knowledge: "Updating cross-account patterns", building_briefing: "Reviewing your account", running_strategist: "Writing this week's concepts", saving_concepts: "Saving concepts",
   // research / ingestion / inspiration
   mining_reddit: "Reading Reddit discussions", scraping_and_extracting: "Reading your website",
   analyzing: "Analyzing the reference", analyzing_batch: "Analyzing references",

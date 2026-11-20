@@ -1524,7 +1524,7 @@ html body #root .creative-strategy button.cs-generate-switcher__item.is-active {
 
 .cs-weekly-dropdown-row {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   align-items: center;
   gap: 9px;
   padding: 1px 1px 3px;
@@ -5139,3 +5139,26 @@ html body #root .creative-strategy button.cs-monthly-filter-button:hover { borde
   .cs-mc__variants li { grid-template-columns: 22px minmax(0, 1fr) 64px 64px; }
   .cs-mc__variants li .cs-mc__share, .cs-mc__variants li .cs-mc__num:nth-of-type(3) { display: none; }
 }
+
+/* ── Top hooks: expanded hook ───────────────────────────────────────────── */
+.cs-hook-overview { display: grid; grid-template-columns: minmax(120px, 170px) minmax(0, 1fr); gap: 18px; align-items: start; }
+.cs-hook-overview__thumb { overflow: hidden; border: 1px solid rgba(108, 52, 3, 0.16); border-radius: 14px; background: #f6f0ea; }
+.cs-hook-overview__thumb .cs-intel-thumbnail { display: block; width: 100%; height: auto; max-height: 300px; object-fit: cover; }
+.cs-hook-overview__thumb .cs-intel-thumbnail.is-empty { display: flex; height: 150px; align-items: center; justify-content: center; color: #c8a58c; }
+.cs-hook-overview__body { display: grid; min-width: 0; align-content: start; gap: 8px; }
+.cs-hook-overview__read { color: #51413a; font-size: 12.5px; line-height: 1.55; }
+.cs-hook-why { color: #3b2a22; font-size: 13px; line-height: 1.6; }
+.cs-hook-transcript-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.cs-hook-transcript-head .cs-intel-subsection-title { margin-right: 4px; }
+.cs-hook-chip { padding: 2px 8px; border: 1px solid rgba(108, 52, 3, 0.16); border-radius: 999px; color: #6c4a39; background: #fffaf4; font-size: 10.5px; font-weight: 500; }
+.cs-hook-mark { padding: 1px 3px; border-radius: 4px; color: #3b170b; background: #ffe2c6; box-shadow: inset 0 -1px 0 rgba(232, 129, 44, 0.45); }
+@media (max-width: 640px) {
+  .cs-hook-overview { grid-template-columns: 1fr; }
+  .cs-hook-overview__thumb { max-width: 220px; }
+}
+
+/* Weekly: production shape of a concept (edit job vs creator shoot). */
+.cs-weekly-pill.is-production { font-weight: 600; }
+.cs-weekly-pill.is-production.is-edit_only { background: #dcfce7; border-color: #86efac; color: #166534; }
+.cs-weekly-pill.is-production.is-partial_reshoot { background: #e0f2fe; border-color: #7dd3fc; color: #075985; }
+.cs-weekly-pill.is-production.is-new_shoot { background: #fef3c7; border-color: #fcd34d; color: #92400e; }
