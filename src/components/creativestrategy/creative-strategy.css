@@ -2273,15 +2273,15 @@ html body #root .creative-strategy .cs-research-intel.is-open.is-stuck button.cs
   grid-column: auto;
 }
 
+.cs-top-strip-viewport {
+  scroll-behavior: smooth;
+  scroll-snap-type: x mandatory;
+}
+
 .cs-top-strip {
   display: flex;
   gap: 14px;
-  overflow-x: auto;
-  padding: 2px 2px 12px;
-  scroll-behavior: smooth;
-  scroll-snap-type: x mandatory;
-  scrollbar-color: rgba(108, 52, 3, 0.22) transparent;
-  scrollbar-width: thin;
+  padding: 2px 2px 14px;
 }
 
 .cs-top-card {
@@ -2921,10 +2921,7 @@ html body #root .creative-strategy .cs-research-intel.is-open.is-stuck button.cs
 }
 
 .cs-intel-transcript {
-  max-height: 190px;
   margin-top: 8px;
-  overflow-y: auto;
-  padding: 12px;
   border: 1px solid rgba(108, 52, 3, 0.12);
   border-radius: 13px;
   color: #51413a;
@@ -2932,6 +2929,10 @@ html body #root .creative-strategy .cs-research-intel.is-open.is-stuck button.cs
   font-size: 12.5px;
   line-height: 1.6;
   white-space: pre-wrap;
+}
+
+.cs-intel-transcript p {
+  padding: 12px 16px 12px 12px;
 }
 
 .cs-intel-expanded-stack {
@@ -3055,9 +3056,7 @@ html body #root .creative-strategy .cs-research-intel.is-open.is-stuck button.cs
 .cs-intel-opener-thumbnails {
   display: flex;
   gap: 9px;
-  margin-top: 13px;
-  overflow-x: auto;
-  padding-bottom: 2px;
+  padding-bottom: 12px;
 }
 
 .cs-intel-opener-grid {
@@ -3813,7 +3812,8 @@ html body #root .creative-strategy button.cs-intel-ad-card.is-active {
 .cs-generate-image-card { width: 100%; max-width: 200px; }
 
 /* ── Monthly Review ─────────────────────────────────────────────────────── */
-.cs-monthly-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.cs-monthly-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; }
+.cs-monthly-toolbar > :first-child { flex: 1 1 320px; }
 .cs-monthly-filter-button { display: inline-flex; height: 36px; align-items: center; gap: 6px; padding: 0 13px; border: 1px solid rgba(108, 52, 3, 0.28); border-radius: 13px; color: #6c4a39; background: var(--cs-cream); font-size: 11.5px; font-weight: 500; }
 .cs-monthly-filter-button strong { color: #3b170b; font-weight: 600; }
 html body #root .creative-strategy button.cs-monthly-filter-button:hover { border-color: rgba(108, 52, 3, 0.62) !important; }
@@ -3954,4 +3954,73 @@ html body #root .creative-strategy button.cs-monthly-filter-button:hover { borde
   to {
     opacity: 1;
   }
+}
+
+/* Top hooks "show more" — the peach details button, centred under the list. */
+.cs-intel-more-button {
+  display: flex;
+  width: fit-content;
+  height: 36px;
+  margin: 14px auto 0;
+  padding: 0 16px;
+  border-radius: 13px;
+  font-size: 12px;
+}
+
+.cs-intel-more-button:focus-visible {
+  outline: 2px solid var(--cs-orange, #ffbe85);
+  outline-offset: 2px;
+}
+
+/* ── Monthly review: month bar + concept cards ───────────────────────────── */
+.cs-monthly-month-bar { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 20px; padding-top: 8px; border-top: 1px solid rgba(108, 52, 3, 0.14); }
+.cs-monthly-month-bar h2 { color: #30150a; font-size: 17px; font-weight: 650; }
+.cs-monthly-month-bar p { margin-top: 2px; color: #8a746c; font-size: 11.5px; }
+.cs-mc-list { display: grid; gap: 10px; }
+.cs-mc { overflow: hidden; border: 1px solid rgba(108, 52, 3, 0.18); border-radius: 18px; background: #fff; box-shadow: 0 2px 5px rgba(59, 23, 11, 0.04); transition: border-color 150ms ease, box-shadow 150ms ease; }
+.cs-mc:hover, .cs-mc.is-open { border-color: rgba(108, 52, 3, 0.34); box-shadow: 0 4px 10px rgba(59, 23, 11, 0.07); }
+.cs-mc__main { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 14px; align-items: start; padding: 14px 16px; }
+.cs-mc__thumb { position: relative; display: flex; width: 60px; height: 75px; align-items: center; justify-content: center; overflow: hidden; border: 1px solid rgba(108, 52, 3, 0.18); border-radius: 12px; color: #c8a58c; background: #f6f0ea; }
+.cs-mc__thumb img { width: 100%; height: 100%; object-fit: cover; }
+.cs-mc__thumb:disabled { cursor: default; }
+.cs-mc__play { position: absolute; right: 5px; bottom: 5px; display: flex; width: 20px; height: 20px; align-items: center; justify-content: center; border-radius: 999px; color: #fff; background: rgba(48, 21, 10, 0.72); }
+.cs-mc__body { display: grid; min-width: 0; gap: 8px; }
+.cs-mc__title-row { display: grid; gap: 5px; }
+.cs-mc__title-row h3 { overflow: hidden; color: #30150a; font-size: 14.5px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+.cs-mc__chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.cs-mc__chips span { padding: 2px 8px; border: 1px solid rgba(108, 52, 3, 0.16); border-radius: 999px; color: #6c4a39; background: #fffaf4; font-size: 10.5px; font-weight: 500; }
+.cs-mc__split { display: flex; height: 8px; max-width: 420px; overflow: hidden; border-radius: 999px; background: rgba(108, 52, 3, 0.06); }
+.cs-mc__split span { min-width: 3px; height: 100%; border-right: 2px solid #fff; background: #f3d9c2; }
+.cs-mc__split span:last-child { border-right: 0; }
+.cs-mc__split span.is-winner { background: #e8812c; }
+.cs-mc__winner { display: flex; min-width: 0; align-items: center; gap: 6px; color: #b4560d; font-size: 12px; }
+.cs-mc__winner-label { flex-shrink: 0; font-weight: 600; }
+.cs-mc__winner-name { overflow: hidden; color: #51413a; text-overflow: ellipsis; white-space: nowrap; }
+.cs-mc__stats { display: grid; grid-template-columns: repeat(3, minmax(58px, auto)); gap: 4px 16px; text-align: right; }
+.cs-mc__stats dt { color: #8a746c; font-size: 10.5px; font-weight: 500; }
+.cs-mc__stats dd { margin-top: 2px; color: #30150a; font-size: 15px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.cs-mc .is-good { color: #15803d; }
+.cs-mc .is-bad { color: #c2410c; }
+.cs-mc__toggle { display: flex; width: 100%; align-items: center; justify-content: center; gap: 6px; padding: 8px 12px; border-top: 1px solid rgba(108, 52, 3, 0.1); color: #6c3403; background: #fffaf4; font-size: 11.5px; font-weight: 600; }
+.cs-mc__toggle:hover { background: #ffefe0; }
+.cs-mc__variants { display: grid; padding: 4px 16px 10px; border-top: 1px solid rgba(108, 52, 3, 0.1); background: #fffdfb; }
+.cs-mc__variants li { display: grid; grid-template-columns: 22px minmax(0, 1fr) minmax(90px, 150px) 64px 48px 64px; gap: 12px; align-items: center; padding: 8px 6px; border-bottom: 1px solid rgba(108, 52, 3, 0.07); font-size: 12px; }
+.cs-mc__variants li:last-child { border-bottom: 0; }
+.cs-mc__variants li.is-winner { margin: 0 -6px; padding: 8px 12px; border-radius: 10px; background: #fff1e4; }
+.cs-mc__rank { display: flex; justify-content: center; color: #a08c84; font-size: 11px; font-variant-numeric: tabular-nums; }
+.cs-mc__variants li.is-winner .cs-mc__rank { color: #d9650b; }
+.cs-mc__variant-name { min-width: 0; }
+.cs-mc__variant-name p { overflow: hidden; color: #3b2a22; text-overflow: ellipsis; white-space: nowrap; }
+.cs-mc__variants li.is-winner .cs-mc__variant-name p { font-weight: 600; }
+.cs-mc__variant-name small { display: block; color: #8a746c; font-size: 10.5px; }
+.cs-mc__share { position: relative; display: flex; align-items: center; gap: 8px; }
+.cs-mc__share i { display: block; height: 6px; flex-shrink: 0; border-radius: 999px; background: #f0c9a6; max-width: calc(100% - 34px); }
+.cs-mc__variants li.is-winner .cs-mc__share i { background: #e8812c; }
+.cs-mc__share span { color: #8a746c; font-size: 10.5px; font-variant-numeric: tabular-nums; }
+.cs-mc__num { text-align: right; color: #51413a; font-variant-numeric: tabular-nums; }
+@media (max-width: 720px) {
+  .cs-mc__main { grid-template-columns: auto minmax(0, 1fr); }
+  .cs-mc__stats { grid-column: 1 / -1; grid-template-columns: repeat(3, 1fr); text-align: left; }
+  .cs-mc__variants li { grid-template-columns: 22px minmax(0, 1fr) 64px 64px; }
+  .cs-mc__variants li .cs-mc__share, .cs-mc__variants li .cs-mc__num:nth-of-type(3) { display: none; }
 }

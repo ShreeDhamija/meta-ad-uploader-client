@@ -3,24 +3,29 @@ import * as ScrollAreaPrimitive from "@radix-ui/react-scroll-area"
 
 import { cn } from "@/lib/utils"
 
-const ScrollArea = React.forwardRef(({ className, viewportClassName, children, ...props }, ref) => (
+const ScrollArea = React.forwardRef(({ className, viewportClassName, viewportRef, viewportProps, thumbClassName, children, ...props }, ref) => (
   <ScrollAreaPrimitive.Root
     ref={ref}
     className={cn("relative overflow-hidden", className)}
     {...props}>
     {/* viewportClassName lets callers cap the viewport directly — a max-height on the
-        Root alone won't scroll, since the viewport's h-full resolves to auto under it */}
-    <ScrollAreaPrimitive.Viewport className={cn("h-full w-full rounded-[inherit]", viewportClassName)}>
+        Root alone won't scroll, since the viewport's h-full resolves to auto under it.
+        viewportRef/viewportProps reach the element that actually scrolls (scrollTo,
+        onScroll, IntersectionObserver roots). */}
+    <ScrollAreaPrimitive.Viewport
+      ref={viewportRef}
+      className={cn("h-full w-full rounded-[inherit]", viewportClassName)}
+      {...viewportProps}>
       {children}
     </ScrollAreaPrimitive.Viewport>
-    <ScrollBar orientation="vertical" />
-    <ScrollBar orientation="horizontal" />
+    <ScrollBar orientation="vertical" thumbClassName={thumbClassName} />
+    <ScrollBar orientation="horizontal" thumbClassName={thumbClassName} />
     <ScrollAreaPrimitive.Corner />
   </ScrollAreaPrimitive.Root>
 ))
 ScrollArea.displayName = ScrollAreaPrimitive.Root.displayName
 
-const ScrollBar = React.forwardRef(({ className, orientation = "vertical", ...props }, ref) => (
+const ScrollBar = React.forwardRef(({ className, thumbClassName, orientation = "vertical", ...props }, ref) => (
   <ScrollAreaPrimitive.ScrollAreaScrollbar
     ref={ref}
     orientation={orientation}
@@ -33,7 +38,7 @@ const ScrollBar = React.forwardRef(({ className, orientation = "vertical", ...pr
       className
     )}
     {...props}>
-    <ScrollAreaPrimitive.ScrollAreaThumb className="relative flex-1 rounded-full bg-gray-400/80" />
+    <ScrollAreaPrimitive.ScrollAreaThumb className={cn("relative flex-1 rounded-full bg-gray-400/80", thumbClassName)} />
   </ScrollAreaPrimitive.ScrollAreaScrollbar>
 ))
 ScrollBar.displayName = ScrollAreaPrimitive.ScrollAreaScrollbar.displayName

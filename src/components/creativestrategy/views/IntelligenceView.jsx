@@ -11,7 +11,7 @@ import { RUN_OPERATIONS } from "../run-model-operations";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { humanize } from "../JsonView";
-import { EmptyState, ErrorBanner, PartialResultsNotice, ProgressiveSection } from "../ui";
+import { CsScrollArea, EmptyState, ErrorBanner, PartialResultsNotice, ProgressiveSection } from "../ui";
 import { useJobRunner } from "../JobsContext";
 import { SpendCpaChart, TopPerformers } from "./InsightsPerformance";
 
@@ -378,7 +378,7 @@ function TopHooksSection({ hooks }) {
   if (!hooks.length) return null;
   return <InsightSection title="Top hooks" tone="dark" actions={<span className="text-xs text-neutral-400">{visibleHooks.length < hooks.length ? `${visibleHooks.length} of ${hooks.length} distinct hooks` : `${hooks.length} distinct hooks`}</span>}>
     <p className="mb-3 text-xs text-neutral-400">Saved hooks with usable extracted text. Similar hooks are combined; ads without usable hook text are excluded.</p>
-    <div className="cs-intel-accordion-list max-h-[720px] overflow-y-auto pr-1">{visibleHooks.map((hook, index) => {
+    <CsScrollArea viewportClassName="max-h-[720px]"><div className="cs-intel-accordion-list pr-3">{visibleHooks.map((hook, index) => {
       const open = expanded === index;
       const formula = hook.hookFormula || {};
       const primaryCopy = hook.adsManagerCopy || {};
@@ -432,7 +432,7 @@ function TopHooksSection({ hooks }) {
           {hook.transcript && hook.mediaType === "video" && <section className="cs-intel-detail-section">
             <h3 className="cs-intel-subsection-title">Transcript</h3>
             {transcriptSections.length > 1 ? <div className="cs-intel-transcript-grid">{transcriptSections.map((section) => <LabeledCopy key={section.label} label={section.label}>{section.value}</LabeledCopy>)}</div>
-              : <p className="cs-intel-transcript">{hook.transcript}</p>}
+              : <CsScrollArea className="cs-intel-transcript" viewportClassName="max-h-[190px]"><p>{hook.transcript}</p></CsScrollArea>}
           </section>}
           {(hook.whyItWorks || hook.gradeRationale) && <section className="cs-intel-detail-section cs-intel-copy-grid">
             {hook.whyItWorks && <LabeledCopy label="Why it works">{hook.whyItWorks}</LabeledCopy>}
@@ -440,16 +440,16 @@ function TopHooksSection({ hooks }) {
           </section>}
         </div>}
       </div>;
-    })}</div>
+    })}</div></CsScrollArea>
     {hooks.length > 20 && <button
       type="button"
-      className="mt-4 rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-400"
+      className="cs-research-details-button cs-intel-more-button"
       aria-expanded={showAll}
       onClick={() => {
         if (showAll && expanded >= 20) setExpanded(null);
         setShowAll((current) => !current);
       }}
-    >{showAll ? "Show less" : `See more (${hooks.length - 20} more)`}</button>}
+    >{showAll ? <>Show fewer<ChevronDown className="h-3.5 w-3.5 rotate-180" /></> : <>Show {hooks.length - 20} more hooks<ChevronDown className="h-3.5 w-3.5" /></>}</button>}
   </InsightSection>;
 }
 TopHooksSection.propTypes = { hooks: PropTypes.array.isRequired };
@@ -530,11 +530,11 @@ PersonaPerformanceSection.propTypes = { mappings: PropTypes.any, ads: PropTypes.
 
 function RecentLaunches({ ads }) {
   if (!ads.length) return null;
-  return <Block title="Recent launches · last 14 days"><div className="flex gap-3 overflow-x-auto pb-2">{ads.map((ad) => {
+  return <Block title="Recent launches · last 14 days"><CsScrollArea axis="x"><div className="flex gap-3 pb-3">{ads.map((ad) => {
     const days = Math.max(0, Math.floor((Date.now() - new Date(ad.createdTime).getTime()) / 86400000));
     const src = ad.imageUrl || ad.thumbnailUrl;
     return <div key={ad.adId} className="w-[170px] shrink-0 overflow-hidden rounded-xl border border-neutral-200"><div className="relative aspect-[9/16] bg-neutral-100">{src ? <img src={src} alt="" className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center text-neutral-400"><Zap className="h-5 w-5" /></div>}<Badge className="absolute left-2 top-2 text-[9px]">{days === 0 ? "Today" : days === 1 ? "Yesterday" : `${days}d ago`}</Badge><Badge variant="outline" className="absolute right-2 top-2 border-white/30 bg-black/50 text-[9px] text-white">{ad.mediaType === "video" ? "Video" : "Static"}</Badge></div><div className="p-2"><strong className="block truncate text-xs">{ad.adName || "Unnamed"}</strong><p className="mt-1 text-[10px] text-neutral-400">{money(ad.spend)} spend{ad.costPerPurchase ? ` · ${money(ad.costPerPurchase)} CPA` : ""}{ad.purchases > 0 ? ` · ${ad.purchases} purchases` : ""}{ad.hookRate > 0 ? ` · ${(ad.hookRate * 100).toFixed(1)}% HR` : ""}</p></div></div>;
-  })}</div></Block>;
+  })}</div></CsScrollArea></Block>;
 }
 RecentLaunches.propTypes = { ads: PropTypes.array.isRequired };
 
@@ -543,7 +543,7 @@ function VisualOpenersSection({ openers, ads }) {
   const byName = new Map(ads.map((ad) => [ad.adName, ad]));
   return <InsightSection title="Visual openers"><p className="mb-3 text-[13px] text-neutral-500">Video ads — what appears in the first 2–5 seconds</p><div className="cs-intel-opener-grid">{openers.map((opener, index) => {
     const examples = (opener.example_ad_names || []).map((name) => byName.get(name)).filter(Boolean);
-    return <div key={index} className="cs-intel-content-card"><strong className="text-[15px] text-neutral-800">{opener.pattern_name || opener.trend_name}</strong><p className="mt-1 text-[13px] leading-relaxed text-neutral-600">{opener.visual_description || opener.opening_description}</p><MetricPills className="mt-2" items={[`${opener.ad_count || examples.length} ads`, `${Math.round(opener.spend_pct || 0)}% spend`]} /><div className="cs-intel-tag-row mt-2">{[opener.talent_type, opener.camera_style, opener.environment].filter(Boolean).map((tag, tagIndex) => <span key={tag} className={`cs-intel-attribute-pill is-tone-${tagIndex % 4}`}>{tag}</span>)}</div>{examples.length > 0 && <div className="cs-intel-opener-thumbnails">{examples.slice(0, 5).map((ad) => <CreativeThumbnail key={ad.adId} src={ad.imageUrl || ad.thumbnailUrl} variant="opener" />)}</div>}</div>;
+    return <div key={index} className="cs-intel-content-card"><strong className="text-[15px] text-neutral-800">{opener.pattern_name || opener.trend_name}</strong><p className="mt-1 text-[13px] leading-relaxed text-neutral-600">{opener.visual_description || opener.opening_description}</p><MetricPills className="mt-2" items={[`${opener.ad_count || examples.length} ads`, `${Math.round(opener.spend_pct || 0)}% spend`]} /><div className="cs-intel-tag-row mt-2">{[opener.talent_type, opener.camera_style, opener.environment].filter(Boolean).map((tag, tagIndex) => <span key={tag} className={`cs-intel-attribute-pill is-tone-${tagIndex % 4}`}>{tag}</span>)}</div>{examples.length > 0 && <CsScrollArea axis="x" className="mt-[13px]"><div className="cs-intel-opener-thumbnails">{examples.slice(0, 5).map((ad) => <CreativeThumbnail key={ad.adId} src={ad.imageUrl || ad.thumbnailUrl} variant="opener" />)}</div></CsScrollArea>}</div>;
   })}</div></InsightSection>;
 }
 VisualOpenersSection.propTypes = { openers: PropTypes.any, ads: PropTypes.array.isRequired };
@@ -561,7 +561,7 @@ function MessagingTrendsSection({ trends, ads }) {
   const max = Math.max(...normalized.map((trend) => Number(trend.spend_pct || 0)), 1);
   return <InsightSection title="Messaging trends" tone="orange"><div className="space-y-3">{normalized.map((trend, index) => {
     const examples = (trend.examples || []).map((name) => byName.get(name)).filter(Boolean);
-    return <div key={index} className="cs-intel-content-card"><strong className="text-[15px] text-neutral-800">{trend.trend}</strong>{trend.description && <p className="mt-1 text-[13px] leading-relaxed text-neutral-600">{trend.description}</p>}<div className="cs-intel-spend-bar mt-3"><div style={{ width: `${Math.max((Number(trend.spend_pct || 0) / max) * 100, 3)}%` }} /></div><MetricPills className="mt-2" items={[`${trend.ad_count || examples.length} ads`, `${Number(trend.spend_pct || 0).toFixed(1)}% spend`]} />{examples.length > 0 && <div className="cs-intel-opener-thumbnails">{examples.slice(0, 4).map((ad) => <CreativeThumbnail key={ad.adId} src={ad.imageUrl || ad.thumbnailUrl} variant="opener" />)}</div>}</div>;
+    return <div key={index} className="cs-intel-content-card"><strong className="text-[15px] text-neutral-800">{trend.trend}</strong>{trend.description && <p className="mt-1 text-[13px] leading-relaxed text-neutral-600">{trend.description}</p>}<div className="cs-intel-spend-bar mt-3"><div style={{ width: `${Math.max((Number(trend.spend_pct || 0) / max) * 100, 3)}%` }} /></div><MetricPills className="mt-2" items={[`${trend.ad_count || examples.length} ads`, `${Number(trend.spend_pct || 0).toFixed(1)}% spend`]} />{examples.length > 0 && <CsScrollArea axis="x" className="mt-[13px]"><div className="cs-intel-opener-thumbnails">{examples.slice(0, 4).map((ad) => <CreativeThumbnail key={ad.adId} src={ad.imageUrl || ad.thumbnailUrl} variant="opener" />)}</div></CsScrollArea>}</div>;
   })}</div></InsightSection>;
 }
 MessagingTrendsSection.propTypes = { trends: PropTypes.any, ads: PropTypes.array.isRequired };
@@ -706,7 +706,7 @@ function AngleGroups({ groups, ads }) {
       <Dialog open={Boolean(selectedAngle)} onOpenChange={(open) => { if (!open) setSelectedAngle(null); }}>
         <DialogContent disableSlide className="max-w-3xl rounded-[28px] sm:rounded-[28px] bg-[#fffaf5]" overlayClassName="bg-black/40">
           <DialogHeader><DialogTitle>{selectedAngle?.name}</DialogTitle><DialogDescription>Ads using this proven angle</DialogDescription></DialogHeader>
-          <div className="max-h-[65vh] overflow-y-auto grid gap-4 sm:grid-cols-2">
+          <CsScrollArea viewportClassName="max-h-[65vh]"><div className="grid gap-4 pr-3 sm:grid-cols-2">
             {matchingAds.length ? matchingAds.map((ad) => <article key={ad.adId} className="rounded-2xl border border-orange-100 bg-white p-3">
               <div className="rounded-xl bg-stone-100 overflow-hidden">{ad.imageUrl || ad.thumbnailUrl ? <img src={ad.imageUrl || ad.thumbnailUrl} alt={ad.adName || "Ad preview"} className="h-64 w-full object-contain" loading="lazy" /> : <div className="grid h-40 place-items-center text-xs text-stone-400">Preview unavailable</div>}</div>
               <h3 className="mt-3 text-sm font-semibold text-stone-800">{ad.adName || "Unnamed ad"}</h3>
@@ -714,7 +714,7 @@ function AngleGroups({ groups, ads }) {
               {(ad.firstSpokenSentence || ad.firstOverlayHeadline || ad.headlineText) && <p className="mt-3 text-sm text-stone-700">{ad.firstSpokenSentence || ad.firstOverlayHeadline || ad.headlineText}</p>}
               {ad.whyItWorks && <p className="mt-2 text-xs text-stone-500">{ad.whyItWorks}</p>}
             </article>) : <p className="text-sm text-stone-500">No saved ads available for this angle. Run Analysis to refresh.</p>}
-          </div>
+          </div></CsScrollArea>
         </DialogContent>
       </Dialog>
     </InsightSection>

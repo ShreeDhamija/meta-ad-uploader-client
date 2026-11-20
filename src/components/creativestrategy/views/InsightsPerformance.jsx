@@ -8,6 +8,7 @@ import PropTypes from "prop-types";
 import { ScatterChart, Scatter, XAxis, YAxis, ZAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell } from "recharts";
 import { AlertTriangle, ChevronLeft, ChevronRight, Play, Search, X, Zap } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { CsScrollArea } from "../ui";
 
 const VIDEO_COLOR = "#2563eb";
 const STATIC_COLOR = "#f59e0b";
@@ -255,6 +256,7 @@ PerformerCard.propTypes = { ad: PropTypes.object.isRequired, rank: PropTypes.num
 export function TopPerformers({ ads, limit = DEFAULT_LIMIT }) {
   const scrollRef = useRef(null);
   const [scrollRoot, setScrollRoot] = useState(null);
+  const setStripRef = useCallback((el) => { scrollRef.current = el; setScrollRoot(el); }, []);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
   const [expanded, setExpanded] = useState(null);
@@ -370,11 +372,18 @@ export function TopPerformers({ ads, limit = DEFAULT_LIMIT }) {
 
       {!displayAds.length && <p className="cs-research-muted py-8 text-center">No ads match these filters.</p>}
 
-      <div ref={(el) => { scrollRef.current = el; setScrollRoot(el); }} onScroll={updateScrollState} className="cs-top-strip">
-        {displayAds.map((ad, idx) => (
-          <PerformerCard key={ad.adId || idx} ad={ad} rank={idx + 1} avgCpa={avgCpa} root={scrollRoot} onOpen={setExpanded} />
-        ))}
-      </div>
+      <CsScrollArea
+        axis="x"
+        viewportClassName="cs-top-strip-viewport"
+        viewportRef={setStripRef}
+        viewportProps={{ onScroll: updateScrollState }}
+      >
+        <div className="cs-top-strip">
+          {displayAds.map((ad, idx) => (
+            <PerformerCard key={ad.adId || idx} ad={ad} rank={idx + 1} avgCpa={avgCpa} root={scrollRoot} onOpen={setExpanded} />
+          ))}
+        </div>
+      </CsScrollArea>
 
       {expanded && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setExpanded(null)}>

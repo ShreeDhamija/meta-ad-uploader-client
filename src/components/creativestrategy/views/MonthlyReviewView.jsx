@@ -1,12 +1,12 @@
 // Monthly Review (= the source app's Product Intelligence "Monthly Review" tab).
 // Reads the product's stored snapshot (built by the monthly_review job: one
 // Meta pull + stored analysis; rebuilt weekly by the cron or the Refresh
-// button). Month pills at the top switch the month: its KPIs, summary and
-// each concept's variants with the winner (most spend in the window). Below,
-// a six-month leaderboard of the winners' existing tags.
+// button). The six-month learnings leaderboard of the winners' existing tags
+// comes first; month pills below it switch the month: its KPIs, summary and
+// each concept with its winner (most spend in the window) and variants.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import PropTypes from "prop-types";
-import { CalendarRange, ChevronDown, ChevronRight, Filter, Loader2, X, Zap } from "lucide-react";
+import { CalendarRange, ChevronDown, Filter, Loader2, Play, Trophy, X, Zap } from "lucide-react";
 import { creativeApi } from "@/lib/creativeApi";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -127,7 +127,19 @@ export default function MonthlyReviewView({ ctx }) {
       ) : (
         <>
           <div className="cs-monthly-toolbar">
-            <div className="cs-weekly-switcher" role="tablist" aria-label="Month">
+            <ReviewMeta review={review} snapshot={snapshot} nameFilter={data?.nameFilter ?? null} />
+            <NameFilterControl current={data?.nameFilter ?? null} busy={jobActive} onSave={saveNameFilter} />
+          </div>
+
+          {/* Six-month view first: it doesn't depend on the month picked below. */}
+          <Leaderboard review={review} dimension={dimension} setDimension={setDimension} token={token} />
+
+          <div className="cs-monthly-month-bar">
+            <div>
+              <h2>Month by month</h2>
+              <p>Pick a launch month to see what it shipped and which variant won each concept.</p>
+            </div>
+            <div className="cs-weekly-switcher" role="tablist" aria-label="Launch month">
               {months.map((m) => (
                 <button
                   key={m.month}
@@ -141,30 +153,13 @@ export default function MonthlyReviewView({ ctx }) {
                 </button>
               ))}
             </div>
-            <NameFilterControl current={data?.nameFilter ?? null} busy={jobActive} onSave={saveNameFilter} />
           </div>
-
-          <ReviewMeta review={review} snapshot={snapshot} nameFilter={data?.nameFilter ?? null} />
 
           {activeMonth && <MonthKpis month={activeMonth} />}
 
           {activeMonth?.summary && <MonthSummary summary={activeMonth.summary} label={activeMonth.label} />}
 
-          <section className="cs-intel-panel">
-            <header className="cs-intel-panel__header">
-              <h2>Concepts launched · {activeMonth?.label}</h2>
-              <span className="text-[11px] text-neutral-500">Winner = most spend in the review window</span>
-            </header>
-            <div className="cs-intel-panel__body space-y-3">
-              {!activeMonth || activeMonth.concepts.length === 0 ? (
-                <p className="text-xs text-neutral-500">No concepts launched in {activeMonth?.label || "this month"}{token ? ` with "${token}" in the name` : ""}.</p>
-              ) : activeMonth.concepts.map((c) => (
-                <ConceptCard key={c.key} concept={c} media={media} token={token} onPreview={setPreview} />
-              ))}
-            </div>
-          </section>
-
-          <Leaderboard review={review} dimension={dimension} setDimension={setDimension} token={token} />
+          {activeMonth && <ConceptsLaunched key={activeMonth.month} month={activeMonth} media={media} token={token} onPreview={setPreview} />}
         </>
       )}
 
@@ -248,86 +243,181 @@ function MonthSummary({ summary, label }) {
 }
 MonthSummary.propTypes = { summary: PropTypes.object.isRequired, label: PropTypes.string.isRequired };
 
-function ConceptCard({ concept, media, token, onPreview }) {
+// Concepts with less spend than this are small tests: counted, but folded away
+// by default so the month reads as its real bets.
+const SMALL_TEST_SPEND = 100;
+const CONCEPT_SORTS = {
+  spend: { label: "Spend", by: (a, b) => b.spend - a.spend },
+  cpa: { label: "CPA", by: (a, b) => (a.cpa ?? Infinity) - (b.cpa ?? Infinity) || b.spend - a.spend },
+  variants: { label: "Variants", by: (a, b) => b.variants.length - a.variants.length || b.spend - a.spend },
+};
+
+const conceptStats = (concept) => {
+  const conversions = concept.variants.reduce((s, v) => s + (v.conversions || 0), 0);
+  return { ...concept, conversions, cpa: conversions > 0 ? concept.spend / conversions : null };
+};
+
+function ConceptsLaunched({ month, media, token, onPreview }) {
+  const [sortKey, setSortKey] = useState("spend");
+  const [showSmall, setShowSmall] = useState(false);
+  const concepts = useMemo(() => month.concepts.map(conceptStats), [month]);
+  const totals = useMemo(() => {
+    const spend = concepts.reduce((s, c) => s + c.spend, 0);
+    const conversions = concepts.reduce((s, c) => s + c.conversions, 0);
+    return { spend, avgCpa: conversions > 0 ? spend / conversions : null };
+  }, [concepts]);
+  const sorted = useMemo(() => [...concepts].sort(CONCEPT_SORTS[sortKey].by), [concepts, sortKey]);
+  const main = sorted.filter((c) => c.spend >= SMALL_TEST_SPEND);
+  const small = sorted.filter((c) => c.spend < SMALL_TEST_SPEND);
+  // A month of nothing but small tests still shows them.
+  const visible = main.length === 0 || showSmall ? sorted : main;
+
+  return (
+    <section className="cs-intel-panel">
+      <header className="cs-intel-panel__header">
+        <div>
+          <h2>Concepts launched · {month.label}</h2>
+          <p className="mt-0.5 text-[11.5px] text-neutral-500">
+            A concept is one creative idea; its variants are the edits, hooks and cuts tested under it. The winner is the variant that spent the most.
+          </p>
+        </div>
+        {concepts.length > 1 && (
+          <div className="cs-weekly-switcher is-compact" role="tablist" aria-label="Sort concepts">
+            {Object.entries(CONCEPT_SORTS).map(([key, s]) => (
+              <button key={key} type="button" role="tab" aria-selected={sortKey === key} onClick={() => setSortKey(key)}
+                className={`cs-weekly-switcher__item ${sortKey === key ? "is-active" : ""}`}>
+                {s.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </header>
+      <div className="cs-intel-panel__body">
+        {concepts.length === 0 ? (
+          <p className="text-xs text-neutral-500">No concepts launched in {month.label}{token ? ` with "${token}" in the name` : ""}.</p>
+        ) : (
+          <div className="cs-mc-list">
+            {visible.map((c) => (
+              <ConceptCard key={c.key} concept={c} monthSpend={totals.spend} avgCpa={totals.avgCpa} media={media} token={token} onPreview={onPreview} />
+            ))}
+            {main.length > 0 && small.length > 0 && (
+              <button type="button" className="cs-research-details-button cs-intel-more-button" aria-expanded={showSmall} onClick={() => setShowSmall((s) => !s)}>
+                {showSmall
+                  ? <>Hide small tests<ChevronDown className="h-3.5 w-3.5 rotate-180" /></>
+                  : <>Show {small.length} small test{small.length === 1 ? "" : "s"} under {money(SMALL_TEST_SPEND)}<ChevronDown className="h-3.5 w-3.5" /></>}
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+ConceptsLaunched.propTypes = { month: PropTypes.object.isRequired, media: PropTypes.object.isRequired, token: PropTypes.string, onPreview: PropTypes.func.isRequired };
+
+/** CPA against the month's blended CPA: within ±10% is neutral. */
+const cpaTone = (cpa, avg) => (cpa == null || !avg ? "" : cpa <= avg * 0.9 ? "is-good" : cpa >= avg * 1.1 ? "is-bad" : "");
+
+function ConceptCard({ concept, monthSpend, avgCpa, media, token, onPreview }) {
+  const [open, setOpen] = useState(false);
   const winner = concept.variants.find((v) => v.is_winner);
   const thumb = winner?.storage_path ? media[winner.storage_path] : null;
   const isVideo = String(winner?.media_type || concept.format || "").toLowerCase().includes("video");
-  // Only the winner shows at first; a concept with no winner shows every variant.
-  const [expanded, setExpanded] = useState(false);
-  const others = winner ? concept.variants.length - 1 : 0;
-  const rows = winner && !expanded ? [winner] : concept.variants;
   const name = (n) => creativeName(n, token);
+  const variants = [...concept.variants].sort((a, b) => b.spend - a.spend);
+  const multi = variants.length > 1;
+  const share = monthSpend > 0 ? concept.spend / monthSpend : 0;
 
   return (
-    <div className="cs-monthly-concept">
-      <div className="cs-monthly-concept__head">
+    <article className={`cs-mc ${open ? "is-open" : ""}`}>
+      <div className="cs-mc__main">
         <button
           type="button"
           disabled={!thumb}
           onClick={() => thumb && onPreview({ url: thumb, isVideo, name: name(winner.ad_names[0]) })}
-          className="cs-monthly-concept__thumb"
+          className="cs-mc__thumb"
           title={thumb ? "View the winning variant" : "No stored creative for the winner"}
         >
           {thumb ? <img src={thumb} alt="" loading="lazy" /> : <Zap className="h-4 w-4" />}
+          {thumb && isVideo && <span className="cs-mc__play"><Play className="h-3 w-3 fill-white" /></span>}
         </button>
-        <div className="min-w-0 flex-1">
-          <p className="break-words text-[14px] font-semibold text-neutral-800">{concept.concept}</p>
-          <p className="mt-0.5 text-xs text-neutral-500">
-            {concept.format && `${concept.format} · `}{concept.variants.length} variant{concept.variants.length === 1 ? "" : "s"} · {money(concept.spend)} total spend
-          </p>
+
+        <div className="cs-mc__body">
+          <div className="cs-mc__title-row">
+            <h3 title={concept.concept}>{concept.concept}</h3>
+            <div className="cs-mc__chips">
+              {concept.format && <span>{concept.format}</span>}
+              <span>{variants.length} variant{multi ? "s" : ""}</span>
+              <span>{Math.round(share * 100)}% of month spend</span>
+            </div>
+          </div>
+
+          {multi && (
+            <div className="cs-mc__split" aria-label="Spend split across variants">
+              {variants.map((v) => (
+                <span key={v.key} className={v.is_winner ? "is-winner" : ""} style={{ flexGrow: Math.max(v.spend, 0.0001) }}
+                  title={`${name(v.ad_names[0])}: ${money(v.spend)} (${Math.round((v.spend_share || 0) * 100)}%)`} />
+              ))}
+            </div>
+          )}
+
+          {winner && (
+            <div className="cs-mc__winner">
+              <Trophy className="h-3.5 w-3.5 shrink-0" />
+              <span className="cs-mc__winner-label">{multi ? `Winner · ${Math.round((winner.spend_share || 0) * 100)}% of spend` : "Only variant"}</span>
+              <span className="cs-mc__winner-name" title={winner.ad_names[0]}>{name(winner.ad_names[0])}</span>
+            </div>
+          )}
+          {winner && (winner.tags?.persona || winner.tags?.primary_angle || !winner.analyzed) && (
+            <div className="cs-intel-tag-row">
+              {winner.tags?.persona && <span className="cs-intel-attribute-pill is-tone-2" title="Persona (from the Insights audit)">{winner.tags.persona}</span>}
+              {winner.tags?.primary_angle && <span className="cs-intel-attribute-pill is-tone-1" title="Angle (from the Insights analysis)">{winner.tags.primary_angle}</span>}
+              {!winner.analyzed && <span className="text-[11px] text-neutral-500">Winner not analyzed yet, so no tags</span>}
+            </div>
+          )}
         </div>
+
+        <dl className="cs-mc__stats">
+          <div><dt>Spend</dt><dd>{money(concept.spend)}</dd></div>
+          <div><dt>Conv.</dt><dd>{concept.conversions || "—"}</dd></div>
+          <div><dt>CPA</dt><dd className={cpaTone(concept.cpa, avgCpa)}>{concept.cpa != null ? money(concept.cpa) : "—"}</dd></div>
+        </dl>
       </div>
-      <table className="cs-monthly-table">
-        <thead>
-          <tr>
-            <th className="text-left">Variant</th>
-            <th>Spend</th>
-            <th>Share</th>
-            <th>Conv.</th>
-            <th>CPA</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((v) => {
-            const toggle = v.is_winner && others > 0;
-            return (
-              <tr
-                key={v.key}
-                className={`${v.is_winner ? "is-winner" : ""} ${toggle ? "is-toggle" : ""}`}
-                onClick={toggle ? () => setExpanded((e) => !e) : undefined}
-                title={toggle ? (expanded ? "Hide the other variants" : `Show the other ${others} variant${others === 1 ? "" : "s"}`) : undefined}
-              >
-                <td className="text-left">
-                  <div className="flex items-start gap-1.5">
-                    {toggle && (expanded ? <ChevronDown className="mt-0.5 h-3.5 w-3.5 shrink-0 text-neutral-500" /> : <ChevronRight className="mt-0.5 h-3.5 w-3.5 shrink-0 text-neutral-500" />)}
-                    {v.is_winner && <span className="cs-monthly-winner">Winner</span>}
-                    <div className="min-w-0">
-                      <p className={`break-all ${v.is_winner ? "font-medium text-neutral-800" : "text-neutral-700"}`} title={v.ad_names[0]}>{name(v.ad_names[0])}</p>
-                      {v.ad_names.length > 1 && <p className="text-[11px] text-neutral-500">+{v.ad_names.length - 1} duplicate{v.ad_names.length === 2 ? "" : "s"} merged</p>}
-                      {v.is_winner && (v.tags?.persona || v.tags?.primary_angle) && (
-                        <div className="cs-intel-tag-row mt-1.5">
-                          {v.tags.persona && <span className="cs-intel-attribute-pill is-tone-2" title="Persona (from the Insights audit)">{v.tags.persona}</span>}
-                          {v.tags.primary_angle && <span className="cs-intel-attribute-pill is-tone-1" title="Angle (from the Insights analysis)">{v.tags.primary_angle}</span>}
-                        </div>
-                      )}
-                      {v.is_winner && !v.analyzed && <p className="text-[11px] text-neutral-500">Not analyzed yet — no tags or stored creative</p>}
-                      {toggle && !expanded && <p className="mt-0.5 text-[11px] text-neutral-500">+{others} other variant{others === 1 ? "" : "s"}</p>}
-                    </div>
-                  </div>
-                </td>
-                <td>{money(v.spend)}</td>
-                <td className="text-neutral-500">{Math.round((v.spend_share || 0) * 100)}%</td>
-                <td>{v.conversions || "—"}</td>
-                <td>{v.cpa != null ? money(v.cpa) : "—"}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+
+      {multi && (
+        <button type="button" className="cs-mc__toggle" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+          {open ? "Hide variants" : `Compare ${variants.length} variants`}
+          <ChevronDown className={`h-3.5 w-3.5 transition-transform ${open ? "rotate-180" : ""}`} />
+        </button>
+      )}
+
+      {open && (
+        <ol className="cs-mc__variants">
+          {variants.map((v, i) => (
+            <li key={v.key} className={v.is_winner ? "is-winner" : ""}>
+              <span className="cs-mc__rank">{v.is_winner ? <Trophy className="h-3.5 w-3.5" /> : i + 1}</span>
+              <div className="cs-mc__variant-name">
+                <p title={v.ad_names[0]}>{name(v.ad_names[0])}</p>
+                {v.ad_names.length > 1 && <small>+{v.ad_names.length - 1} duplicate{v.ad_names.length === 2 ? "" : "s"} merged (same creative relaunched)</small>}
+              </div>
+              <div className="cs-mc__share" title={`${Math.round((v.spend_share || 0) * 100)}% of this concept's spend`}>
+                <i style={{ width: `${Math.max((v.spend_share || 0) * 100, 2)}%` }} />
+                <span>{Math.round((v.spend_share || 0) * 100)}%</span>
+              </div>
+              <span className="cs-mc__num">{money(v.spend)}</span>
+              <span className="cs-mc__num">{v.conversions || "—"}</span>
+              <span className={`cs-mc__num ${cpaTone(v.cpa, avgCpa)}`}>{v.cpa != null ? money(v.cpa) : "—"}</span>
+            </li>
+          ))}
+        </ol>
+      )}
+    </article>
   );
 }
-ConceptCard.propTypes = { concept: PropTypes.object.isRequired, media: PropTypes.object.isRequired, token: PropTypes.string, onPreview: PropTypes.func.isRequired };
+ConceptCard.propTypes = {
+  concept: PropTypes.object.isRequired, monthSpend: PropTypes.number.isRequired, avgCpa: PropTypes.number,
+  media: PropTypes.object.isRequired, token: PropTypes.string, onPreview: PropTypes.func.isRequired,
+};
 
 function Leaderboard({ review, dimension, setDimension, token }) {
   const [open, setOpen] = useState(null);

@@ -7,6 +7,7 @@ import { CircleDashed, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 // ── Loading ──────────────────────────────────────────────────────────────────
 // Centered spinner + label for tab initiation / async actions.
@@ -186,3 +187,20 @@ export function ErrorBanner({ message, className }) {
   );
 }
 ErrorBanner.propTypes = { message: PropTypes.string, className: PropTypes.string };
+
+// ── Scrolling ────────────────────────────────────────────────────────────────
+// shadcn ScrollArea with the module's warm brown thumb. `axis="y"` keeps
+// Radix's inner wrapper block-level so long text wraps instead of widening
+// the content; `axis="x"` leaves it sized to the row of cards.
+export function CsScrollArea({ axis = "y", className, viewportClassName, ...props }) {
+  return (
+    <ScrollArea
+      type="hover"
+      className={cn("cs-scroll", className)}
+      viewportClassName={cn(axis === "y" && "[&>div]:!block", viewportClassName)}
+      thumbClassName="bg-[#6c3403]/25 hover:bg-[#6c3403]/45"
+      {...props}
+    />
+  );
+}
+CsScrollArea.propTypes = { axis: PropTypes.oneOf(["x", "y"]), className: PropTypes.string, viewportClassName: PropTypes.string };
