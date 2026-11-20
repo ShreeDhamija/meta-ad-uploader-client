@@ -59,15 +59,15 @@ function outlierFences(values) {
   return { lo: q1 - 3 * iqr, hi: q3 + 3 * iqr };
 }
 
-function Section({ title, actions, children }) {
+function Section({ title, actions, children, noDivider = false }) {
   return (
-    <section className="cs-intel-insight">
+    <section className={`cs-intel-insight ${noDivider ? "is-no-divider" : ""}`}>
       <header><h2>{title}</h2>{actions}</header>
       <div className="cs-intel-insight__body">{children}</div>
     </section>
   );
 }
-Section.propTypes = { title: PropTypes.string.isRequired, actions: PropTypes.node, children: PropTypes.node };
+Section.propTypes = { title: PropTypes.string.isRequired, actions: PropTypes.node, children: PropTypes.node, noDivider: PropTypes.bool };
 
 // ── Spend vs CPA ─────────────────────────────────────────────────────────────
 
@@ -150,22 +150,23 @@ SpendCpaChart.propTypes = { ads: PropTypes.array.isRequired };
 const DEFAULT_LIMIT = 50;
 const SORTS = {
   spend: { label: "Spend", value: (ad) => num(ad.spend) || null },
-  cpa: { label: "Lowest CPA", value: (ad) => num(ad.costPerPurchase) || null, asc: true },
+  cpa: { label: "Lowest CPA", value: (ad) => cpaOf(ad), asc: true },
   conversions: { label: "Conversions", value: (ad) => num(ad.purchases) || null },
   ctr: { label: "CTR", value: (ad) => num(ad.ctr) || null },
   hook_rate: { label: "Hook rate", value: (ad) => num(ad.hookRate) || null },
 };
-const FORMATS = [["all", "All"], ["video", "Video"], ["static", "Static"]];
+const FORMATS = [{ key: "all", label: "All" }, { key: "video", label: "Video" }, { key: "static", label: "Static" }];
 
-function Metric({ label, value }) {
-  return (
-    <div className="min-w-0">
-      <p className="text-[11px] leading-tight text-neutral-400">{label}</p>
-      <p className="truncate text-xs font-semibold leading-tight text-neutral-800 tabular-nums">{value}</p>
-    </div>
-  );
+const pct = (v, digits = 1) => `${v.toFixed(digits)}%`;
+
+/** CPA against the account's blended CPA: within ±10% is "at average". */
+function cpaTone(cpa, avgCpa) {
+  if (!cpa || !avgCpa) return { tone: "", note: null };
+  const ratio = cpa / avgCpa;
+  if (ratio <= 0.9) return { tone: "is-good", note: `${Math.round((1 - ratio) * 100)}% below avg` };
+  if (ratio >= 1.1) return { tone: "is-bad", note: `${Math.round((ratio - 1) * 100)}% above avg` };
+  return { tone: "", note: "at avg" };
 }
-Metric.propTypes = { label: PropTypes.string.isRequired, value: PropTypes.string.isRequired };
 
 /** Loads the image only once the card is near the visible part of the strip. */
 function LazyThumb({ root, src }) {
@@ -184,6 +185,73 @@ function LazyThumb({ root, src }) {
 }
 LazyThumb.propTypes = { root: PropTypes.object, src: PropTypes.string.isRequired };
 
+function Stat({ label, value, muted = false }) {
+  return (
+    <div className={`cs-top-stat ${muted ? "is-muted" : ""}`}>
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+Stat.propTypes = { label: PropTypes.string.isRequired, value: PropTypes.string.isRequired, muted: PropTypes.bool };
+
+function PerformerCard({ ad, rank, avgCpa, root, onOpen }) {
+  const video = isVideoAd(ad);
+  const thumb = thumbOf(ad);
+  const spend = num(ad.spend); const cpa = cpaOf(ad); const conv = num(ad.purchases);
+  const ctr = num(ad.ctr); const cpm = num(ad.cpm); const freq = num(ad.frequency);
+  const clicks = num(ad.clicks); const cpc = clicks > 0 ? spend / clicks : null;
+  const hook = num(ad.hookRate); const watch = num(ad.avgWatchTime);
+  const { tone, note } = cpaTone(cpa, avgCpa);
+  const fatigued = isFatigued(ad, avgCpa);
+
+  return (
+    <article className="cs-top-card">
+      <button type="button" onClick={() => thumb && onOpen(ad)} className="cs-top-card__media" aria-label={`Preview ${ad.adName || "ad"}`}>
+        {thumb ? <LazyThumb root={root} src={thumb} /> : <div className="grid h-full w-full place-items-center text-[#c9a891]"><Zap className="h-5 w-5" /></div>}
+        {video && thumb && <span className="cs-top-card__play"><Play className="ml-0.5 h-3.5 w-3.5 fill-white text-white" /></span>}
+        <span className="cs-top-card__rank">{rank}</span>
+        <span className="cs-top-card__format">{video ? "Video" : "Static"}</span>
+      </button>
+
+      <div className="cs-top-card__body">
+        <p className="cs-top-card__name" title={ad.adName || "Unnamed"}>{ad.adName || "Unnamed"}</p>
+
+        <div className="cs-top-card__headline">
+          <div>
+            <span>Spend</span>
+            <strong>{fmt$(spend)}</strong>
+          </div>
+          <div className={tone}>
+            <span>CPA</span>
+            <strong>{cpa ? fmt$(cpa) : "—"}</strong>
+          </div>
+        </div>
+        <p className="cs-top-card__sub">
+          {conv > 0 ? `${conv.toLocaleString()} conversion${conv === 1 ? "" : "s"}` : "No conversions"}
+          {note && <> · <span className={tone}>{note}</span></>}
+        </p>
+
+        <div className="cs-top-card__stats">
+          <Stat label="CTR" value={ctr > 0 ? pct(ctr, 2) : "—"} />
+          <Stat label="CPM" value={cpm > 0 ? fmtCents(cpm) : "—"} />
+          <Stat label="CPC" value={cpc != null ? fmtCents(cpc) : "—"} />
+          <Stat label="Freq." value={freq > 0 ? `${freq.toFixed(1)}×` : "—"} />
+          <Stat label="Hook" value={video ? (hook > 0 ? pct(hook * 100) : "—") : "n/a"} muted={!video} />
+          <Stat label="Watch" value={video ? (watch > 0 ? `${Math.round(watch)}s` : "—") : "n/a"} muted={!video} />
+        </div>
+
+        {fatigued && (
+          <span className="cs-top-card__fatigue" title={`Frequency ${freq.toFixed(1)}×${cpa ? " with CPA above average" : ""}`}>
+            <AlertTriangle className="h-3 w-3" />Fatigue risk
+          </span>
+        )}
+      </div>
+    </article>
+  );
+}
+PerformerCard.propTypes = { ad: PropTypes.object.isRequired, rank: PropTypes.number.isRequired, avgCpa: PropTypes.number, root: PropTypes.object, onOpen: PropTypes.func.isRequired };
+
 export function TopPerformers({ ads, limit = DEFAULT_LIMIT }) {
   const scrollRef = useRef(null);
   const [scrollRoot, setScrollRoot] = useState(null);
@@ -197,6 +265,10 @@ export function TopPerformers({ ads, limit = DEFAULT_LIMIT }) {
 
   const avgCpa = useMemo(() => blendedCpa(ads), [ads]);
   const pool = useMemo(() => ads.filter((ad) => num(ad.spend) > 0), [ads]);
+  const formatCounts = useMemo(() => ({
+    all: pool.length, video: pool.filter(isVideoAd).length, static: pool.filter((ad) => !isVideoAd(ad)).length,
+  }), [pool]);
+  const fatiguedCount = useMemo(() => pool.filter((ad) => isFatigued(ad, avgCpa)).length, [pool, avgCpa]);
 
   // Filters run over every ad with spend, then the limit applies — so a search
   // can surface an ad outside the top 50.
@@ -237,111 +309,80 @@ export function TopPerformers({ ads, limit = DEFAULT_LIMIT }) {
     return () => window.removeEventListener("resize", updateScrollState);
   }, [updateScrollState, displayAds.length]);
 
+  useEffect(() => {
+    if (!expanded) return undefined;
+    const onKey = (e) => { if (e.key === "Escape") setExpanded(null); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [expanded]);
+
   if (!pool.length) return null;
   const scroll = (dir) => {
     const el = scrollRef.current;
     if (!el) return;
-    el.scrollBy({ left: dir === "left" ? -Math.max(el.clientWidth - 220, 220) : Math.max(el.clientWidth - 220, 220), behavior: "smooth" });
+    const step = Math.max(el.clientWidth - 220, 220);
+    el.scrollBy({ left: dir === "left" ? -step : step, behavior: "smooth" });
   };
-  const arrow = "grid h-6 w-6 place-items-center rounded-md border border-neutral-200 bg-white hover:bg-neutral-50 disabled:pointer-events-none disabled:opacity-40";
+  const summary = filtersActive
+    ? `${matchCount} match${matchCount === 1 ? "" : "es"}${matchCount > displayAds.length ? ` · top ${displayAds.length} shown` : ""}`
+    : `Top ${displayAds.length} by ${SORTS[sortKey].label.toLowerCase()}`;
 
   return (
     <Section
       title="Top performers"
-      actions={<div className="flex items-center gap-2">
-        <span className="text-xs text-neutral-400">
-          {filtersActive
-            ? `${matchCount} match${matchCount === 1 ? "" : "es"}${matchCount > displayAds.length ? ` · showing top ${displayAds.length}` : ""}`
-            : `top ${displayAds.length} by ${SORTS[sortKey].label.toLowerCase()}`}
-        </span>
-        <button type="button" onClick={() => scroll("left")} disabled={!canScrollLeft} aria-label="Scroll left" className={arrow}><ChevronLeft className="h-3.5 w-3.5" /></button>
-        <button type="button" onClick={() => scroll("right")} disabled={!canScrollRight} aria-label="Scroll right" className={arrow}><ChevronRight className="h-3.5 w-3.5" /></button>
-      </div>}
-    >
-      <div className="mb-3 flex flex-wrap items-center gap-2">
-        <div className="relative w-full sm:w-56">
-          <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-neutral-400" />
-          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search ad name…"
-            className="h-8 w-full rounded-md border border-neutral-200 bg-white pl-7 pr-7 text-xs outline-none focus:border-neutral-400" />
-          {query && <button type="button" onClick={() => setQuery("")} aria-label="Clear search" className="absolute right-2 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700"><X className="h-3.5 w-3.5" /></button>}
+      noDivider
+      actions={(
+        <div className="flex items-center gap-2">
+          <span className="cs-top-summary">{summary}{avgCpa ? ` · avg CPA ${fmt$(avgCpa)}` : ""}</span>
+          <button type="button" onClick={() => scroll("left")} disabled={!canScrollLeft} aria-label="Scroll left" className="cs-top-arrow"><ChevronLeft className="h-4 w-4" /></button>
+          <button type="button" onClick={() => scroll("right")} disabled={!canScrollRight} aria-label="Scroll right" className="cs-top-arrow"><ChevronRight className="h-4 w-4" /></button>
         </div>
-        <div className="inline-flex overflow-hidden rounded-md border border-neutral-200 bg-white">
-          {FORMATS.map(([key, label]) => (
-            <button key={key} type="button" onClick={() => setFormat(key)} aria-pressed={format === key}
-              className={`h-8 px-2.5 text-xs ${format === key ? "bg-neutral-800 text-white" : "text-neutral-600 hover:bg-neutral-50"}`}>{label}</button>
+      )}
+    >
+      <div className="cs-top-controls">
+        <div className="cs-top-search">
+          <Search className="h-3.5 w-3.5" aria-hidden="true" />
+          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search ad name…" className="cs-research-input" aria-label="Search ad name" />
+          {query && <button type="button" onClick={() => setQuery("")} aria-label="Clear search"><X className="h-3.5 w-3.5" /></button>}
+        </div>
+        <div className="cs-weekly-switcher is-compact" role="group" aria-label="Format">
+          {FORMATS.map((item) => (
+            <button key={item.key} type="button" onClick={() => setFormat(item.key)} aria-pressed={format === item.key}
+              className={`cs-weekly-switcher__item ${format === item.key ? "is-active" : ""}`}>
+              {item.label} <span>{formatCounts[item.key]}</span>
+            </button>
           ))}
         </div>
-        <button type="button" onClick={() => setFatiguedOnly((v) => !v)} aria-pressed={fatiguedOnly}
-          className={`inline-flex h-8 items-center gap-1 rounded-md border px-2.5 text-xs ${fatiguedOnly ? "border-amber-400 bg-amber-50 text-amber-700" : "border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50"}`}>
-          <AlertTriangle className="h-3 w-3" />Fatigued only
-        </button>
+        <div className="cs-weekly-switcher is-compact">
+          <button type="button" onClick={() => setFatiguedOnly((v) => !v)} aria-pressed={fatiguedOnly}
+            className={`cs-weekly-switcher__item ${fatiguedOnly ? "is-active" : ""}`}>
+            <AlertTriangle className="h-3 w-3" />Fatigued <span>{fatiguedCount}</span>
+          </button>
+        </div>
         <Select value={sortKey} onValueChange={setSortKey}>
-          <SelectTrigger className="h-8 w-[160px] bg-white text-xs"><SelectValue /></SelectTrigger>
-          <SelectContent className="bg-white">
-            {Object.keys(SORTS).map((key) => <SelectItem key={key} value={key} className="text-xs">Sort: {SORTS[key].label}</SelectItem>)}
+          <SelectTrigger className="cs-weekly-filter-select cs-top-sort px-3"><SelectValue /></SelectTrigger>
+          <SelectContent className="cs-select-content bg-white">
+            {Object.keys(SORTS).map((key) => <SelectItem key={key} value={key}>Sort: {SORTS[key].label}</SelectItem>)}
           </SelectContent>
         </Select>
-        {filtersActive && <button type="button" onClick={() => { setQuery(""); setFormat("all"); setFatiguedOnly(false); }} className="text-xs font-medium text-[#854413] hover:underline">Clear filters</button>}
+        {filtersActive && <button type="button" onClick={() => { setQuery(""); setFormat("all"); setFatiguedOnly(false); }} className="cs-weekly-clear">Clear filters</button>}
       </div>
 
-      {!displayAds.length && <p className="py-6 text-center text-xs text-neutral-400">No ads match these filters.</p>}
+      {!displayAds.length && <p className="cs-research-muted py-8 text-center">No ads match these filters.</p>}
 
-      <div ref={(el) => { scrollRef.current = el; setScrollRoot(el); }} onScroll={updateScrollState}
-        className="flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth pb-2" style={{ scrollbarWidth: "thin" }}>
-        {displayAds.map((ad, idx) => {
-          const video = isVideoAd(ad);
-          const thumb = thumbOf(ad);
-          const spend = num(ad.spend); const cpa = num(ad.costPerPurchase); const ctr = num(ad.ctr); const cpm = num(ad.cpm);
-          const clicks = num(ad.clicks); const cpc = clicks > 0 ? spend / clicks : null;
-          const watch = num(ad.avgWatchTime); const freq = num(ad.frequency);
-          return (
-            <div key={ad.adId || idx} className="w-[120px] shrink-0 snap-start overflow-hidden rounded-lg border border-neutral-200 bg-white">
-              {/* 9:16 thumbnail — click to enlarge */}
-              <button type="button" onClick={() => thumb && setExpanded(ad)} className="group relative block aspect-[9/16] w-full bg-neutral-900">
-                {thumb ? <LazyThumb root={scrollRoot} src={thumb} /> : <div className="grid h-full w-full place-items-center text-neutral-500"><Zap className="h-5 w-5" /></div>}
-                {video && thumb && (
-                  <div className="absolute inset-0 grid place-items-center bg-black/20 transition-colors group-hover:bg-black/40">
-                    <div className="grid h-8 w-8 place-items-center rounded-full bg-black/60"><Play className="ml-0.5 h-4 w-4 fill-white text-white" /></div>
-                  </div>
-                )}
-                <div className="absolute left-1.5 top-1.5 grid h-6 w-6 place-items-center rounded-full bg-[#854413] text-[11px] font-bold text-white shadow">{idx + 1}</div>
-                <span className="absolute right-1.5 top-1.5 rounded border border-white/20 bg-black/50 px-1.5 text-[9px] text-white">{video ? "Video" : "Static"}</span>
-              </button>
-              <div className="space-y-2 px-2 py-2">
-                {/* Full name, wrapped — the differences are often at the end. */}
-                <p className="break-all text-[11px] font-medium leading-snug text-neutral-800">{ad.adName || "Unnamed"}</p>
-                {isFatigued(ad, avgCpa) && (
-                  <span title={`Frequency ${freq.toFixed(1)}× — high frequency${ad.costPerPurchase ? " with CPA above average" : ""}`}
-                    className="inline-flex items-center gap-1 rounded border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-[11px] font-semibold text-amber-700">
-                    <AlertTriangle className="h-3 w-3" />Fatigue
-                  </span>
-                )}
-                <div className="grid grid-cols-2 gap-x-2 gap-y-1.5">
-                  <Metric label="Spend" value={fmt$(spend)} />
-                  <Metric label="CPA" value={cpa ? fmt$(cpa) : "—"} />
-                  <Metric label="Conv." value={num(ad.purchases) > 0 ? String(ad.purchases) : "—"} />
-                  <Metric label="CTR" value={ctr > 0 ? `${ctr.toFixed(2)}%` : "—"} />
-                  <Metric label="CPM" value={cpm > 0 ? fmtCents(cpm) : "—"} />
-                  <Metric label="CPC" value={cpc != null ? fmtCents(cpc) : "—"} />
-                  {video && <Metric label="Hook rate" value={num(ad.hookRate) > 0 ? `${(num(ad.hookRate) * 100).toFixed(1)}%` : "—"} />}
-                  {video && <Metric label="Avg watch" value={watch > 0 ? `${Math.round(watch)}s` : "—"} />}
-                </div>
-              </div>
-            </div>
-          );
-        })}
+      <div ref={(el) => { scrollRef.current = el; setScrollRoot(el); }} onScroll={updateScrollState} className="cs-top-strip">
+        {displayAds.map((ad, idx) => (
+          <PerformerCard key={ad.adId || idx} ad={ad} rank={idx + 1} avgCpa={avgCpa} root={scrollRoot} onOpen={setExpanded} />
+        ))}
       </div>
 
       {expanded && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={() => setExpanded(null)}>
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
-          <div className="relative mx-4 w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
-            <button type="button" onClick={() => setExpanded(null)} aria-label="Close"
-              className="absolute -right-3 -top-3 z-10 grid h-7 w-7 place-items-center rounded-full border border-neutral-200 bg-white hover:bg-neutral-50"><X className="h-4 w-4" /></button>
-            <div className="aspect-[9/16] overflow-hidden rounded-lg bg-black">
-              <img src={thumbOf(expanded)} alt="" className="h-full w-full object-contain" />
-            </div>
-            <p className="mt-2 break-all px-1 text-sm font-medium text-white">{expanded.adName}</p>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setExpanded(null)}>
+          <div className="absolute inset-0 bg-black/45 backdrop-blur-[1px]" />
+          <div className="cs-top-preview" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={expanded.adName || "Ad preview"}>
+            <button type="button" onClick={() => setExpanded(null)} aria-label="Close" className="cs-top-preview__close"><X className="h-4 w-4" /></button>
+            <div className="cs-top-preview__media"><img src={thumbOf(expanded)} alt="" /></div>
+            <p>{expanded.adName}</p>
           </div>
         </div>
       )}
