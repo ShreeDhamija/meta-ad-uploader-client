@@ -2069,6 +2069,740 @@ html body #root .creative-strategy .cs-research-intel.is-open.is-stuck button.cs
   font-size: 11px;
 }
 
+/* ── Research page: structured section views (ResearchSections.jsx) ──────────
+ * Expanded research rows use the persona profile's model: a two-column grid of
+ * labeled boxes (.cs-persona-block), plus leads, stat tiles, callouts, tags,
+ * quotes and sub-cards for repeated items. Keep this block self-contained. */
+.cs-research-details-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cs-research-layout {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  align-items: start;
+  padding-top: 6px;
+}
+
+.cs-research-layout__cell {
+  min-width: 0;
+}
+
+.cs-research-layout__cell.is-wide {
+  grid-column: 1 / -1;
+}
+
+.cs-research-block > h4 {
+  margin-bottom: 12px;
+}
+
+.cs-research-block.is-good > h4 svg { color: #2f7d46; }
+.cs-research-block.is-bad > h4 svg { color: #b43c22; }
+.cs-research-block.is-warn > h4 svg { color: #b86b0c; }
+
+.cs-research-subheading {
+  margin-top: 10px;
+  color: #3b170b;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.cs-research-lead {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+  padding: 16px 20px;
+  border: 1px solid rgba(194, 97, 26, 0.24);
+  border-left: 4px solid #e8812c;
+  border-radius: 16px;
+  background: #fff3e6;
+}
+
+.cs-research-lead p {
+  color: #3b170b;
+  font-size: 14px;
+  font-weight: 450;
+  line-height: 1.6;
+}
+
+.cs-research-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+.cs-research-stats > div {
+  min-width: 0;
+  padding: 12px 15px;
+  border: 1px solid rgba(108, 52, 3, 0.16);
+  border-radius: 14px;
+  background: #fff;
+}
+
+.cs-research-stats dt {
+  color: #9a6038;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.cs-research-stats dd {
+  margin-top: 3px;
+  color: #310b00;
+  font-size: 22px;
+  font-weight: 650;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+.cs-research-stats > div.is-text dd {
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.cs-research-stats small {
+  display: block;
+  margin-top: 2px;
+  color: #8a746c;
+  font-size: 10.5px;
+}
+
+.cs-research-callout {
+  display: grid;
+  gap: 7px;
+  padding: 14px 16px;
+  border: 1px solid rgba(108, 52, 3, 0.2);
+  border-radius: 14px;
+  color: #3b170b;
+  background: var(--cs-peach);
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+
+.cs-research-callout > span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #6c3403;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.cs-research-callout.is-dark {
+  border-color: #310b00;
+  color: #fff7ef;
+  background: #310b00;
+  font-size: 13.5px;
+}
+
+.cs-research-callout.is-dark > span {
+  color: var(--cs-orange);
+}
+
+.cs-research-chips.is-good span { border-color: rgba(47, 125, 70, 0.28); color: #23613a; background: #e9f6ec; }
+.cs-research-chips.is-bad span { border-color: rgba(180, 60, 34, 0.25); color: #93301a; background: #fdebe6; }
+
+.cs-research-value-list.is-numbered {
+  list-style: decimal;
+}
+
+/* Long URLs in research lists (also in the persona dialog) must wrap. */
+.cs-research-value-list {
+  min-width: 0;
+}
+
+.cs-research-value-list li {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.cs-research-nested {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.cs-research-nested p {
+  overflow-wrap: anywhere;
+}
+
+.cs-research-more {
+  margin-top: 6px;
+  color: #9a8d87;
+  font-size: 11px;
+}
+
+.cs-research-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.cs-research-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border: 1px solid rgba(108, 52, 3, 0.16);
+  border-radius: 999px;
+  color: #6c5a52;
+  background: #f6efea;
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.cs-research-tag.is-good { border-color: rgba(47, 125, 70, 0.25); color: #23613a; background: #e9f6ec; }
+.cs-research-tag.is-warn { border-color: rgba(184, 107, 12, 0.28); color: #8a4b07; background: #fff1dc; }
+.cs-research-tag.is-bad { border-color: rgba(180, 60, 34, 0.25); color: #93301a; background: #fdebe6; }
+.cs-research-tag.is-brand { border-color: rgba(108, 52, 3, 0.24); color: #6c3403; background: var(--cs-peach); }
+
+.cs-research-items {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
+}
+
+.cs-research-items.is-single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.cs-research-item {
+  display: grid;
+  min-width: 0;
+  gap: 9px;
+  align-content: start;
+  padding: 13px 15px;
+  border: 1px solid rgba(108, 52, 3, 0.16);
+  border-radius: 14px;
+  background: var(--cs-cream);
+}
+
+.cs-research-item > header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 6px 10px;
+}
+
+.cs-research-item h5 {
+  min-width: 0;
+  flex: 1 1 180px;
+  color: #3b170b;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.45;
+}
+
+.cs-research-item__subtitle {
+  margin-top: -4px;
+  color: #7d6d66;
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+
+.cs-research-item__body,
+.cs-research-stack,
+.cs-research-fields {
+  display: grid;
+  min-width: 0;
+  gap: 9px;
+  color: #4f423c;
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.cs-research-fields strong {
+  color: #3b170b;
+  font-weight: 650;
+}
+
+.cs-research-field > span {
+  display: block;
+  margin-bottom: 4px;
+  color: #9a6038;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.cs-research-para {
+  color: #4f423c;
+  font-size: 12.5px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.cs-research-hint {
+  padding-left: 14px;
+  color: #7d6d66;
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+
+.cs-research-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  color: #6c5a52;
+  background: #f7f1ec;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.cs-research-note + .cs-research-note {
+  margin-top: 6px;
+}
+
+.cs-research-note svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: #9a6038;
+}
+
+.cs-research-quotes {
+  display: grid;
+  gap: 8px;
+}
+
+.cs-research-quote {
+  margin: 0;
+  padding: 9px 12px 9px 13px;
+  border-left: 3px solid var(--cs-orange);
+  border-radius: 0 12px 12px 0;
+  background: #fff;
+}
+
+.cs-research-quote blockquote {
+  color: #3b2a22;
+  font-size: 12.5px;
+  font-style: italic;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.cs-research-quote figcaption {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin-top: 5px;
+  color: #8a746c;
+  font-size: 11px;
+}
+
+.cs-research-quote a,
+.cs-research-link,
+.cs-research-links a {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: #c2611a;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.cs-research-links {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 6px 18px;
+  font-size: 12px;
+}
+
+.cs-research-links li {
+  display: grid;
+  min-width: 0;
+  gap: 1px;
+}
+
+.cs-research-links a {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cs-research-links small {
+  color: #8a746c;
+  font-size: 10.5px;
+}
+
+.cs-research-lanes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.cs-research-lane {
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid rgba(108, 52, 3, 0.14);
+  border-radius: 14px;
+  background: var(--cs-cream);
+}
+
+.cs-research-lane h5 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 9px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.cs-research-lane.is-good { border-color: rgba(47, 125, 70, 0.22); background: #f1f9f3; }
+.cs-research-lane.is-good h5 { color: #23613a; }
+.cs-research-lane.is-warn { border-color: rgba(184, 107, 12, 0.24); background: #fff7ea; }
+.cs-research-lane.is-warn h5 { color: #8a4b07; }
+.cs-research-lane.is-bad { border-color: rgba(180, 60, 34, 0.2); background: #fdf2ef; }
+.cs-research-lane.is-bad h5 { color: #93301a; }
+
+.cs-research-competitors {
+  display: grid;
+  gap: 16px;
+}
+
+.cs-research-competitor {
+  min-width: 0;
+  overflow: hidden;
+  border: 1.5px solid rgba(59, 23, 11, 0.62);
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 3px 8px rgba(59, 23, 11, 0.08);
+}
+
+.cs-research-competitor > header {
+  display: grid;
+  gap: 6px;
+  padding: 14px 18px 15px;
+  color: #fff;
+  background: #310b00;
+}
+
+.cs-research-competitor.is-orange > header {
+  color: #27120a;
+  background: var(--cs-orange);
+}
+
+.cs-research-competitor__title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+}
+
+.cs-research-competitor__title h5 {
+  font-size: 17px;
+  font-weight: 650;
+  line-height: 1.3;
+}
+
+.cs-research-competitor__title a {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--cs-orange);
+  font-size: 12px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.cs-research-competitor.is-orange .cs-research-competitor__title a {
+  color: #6c3403;
+}
+
+.cs-research-competitor > header > p {
+  color: rgba(255, 247, 239, 0.86);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.cs-research-competitor.is-orange > header > p {
+  color: #4a2410;
+}
+
+.cs-research-competitor__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.cs-research-competitor__tags:empty {
+  display: none;
+}
+
+.cs-research-competitor__tags span {
+  padding: 2px 9px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.cs-research-competitor.is-orange .cs-research-competitor__tags span {
+  border-color: rgba(108, 52, 3, 0.25);
+  background: rgba(255, 250, 244, 0.5);
+}
+
+.cs-research-competitor__body {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 18px;
+  align-items: start;
+  padding: 16px 18px 18px;
+  color: #4f423c;
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.cs-research-competitor__body > .is-wide {
+  grid-column: 1 / -1;
+}
+
+.cs-research-competitor__body > .cs-research-field {
+  min-width: 0;
+}
+
+.cs-research-table-wrap {
+  overflow-x: auto;
+  border: 1px solid rgba(108, 52, 3, 0.16);
+  border-radius: 16px;
+  background: #fff;
+}
+
+.cs-research-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  color: #4f423c;
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: left;
+}
+
+.cs-research-table th,
+.cs-research-table td {
+  min-width: 14rem;
+  padding: 11px 13px;
+  border-bottom: 1px solid rgba(108, 52, 3, 0.1);
+  vertical-align: top;
+}
+
+.cs-research-table tbody tr:last-child > * {
+  border-bottom: 0;
+}
+
+.cs-research-table thead th {
+  color: #3b170b;
+  background: #fff3e6;
+  font-size: 12.5px;
+  font-weight: 650;
+}
+
+.cs-research-table th[scope="row"],
+.cs-research-table thead th:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  min-width: 8.5rem;
+  max-width: 10rem;
+  color: #6c3403;
+  background: #fffaf4;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  box-shadow: inset -1px 0 0 rgba(108, 52, 3, 0.12);
+}
+
+.cs-research-table__persona {
+  display: inline-flex;
+  margin-right: 7px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  color: #fff;
+  background: #310b00;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.cs-research-table .cs-research-value-list {
+  gap: 4px;
+  font-size: 12px;
+}
+
+.cs-research-table .cs-persona-chips span {
+  padding: 3px 9px;
+  font-size: 11px;
+}
+
+.cs-research-cell-pairs {
+  display: grid;
+  gap: 6px;
+}
+
+.cs-research-cell-pairs li {
+  display: grid;
+  gap: 2px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: var(--cs-cream);
+}
+
+.cs-research-cell-pairs li span + span {
+  color: #2f6b45;
+}
+
+.cs-research-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 8px;
+}
+
+.cs-research-tiles p {
+  display: flex;
+  min-width: 0;
+  gap: 9px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  color: #4f423c;
+  background: var(--cs-cream);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.cs-research-tiles p span {
+  flex-shrink: 0;
+  color: #c2611a;
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.cs-research-status-list {
+  display: grid;
+  gap: 8px;
+}
+
+.cs-research-status-list li {
+  display: grid;
+  gap: 3px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(108, 52, 3, 0.1);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.cs-research-status-list li:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.cs-research-status-list li > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  color: #3b170b;
+}
+
+.cs-research-status-list p {
+  color: #6c5a52;
+}
+
+.cs-research-avatars {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+}
+
+.cs-research-avatar {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  padding: 16px 18px;
+  border: 1px solid rgba(108, 52, 3, 0.18);
+  border-radius: 18px;
+  background: #fff;
+}
+
+.cs-research-avatar > header {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.cs-research-avatar h5 {
+  color: #3b170b;
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.cs-research-avatar .cs-persona-profile {
+  padding-top: 4px;
+}
+
+.cs-research-avatar .cs-persona-block {
+  background: var(--cs-cream);
+}
+
+@media (max-width: 640px) {
+  .cs-research-layout,
+  .cs-research-competitor__body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .cs-research-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .cs-research-stats dd {
+    font-size: 17px;
+  }
+
+  .cs-research-items,
+  .cs-research-links,
+  .cs-research-tiles,
+  .cs-research-lanes {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .cs-research-lead {
+    padding: 14px 15px;
+  }
+
+  .cs-research-competitor > header,
+  .cs-research-competitor__body {
+    padding-right: 14px;
+    padding-left: 14px;
+  }
+
+  .cs-research-table th,
+  .cs-research-table td {
+    min-width: 12rem;
+  }
+
+  .cs-research-table th[scope="row"],
+  .cs-research-table thead th:first-child {
+    min-width: 6.5rem;
+  }
+}
+/* ── End research structured section views ─────────────────────────────── */
+
 .cs-intel-toolbar {
   display: flex;
   align-items: center;

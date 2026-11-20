@@ -13,15 +13,19 @@ import { RUN_OPERATIONS } from "../run-model-operations";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { humanize } from "../JsonView";
 import { EmptyState, ErrorBanner, PartialResultsNotice, ProgressiveSection } from "../ui";
+import { ResearchSectionBody, researchSectionMeta } from "./ResearchSections";
 import { useJobRunner } from "../JobsContext";
 import redditIcon from "@/assets/icons/signup/reddit.svg";
 
 const ORDER = [
   "reddit_sentiment", "brand_deep_dive", "consumer_research_report", "review_mining", "language_bank",
-  "sentiment_alignment", "competitor_scan", "persona_cross_map",
+  "sentiment_alignment", "competitor_scan", "persona_cross_map", "secondary_audience_signals",
   "persona_summary_table", "market_analysis", "features", "benefits", "pricing",
-  "branding", "pain_points", "objections", "testimonials",
+  "branding", "pain_points", "objections", "testimonials", "customer_avatars",
 ];
+// Stored per product but owned by other pages: personas render above, trending
+// creative on Inspiration, and the ad audit on Insights.
+const NON_RESEARCH_TYPES = new Set(["personas", "trending_creative", "creative_strategy_audit"]);
 
 const PROGRESSIVE_RESEARCH_SECTIONS = [
   { type: "reddit_sentiment", title: "Reddit sentiment", phase: "mining_reddit", icon: redditIcon },
@@ -170,7 +174,7 @@ export default function ResearchView({ ctx }) {
     } : {}),
   };
   const sectionTypes = types
-    .filter((type) => type !== "personas" && type !== "trending_creative")
+    .filter((type) => !NON_RESEARCH_TYPES.has(type))
     .sort((a, b) => {
       const first = ORDER.indexOf(a);
       const second = ORDER.indexOf(b);
@@ -269,14 +273,14 @@ export default function ResearchView({ ctx }) {
               </div>
               <div className="cs-research-intel-list">
                 {PROGRESSIVE_RESEARCH_SECTIONS.map((section) => researchIntel[section.type]
-                  ? <ResearchIntelRow key={section.type} title={section.title} icon={section.icon} data={researchIntel[section.type]} />
+                  ? <ResearchIntelRow key={section.type} type={section.type} title={section.title} icon={section.icon} data={researchIntel[section.type]} />
                   : (
                     <div key={section.type} className="relative">
                       {section.icon && <img src={section.icon} alt="" aria-hidden="true" className="absolute left-4 top-4 z-10 h-5 w-5" />}
                       <ProgressiveSection title={section.title} active={stageActive(section.phase)} lines={2} className={`rounded-[20px] ${section.icon ? "[&_h3]:pl-7" : ""}`} />
                     </div>
                   ))}
-                {extraSectionTypes.map((type) => <ResearchIntelRow key={type} title={humanize(type)} data={intel[type]} />)}
+                {extraSectionTypes.map((type) => <ResearchIntelRow key={type} type={type} title={humanize(type)} data={intel[type]} />)}
               </div>
               {!intel.persona_cross_map && <p className="mt-3 text-xs text-neutral-500">Persona cross-map compares research personas with audiences found in your ads. Run ad analysis, then Research, to build it. The persona summary table above works from research alone.</p>}
           </section>
@@ -478,6 +482,11 @@ function PersonaProfile({ persona }) {
   );
 }
 
+/** Full persona profile inside the customer avatars research section. */
+function renderAvatarProfile(persona) {
+  return <PersonaProfile persona={persona} />;
+}
+
 function PersonaBlock({ icon: Icon, label, children }) {
   return (
     <section className="cs-persona-block">
@@ -505,22 +514,14 @@ function PersonaListSection({ icon, label, items }) {
   );
 }
 
-function ResearchIntelRow({ title, data, icon }) {
+function ResearchIntelRow({ type, title, data, icon }) {
   const [open, setOpen] = useState(false);
-  const [full, setFull] = useState(false);
   const [headerStuck, setHeaderStuck] = useState(false);
   const stickySentinelRef = useRef(null);
-  const entries = objectEntries(data);
-  const isPersonaTable = Array.isArray(data?.columns) && Array.isArray(data?.rows);
-  const previewEntries = getPreviewEntries(data);
-  const hasMore = entries.length > 0;
-  const descriptors = entries.slice(0, 3).map(([key]) => humanize(key));
+  const descriptors = researchSectionMeta(type, data);
   const lastRun = findValue(data, ["last_run", "lastRun", "generated_at", "generatedAt", "updated_at", "updatedAt"]);
 
-  const toggle = () => {
-    if (open) setFull(false);
-    setOpen((current) => !current);
-  };
+  const toggle = () => setOpen((current) => !current);
 
   useEffect(() => {
     if (!open || !stickySentinelRef.current) {
@@ -558,7 +559,7 @@ function ResearchIntelRow({ title, data, icon }) {
         <div>
           <h3 className="flex items-center gap-2">{icon && <img src={icon} alt="" aria-hidden="true" className="h-5 w-5 shrink-0" />}{title}</h3>
           <p>
-            {descriptors.length > 0 && <span>{descriptors.join(", ")}</span>}
+            {descriptors.length > 0 && <span>{descriptors.join(" · ")}</span>}
             {lastRun && <span>Last Run: {formatDate(lastRun)}</span>}
           </p>
         </div>
@@ -566,40 +567,10 @@ function ResearchIntelRow({ title, data, icon }) {
       </button>
       {open && (
         <div className="cs-research-intel__body">
-          {isPersonaTable ? <PersonaSummaryTable data={data} /> : <ResearchDetails data={Object.fromEntries(full ? entries : previewEntries)} />}
-          {hasMore && !isPersonaTable && (
-            <button type="button" onClick={() => setFull((current) => !current)} className="cs-research-details-button">
-              {full ? "Show Key Details" : "View Full Details"}
-            </button>
-          )}
+          <ResearchSectionBody type={type} data={data} renderPersona={renderAvatarProfile} />
         </div>
       )}
     </article>
-  );
-}
-
-function PersonaSummaryTable({ data }) {
-  if (!data.columns.length) return <p className="cs-research-muted">No research personas are available for comparison.</p>;
-  return (
-    <div className="overflow-x-auto">
-      <table className="w-full border-collapse text-left text-sm">
-        <caption className="sr-only">Side-by-side comparison of research personas</caption>
-        <thead>
-          <tr>
-            <th scope="col" className="min-w-[9rem] border-b p-3 align-top">Field</th>
-            {data.columns.map((column, index) => <th key={index} scope="col" className="min-w-[16rem] border-b p-3 align-top">{column.persona_label || `Persona ${index + 1}`}</th>)}
-          </tr>
-        </thead>
-        <tbody>
-          {data.rows.map((row, index) => (
-            <tr key={row.field_key || index}>
-              <th scope="row" className="border-b p-3 align-top">{row.field_label || humanize(row.field_key)}</th>
-              {data.columns.map((_, columnIndex) => <td key={columnIndex} className="border-b p-3 align-top"><ResearchValue data={row.values?.[columnIndex]} /></td>)}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
   );
 }
 
@@ -654,31 +625,6 @@ function objectEntries(data) {
   return [["details", data]];
 }
 
-function getPreviewEntries(data) {
-  // Show research findings before transport metadata such as query lists.
-  if (data && typeof data === "object" && !Array.isArray(data)) {
-    const evidenceKey = ["competitors", "negative", "matched_personas"].find((key) => Array.isArray(data[key]) && data[key].length);
-    if (evidenceKey) return [["summary", data.summary || data.coverage_summary?.top_opportunity], [evidenceKey, data[evidenceKey]]].filter(([, value]) => value != null && value !== "");
-    if (typeof data.summary === "string" && "threads_analyzed" in data) return [["summary", data.summary], ["threads_analyzed", data.threads_analyzed]];
-  }
-  const important = [];
-  const visit = (value, depth = 0) => {
-    if (!value || typeof value !== "object" || depth > 4 || important.length >= 2) return;
-    Object.entries(value).forEach(([key, child]) => {
-      if (important.length >= 2) return;
-      if (/(usp|unique.?selling|claim)/i.test(key)) important.push([key, child]);
-      else visit(child, depth + 1);
-    });
-  };
-  visit(data);
-
-  const result = [...important];
-  objectEntries(data).forEach((entry) => {
-    if (result.length < 2 && !result.some(([key]) => key === entry[0])) result.push(entry);
-  });
-  return result;
-}
-
 function findValue(data, keys) {
   if (!data || typeof data !== "object") return undefined;
   const normalized = new Set(keys.map((key) => key.toLowerCase().replace(/[^a-z0-9]/g, "")));
@@ -731,7 +677,6 @@ PersonaDialog.propTypes = {
 PersonaProfile.propTypes = { persona: PropTypes.object.isRequired };
 PersonaBlock.propTypes = { icon: PropTypes.elementType.isRequired, label: PropTypes.string.isRequired, children: PropTypes.node };
 PersonaListSection.propTypes = { icon: PropTypes.elementType.isRequired, label: PropTypes.string.isRequired, items: PropTypes.any };
-ResearchIntelRow.propTypes = { title: PropTypes.string.isRequired, data: PropTypes.any, icon: PropTypes.string };
-PersonaSummaryTable.propTypes = { data: PropTypes.object.isRequired };
+ResearchIntelRow.propTypes = { type: PropTypes.string.isRequired, title: PropTypes.string.isRequired, data: PropTypes.any, icon: PropTypes.string };
 ResearchDetails.propTypes = { data: PropTypes.any, exclude: PropTypes.instanceOf(Set) };
 ResearchValue.propTypes = { data: PropTypes.any };
