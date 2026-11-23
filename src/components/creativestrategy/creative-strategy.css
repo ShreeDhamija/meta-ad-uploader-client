@@ -5538,3 +5538,18 @@ html body #root .creative-strategy button.cs-monthly-filter-button:hover { borde
 /* Top performers: the ad name opens the detail drawer. */
 .cs-top-card__name.is-link { width: 100%; text-align: left; cursor: pointer; }
 .cs-top-card__name.is-link:hover { text-decoration: underline; text-underline-offset: 2px; }
+
+/* Header dropdowns (Monthly Review group-by / sort): as wide as their label,
+   never the whole row. Matches the specificity of the base filter-select rule. */
+.creative-strategy button.cs-weekly-filter-select.cs-panel-select {
+  width: auto;
+  max-width: 200px;
+  flex: 0 0 auto;
+  gap: 8px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0 12px;
+  font-size: 12.5px;
+}
+/* Winning angles and Take into next month: one box per row. */
+.cs-monthly-summary-boxes { grid-template-columns: minmax(0, 1fr); }
