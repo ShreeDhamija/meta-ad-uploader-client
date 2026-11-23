@@ -1896,10 +1896,10 @@ export default function AdCreationForm({
     [isPartnershipAd, partnershipSource, partnershipAdCodes],
   );
 
-  // Looked-up results belong to one brand account; start over when it changes.
+  // Looked-up results belong to one brand account (ad account, Page and Instagram); start over when it changes.
   useEffect(() => {
     setPartnershipCodeLookups({});
-  }, [selectedAdAccount, instagramAccountId, setPartnershipCodeLookups]);
+  }, [selectedAdAccount, pageId, instagramAccountId, setPartnershipCodeLookups]);
 
   // Auto-verify codes shortly after they're pasted or typed (Meta documents no fixed code length).
   useEffect(() => {
