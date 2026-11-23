@@ -38,25 +38,36 @@ const NAV = [
   { key: "products", label: "Products", icon: Box },
   { key: "intelligence", label: "Insights", icon: Zap },
   { key: "monthly", label: "Monthly Review", icon: CalendarRange },
+  { key: "research", label: "Research", icon: SearchCheck },
   { key: "library", label: "Library", icon: BookOpen },
   { key: "generate", label: "Generate", icon: Flame },
   { key: "inspiration", label: "Inspiration", icon: Heart },
   { key: "weekly", label: "Weekly Strategy", icon: MousePointerClick },
-  { key: "research", label: "Research", icon: SearchCheck },
   { key: "models", label: "AI Models", icon: FlaskConical },
 ];
+
+// Where each finished job's results live (job tracker → "View results").
+const RESULT_TABS = {
+  ingest_context: "products", analyze_ads: "intelligence", trending_creative: "intelligence",
+  research: "research", monthly_review: "monthly", generate_library: "library",
+  generate_ad: "generate", generate_scripts: "generate", generate_brief: "generate",
+  inspo_analyze: "inspiration", weekly_strategy: "weekly", weekly_brief: "weekly",
+};
+// The Generate sub-tab a generation job's results open in.
+const GENERATE_MODES = { generate_ad: "statics", generate_scripts: "scripts", generate_brief: "briefs" };
+const resultTabFor = (job) => RESULT_TABS[job?.type || job?.meta?.kind] || null;
 
 const DESCRIPTIONS = {
   models: "Choose your preferred models and compare results on the same input.",
   brands: "View and manage connected Meta ad accounts.",
   products: "Create and manage products for the selected account.",
-  intelligence: "Run Meta ad analysis and review analyzed creatives + the strategy audit.",
+  intelligence: "What's working in your Meta ads: each top-spending ad is broken down (hook, angle, persona), then reviewed together for patterns. Refreshes every Monday, or click Run Analysis.",
   monthly: "Each month's launched concepts, their winning variants, and what the winners had in common.",
   research: "Run the 7-phase research agent → personas, brand deep dive, language bank.",
   library: "Generate draft hooks, headlines, and primary text from personas and analyzed ads.",
   generate: "Generate static image ads, video scripts, and creative briefs from brand/product context.",
   inspiration: "Upload reference ads (image/video) and mine their structure for on-brand adaptation.",
-  weekly: "Run the weekly creative strategist → tiered concept cards. Approve ideas to brief.",
+  weekly: "New ad concepts for this account, built from your latest ad results and research. A fresh set lands every Monday. Approve the ones you like to turn them into briefs.",
 };
 
 export default function CreativeStrategyLayout() {
@@ -67,7 +78,17 @@ export default function CreativeStrategyLayout() {
     loading: globalSettingsLoading,
     hasSeenCreativeStrategyOnboarding,
     setHasSeenCreativeStrategyOnboarding,
+    hasSeenCreativeStrategySetupPopup,
+    setHasSeenCreativeStrategySetupPopup,
   } = useGlobalSettings();
+  // One-time "setup is running in the job tracker" popup after the first product.
+  const showSetupPopup = !globalSettingsLoading && !hasSeenCreativeStrategySetupPopup;
+  const markSetupPopupSeen = useCallback(() => {
+    setHasSeenCreativeStrategySetupPopup(true);
+    void saveSettings({ globalSettings: { hasSeenCreativeStrategySetupPopup: true } })
+      .then(() => window.dispatchEvent(new Event("globalSettingsUpdated")))
+      .catch((err) => console.error("Failed to save Creative Strategy setup popup flag:", err));
+  }, [setHasSeenCreativeStrategySetupPopup]);
   // One-time, unskippable walkthrough the first time a user opens Creative Strategy.
   const showOnboarding = !globalSettingsLoading && !hasSeenCreativeStrategyOnboarding;
   const finishOnboarding = useCallback(() => {
@@ -107,6 +128,7 @@ export default function CreativeStrategyLayout() {
   }, [blocker]);
   const switchTab = useCallback((key) => {
     if (key !== activeTab && !confirmLeave()) return;
+    setViewIntent(null);
     setActiveTab(key);
   }, [activeTab, confirmLeave]);
   const [creativeClients, setCreativeClients] = useState([]);
@@ -123,6 +145,12 @@ export default function CreativeStrategyLayout() {
   const [brandsLoaded, setBrandsLoaded] = useState(false);
   const previousBrand = useRef(null);
   const productRequest = useRef(0);
+  // A product to select once the newly selected account's products load.
+  const pendingProductId = useRef(null);
+  // Bumped to remount the active view (e.g. opening a job's results there).
+  const [viewNonce, setViewNonce] = useState(0);
+  // What the remounted view should open to, e.g. a product's editor.
+  const [viewIntent, setViewIntent] = useState(null);
 
   useEffect(() => {
     if (!userId) return;
@@ -222,7 +250,12 @@ export default function CreativeStrategyLayout() {
         if (request !== productRequest.current) return;
         const next = r.products || [];
         setProducts(next);
-        setSelectedProductId((id) => next.some((product) => product.id === id) ? id : null);
+        const pending = pendingProductId.current;
+        pendingProductId.current = null;
+        setSelectedProductId((id) => {
+          const wanted = pending ?? id;
+          return next.some((product) => product.id === wanted) ? wanted : null;
+        });
       })
       .catch((e) => { if (request === productRequest.current) setProductError(e.message); })
       .finally(() => { if (request === productRequest.current) setProductsLoading(false); });
@@ -259,6 +292,26 @@ export default function CreativeStrategyLayout() {
     else { productRequest.current += 1; setProductsLoading(false); setSelectedProductId(null); }
   }, [selectedBrandId, restoredUser, userId, brandsLoaded, brandsLoading, brands]);
 
+  // Job tracker → "View results": open the job's account, product and tab.
+  const openJobResult = useCallback((job, tab) => {
+    if (!tab || !confirmLeave()) return;
+    const brandId = job.meta?.brandId || null;
+    const productId = job.meta?.productId || null;
+    const mode = GENERATE_MODES[job.type || job.meta?.kind];
+    if (mode && userId) {
+      try { localStorage.setItem(`cs-generate-mode:${userId}`, mode); } catch { /* Generate keeps its last mode. */ }
+    }
+    if (brandId && brandId !== selectedBrandId) {
+      pendingProductId.current = productId;
+      setSelectedBrandId(brandId);
+    } else if (productId) {
+      setSelectedProductId(productId);
+    }
+    setActiveTab(tab);
+    setViewIntent(tab === "products" && productId ? "edit-product" : null);
+    setViewNonce((n) => n + 1);
+  }, [confirmLeave, selectedBrandId, userId]);
+
   const selectedBrand = brands.find((b) => b.id === selectedBrandId) || null;
   const selectedProduct = products.find((p) => p.id === selectedProductId) || null;
   const selectorsDisabled = activeTab === "brands";
@@ -291,6 +344,9 @@ export default function CreativeStrategyLayout() {
     setSelectedProductId,
     reloadProducts: () => loadProducts(selectedBrandId),
     goTo: switchTab,
+    viewIntent,
+    showSetupPopup,
+    markSetupPopupSeen,
     confirmLeave,
     setUnsavedChanges,
     renderHeaderActions,
@@ -359,6 +415,7 @@ export default function CreativeStrategyLayout() {
                 {NAV.map(({ key, label, icon: Icon }) => (
                   <button
                     key={key}
+                    data-cs-nav={key}
                     onClick={() => switchTab(key)}
                     className={cn(
                       "relative flex h-10 w-full items-center justify-start gap-2 rounded-2xl px-4 py-2 transition-all max-lg:justify-center max-lg:px-2",
@@ -431,7 +488,7 @@ export default function CreativeStrategyLayout() {
                 )}
               </div>
               <div className="cs-global-selector-card__status">
-                <JobsIndicator />
+                <JobsIndicator resultTabFor={resultTabFor} onOpenResult={openJobResult} />
                 <CostTracker clientId={selectedBrandId} />
               </div>
             </div>
@@ -441,14 +498,14 @@ export default function CreativeStrategyLayout() {
               <div className="min-w-0">
                 <h1 className="text-[28px] font-bold leading-none tracking-[-0.035em] max-md:text-2xl">{active?.label}</h1>
                 {DESCRIPTIONS[activeTab] && (
-                  <p className="mt-1.5 truncate text-[14px] font-normal text-[var(--cs-muted)]">{DESCRIPTIONS[activeTab]}</p>
+                  <p className="mt-1.5 max-w-[820px] text-[14px] font-normal leading-snug text-[var(--cs-muted)]">{DESCRIPTIONS[activeTab]}</p>
                 )}
                 <div ref={setHeaderStatusTarget} />
               </div>
               <div ref={setHeaderActionsTarget} className="flex shrink-0 flex-wrap items-center justify-end gap-3" />
             </header>
 
-            <ScrollArea key={activeTab} className="min-h-0 flex-1" viewportClassName={activeTab === "generate" ? "cs-main-viewport h-full" : "h-full [&>div]:!block"}>
+            <ScrollArea key={`${activeTab}:${viewNonce}`} className="min-h-0 flex-1" viewportClassName={activeTab === "generate" ? "cs-main-viewport h-full" : "h-full [&>div]:!block"}>
               <div
                 className={cn(
                   "w-full px-12 pb-12 pt-3 max-lg:px-7 max-lg:pb-7 max-lg:pt-3 max-md:px-5 max-md:pb-5 max-md:pt-3",

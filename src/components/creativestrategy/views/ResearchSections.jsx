@@ -438,7 +438,8 @@ function pricingContent(pricing) {
 function pricingBlocks(data, options = {}) {
   if (!data || typeof data !== "object") return [];
   if (typeof data.text === "string") return contextTextBlocks(data.text, { label: "Pricing", icon: DollarSign });
-  return [block("pricing", <Block icon={DollarSign} label="Pricing">{pricingContent(data)}</Block>, { wide: true, key: true, ...options })];
+  // The section header already says "Pricing", so the content renders bare.
+  return [block("pricing", <div className="cs-research-bare">{pricingContent(data)}</div>, { wide: true, key: true, ...options })];
 }
 
 function marketBlocks(data, options = {}) {
@@ -1019,9 +1020,11 @@ function crossMapBlocks(data) {
 function secondarySignalsBlocks(data) {
   const items = list(data.items);
   if (items.length === 0) return genericBlocks(data, [], { key: true });
+  // Cards sit straight in the section (its header already names and counts
+  // them); each card keeps its own border and tint for contrast.
   return [
     block("signals", (
-      <Block icon={Users} label={`Secondary audiences (${items.length})`}>
+      <div className="cs-research-bare">
         <Items>
           {items.map((item, index) => (
             <ItemCard
@@ -1037,7 +1040,7 @@ function secondarySignalsBlocks(data) {
             </ItemCard>
           ))}
         </Items>
-      </Block>
+      </div>
     ), { key: true, wide: true }),
   ];
 }

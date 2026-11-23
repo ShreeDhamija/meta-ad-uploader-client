@@ -13,10 +13,11 @@ import { creativeApi } from "@/lib/creativeApi";
 import RunModelControls from "../RunModelControls";
 import { useRunModels } from "../useRunModels";
 import { RUN_OPERATIONS } from "../run-model-operations";
-import { ArrowLeft, Box, Brain, Check, ChevronDown, ExternalLink, Image as ImageIcon, Pencil, Plus, Route, Star } from "lucide-react";
+import { ArrowLeft, Box, Brain, Check, ChevronDown, ExternalLink, History, Image as ImageIcon, Loader2, Pencil, Plus, Route, Star, Trash2 } from "lucide-react";
 import PropTypes from "prop-types";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useJobRunner, useJobs } from "../JobsContext";
+import ProductUrlField, { isValidProductUrl, normalizeProductUrl } from "../ProductUrlField";
 import { EmptyState, ErrorBanner, ViewLoading } from "../ui";
 import BrandingEditor from "./BrandingEditor";
 
@@ -51,19 +52,36 @@ export default function ProductsView({ ctx }) {
   const createBrand = ctx.brands.find((brand) => brand.id === createBrandId);
   const models = useRunModels(createBrandId);
   const [tab, setTab] = useState("products");
+  // Job tracker → "View results" for website reading opens the product editor
+  // (once its product is selected, which can lag an account switch).
+  const openEditor = useRef(ctx.viewIntent === "edit-product");
+  useEffect(() => {
+    if (openEditor.current && selectedProductId) { openEditor.current = false; setTab("context"); }
+  }, [selectedProductId]);
   const [form, setForm] = useState({ name: "", url: "", productType: "physical" });
   const [err, setErr] = useState(null);
   const [adding, setAdding] = useState(false);
   const [creating, setCreating] = useState(false);
-  const { track } = useJobs();
+  // Set once a product is created: the dialog then explains where setup runs.
+  const [created, setCreated] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const { track, refreshHistory } = useJobs();
+  const urlValid = isValidProductUrl(form.url);
 
   const add = async (e) => {
     e.preventDefault();
-    if (!createBrand) return;
+    if (!createBrand || !form.name.trim() || !urlValid) return;
     setErr(null);
     setCreating(true);
+    // The setup popup is a one-time explainer for the user's very first product
+    // (flag in global settings, see useGlobalSettings).
+    const firstProduct = ctx.showSetupPopup && !ctx.brands.some((brand) => Number(brand.productCount) > 0);
     try {
-      const response = await creativeApi.createProduct({ ...form, clientId: createBrandId, aiSelections: models.forRun(RUN_OPERATIONS.setup) });
+      const response = await creativeApi.createProduct({
+        ...form, name: form.name.trim(), url: normalizeProductUrl(form.url),
+        clientId: createBrandId, aiSelections: models.forRun(RUN_OPERATIONS.setup),
+      });
       models.reset(RUN_OPERATIONS.setup);
       if (response.product?.id) {
         setSelectedProductId(response.product.id);
@@ -75,8 +93,17 @@ export default function ProductsView({ ctx }) {
           });
         }
       }
+      const started = Boolean(response.cascade?.jobId);
+      // Explain where setup runs the first time; always say so if it couldn't start.
+      if ((firstProduct && started) || !started) {
+        setCreated({ name: response.product?.name || form.name.trim(), started });
+        if (started) ctx.markSetupPopupSeen?.();
+      } else {
+        setAdding(false);
+      }
+      // Point at the job tracker in the top bar, where setup now runs.
+      window.dispatchEvent(new CustomEvent("cs-jobs-attention"));
       setForm({ name: "", url: "", productType: "physical" });
-      setAdding(false);
       await reloadBrands();
       if (selectedBrandId === createBrandId) await reloadProducts();
       else ctx.setSelectedBrandId(createBrandId);
@@ -84,6 +111,27 @@ export default function ProductsView({ ctx }) {
       setErr(e.message);
     } finally {
       setCreating(false);
+    }
+  };
+  const removeProduct = async () => {
+    if (!selectedProductId) return;
+    setErr(null);
+    setDeleting(true);
+    try {
+      await creativeApi.deleteProduct(selectedProductId);
+      setConfirmDelete(false);
+      ctx.setUnsavedChanges?.("product-context", null);
+      ctx.setUnsavedChanges?.("brand-guidelines", null);
+      setSelectedProductId(null);
+      setTab("products");
+      refreshHistory();
+      await reloadBrands();
+      await reloadProducts();
+    } catch (e) {
+      setErr(e.message);
+      setConfirmDelete(false);
+    } finally {
+      setDeleting(false);
     }
   };
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
@@ -101,7 +149,7 @@ export default function ProductsView({ ctx }) {
     <Tabs value={tab} onValueChange={setTab} className="space-y-7">
       {tab === "products" && (
         renderHeaderActions(
-          <Dialog open={adding} onOpenChange={(open) => { setAdding(open); setFormBrandId(null); setAccountQuery(""); setAccountOpen(false); setErr(null); }}>
+          <Dialog open={adding} onOpenChange={(open) => { setAdding(open); setFormBrandId(null); setAccountQuery(""); setAccountOpen(false); setErr(null); if (!open) setCreated(null); }}>
             <DialogTrigger asChild>
               <button className="cs-primary-button">
                 <Plus className="h-5 w-5" /> Add New Product
@@ -112,6 +160,30 @@ export default function ProductsView({ ctx }) {
               overlayClassName="bg-black/45 backdrop-blur-[1px]"
               className="cs-modal data-[state=open]:duration-150 data-[state=closed]:duration-100 sm:rounded-[32px]"
             >
+              {created ? (
+                <>
+                  <DialogHeader className="items-center text-center">
+                    <span className="mb-1 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-600"><Check className="h-6 w-6" /></span>
+                    <DialogTitle className="text-2xl font-bold tracking-tight">{created.name} is set up</DialogTitle>
+                    <DialogDescription className="max-w-sm text-center text-sm text-neutral-500">
+                      {created.started
+                        ? "We're now reading the product page, analyzing your ads, running research, and writing your copy library and first weekly strategy. It all runs on its own and takes about 10–15 minutes, so you can leave this page."
+                        : "The product was created, but its automatic setup couldn't start. Run each step from its tab when you're ready."}
+                    </DialogDescription>
+                  </DialogHeader>
+                  {created.started && (
+                    <div className="cs-setup-tracker-note">
+                      <History className="h-5 w-5 shrink-0 text-[#854413]" />
+                      <p>
+                        <strong>Follow along in the job tracker at the top right.</strong> Every step shows up there as it runs. When a step finishes, click <strong>View results</strong> on it to jump straight to what it made.
+                      </p>
+                    </div>
+                  )}
+                  <DialogFooter>
+                    <button type="button" onClick={() => setAdding(false)} className="cs-primary-button cs-modal-submit w-full">Got it</button>
+                  </DialogFooter>
+                </>
+              ) : <>
               <DialogHeader className="items-center text-center">
                 <DialogTitle className="text-2xl font-bold tracking-tight">Add a new product</DialogTitle>
                 <DialogDescription className="max-w-sm text-center text-sm text-neutral-500">
@@ -146,12 +218,12 @@ export default function ProductsView({ ctx }) {
                   className="cs-modal-input"
                   autoFocus
                 />
-                <div className="space-y-1.5">
-                  <Input aria-label="Product URL" type="url" placeholder="https://your-product-page.com" value={form.url} onChange={set("url")} className="cs-modal-input" />
-                  <p className="px-1 text-xs leading-5 text-neutral-500">
-                    Used to automatically build product context, brand guidelines, research, insights, copy, and the first strategy.
-                  </p>
-                </div>
+                <ProductUrlField
+                  value={form.url}
+                  onChange={(url) => setForm((f) => ({ ...f, url }))}
+                  adAccountId={createBrand.metaAdAccountId}
+                  disabled={creating}
+                />
                 <Select value={form.productType} onValueChange={(v) => setForm((f) => ({ ...f, productType: v }))}>
                   <SelectTrigger className="cs-modal-input w-full capitalize">
                     <SelectValue />
@@ -167,12 +239,13 @@ export default function ProductsView({ ctx }) {
                 <RunModelControls models={models} operations={RUN_OPERATIONS.setup} title="Models for this product setup" disabled={creating} />
                 <ErrorBanner message={err} />
                 <DialogFooter>
-                  <button type="submit" disabled={!form.name.trim() || !form.url.trim() || creating} className="cs-primary-button cs-modal-submit w-full">
+                  <button type="submit" disabled={!form.name.trim() || !urlValid || creating} className="cs-primary-button cs-modal-submit w-full">
                     {creating ? "Creating & starting setup…" : "Create Product & Start Setup"}
                   </button>
                 </DialogFooter>
                 </>}
               </form>
+              </>}
             </DialogContent>
           </Dialog>
         )
@@ -251,13 +324,32 @@ export default function ProductsView({ ctx }) {
 
       <TabsContent value="context" className="mt-0">
         <ProductEditorNav onBack={() => { if (!ctx.confirmLeave || ctx.confirmLeave()) setTab("products"); }} />
+        {!adding && <div className="mb-4 empty:hidden"><ErrorBanner message={err} /></div>}
         <ContextEditor
           productId={selectedProductId}
           productName={selectedProduct?.name}
           productUrl={selectedProduct?.url}
           renderHeaderActions={renderHeaderActions}
           setUnsavedChanges={ctx.setUnsavedChanges}
+          onDelete={() => setConfirmDelete(true)}
         />
+        <Dialog open={confirmDelete} onOpenChange={(open) => { if (!deleting) setConfirmDelete(open); }}>
+          <DialogContent disableSlide overlayClassName="bg-black/45 backdrop-blur-[1px]" className="cs-modal sm:rounded-[32px]">
+            <DialogHeader className="items-center text-center">
+              <span className="mb-1 flex h-12 w-12 items-center justify-center rounded-full bg-red-50 text-red-600"><Trash2 className="h-5 w-5" /></span>
+              <DialogTitle className="text-2xl font-bold tracking-tight">Delete {selectedProduct?.name || "this product"}?</DialogTitle>
+              <DialogDescription className="max-w-sm text-center text-sm text-neutral-500">
+                It disappears from every tab and stops getting weekly updates. Any of its jobs that are still running or waiting are cancelled. Your account&apos;s analyzed ads stay, since other products share them.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="mt-2 gap-2 sm:flex-col sm:space-x-0">
+              <button type="button" onClick={removeProduct} disabled={deleting} className="cs-primary-button cs-modal-submit cs-danger-solid w-full">
+                {deleting && <Loader2 className="h-4 w-4 animate-spin" />}{deleting ? "Deleting…" : "Delete product"}
+              </button>
+              <button type="button" onClick={() => setConfirmDelete(false)} disabled={deleting} className="cs-onboarding__back w-full">Keep it</button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
         <div className="mt-7">
           <BrandingEditor clientId={selectedBrandId} productId={selectedProductId} productName={selectedProduct?.name} setUnsavedChanges={ctx.setUnsavedChanges} />
         </div>
@@ -285,7 +377,7 @@ ProductEditorNav.propTypes = { onBack: PropTypes.func.isRequired };
 
 // Context editor — per-category manual intel + "Run ingestion" (scrape the
 // product URL to auto-fill).
-function ContextEditor({ productId, productName, productUrl, renderHeaderActions, setUnsavedChanges }) {
+function ContextEditor({ productId, productName, productUrl, renderHeaderActions, setUnsavedChanges, onDelete }) {
   const models = useRunModels(productId);
   const [intel, setIntel] = useState({});
   const [drafts, setDrafts] = useState({});
@@ -356,6 +448,11 @@ function ContextEditor({ productId, productName, productUrl, renderHeaderActions
           >
             Run Ingestion
           </button>
+          {productId && (
+            <button type="button" onClick={onDelete} className="cs-danger-button" title="Delete this product">
+              <Trash2 className="h-4 w-4" /> Delete Product
+            </button>
+          )}
         </div>
       )}
 
@@ -418,4 +515,5 @@ ContextEditor.propTypes = {
   productUrl: PropTypes.string,
   renderHeaderActions: PropTypes.func.isRequired,
   setUnsavedChanges: PropTypes.func,
+  onDelete: PropTypes.func,
 };

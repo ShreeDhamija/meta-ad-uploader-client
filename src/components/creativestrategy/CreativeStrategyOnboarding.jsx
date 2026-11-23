@@ -10,6 +10,7 @@
 // layout (they are `object-cover`ed into it).
 import PropTypes from "prop-types";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const CREATIVE_STRATEGY_ONBOARDING_SCREENS = [
@@ -31,8 +32,8 @@ const CREATIVE_STRATEGY_ONBOARDING_SCREENS = [
     title: "Two things to set up first",
     intro: "Everything else is built from these two, so do them before anything else.",
     items: [
-      { label: "Connect your Meta ad account", text: "Your connected accounts show up in the Accounts tab." },
-      { label: "Add your product with its URL", text: "In the Products tab, click New Product and paste the product page link." },
+      { label: "Connect your Meta ad account", text: "Your connected accounts show up in the Accounts tab.", tabs: ["brands"] },
+      { label: "Add your product with its URL", text: "In the Products tab, click New Product and paste the product page link.", tabs: ["products"] },
       { label: "More ads, better insights", text: "Ads with real spend behind them give us much more to learn from." },
     ],
     image: null,
@@ -43,10 +44,10 @@ const CREATIVE_STRATEGY_ONBOARDING_SCREENS = [
     title: "What happens after you add a product",
     intro: "It all runs on its own and takes about 10–15 minutes. You can leave the page while it works.",
     items: [
-      { label: "1. Read the product page", text: "Features, benefits, pain points, reviews, pricing, plus your brand colors, fonts and logo." },
-      { label: "2. Research (5–10 min)", text: "We dig into your brand, real customer reviews, Reddit and forums, and your competitors." },
-      { label: "3. Insights", text: "Your top Meta ads are broken down one by one, then reviewed together as a strategy audit." },
-      { label: "4. Copy and concepts", text: "Your copy Library and your first Weekly Strategy concepts are created side by side." },
+      { label: "1. Read the product page", text: "Features, benefits, pain points, reviews, pricing, plus your brand colors, fonts and logo.", tabs: ["products"] },
+      { label: "2. Research (5–10 min)", text: "We dig into your brand, real customer reviews, Reddit and forums, and your competitors.", tabs: ["research"] },
+      { label: "3. Insights", text: "Your top Meta ads are broken down one by one, then reviewed together as a strategy audit.", tabs: ["intelligence"] },
+      { label: "4. Copy and concepts", text: "Your copy Library and your first Weekly Strategy concepts are created side by side.", tabs: ["library", "weekly"] },
     ],
     footnote: "Insights need a connected Meta ad account.",
     image: null,
@@ -57,10 +58,10 @@ const CREATIVE_STRATEGY_ONBOARDING_SCREENS = [
     title: "Fresh work lands each week",
     intro: "Every Monday at 9am (Sydney time), things update on their own:",
     items: [
-      { text: "Your ads are analyzed again." },
+      { text: "Your ads are analyzed again.", tabs: ["intelligence"] },
       { text: "What we know works for your brand is refreshed." },
-      { text: "A new set of Weekly Strategy concepts is ready." },
-      { text: "Your Monthly Review is rebuilt." },
+      { text: "A new set of Weekly Strategy concepts is ready.", tabs: ["weekly"] },
+      { text: "Your Monthly Review is rebuilt.", tabs: ["monthly"] },
     ],
     footnote:
       "Research does not refresh on its own. Run it again when your product, positioning or reviews change.",
@@ -71,14 +72,15 @@ const CREATIVE_STRATEGY_ONBOARDING_SCREENS = [
     eyebrow: "What you'll see",
     title: "The kind of data you'll get",
     items: [
-      { label: "Your customers", text: "Personas, real customer quotes and the phrases they actually use." },
-      { label: "Your market", text: "A picture of your competitors and how you compare." },
-      { label: "Your ads", text: "A breakdown and grade for each ad, plus a strategy audit across all of them." },
+      { label: "Your customers", text: "Personas, real customer quotes and the phrases they actually use.", tabs: ["research"] },
+      { label: "Your market", text: "A picture of your competitors and how you compare.", tabs: ["research"] },
+      { label: "Your ads", text: "A breakdown and grade for each ad, plus a strategy audit across all of them.", tabs: ["intelligence"] },
       {
         label: "New ideas",
         text: "Weekly concepts in five types: Iterations, Format Flips, Inspired, Big Swings and Net-new.",
+        tabs: ["weekly"],
       },
-      { label: "Ready to use", text: "Hooks, headlines, primary text, static ads, briefs, scripts and a monthly look back." },
+      { label: "Ready to use", text: "Hooks, headlines, primary text, static ads, briefs, scripts and a monthly look back.", tabs: ["library", "generate", "monthly"] },
     ],
     image: null,
   },
@@ -87,11 +89,11 @@ const CREATIVE_STRATEGY_ONBOARDING_SCREENS = [
     eyebrow: "Tour of the tabs · 1 of 2",
     title: "Set up and understand",
     items: [
-      { label: "Accounts", text: "Your connected Meta ad accounts." },
-      { label: "Products", text: "Add and edit the products we build strategy for." },
-      { label: "Research", text: "Personas, customer language, brand deep dive and competitors. Click Run Research to refresh it." },
-      { label: "Insights", text: "Each analyzed ad, with its hook, angle and why it works, plus the strategy audit." },
-      { label: "Monthly Review", text: "Each month's launched concepts, the winners, and what the winners had in common." },
+      { label: "Accounts", text: "Your connected Meta ad accounts.", tabs: ["brands"] },
+      { label: "Products", text: "Add and edit the products we build strategy for.", tabs: ["products"] },
+      { label: "Insights", text: "Each analyzed ad, with its hook, angle and why it works, plus the strategy audit.", tabs: ["intelligence"] },
+      { label: "Monthly Review", text: "Each month's launched concepts, the winners, and what the winners had in common.", tabs: ["monthly"] },
+      { label: "Research", text: "Personas, customer language, brand deep dive and competitors. Click Run Research to refresh it.", tabs: ["research"] },
     ],
     image: null,
   },
@@ -100,11 +102,11 @@ const CREATIVE_STRATEGY_ONBOARDING_SCREENS = [
     eyebrow: "Tour of the tabs · 2 of 2",
     title: "Create and plan",
     items: [
-      { label: "Library", text: "Hooks, Headlines and Primary Text written for each persona." },
-      { label: "Generate", text: "Make static image ads, video scripts and creative briefs." },
-      { label: "Inspiration", text: "Upload ads you like and get versions adapted to your brand." },
-      { label: "Weekly Strategy", text: "This week's concept cards. Approve the ones you want to brief." },
-      { label: "AI Models", text: "Pick your preferred models and compare their results." },
+      { label: "Library", text: "Hooks, Headlines and Primary Text written for each persona.", tabs: ["library"] },
+      { label: "Generate", text: "Make static image ads, video scripts and creative briefs.", tabs: ["generate"] },
+      { label: "Inspiration", text: "Upload ads you like and get versions adapted to your brand.", tabs: ["inspiration"] },
+      { label: "Weekly Strategy", text: "This week's concept cards. Approve the ones you want to brief.", tabs: ["weekly"] },
+      { label: "AI Models", text: "Pick your preferred models and compare their results.", tabs: ["models"] },
     ],
     image: null,
   },
@@ -114,13 +116,14 @@ const CREATIVE_STRATEGY_ONBOARDING_SCREENS = [
     title: "Teach it your taste",
     intro: "Your feedback shapes what you get next. A few clicks go a long way.",
     items: [
-      { label: "Library", text: "Approve the copy you like and archive what you don't. New copy learns from both." },
+      { label: "Library", text: "Approve the copy you like and archive what you don't. New copy learns from both.", tabs: ["library"] },
       {
         label: "Weekly Strategy",
         text: "Approve or dismiss concepts. It remembers the last 4 weeks, so it won't repeat ideas or go back to ones you dismissed.",
+        tabs: ["weekly"],
       },
-      { label: "Generate", text: "Give static ads a thumbs up or down. Future statics take it into account." },
-      { label: "Inspiration", text: "Upload reference ads you love to get on-brand takes on them." },
+      { label: "Generate", text: "Give static ads a thumbs up or down. Future statics take it into account.", tabs: ["generate"] },
+      { label: "Inspiration", text: "Upload reference ads you love to get on-brand takes on them.", tabs: ["inspiration"] },
     ],
     image: null,
   },
@@ -136,6 +139,7 @@ const CREATIVE_STRATEGY_ONBOARDING_SCREENS = [
       {
         label: "Keep research current",
         text: "Run Research again whenever your product, positioning or reviews change.",
+        tabs: ["research"],
       },
       {
         label: "Start with the basics",
@@ -147,15 +151,84 @@ const CREATIVE_STRATEGY_ONBOARDING_SCREENS = [
 ];
 
 const FOCUSABLE = 'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+const SPOTLIGHT_PAD = 5;
+
+/** Sidebar tabs a screen talks about: every tab its bullets link to, in nav order. */
+function screenTabs(screen) {
+  return [...new Set((screen?.items || []).flatMap((item) => item.tabs || []))];
+}
+
+/**
+ * Screen-space boxes of the sidebar nav buttons (CreativeStrategyLayout marks
+ * them with data-cs-nav), re-measured on resize so the spotlight stays on them.
+ */
+function useNavRects(tabs) {
+  const key = tabs.join(",");
+  const [rects, setRects] = useState([]);
+  useEffect(() => {
+    const measure = () => {
+      setRects(key ? key.split(",").map((tab) => {
+        const element = document.querySelector(`[data-cs-nav="${tab}"]`);
+        const box = element?.getBoundingClientRect();
+        return box && box.width > 0 ? { tab, x: box.left, y: box.top, w: box.width, h: box.height } : null;
+      }).filter(Boolean) : []);
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [key]);
+  return rects;
+}
+
+/** Dark overlay with lit cut-outs around the highlighted tabs and an arrow pointing at them. */
+function Spotlight({ rects, focusTabs }) {
+  const focused = focusTabs.length ? rects.filter((rect) => focusTabs.includes(rect.tab)) : rects;
+  const target = focused.length ? focused : rects;
+  const arrow = target.length ? {
+    x: Math.max(...target.map((rect) => rect.x + rect.w)) + 14,
+    y: (Math.min(...target.map((rect) => rect.y)) + Math.max(...target.map((rect) => rect.y + rect.h))) / 2,
+  } : null;
+  return (
+    <>
+      <svg className="cs-onboarding-spotlight" aria-hidden="true" width="100%" height="100%">
+        <defs>
+          <mask id="cs-onboarding-mask">
+            <rect width="100%" height="100%" fill="white" />
+            {rects.map((rect) => (
+              <rect key={rect.tab} x={rect.x - SPOTLIGHT_PAD} y={rect.y - SPOTLIGHT_PAD} width={rect.w + SPOTLIGHT_PAD * 2}
+                height={rect.h + SPOTLIGHT_PAD * 2} rx="18" fill="black" className="cs-onboarding-spotlight__hole" />
+            ))}
+          </mask>
+        </defs>
+        <rect width="100%" height="100%" fill="rgba(12, 10, 9, 0.62)" mask="url(#cs-onboarding-mask)" />
+        {rects.map((rect) => (
+          <rect key={rect.tab} x={rect.x - SPOTLIGHT_PAD} y={rect.y - SPOTLIGHT_PAD} width={rect.w + SPOTLIGHT_PAD * 2}
+            height={rect.h + SPOTLIGHT_PAD * 2} rx="18" fill="none"
+            className={cn("cs-onboarding-spotlight__ring", target.includes(rect) && "is-focused")} />
+        ))}
+      </svg>
+      {arrow && (
+        <div className="cs-onboarding-arrow" style={{ left: arrow.x, top: arrow.y }} aria-hidden="true">
+          <ArrowLeft className="h-5 w-5" strokeWidth={2.5} />
+        </div>
+      )}
+    </>
+  );
+}
+Spotlight.propTypes = { rects: PropTypes.array.isRequired, focusTabs: PropTypes.array.isRequired };
 
 export default function CreativeStrategyOnboarding({ onFinish, screens = CREATIVE_STRATEGY_ONBOARDING_SCREENS }) {
   const [index, setIndex] = useState(0);
+  const [hoveredItem, setHoveredItem] = useState(null);
   const dialogRef = useRef(null);
   const nextRef = useRef(null);
   const total = screens.length;
   const screen = screens[index];
   const isFirst = index === 0;
   const isLast = index === total - 1;
+  const rects = useNavRects(screenTabs(screen));
+  const spotlit = rects.length > 0;
+  useEffect(() => setHoveredItem(null), [index]);
 
   const goNext = useCallback(() => {
     if (isLast) onFinish();
@@ -198,13 +271,14 @@ export default function CreativeStrategyOnboarding({ onFinish, screens = CREATIV
   if (!screen) return null;
 
   return (
-    <div className="cs-onboarding-backdrop fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4">
+    <div className={cn("cs-onboarding-backdrop fixed inset-0 z-[60] flex items-center justify-center p-4", spotlit && "is-spotlit")}>
+      <Spotlight rects={rects} focusTabs={hoveredItem?.tabs || []} />
       <div
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="cs-onboarding-title"
-        className="cs-onboarding flex max-h-[calc(100vh-32px)] w-[920px] max-w-full flex-col overflow-hidden"
+        className="cs-onboarding relative flex max-h-[calc(100vh-32px)] w-[920px] max-w-full flex-col overflow-hidden"
       >
         {/* Step count + progress */}
         <div className="flex items-center justify-between gap-4 px-8 pt-7 max-md:px-5 max-md:pt-5">
@@ -233,7 +307,12 @@ export default function CreativeStrategyOnboarding({ onFinish, screens = CREATIV
               {screen.items?.length > 0 && (
                 <ul className="mt-4 space-y-2.5">
                   {screen.items.map((item, i) => (
-                    <li key={i} className="flex gap-2.5 text-[14px] leading-snug text-neutral-700">
+                    <li
+                      key={i}
+                      onMouseEnter={() => item.tabs && setHoveredItem(item)}
+                      onMouseLeave={() => setHoveredItem(null)}
+                      className={cn("flex gap-2.5 text-[14px] leading-snug text-neutral-700", item.tabs && "cs-onboarding__linked-item")}
+                    >
                       <span className="mt-[7px] h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[var(--cs-orange-ink)]" aria-hidden="true" />
                       <span>
                         {item.label && <span className="font-semibold text-[var(--cs-ink)]">{item.label}. </span>}
@@ -280,7 +359,7 @@ CreativeStrategyOnboarding.propTypes = {
       eyebrow: PropTypes.string,
       title: PropTypes.string.isRequired,
       intro: PropTypes.string,
-      items: PropTypes.arrayOf(PropTypes.shape({ label: PropTypes.string, text: PropTypes.string.isRequired })),
+      items: PropTypes.arrayOf(PropTypes.shape({ label: PropTypes.string, text: PropTypes.string.isRequired, tabs: PropTypes.arrayOf(PropTypes.string) })),
       footnote: PropTypes.string,
       image: PropTypes.string,
     }),

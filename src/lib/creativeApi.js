@@ -54,6 +54,7 @@ export const creativeApi = {
   listProducts: (clientId) => request(`/products?clientId=${encodeURIComponent(clientId)}`),
   createProduct: (body) => request("/products", { method: "POST", body }),
   getProduct: (id) => request(`/products/${id}`),
+  deleteProduct: (id) => request(`/products/${encodeURIComponent(id)}`, { method: "DELETE" }),
   getContext: (productId) => request(`/context?productId=${encodeURIComponent(productId)}`),
   saveContext: (productId, intelType, contentText) => request("/context", { method: "PUT", body: { productId, intelType, contentText } }),
   runIngest: (productId, aiSelections) => request("/context/ingest", { method: "POST", body: { productId, aiSelections } }),
@@ -110,6 +111,7 @@ export const creativeApi = {
     request(`/weekly/ideas/${encodeURIComponent(ideaId)}/brief`, { method: "POST", body: { productId, aiSelections } }),
   getJobHistory: (offset = 0) => request(`/jobs?offset=${offset}`),
   getJob: (id) => request(`/jobs/${id}`),
+  cancelJob: (id) => request(`/jobs/${encodeURIComponent(id)}/cancel`, { method: "POST" }),
   getUsage: ({ window = "7d", groupBy = "provider", clientId } = {}) =>
     request(`/usage?window=${encodeURIComponent(window)}&groupBy=${encodeURIComponent(groupBy)}${clientId ? `&clientId=${encodeURIComponent(clientId)}` : ""}`),
 };

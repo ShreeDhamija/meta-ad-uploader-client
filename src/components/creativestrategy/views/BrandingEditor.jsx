@@ -157,8 +157,8 @@ export default function BrandingEditor({ clientId, productId, productName, setUn
           </GuidelineCard>
 
           <GuidelineCard icon={ImageIcon} title="Logo rules" description="The canonical mark and its constraints in generated creative.">
-            <Field label="Logo URL"><div className="relative"><Link className="pointer-events-none absolute left-3.5 top-3 h-4 w-4 text-neutral-400" /><input value={g.logoUrl} onChange={text("logoUrl")} placeholder="https://…" className="cs-brand-input pl-10" /></div></Field>
-            <Field label="Usage rules"><textarea rows={3} value={g.logoUsageRules} onChange={text("logoUsageRules")} placeholder="Minimum clear space, approved backgrounds, placement…" className="cs-brand-input" /></Field>
+            <Field label="Logo URL"><div className="relative"><Link className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" /><input value={g.logoUrl} onChange={text("logoUrl")} placeholder="https://…" className="cs-brand-input" style={{ paddingLeft: 38 }} /></div></Field>
+            <Field label="Usage rules"><textarea rows={6} value={g.logoUsageRules} onChange={text("logoUsageRules")} placeholder="Minimum clear space, approved backgrounds, placement…" className="cs-brand-input min-h-[150px]" /></Field>
           </GuidelineCard>
 
           <GuidelineCard icon={ScanSearch} title="Source notes" description="A long-form brand bible or reference copy used as extra context." className="xl:col-span-2">
@@ -496,9 +496,11 @@ function SnippetRows({ rows, onChange }) {
     <div className="space-y-2">
       {rows.map((row, index) => (
         <div key={`snippet-${index}`} className="cs-brand-row">
-          <div className="flex gap-2">
-            <Quote className="mt-1 h-4 w-4 shrink-0 text-neutral-400" />
+          <div className="flex gap-1">
+            {/* Real quotation marks around the phrase, instead of a quote icon. */}
+            <span className="cs-brand-quote-mark" aria-hidden="true">“</span>
             <textarea rows={2} value={row.quote || ""} onChange={(e) => update(index, "quote", e.target.value)} placeholder="Exact customer phrase or characteristic brand language" className="min-w-0 flex-1 resize-none border-0 bg-transparent p-0 text-sm text-neutral-800 outline-none placeholder:text-neutral-400" />
+            <span className="cs-brand-quote-mark self-end" aria-hidden="true">”</span>
             <button type="button" onClick={() => onChange(rows.filter((_, rowIndex) => rowIndex !== index))} aria-label="Remove language snippet" className="self-start p-1 text-neutral-300 hover:text-red-600"><Trash2 className="h-3.5 w-3.5" /></button>
           </div>
           <input value={row.source || ""} onChange={(e) => update(index, "source", e.target.value)} placeholder="Source or context" className="mt-2 w-full border-0 border-t border-neutral-200 bg-transparent px-0 pt-2 text-xs text-neutral-500 outline-none placeholder:text-neutral-400" />

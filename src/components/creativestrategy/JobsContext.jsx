@@ -24,6 +24,7 @@ const BACKGROUND_KINDS = new Set(["learning_truths"]);
 const isVisible = (job) => !BACKGROUND_KINDS.has(job.type || job.meta?.kind);
 
 export function jobOutcome(job) {
+  if (job.status === "cancelled") return "cancelled";
   if (job.status === "failed") return "failed";
   if (job.status !== "completed") return null;
   return (Array.isArray(job.result?.errors) && job.result.errors.length) || job.result?.failed > 0 || partialErrors(job).length ? "failed" : "completed";
@@ -72,8 +73,9 @@ export function JobsProvider({ children, userId }) {
   jobsRef.current = jobs;
 
   const resultKey = (job) => `${job.id}:${jobOutcome(job)}`;
+  // A job the user cancelled is not news: it never lights up the tracker.
   const unreadResults = Object.values(jobs).filter((job) =>
-    isVisible(job) && jobOutcome(job) && Math.max(job.finishedAt || 0, job.startedAt || 0) > clearedAt && isCurrentSessionResult(job, sessionStartedAt.current, sessionJobs.current) && !readResults.has(resultKey(job)));
+    isVisible(job) && jobOutcome(job) && jobOutcome(job) !== "cancelled" && Math.max(job.finishedAt || 0, job.startedAt || 0) > clearedAt && isCurrentSessionResult(job, sessionStartedAt.current, sessionJobs.current) && !readResults.has(resultKey(job)));
   const unreadStatus = unreadResults.some((job) => jobOutcome(job) === "failed") ? "failed" : unreadResults.length ? "completed" : null;
   const markResultsRead = useCallback(() => {
     setReadResults((current) => {
@@ -136,6 +138,16 @@ export function JobsProvider({ children, userId }) {
     return () => clearInterval(interval);
   }, [refreshHistory]);
 
+  // Cancel a queued or running job. The steps chained after it never start,
+  // so their "waiting" placeholders disappear with it.
+  const cancel = useCallback(async (id) => {
+    await creativeApi.cancelJob(id);
+    setJobs((previous) => previous[id]
+      ? { ...previous, [id]: { ...previous[id], status: "cancelled", upcoming: [], error: "Cancelled by user", finishedAt: Date.now() } }
+      : previous);
+    await refreshHistory();
+  }, [refreshHistory]);
+
   useEffect(() => {
     let cancelled = false;
     let polling = false;
@@ -186,7 +198,7 @@ export function JobsProvider({ children, userId }) {
   const trackerJobs = useMemo(() => ({ ...Object.fromEntries(Object.entries(visibleJobs).filter(([, job]) =>
     ACTIVE(job.status) || Math.max(job.finishedAt || 0, job.startedAt || 0) > clearedAt)), ...waitingJobs }), [visibleJobs, waitingJobs, clearedAt]);
   const unreadErrors = unreadResults.filter((job) => jobOutcome(job) === "failed").length;
-  const value = useMemo(() => ({ jobs: visibleJobs, trackerJobs, clearHistory, track, historyLoading, historyError, nextOffset, loadMore, refreshHistory, unreadStatus, unreadErrors, markResultsRead }), [visibleJobs, trackerJobs, clearHistory, track, historyLoading, historyError, nextOffset, loadMore, refreshHistory, unreadStatus, unreadErrors, markResultsRead]);
+  const value = useMemo(() => ({ jobs: visibleJobs, trackerJobs, clearHistory, track, cancel, historyLoading, historyError, nextOffset, loadMore, refreshHistory, unreadStatus, unreadErrors, markResultsRead }), [visibleJobs, trackerJobs, clearHistory, track, cancel, historyLoading, historyError, nextOffset, loadMore, refreshHistory, unreadStatus, unreadErrors, markResultsRead]);
   return <JobsContext.Provider value={value}>{children}</JobsContext.Provider>;
 }
 JobsProvider.propTypes = { children: PropTypes.node, userId: PropTypes.string };
@@ -223,7 +235,7 @@ export function useJobRunner({ kind, brandId, productId, enabled = true, restore
   useEffect(() => {
     if (!job) return;
     const key = `${job.id}:${job.status}`;
-    if ((job.status === "completed" || job.status === "failed") && firedRef.current !== key) {
+    if ((job.status === "completed" || job.status === "failed" || job.status === "cancelled") && firedRef.current !== key) {
       firedRef.current = key;
       if (job.status === "completed") cbRef.current.onComplete?.(job);
       else cbRef.current.onFail?.(job);
@@ -270,11 +282,22 @@ const KIND_LABEL = {
   generate_scripts: "Video scripts", generate_brief: "Creative brief", weekly_brief: "Concept brief",
 };
 
+/** Plain-English name of a job kind, e.g. "Ad analysis". */
+export function jobTitle(job) {
+  const type = job?.type || job?.meta?.kind;
+  return type === "research" && job?.only === "cross_map" ? "Persona mapping" : KIND_LABEL[type] || job?.meta?.label || "Background task";
+}
+
+/** The visible steps that start after this job (its chain), in order. */
+export function dependentSteps(job) {
+  return (Array.isArray(job?.upcoming) ? job.upcoming : []).filter((step) => !BACKGROUND_KINDS.has(step.type)).map((step) => jobTitle(step));
+}
+
 // Returns { title, detail, pct } for a job record. pct is best-effort (null when unknown).
 export function describeJob(job) {
   if (!job) return null;
   const type = job.type || job.meta?.kind;
-  const title = type === "research" && job.only === "cross_map" ? "Persona mapping" : KIND_LABEL[type] || job.meta?.label || "Background task";
+  const title = jobTitle(job);
   const p = job.progress || {};
   const timing = timeProgress(job);
   if (job.status === "waiting") return { title, detail: "Waiting · starts after the step above", pct: null, eta: timeProgress({ ...job, status: "queued" }).label };
@@ -293,6 +316,7 @@ export function describeJob(job) {
     return { title, detail: errors ? `${detail} · ${errors}` : detail, pct: 100 };
   }
   if (job.status === "failed") return { title, detail: job.error || "failed", pct: null };
+  if (job.status === "cancelled") return { title, detail: job.error && job.error !== "Cancelled by user" ? job.error : "Cancelled · the steps after it were cancelled too", pct: null };
 
   // running
   if (type === "research" && typeof p.phase === "number") {

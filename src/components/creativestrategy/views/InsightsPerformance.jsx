@@ -6,7 +6,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import PropTypes from "prop-types";
 import { ScatterChart, Scatter, XAxis, YAxis, ZAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell } from "recharts";
-import { AlertTriangle, ChevronLeft, ChevronRight, Play, Search, X, Zap } from "lucide-react";
+import { AlertTriangle, ChevronLeft, ChevronRight, Flame, Play, Search, X, Zap } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CsScrollArea } from "../ui";
 
@@ -155,7 +155,13 @@ const SORTS = {
   conversions: { label: "Conversions", value: (ad) => num(ad.purchases) || null },
   ctr: { label: "CTR", value: (ad) => num(ad.ctr) || null },
   hook_rate: { label: "Hook rate", value: (ad) => num(ad.hookRate) || null },
+  // Week-over-week spend growth; ads that only started spending this week
+  // ("new") follow the growing ones.
+  growth: { label: "Spend growth", value: (ad) => (ad.trend ? (ad.trend.spendDelta ?? 0.0001) : null), trendingOnly: true },
 };
+
+/** "+45% this week" or "New this week" for a trending ad. */
+const trendLabel = (trend) => (trend.spendDelta != null ? `+${Math.round(trend.spendDelta * 100)}% this week` : "New this week");
 const FORMATS = [{ key: "all", label: "All" }, { key: "video", label: "Video" }, { key: "static", label: "Static" }];
 
 const pct = (v, digits = 1) => `${v.toFixed(digits)}%`;
@@ -242,10 +248,19 @@ function PerformerCard({ ad, rank, avgCpa, root, onOpen }) {
           <Stat label="Watch" value={video ? (watch > 0 ? `${Math.round(watch)}s` : "—") : "n/a"} muted={!video} />
         </div>
 
-        {fatigued && (
-          <span className="cs-top-card__fatigue" title={`Frequency ${freq.toFixed(1)}×${cpa ? " with CPA above average" : ""}`}>
-            <AlertTriangle className="h-3 w-3" />Fatigue risk
-          </span>
+        {(ad.trend || fatigued) && (
+          <div className="flex flex-wrap gap-1">
+            {ad.trend && (
+              <span className="cs-top-card__trend" title={`$${Math.round(num(ad.trend.currentSpend)).toLocaleString()} spent in the last 7 days${ad.trend.previousSpend ? `, up from $${Math.round(num(ad.trend.previousSpend)).toLocaleString()} the week before` : ""}`}>
+                <Flame className="h-3 w-3" />{trendLabel(ad.trend)}
+              </span>
+            )}
+            {fatigued && (
+              <span className="cs-top-card__fatigue" title={`Frequency ${freq.toFixed(1)}×${cpa ? " with CPA above average" : ""}`}>
+                <AlertTriangle className="h-3 w-3" />Fatigue risk
+              </span>
+            )}
+          </div>
         )}
       </div>
     </article>
@@ -253,7 +268,7 @@ function PerformerCard({ ad, rank, avgCpa, root, onOpen }) {
 }
 PerformerCard.propTypes = { ad: PropTypes.object.isRequired, rank: PropTypes.number.isRequired, avgCpa: PropTypes.number, root: PropTypes.object, onOpen: PropTypes.func.isRequired };
 
-export function TopPerformers({ ads, limit = DEFAULT_LIMIT }) {
+export function TopPerformers({ ads, trending = [], trendingRefreshing = false, limit = DEFAULT_LIMIT }) {
   const scrollRef = useRef(null);
   const [scrollRoot, setScrollRoot] = useState(null);
   const setStripRef = useCallback((el) => { scrollRef.current = el; setScrollRoot(el); }, []);
@@ -263,10 +278,33 @@ export function TopPerformers({ ads, limit = DEFAULT_LIMIT }) {
   const [query, setQuery] = useState("");
   const [format, setFormat] = useState("all");
   const [fatiguedOnly, setFatiguedOnly] = useState(false);
+  const [trendingOnly, setTrendingOnly] = useState(false);
   const [sortKey, setSortKey] = useState("spend");
 
   const avgCpa = useMemo(() => blendedCpa(ads), [ads]);
-  const pool = useMemo(() => ads.filter((ad) => num(ad.spend) > 0), [ads]);
+  // Trending creatives (spend rising week over week, or new this week) are
+  // tagged onto the matching saved ad; ones not saved yet join from the
+  // trending data alone, so the Trending filter shows every one of them.
+  const pool = useMemo(() => {
+    const trendById = new Map(trending.filter((t) => t?.adId).map((t) => [t.adId, t]));
+    const saved = ads.filter((ad) => num(ad.spend) > 0 || trendById.has(ad.adId))
+      .map((ad) => (trendById.has(ad.adId) ? { ...ad, trend: trendById.get(ad.adId) } : ad));
+    const savedIds = new Set(saved.map((ad) => ad.adId));
+    const unsaved = [...trendById.values()].filter((t) => !savedIds.has(t.adId)).map((t) => ({
+      adId: t.adId, adName: t.adName, thumbnailUrl: t.thumbnailUrl, spend: num(t.currentSpend),
+      costPerPurchase: t.cpa, ctr: t.ctr, avgWatchTime: t.videoAvgWatchTime, createdTime: t.createdTime,
+      mediaType: t.videoAvgWatchTime ? "video" : undefined, trend: t,
+    }));
+    return [...saved, ...unsaved];
+  }, [ads, trending]);
+  const trendingCount = useMemo(() => pool.filter((ad) => ad.trend).length, [pool]);
+  const toggleTrending = () => {
+    const next = !trendingOnly;
+    setTrendingOnly(next);
+    // Trending opens ranked by growth; leaving it drops the growth sort.
+    if (next) setSortKey("growth");
+    else if (sortKey === "growth") setSortKey("spend");
+  };
   const formatCounts = useMemo(() => ({
     all: pool.length, video: pool.filter(isVideoAd).length, static: pool.filter((ad) => !isVideoAd(ad)).length,
   }), [pool]);
@@ -282,6 +320,7 @@ export function TopPerformers({ ads, limit = DEFAULT_LIMIT }) {
       if (format === "video" && !isVideoAd(ad)) return false;
       if (format === "static" && isVideoAd(ad)) return false;
       if (fatiguedOnly && !isFatigued(ad, avgCpa)) return false;
+      if (trendingOnly && !ad.trend) return false;
       return true;
     });
     const sorted = [...matched].sort((a, b) => {
@@ -293,11 +332,11 @@ export function TopPerformers({ ads, limit = DEFAULT_LIMIT }) {
       return asc ? va - vb : vb - va;
     });
     return { displayAds: sorted.slice(0, limit), matchCount: matched.length };
-  }, [pool, query, format, fatiguedOnly, sortKey, avgCpa, limit]);
+  }, [pool, query, format, fatiguedOnly, trendingOnly, sortKey, avgCpa, limit]);
 
-  const filtersActive = query.trim() !== "" || format !== "all" || fatiguedOnly;
+  const filtersActive = query.trim() !== "" || format !== "all" || fatiguedOnly || trendingOnly;
 
-  useEffect(() => { scrollRef.current?.scrollTo({ left: 0 }); }, [query, format, fatiguedOnly, sortKey]);
+  useEffect(() => { scrollRef.current?.scrollTo({ left: 0 }); }, [query, format, fatiguedOnly, trendingOnly, sortKey]);
 
   const updateScrollState = useCallback(() => {
     const el = scrollRef.current;
@@ -331,7 +370,7 @@ export function TopPerformers({ ads, limit = DEFAULT_LIMIT }) {
 
   return (
     <Section
-      title="Top performers"
+      title={trendingOnly ? "Top performers · trending" : "Top performers"}
       noDivider
       actions={(
         <div className="flex items-center gap-2">
@@ -360,17 +399,27 @@ export function TopPerformers({ ads, limit = DEFAULT_LIMIT }) {
             className={`cs-weekly-switcher__item ${fatiguedOnly ? "is-active" : ""}`}>
             <AlertTriangle className="h-3 w-3" />Fatigued <span>{fatiguedCount}</span>
           </button>
+          <button type="button" onClick={toggleTrending} aria-pressed={trendingOnly}
+            title="Ads whose spend is growing fastest week over week, or that started spending in the last 7 days"
+            className={`cs-weekly-switcher__item ${trendingOnly ? "is-active" : ""}`}>
+            <Flame className="h-3 w-3" />Trending <span>{trendingCount}</span>
+          </button>
         </div>
         <Select value={sortKey} onValueChange={setSortKey}>
           <SelectTrigger className="cs-weekly-filter-select cs-top-sort px-3"><SelectValue /></SelectTrigger>
           <SelectContent className="cs-select-content bg-white">
-            {Object.keys(SORTS).map((key) => <SelectItem key={key} value={key}>Sort: {SORTS[key].label}</SelectItem>)}
+            {Object.keys(SORTS).filter((key) => !SORTS[key].trendingOnly || trendingOnly).map((key) => <SelectItem key={key} value={key}>Sort: {SORTS[key].label}</SelectItem>)}
           </SelectContent>
         </Select>
-        {filtersActive && <button type="button" onClick={() => { setQuery(""); setFormat("all"); setFatiguedOnly(false); }} className="cs-weekly-clear">Clear filters</button>}
+        {filtersActive && <button type="button" onClick={() => { setQuery(""); setFormat("all"); setFatiguedOnly(false); setTrendingOnly(false); if (sortKey === "growth") setSortKey("spend"); }} className="cs-weekly-clear">Clear filters</button>}
       </div>
 
-      {!displayAds.length && <p className="cs-research-muted py-8 text-center">No ads match these filters.</p>}
+      {trendingOnly && displayAds.length > 0 && <p className="mb-2 text-xs text-neutral-500">Ads whose spend grew week over week, or that started spending in the last 7 days.</p>}
+      {!displayAds.length && <p className="cs-research-muted py-8 text-center">
+        {trendingOnly && trendingCount === 0
+          ? (trendingRefreshing ? "Refreshing trending creatives with the analysis…" : "No trending creatives in the last 7 days. Run Analysis to refresh.")
+          : "No ads match these filters."}
+      </p>}
 
       <CsScrollArea
         axis="x"
@@ -398,4 +447,4 @@ export function TopPerformers({ ads, limit = DEFAULT_LIMIT }) {
     </Section>
   );
 }
-TopPerformers.propTypes = { ads: PropTypes.array.isRequired, limit: PropTypes.number };
+TopPerformers.propTypes = { ads: PropTypes.array.isRequired, trending: PropTypes.array, trendingRefreshing: PropTypes.bool, limit: PropTypes.number };

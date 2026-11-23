@@ -19,6 +19,9 @@ export default function useGlobalSettings() {
     const [hasSeenCsvImportGuide, setHasSeenCsvImportGuide] = useState(false);
     const [hasSeenVariantsGuide, setHasSeenVariantsGuide] = useState(false);
     const [hasSeenCreativeStrategyOnboarding, setHasSeenCreativeStrategyOnboarding] = useState(false);
+    // "Setup has started, follow it in the job tracker" popup after the first
+    // Creative Strategy product is created.
+    const [hasSeenCreativeStrategySetupPopup, setHasSeenCreativeStrategySetupPopup] = useState(false);
     const [seenOnboardingCards, setSeenOnboardingCards] = useState([]);
     const [selectedAdAccountIds, setSelectedAdAccountIds] = useState([])
     const [selectedTikTokAdvertiserIds, setSelectedTikTokAdvertiserIds] = useState([])
@@ -59,6 +62,9 @@ export default function useGlobalSettings() {
             setHasSeenCreativeStrategyOnboarding(
                 res.ok ? Boolean(data?.settings?.hasSeenCreativeStrategyOnboarding) : true
             );
+            setHasSeenCreativeStrategySetupPopup(
+                res.ok ? Boolean(data?.settings?.hasSeenCreativeStrategySetupPopup) : true
+            );
             setSeenOnboardingCards(
                 Array.isArray(data?.settings?.seenOnboardingCards)
                     ? data.settings.seenOnboardingCards
@@ -92,6 +98,7 @@ export default function useGlobalSettings() {
             setHasSeenVariantsGuide(true);
             // Same for the unskippable Creative Strategy walkthrough.
             setHasSeenCreativeStrategyOnboarding(true);
+            setHasSeenCreativeStrategySetupPopup(true);
             setSeenOnboardingCards([]);
             setUploadSources(['local', 'drive', 'dropbox']);
         } finally {
@@ -149,6 +156,8 @@ export default function useGlobalSettings() {
         setHasSeenVariantsGuide,
         hasSeenCreativeStrategyOnboarding,
         setHasSeenCreativeStrategyOnboarding,
+        hasSeenCreativeStrategySetupPopup,
+        setHasSeenCreativeStrategySetupPopup,
         seenOnboardingCards,
         setSeenOnboardingCards,
         effectiveSeenOnboardingIds,

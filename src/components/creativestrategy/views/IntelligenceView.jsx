@@ -162,7 +162,7 @@ export default function IntelligenceView({ ctx }) {
         </div>
       )}
       <FailedDownloadsBanner ads={failedDownloads} total={analyzedAds.length} />
-      {patterns.length > 0 ? <StrategicPatterns patterns={patterns} /> : <ProgressiveSection title="Strategic patterns by spend" active={auditWorkActive} />}
+      {patterns.length > 0 ? <StrategicPatterns patterns={patterns} /> : <ProgressiveSection title="Most common patterns by spend" active={auditWorkActive} />}
       {topHooks.length > 0 ? <TopHooksSection key={selectedProductId} hooks={topHooks} /> : <ProgressiveSection title="Top hooks" active={adWorkActive} cards={2} />}
       {Array.isArray(a.messaging_themes) && a.messaging_themes.length > 0
         ? <MessagingThemesSection themes={a.messaging_themes} ads={ads} />
@@ -173,23 +173,8 @@ export default function IntelligenceView({ ctx }) {
         ? <PersonaPerformanceSection mappings={a.persona_ad_mapping} ads={ads} />
         : <ProgressiveSection title="Customer persona performance" active={auditWorkActive} cards={2} />}
 
-      {ads.length > 0 && <TopPerformers key={selectedProductId} ads={ads} />}
-
-      <Block title="Trending creative · rising spend / new, last 7d" noDivider>
-        {trendingAds.length > 0 ? (
-          <div className="cs-intel-creative-grid">
-            {trendingAds.slice(0, 8).map((t) => (
-              <div key={t.adId} className="cs-intel-creative-card">
-                <CreativeThumbnail src={t.thumbnailUrl} variant="card" />
-                <div className="cs-intel-creative-card__body">
-                  <div className="truncate" title={t.adName}>{t.adName}</div>
-                  <p>{money(t.currentSpend)}{t.spendDelta != null ? ` · +${Math.round(t.spendDelta * 100)}% WoW` : " · new"}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : <p className="text-xs text-neutral-400">{analyzeActive ? "Refreshing with analysis…" : "No trending creatives in the latest data. Run Analysis to refresh."}</p>}
-      </Block>
+      {/* Trending creatives live in Top performers as a filter, like Fatigued. */}
+      {(ads.length > 0 || trendingAds.length > 0) && <TopPerformers key={selectedProductId} ads={ads} trending={trendingAds} trendingRefreshing={analyzeActive} />}
 
       {recent.length > 0 ? <RecentLaunches ads={recent} /> : <Block title="Recent launches · last 14 days" noDivider><p className="text-xs text-neutral-500">{adWorkActive || loading ? "Loading recent launches…" : "No ads launched in the last 14 days in the saved analysis. Run Analysis to refresh."}</p></Block>}
       {Array.isArray(a.visual_openers) && a.visual_openers.length > 0
@@ -360,7 +345,7 @@ FailedDownloadsBanner.propTypes = { ads: PropTypes.array.isRequired, total: Prop
 
 function StrategicPatterns({ patterns }) {
   if (!patterns.length) return null;
-  return <InsightSection title="Strategic patterns by spend">
+  return <InsightSection title="Most common patterns by spend" description="The storytelling moves your ads use most, ranked by how much spend sits behind them. A pattern is how an ad makes its point, not just its topic.">
     <div className="cs-intel-patterns">{patterns.map((pattern, index) => {
       const pct = Number(pattern.spend_pct || 0);
       return <div key={index} className="cs-intel-pattern">
@@ -485,7 +470,11 @@ function MessagingThemesSection({ themes, ads }) {
     const repAd = matchedAds.find(ad => ad.adId === theme.representative_ad_id) || matchedAds.find(ad => ad.adName === theme.representative_ad_name) || [...matchedAds].sort((x, y) => (y.spend || 0) - (x.spend || 0))[0];
     return { ...theme, matchedAds, spend, purchases, cpa: purchases > 0 ? spend / purchases : null, repAd };
   }).sort((x, y) => y.spend - x.spend);
-  return <InsightSection title="Messaging themes" tone="orange">
+  return <InsightSection
+    title="Messaging themes"
+    tone="orange"
+    description={`The core desire or problem each ad leads with, like "saves you time" or "finally sleep through the night". Every ad is placed in exactly one theme, so you can see where your spend is concentrated and which messages pay off. Proven themes have 3+ ads, a real share of spend and a CPA at or below your average. ${enriched.length} theme${enriched.length === 1 ? "" : "s"} detected.`}
+  >
     <div className="space-y-2">{enriched.map((theme, index) => {
       const open = expanded === index;
       return <div key={`${theme.theme}-${index}`} className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
@@ -536,7 +525,7 @@ function PersonaPerformanceSection({ mappings, ads }) {
     const open = expanded === index; const share = total > 0 ? (persona.spend / total) * 100 : 0;
     const title = persona.persona_short_title || persona.matched_research_persona || persona.persona || `Persona ${index + 1}`;
     return <div key={`${title}-${index}`} className="overflow-hidden rounded-xl border border-neutral-200 bg-white"><button type="button" onClick={() => setExpanded(open ? null : index)} className="flex w-full gap-3 p-3 text-left">
-      <div className="min-w-0 flex-1"><strong className="text-[15px] text-neutral-800">{title}</strong>{persona.persona && persona.persona !== title && <p className="mt-1 line-clamp-2 text-[13px] leading-relaxed text-neutral-600">{persona.persona}</p>}
+      <div className="min-w-0 flex-1"><strong className="text-[15px] text-neutral-800">{title}</strong>{persona.persona && persona.persona !== title && <p className="mt-1 text-[13px] leading-relaxed text-neutral-600">{persona.persona}</p>}
         <MetricPills className="mt-2" items={[`${persona.matchedAds.length} ads`, `${money(persona.spend)} spend`, `${Math.round(share)}% share`, persona.cpa ? `${money(persona.cpa)} CPA` : null]} /><div className="cs-intel-spend-bar mt-3"><div style={{ width: `${Math.max(share, 2)}%` }} /></div>
       </div>{open ? <ChevronDown className="h-4 w-4 text-neutral-400" /> : <ChevronRight className="h-4 w-4 text-neutral-400" />}</button>
       {open && <div className="cs-intel-expanded-stack">
@@ -554,7 +543,7 @@ function RecentLaunches({ ads }) {
   return <Block title="Recent launches · last 14 days"><CsScrollArea axis="x"><div className="flex gap-3 pb-3">{ads.map((ad) => {
     const days = Math.max(0, Math.floor((Date.now() - new Date(ad.createdTime).getTime()) / 86400000));
     const src = ad.imageUrl || ad.thumbnailUrl;
-    return <div key={ad.adId} className="w-[170px] shrink-0 overflow-hidden rounded-xl border border-neutral-200"><div className="relative aspect-[9/16] bg-neutral-100">{src ? <img src={src} alt="" className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center text-neutral-400"><Zap className="h-5 w-5" /></div>}<Badge className="absolute left-2 top-2 text-[9px]">{days === 0 ? "Today" : days === 1 ? "Yesterday" : `${days}d ago`}</Badge><Badge variant="outline" className="absolute right-2 top-2 border-white/30 bg-black/50 text-[9px] text-white">{ad.mediaType === "video" ? "Video" : "Static"}</Badge></div><div className="p-2"><strong className="block truncate text-xs">{ad.adName || "Unnamed"}</strong><p className="mt-1 text-[10px] text-neutral-400">{money(ad.spend)} spend{ad.costPerPurchase ? ` · ${money(ad.costPerPurchase)} CPA` : ""}{ad.purchases > 0 ? ` · ${ad.purchases} purchases` : ""}{ad.hookRate > 0 ? ` · ${(ad.hookRate * 100).toFixed(1)}% HR` : ""}</p></div></div>;
+    return <div key={ad.adId} className="w-[112px] shrink-0 overflow-hidden rounded-xl border border-neutral-200"><div className="relative aspect-[9/16] bg-neutral-100">{src ? <img src={src} alt="" className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center text-neutral-400"><Zap className="h-5 w-5" /></div>}<Badge className="absolute left-1.5 top-1.5 px-1.5 text-[9px]">{days === 0 ? "Today" : days === 1 ? "Yesterday" : `${days}d ago`}</Badge><Badge variant="outline" className="absolute bottom-1.5 left-1.5 border-white/30 bg-black/50 px-1.5 text-[9px] text-white">{ad.mediaType === "video" ? "Video" : "Static"}</Badge></div><div className="p-2"><strong className="block truncate text-xs">{ad.adName || "Unnamed"}</strong><p className="mt-1 text-[10px] text-neutral-400">{money(ad.spend)} spend{ad.costPerPurchase ? ` · ${money(ad.costPerPurchase)} CPA` : ""}{ad.purchases > 0 ? ` · ${ad.purchases} purchases` : ""}{ad.hookRate > 0 ? ` · ${(ad.hookRate * 100).toFixed(1)}% HR` : ""}</p></div></div>;
   })}</div></CsScrollArea></Block>;
 }
 RecentLaunches.propTypes = { ads: PropTypes.array.isRequired };
@@ -627,18 +616,21 @@ function Block({ title, children, actions, noDivider = false }) {
 }
 Block.propTypes = { title: PropTypes.string.isRequired, children: PropTypes.node, actions: PropTypes.node, noDivider: PropTypes.bool };
 
-function InsightSection({ title, children, actions, tone }) {
+function InsightSection({ title, description, children, actions, tone }) {
   return (
     <section className={`cs-intel-insight ${tone ? `is-persona-style is-${tone}` : ""}`}>
       <header>
-        <h2>{title}</h2>
+        <div className="min-w-0">
+          <h2>{title}</h2>
+          {description && <p className="cs-intel-insight__subheader">{description}</p>}
+        </div>
         {actions}
       </header>
       <div className="cs-intel-insight__body">{children}</div>
     </section>
   );
 }
-InsightSection.propTypes = { title: PropTypes.string.isRequired, children: PropTypes.node, actions: PropTypes.node, tone: PropTypes.oneOf(["dark", "orange"]) };
+InsightSection.propTypes = { title: PropTypes.string.isRequired, description: PropTypes.string, children: PropTypes.node, actions: PropTypes.node, tone: PropTypes.oneOf(["dark", "orange"]) };
 
 function Pill({ children }) {
   return <span className="cs-intel-pill">{children}</span>;

@@ -525,7 +525,8 @@ function PersonaListSection({ icon, label, items }) {
 }
 
 function ResearchIntelRow({ type, title, data, icon, guidelines }) {
-  const [open, setOpen] = useState(false);
+  // Sections open on load (key details only; "View Full Details" shows the rest).
+  const [open, setOpen] = useState(true);
   const [headerStuck, setHeaderStuck] = useState(false);
   const stickySentinelRef = useRef(null);
   const descriptors = researchSectionMeta(type, data);
