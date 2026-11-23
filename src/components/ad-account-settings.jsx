@@ -14,7 +14,7 @@ import { Popover, PopoverContent, PopoverTrigger, PopoverAnchor } from "@/compon
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
-import { Search, Check, ChevronsUpDown, RefreshCcw, X, CircleX, Loader, AlertTriangle, Ban, Pencil, CircleDollarSign, CalendarClock, Crosshair, Minus, CirclePlus } from "lucide-react"
+import { Search, Check, ChevronsUpDown, RefreshCcw, X, CircleX, Loader, AlertTriangle, Ban, Pencil, CircleDollarSign, CalendarClock, Crosshair, Minus, CirclePlus, MousePointerClick } from "lucide-react"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { useAuth } from "@/lib/AuthContext"
 import { Input } from "@/components/ui/input"
@@ -229,6 +229,17 @@ function TargetingPicker({ label = "Search targeting", adAccountId, value, searc
   </div>;
 }
 
+// Attribution editing in Edit setup is limited to these users for now.
+const ATTRIBUTION_EDIT_USER_IDS = ["122195311376854213", "10236978990363167"];
+// Meta's attribution_spec event types and the windows Ads Manager offers for each.
+// A source ad set's own window is always kept selectable, even if not listed here.
+const ATTRIBUTION_EVENTS = [
+  { type: "CLICK_THROUGH", label: "Click-through", windows: [1, 7], optional: false },
+  { type: "ENGAGED_VIDEO_VIEW", label: "Engaged-view", windows: [1], optional: true },
+  { type: "VIEW_THROUGH", label: "View-through", windows: [1], optional: true },
+];
+const ATTRIBUTION_CLICK_ERROR = "Choose a click-through attribution window in Edit setup.";
+
 export function getAdSetAdvancedSettingsError(settings) {
   const { defaults, changes = {} } = settings || {};
   if (!defaults) return null;
@@ -264,6 +275,7 @@ export function getAdSetAdvancedSettingsError(settings) {
       : Number(minimum.value) > Number(available.remainingAmount);
     if (exceeds) return `Minimum spend exceeds the campaign's remaining minimum-spend allocation. Use at most ${available.maxPercentage}% or ${defaults.budget.currency} ${available.remainingAmount}, or clear the minimum.`;
   }
+  if (changes.attributionSpec !== undefined && !changes.attributionSpec.some((spec) => spec.event_type === "CLICK_THROUGH")) return ATTRIBUTION_CLICK_ERROR;
   return null;
 }
 
@@ -288,6 +300,8 @@ function AdSetSetupSection({ title, icon: Icon, className, spacing = "space-y-3"
 }
 
 function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onChange, disabled }) {
+  const { userId } = useAuth();
+  const canEditAttribution = ATTRIBUTION_EDIT_USER_IDS.includes(String(userId));
   const [expanded, setExpanded] = useState(Boolean(value));
   const reduceMotion = useReducedMotion();
   const settingsRequestRef = useRef(null);
@@ -298,7 +312,7 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
   const [reload, setReload] = useState(0);
   const defaults = value?.defaults;
   useEffect(() => {
-    if (!expanded || (defaults && Object.prototype.hasOwnProperty.call(defaults, "spendLimits") && Object.prototype.hasOwnProperty.call(defaults, "minimumSpendAvailability") && defaults.interestsResolved) || disabled) return;
+    if (!expanded || (defaults && Object.prototype.hasOwnProperty.call(defaults, "spendLimits") && Object.prototype.hasOwnProperty.call(defaults, "minimumSpendAvailability") && (!canEditAttribution || Object.prototype.hasOwnProperty.call(defaults, "attributionSpec")) && defaults.interestsResolved) || disabled) return;
     const controller = new AbortController();
     settingsRequestRef.current = controller;
     setLoading(true);
@@ -308,7 +322,7 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
       .then(async (response) => {
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || "Could not load ad set settings.");
-        if (!controller.signal.aborted) onChange({ sourceAdSetId: adSetId, campaignId, adAccountId, defaults: { ...data, spendLimits: data.spendLimits ?? null, minimumSpendAvailability: data.minimumSpendAvailability ?? null, interestsResolved: true }, changes: latestSettingsRef.current?.changes || {} });
+        if (!controller.signal.aborted) onChange({ sourceAdSetId: adSetId, campaignId, adAccountId, defaults: { ...data, spendLimits: data.spendLimits ?? null, minimumSpendAvailability: data.minimumSpendAvailability ?? null, attributionSpec: data.attributionSpec ?? [], interestsResolved: true }, changes: latestSettingsRef.current?.changes || {} });
       })
       .catch((err) => { if (!controller.signal.aborted) setError(err.message); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
@@ -316,7 +330,7 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
       controller.abort();
       if (settingsRequestRef.current === controller) settingsRequestRef.current = null;
     };
-  }, [expanded, defaults, disabled, adSetId, campaignId, adAccountId, onChange, reload]);
+  }, [expanded, defaults, disabled, adSetId, campaignId, adAccountId, onChange, reload, canEditAttribution]);
 
   const changes = value?.changes || {};
   const targeting = defaults?.targeting || {};
@@ -454,6 +468,14 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
   };
   const startTime = field("startTime", defaults?.startTime || "");
   const endTime = field("endTime", defaults?.endTime || "");
+  const sourceAttribution = defaults?.attributionSpec || [];
+  const attribution = changes.attributionSpec ?? sourceAttribution;
+  const attributionWindow = (spec, type) => spec.find((entry) => entry.event_type === type)?.window_days;
+  // Always send the full spec in Meta's event order so untouched windows are kept.
+  const updateAttribution = (type, days) => update("attributionSpec", ATTRIBUTION_EVENTS.flatMap(({ type: eventType }) => {
+    const windowDays = eventType === type ? days : attributionWindow(attribution, eventType);
+    return windowDays ? [{ event_type: eventType, window_days: Number(windowDays) }] : [];
+  }));
   return (
     <fieldset disabled={disabled} className="mt-2 min-w-0">
       <div className="flex items-center justify-between gap-3">
@@ -553,7 +575,7 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
                     </p>}
                     <p className="text-xs text-gray-500">Leave empty for no limit. Switching units converts using the current campaign budget. Percentages must be whole numbers.</p>
                   </div>}
-                  {advancedError && <p role="alert" className="text-xs text-red-600">{advancedError}</p>}
+                  {advancedError && advancedError !== ATTRIBUTION_CLICK_ERROR && <p role="alert" className="text-xs text-red-600">{advancedError}</p>}
 
                 </AdSetSetupSection>
                 <AdSetSetupSection title="Schedule" icon={CalendarClock} className="border-t pt-4">
@@ -566,6 +588,26 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
                   {endTime && Date.parse(endTime) <= Date.now() && <p className="text-xs text-amber-700">The source ad set has ended. Choose a new end time{defaults.budget.mode === "daily" ? " or clear it for ongoing delivery" : ""}.</p>}
                   {defaults.hasRecurringSchedule && <p className="text-xs text-gray-500">The source’s recurring delivery hours will be retained.</p>}
                 </AdSetSetupSection>
+                {canEditAttribution && <AdSetSetupSection title="Attribution" icon={MousePointerClick} className="border-t pt-4">
+                  {ATTRIBUTION_EVENTS.map(({ type, label, windows, optional }) => {
+                    const current = attributionWindow(attribution, type);
+                    const sourceWindow = attributionWindow(sourceAttribution, type);
+                    const options = [...new Set([...windows, ...(sourceWindow ? [Number(sourceWindow)] : [])])].sort((a, b) => a - b);
+                    return <div key={type} className="flex items-center justify-between gap-3">
+                      <Label htmlFor={`new-adset-attribution-${type}`}>{label}</Label>
+                      <Select value={current ? String(current) : optional ? "none" : ""} disabled={disabled} onValueChange={(next) => updateAttribution(type, next === "none" ? null : next)}>
+                        <SelectTrigger id={`new-adset-attribution-${type}`} className="h-9 w-32 shrink-0 rounded-xl bg-white py-2"><SelectValue placeholder="Meta default" /></SelectTrigger>
+                        <SelectContent className="rounded-2xl bg-white shadow-lg">
+                          {optional && <SelectItem value="none" className="rounded-xl">None</SelectItem>}
+                          {options.map((days) => <SelectItem key={days} value={String(days)} className="rounded-xl">{days} day{days === 1 ? "" : "s"}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>;
+                  })}
+                  {changes.attributionSpec !== undefined && !attributionWindow(attribution, "CLICK_THROUGH") && <p role="alert" className="text-xs text-red-600">{ATTRIBUTION_CLICK_ERROR}</p>}
+                  {!sourceAttribution.length && changes.attributionSpec === undefined && <p className="text-xs text-gray-500">The source ad set uses Meta’s default attribution. Choose a click-through window to set your own.</p>}
+                  <p className="text-xs text-gray-500">Meta checks these windows against the ad set’s optimization goal when it’s created.</p>
+                </AdSetSetupSection>}
               </>}
             </div>
           </motion.div>

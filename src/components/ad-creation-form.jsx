@@ -2099,8 +2099,13 @@ export default function AdCreationForm({
       const defaultSnapshot = activeVariantId === "default" ? liveVariantSnapshot : variants.find((variant) => variant.id === "default")?.snapshot;
       if (!shareNewAdSet || variants.length <= 1 || !(snapshot?.showDuplicateBlock ?? Boolean(snapshot?.duplicateAdSet))) return snapshot;
       const sourceAdSet = defaultSnapshot?.adSets?.find((adSet) => adSet.id === defaultSnapshot?.duplicateAdSet);
+      const defaultCampaigns = defaultSnapshot?.selectedCampaign;
       return {
         ...snapshot,
+        // The shared ad set is created in Default's campaign.
+        ...(defaultSnapshot?.showDuplicateBlock && defaultCampaigns?.length === 1
+          ? { selectedCampaign: [...defaultCampaigns], campaignObjective: defaultSnapshot.campaignObjective || [] }
+          : {}),
         duplicateAdSet: defaultSnapshot?.duplicateAdSet || "",
         adSets: sourceAdSet
           ? [...(snapshot.adSets || []).filter((adSet) => adSet.id !== sourceAdSet.id), sourceAdSet]
@@ -3433,7 +3438,7 @@ export default function AdCreationForm({
           completedAt: Date.now(),
           message: cancelled
             ? "Shared ad set creation cancelled. No variant ads were launched. The ad set may already exist in Ads Manager."
-            : `Could not create shared ad set: ${detail}. No variant ads were launched.`,
+            : `Could not create shared ad set: ${detail.replace(/\.+$/, "")}. No variant ads were launched.`,
           sharedAdSetJob: jobToProcess,
         });
         setJobQueue((previous) => previous.filter((job) => job.id !== jobToProcess.id));

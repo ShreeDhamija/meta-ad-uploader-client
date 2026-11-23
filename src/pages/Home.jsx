@@ -1260,8 +1260,13 @@ export default function Home() {
         const defaultSnapshot = activeVariantId === "default" ? current : variants.find((variant) => variant.id === "default")?.snapshot;
         if (!shareNewAdSet || variants.length <= 1 || !(snapshot?.showDuplicateBlock ?? Boolean(snapshot?.duplicateAdSet))) return snapshot;
         const sourceAdSet = defaultSnapshot?.adSets?.find((adSet) => adSet.id === defaultSnapshot?.duplicateAdSet);
+        const defaultCampaigns = defaultSnapshot?.selectedCampaign;
         return {
             ...snapshot,
+            // The shared ad set is created in Default's campaign.
+            ...(defaultSnapshot?.showDuplicateBlock && defaultCampaigns?.length === 1
+                ? { selectedCampaign: [...defaultCampaigns], campaignObjective: defaultSnapshot.campaignObjective || [] }
+                : {}),
             duplicateAdSet: defaultSnapshot?.duplicateAdSet || "",
             adSets: sourceAdSet
                 ? [...(snapshot.adSets || []).filter((adSet) => adSet.id !== sourceAdSet.id), sourceAdSet]
@@ -1295,6 +1300,28 @@ export default function Home() {
             return changed ? next : previous;
         });
     }, [shareNewAdSet, variants.length, activeVariantId, showDuplicateBlock, duplicateAdSet, defaultDuplicateAdSet]);
+
+    // With "Launch all in 1 new ad set", every variant launching in a new ad set
+    // uses Default's campaign, since that's where the shared ad set is created.
+    const defaultVariantSnapshot = variants.find((variant) => variant.id === "default")?.snapshot;
+    const defaultCampaignSelection = activeVariantId === "default" ? selectedCampaign : defaultVariantSnapshot?.selectedCampaign;
+    const defaultInNewAdSet = activeVariantId === "default" ? showDuplicateBlock : defaultVariantSnapshot?.showDuplicateBlock;
+    const sharedAdSetCampaignId = defaultInNewAdSet && defaultCampaignSelection?.length === 1 ? defaultCampaignSelection[0] : "";
+    useEffect(() => {
+        if (!shareNewAdSet || variants.length <= 1 || !sharedAdSetCampaignId) return;
+        const objective = campaigns.find((campaign) => campaign.id === sharedAdSetCampaignId)?.objective;
+        const patch = { selectedCampaign: [sharedAdSetCampaignId], campaignObjective: objective ? [objective] : [] };
+        const needsSwitch = (campaignIds) => campaignIds?.length !== 1 || campaignIds[0] !== sharedAdSetCampaignId;
+        if (activeVariantId !== "default" && showDuplicateBlock && needsSwitch(selectedCampaign)) {
+            updateVariantFields(activeVariantId, patch);
+        }
+        variants.forEach((variant) => {
+            const snapshot = variant.snapshot;
+            if (variant.id === "default" || variant.id === activeVariantId || !snapshot ||
+                !(snapshot.showDuplicateBlock ?? Boolean(snapshot.duplicateAdSet)) || !needsSwitch(snapshot.selectedCampaign)) return;
+            updateVariantFields(variant.id, patch);
+        });
+    }, [shareNewAdSet, variants, activeVariantId, showDuplicateBlock, selectedCampaign, sharedAdSetCampaignId, campaigns, updateVariantFields]);
 
 
     const isFormFieldModified = useCallback((fieldKeys) => {
