@@ -1,4 +1,16 @@
 {
+    "headers": [
+        {
+            "source": "/(.*)",
+            "has": [{ "type": "host", "value": "staging.withblip.com" }],
+            "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }]
+        },
+        {
+            "source": "/(.*)",
+            "has": [{ "type": "host", "value": "dev.withblip.com" }],
+            "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }]
+        }
+    ],
     "rewrites": [
         {
             "source": "/(.*)",

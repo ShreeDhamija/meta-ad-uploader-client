@@ -4,6 +4,7 @@ import "./index.css";
 import { AuthProvider, useAuth } from "./lib/AuthContext";
 import { AppProvider } from "./lib/AppContext";
 import { TikTokAuthProvider, useTikTokAuth } from "./lib/TikTokAuthContext";
+import posthog from 'posthog-js'
 import { PostHogProvider } from 'posthog-js/react'
 
 import {
@@ -33,6 +34,15 @@ import { IS_STAGING } from "./lib/environment";
 
 // Library and Creative Strategy are not released yet: only routed on staging (see lib/environment).
 // Asset library: only routed where VITE_ENABLE_DAM is "true" (and off production); loaded on demand.
+// Keep staging/dev/preview copies out of search results (production is unaffected).
+// vercel.json also sends an X-Robots-Tag header on staging.withblip.com and dev.withblip.com.
+if (IS_STAGING) {
+  const robots = document.createElement("meta");
+  robots.name = "robots";
+  robots.content = "noindex, nofollow";
+  document.head.appendChild(robots);
+}
+
 const DAM_ENABLED = import.meta.env.VITE_ENABLE_DAM === "true" && IS_STAGING;
 const Library = DAM_ENABLED ? lazy(() => import("./pages/Library.jsx")) : null;
 
@@ -93,9 +103,15 @@ const router = createBrowserRouter([
 ]);
 
 
-const options = {
-  api_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
-  defaults: '2025-05-24',
+// Initialise PostHog before React renders. AuthProvider (which calls
+// posthog.identify after /auth/me) sits above PostHogProvider and only renders
+// its children once auth resolves, so letting the provider init would be too
+// late and the identify call would be dropped.
+if (import.meta.env.VITE_PUBLIC_POSTHOG_KEY) {
+  posthog.init(import.meta.env.VITE_PUBLIC_POSTHOG_KEY, {
+    api_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
+    defaults: '2025-05-24',
+  })
 }
 
 
@@ -104,7 +120,7 @@ createRoot(document.getElementById("root")).render(
     <AuthProvider>
       <TikTokAuthProvider>
         <AppProvider>
-          <PostHogProvider apiKey={import.meta.env.VITE_PUBLIC_POSTHOG_KEY} options={options}>
+          <PostHogProvider client={posthog}>
             <RouterProvider router={router} />
           </PostHogProvider>
         </AppProvider>

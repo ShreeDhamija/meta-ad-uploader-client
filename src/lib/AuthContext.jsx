@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
+import posthog from "posthog-js"
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 import { clearCache, clearAnalyticsCache, clearTikTokSessionData } from "@/lib/dataCache"
 
@@ -61,6 +62,11 @@ export const AuthProvider = ({ children }) => {
       lastMetaUidRef.current = nextUid
       localStorage.setItem('blip_last_meta_uid', nextUid)
 
+      // Link this browser's anonymous PostHog visitor (incl. landing-page visits
+      // on withblip.com) to the person the server identifies by facebookId.
+      // Runs after every signup/login redirect; repeat calls are a no-op.
+      if (posthog.__loaded) posthog.identify(String(nextUid))
+
       if (notify) toast.success("Logged In Successfully!")
       setIsLoggedIn(true)
       setUserName(data.user.name)
@@ -106,6 +112,7 @@ export const AuthProvider = ({ children }) => {
         clearTikTokSessionData()
         localStorage.removeItem('blip_last_meta_uid')
         lastMetaUidRef.current = ""
+        if (posthog.__loaded) posthog.reset()
         resetAuthState()
       } else {
         toast.error("Failed to log out")
