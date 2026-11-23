@@ -10,6 +10,7 @@ import RunModelControls from "../RunModelControls";
 import { useRunModels } from "../useRunModels";
 import { RUN_OPERATIONS } from "../run-model-operations";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Badge } from "@/components/ui/badge";
 import { humanize } from "../JsonView";
 import { CsScrollArea, EmptyState, ErrorBanner, PartialResultsNotice, ProgressiveSection } from "../ui";
@@ -36,6 +37,8 @@ export default function IntelligenceView({ ctx }) {
   const requestId = useRef(0);
   const [trending, setTrending] = useState(null);
   const [adNameFilter, setAdNameFilter] = useState(null);
+  // The ad whose full analysis is open in the right-hand drawer.
+  const [drawerAd, setDrawerAd] = useState(null);
 
   const load = useCallback(async (pid, { silent = false } = {}) => {
     const request = ++requestId.current;
@@ -51,12 +54,12 @@ export default function IntelligenceView({ ctx }) {
   }, []);
 
   useEffect(() => {
-    setAds([]); setAudit(null); setAngles([]); setTrending(null); setUpdatedAt(null); setErr(null);
+    setAds([]); setAudit(null); setAngles([]); setTrending(null); setUpdatedAt(null); setErr(null); setDrawerAd(null);
     if (selectedProductId) load(selectedProductId);
   }, [load, selectedProductId]);
 
   // Tracked jobs (persist across tab switches + reload on completion).
-  const { job: analyzeJob, start: startAnalyze } = useJobRunner({ kind: "analyze_ads", productId: selectedProductId, onComplete: () => load(selectedProductId) });
+  const { job: analyzeJob, start: startAnalyze } = useJobRunner({ kind: "analyze_ads", productId: selectedProductId, match: (j) => j.only !== "winners", onComplete: () => load(selectedProductId) });
   const analyzeActive = isActiveJob(analyzeJob);
 
   useEffect(() => {
@@ -91,6 +94,9 @@ export default function IntelligenceView({ ctx }) {
   const trendingAds = trending?.trending_ads || [];
 
   const topHooks = deriveHooksFromAds(ads, a.top_hooks);
+  // A top ad opens with the same hook text Top hooks shows for it.
+  const hookTextById = new Map(topHooks.map((hook) => [hook.adId, hook.hookText]));
+  const openAd = (ad) => setDrawerAd({ ...ad, hookText: ad.hookText || hookTextById.get(ad.adId) || ad.firstSpokenSentence || ad.firstOverlayHeadline || ad.headlineText || "" });
   const recentCutoff = Date.now() - 14 * 24 * 60 * 60 * 1000;
   const recent = [...ads].filter((x) => x.createdTime && new Date(x.createdTime).getTime() >= recentCutoff)
     .sort((x, y) => new Date(y.createdTime) - new Date(x.createdTime));
@@ -163,7 +169,7 @@ export default function IntelligenceView({ ctx }) {
       )}
       <FailedDownloadsBanner ads={failedDownloads} total={analyzedAds.length} />
       {patterns.length > 0 ? <StrategicPatterns patterns={patterns} /> : <ProgressiveSection title="Most common patterns by spend" active={auditWorkActive} />}
-      {topHooks.length > 0 ? <TopHooksSection key={selectedProductId} hooks={topHooks} /> : <ProgressiveSection title="Top hooks" active={adWorkActive} cards={2} />}
+      {topHooks.length > 0 ? <TopHooksSection key={selectedProductId} hooks={topHooks} onOpenAd={openAd} /> : <ProgressiveSection title="Top hooks" active={adWorkActive} cards={2} />}
       {Array.isArray(a.messaging_themes) && a.messaging_themes.length > 0
         ? <MessagingThemesSection themes={a.messaging_themes} ads={ads} />
         : <ProgressiveSection title="Messaging themes" active={auditWorkActive} cards={2} />}
@@ -174,7 +180,7 @@ export default function IntelligenceView({ ctx }) {
         : <ProgressiveSection title="Customer persona performance" active={auditWorkActive} cards={2} />}
 
       {/* Trending creatives live in Top performers as a filter, like Fatigued. */}
-      {(ads.length > 0 || trendingAds.length > 0) && <TopPerformers key={selectedProductId} ads={ads} trending={trendingAds} trendingRefreshing={analyzeActive} />}
+      {(ads.length > 0 || trendingAds.length > 0) && <TopPerformers key={selectedProductId} ads={ads} trending={trendingAds} trendingRefreshing={analyzeActive} onOpenAd={openAd} />}
 
       {recent.length > 0 ? <RecentLaunches ads={recent} /> : <Block title="Recent launches · last 14 days" noDivider><p className="text-xs text-neutral-500">{adWorkActive || loading ? "Loading recent launches…" : "No ads launched in the last 14 days in the saved analysis. Run Analysis to refresh."}</p></Block>}
       {Array.isArray(a.visual_openers) && a.visual_openers.length > 0
@@ -204,6 +210,7 @@ export default function IntelligenceView({ ctx }) {
       )}
         </div>
       )}
+      <AdDetailDrawer ad={drawerAd} onClose={() => setDrawerAd(null)} />
     </div>
   );
 }
@@ -364,87 +371,45 @@ function StrategicPatterns({ patterns }) {
 }
 StrategicPatterns.propTypes = { patterns: PropTypes.array.isRequired };
 
-function TopHooksSection({ hooks }) {
+// How a top hook opens its details: the right-hand drawer (new) or inline
+// under the row (the original layout). Kept as a per-browser toggle while the
+// drawer is being tried out.
+const HOOK_VIEW_KEY = "cs-top-hooks-view";
+function readHookView() {
+  try { return localStorage.getItem(HOOK_VIEW_KEY) === "inline" ? "inline" : "drawer"; } catch { return "drawer"; }
+}
+
+function TopHooksSection({ hooks, onOpenAd }) {
   const [expanded, setExpanded] = useState(null);
   const [showAll, setShowAll] = useState(false);
+  const [view, setView] = useState(readHookView);
   const visibleHooks = showAll ? hooks : hooks.slice(0, 20);
+  const chooseView = (next) => {
+    setView(next);
+    setExpanded(null);
+    try { localStorage.setItem(HOOK_VIEW_KEY, next); } catch { /* Keep session state. */ }
+  };
   if (!hooks.length) return null;
-  return <InsightSection title="Top hooks" tone="dark" actions={<span className="text-xs text-neutral-400">{visibleHooks.length < hooks.length ? `${visibleHooks.length} of ${hooks.length} distinct hooks` : `${hooks.length} distinct hooks`}</span>}>
+  return <InsightSection title="Top hooks" tone="dark" actions={<div className="flex flex-wrap items-center gap-3">
+    <span className="text-xs text-neutral-400">{visibleHooks.length < hooks.length ? `${visibleHooks.length} of ${hooks.length} distinct hooks` : `${hooks.length} distinct hooks`}</span>
+    <div className="cs-hook-view-toggle" role="group" aria-label="Open hook details">
+      {[["drawer", "Drawer"], ["inline", "Inline"]].map(([key, label]) => (
+        <button key={key} type="button" aria-pressed={view === key} onClick={() => chooseView(key)} className={view === key ? "is-active" : ""}>{label}</button>
+      ))}
+    </div>
+  </div>}>
     <p className="mb-3 text-xs text-neutral-400">Saved hooks with usable extracted text. Similar hooks are combined; ads without usable hook text are excluded.</p>
     <CsScrollArea viewportClassName="max-h-[720px]"><div className="cs-intel-accordion-list pr-3">{visibleHooks.map((hook, index) => {
-      const open = expanded === index;
-      const formula = hook.hookFormula || {};
-      const primaryCopy = hook.adsManagerCopy || {};
-      const transcript = parseTranscript(hook.transcript, hook.firstSpokenSentence);
+      const open = view === "inline" && expanded === index;
       return <div key={`${hook.adId}-${index}`} className="cs-intel-accordion-card">
-        <button type="button" onClick={() => setExpanded(open ? null : index)} className="cs-intel-hook-trigger">
+        <button type="button" onClick={() => (view === "drawer" ? onOpenAd(hook) : setExpanded(open ? null : index))} className="cs-intel-hook-trigger">
           <span className="cs-intel-list-index">{index + 1}</span>
           <p className="cs-intel-hook-title">“{hook.hookText}”</p>
           <MediaTag mediaType={hook.mediaType} />
           <MetricPills compact items={[`${money(hook.spend)} spend`, hook.costPerPurchase ? `${money(hook.costPerPurchase)} CPA` : null]} />
           {open ? <ChevronDown className="h-3.5 w-3.5 text-neutral-400" /> : <ChevronRight className="h-3.5 w-3.5 text-neutral-400" />}
         </button>
-        {open && <div className="cs-intel-hook-details">
-          <section className="cs-intel-detail-section is-first cs-hook-overview">
-            <div className="cs-hook-overview__thumb">
-              <CreativeThumbnail src={hook.imageUrl || hook.thumbnailUrl} variant="card" />
-            </div>
-            <div className="cs-hook-overview__body">
-              <p className="cs-intel-field-label">Ad name</p>
-              <strong className="cs-intel-ad-name">{hook.adName || "Unnamed"}</strong>
-              <div className="cs-intel-stat-line">
-                {[
-                  hook.purchases > 0 && `${hook.purchases} conversions`,
-                  hook.ctr != null && `${Number(hook.ctr).toFixed(2)}% CTR`,
-                  hook.cpm != null && `${money(hook.cpm)} CPM`,
-                  hook.hookRate > 0 && `${(hook.hookRate * 100).toFixed(1)}% hook rate`,
-                  hook.avgWatchTime > 0 && `${Number(hook.avgWatchTime).toFixed(1)}s avg watch`,
-                  hook.frequency > 0 && `${Number(hook.frequency).toFixed(1)}x frequency`,
-                  hook.funnelPosition && humanize(hook.funnelPosition),
-                ].filter(Boolean).map((stat) => <span key={stat}>{stat}</span>)}
-              </div>
-              {hook.gradeRationale && <p className="cs-hook-overview__read">{hook.gradeRationale}</p>}
-              <div className="cs-intel-tag-row">{[
-                hook.primaryAngle && `Angle: ${hook.primaryAngle}`, hook.hookStyle && `Style: ${hook.hookStyle}`,
-                hook.emotionalTrigger && `Emotion: ${hook.emotionalTrigger}`, hook.awarenessStage && `Awareness: ${plainLabel(hook.awarenessStage)}`,
-                hook.benefitType && `Benefit: ${plainLabel(hook.benefitType)}`, hook.conceptClassification && `Bucket: ${plainLabel(hook.conceptClassification)}`,
-              ].filter(Boolean).map((tag, tagIndex) => <span key={tag} className={`cs-intel-attribute-pill is-tone-${tagIndex % 4}`}>{tag}</span>)}</div>
-            </div>
-          </section>
-          {(formula.pattern_interrupt || formula.qualifier || formula.gap) && <section className="cs-intel-detail-section">
-            <h3 className="cs-intel-subsection-title">Hook formula</h3>
-            <div className="cs-intel-formula-grid">{[["Pattern interrupt", formula.pattern_interrupt], ["Qualifier", formula.qualifier], ["Gap", formula.gap]].filter(([, value]) => value).map(([label, value]) =>
-              <div key={label} className="cs-intel-formula-card"><small>{label}</small><p>{value}</p></div>)}</div>
-          </section>}
-          {hook.whyItWorks && <section className="cs-intel-detail-section">
-            <h3 className="cs-intel-subsection-title">Why it works</h3>
-            <p className="cs-hook-why">{hook.whyItWorks}</p>
-          </section>}
-          {(hook.buildingBlocks?.length > 0 || hook.lifeForce8?.length > 0) && <section className="cs-intel-detail-section">
-            {hook.buildingBlocks?.length > 0 && <DetailList label="Building blocks" items={hook.buildingBlocks.map(plainLabel)} />}
-            {hook.lifeForce8?.length > 0 && <DetailList label="Core desires" items={hook.lifeForce8.map(plainLabel)} />}
-          </section>}
-          {(primaryCopy.primary_text || primaryCopy.headline || hook.headlineText || primaryCopy.cta || hook.ctaType) && <section className="cs-intel-detail-section">
-            <h3 className="cs-intel-subsection-title">Ad copy</h3>
-            <div className="cs-intel-copy-grid">
-              {primaryCopy.primary_text && <LabeledCopy label="Primary text">{primaryCopy.primary_text}</LabeledCopy>}
-              {(primaryCopy.headline || hook.headlineText) && <LabeledCopy label="Headline">{primaryCopy.headline || hook.headlineText}</LabeledCopy>}
-              {(primaryCopy.cta || hook.ctaType) && <LabeledCopy label="Call to action">{plainLabel(primaryCopy.cta || hook.ctaType)}</LabeledCopy>}
-            </div>
-          </section>}
-          {transcript.full && hook.mediaType === "video" && <section className="cs-intel-detail-section">
-            <div className="cs-hook-transcript-head">
-              <h3 className="cs-intel-subsection-title">Transcript</h3>
-              {transcript.speechQuality && <span className="cs-hook-chip">Speech: {transcript.speechQuality}</span>}
-              {transcript.wordCount && <span className="cs-hook-chip">First sentence: {transcript.wordCount} words</span>}
-            </div>
-            <CsScrollArea className="cs-intel-transcript" viewportClassName="max-h-[190px]">
-              <p>{transcript.highlight
-                ? <>{transcript.full.slice(0, transcript.highlight[0])}<mark className="cs-hook-mark" title="Opening hook (0–8s)">{transcript.full.slice(transcript.highlight[0], transcript.highlight[1])}</mark>{transcript.full.slice(transcript.highlight[1])}</>
-                : <>{transcript.firstSentence && <><mark className="cs-hook-mark" title="Opening hook (0–8s)">{transcript.firstSentence}</mark>{"\n\n"}</>}{transcript.full}</>}</p>
-            </CsScrollArea>
-          </section>}
-        </div>}
+        {open && <HookDetails hook={hook} />}
       </div>;
     })}</div></CsScrollArea>
     {hooks.length > 20 && <button
@@ -458,7 +423,142 @@ function TopHooksSection({ hooks }) {
     >{showAll ? <>Show fewer<ChevronDown className="h-3.5 w-3.5 rotate-180" /></> : <>Show {hooks.length - 20} more hooks<ChevronDown className="h-3.5 w-3.5" /></>}</button>}
   </InsightSection>;
 }
-TopHooksSection.propTypes = { hooks: PropTypes.array.isRequired };
+TopHooksSection.propTypes = { hooks: PropTypes.array.isRequired, onOpenAd: PropTypes.func.isRequired };
+
+/** True once an ad has the full creative read (angle + description). */
+const isAnalyzedAd = (ad) => Boolean(ad?.primaryAngle && ad?.mediaDescription);
+
+/**
+ * Everything the analysis knows about one ad: overview, hook formula, why it
+ * works, building blocks, copy and transcript. `variant="drawer"` leads with a
+ * large preview and a stat grid; "inline" is the original Top hooks layout.
+ */
+function HookDetails({ hook, variant = "inline" }) {
+  const formula = hook.hookFormula || {};
+  const primaryCopy = hook.adsManagerCopy || {};
+  const transcript = parseTranscript(hook.transcript, hook.firstSpokenSentence);
+  const drawer = variant === "drawer";
+  const tags = [
+    hook.primaryAngle && `Angle: ${hook.primaryAngle}`, hook.hookStyle && `Style: ${hook.hookStyle}`,
+    hook.emotionalTrigger && `Emotion: ${hook.emotionalTrigger}`, hook.awarenessStage && `Awareness: ${plainLabel(hook.awarenessStage)}`,
+    hook.benefitType && `Benefit: ${plainLabel(hook.benefitType)}`, hook.conceptClassification && `Bucket: ${plainLabel(hook.conceptClassification)}`,
+  ].filter(Boolean);
+  const stats = [
+    hook.purchases > 0 && `${hook.purchases} conversions`,
+    hook.ctr != null && `${Number(hook.ctr).toFixed(2)}% CTR`,
+    hook.cpm != null && `${money(hook.cpm)} CPM`,
+    hook.hookRate > 0 && `${(hook.hookRate * 100).toFixed(1)}% hook rate`,
+    hook.avgWatchTime > 0 && `${Number(hook.avgWatchTime).toFixed(1)}s avg watch`,
+    hook.frequency > 0 && `${Number(hook.frequency).toFixed(1)}x frequency`,
+    hook.funnelPosition && humanize(hook.funnelPosition),
+  ].filter(Boolean);
+  const drawerStats = [
+    ["Spend", money(hook.spend)],
+    ["CPA", hook.costPerPurchase ? money(hook.costPerPurchase) : "—"],
+    ["Conversions", hook.purchases > 0 ? String(hook.purchases) : "—"],
+    ["CTR", hook.ctr != null ? `${Number(hook.ctr).toFixed(2)}%` : "—"],
+    ["CPM", hook.cpm != null ? money(hook.cpm) : "—"],
+    ["Frequency", hook.frequency > 0 ? `${Number(hook.frequency).toFixed(1)}x` : "—"],
+    ...(String(hook.mediaType || "").toLowerCase() === "video" ? [
+      ["Hook rate", hook.hookRate > 0 ? `${(hook.hookRate * 100).toFixed(1)}%` : "—"],
+      ["Avg watch", hook.avgWatchTime > 0 ? `${Number(hook.avgWatchTime).toFixed(1)}s` : "—"],
+    ] : []),
+  ];
+  return <div className={`cs-intel-hook-details ${drawer ? "is-drawer" : ""}`}>
+    {drawer ? <section className="cs-intel-detail-section is-first cs-ad-drawer__overview">
+      <div className="cs-ad-drawer__media">
+        {hook.imageUrl || hook.thumbnailUrl ? <img src={hook.imageUrl || hook.thumbnailUrl} alt="" /> : <div className="cs-ad-drawer__media-empty"><Zap className="h-6 w-6" /></div>}
+      </div>
+      <div className="min-w-0 space-y-3">
+        {hook.hookText && <div><p className="cs-intel-field-label">Hook</p><p className="cs-ad-drawer__hook">“{hook.hookText}”</p></div>}
+        <dl className="cs-ad-drawer__stats">{drawerStats.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
+        {hook.funnelPosition && <p className="text-xs text-neutral-500">Funnel: {humanize(hook.funnelPosition)}</p>}
+        {hook.gradeRationale && <p className="cs-hook-overview__read">{hook.gradeRationale}</p>}
+        {tags.length > 0 && <div className="cs-intel-tag-row">{tags.map((tag, tagIndex) => <span key={tag} className={`cs-intel-attribute-pill is-tone-${tagIndex % 4}`}>{tag}</span>)}</div>}
+      </div>
+    </section> : <section className="cs-intel-detail-section is-first cs-hook-overview">
+      <div className="cs-hook-overview__thumb">
+        <CreativeThumbnail src={hook.imageUrl || hook.thumbnailUrl} variant="card" />
+      </div>
+      <div className="cs-hook-overview__body">
+        <p className="cs-intel-field-label">Ad name</p>
+        <strong className="cs-intel-ad-name">{hook.adName || "Unnamed"}</strong>
+        <div className="cs-intel-stat-line">{stats.map((stat) => <span key={stat}>{stat}</span>)}</div>
+        {hook.gradeRationale && <p className="cs-hook-overview__read">{hook.gradeRationale}</p>}
+        <div className="cs-intel-tag-row">{tags.map((tag, tagIndex) => <span key={tag} className={`cs-intel-attribute-pill is-tone-${tagIndex % 4}`}>{tag}</span>)}</div>
+      </div>
+    </section>}
+    {drawer && !isAnalyzedAd(hook) && <section className="cs-intel-detail-section">
+      <p className="cs-ad-drawer__note">This ad hasn&apos;t had a full creative analysis yet, so there&apos;s no hook breakdown, angle or transcript. Each Run Analysis reads your top-spending ads.</p>
+    </section>}
+    {(formula.pattern_interrupt || formula.qualifier || formula.gap) && <section className="cs-intel-detail-section">
+      <h3 className="cs-intel-subsection-title">Hook formula</h3>
+      <div className="cs-intel-formula-grid">{[["Pattern interrupt", formula.pattern_interrupt], ["Qualifier", formula.qualifier], ["Gap", formula.gap]].filter(([, value]) => value).map(([label, value]) =>
+        <div key={label} className="cs-intel-formula-card"><small>{label}</small><p>{value}</p></div>)}</div>
+    </section>}
+    {hook.whyItWorks && <section className="cs-intel-detail-section">
+      <h3 className="cs-intel-subsection-title">Why it works</h3>
+      <p className="cs-hook-why">{hook.whyItWorks}</p>
+    </section>}
+    {(hook.buildingBlocks?.length > 0 || hook.lifeForce8?.length > 0) && <section className="cs-intel-detail-section">
+      {hook.buildingBlocks?.length > 0 && <DetailList label="Building blocks" items={hook.buildingBlocks.map(plainLabel)} />}
+      {hook.lifeForce8?.length > 0 && <DetailList label="Core desires" items={hook.lifeForce8.map(plainLabel)} />}
+    </section>}
+    {(primaryCopy.primary_text || primaryCopy.headline || hook.headlineText || primaryCopy.cta || hook.ctaType) && <section className="cs-intel-detail-section">
+      <h3 className="cs-intel-subsection-title">Ad copy</h3>
+      <div className="cs-intel-copy-grid">
+        {primaryCopy.primary_text && <LabeledCopy label="Primary text">{primaryCopy.primary_text}</LabeledCopy>}
+        {(primaryCopy.headline || hook.headlineText) && <LabeledCopy label="Headline">{primaryCopy.headline || hook.headlineText}</LabeledCopy>}
+        {(primaryCopy.cta || hook.ctaType) && <LabeledCopy label="Call to action">{plainLabel(primaryCopy.cta || hook.ctaType)}</LabeledCopy>}
+      </div>
+    </section>}
+    {transcript.full && hook.mediaType === "video" && <section className="cs-intel-detail-section">
+      <div className="cs-hook-transcript-head">
+        <h3 className="cs-intel-subsection-title">Transcript</h3>
+        {transcript.speechQuality && <span className="cs-hook-chip">Speech: {transcript.speechQuality}</span>}
+        {transcript.wordCount && <span className="cs-hook-chip">First sentence: {transcript.wordCount} words</span>}
+      </div>
+      <CsScrollArea className="cs-intel-transcript" viewportClassName={drawer ? "max-h-[360px]" : "max-h-[190px]"}>
+        <p>{transcript.highlight
+          ? <>{transcript.full.slice(0, transcript.highlight[0])}<mark className="cs-hook-mark" title="Opening hook (0–8s)">{transcript.full.slice(transcript.highlight[0], transcript.highlight[1])}</mark>{transcript.full.slice(transcript.highlight[1])}</>
+          : <>{transcript.firstSentence && <><mark className="cs-hook-mark" title="Opening hook (0–8s)">{transcript.firstSentence}</mark>{"\n\n"}</>}{transcript.full}</>}</p>
+      </CsScrollArea>
+    </section>}
+  </div>;
+}
+HookDetails.propTypes = { hook: PropTypes.object.isRequired, variant: PropTypes.oneOf(["inline", "drawer"]) };
+
+/**
+ * Right-hand drawer, detached from the screen edge, with one ad's full
+ * analysis (opened from Top hooks or Top performers).
+ */
+function AdDetailDrawer({ ad, onClose }) {
+  return (
+    <DialogPrimitive.Root open={Boolean(ad)} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogPrimitive.Portal>
+        <DialogPrimitive.Overlay className="cs-ad-drawer-overlay" />
+        <DialogPrimitive.Content className="cs-ad-drawer" aria-describedby={undefined}>
+          {ad && <>
+            <header className="cs-ad-drawer__header">
+              <div className="min-w-0">
+                <DialogPrimitive.Title className="cs-ad-drawer__title" title={ad.adName}>{ad.adName || "Unnamed ad"}</DialogPrimitive.Title>
+                <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                  <MediaTag mediaType={ad.mediaType} />
+                  {ad.trend && <span className="cs-top-card__trend">{ad.trend.spendDelta != null ? `+${Math.round(ad.trend.spendDelta * 100)}% this week` : "New this week"}</span>}
+                </div>
+              </div>
+              <DialogPrimitive.Close className="cs-ad-drawer__close" aria-label="Close"><X className="h-4 w-4" /></DialogPrimitive.Close>
+            </header>
+            <CsScrollArea className="min-h-0 flex-1" viewportClassName="h-full">
+              <div className="cs-ad-drawer__body"><HookDetails hook={ad} variant="drawer" /></div>
+            </CsScrollArea>
+          </>}
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
+  );
+}
+AdDetailDrawer.propTypes = { ad: PropTypes.object, onClose: PropTypes.func.isRequired };
 
 function MessagingThemesSection({ themes, ads }) {
   const [expanded, setExpanded] = useState(null);

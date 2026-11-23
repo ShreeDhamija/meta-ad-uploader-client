@@ -55,7 +55,7 @@ const RESULT_TABS = {
 };
 // The Generate sub-tab a generation job's results open in.
 const GENERATE_MODES = { generate_ad: "statics", generate_scripts: "scripts", generate_brief: "briefs" };
-const resultTabFor = (job) => RESULT_TABS[job?.type || job?.meta?.kind] || null;
+const resultTabFor = (job) => (job?.only === "winners" ? "monthly" : RESULT_TABS[job?.type || job?.meta?.kind] || null);
 
 const DESCRIPTIONS = {
   models: "Choose your preferred models and compare results on the same input.",

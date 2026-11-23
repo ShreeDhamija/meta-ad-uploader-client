@@ -214,19 +214,24 @@ export function useJobs() {
 // Fires onComplete exactly once when a tracked job finishes successfully — even
 // if the job completed while the view was unmounted (the view re-adopts it on
 // remount and reloads its data).
-export function useJobRunner({ kind, brandId, productId, enabled = true, restoreFinished = true, onComplete, onFail }) {
+// `match` narrows further, e.g. to tell Monthly Review winner analysis apart
+// from a regular Insights run (both are analyze_ads).
+export function useJobRunner({ kind, brandId, productId, enabled = true, restoreFinished = true, match, onComplete, onFail }) {
   const { jobs, track } = useJobs();
   const firedRef = useRef(null);
   const observedJobs = useRef(new Set());
   const cbRef = useRef({ onComplete, onFail });
   cbRef.current = { onComplete, onFail };
+  const matchRef = useRef(match);
+  matchRef.current = match;
 
   const job = useMemo(() => {
     if (!enabled) return null;
     const matches = Object.values(jobs).filter((j) =>
       j.meta?.kind === kind &&
       (brandId == null || j.meta?.brandId === brandId) &&
-      (productId == null || j.meta?.productId === productId));
+      (productId == null || j.meta?.productId === productId) &&
+      (!matchRef.current || matchRef.current(j)));
     for (const match of matches) if (ACTIVE(match.status)) observedJobs.current.add(match.id);
     matches.sort((a, b) => (b.startedAt || 0) - (a.startedAt || 0));
     return matches.find((match) => restoreFinished || observedJobs.current.has(match.id)) || null;
@@ -285,7 +290,9 @@ const KIND_LABEL = {
 /** Plain-English name of a job kind, e.g. "Ad analysis". */
 export function jobTitle(job) {
   const type = job?.type || job?.meta?.kind;
-  return type === "research" && job?.only === "cross_map" ? "Persona mapping" : KIND_LABEL[type] || job?.meta?.label || "Background task";
+  if (type === "research" && job?.only === "cross_map") return "Persona mapping";
+  if (type === "analyze_ads" && job?.only === "winners") return "Analyzing Monthly Review winners";
+  return KIND_LABEL[type] || job?.meta?.label || "Background task";
 }
 
 /** The visible steps that start after this job (its chain), in order. */

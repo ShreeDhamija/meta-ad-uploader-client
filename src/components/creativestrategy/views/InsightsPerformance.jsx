@@ -202,7 +202,7 @@ function Stat({ label, value, muted = false }) {
 }
 Stat.propTypes = { label: PropTypes.string.isRequired, value: PropTypes.string.isRequired, muted: PropTypes.bool };
 
-function PerformerCard({ ad, rank, avgCpa, root, onOpen }) {
+function PerformerCard({ ad, rank, avgCpa, root, onOpen, openDetails = false }) {
   const video = isVideoAd(ad);
   const thumb = thumbOf(ad);
   const spend = num(ad.spend); const cpa = cpaOf(ad); const conv = num(ad.purchases);
@@ -214,7 +214,7 @@ function PerformerCard({ ad, rank, avgCpa, root, onOpen }) {
 
   return (
     <article className="cs-top-card">
-      <button type="button" onClick={() => thumb && onOpen(ad)} className="cs-top-card__media" aria-label={`Preview ${ad.adName || "ad"}`}>
+      <button type="button" onClick={() => onOpen(ad)} disabled={!thumb && !openDetails} className="cs-top-card__media" aria-label={`${openDetails ? "Open details for" : "Preview"} ${ad.adName || "ad"}`}>
         {thumb ? <LazyThumb root={root} src={thumb} /> : <div className="grid h-full w-full place-items-center text-[#c9a891]"><Zap className="h-5 w-5" /></div>}
         {video && thumb && <span className="cs-top-card__play"><Play className="ml-0.5 h-3.5 w-3.5 fill-white text-white" /></span>}
         <span className="cs-top-card__rank">{rank}</span>
@@ -222,7 +222,9 @@ function PerformerCard({ ad, rank, avgCpa, root, onOpen }) {
       </button>
 
       <div className="cs-top-card__body">
-        <p className="cs-top-card__name" title={ad.adName || "Unnamed"}>{ad.adName || "Unnamed"}</p>
+        {openDetails
+          ? <button type="button" onClick={() => onOpen(ad)} className="cs-top-card__name is-link" title={`${ad.adName || "Unnamed"} · open details`}>{ad.adName || "Unnamed"}</button>
+          : <p className="cs-top-card__name" title={ad.adName || "Unnamed"}>{ad.adName || "Unnamed"}</p>}
 
         <div className="cs-top-card__headline">
           <div>
@@ -266,9 +268,9 @@ function PerformerCard({ ad, rank, avgCpa, root, onOpen }) {
     </article>
   );
 }
-PerformerCard.propTypes = { ad: PropTypes.object.isRequired, rank: PropTypes.number.isRequired, avgCpa: PropTypes.number, root: PropTypes.object, onOpen: PropTypes.func.isRequired };
+PerformerCard.propTypes = { ad: PropTypes.object.isRequired, rank: PropTypes.number.isRequired, avgCpa: PropTypes.number, root: PropTypes.object, onOpen: PropTypes.func.isRequired, openDetails: PropTypes.bool };
 
-export function TopPerformers({ ads, trending = [], trendingRefreshing = false, limit = DEFAULT_LIMIT }) {
+export function TopPerformers({ ads, trending = [], trendingRefreshing = false, onOpenAd, limit = DEFAULT_LIMIT }) {
   const scrollRef = useRef(null);
   const [scrollRoot, setScrollRoot] = useState(null);
   const setStripRef = useCallback((el) => { scrollRef.current = el; setScrollRoot(el); }, []);
@@ -429,7 +431,7 @@ export function TopPerformers({ ads, trending = [], trendingRefreshing = false, 
       >
         <div className="cs-top-strip">
           {displayAds.map((ad, idx) => (
-            <PerformerCard key={ad.adId || idx} ad={ad} rank={idx + 1} avgCpa={avgCpa} root={scrollRoot} onOpen={setExpanded} />
+            <PerformerCard key={ad.adId || idx} ad={ad} rank={idx + 1} avgCpa={avgCpa} root={scrollRoot} onOpen={onOpenAd || setExpanded} openDetails={Boolean(onOpenAd)} />
           ))}
         </div>
       </CsScrollArea>
@@ -447,4 +449,4 @@ export function TopPerformers({ ads, trending = [], trendingRefreshing = false, 
     </Section>
   );
 }
-TopPerformers.propTypes = { ads: PropTypes.array.isRequired, trending: PropTypes.array, trendingRefreshing: PropTypes.bool, limit: PropTypes.number };
+TopPerformers.propTypes = { ads: PropTypes.array.isRequired, trending: PropTypes.array, trendingRefreshing: PropTypes.bool, onOpenAd: PropTypes.func, limit: PropTypes.number };

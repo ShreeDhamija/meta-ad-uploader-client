@@ -5438,3 +5438,103 @@ html body #root .creative-strategy button.cs-monthly-filter-button:hover { borde
 
 /* Customer language: plain quotation marks around each phrase. */
 .cs-brand-quote-mark { flex-shrink: 0; color: #8a746c; font-family: Georgia, "Times New Roman", serif; font-size: 20px; line-height: 20px; }
+
+/* Section headers with a title + subheader on the left and a control on the
+   right: the text takes the free width, the control stays top right. */
+.cs-intel-panel__header > .min-w-0,
+.cs-intel-insight > header > .min-w-0 { flex: 1 1 320px; }
+.cs-intel-insight__subheader,
+.cs-intel-panel__subheader { max-width: 90%; }
+.cs-intel-panel__header:has(.cs-panel-select) { flex-wrap: nowrap; align-items: flex-start; }
+.cs-panel-select.cs-weekly-filter-select { width: auto; min-width: 0; height: 32px; min-height: 32px; flex-shrink: 0; padding: 0 10px; font-size: 12px; }
+@media (max-width: 640px) { .cs-intel-panel__header:has(.cs-panel-select) { flex-wrap: wrap; } }
+
+/* Monthly: the scorecard panel matches the summary's height (empty space
+   below the cards is fine). */
+.cs-monthly-overview { align-items: stretch; }
+.cs-monthly-overview > .cs-intel-panel { height: 100%; }
+.cs-monthly-summary-boxes { gap: 12px; }
+@media (max-width: 1400px) { .cs-monthly-summary-boxes { grid-template-columns: minmax(0, 1fr); } }
+
+/* Monthly: the winning variant leads each concept card. */
+.cs-mc__winner-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  padding: 9px 16px;
+  border-bottom: 1px solid rgba(232, 129, 44, 0.35);
+  background: linear-gradient(90deg, #ffedd5 0%, #fff7ed 70%);
+}
+.cs-mc__winner-banner.is-solo { border-bottom-color: rgba(108, 52, 3, 0.12); background: #fffaf4; }
+.cs-mc__winner-pill {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  color: #fff;
+  background: #c2410c;
+  font-size: 11.5px;
+  font-weight: 650;
+}
+.cs-mc__winner-banner.is-solo .cs-mc__winner-pill { color: #6c3403; background: #fde3c8; }
+.cs-mc__winner-banner-name { min-width: 0; overflow: hidden; color: #30150a; font-size: 13px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; flex: 1 1 200px; }
+.cs-mc__thumb.is-batch { border: 2px solid #e8812c; }
+.cs-mc__siblings small { margin-right: 2px; color: #8a746c; font-size: 10.5px; font-weight: 600; }
+
+/* ── Insights: ad detail drawer (right side, detached from the edge) ─────── */
+.cs-ad-drawer-overlay { position: fixed; inset: 0; z-index: 50; background: rgba(12, 10, 9, 0.38); backdrop-filter: blur(1px); }
+.cs-ad-drawer-overlay[data-state="open"] { animation: cs-drawer-fade 160ms ease-out; }
+.cs-ad-drawer {
+  --cs-ink: #1d1d1d;
+  --cs-muted: #858585;
+  --cs-cream: #fffaf4;
+  --cs-peach: #ffe9d6;
+  --cs-orange: #ffbe85;
+  --cs-orange-ink: #6c3403;
+  position: fixed;
+  z-index: 51;
+  top: 16px;
+  right: 16px;
+  bottom: 16px;
+  display: flex;
+  width: min(760px, calc(100vw - 32px));
+  flex-direction: column;
+  overflow: hidden;
+  border: 1.5px solid rgba(59, 23, 11, 0.62);
+  border-radius: 28px;
+  background: #fffaf4;
+  box-shadow: 0 24px 60px rgba(29, 20, 15, 0.28);
+  outline: none;
+}
+.cs-ad-drawer[data-state="open"] { animation: cs-drawer-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+@keyframes cs-drawer-in { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
+@keyframes cs-drawer-fade { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .cs-ad-drawer[data-state="open"], .cs-ad-drawer-overlay[data-state="open"] { animation: none; } }
+.cs-ad-drawer__header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 20px 22px 16px; border-bottom: 1px solid rgba(108, 52, 3, 0.18); }
+.cs-ad-drawer__title { overflow-wrap: anywhere; color: #30150a; font-size: 16px; font-weight: 650; line-height: 1.35; }
+.cs-ad-drawer__close { display: flex; width: 34px; height: 34px; flex-shrink: 0; align-items: center; justify-content: center; border: 1px solid rgba(108, 52, 3, 0.2); border-radius: 999px; color: #57534e; background: #fff; }
+.cs-ad-drawer__close:hover { background: #fafaf9; }
+.cs-ad-drawer__body { padding: 6px 22px 26px; }
+.cs-ad-drawer__overview { display: grid !important; grid-template-columns: minmax(0, 260px) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 640px) { .cs-ad-drawer__overview { grid-template-columns: minmax(0, 1fr); } }
+.cs-ad-drawer__media { overflow: hidden; border: 1px solid rgba(108, 52, 3, 0.16); border-radius: 18px; background: #f6f0ea; }
+.cs-ad-drawer__media img { display: block; width: 100%; max-height: 460px; object-fit: contain; }
+.cs-ad-drawer__media-empty { display: grid; aspect-ratio: 4 / 5; place-items: center; color: #c8a58c; }
+.cs-ad-drawer__hook { margin-top: 3px; color: #30150a; font-size: 15px; font-weight: 600; line-height: 1.45; }
+.cs-ad-drawer__stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+.cs-ad-drawer__stats div { padding: 8px 10px; border: 1px solid rgba(108, 52, 3, 0.14); border-radius: 12px; background: #fff; }
+.cs-ad-drawer__stats dt { color: #8a746c; font-size: 10.5px; font-weight: 500; }
+.cs-ad-drawer__stats dd { margin-top: 2px; color: #30150a; font-size: 14px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.cs-ad-drawer__note { padding: 10px 12px; border: 1px solid #fde68a; border-radius: 12px; color: #78350f; background: #fffbeb; font-size: 12.5px; line-height: 1.5; }
+
+/* Top hooks: where details open (drawer or inline). */
+.cs-hook-view-toggle { display: inline-flex; padding: 2px; border: 1px solid rgba(255, 253, 251, 0.3); border-radius: 999px; }
+.cs-hook-view-toggle button { padding: 3px 10px; border-radius: 999px; color: rgba(255, 253, 251, 0.75); font-size: 11px; font-weight: 600; }
+.cs-hook-view-toggle button.is-active { color: #30150a; background: #fffdfb; }
+
+/* Top performers: the ad name opens the detail drawer. */
+.cs-top-card__name.is-link { width: 100%; text-align: left; cursor: pointer; }
+.cs-top-card__name.is-link:hover { text-decoration: underline; text-underline-offset: 2px; }

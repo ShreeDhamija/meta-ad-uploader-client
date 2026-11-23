@@ -81,6 +81,10 @@ export default function MonthlyReviewView({ ctx }) {
 
   const { job, start } = useJobRunner({ kind: "monthly_review", productId: selectedProductId, onComplete: () => load(selectedProductId), onFail: () => load(selectedProductId) });
   const jobActive = Boolean(job && (job.status == null || job.status === "queued" || job.status === "running"));
+  // Refresh/setup also analyze winners Insights never read (it only covers
+  // top spenders), then rebuild the review so they get tags.
+  const { job: winnersJob } = useJobRunner({ kind: "analyze_ads", productId: selectedProductId, match: (j) => j.only === "winners", restoreFinished: false });
+  const winnersActive = Boolean(winnersJob && (winnersJob.status == null || winnersJob.status === "queued" || winnersJob.status === "running"));
 
   const run = async () => {
     if (!selectedProductId) return;
@@ -140,8 +144,15 @@ export default function MonthlyReviewView({ ctx }) {
             <NameFilterControl current={data?.nameFilter ?? null} busy={jobActive} onSave={saveNameFilter} />
           </div>
 
+          {winnersActive && (
+            <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900" role="status">
+              <Loader2 className="mt-0.5 h-3.5 w-3.5 shrink-0 animate-spin" />
+              <p>Analyzing winning variants that haven&apos;t been analyzed yet, so they get persona, angle and style tags. The review rebuilds on its own when this finishes. Follow it in the job tracker.</p>
+            </div>
+          )}
+
           {/* Six-month view first: it doesn't depend on the month picked below. */}
-          <Leaderboard review={review} dimension={dimension} setDimension={setDimension} token={token} />
+          <Leaderboard review={review} dimension={dimension} setDimension={setDimension} token={token} winnersActive={winnersActive} />
 
           <div className="cs-monthly-month-bar">
             <div className="text-center">
@@ -238,18 +249,20 @@ function MonthSummary({ summary, label }) {
       <header className="cs-intel-panel__header"><h2>{label} summary</h2></header>
       <div className="cs-intel-panel__body space-y-3">
         <p className="text-[13.5px] font-medium leading-relaxed text-neutral-800">{summary.headline}</p>
-        {summary.winning_angles?.length > 0 && (
-          <div>
-            <h3 className="cs-intel-subsection-title">Winning angles</h3>
-            <ul className="mt-1.5 list-disc space-y-1 pl-4 text-[12.5px] leading-relaxed text-neutral-600">{summary.winning_angles.map((a, i) => <li key={i}>{a}</li>)}</ul>
-          </div>
-        )}
-        {summary.learnings?.length > 0 && (
-          <div>
-            <h3 className="cs-intel-subsection-title">Take into next month</h3>
-            <ul className="mt-1.5 list-disc space-y-1 pl-4 text-[12.5px] leading-relaxed text-neutral-600">{summary.learnings.map((a, i) => <li key={i}>{a}</li>)}</ul>
-          </div>
-        )}
+        <div className="cs-intel-two-column cs-monthly-summary-boxes">
+          {summary.winning_angles?.length > 0 && (
+            <div className="cs-intel-content-card">
+              <h3 className="cs-intel-subsection-title">Winning angles</h3>
+              <ul className="mt-2 list-disc space-y-1 pl-4 text-[12.5px] leading-relaxed text-neutral-600">{summary.winning_angles.map((a, i) => <li key={i}>{a}</li>)}</ul>
+            </div>
+          )}
+          {summary.learnings?.length > 0 && (
+            <div className="cs-intel-content-card">
+              <h3 className="cs-intel-subsection-title">Take into next month</h3>
+              <ul className="mt-2 list-disc space-y-1 pl-4 text-[12.5px] leading-relaxed text-neutral-600">{summary.learnings.map((a, i) => <li key={i}>{a}</li>)}</ul>
+            </div>
+          )}
+        </div>
       </div>
     </section>
   );
@@ -291,12 +304,12 @@ function ConceptsLaunched({ month, media, token, onPreview }) {
         <div className="min-w-0">
           <h2>Concepts launched · {month.label}</h2>
           <p className="cs-intel-panel__subheader">
-            Each card is one concept: a batch of ad variants (different hooks, edits or cuts) testing the same idea. The winning variant is the one Meta put the most spend behind, and the bar shows how spend split across the batch.
+            Each card is one concept: a batch of ad variants (different hooks, edits or cuts) testing the same idea. The winning variant, shown first, is the one Meta put the most spend behind.
           </p>
         </div>
         {concepts.length > 1 && (
           <Select value={sortKey} onValueChange={setSortKey}>
-            <SelectTrigger className="cs-weekly-filter-select w-auto min-w-[170px] px-3" aria-label="Sort concepts"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="cs-weekly-filter-select cs-panel-select" aria-label="Sort concepts"><SelectValue /></SelectTrigger>
             <SelectContent className="cs-select-content bg-white">
               {Object.entries(CONCEPT_SORTS).map(([key, s]) => <SelectItem key={key} value={key}>Sort: {s.label}</SelectItem>)}
             </SelectContent>
@@ -353,6 +366,16 @@ function ConceptCard({ concept, monthSpend, avgCpa, media, token, onPreview }) {
 
   return (
     <article className={`cs-mc ${open ? "is-open" : ""}`}>
+      {/* The winning variant leads the card: it's what the batch produced. */}
+      {winner && (
+        <div className={`cs-mc__winner-banner ${multi ? "" : "is-solo"}`}>
+          <span className="cs-mc__winner-pill">
+            <Trophy className="h-3.5 w-3.5" />
+            {multi ? `Winning variant · beat ${variants.length - 1} other${variants.length === 2 ? "" : "s"} in this batch` : "Only variant in this concept"}
+          </span>
+          <span className="cs-mc__winner-banner-name" title={winner.ad_names[0]}>{name(winner.ad_names[0])}</span>
+        </div>
+      )}
       <div className="cs-mc__main">
         <button
           type="button"
@@ -369,7 +392,7 @@ function ConceptCard({ concept, monthSpend, avgCpa, media, token, onPreview }) {
         <div className="cs-mc__body">
           <p className="cs-mc__eyebrow">
             <Layers className="h-3 w-3" />
-            {multi ? `Concept batch · ${variants.length} variants tested` : "Concept · 1 variant"}
+            {multi ? `Concept · batch of ${variants.length} variants` : "Concept · 1 variant"}
           </p>
           <div className="cs-mc__title-row">
             <h3 title={concept.concept}>{concept.concept}</h3>
@@ -379,34 +402,15 @@ function ConceptCard({ concept, monthSpend, avgCpa, media, token, onPreview }) {
             </div>
           </div>
 
-          {winner && (
-            <div className="cs-mc__winner">
-              <Trophy className="h-3.5 w-3.5 shrink-0" />
-              <span className="cs-mc__winner-label">
-                {multi ? `Winning variant · 1 of ${variants.length} · took ${Math.round((winner.spend_share || 0) * 100)}% of the batch's spend` : "Only variant in this concept"}
-              </span>
-              <span className="cs-mc__winner-name" title={winner.ad_names[0]}>{name(winner.ad_names[0])}</span>
-            </div>
-          )}
-
-          {multi && (
-            <div className="cs-mc__batch">
-              <div className="cs-mc__split" aria-label="Spend split across the batch's variants">
-                {variants.map((v) => (
-                  <span key={v.key} className={v.is_winner ? "is-winner" : ""} style={{ flexGrow: Math.max(v.spend, 0.0001) }}
-                    title={`${name(v.ad_names[0])}: ${money(v.spend)} (${Math.round((v.spend_share || 0) * 100)}%)`} />
-                ))}
-              </div>
-              {siblings.length > 0 && (
-                <div className="cs-mc__siblings" aria-label="Other variants in this batch">
-                  {siblings.map((v) => (
-                    <button key={v.key} type="button" onClick={() => openVariant(v)} title={`${name(v.ad_names[0])} · ${money(v.spend)}`}>
-                      <img src={media[v.storage_path]} alt="" loading="lazy" />
-                    </button>
-                  ))}
-                  {variants.length - 1 > siblings.length && <span>+{variants.length - 1 - siblings.length}</span>}
-                </div>
-              )}
+          {siblings.length > 0 && (
+            <div className="cs-mc__siblings" aria-label="Other variants in this batch">
+              <small>Other variants</small>
+              {siblings.map((v) => (
+                <button key={v.key} type="button" onClick={() => openVariant(v)} title={`${name(v.ad_names[0])} · ${money(v.spend)}`}>
+                  <img src={media[v.storage_path]} alt="" loading="lazy" />
+                </button>
+              ))}
+              {variants.length - 1 > siblings.length && <span>+{variants.length - 1 - siblings.length}</span>}
             </div>
           )}
 
@@ -479,7 +483,7 @@ function MonthTooltip({ active, payload, label, series }) {
 }
 MonthTooltip.propTypes = { active: PropTypes.bool, payload: PropTypes.array, label: PropTypes.string, series: PropTypes.array.isRequired };
 
-function Leaderboard({ review, dimension, setDimension, token }) {
+function Leaderboard({ review, dimension, setDimension, token, winnersActive }) {
   const [open, setOpen] = useState(null);
   const dim = DIMENSIONS.find((d) => d.key === dimension) || DIMENSIONS[0];
   const monthsOldestFirst = useMemo(() => [...review.months].reverse(), [review]);
@@ -548,7 +552,7 @@ function Leaderboard({ review, dimension, setDimension, token }) {
           </p>
         </div>
         <Select value={dimension} onValueChange={(value) => { setDimension(value); setOpen(null); }}>
-          <SelectTrigger className="cs-weekly-filter-select w-auto min-w-[200px] px-3" aria-label="Group winners by"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="cs-weekly-filter-select cs-panel-select" aria-label="Group winners by"><SelectValue /></SelectTrigger>
           <SelectContent className="cs-select-content bg-white">
             {DIMENSIONS.map((d) => <SelectItem key={d.key} value={d.key}>Group by: {d.label}</SelectItem>)}
           </SelectContent>
@@ -616,16 +620,16 @@ function Leaderboard({ review, dimension, setDimension, token }) {
         {rows.length === 0 && anyWinners && (
           <p className="mt-3 text-xs text-neutral-500">No winners carry a {dim.label.toLowerCase()} tag yet. Tags come from Insights analysis, which covers each account&apos;s top spenders.</p>
         )}
-        {review.untagged_winners > 0 && (
+        {review.untagged_winners > 0 && !winnersActive && (
           <p className="mt-3 text-[11px] text-neutral-500">
-            {review.untagged_winners} winning variant{review.untagged_winners === 1 ? " has" : "s have"} no Insights analysis yet, so no tags to rank. Run Analysis on the Insights tab to cover more of them.
+            {review.untagged_winners} winning variant{review.untagged_winners === 1 ? " hasn't" : "s haven't"} been analyzed yet, so they have no tags to group by. Insights only analyzes your top spenders, so Refresh Review analyzes the remaining winners (and the Monday refresh does too). With many winners this can take a while.
           </p>
         )}
       </div>
     </section>
   );
 }
-Leaderboard.propTypes = { review: PropTypes.object.isRequired, dimension: PropTypes.string.isRequired, setDimension: PropTypes.func.isRequired, token: PropTypes.string };
+Leaderboard.propTypes = { review: PropTypes.object.isRequired, dimension: PropTypes.string.isRequired, setDimension: PropTypes.func.isRequired, token: PropTypes.string, winnersActive: PropTypes.bool };
 
 /**
  * Optional "ad name contains" filter, for an account shared by several
