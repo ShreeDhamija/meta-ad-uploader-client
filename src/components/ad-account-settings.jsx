@@ -229,8 +229,6 @@ function TargetingPicker({ label = "Search targeting", adAccountId, value, searc
   </div>;
 }
 
-// Attribution editing in Edit setup is limited to these users for now.
-const ATTRIBUTION_EDIT_USER_IDS = ["122195311376854213", "10236978990363167"];
 // Meta's attribution_spec event types. Allowed windows come from the server's goal-based attributionRules;
 // a source ad set's own window is always kept selectable.
 const ATTRIBUTION_EVENTS = [
@@ -300,8 +298,6 @@ function AdSetSetupSection({ title, icon: Icon, className, spacing = "space-y-3"
 }
 
 function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onChange, disabled }) {
-  const { userId } = useAuth();
-  const canEditAttribution = ATTRIBUTION_EDIT_USER_IDS.includes(String(userId));
   const [expanded, setExpanded] = useState(Boolean(value));
   const reduceMotion = useReducedMotion();
   const settingsRequestRef = useRef(null);
@@ -312,7 +308,7 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
   const [reload, setReload] = useState(0);
   const defaults = value?.defaults;
   useEffect(() => {
-    if (!expanded || (defaults && Object.prototype.hasOwnProperty.call(defaults, "spendLimits") && Object.prototype.hasOwnProperty.call(defaults, "minimumSpendAvailability") && (!canEditAttribution || Object.prototype.hasOwnProperty.call(defaults, "attributionRules")) && defaults.interestsResolved) || disabled) return;
+    if (!expanded || (defaults && Object.prototype.hasOwnProperty.call(defaults, "spendLimits") && Object.prototype.hasOwnProperty.call(defaults, "minimumSpendAvailability") && Object.prototype.hasOwnProperty.call(defaults, "attributionRules") && defaults.interestsResolved) || disabled) return;
     const controller = new AbortController();
     settingsRequestRef.current = controller;
     setLoading(true);
@@ -330,7 +326,7 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
       controller.abort();
       if (settingsRequestRef.current === controller) settingsRequestRef.current = null;
     };
-  }, [expanded, defaults, disabled, adSetId, campaignId, adAccountId, onChange, reload, canEditAttribution]);
+  }, [expanded, defaults, disabled, adSetId, campaignId, adAccountId, onChange, reload]);
 
   const changes = value?.changes || {};
   const targeting = defaults?.targeting || {};
@@ -591,7 +587,7 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
                   {endTime && Date.parse(endTime) <= Date.now() && <p className="text-xs text-amber-700">The source ad set has ended. Choose a new end time{defaults.budget.mode === "daily" ? " or clear it for ongoing delivery" : ""}.</p>}
                   {defaults.hasRecurringSchedule && <p className="text-xs text-gray-500">The source’s recurring delivery hours will be retained.</p>}
                 </AdSetSetupSection>
-                {canEditAttribution && <AdSetSetupSection title="Attribution" icon={MousePointerClick} className="border-t pt-4">
+                <AdSetSetupSection title="Attribution" icon={MousePointerClick} className="border-t pt-4">
                   {!attributionRules?.editable ? <>
                     <div className="flex items-center justify-between gap-3"><Label>Current setting</Label><span className="text-sm text-gray-700">{attributionSummary}</span></div>
                     <p className="text-xs text-gray-500">{attributionRules?.reason} The source’s setting will be kept.</p>
@@ -616,7 +612,7 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
                   {!sourceAttribution.length && changes.attributionSpec === undefined && <p className="text-xs text-gray-500">The source ad set uses Meta’s default attribution. Choose a click-through window to set your own.</p>}
                   <p className="text-xs text-gray-500">Meta checks these windows against the ad set’s optimization goal when it’s created.</p>
                   </>}
-                </AdSetSetupSection>}
+                </AdSetSetupSection>
               </>}
             </div>
           </motion.div>
