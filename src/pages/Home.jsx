@@ -1309,18 +1309,27 @@ export default function Home() {
     const sharedAdSetCampaignId = defaultInNewAdSet && defaultCampaignSelection?.length === 1 ? defaultCampaignSelection[0] : "";
     useEffect(() => {
         if (!shareNewAdSet || variants.length <= 1 || !sharedAdSetCampaignId) return;
-        const objective = campaigns.find((campaign) => campaign.id === sharedAdSetCampaignId)?.objective;
-        const patch = { selectedCampaign: [sharedAdSetCampaignId], campaignObjective: objective ? [objective] : [] };
+        const campaign = campaigns.find((item) => item.id === sharedAdSetCampaignId);
+        const patch = { selectedCampaign: [sharedAdSetCampaignId], campaignObjective: campaign?.objective ? [campaign.objective] : [] };
         const needsSwitch = (campaignIds) => campaignIds?.length !== 1 || campaignIds[0] !== sharedAdSetCampaignId;
+        const switched = [];
         if (activeVariantId !== "default" && showDuplicateBlock && needsSwitch(selectedCampaign)) {
             updateVariantFields(activeVariantId, patch);
+            switched.push(variants.find((variant) => variant.id === activeVariantId)?.name || "This variant");
         }
         variants.forEach((variant) => {
             const snapshot = variant.snapshot;
             if (variant.id === "default" || variant.id === activeVariantId || !snapshot ||
                 !(snapshot.showDuplicateBlock ?? Boolean(snapshot.duplicateAdSet)) || !needsSwitch(snapshot.selectedCampaign)) return;
             updateVariantFields(variant.id, patch);
+            switched.push(variant.name);
         });
+        if (switched.length) {
+            toast.info(`${switched.join(", ")} switched to Default’s campaign${campaign?.name ? ` “${campaign.name}”` : ""}`, {
+                id: "shared-ad-set-campaign-switch",
+                description: "Default is set to launch all variants in 1 new ad set, which is created in Default’s campaign.",
+            });
+        }
     }, [shareNewAdSet, variants, activeVariantId, showDuplicateBlock, selectedCampaign, sharedAdSetCampaignId, campaigns, updateVariantFields]);
 
 

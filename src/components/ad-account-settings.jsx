@@ -231,12 +231,12 @@ function TargetingPicker({ label = "Search targeting", adAccountId, value, searc
 
 // Attribution editing in Edit setup is limited to these users for now.
 const ATTRIBUTION_EDIT_USER_IDS = ["122195311376854213", "10236978990363167"];
-// Meta's attribution_spec event types and the windows Ads Manager offers for each.
-// A source ad set's own window is always kept selectable, even if not listed here.
+// Meta's attribution_spec event types. Allowed windows come from the server's goal-based attributionRules;
+// a source ad set's own window is always kept selectable.
 const ATTRIBUTION_EVENTS = [
-  { type: "CLICK_THROUGH", label: "Click-through", windows: [1, 7], optional: false },
-  { type: "ENGAGED_VIDEO_VIEW", label: "Engaged-view", windows: [1], optional: true },
-  { type: "VIEW_THROUGH", label: "View-through", windows: [1], optional: true },
+  { type: "CLICK_THROUGH", label: "Click-through", optional: false },
+  { type: "ENGAGED_VIDEO_VIEW", label: "Engaged-view", optional: true },
+  { type: "VIEW_THROUGH", label: "View-through", optional: true },
 ];
 const ATTRIBUTION_CLICK_ERROR = "Choose a click-through attribution window in Edit setup.";
 
@@ -312,7 +312,7 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
   const [reload, setReload] = useState(0);
   const defaults = value?.defaults;
   useEffect(() => {
-    if (!expanded || (defaults && Object.prototype.hasOwnProperty.call(defaults, "spendLimits") && Object.prototype.hasOwnProperty.call(defaults, "minimumSpendAvailability") && (!canEditAttribution || Object.prototype.hasOwnProperty.call(defaults, "attributionSpec")) && defaults.interestsResolved) || disabled) return;
+    if (!expanded || (defaults && Object.prototype.hasOwnProperty.call(defaults, "spendLimits") && Object.prototype.hasOwnProperty.call(defaults, "minimumSpendAvailability") && (!canEditAttribution || Object.prototype.hasOwnProperty.call(defaults, "attributionRules")) && defaults.interestsResolved) || disabled) return;
     const controller = new AbortController();
     settingsRequestRef.current = controller;
     setLoading(true);
@@ -322,7 +322,7 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
       .then(async (response) => {
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || "Could not load ad set settings.");
-        if (!controller.signal.aborted) onChange({ sourceAdSetId: adSetId, campaignId, adAccountId, defaults: { ...data, spendLimits: data.spendLimits ?? null, minimumSpendAvailability: data.minimumSpendAvailability ?? null, attributionSpec: data.attributionSpec ?? [], interestsResolved: true }, changes: latestSettingsRef.current?.changes || {} });
+        if (!controller.signal.aborted) onChange({ sourceAdSetId: adSetId, campaignId, adAccountId, defaults: { ...data, spendLimits: data.spendLimits ?? null, minimumSpendAvailability: data.minimumSpendAvailability ?? null, attributionSpec: data.attributionSpec ?? [], attributionRules: data.attributionRules ?? { editable: false, reason: "Attribution can’t be changed for this ad set." }, interestsResolved: true }, changes: latestSettingsRef.current?.changes || {} });
       })
       .catch((err) => { if (!controller.signal.aborted) setError(err.message); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
@@ -470,6 +470,9 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
   const endTime = field("endTime", defaults?.endTime || "");
   const sourceAttribution = defaults?.attributionSpec || [];
   const attribution = changes.attributionSpec ?? sourceAttribution;
+  const attributionRules = defaults?.attributionRules;
+  const attributionLabels = { CLICK_THROUGH: "click", ENGAGED_VIDEO_VIEW: "engaged-view", VIEW_THROUGH: "view" };
+  const attributionSummary = sourceAttribution.map(({ event_type, window_days }) => `${window_days}-day ${attributionLabels[event_type] || event_type.toLowerCase()}`).join(", ") || "Meta default";
   const attributionWindow = (spec, type) => spec.find((entry) => entry.event_type === type)?.window_days;
   // Always send the full spec in Meta's event order so untouched windows are kept.
   const updateAttribution = (type, days) => update("attributionSpec", ATTRIBUTION_EVENTS.flatMap(({ type: eventType }) => {
@@ -589,7 +592,12 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
                   {defaults.hasRecurringSchedule && <p className="text-xs text-gray-500">The source’s recurring delivery hours will be retained.</p>}
                 </AdSetSetupSection>
                 {canEditAttribution && <AdSetSetupSection title="Attribution" icon={MousePointerClick} className="border-t pt-4">
-                  {ATTRIBUTION_EVENTS.map(({ type, label, windows, optional }) => {
+                  {!attributionRules?.editable ? <>
+                    <div className="flex items-center justify-between gap-3"><Label>Current setting</Label><span className="text-sm text-gray-700">{attributionSummary}</span></div>
+                    <p className="text-xs text-gray-500">{attributionRules?.reason} The source’s setting will be kept.</p>
+                  </> : <>
+                  {ATTRIBUTION_EVENTS.filter(({ type }) => attributionRules.windows?.[type]).map(({ type, label, optional }) => {
+                    const windows = attributionRules.windows[type];
                     const current = attributionWindow(attribution, type);
                     const sourceWindow = attributionWindow(sourceAttribution, type);
                     const options = [...new Set([...windows, ...(sourceWindow ? [Number(sourceWindow)] : [])])].sort((a, b) => a - b);
@@ -607,6 +615,7 @@ function NewAdSetSettingsEditor({ adSetId, campaignId, adAccountId, value, onCha
                   {changes.attributionSpec !== undefined && !attributionWindow(attribution, "CLICK_THROUGH") && <p role="alert" className="text-xs text-red-600">{ATTRIBUTION_CLICK_ERROR}</p>}
                   {!sourceAttribution.length && changes.attributionSpec === undefined && <p className="text-xs text-gray-500">The source ad set uses Meta’s default attribution. Choose a click-through window to set your own.</p>}
                   <p className="text-xs text-gray-500">Meta checks these windows against the ad set’s optimization goal when it’s created.</p>
+                  </>}
                 </AdSetSetupSection>}
               </>}
             </div>
