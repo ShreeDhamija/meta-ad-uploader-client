@@ -18,6 +18,7 @@ import { RUN_OPERATIONS } from "../run-model-operations";
 import { ViewLoading, EmptyState, ErrorBanner } from "../ui";
 import { useJobRunner } from "../JobsContext";
 import "./library.css";
+import { RunByNote } from "../run-by";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "https://api.withblip.com";
 
@@ -63,6 +64,7 @@ export default function LibraryView({ ctx }) {
   const adAccountId = selectedBrand?.metaAdAccountId || null;
   const models = useRunModels(selectedProductId);
   const [items, setItems] = useState([]);
+  const [lastRun, setLastRun] = useState(null);
   const [err, setErr] = useState(null);
   const [loading, setLoading] = useState(false);
   const [updating, setUpdating] = useState(null);
@@ -79,11 +81,12 @@ export default function LibraryView({ ctx }) {
 
   // `quiet` refreshes in place (after a run) instead of swapping the board for a spinner.
   const load = async (productId, { quiet = false } = {}) => {
-    if (!productId) { setItems([]); return; }
+    if (!productId) { setItems([]); setLastRun(null); return; }
     if (!quiet) setLoading(true);
     try {
       const response = await creativeApi.getLibrary(productId);
       setItems(response.items || []);
+      setLastRun(response.lastRun || null);
     } catch (error) {
       setErr(error.message);
     } finally {
@@ -232,6 +235,7 @@ export default function LibraryView({ ctx }) {
             {jobActive ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
             {jobActive ? "Generating…" : generateOption.button}
           </button>
+          {lastRun && <RunByNote label="Last generated" at={lastRun.at} uid={lastRun.uid} auto={lastRun.auto} className="w-full text-right text-[11px] text-neutral-500" />}
         </div>
       )}
       {selectedProductId && <RunModelControls models={models} operations={RUN_OPERATIONS.library} disabled={Boolean(jobActive)} />}

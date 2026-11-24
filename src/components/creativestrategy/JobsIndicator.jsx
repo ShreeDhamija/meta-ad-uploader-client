@@ -6,6 +6,7 @@ import PropTypes from "prop-types";
 import { Loader2, CheckCircle2, AlertTriangle, ArrowRight, Ban, ChevronDown, History, Clock, X } from "lucide-react";
 import { useJobs, describeJob, jobOutcome, dependentSteps } from "./JobsContext";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import RunBy from "./run-by";
 
 const ACTIVE = (status) => status === "queued" || status === "running" || status == null;
 const dateLabel = (value) => value ? new Date(value).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) : "Time unavailable";
@@ -120,7 +121,7 @@ export default function JobsIndicator({ resultTabFor, onOpenResult }) {
                 </div>
                 <p className={`mt-1 text-xs break-words ${failed ? "text-red-700" : "text-stone-600"}`}>{description.detail}</p>
                 <p className="mt-2 text-[11px] text-stone-400">
-                  {isWaiting ? "Not started yet" : job.executionStartedAt ? `Started ${dateLabel(job.executionStartedAt)}` : "Not started yet"}
+                  {isWaiting ? "Not started yet" : job.executionStartedAt ? `Started ${dateLabel(job.executionStartedAt)}` : "Not started yet"}{" "}<RunBy uid={job.byUid || null} auto={!!job.byAuto} prefix={isWaiting || !job.executionStartedAt ? "· queued by" : "by"} />
                   {!done && !failed && !cancelled && description.eta && <> · {description.eta}</>}
                 </p>
                 {description.pct != null && !done && !failed && !cancelled && <div className="mt-2 h-1 rounded-full bg-stone-200 overflow-hidden"><div className="h-full bg-blue-500 transition-[width] duration-700" style={{ width: `${description.pct}%` }} /></div>}

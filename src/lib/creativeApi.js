@@ -115,6 +115,7 @@ export const creativeApi = {
   getJobHistory: (offset = 0) => request(`/jobs?offset=${offset}`),
   getJob: (id) => request(`/jobs/${id}`),
   cancelJob: (id) => request(`/jobs/${encodeURIComponent(id)}/cancel`, { method: "POST" }),
+  getUserProfiles: (uids) => request(`/users/profiles?uids=${encodeURIComponent(uids.join(","))}`),
   getUsage: ({ window = "7d", groupBy = "provider", clientId } = {}) =>
     request(`/usage?window=${encodeURIComponent(window)}&groupBy=${encodeURIComponent(groupBy)}${clientId ? `&clientId=${encodeURIComponent(clientId)}` : ""}`),
 };

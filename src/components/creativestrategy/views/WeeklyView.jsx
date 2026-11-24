@@ -12,6 +12,7 @@ import { RUN_OPERATIONS } from "../run-model-operations";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { EmptyState, ErrorBanner, PartialResultsNotice, ProgressiveSection } from "../ui";
 import { useJobRunner, useJobs } from "../JobsContext";
+import RunBy from "../run-by";
 
 const isActive = (job) => job.status == null || job.status === "queued" || job.status === "running";
 
@@ -222,7 +223,7 @@ export default function WeeklyView({ ctx }) {
             {jobActive ? "Running Strategy…" : "Run Strategy"}
           </button>
           {selectedBrandId && <div className="space-y-1 text-right text-[11px] text-neutral-500">
-            <p>Last run: {lastRunAt ? <time dateTime={lastRunAt}>{lastRunLabel}</time> : lastRunLabel}</p>
+            <p>Last run: {lastRunAt ? <time dateTime={lastRunAt}>{lastRunLabel}</time> : lastRunLabel}{lastRunAt && run?.by && <>{" "}<RunBy uid={run.by.uid} auto={run.by.auto} /></>}</p>
             <p>Next run: {nextRunAt ? <><time dateTime={nextRunAt}>{nextRunLabel}</time> (Sydney time)</> : loading ? "Loading…" : schedule?.enabled === false ? "Not scheduled" : "Unavailable"}</p>
           </div>}
           </div>

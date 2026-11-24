@@ -17,6 +17,7 @@ import { CsScrollArea, EmptyState, ErrorBanner, PartialResultsNotice, Progressiv
 import { useJobRunner } from "../JobsContext";
 import { SpendCpaChart, TopPerformers } from "./InsightsPerformance";
 import { AdMediaPlayer, AdMediaProvider, AdThumbImg } from "../meta-media";
+import RunBy from "../run-by";
 
 const money = (n) => `$${Math.round(n || 0).toLocaleString()}`;
 const mean = (arr) => (arr.length ? arr.reduce((s, x) => s + x, 0) / arr.length : null);
@@ -33,6 +34,7 @@ export default function IntelligenceView({ ctx }) {
   const [loading, setLoading] = useState(false);
   const [angles, setAngles] = useState([]);
   const [updatedAt, setUpdatedAt] = useState(null);
+  const [updatedBy, setUpdatedBy] = useState(null);
   const currentProduct = useRef(selectedProductId);
   currentProduct.current = selectedProductId;
   const requestId = useRef(0);
@@ -49,6 +51,7 @@ export default function IntelligenceView({ ctx }) {
       const [r, ang] = await Promise.all([creativeApi.getInsights(pid), creativeApi.getAngles(pid).catch(() => ({ angles: [] }))]);
       if (currentProduct.current !== pid || request !== requestId.current) return;
       setUpdatedAt(r.updatedAt || null);
+      setUpdatedBy(r.updatedBy || null);
       setAdNameFilter(r.adNameFilter ?? null);
       setAds(r.ads || []); setAudit(r.audit || null); setAngles(ang.angles || []); setTrending(r.trending || null);
     } catch (e) { if (!silent && currentProduct.current === pid) setErr(e.message); } finally { if (!silent && currentProduct.current === pid) setLoading(false); }
@@ -135,7 +138,7 @@ export default function IntelligenceView({ ctx }) {
           {analyzeActive && <Loader2 className="h-4 w-4 animate-spin" />}
           {analyzeActive ? "Running Analysis…" : "Run Analysis"}
         </button>
-        <p className="text-[11px] text-neutral-500">Updated: {updatedAt ? <time dateTime={updatedAt}>{new Date(updatedAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}</time> : "Not analyzed yet"}</p>
+        <p className="text-[11px] text-neutral-500">Updated: {updatedAt ? <time dateTime={updatedAt}>{new Date(updatedAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}</time> : "Not analyzed yet"}{updatedAt && updatedBy && <>{" "}<RunBy uid={updatedBy.uid} auto={updatedBy.auto} /></>}</p>
         </div>
         </div>
       )}

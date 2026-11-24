@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { EmptyState, ErrorBanner, ProgressiveSection } from "../ui";
 import { useJobRunner } from "../JobsContext";
+import RunBy from "../run-by";
 
 const money = (v) => (v >= 1000 ? `$${(v / 1000).toFixed(1)}K` : `$${Math.round(v || 0)}`);
 const NAME_FILTER_MAX = 100;
@@ -119,7 +120,7 @@ export default function MonthlyReviewView({ ctx }) {
               {jobActive && <Loader2 className="h-4 w-4 animate-spin" />}
               {jobActive ? "Pulling from Meta…" : review ? "Refresh Review" : "Build Review"}
             </button>
-            <p className="text-[11px] text-neutral-500">Updated: {computedLabel && review ? <time dateTime={snapshot.computedAt}>{computedLabel}</time> : "Not built yet"}</p>
+            <p className="text-[11px] text-neutral-500">Updated: {computedLabel && review ? <time dateTime={snapshot.computedAt}>{computedLabel}</time> : "Not built yet"}{computedLabel && review && snapshot.computedBy && <>{" "}<RunBy uid={snapshot.computedBy.uid} auto={snapshot.computedBy.auto} /></>}</p>
           </div>
         </div>,
       )}

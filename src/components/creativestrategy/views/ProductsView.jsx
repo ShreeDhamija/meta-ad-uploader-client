@@ -20,6 +20,7 @@ import { useJobRunner, useJobs } from "../JobsContext";
 import ProductUrlField, { isValidProductUrl, normalizeProductUrl } from "../ProductUrlField";
 import { EmptyState, ErrorBanner, ViewLoading } from "../ui";
 import BrandingEditor from "./BrandingEditor";
+import RunBy from "../run-by";
 
 const TYPES = ["physical", "saas", "info", "service"];
 const CONTEXT_LABELS = {
@@ -313,7 +314,7 @@ export default function ProductsView({ ctx }) {
                     <button type="button" onClick={() => selectAndGo(p.id, "generate")} className="cs-product-action">
                       <ImageIcon className="h-5 w-5" /> Generate Static Ads
                     </button>
-                    <p className="px-2 pt-1 text-xs font-medium text-neutral-600">Created at: {formatDate(p.createdAt || p.created_at)}</p>
+                    <p className="px-2 pt-1 text-xs font-medium text-neutral-600">Created at: {formatDate(p.createdAt || p.created_at)}{" "}<RunBy uid={p.createdBy || p.created_by || null} /></p>
                   </div>
                 </article>
               );

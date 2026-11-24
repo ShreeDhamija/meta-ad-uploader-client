@@ -16,6 +16,7 @@ import { EmptyState, ErrorBanner, PartialResultsNotice, ProgressiveSection } fro
 import { ResearchSectionBody, researchSectionMeta } from "./ResearchSections";
 import { useJobRunner } from "../JobsContext";
 import redditIcon from "@/assets/icons/signup/reddit.svg";
+import RunBy from "../run-by";
 
 const ORDER = [
   "reddit_sentiment", "brand_deep_dive", "consumer_research_report", "review_mining", "language_bank",
@@ -79,6 +80,7 @@ export default function ResearchView({ ctx }) {
   }, [ctx.selectedBrandId]);
   const models = useRunModels(selectedProductId);
   const [intel, setIntel] = useState({});
+  const [lastRunBy, setLastRunBy] = useState(null);
   const [types, setTypes] = useState([]);
   const [err, setErr] = useState(null);
   const [personaBusy, setPersonaBusy] = useState(null);
@@ -91,6 +93,7 @@ export default function ResearchView({ ctx }) {
     try {
       const response = await creativeApi.getResearch(productId);
       setIntel(response.intel || {});
+      setLastRunBy(response.lastRunBy || null);
       setTypes(response.intelTypes || []);
     } catch (error) {
       setErr(error.message);
@@ -283,14 +286,14 @@ export default function ResearchView({ ctx }) {
               </div>
               <div className="cs-research-intel-list">
                 {PROGRESSIVE_RESEARCH_SECTIONS.map((section) => researchIntel[section.type]
-                  ? <ResearchIntelRow key={section.type} type={section.type} title={section.title} icon={section.icon} data={researchIntel[section.type]} />
+                  ? <ResearchIntelRow key={section.type} type={section.type} title={section.title} icon={section.icon} data={researchIntel[section.type]} runBy={lastRunBy} />
                   : (
                     <div key={section.type} className="relative">
                       {section.icon && <img src={section.icon} alt="" aria-hidden="true" className="absolute left-4 top-4 z-10 h-5 w-5" />}
                       <ProgressiveSection title={section.title} active={stageActive(section.phase)} lines={2} className={`rounded-[20px] ${section.icon ? "[&_h3]:pl-7" : ""}`} />
                     </div>
                   ))}
-                {extraSectionTypes.map((type) => <ResearchIntelRow key={type} type={type} title={humanize(type)} data={intel[type]} guidelines={guidelines} />)}
+                {extraSectionTypes.map((type) => <ResearchIntelRow key={type} type={type} title={humanize(type)} data={intel[type]} guidelines={guidelines} runBy={lastRunBy} />)}
               </div>
               {!intel.persona_cross_map && <p className="mt-3 text-xs text-neutral-500">Persona cross-map compares research personas with audiences found in your ads. Run ad analysis, then Research, to build it. The persona summary table above works from research alone.</p>}
           </section>
@@ -524,7 +527,7 @@ function PersonaListSection({ icon, label, items }) {
   );
 }
 
-function ResearchIntelRow({ type, title, data, icon, guidelines }) {
+function ResearchIntelRow({ type, title, data, icon, guidelines, runBy }) {
   // Sections open on load (key details only; "View Full Details" shows the rest).
   const [open, setOpen] = useState(true);
   const [headerStuck, setHeaderStuck] = useState(false);
@@ -571,7 +574,7 @@ function ResearchIntelRow({ type, title, data, icon, guidelines }) {
           <h3 className="flex items-center gap-2">{icon && <img src={icon} alt="" aria-hidden="true" className="h-5 w-5 shrink-0" />}{title}</h3>
           <p>
             {descriptors.length > 0 && <span>{descriptors.join(" · ")}</span>}
-            {lastRun && <span>Last Run: {formatDate(lastRun)}</span>}
+            {lastRun && <span>Last Run: {formatDate(lastRun)}{runBy && <>{" "}<RunBy uid={runBy.uid} auto={runBy.auto} /></>}</span>}
           </p>
         </div>
         <span className="cs-research-intel__toggle"><Plus className="h-5 w-5" /></span>
@@ -688,6 +691,6 @@ PersonaDialog.propTypes = {
 PersonaProfile.propTypes = { persona: PropTypes.object.isRequired };
 PersonaBlock.propTypes = { icon: PropTypes.elementType.isRequired, label: PropTypes.string.isRequired, children: PropTypes.node };
 PersonaListSection.propTypes = { icon: PropTypes.elementType.isRequired, label: PropTypes.string.isRequired, items: PropTypes.any };
-ResearchIntelRow.propTypes = { type: PropTypes.string.isRequired, title: PropTypes.string.isRequired, data: PropTypes.any, icon: PropTypes.string, guidelines: PropTypes.object };
+ResearchIntelRow.propTypes = { type: PropTypes.string.isRequired, title: PropTypes.string.isRequired, data: PropTypes.any, icon: PropTypes.string, guidelines: PropTypes.object, runBy: PropTypes.object };
 ResearchDetails.propTypes = { data: PropTypes.any, exclude: PropTypes.instanceOf(Set) };
 ResearchValue.propTypes = { data: PropTypes.any };

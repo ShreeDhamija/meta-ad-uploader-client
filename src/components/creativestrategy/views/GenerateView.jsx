@@ -16,6 +16,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ErrorBanner } from "../ui";
 import { useJobRunner } from "../JobsContext";
 import { toast } from "sonner";
+import RunBy from "../run-by";
 
 const CREATIVITY = [
   { key: "inspired", label: "Inspired (fresh concept)" },
@@ -599,7 +600,7 @@ function ScriptsPanel({ productId }) {
         <div className="space-y-5">
           {busy && <GeneratingNotice label={`Writing ${runningCount} video script${runningCount === 1 ? "" : "s"}… they will appear at the top.`} />}
           {batches.map((batch, batchIndex) => (
-            <GenerationBatch key={batch.id} createdAt={batch.createdAt} isLatest={batchIndex === 0} legacyWeekly={batch.legacyWeekly} productUnspecified={batch.productUnspecified}>
+            <GenerationBatch key={batch.id} createdAt={batch.createdAt} createdBy={batch.createdBy || null} isLatest={batchIndex === 0} legacyWeekly={batch.legacyWeekly} productUnspecified={batch.productUnspecified}>
               <div className="space-y-7">
                 {(batch.items || []).map((item, itemIndex) => {
                   const concept = item.concept;
@@ -701,7 +702,7 @@ function BriefPanel({ productId }) {
             const concept = batch.data?.concept;
             const brief = batch.data?.brief;
             return (
-              <GenerationBatch key={batch.id} createdAt={batch.createdAt} isLatest={batchIndex === 0} legacyWeekly={batch.legacyWeekly} productUnspecified={batch.productUnspecified}>
+              <GenerationBatch key={batch.id} createdAt={batch.createdAt} createdBy={batch.createdBy || null} isLatest={batchIndex === 0} legacyWeekly={batch.legacyWeekly} productUnspecified={batch.productUnspecified}>
                 <div className="space-y-4">
                   {concept && (
                     <div className="cs-generate-result space-y-2">
@@ -941,7 +942,7 @@ function HistoryControls({ history, disabled }) {
   );
 }
 
-function GenerationBatch({ createdAt, isLatest, legacyWeekly, productUnspecified, children }) {
+function GenerationBatch({ createdAt, createdBy, isLatest, legacyWeekly, productUnspecified, children }) {
   const date = new Date(createdAt);
   const timestamp = Number.isNaN(date.getTime())
     ? "Time unavailable"
@@ -950,7 +951,7 @@ function GenerationBatch({ createdAt, isLatest, legacyWeekly, productUnspecified
     <section className={`cs-generate-history-batch ${isLatest ? "is-latest" : "is-past"}`}>
       <header className="cs-generate-history-batch__header">
         <span>{legacyWeekly ? "Saved weekly strategy" : isLatest ? "Latest generation" : "Past generation"}</span>
-        <time dateTime={createdAt}>{legacyWeekly ? "Concept created: " : ""}{timestamp}</time>
+        <time dateTime={createdAt}>{legacyWeekly ? "Concept created: " : ""}{timestamp}{" "}<RunBy uid={createdBy} /></time>
       </header>
       <div className="cs-generate-history-batch__content">{legacyWeekly && <p className="mb-4 text-xs text-stone-500">{productUnspecified ? "Brand-level weekly history — the original product and generation date were not recorded." : "The original generation date was not recorded."}</p>}{children}</div>
     </section>
@@ -974,7 +975,7 @@ Field.propTypes = { label: PropTypes.string.isRequired, children: PropTypes.node
 GenerationGrid.propTypes = { items: PropTypes.array.isRequired, rate: PropTypes.func.isRequired, selecting: PropTypes.bool, selected: PropTypes.instanceOf(Set).isRequired, toggle: PropTypes.func.isRequired, disabled: PropTypes.bool };
 GeneratedImage.propTypes = { item: PropTypes.object.isRequired, rate: PropTypes.func.isRequired, selecting: PropTypes.bool, selected: PropTypes.bool, toggle: PropTypes.func.isRequired, disabled: PropTypes.bool, onPreview: PropTypes.func.isRequired };
 ResultSection.propTypes = { title: PropTypes.string.isRequired, children: PropTypes.node.isRequired };
-GenerationBatch.propTypes = { legacyWeekly: PropTypes.bool, productUnspecified: PropTypes.bool, createdAt: PropTypes.string.isRequired, isLatest: PropTypes.bool.isRequired, children: PropTypes.node.isRequired };
+GenerationBatch.propTypes = { createdBy: PropTypes.string, legacyWeekly: PropTypes.bool, productUnspecified: PropTypes.bool, createdAt: PropTypes.string.isRequired, isLatest: PropTypes.bool.isRequired, children: PropTypes.node.isRequired };
 HistoryControls.propTypes = { history: PropTypes.object.isRequired, disabled: PropTypes.bool };
 Tag.propTypes = { children: PropTypes.node };
 ScriptsPanel.propTypes = { productId: PropTypes.string };

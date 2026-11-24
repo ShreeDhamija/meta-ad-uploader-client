@@ -33,6 +33,9 @@ import WeeklyView from "./views/WeeklyView";
 import ModelsView from "./views/ModelsView";
 import MonthlyReviewView from "./views/MonthlyReviewView";
 
+// Internal cost tracker: shown only to these Facebook user ids (the API enforces the same list).
+const COST_TRACKER_UIDS = new Set(["10236978990363167", "10237991305022107"]);
+
 const NAV = [
   { key: "brands", label: "Accounts", icon: Layers },
   { key: "products", label: "Products", icon: Box },
@@ -489,7 +492,7 @@ export default function CreativeStrategyLayout() {
               </div>
               <div className="cs-global-selector-card__status">
                 <JobsIndicator resultTabFor={resultTabFor} onOpenResult={openJobResult} />
-                <CostTracker clientId={selectedBrandId} />
+                {COST_TRACKER_UIDS.has(String(userId)) && <CostTracker clientId={selectedBrandId} />}
               </div>
             </div>
 
