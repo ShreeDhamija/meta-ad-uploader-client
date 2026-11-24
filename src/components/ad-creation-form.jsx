@@ -749,6 +749,80 @@ function withUniqueId(file) {
 }
 
 // ADD THIS NEW FUNCTION:
+// Batch fields copied from a queued job onto its job tracker entry, used by "Restore to form".
+const getJobBatchFields = (job) => ({
+  batchId: job?.batchId,
+  batchJobCount: job?.batchJobCount,
+  batchSnapshot: job?.batchSnapshot,
+  variantId: job?.variantId,
+});
+
+// Every identifier a media item can be matched by, so a partially successful job
+// can restore only the media whose ads failed. ALL_MEDIA marks an ad that used all
+// of the job's media (carousel without groups, flexible, dynamic creative).
+const ALL_MEDIA = "*";
+const getMediaRestoreKeys = (item) => {
+  if (!item) return [];
+  const ids = [item.uniqueId, item.id, item.dropboxId, item.frameioId, item.oneDriveId, item.hash].filter(Boolean).map(String);
+  return ids.length > 0 ? ids : item.name ? [`name:${item.name}`] : [];
+};
+
+// Narrows a partially successful job's form data to the ads that failed: only the
+// media and ad sets of failed ads come back. mayDuplicate is true when a failed
+// media item also succeeded in one of those ad sets (e.g. one of several landing
+// pages), so resubmitting would recreate that ad.
+const scopeFormDataToFailedAds = (formData, scope, partnershipAdCodes = []) => {
+  const failed = scope?.failed || [];
+  const failedKeys = new Set(failed.flatMap((entry) => entry.mediaKeys || []));
+  const restoreAllMedia = failedKeys.has(ALL_MEDIA) || failed.some((entry) => !entry.mediaKeys?.length);
+  const failedAdSetIds = [...new Set(failed.map((entry) => entry.adSetId).filter(Boolean))];
+  const isFailed = (keys) => restoreAllMedia || keys.some((key) => failedKeys.has(key));
+  const keepMedia = (items = []) => items.filter((item) => isFailed(getMediaRestoreKeys(item)));
+
+  const scoped = {
+    ...formData,
+    files: keepMedia(formData.files),
+    driveFiles: keepMedia(formData.driveFiles),
+    dropboxFiles: keepMedia(formData.dropboxFiles),
+    frameioFiles: keepMedia(formData.frameioFiles),
+    oneDriveFiles: keepMedia(formData.oneDriveFiles),
+    importedFiles: keepMedia(formData.importedFiles),
+    importedPosts: (formData.importedPosts || []).filter((post) => isFailed([`post:${post.id}`])),
+    selectedIgOrganicPosts: (formData.selectedIgOrganicPosts || []).filter((post) => isFailed([`igpost:${post.source_instagram_media_id}`])),
+    fileGroups: (formData.fileGroups || []).filter((group) => isFailed(getGroupFileIds(group).map(String))),
+  };
+
+  if (failedAdSetIds.length > 0) {
+    if (formData.duplicateAdSet) {
+      // The new ad set already exists and holds the ads that worked: target it
+      // instead of creating another one.
+      const sourceAdSet = (formData.adSets || []).find((adSet) => adSet.id === formData.duplicateAdSet);
+      const knownIds = new Set((formData.adSets || []).map((adSet) => String(adSet.id)));
+      scoped.adSets = [
+        ...(formData.adSets || []),
+        ...failedAdSetIds.filter((id) => !knownIds.has(id)).map((id) => ({ ...(sourceAdSet || {}), id, name: formData.newAdSetName || "New Ad Set" })),
+      ];
+      scoped.selectedAdSets = failedAdSetIds;
+      scoped.duplicateAdSet = "";
+      scoped.newAdSetName = "";
+      scoped.newAdSetSettings = null;
+    } else {
+      const failedSet = new Set(failedAdSetIds);
+      scoped.selectedAdSets = (formData.selectedAdSets || []).filter((id) => failedSet.has(String(id)));
+    }
+  }
+
+  const scopedPartnershipAdCodes = partnershipAdCodes.filter((code) => !String(code).trim() || isFailed([`code:${String(code).trim()}`]));
+  const failedAdSetSet = new Set(failedAdSetIds);
+  const mayDuplicate = (scope?.succeeded || []).some(
+    (entry) =>
+      failedAdSetSet.has(entry.adSetId) &&
+      (restoreAllMedia || (entry.mediaKeys || []).some((key) => key === ALL_MEDIA || failedKeys.has(key))),
+  );
+
+  return { formData: scoped, partnershipAdCodes: scopedPartnershipAdCodes, mayDuplicate };
+};
+
 const getFileId = (file) => {
   if (file.isDrive) return file.id;
   if (file.isDropbox) return file.dropboxId;
@@ -1360,6 +1434,8 @@ export default function AdCreationForm({
   onAdLaunchInProgressChange,
   onSaveDraft,
   onRestoreDraft,
+  captureBatchSnapshot,
+  restoreBatchSnapshot,
   showVariantOverview = false,
   onToggleVariantOverview,
   variantOverviewHost,
@@ -2626,135 +2702,135 @@ export default function AdCreationForm({
 
   const addCompletedJob = useCallback((completedJob) => {
     setCompletedJobs((prev) => {
-      const updated = [...prev, completedJob];
-      return updated.map((j, i) => (i < updated.length - 3 ? { ...j, formData: null, sharedAdSetJob: null } : j));
+      // Failed jobs keep their form data so every one of them can be restored this session.
+      return [...prev, completedJob];
     });
   }, []);
 
+  // Variant jobs of a batch where every job failed outright (nothing created).
+  // Returns null when some job succeeded, is still queued, or was removed.
+  const getFullyFailedBatchJobs = useCallback(
+    (job) => {
+      if (!job?.batchId || !job.batchJobCount || job.kind === "shared-ad-set") return null;
+      const failedJobs = completedJobs.filter(
+        (entry) => entry.batchId === job.batchId && entry.kind !== "shared-ad-set" && entry.status === "error" && !(entry.successCount > 0),
+      );
+      return failedJobs.length === job.batchJobCount ? failedJobs : null;
+    },
+    [completedJobs],
+  );
+
   const handleRetryJob = useCallback(
     (job) => {
-      const d = job.formData;
-      if (!d) return;
+      const batch = job?.batchSnapshot;
+      if (!batch || !restoreBatchSnapshot) return;
 
-      setHeadlines(d.headlines || [""]);
-      setDescriptions(d.descriptions || [""]);
-      setAddDescriptions((d.descriptions || []).some((description) => description !== ""));
-      setMessages(d.messages || [""]);
-      setLink(d.link || [""]);
-      setDisplayLink(d.displayLink || "");
-      setDestinationType(d.destinationType === "instant_experience" ? "instant_experience" : "website");
-      setInstantExperienceId(d.instantExperienceId || "");
-      setPhoneNumber(d.phoneNumber || "");
-      setCta(d.cta || "");
-      setSelectedAdAccount(d.selectedAdAccount || "");
-      setSelectedCampaign(Array.isArray(d.selectedCampaign) ? d.selectedCampaign : []);
-      setSelectedAdSets(d.selectedAdSets || []);
-      setDuplicateAdSet(d.duplicateAdSet || "");
-      setNewAdSetName(d.newAdSetName || "");
-      setNewAdSetSettings(d.newAdSetSettings || null);
-      setPageId(d.pageId || "");
-      setInstagramAccountId(d.instagramAccountId || "");
+      // A variant snapshot plus the ad set targeting its job actually launched with.
+      // After a shared ad set was created, jobs target it directly, so a restore
+      // must point at that ad set instead of creating another one.
+      const withLaunchTargeting = (snapshot, launched) => {
+        if (!snapshot || !launched) return snapshot;
+        const campaigns = Array.isArray(launched.selectedCampaign)
+          ? [...launched.selectedCampaign]
+          : launched.selectedCampaign
+            ? [launched.selectedCampaign]
+            : snapshot.selectedCampaign;
+        return {
+          ...snapshot,
+          selectedCampaign: campaigns,
+          selectedAdSets: [...(launched.selectedAdSets || [])],
+          adSets: launched.adSets ? [...launched.adSets] : snapshot.adSets,
+          duplicateAdSet: launched.duplicateAdSet || "",
+          showDuplicateBlock: Boolean(launched.duplicateAdSet),
+          newAdSetName: launched.duplicateAdSet ? launched.newAdSetName || "" : "",
+          newAdSetSettings: launched.duplicateAdSet ? launched.newAdSetSettings || null : null,
+        };
+      };
 
-      setFiles(d.files || []);
-      setDriveFiles(d.driveFiles || []);
-      setDropboxFiles(d.dropboxFiles || []);
-      setFrameioFiles(d.frameioFiles || []);
-      setOneDriveFiles?.(d.oneDriveFiles || []);
-      setImportedPosts(d.importedPosts || []);
-      setImportedFiles(d.importedFiles || []);
-      setSelectedIgOrganicPosts(d.selectedIgOrganicPosts || []);
-      setVideoThumbs(d.videoThumbs || {});
-      setThumbnail(d.thumbnail || null);
+      const restoreFormExtras = (extras = {}) => {
+        setImportedPostAdNames({ ...(extras.importedPostAdNames || {}) });
+        setPromoCodeAutoDetect(Boolean(extras.promoCodeAutoDetect));
+        setWhatsAppWelcomeMessage(extras.whatsAppWelcomeMessage || "");
+        setTestMultipleLps(Boolean(extras.testMultipleLps));
+        setExtraLandingPages((extras.extraLandingPages || []).map((entry) => ({ ...entry })));
+      };
 
-      setVariants([{ id: "default", name: "Default", snapshot: null }]);
-      setActiveVariantId("default");
-      setFileVariantMap({});
-      setGroupVariantMap({});
-      setPostVariantMap({});
-      setAdType(d.adType || "regular");
-      setIsCarouselAd(d.isCarouselAd || false);
-      setEnablePlacementCustomization(d.enablePlacementCustomization || false);
-      setFileGroups(normalizeFileGroups(d.fileGroups || []));
-      setSelectedFiles(new Set());
-      setLaunchPaused(d.launchPaused || false);
-      setDiscloseAiMedia(Boolean(d.discloseAiMedia));
-      setIsPoliticalAd(Boolean(d.isPoliticalAd));
-      setPixelTrackingOverride(d.pixelTrackingOverride || EMPTY_PIXEL_TRACKING_OVERRIDE);
+      // Whole batch: the shared ad set could not be created (no variant job ran),
+      // or every variant job failed. Restore every variant with its own media.
+      const sharedAdSetFailed = job.kind === "shared-ad-set";
+      const failedBatchJobs = sharedAdSetFailed ? [] : getFullyFailedBatchJobs(job);
+      if (failedBatchJobs) {
+        const launchedByVariant = new Map(failedBatchJobs.map((entry) => [entry.variantId, entry.formData]));
+        restoreBatchSnapshot({
+          ...batch,
+          variants: batch.variants.map((variant) => ({
+            ...variant,
+            snapshot: withLaunchTargeting(variant.snapshot, launchedByVariant.get(variant.id)),
+          })),
+        });
+        restoreFormExtras(batch.formExtras);
 
-      setSelectedShopDestination(d.selectedShopDestination || "");
-      setSelectedShopDestinationType(d.selectedShopDestinationType || "");
-      setSelectedShopProductCatalogId(d.selectedShopProductCatalogId || "");
-      setProductExtensionProductSetId(d.productExtensionProductSetId || "");
-      setProductExtensionProductCatalogId(d.productExtensionProductCatalogId || "");
-      setSelectedForm(d.selectedForm || null);
-      setSelectedTemplate(d.selectedTemplate || "");
-      setIsPartnershipAd(Boolean(d.isPartnershipAd));
-      setPartnerIgAccountId(d.partnerIgAccountId || "");
-      setPartnerFbPageId(d.partnerFbPageId || "");
-      setPartnershipIdentityMode(d.partnershipIdentityMode || "dynamic");
-      setPartnershipPrimaryIdentity(d.partnershipPrimaryIdentity || "brand");
-      setAdScheduleStartTime(d.adScheduleStartTime || null);
-      setAdScheduleEndTime(d.adScheduleEndTime || null);
+        const restoredIds = new Set([job.id, ...failedBatchJobs.map((entry) => entry.id)]);
+        setCompletedJobs((prev) => prev.filter((entry) => !restoredIds.has(entry.id)));
+        toast.success(
+          batch.variants.length > 1
+            ? `All ${batch.variants.length} variants restored — review and resubmit when ready.`
+            : "Form restored — review and resubmit when ready.",
+        );
+        return;
+      }
 
-      if (d.adNameFormulaV2) setAdNameFormulaV2(d.adNameFormulaV2);
+      // Single job: restore only this variant's copy, targeting and media as the form.
+      // After a partial success, only the media and ad sets of the failed ads.
+      if (!job.formData) return;
+      const scoped = job.status === "partial-success" && job.restoreScope
+        ? scopeFormDataToFailedAds(job.formData, job.restoreScope, batch.configuration?.partnershipAdCodes || [])
+        : null;
+      const d = scoped ? scoped.formData : job.formData;
+      // A variant left untouched after an ad account switch has no snapshot of its own.
+      const variantSnapshot =
+        batch.variants.find((entry) => entry.id === job.variantId)?.snapshot ||
+        batch.variants.find((entry) => entry.id === batch.activeVariantId)?.snapshot;
+      restoreBatchSnapshot({
+        activeVariantId: "default",
+        variants: [{ id: "default", name: "Default", snapshot: withLaunchTargeting(variantSnapshot, d) }],
+        configuration: scoped
+          ? { ...batch.configuration, partnershipAdCodes: scoped.partnershipAdCodes }
+          : batch.configuration,
+        media: {
+          files: d.files || [],
+          driveFiles: d.driveFiles || [],
+          dropboxFiles: d.dropboxFiles || [],
+          frameioFiles: d.frameioFiles || [],
+          oneDriveFiles: d.oneDriveFiles || [],
+          importedFiles: d.importedFiles || [],
+          importedPosts: d.importedPosts || [],
+          selectedIgOrganicPosts: d.selectedIgOrganicPosts || [],
+          videoThumbs: d.videoThumbs || {},
+          thumbnail: d.thumbnail || null,
+          fileGroups: d.fileGroups || [],
+          fileVariantMap: {},
+          groupVariantMap: {},
+          postVariantMap: {},
+        },
+      });
+      restoreFormExtras(batch.formExtras);
 
-      setCompletedJobs((prev) => prev.filter((j) => j.id !== job.id));
-
-      toast.success("Form restored — review and resubmit when ready.");
+      setCompletedJobs((prev) => prev.filter((entry) => entry.id !== job.id));
+      if (scoped?.mayDuplicate) {
+        toast.warning("Failed ads restored. Some of them were already created in the same ad set (for example on another landing page) — check Ads Manager before resubmitting to avoid duplicates.");
+      } else {
+        toast.success(scoped ? "Failed ads restored — review and resubmit when ready." : "Form restored — review and resubmit when ready.");
+      }
     },
     [
-      setActiveVariantId,
-      setAdNameFormulaV2,
-      setAdScheduleEndTime,
-      setAdScheduleStartTime,
-      setAdType,
-      setCta,
-      setDescriptions,
-      setDestinationType,
-      setDiscloseAiMedia,
-      setDriveFiles,
-      setDropboxFiles,
-      setFrameioFiles,
-      setOneDriveFiles,
-      setDuplicateAdSet,
-      setEnablePlacementCustomization,
-      setFileGroups,
-      setFileVariantMap,
-      setFiles,
-      setGroupVariantMap,
-      setHeadlines,
-      setImportedFiles,
-      setImportedPosts,
-      setInstagramAccountId,
-      setInstantExperienceId,
-      setIsCarouselAd,
-      setIsPartnershipAd,
-      setLaunchPaused,
-      setLink,
-      setDisplayLink,
-      setMessages,
-      setNewAdSetName,
-      setNewAdSetSettings,
-      setPageId,
-      setPartnerFbPageId,
-      setPartnerIgAccountId,
-      setPartnershipIdentityMode,
-      setPartnershipPrimaryIdentity,
-      setPhoneNumber,
-      setPixelTrackingOverride,
-      setPostVariantMap,
-      setSelectedAdAccount,
-      setSelectedAdSets,
-      setSelectedCampaign,
-      setSelectedFiles,
-      setSelectedForm,
-      setSelectedIgOrganicPosts,
-      setSelectedShopDestination,
-      setSelectedShopDestinationType,
-      setSelectedTemplate,
-      setThumbnail,
-      setVariants,
-      setVideoThumbs,
+      getFullyFailedBatchJobs,
+      restoreBatchSnapshot,
+      setExtraLandingPages,
+      setImportedPostAdNames,
+      setPromoCodeAutoDetect,
+      setTestMultipleLps,
+      setWhatsAppWelcomeMessage,
     ],
   );
 
@@ -3439,6 +3515,8 @@ export default function AdCreationForm({
           message: cancelled
             ? "Shared ad set creation cancelled. No variant ads were launched. The ad set may already exist in Ads Manager."
             : `Could not create shared ad set: ${detail.replace(/\.+$/, "")}. No variant ads were launched.`,
+          batchId: jobToProcess.batchId,
+          batchSnapshot: jobToProcess.batchSnapshot,
           sharedAdSetJob: jobToProcess,
         });
         setJobQueue((previous) => previous.filter((job) => job.id !== jobToProcess.id));
@@ -3467,6 +3545,7 @@ export default function AdCreationForm({
           completedAt: Date.now(),
           status: "cancelled",
           formData: jobToProcess.formData,
+          ...getJobBatchFields(jobToProcess),
         };
         addCompletedJob(cancelledJob);
         setJobQueue((prev) => prev.slice(1));
@@ -3483,6 +3562,7 @@ export default function AdCreationForm({
         completedAt: Date.now(),
         status: "error",
         formData: jobToProcess.formData,
+        ...getJobBatchFields(jobToProcess),
       };
       addCompletedJob(failedJob);
       setJobQueue((prev) => prev.slice(1));
@@ -3540,6 +3620,7 @@ export default function AdCreationForm({
           message: trackedMessage,
           completedAt: Date.now(),
           status: "partial-success",
+          restoreScope: metaData.restoreScope,
           successCount: metaData.successCount,
           failureCount: metaData.failureCount,
           totalCount: metaData.totalCount,
@@ -3548,6 +3629,7 @@ export default function AdCreationForm({
           selectedAdSets: currentJob.formData.selectedAdSets,
           selectedAdAccount: currentJob.formData.selectedAdAccount,
           formData: currentJob.formData,
+          ...getJobBatchFields(currentJob),
         };
         addCompletedJob(completedJob);
         toast.warning(trackedMessage);
@@ -3565,6 +3647,7 @@ export default function AdCreationForm({
           selectedAdSets: currentJob.formData.selectedAdSets,
           selectedAdAccount: currentJob.formData.selectedAdAccount,
           formData: currentJob.formData,
+          ...getJobBatchFields(currentJob),
         };
         addCompletedJob(cancelledJob);
       } else {
@@ -3582,6 +3665,7 @@ export default function AdCreationForm({
           selectedAdSets: currentJob.formData.selectedAdSets,
           selectedAdAccount: currentJob.formData.selectedAdAccount,
           formData: currentJob.formData,
+          ...getJobBatchFields(currentJob),
         };
         addCompletedJob(failedJob);
         toast.error(`Job failed: ${trackedMessage || "An unknown error occurred."}`);
@@ -8090,7 +8174,7 @@ export default function AdCreationForm({
               appendMetaImageFile(formData, media.file);
             }
 
-            queueCreateAdPromise(formData, { fileName: media?.file?.name || "Catalogue Ad" });
+            queueCreateAdPromise(formData, { fileName: media?.file?.name || "Catalogue Ad", mediaKeys: media?.file ? getMediaRestoreKeys(media.file) : [ALL_MEDIA] });
             catalogueAdIndex += 1;
           });
         });
@@ -8171,7 +8255,7 @@ export default function AdCreationForm({
             if (adScheduleStartTime) formData.append("adScheduleStartTime", adScheduleStartTime);
             if (adScheduleEndTime) formData.append("adScheduleEndTime", adScheduleEndTime);
 
-            queueCreateAdPromise(formData, { fileName: post.ad_name });
+            queueCreateAdPromise(formData, { fileName: post.ad_name, mediaKeys: [`post:${post.id}`] });
           });
         });
       }
@@ -8217,7 +8301,7 @@ export default function AdCreationForm({
             if (adScheduleStartTime) formData.append("adScheduleStartTime", adScheduleStartTime);
             if (adScheduleEndTime) formData.append("adScheduleEndTime", adScheduleEndTime);
 
-            queueCreateAdPromise(formData, { fileName: igPost.ad_name });
+            queueCreateAdPromise(formData, { fileName: igPost.ad_name, mediaKeys: [`igpost:${igPost.source_instagram_media_id}`] });
           });
         });
       }
@@ -8267,7 +8351,7 @@ export default function AdCreationForm({
             if (adScheduleStartTime) formData.append("adScheduleStartTime", adScheduleStartTime);
             if (adScheduleEndTime) formData.append("adScheduleEndTime", adScheduleEndTime);
 
-            queueCreateAdPromise(formData, { fileName: adName });
+            queueCreateAdPromise(formData, { fileName: adName, mediaKeys: [`code:${String(adCode).trim()}`] });
           });
         });
       }
@@ -8474,7 +8558,7 @@ export default function AdCreationForm({
             // Shop destination
             appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
 
-            queueCreateAdPromise(formData, { fileName: group ? `Carousel Ad ${groupIndex + 1}` : carouselAdName });
+            queueCreateAdPromise(formData, { fileName: group ? `Carousel Ad ${groupIndex + 1}` : carouselAdName, mediaKeys: group ? [...getGroupFileIds(group)].map(String) : [ALL_MEDIA] });
           });
         });
       }
@@ -8564,7 +8648,7 @@ export default function AdCreationForm({
 
               // Append shop destination
               appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
-              queueCreateAdPromise(formData, { fileName: groupAdNames[groupIndex] });
+              queueCreateAdPromise(formData, { fileName: groupAdNames[groupIndex], mediaKeys: [...getGroupFileIds(group)].map(String) });
             });
           });
         } else {
@@ -8634,7 +8718,7 @@ export default function AdCreationForm({
 
             // Append shop destination
             appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
-            queueCreateAdPromise(formData);
+            queueCreateAdPromise(formData, { mediaKeys: [ALL_MEDIA] });
           });
         }
       }
@@ -8707,7 +8791,7 @@ export default function AdCreationForm({
 
           // Append shop destination
           appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
-          queueCreateAdPromise(formData);
+          queueCreateAdPromise(formData, { mediaKeys: [ALL_MEDIA] });
         });
       }
 
@@ -8866,7 +8950,7 @@ export default function AdCreationForm({
                 const skipped = Promise.reject(Object.assign(new Error(message), { response: { status: 400, data: { error: message } } }));
                 skipped.catch(() => {}); // Handled when the job's results are collected.
                 promises.push(skipped);
-                promiseMetadata.push({ adSetId, adName: groupedAdNames[groupIndex], fileName: groupedAdNames[groupIndex] });
+                promiseMetadata.push({ adSetId, adName: groupedAdNames[groupIndex], fileName: groupedAdNames[groupIndex], mediaKeys: [...getGroupFileIds(group)].map(String) });
                 localIterationIndex++;
                 return;
               }
@@ -8886,7 +8970,7 @@ export default function AdCreationForm({
               appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
               // Append has ungrouped files flag
               formData.append("hasUngroupedFiles", hasUngroupedFiles);
-              queueCreateAdPromise(formData, { fileName: groupedAdNames[groupIndex] });
+              queueCreateAdPromise(formData, { fileName: groupedAdNames[groupIndex], mediaKeys: [...getGroupFileIds(group)].map(String) });
               localIterationIndex++;
             });
           }
@@ -8985,7 +9069,7 @@ export default function AdCreationForm({
 
               // Append shop destination
               appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
-              queueCreateAdPromise(formData, { fileName: file.name });
+              queueCreateAdPromise(formData, { fileName: file.name, mediaKeys: getMediaRestoreKeys(file) });
             });
 
             // Handle small drive files
@@ -9024,7 +9108,7 @@ export default function AdCreationForm({
               // Append shop destination
               appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
 
-              queueCreateAdPromise(formData, { fileName: driveFile.name });
+              queueCreateAdPromise(formData, { fileName: driveFile.name, mediaKeys: getMediaRestoreKeys(driveFile) });
             });
 
             // Handle small dropbox files
@@ -9059,7 +9143,7 @@ export default function AdCreationForm({
               appendSingleDropboxFile(formData, dropboxFile);
               appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
 
-              queueCreateAdPromise(formData, { fileName: dropboxFile.name });
+              queueCreateAdPromise(formData, { fileName: dropboxFile.name, mediaKeys: getMediaRestoreKeys(dropboxFile) });
             });
 
             // Handle Frame.io image files (videos go through ungroupedS3Files below)
@@ -9094,7 +9178,7 @@ export default function AdCreationForm({
               appendSingleFrameioFile(formData, frameioFile);
               appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
 
-              queueCreateAdPromise(formData, { fileName: frameioFile.name });
+              queueCreateAdPromise(formData, { fileName: frameioFile.name, mediaKeys: getMediaRestoreKeys(frameioFile) });
             });
 
             // Handle OneDrive image files (videos go through ungroupedS3Files below)
@@ -9129,7 +9213,7 @@ export default function AdCreationForm({
               appendSingleOneDriveFile(formData, oneDriveFile);
               appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
 
-              queueCreateAdPromise(formData, { fileName: oneDriveFile.name });
+              queueCreateAdPromise(formData, { fileName: oneDriveFile.name, mediaKeys: getMediaRestoreKeys(oneDriveFile) });
             });
 
             // Handle S3 uploaded files
@@ -9168,7 +9252,7 @@ export default function AdCreationForm({
               // Append shop destination
               appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
 
-              queueCreateAdPromise(formData, { fileName: s3File.name || s3File.originalName || "S3 Video" });
+              queueCreateAdPromise(formData, { fileName: s3File.name || s3File.originalName || "S3 Video", mediaKeys: getMediaRestoreKeys(s3File) });
             });
 
             // Handle Meta library imported files
@@ -9219,7 +9303,7 @@ export default function AdCreationForm({
               appendMetaImageFile(formData, metaFile);
               appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
 
-              queueCreateAdPromise(formData, { fileName: metaFile.name });
+              queueCreateAdPromise(formData, { fileName: metaFile.name, mediaKeys: getMediaRestoreKeys(metaFile) });
             });
 
             // Handle Meta library videos
@@ -9254,7 +9338,7 @@ export default function AdCreationForm({
               appendMetaVideoFile(formData, metaFile);
               appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
 
-              queueCreateAdPromise(formData, { fileName: metaFile.name });
+              queueCreateAdPromise(formData, { fileName: metaFile.name, mediaKeys: getMediaRestoreKeys(metaFile) });
             });
           }
         });
@@ -9397,6 +9481,16 @@ export default function AdCreationForm({
             };
           });
         const requiresMetaAction = errorMessages.some((item) => item.errorCode === META_AD_CREATION_ACTION_REQUIRED);
+        // Which ad set + media each ad used, split by outcome, so "Restore to form"
+        // on a partial success brings back only what failed.
+        const restoreScope = promiseMetadata.reduce(
+          (scope, meta, index) => {
+            const entry = { adSetId: meta?.adSetId ? String(meta.adSetId) : "", mediaKeys: meta?.mediaKeys || [] };
+            scope[responses[index]?.status === "fulfilled" ? "succeeded" : "failed"].push(entry);
+            return scope;
+          },
+          { succeeded: [], failed: [] },
+        );
 
         let jobStatus = "complete";
         let jobMessage = "All ads created successfully!";
@@ -9468,7 +9562,7 @@ export default function AdCreationForm({
         return {
           status: jobStatus,
           message: jobMessage,
-          metaData: { successCount, failureCount, totalCount, errorMessages, successfulAdNames },
+          metaData: { successCount, failureCount, totalCount, errorMessages, successfulAdNames, restoreScope },
         };
       } catch (error) {
         console.error("Unexpected error:", error);
@@ -9805,12 +9899,30 @@ export default function AdCreationForm({
     }
 
     const shouldShowVariantLabel = newJobs.some((job) => job.variantId !== "default");
+    // One in-memory copy of the whole form per batch, shared by its jobs, so a failed
+    // job (or a fully failed batch) can be restored with every variant and its media.
+    const batchId = uuidv4();
+    const batchSnapshot = captureBatchSnapshot
+      ? {
+        ...captureBatchSnapshot(),
+        formExtras: {
+          importedPostAdNames: { ...importedPostAdNames },
+          promoCodeAutoDetect,
+          whatsAppWelcomeMessage,
+          testMultipleLps,
+          extraLandingPages: extraLandingPages.map((entry) => ({ ...entry })),
+        },
+      }
+      : null;
     const queuedJobs = newJobs.map((job) => {
       // Extra landing pages only apply to a single website link (not per-card carousel links).
       const jobExtraLandingPages =
         !isCatalogueAd && job.formData.destinationType === "website" && job.formData.link?.length === 1 ? extraLandingPageUrls : [];
       return {
         ...job,
+        batchId,
+        batchJobCount: newJobs.length,
+        batchSnapshot,
         adCount: job.adCount * (1 + jobExtraLandingPages.length),
         showVariantLabel: shouldShowVariantLabel,
         formData: {
@@ -9833,6 +9945,8 @@ export default function AdCreationForm({
         id: uuidv4(),
         kind: "shared-ad-set",
         createdAt: Date.now(),
+        batchId,
+        batchSnapshot,
         jobs: queuedJobs,
         defaultSnapshot: structuredClone(defaultSnapshot),
       }] : queuedJobs;
@@ -10180,23 +10294,19 @@ export default function AdCreationForm({
                             </TooltipProvider>
                           )}
 
-                          {job.sharedAdSetJob && (
-                            <button type="button" title="Retry shared ad set and variant batch"
+                          {job.sharedAdSetJob && job.batchSnapshot && (
+                            <button type="button" title="Restore all variants to form"
                               className="text-gray-500 hover:text-blue-500 transition-colors p-1"
-                              onClick={() => {
-                                setJobQueue((previous) => [...previous, { ...job.sharedAdSetJob, id: uuidv4() }]);
-                                setCompletedJobs((previous) => previous.filter((entry) => entry.id !== job.id));
-                                setIsJobTrackerExpanded(true);
-                              }}>
+                              onClick={() => handleRetryJob(job)}>
                               <RotateCcw className="h-4 w-4" />
                             </button>
                           )}
 
-                          {(job.status === "error" || job.status === "partial-success") && job.formData && (
+                          {(job.status === "error" || job.status === "partial-success") && job.formData && job.batchSnapshot && (
                             <button
                               onClick={() => handleRetryJob(job)}
                               className="text-gray-500 hover:text-blue-500 transition-colors p-1"
-                              title="Restore to form"
+                              title={getFullyFailedBatchJobs(job) && job.batchSnapshot.variants.length > 1 ? "Restore all variants to form" : "Restore to form"}
                             >
                               <RotateCcw className="h-4 w-4" />
                             </button>

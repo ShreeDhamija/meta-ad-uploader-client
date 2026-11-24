@@ -1781,6 +1781,103 @@ export default function Home() {
         setSelectedFiles(new Set());
     }, [hydrateFromSnapshot, selectedAdAccount, setDriveFiles, setDropboxFiles, setOneDriveFiles]);
 
+    // In-memory copy of the whole launcher (every variant, media and its variant
+    // assignment) taken when a batch is queued, so failed jobs can be restored.
+    // Media arrays are copied shallowly: File objects are references, not data.
+    const captureBatchSnapshot = useCallback(() => ({
+        activeVariantId,
+        variants: variants.map((variant) => ({
+            id: variant.id,
+            name: variant.name,
+            snapshot: variant.id === activeVariantId ? captureCurrentSnapshot() : cloneSnapshotValue(variant.snapshot),
+        })),
+        configuration: {
+            adType,
+            isCarouselAd,
+            enablePlacementCustomization,
+            useExistingPosts,
+            usePostID,
+            editAdCreativeMode,
+            shareNewAdSet,
+            partnershipSource,
+            partnershipAdCodes: [...partnershipAdCodes],
+            partnershipCodeCaptions: { ...partnershipCodeCaptions },
+        },
+        media: {
+            files: [...files],
+            driveFiles: [...driveFiles],
+            dropboxFiles: [...dropboxFiles],
+            frameioFiles: [...frameioFiles],
+            oneDriveFiles: [...oneDriveFiles],
+            importedFiles: [...importedFiles],
+            importedPosts: [...importedPosts],
+            selectedIgOrganicPosts: [...selectedIgOrganicPosts],
+            videoThumbs: { ...videoThumbs },
+            thumbnail,
+            fileGroups: fileGroups.map((group) => (Array.isArray(group) ? [...group] : { ...group, fileIds: [...(group.fileIds || [])] })),
+            fileVariantMap: { ...fileVariantMap },
+            groupVariantMap: { ...groupVariantMap },
+            postVariantMap: { ...postVariantMap },
+        },
+    }), [
+        activeVariantId, variants, captureCurrentSnapshot, adType, isCarouselAd, enablePlacementCustomization,
+        useExistingPosts, usePostID, editAdCreativeMode, shareNewAdSet, partnershipSource, partnershipAdCodes,
+        partnershipCodeCaptions, files, driveFiles, dropboxFiles, frameioFiles, oneDriveFiles, importedFiles,
+        importedPosts, selectedIgOrganicPosts, videoThumbs, thumbnail, fileGroups, fileVariantMap, groupVariantMap,
+        postVariantMap,
+    ]);
+
+    const restoreBatchSnapshot = useCallback((batch) => {
+        if (!batch?.variants?.length) return;
+        const activeId = batch.variants.some((variant) => variant.id === batch.activeVariantId)
+            ? batch.activeVariantId
+            : batch.variants[0].id;
+        const activeSnapshot = batch.variants.find((variant) => variant.id === activeId)?.snapshot;
+
+        // Restoring a batch from another ad account must not trigger the
+        // account-change reset, which would wipe the variant snapshots set below.
+        if (activeSnapshot?.selectedAdAccount) previousAdAccountRef.current = activeSnapshot.selectedAdAccount;
+
+        hydrateFromSnapshot(activeSnapshot);
+        setVariants(batch.variants.map((variant) => ({
+            id: variant.id,
+            name: variant.name,
+            snapshot: variant.id === activeId ? null : cloneSnapshotValue(variant.snapshot),
+        })));
+        setActiveVariantId(activeId);
+
+        const configuration = batch.configuration || {};
+        setAdType(configuration.adType || "regular");
+        setIsCarouselAd(Boolean(configuration.isCarouselAd));
+        setEnablePlacementCustomization(Boolean(configuration.enablePlacementCustomization));
+        setUseExistingPosts(Boolean(configuration.useExistingPosts));
+        setUsePostID(Boolean(configuration.usePostID));
+        setEditAdCreativeMode(Boolean(configuration.editAdCreativeMode));
+        if (configuration.shareNewAdSet !== undefined) setShareNewAdSet(Boolean(configuration.shareNewAdSet));
+        setPartnershipSource(configuration.partnershipSource || "creator");
+        setPartnershipAdCodes(configuration.partnershipAdCodes?.length ? [...configuration.partnershipAdCodes] : [""]);
+        setPartnershipCodeCaptions({ ...(configuration.partnershipCodeCaptions || {}) });
+
+        const media = batch.media || {};
+        setFiles([...(media.files || [])]);
+        setDriveFiles([...(media.driveFiles || [])]);
+        setDropboxFiles([...(media.dropboxFiles || [])]);
+        setFrameioFiles([...(media.frameioFiles || [])]);
+        setOneDriveFiles([...(media.oneDriveFiles || [])]);
+        setImportedFiles([...(media.importedFiles || [])]);
+        setImportedPosts([...(media.importedPosts || [])]);
+        setSelectedIgOrganicPosts([...(media.selectedIgOrganicPosts || [])]);
+        setVideoThumbs({ ...(media.videoThumbs || {}) });
+        setThumbnail(media.thumbnail || null);
+        setFileGroups((media.fileGroups || []).map((group) => (
+            Array.isArray(group) ? { id: uuidv4(), fileIds: [...group] } : { ...group, fileIds: [...(group.fileIds || [])] }
+        )));
+        setFileVariantMap({ ...(media.fileVariantMap || {}) });
+        setGroupVariantMap({ ...(media.groupVariantMap || {}) });
+        setPostVariantMap({ ...(media.postVariantMap || {}) });
+        setSelectedFiles(new Set());
+    }, [hydrateFromSnapshot, setDriveFiles, setDropboxFiles, setOneDriveFiles]);
+
     const handleAddVariant = useCallback(() => {
         const usedLetters = new Set(
             variants
@@ -2588,6 +2685,8 @@ export default function Home() {
                             onAdLaunchInProgressChange={setAdLaunchInProgress}
                             onSaveDraft={saveCurrentDraft}
                             onRestoreDraft={restoreDraftToForm}
+                            captureBatchSnapshot={captureBatchSnapshot}
+                            restoreBatchSnapshot={restoreBatchSnapshot}
                             showVariantOverview={showVariantOverview}
                             onToggleVariantOverview={toggleVariantOverview}
                             variantOverviewHost={variantOverviewHost}
