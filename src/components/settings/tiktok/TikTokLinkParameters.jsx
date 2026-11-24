@@ -11,6 +11,7 @@ import {
     CommandList,
 } from "@/components/ui/command"
 import { toast } from "sonner";
+import { RotateLoader } from "react-spinners";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
