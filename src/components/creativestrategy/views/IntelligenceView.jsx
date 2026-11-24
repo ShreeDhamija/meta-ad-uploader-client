@@ -16,6 +16,7 @@ import { humanize } from "../JsonView";
 import { CsScrollArea, EmptyState, ErrorBanner, PartialResultsNotice, ProgressiveSection } from "../ui";
 import { useJobRunner } from "../JobsContext";
 import { SpendCpaChart, TopPerformers } from "./InsightsPerformance";
+import { AdMediaPlayer, AdMediaProvider, AdThumbImg } from "../meta-media";
 
 const money = (n) => `$${Math.round(n || 0).toLocaleString()}`;
 const mean = (arr) => (arr.length ? arr.reduce((s, x) => s + x, 0) / arr.length : null);
@@ -125,6 +126,7 @@ export default function IntelligenceView({ ctx }) {
   }, {});
 
   return (
+    <AdMediaProvider key={selectedProductId || "none"} productId={selectedProductId}>
     <div className="space-y-5">
       {renderHeaderActions(
         <div className="flex items-center gap-3">
@@ -212,6 +214,7 @@ export default function IntelligenceView({ ctx }) {
       )}
       <AdDetailDrawer ad={drawerAd} onClose={() => setDrawerAd(null)} />
     </div>
+    </AdMediaProvider>
   );
 }
 
@@ -467,7 +470,7 @@ function HookDetails({ hook, variant = "inline" }) {
   return <div className={`cs-intel-hook-details ${drawer ? "is-drawer" : ""}`}>
     {drawer ? <section className="cs-intel-detail-section is-first cs-ad-drawer__overview">
       <div className="cs-ad-drawer__media">
-        {hook.imageUrl || hook.thumbnailUrl ? <img src={hook.imageUrl || hook.thumbnailUrl} alt="" /> : <div className="cs-ad-drawer__media-empty"><Zap className="h-6 w-6" /></div>}
+        <AdMediaPlayer ad={hook} fallback={<div className="cs-ad-drawer__media-empty"><Zap className="h-6 w-6" /></div>} />
       </div>
       <div className="min-w-0 space-y-3">
         {hook.hookText && <div><p className="cs-intel-field-label">Hook</p><p className="cs-ad-drawer__hook">“{hook.hookText}”</p></div>}
@@ -478,7 +481,7 @@ function HookDetails({ hook, variant = "inline" }) {
       </div>
     </section> : <section className="cs-intel-detail-section is-first cs-hook-overview">
       <div className="cs-hook-overview__thumb">
-        <CreativeThumbnail src={hook.imageUrl || hook.thumbnailUrl} variant="card" />
+        <CreativeThumbnail ad={hook} variant="card" />
       </div>
       <div className="cs-hook-overview__body">
         <p className="cs-intel-field-label">Ad name</p>
@@ -579,7 +582,7 @@ function MessagingThemesSection({ themes, ads }) {
       const open = expanded === index;
       return <div key={`${theme.theme}-${index}`} className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
         <button type="button" onClick={() => setExpanded(open ? null : index)} className="flex w-full items-start gap-3 p-3 text-left">
-          <CreativeThumbnail src={theme.repAd?.imageUrl || theme.repAd?.thumbnailUrl} />
+          <CreativeThumbnail ad={theme.repAd} />
           <div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><strong className="text-sm text-neutral-800">{theme.theme}</strong>{theme.proven && <Badge variant="secondary" className="text-[9px] text-emerald-700">Proven</Badge>}</div>
             <p className="mt-1 text-[13px] leading-relaxed text-neutral-600">{theme.description}</p>
             <MetricPills className="mt-2" items={[`${money(theme.spend)} spend`, `${theme.matchedAds.length} ads`, theme.cpa ? `${money(theme.cpa)} CPA` : null, theme.awareness_level && humanize(theme.awareness_level)]} />
@@ -643,7 +646,7 @@ function RecentLaunches({ ads }) {
   return <Block title="Recent launches · last 14 days"><CsScrollArea axis="x"><div className="flex gap-3 pb-3">{ads.map((ad) => {
     const days = Math.max(0, Math.floor((Date.now() - new Date(ad.createdTime).getTime()) / 86400000));
     const src = ad.imageUrl || ad.thumbnailUrl;
-    return <div key={ad.adId} className="w-[112px] shrink-0 overflow-hidden rounded-xl border border-neutral-200"><div className="relative aspect-[9/16] bg-neutral-100">{src ? <img src={src} alt="" className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center text-neutral-400"><Zap className="h-5 w-5" /></div>}<Badge className="absolute left-1.5 top-1.5 px-1.5 text-[9px]">{days === 0 ? "Today" : days === 1 ? "Yesterday" : `${days}d ago`}</Badge><Badge variant="outline" className="absolute bottom-1.5 left-1.5 border-white/30 bg-black/50 px-1.5 text-[9px] text-white">{ad.mediaType === "video" ? "Video" : "Static"}</Badge></div><div className="p-2"><strong className="block truncate text-xs">{ad.adName || "Unnamed"}</strong><p className="mt-1 text-[10px] text-neutral-400">{money(ad.spend)} spend{ad.costPerPurchase ? ` · ${money(ad.costPerPurchase)} CPA` : ""}{ad.purchases > 0 ? ` · ${ad.purchases} purchases` : ""}{ad.hookRate > 0 ? ` · ${(ad.hookRate * 100).toFixed(1)}% HR` : ""}</p></div></div>;
+    return <div key={ad.adId} className="w-[112px] shrink-0 overflow-hidden rounded-xl border border-neutral-200"><div className="relative aspect-[9/16] bg-neutral-100"><AdThumbImg ad={ad} src={src} className="h-full w-full object-cover" fallback={<div className="flex h-full w-full items-center justify-center text-neutral-400"><Zap className="h-5 w-5" /></div>} /><Badge className="absolute left-1.5 top-1.5 px-1.5 text-[9px]">{days === 0 ? "Today" : days === 1 ? "Yesterday" : `${days}d ago`}</Badge><Badge variant="outline" className="absolute bottom-1.5 left-1.5 border-white/30 bg-black/50 px-1.5 text-[9px] text-white">{ad.mediaType === "video" ? "Video" : "Static"}</Badge></div><div className="p-2"><strong className="block truncate text-xs">{ad.adName || "Unnamed"}</strong><p className="mt-1 text-[10px] text-neutral-400">{money(ad.spend)} spend{ad.costPerPurchase ? ` · ${money(ad.costPerPurchase)} CPA` : ""}{ad.purchases > 0 ? ` · ${ad.purchases} purchases` : ""}{ad.hookRate > 0 ? ` · ${(ad.hookRate * 100).toFixed(1)}% HR` : ""}</p></div></div>;
   })}</div></CsScrollArea></Block>;
 }
 RecentLaunches.propTypes = { ads: PropTypes.array.isRequired };
@@ -653,7 +656,7 @@ function VisualOpenersSection({ openers, ads }) {
   const byName = new Map(ads.map((ad) => [ad.adName, ad]));
   return <InsightSection title="Visual openers"><p className="mb-3 text-[13px] text-neutral-500">Video ads — what appears in the first 2–5 seconds</p><div className="cs-intel-opener-grid">{openers.map((opener, index) => {
     const examples = (opener.example_ad_names || []).map((name) => byName.get(name)).filter(Boolean);
-    return <div key={index} className="cs-intel-content-card"><strong className="text-[15px] text-neutral-800">{opener.pattern_name || opener.trend_name}</strong><p className="mt-1 text-[13px] leading-relaxed text-neutral-600">{opener.visual_description || opener.opening_description}</p><MetricPills className="mt-2" items={[`${opener.ad_count || examples.length} ads`, `${Math.round(opener.spend_pct || 0)}% spend`]} /><div className="cs-intel-tag-row mt-2">{[opener.talent_type, opener.camera_style, opener.environment].filter(Boolean).map((tag, tagIndex) => <span key={tag} className={`cs-intel-attribute-pill is-tone-${tagIndex % 4}`}>{tag}</span>)}</div>{examples.length > 0 && <CsScrollArea axis="x" className="mt-[13px]"><div className="cs-intel-opener-thumbnails">{examples.slice(0, 5).map((ad) => <CreativeThumbnail key={ad.adId} src={ad.imageUrl || ad.thumbnailUrl} variant="opener" />)}</div></CsScrollArea>}</div>;
+    return <div key={index} className="cs-intel-content-card"><strong className="text-[15px] text-neutral-800">{opener.pattern_name || opener.trend_name}</strong><p className="mt-1 text-[13px] leading-relaxed text-neutral-600">{opener.visual_description || opener.opening_description}</p><MetricPills className="mt-2" items={[`${opener.ad_count || examples.length} ads`, `${Math.round(opener.spend_pct || 0)}% spend`]} /><div className="cs-intel-tag-row mt-2">{[opener.talent_type, opener.camera_style, opener.environment].filter(Boolean).map((tag, tagIndex) => <span key={tag} className={`cs-intel-attribute-pill is-tone-${tagIndex % 4}`}>{tag}</span>)}</div>{examples.length > 0 && <CsScrollArea axis="x" className="mt-[13px]"><div className="cs-intel-opener-thumbnails">{examples.slice(0, 5).map((ad) => <CreativeThumbnail key={ad.adId} ad={ad} variant="opener" />)}</div></CsScrollArea>}</div>;
   })}</div></InsightSection>;
 }
 VisualOpenersSection.propTypes = { openers: PropTypes.any, ads: PropTypes.array.isRequired };
@@ -671,7 +674,7 @@ function MessagingTrendsSection({ trends, ads }) {
   const max = Math.max(...normalized.map((trend) => Number(trend.spend_pct || 0)), 1);
   return <InsightSection title="Messaging trends" tone="orange"><div className="space-y-3">{normalized.map((trend, index) => {
     const examples = (trend.examples || []).map((name) => byName.get(name)).filter(Boolean);
-    return <div key={index} className="cs-intel-content-card"><strong className="text-[15px] text-neutral-800">{trend.trend}</strong>{trend.description && <p className="mt-1 text-[13px] leading-relaxed text-neutral-600">{trend.description}</p>}<div className="cs-intel-spend-bar mt-3"><div style={{ width: `${Math.max((Number(trend.spend_pct || 0) / max) * 100, 3)}%` }} /></div><MetricPills className="mt-2" items={[`${trend.ad_count || examples.length} ads`, `${Number(trend.spend_pct || 0).toFixed(1)}% spend`]} />{examples.length > 0 && <CsScrollArea axis="x" className="mt-[13px]"><div className="cs-intel-opener-thumbnails">{examples.slice(0, 4).map((ad) => <CreativeThumbnail key={ad.adId} src={ad.imageUrl || ad.thumbnailUrl} variant="opener" />)}</div></CsScrollArea>}</div>;
+    return <div key={index} className="cs-intel-content-card"><strong className="text-[15px] text-neutral-800">{trend.trend}</strong>{trend.description && <p className="mt-1 text-[13px] leading-relaxed text-neutral-600">{trend.description}</p>}<div className="cs-intel-spend-bar mt-3"><div style={{ width: `${Math.max((Number(trend.spend_pct || 0) / max) * 100, 3)}%` }} /></div><MetricPills className="mt-2" items={[`${trend.ad_count || examples.length} ads`, `${Number(trend.spend_pct || 0).toFixed(1)}% spend`]} />{examples.length > 0 && <CsScrollArea axis="x" className="mt-[13px]"><div className="cs-intel-opener-thumbnails">{examples.slice(0, 4).map((ad) => <CreativeThumbnail key={ad.adId} ad={ad} variant="opener" />)}</div></CsScrollArea>}</div>;
   })}</div></InsightSection>;
 }
 MessagingTrendsSection.propTypes = { trends: PropTypes.any, ads: PropTypes.array.isRequired };
@@ -699,7 +702,7 @@ function UntappedAnglesSection({ audit }) {
 UntappedAnglesSection.propTypes = { audit: PropTypes.object.isRequired };
 
 function AdEvidenceCard({ ad }) {
-  return <div className="cs-intel-evidence-card"><CreativeThumbnail src={ad.imageUrl || ad.thumbnailUrl} /><div className="min-w-0 flex-1"><strong className="block truncate text-[13px] text-neutral-800">{ad.adName || "Unnamed"}</strong><MetricPills className="mt-1.5" compact items={[`${money(ad.spend)} spend`, ad.costPerPurchase ? `${money(ad.costPerPurchase)} CPA` : null, ad.hookRate > 0 ? `${(ad.hookRate * 100).toFixed(1)}% HR` : null]} /></div><MediaTag mediaType={ad.mediaType} /></div>;
+  return <div className="cs-intel-evidence-card"><CreativeThumbnail ad={ad} /><div className="min-w-0 flex-1"><strong className="block truncate text-[13px] text-neutral-800">{ad.adName || "Unnamed"}</strong><MetricPills className="mt-1.5" compact items={[`${money(ad.spend)} spend`, ad.costPerPurchase ? `${money(ad.costPerPurchase)} CPA` : null, ad.hookRate > 0 ? `${(ad.hookRate * 100).toFixed(1)}% HR` : null]} /></div><MediaTag mediaType={ad.mediaType} /></div>;
 }
 AdEvidenceCard.propTypes = { ad: PropTypes.object.isRequired };
 
@@ -801,13 +804,11 @@ function parseTranscript(transcript, fallbackFirstSentence) {
   return out;
 }
 
-function CreativeThumbnail({ src, variant = "compact" }) {
+function CreativeThumbnail({ ad, variant = "compact" }) {
   const className = `cs-intel-thumbnail is-${variant}`;
-  return src
-    ? <img src={src} alt="" className={className} />
-    : <div className={`${className} is-empty`}><Zap className="h-5 w-5" /></div>;
+  return <AdThumbImg ad={ad} className={className} fallback={<div className={`${className} is-empty`}><Zap className="h-5 w-5" /></div>} />;
 }
-CreativeThumbnail.propTypes = { src: PropTypes.string, variant: PropTypes.oneOf(["compact", "card", "opener", "performer"]) };
+CreativeThumbnail.propTypes = { ad: PropTypes.object, variant: PropTypes.oneOf(["compact", "card", "opener", "performer"]) };
 
 function AngleGroups({ groups, ads }) {
   const [selectedAngle, setSelectedAngle] = useState(null);
@@ -844,7 +845,7 @@ function AngleGroups({ groups, ads }) {
           <DialogHeader><DialogTitle>{selectedAngle?.name}</DialogTitle><DialogDescription>Ads using this proven angle</DialogDescription></DialogHeader>
           <CsScrollArea viewportClassName="max-h-[65vh]"><div className="grid gap-4 pr-3 sm:grid-cols-2">
             {matchingAds.length ? matchingAds.map((ad) => <article key={ad.adId} className="rounded-2xl border border-orange-100 bg-white p-3">
-              <div className="rounded-xl bg-stone-100 overflow-hidden">{ad.imageUrl || ad.thumbnailUrl ? <img src={ad.imageUrl || ad.thumbnailUrl} alt={ad.adName || "Ad preview"} className="h-64 w-full object-contain" loading="lazy" /> : <div className="grid h-40 place-items-center text-xs text-stone-400">Preview unavailable</div>}</div>
+              <div className="rounded-xl bg-stone-100 overflow-hidden"><AdThumbImg ad={ad} alt={ad.adName || "Ad preview"} className="h-64 w-full object-contain" loading="lazy" fallback={<div className="grid h-40 place-items-center text-xs text-stone-400">Preview unavailable</div>} /></div>
               <h3 className="mt-3 text-sm font-semibold text-stone-800">{ad.adName || "Unnamed ad"}</h3>
               <MetricPills className="mt-2" items={[`${money(ad.spend)} spend`, ad.mediaType === "video" ? "Video" : "Static"]} />
               {(ad.firstSpokenSentence || ad.firstOverlayHeadline || ad.headlineText) && <p className="mt-3 text-sm text-stone-700">{ad.firstSpokenSentence || ad.firstOverlayHeadline || ad.headlineText}</p>}

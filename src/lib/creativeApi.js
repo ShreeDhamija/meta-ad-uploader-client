@@ -71,6 +71,8 @@ export const creativeApi = {
   getInsights: (productId) => request(`/insights?productId=${encodeURIComponent(productId)}`),
   getInsightAd: (productId, adId) => request(`/insights/ad?productId=${encodeURIComponent(productId)}&adId=${encodeURIComponent(adId)}`),
   getAngles: (productId) => request(`/insights/angles?productId=${encodeURIComponent(productId)}`),
+  refreshAdThumbnails: (productId, adIds) => request("/insights/thumbnails", { method: "POST", body: { productId, adIds } }),
+  getAdVideo: (productId, adId, fresh = false) => request("/insights/video", { method: "POST", body: { productId, adId, fresh } }),
   runTrending: (productId) => request("/insights/trending/run", { method: "POST", body: { productId } }),
   getMonthlyReview: (productId) => request(`/monthly-review?productId=${encodeURIComponent(productId)}`),
   runMonthlyReview: (productId) => request("/monthly-review/run", { method: "POST", body: { productId } }),
@@ -83,7 +85,8 @@ export const creativeApi = {
   runResearch: (productId, aiSelections) => request("/research/run", { method: "POST", body: { productId, aiSelections } }),
   getResearch: (productId) => request(`/research?productId=${encodeURIComponent(productId)}`),
   expandPersona: (body) => request("/research/persona/expand", { method: "POST", body }),
-  runLibrary: (productId, aiSelections) => request("/library/run", { method: "POST", body: { productId, aiSelections } }),
+  // itemTypes: optional subset of ["hook", "headline", "primary_text"]; omitted = full library.
+  runLibrary: (productId, aiSelections, itemTypes) => request("/library/run", { method: "POST", body: { productId, aiSelections, ...(itemTypes ? { itemTypes } : {}) } }),
   getLibrary: (productId) => request(`/library?productId=${encodeURIComponent(productId)}`),
   setLibraryStatus: (id, status) => request(`/library/${encodeURIComponent(id)}/status`, { method: "POST", body: { status } }),
   getVisualSources: (productId) => request(`/generate/visual-sources?productId=${encodeURIComponent(productId)}`),

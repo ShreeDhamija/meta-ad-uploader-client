@@ -84,7 +84,35 @@ function useGenerationHistory(productId, kind) {
     }
   };
 
-  return { batches, loading, error, nextOffset, loadMore, retry: () => setReload((value) => value + 1) };
+  // After a run: fetch the newest page and put batches not shown yet on top,
+  // keeping everything already loaded (older pages included) in place.
+  const refreshLatest = async () => {
+    if (!productId) return;
+    try {
+      const response = await creativeApi.getGenerationHistory(productId, kind);
+      if (batches.length === 0) {
+        setBatches(response.batches || []);
+        setNextOffset(response.nextOffset);
+        setError(null);
+        return;
+      }
+      const ids = new Set(batches.map((batch) => batch.id));
+      const fresh = (response.batches || []).filter((batch) => !ids.has(batch.id));
+      if (fresh.length) {
+        setBatches((current) => {
+          const shown = new Set(current.map((batch) => batch.id));
+          return [...fresh.filter((batch) => !shown.has(batch.id)), ...current];
+        });
+        // New rows shift the server's paging; move the cursor past them.
+        setNextOffset((offset) => (offset == null ? null : offset + fresh.length));
+      }
+      setError(null);
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  return { batches, loading, error, nextOffset, loadMore, refreshLatest, retry: () => setReload((value) => value + 1) };
 }
 
 const isJobActive = (job) => Boolean(job) && (job.status == null || job.status === "queued" || job.status === "running");
@@ -157,6 +185,29 @@ export default function GenerateView({ ctx }) {
     }
   };
 
+  // After a run: put the new images on top of what is already loaded (older
+  // pages included) instead of reloading the grid from page one.
+  const loadLatest = async (productId) => {
+    if (!productId) return;
+    if (items.length === 0) { await load(productId); return; }
+    const requestId = staticRequest.current;
+    try {
+      const response = await creativeApi.getGenerated(productId, 0);
+      if (requestId !== staticRequest.current) return;
+      const ids = new Set(items.map((item) => item.id));
+      const fresh = (response.items || []).filter((item) => !ids.has(item.id));
+      if (!fresh.length) return;
+      setItems((current) => {
+        const shown = new Set(current.map((item) => item.id));
+        return [...fresh.filter((item) => !shown.has(item.id)), ...current];
+      });
+      // New rows shift the server's paging; move the cursor past them.
+      setNextStaticOffset((offset) => (offset == null ? null : offset + fresh.length));
+    } catch (error) {
+      if (requestId === staticRequest.current) setErr(error.message);
+    }
+  };
+
   useEffect(() => {
     setFormatsLoading(true);
     creativeApi.getFormats()
@@ -182,7 +233,7 @@ export default function GenerateView({ ctx }) {
     productId: selectedProductId,
     enabled: Boolean(selectedProductId),
     restoreFinished: false,
-    onComplete: () => load(selectedProductId),
+    onComplete: () => loadLatest(selectedProductId),
   });
 
   const handleVisualChange = useCallback((selection) => {
@@ -425,12 +476,15 @@ export default function GenerateView({ ctx }) {
             <WorkspaceEmpty icon={Box} title="Select a product" hint="Choose a brand and product above to configure and generate static ads." />
           ) : formatsLoading || (generatedLoading && imageItems.length === 0) ? (
             <GenerateLoading label={formatsLoading ? "Loading generation options…" : "Loading previous images…"} />
-          ) : generationActive ? (
+          ) : generationActive && imageItems.length === 0 ? (
             <GenerateLoading label="Generating static variations…" />
           ) : imageItems.length === 0 ? (
             <WorkspaceEmpty icon={Flame} title="No generated ads yet" hint="Choose your settings in the sidebar and generate the first variations." />
           ) : (
-            <GenerationGrid items={imageItems} rate={rate} selecting={Boolean(bulkAction)} selected={selectedImages} toggle={toggleImage} disabled={bulkBusy} />
+            <>
+              {generationActive && <GeneratingNotice label="Generating static variations… new images will appear at the top." />}
+              <GenerationGrid items={imageItems} rate={rate} selecting={Boolean(bulkAction)} selected={selectedImages} toggle={toggleImage} disabled={bulkBusy} />
+            </>
           )}
           {nextStaticOffset != null && !generationActive && (
             <button type="button" onClick={() => load(selectedProductId, nextStaticOffset)} disabled={generatedLoading || bulkBusy} className="cs-library-action mt-4 self-start">
@@ -462,7 +516,7 @@ function ScriptsPanel({ productId }) {
   // tracker; the saved scripts load into the history when it finishes.
   const { job, start } = useJobRunner({
     kind: "generate_scripts", productId, enabled: Boolean(productId), restoreFinished: false,
-    onComplete: () => history.retry(),
+    onComplete: () => history.refreshLatest(),
   });
   const busy = starting || isJobActive(job);
   const runningCount = job?.progress?.total || count;
@@ -537,12 +591,13 @@ function ScriptsPanel({ productId }) {
         <WorkspaceEmpty icon={Box} title="Select a product" hint="Choose a product above before generating a video script." />
       ) : history.loading && batches.length === 0 ? (
         <GenerateLoading label="Loading saved scripts…" />
-      ) : busy ? (
+      ) : busy && batches.length === 0 ? (
         <GenerateLoading label={`Writing ${runningCount} video script${runningCount === 1 ? "" : "s"}…`} />
       ) : batches.length === 0 ? (
         <WorkspaceEmpty icon={FileText} title="Video script generation" hint="Generate a concept-led video ad script with three opening hooks." />
       ) : (
         <div className="space-y-5">
+          {busy && <GeneratingNotice label={`Writing ${runningCount} video script${runningCount === 1 ? "" : "s"}… they will appear at the top.`} />}
           {batches.map((batch, batchIndex) => (
             <GenerationBatch key={batch.id} createdAt={batch.createdAt} isLatest={batchIndex === 0} legacyWeekly={batch.legacyWeekly} productUnspecified={batch.productUnspecified}>
               <div className="space-y-7">
@@ -595,7 +650,7 @@ function BriefPanel({ productId }) {
   const [err, setErr] = useState(null);
   const { job, start } = useJobRunner({
     kind: "generate_brief", productId, enabled: Boolean(productId), restoreFinished: false,
-    onComplete: () => history.retry(),
+    onComplete: () => history.refreshLatest(),
   });
   const busy = starting || isJobActive(job);
 
@@ -635,12 +690,13 @@ function BriefPanel({ productId }) {
         <WorkspaceEmpty icon={Box} title="Select a product" hint="Choose a product above before generating a brief." />
       ) : history.loading && batches.length === 0 ? (
         <GenerateLoading label="Loading saved briefs…" />
-      ) : busy ? (
+      ) : busy && batches.length === 0 ? (
         <GenerateLoading label={"Building the creative brief…"} />
       ) : batches.length === 0 ? (
         <WorkspaceEmpty icon={ClipboardList} title="No brief generated yet" hint="Choose a format and add optional direction in the sidebar." />
       ) : (
         <div className="space-y-5">
+          {busy && <GeneratingNotice label="Building the creative brief… it will appear at the top." />}
           {batches.map((batch, batchIndex) => {
             const concept = batch.data?.concept;
             const brief = batch.data?.brief;
@@ -709,6 +765,16 @@ function GenerateLoading({ label }) {
   return (
     <div className="flex min-h-[420px] flex-col items-center justify-center gap-3 text-sm text-neutral-500">
       <Loader2 className="h-6 w-6 animate-spin text-[#6c3403]" />
+      <span>{label}</span>
+    </div>
+  );
+}
+
+// Shown above existing results while a run is in progress, so they stay visible.
+function GeneratingNotice({ label }) {
+  return (
+    <div role="status" className="mb-4 flex items-center gap-2 rounded-2xl border border-[#6c3403]/25 bg-[#ffe9d6] px-4 py-3 text-xs font-medium text-[#6c3403]">
+      <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
       <span>{label}</span>
     </div>
   );
@@ -899,6 +965,7 @@ GenerateView.propTypes = { ctx: PropTypes.object.isRequired };
 GenerateWorkspace.propTypes = { sidebarFooter: PropTypes.node, sidebar: PropTypes.node.isRequired, children: PropTypes.node.isRequired, isStatics: PropTypes.bool, footer: PropTypes.node };
 WorkspaceEmpty.propTypes = { icon: PropTypes.elementType.isRequired, title: PropTypes.string.isRequired, hint: PropTypes.string.isRequired };
 GenerateLoading.propTypes = { label: PropTypes.string.isRequired };
+GeneratingNotice.propTypes = { label: PropTypes.string.isRequired };
 SidebarSelect.propTypes = { label: PropTypes.string.isRequired, value: PropTypes.string.isRequired, onChange: PropTypes.func.isRequired, options: PropTypes.array.isRequired };
 SidebarNumber.propTypes = { label: PropTypes.string.isRequired, value: PropTypes.number.isRequired, min: PropTypes.number.isRequired, max: PropTypes.number.isRequired, onChange: PropTypes.func.isRequired };
 SidebarLoading.propTypes = { label: PropTypes.string.isRequired };

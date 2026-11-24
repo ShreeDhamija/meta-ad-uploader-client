@@ -9,6 +9,7 @@ import { ScatterChart, Scatter, XAxis, YAxis, ZAxis, Tooltip, ResponsiveContaine
 import { AlertTriangle, ChevronLeft, ChevronRight, Flame, Play, Search, X, Zap } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CsScrollArea } from "../ui";
+import { AdThumbImg } from "../meta-media";
 
 const VIDEO_COLOR = "#2563eb";
 const STATIC_COLOR = "#f59e0b";
@@ -77,9 +78,8 @@ function ScatterTooltip({ active, payload }) {
   const d = payload[0].payload;
   return (
     <div className="flex max-w-[340px] gap-2.5 rounded-lg border border-neutral-200 bg-white p-2 text-xs shadow-md">
-      {d.thumb
-        ? <img src={d.thumb} alt="" className="h-20 w-14 shrink-0 rounded object-cover bg-neutral-100" />
-        : <div className="grid h-20 w-14 shrink-0 place-items-center rounded bg-neutral-100 text-neutral-400"><Zap className="h-4 w-4" /></div>}
+      <AdThumbImg ad={d} src={d.thumb} className="h-20 w-14 shrink-0 rounded object-cover bg-neutral-100"
+        fallback={<div className="grid h-20 w-14 shrink-0 place-items-center rounded bg-neutral-100 text-neutral-400"><Zap className="h-4 w-4" /></div>} />
       <div className="min-w-0">
         {/* Full name, wrapped — ad names are long and often differ only at the end. */}
         <p className="break-words font-medium text-neutral-800">{d.name}</p>
@@ -99,7 +99,7 @@ export function SpendCpaChart({ ads }) {
     .map((ad) => {
       const cpa = cpaOf(ad);
       if (cpa == null) return null;
-      return { name: ad.adName || "Unnamed", spend: num(ad.spend), cpa, conversions: num(ad.purchases),
+      return { adId: ad.adId, name: ad.adName || "Unnamed", spend: num(ad.spend), cpa, conversions: num(ad.purchases),
         thumb: thumbOf(ad), fill: isVideoAd(ad) ? VIDEO_COLOR : STATIC_COLOR };
     })
     .filter(Boolean), [ads]);
@@ -176,7 +176,7 @@ function cpaTone(cpa, avgCpa) {
 }
 
 /** Loads the image only once the card is near the visible part of the strip. */
-function LazyThumb({ root, src }) {
+function LazyThumb({ root, ad, src }) {
   const ref = useRef(null);
   const [visible, setVisible] = useState(false);
   useEffect(() => {
@@ -188,9 +188,10 @@ function LazyThumb({ root, src }) {
     io.observe(el);
     return () => io.disconnect();
   }, [root, visible]);
-  return <div ref={ref} className="h-full w-full">{visible && <img src={src} alt="" loading="lazy" className="h-full w-full object-cover" />}</div>;
+  return <div ref={ref} className="h-full w-full">{visible && <AdThumbImg ad={ad} src={src} loading="lazy" className="h-full w-full object-cover"
+    fallback={<div className="grid h-full w-full place-items-center text-[#c9a891]"><Zap className="h-5 w-5" /></div>} />}</div>;
 }
-LazyThumb.propTypes = { root: PropTypes.object, src: PropTypes.string.isRequired };
+LazyThumb.propTypes = { root: PropTypes.object, ad: PropTypes.object, src: PropTypes.string.isRequired };
 
 function Stat({ label, value, muted = false }) {
   return (
@@ -215,7 +216,7 @@ function PerformerCard({ ad, rank, avgCpa, root, onOpen, openDetails = false }) 
   return (
     <article className="cs-top-card">
       <button type="button" onClick={() => onOpen(ad)} disabled={!thumb && !openDetails} className="cs-top-card__media" aria-label={`${openDetails ? "Open details for" : "Preview"} ${ad.adName || "ad"}`}>
-        {thumb ? <LazyThumb root={root} src={thumb} /> : <div className="grid h-full w-full place-items-center text-[#c9a891]"><Zap className="h-5 w-5" /></div>}
+        {thumb ? <LazyThumb root={root} ad={ad} src={thumb} /> : <div className="grid h-full w-full place-items-center text-[#c9a891]"><Zap className="h-5 w-5" /></div>}
         {video && thumb && <span className="cs-top-card__play"><Play className="ml-0.5 h-3.5 w-3.5 fill-white text-white" /></span>}
         <span className="cs-top-card__rank">{rank}</span>
         <span className="cs-top-card__format">{video ? "Video" : "Static"}</span>
@@ -441,7 +442,7 @@ export function TopPerformers({ ads, trending = [], trendingRefreshing = false, 
           <div className="absolute inset-0 bg-black/45 backdrop-blur-[1px]" />
           <div className="cs-top-preview" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={expanded.adName || "Ad preview"}>
             <button type="button" onClick={() => setExpanded(null)} aria-label="Close" className="cs-top-preview__close"><X className="h-4 w-4" /></button>
-            <div className="cs-top-preview__media"><img src={thumbOf(expanded)} alt="" /></div>
+            <div className="cs-top-preview__media"><AdThumbImg ad={expanded} src={thumbOf(expanded)} /></div>
             <p>{expanded.adName}</p>
           </div>
         </div>
