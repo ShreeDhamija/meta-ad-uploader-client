@@ -266,7 +266,7 @@ export default function LibraryView({ ctx }) {
             <div className="flex items-center gap-2">
               <button type="button" onClick={cancelTemplate} className="cs-library-action is-archive">Cancel</button>
               <button type="button" onClick={() => setNameDialogOpen(true)} disabled={pickedTotal === 0} className="cs-library-action is-approve">
-                <Check className="h-3.5 w-3.5" /> Save template
+                Save template
               </button>
             </div>
           </div>
@@ -509,7 +509,7 @@ function TemplateNameDialog({ open, onOpenChange, adAccountId, picked, onSaved }
           <div className="cs-library-dialog-actions">
             <button type="button" onClick={() => onOpenChange(false)} disabled={saving} className="cs-library-action is-archive">Cancel</button>
             <button type="submit" disabled={!canSave} className="cs-library-action is-approve">
-              <Check className="h-4 w-4" /> {saving ? "Saving…" : "Save template"}
+              {saving ? "Saving…" : "Save template"}
             </button>
           </div>
         </form>

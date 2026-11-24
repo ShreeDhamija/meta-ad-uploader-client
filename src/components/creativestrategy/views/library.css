@@ -99,10 +99,8 @@
 .cs-library-split__menu-label {
   padding: 6px 10px 4px;
   color: #8a746c;
-  font-size: 10.5px;
+  font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
 }
 
 .cs-library-split__option {
@@ -139,7 +137,7 @@
   gap: 10px;
   padding: 0 20px;
   border: 1.5px solid var(--cs-orange-ink);
-  border-radius: 999px;
+  border-radius: 18px;
   color: #2e1107;
   background: var(--cs-orange);
   box-shadow: 0 2px 2px rgba(0, 0, 0, 0.18);
@@ -156,8 +154,11 @@
   transform: translateY(-1px);
 }
 
+/* No focus ring after a click (it stuck around until you clicked away). */
+.cs-library-template-button:focus,
 .cs-library-template-button:focus-visible {
-  box-shadow: 0 0 0 3px rgba(108, 52, 3, 0.22);
+  outline: none;
+  box-shadow: 0 2px 2px rgba(0, 0, 0, 0.18);
 }
 
 .cs-library-template-button:disabled {
@@ -183,6 +184,7 @@
 .cs-library-dialog-actions .cs-library-action {
   height: 40px;
   padding: 0 20px;
+  border-radius: 18px;
   font-size: 13px;
   outline: none;
 }
