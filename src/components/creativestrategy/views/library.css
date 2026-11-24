@@ -14,38 +14,150 @@
   max-width: 280px;
 }
 
-/* Hooks / Headlines / Primary Text toggles next to the Generate button. */
-.cs-library-generate-types {
-  padding: 4px;
+/* Generate button with a "what to generate" dropdown on its right edge — one
+   continuous dark button, split by a short divider (same idea as the
+   launcher's Publish / Save draft button). */
+.cs-library-split {
+  display: inline-flex;
+  height: 44px;
+  overflow: hidden;
+  border: 2px solid #3f3e3e;
+  border-radius: 18px;
+  background: linear-gradient(0deg, #414141 0%, #000 77.88%);
+  box-shadow: var(--cs-shadow-cta);
+  transition: transform 180ms ease, opacity 180ms ease;
 }
 
-.cs-library-generate-types .cs-weekly-switcher__item:disabled {
+.cs-library-split:hover:not(.is-disabled) {
+  transform: translateY(-1px);
+}
+
+.cs-library-split.is-disabled {
+  opacity: 0.5;
+}
+
+.cs-library-split__main,
+.cs-library-split__toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: transparent;
+  outline: none;
+  transition: background-color 150ms ease;
+}
+
+.cs-library-split__main {
+  gap: 8px;
+  padding: 0 16px 0 20px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.cs-library-split__toggle {
+  position: relative;
+  width: 40px;
+}
+
+.cs-library-split__toggle::before {
+  content: "";
+  position: absolute;
+  top: 25%;
+  left: 0;
+  width: 1px;
+  height: 50%;
+  background: rgba(255, 255, 255, 0.28);
+  pointer-events: none;
+}
+
+.cs-library-split__main:hover:not(:disabled),
+.cs-library-split__toggle:hover:not(:disabled),
+.cs-library-split__toggle[data-state="open"] {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.cs-library-split__main:disabled,
+.cs-library-split__toggle:disabled {
   cursor: not-allowed;
-  opacity: 0.55;
 }
 
+.cs-library-split__main:focus-visible,
+.cs-library-split__toggle:focus-visible {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+/* The menu renders in a portal, outside .creative-strategy, so no theme vars. */
+.cs-library-split__menu {
+  width: 248px;
+  padding: 8px;
+  border: 1px solid #e7ded8;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(29, 29, 29, 0.12);
+}
+
+.cs-library-split__menu-label {
+  padding: 6px 10px 4px;
+  color: #8a746c;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.cs-library-split__option {
+  display: flex;
+  width: 100%;
+  min-height: 38px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  color: #342923;
+  font-size: 13.5px;
+  text-align: left;
+  outline: none;
+}
+
+.cs-library-split__option:hover,
+.cs-library-split__option:focus-visible {
+  background: #f3f4f6;
+}
+
+.cs-library-split__option.is-active {
+  color: #3b170b;
+  font-weight: 600;
+}
+
+/* Same look as the product card's "View Insights" action. */
 .cs-library-template-button {
   display: inline-flex;
   height: 44px;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 0 18px;
-  border: 1.5px solid rgba(108, 52, 3, 0.55);
-  border-radius: 18px;
-  color: #3b170b;
-  background: var(--cs-cream);
-  box-shadow: 0 2px 5px rgba(59, 23, 11, 0.1);
-  font-size: 13.5px;
-  font-weight: 600;
+  gap: 10px;
+  padding: 0 20px;
+  border: 1.5px solid var(--cs-orange-ink);
+  border-radius: 999px;
+  color: #2e1107;
+  background: var(--cs-orange);
+  box-shadow: 0 2px 2px rgba(0, 0, 0, 0.18);
+  font-size: 14px;
+  font-weight: 500;
+  outline: none;
   transition:
     transform 160ms ease,
-    box-shadow 160ms ease;
+    filter 160ms ease;
 }
 
 .cs-library-template-button:hover:not(:disabled) {
+  filter: brightness(1.025);
   transform: translateY(-1px);
-  box-shadow: 0 4px 9px rgba(59, 23, 11, 0.14);
+}
+
+.cs-library-template-button:focus-visible {
+  box-shadow: 0 0 0 3px rgba(108, 52, 3, 0.22);
 }
 
 .cs-library-template-button:disabled {
@@ -66,8 +178,29 @@
   box-shadow: 0 3px 8px rgba(59, 23, 11, 0.12);
 }
 
-.cs-library-template-bar .cs-library-action:disabled {
+/* Taller buttons that still fit inside the bar's two-line text height. */
+.cs-library-template-bar .cs-library-action,
+.cs-library-dialog-actions .cs-library-action {
+  height: 40px;
+  padding: 0 20px;
+  font-size: 13px;
+  outline: none;
+}
+
+.cs-library-template-bar .cs-library-action:disabled,
+.cs-library-dialog-actions .cs-library-action:disabled {
   cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.cs-library-dialog-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.cs-library-dialog-actions .cs-library-action {
+  width: 100%;
 }
 
 .cs-library-column.is-dimmed {
@@ -98,7 +231,14 @@
 .cs-library-checkbox {
   flex-shrink: 0;
   border-color: rgba(59, 23, 11, 0.7);
+  color: #fff;
   background: #fff;
+}
+
+/* Fill when ticked so the white check shows (the base white fill hid it). */
+.cs-library-checkbox[data-state="checked"] {
+  border-color: #3b170b;
+  background: #3b170b;
 }
 
 .cs-library-template-input {

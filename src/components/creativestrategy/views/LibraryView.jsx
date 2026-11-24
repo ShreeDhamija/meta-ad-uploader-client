@@ -5,7 +5,8 @@
 // Meta ad account (the same store Settings → Copy Templates reads).
 import { useEffect, useMemo, useState } from "react";
 import PropTypes from "prop-types";
-import { Archive, BookOpen, Box, Check, Copy, FilePlus2, Loader2, Sparkles, X } from "lucide-react";
+import { Archive, BookOpen, Box, Check, ChevronDown, Copy, FilePlus2, Loader2, Sparkles, X } from "lucide-react";
+import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
 import { creativeApi } from "@/lib/creativeApi";
 import { saveCopyTemplate } from "@/lib/saveCopyTemplate";
@@ -69,6 +70,7 @@ export default function LibraryView({ ctx }) {
   const [loading, setLoading] = useState(false);
   const [updating, setUpdating] = useState(null);
   const [generateKey, setGenerateKey] = useState("all");
+  const [generateMenuOpen, setGenerateMenuOpen] = useState(false);
   const [researchPersonas, setResearchPersonas] = useState([]);
 
   const [personaFilter, setPersonaFilter] = useState("all");
@@ -217,24 +219,35 @@ export default function LibraryView({ ctx }) {
             {templateMode ? <X className="h-4 w-4" /> : <FilePlus2 className="h-4 w-4" />}
             {templateMode ? "Cancel template" : "Create new template"}
           </button>
-          <div className="cs-weekly-switcher cs-library-generate-types" role="group" aria-label="What to generate">
-            {GENERATE_OPTIONS.map((option) => (
-              <button
-                key={option.key}
-                type="button"
-                onClick={() => setGenerateKey(option.key)}
-                disabled={!selectedProductId || Boolean(jobActive)}
-                aria-pressed={generateKey === option.key}
-                className={`cs-weekly-switcher__item ${generateKey === option.key ? "is-active" : ""}`}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-          <button type="button" onClick={run} disabled={!selectedProductId || jobActive} className="cs-primary-button">
-            {jobActive ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-            {jobActive ? "Generating…" : generateOption.button}
-          </button>
+          <Popover open={generateMenuOpen} onOpenChange={setGenerateMenuOpen}>
+            <PopoverAnchor asChild>
+              <div className={`cs-library-split ${!selectedProductId || jobActive ? "is-disabled" : ""}`}>
+                <button type="button" onClick={run} disabled={!selectedProductId || jobActive} className="cs-library-split__main">
+                  {jobActive ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                  {jobActive ? "Generating…" : generateOption.button}
+                </button>
+                <PopoverTrigger asChild>
+                  <button type="button" disabled={!selectedProductId || Boolean(jobActive)} className="cs-library-split__toggle" aria-label="Choose what to generate">
+                    <ChevronDown className={`h-4 w-4 transition-transform ${generateMenuOpen ? "rotate-180" : ""}`} />
+                  </button>
+                </PopoverTrigger>
+              </div>
+            </PopoverAnchor>
+            <PopoverContent align="end" sideOffset={6} className="cs-library-split__menu">
+              <p className="cs-library-split__menu-label">What to generate</p>
+              {GENERATE_OPTIONS.map((option) => (
+                <button
+                  key={option.key}
+                  type="button"
+                  onClick={() => { setGenerateKey(option.key); setGenerateMenuOpen(false); }}
+                  className={`cs-library-split__option ${generateKey === option.key ? "is-active" : ""}`}
+                >
+                  <span>{option.label}</span>
+                  {generateKey === option.key && <Check className="h-4 w-4" />}
+                </button>
+              ))}
+            </PopoverContent>
+          </Popover>
           {lastRun && <RunByNote label="Last generated" at={lastRun.at} uid={lastRun.uid} auto={lastRun.auto} className="w-full text-right text-[11px] text-neutral-500" />}
         </div>
       )}
@@ -481,7 +494,7 @@ function TemplateNameDialog({ open, onOpenChange, adAccountId, picked, onSaved }
         <DialogDescription className="text-sm text-neutral-500">
           {picked.headline.length} headline{picked.headline.length === 1 ? "" : "s"} and {picked.primary_text.length} primary text{picked.primary_text.length === 1 ? "" : "s"} will be saved to Copy Templates.
         </DialogDescription>
-        <form onSubmit={save} className="mt-2 space-y-3">
+        <form onSubmit={save} className="mt-1 space-y-3">
           <input
             autoFocus
             value={name}
@@ -493,10 +506,10 @@ function TemplateNameDialog({ open, onOpenChange, adAccountId, picked, onSaved }
           />
           {nameTaken && <p className="text-xs text-red-600">A template with this name already exists for this ad account.</p>}
           {error && <p className="text-xs text-red-600">{error}</p>}
-          <div className="flex justify-end gap-2 pt-1">
+          <div className="cs-library-dialog-actions">
             <button type="button" onClick={() => onOpenChange(false)} disabled={saving} className="cs-library-action is-archive">Cancel</button>
             <button type="submit" disabled={!canSave} className="cs-library-action is-approve">
-              {saving || checking ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />} Save template
+              <Check className="h-4 w-4" /> {saving ? "Saving…" : "Save template"}
             </button>
           </div>
         </form>
