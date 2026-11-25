@@ -48,7 +48,7 @@ export function ReferenceAdField({ value, onChange, productId, clientId, disable
           <Film className="h-4 w-4" /> Choose a reference ad
         </button>
       )}
-      <p className="cs-generate-sidebar-description">Without one, the brief is built from a new concept. With one, it's built on that ad: your own ad gets a new version, an uploaded ad is remade for this brand.</p>
+      <p className="cs-generate-sidebar-description">Without one, the brief is built from a new concept. With one, it’s built on that ad: your own ad gets a new version, an uploaded ad is remade for this brand.</p>
       <ReferenceAdDialog open={open} onClose={() => setOpen(false)} productId={productId} clientId={clientId} selectedId={value?.id} onSelect={(ref) => { onChange(ref); setOpen(false); }} />
     </div>
   );
@@ -131,7 +131,7 @@ function ReferenceAdDialog({ open, onClose, productId, clientId, selectedId, onS
             className={`cs-reference-drop ${dragging ? "is-dragging" : ""}`}
           >
             {uploading ? <><Loader2 className="h-5 w-5 animate-spin" /><span><strong>Analyzing the video…</strong> This takes about a minute.</span></>
-              : <><Upload className="h-5 w-5" /><span><strong>Upload a video to use for this run</strong> MP4 or MOV, up to 40 MB. It's transcribed and analyzed, then remade for this brand. The video itself isn't stored.</span></>}
+              : <><Upload className="h-5 w-5" /><span><strong>Upload a video to use for this run</strong> MP4 or MOV, up to 40 MB. It’s transcribed and analyzed, then remade for this brand. The video itself isn’t stored.</span></>}
           </button>
           {uploadError && <p className="mt-2 text-xs text-red-700">{uploadError}</p>}
         </div>

@@ -5,7 +5,7 @@
 // Both read the same per-ad rows the rest of Insights uses (camelCase fields).
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import PropTypes from "prop-types";
-import { ScatterChart, Scatter, XAxis, YAxis, ZAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell } from "recharts";
+import { ScatterChart, Scatter, AreaChart, Area, XAxis, YAxis, ZAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell } from "recharts";
 import { AlertTriangle, ChevronLeft, ChevronRight, Flame, Play, Rocket, Search, X, Zap } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CsScrollArea } from "../ui";
@@ -212,6 +212,72 @@ function Stat({ label, value, muted = false }) {
 }
 Stat.propTypes = { label: PropTypes.string.isRequired, value: PropTypes.string.isRequired, muted: PropTypes.bool };
 
+const fmtCount = (v) => (v >= 1e6 ? `${(v / 1e6).toFixed(1)}M` : v >= 1e3 ? `${(v / 1e3).toFixed(1)}K` : `${Math.round(v)}`);
+
+// Meta's video_play_curve_actions points: seconds 0–14, then wider ranges.
+const RETENTION_LABELS = [
+  ...Array.from({ length: 15 }, (_, i) => `${i}s`),
+  "15–20s", "20–25s", "25–30s", "30–40s", "40–50s", "50–60s", "60s+",
+];
+const CHART_COLOR = "#854413";
+
+function RetentionTooltip({ active, payload }) {
+  if (!active || !payload?.length) return null;
+  const point = payload[0].payload;
+  return (
+    <div className="rounded-md border border-neutral-200 bg-white px-2 py-1 text-[11px] shadow-sm">
+      <div className="text-neutral-500">{point.label}</div>
+      <div className="font-medium text-neutral-800">{point.value.toFixed(0)}% of plays</div>
+    </div>
+  );
+}
+RetentionTooltip.propTypes = { active: PropTypes.bool, payload: PropTypes.array };
+
+/** Share of video plays still watching at each point (same data as Analytics → Top ads). */
+function RetentionCurve({ values, height = 64 }) {
+  // Points past the video's end come back as 0 — drop the trailing run.
+  const data = useMemo(() => {
+    if (!Array.isArray(values) || !values.length) return [];
+    let end = values.length;
+    while (end > 1 && !values[end - 1]) end--;
+    return values.slice(0, end).map((value, i) => ({ label: RETENTION_LABELS[i] || `${i}`, value: num(value) }));
+  }, [values]);
+  if (data.length < 2) return <div style={{ height }}><div className="cs-top-card__chart-empty">No retention data</div></div>;
+  return (
+    <div style={{ height }}>
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart data={data} margin={{ top: 2, right: 2, bottom: 0, left: 2 }}>
+          <XAxis dataKey="label" hide />
+          <YAxis domain={[0, 100]} hide />
+          <Tooltip content={<RetentionTooltip />} cursor={{ stroke: "#d6c7bf", strokeWidth: 1 }} />
+          <Area type="monotone" dataKey="value" stroke={CHART_COLOR} strokeWidth={1.75} fill={CHART_COLOR} fillOpacity={0.1}
+            activeDot={{ r: 3, stroke: "#fff", strokeWidth: 1.5 }} isAnimationActive={false} />
+        </AreaChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+RetentionCurve.propTypes = { values: PropTypes.array, height: PropTypes.number };
+
+/** Share of impressions by age band (Meta estimates these). */
+function AgeBars({ rows, height = 72 }) {
+  if (!Array.isArray(rows) || !rows.length) return <div style={{ height }}><div className="cs-top-card__chart-empty">No age data</div></div>;
+  const max = Math.max(...rows.map((r) => num(r.pct)), 1);
+  const barMax = height - 26;
+  return (
+    <div className="cs-top-age" style={{ height }}>
+      {rows.map((row) => (
+        <div key={row.age} className="cs-top-age__band" title={`${row.age}: ${num(row.pct).toFixed(1)}% · ${fmtCount(num(row.impressions))} impressions`}>
+          <b>{Math.round(num(row.pct))}%</b>
+          <i style={{ height: `${Math.max((num(row.pct) / max) * barMax, 2)}px` }} />
+          <em>{row.age}</em>
+        </div>
+      ))}
+    </div>
+  );
+}
+AgeBars.propTypes = { rows: PropTypes.array, height: PropTypes.number };
+
 export function PerformerCard({ ad, rank, avgCpa, root, onOpen, openDetails = false, showLaunch = false }) {
   const video = isVideoAd(ad);
   const thumb = thumbOf(ad);
@@ -219,6 +285,9 @@ export function PerformerCard({ ad, rank, avgCpa, root, onOpen, openDetails = fa
   const ctr = num(ad.ctr); const cpm = num(ad.cpm); const freq = num(ad.frequency);
   const clicks = num(ad.clicks); const cpc = clicks > 0 ? spend / clicks : null;
   const hook = num(ad.hookRate); const watch = num(ad.avgWatchTime);
+  // Hold = ThruPlays ÷ 3s views ("3s → ThruPlay"), as in Analytics → Top ads.
+  const views3s = num(ad.video3sViews); const thruplays = num(ad.videoThruPlays);
+  const hold = views3s > 0 ? (thruplays / views3s) * 100 : null;
   const { tone, note } = cpaTone(cpa, avgCpa);
   const fatigued = isFatigued(ad, avgCpa);
 
@@ -258,6 +327,19 @@ export function PerformerCard({ ad, rank, avgCpa, root, onOpen, openDetails = fa
           <Stat label="Freq." value={freq > 0 ? `${freq.toFixed(1)}×` : "—"} />
           <Stat label="Hook" value={video ? (hook > 0 ? pct(hook * 100) : "—") : "n/a"} muted={!video} />
           <Stat label="Watch" value={video ? (watch > 0 ? `${Math.round(watch)}s` : "—") : "n/a"} muted={!video} />
+          <Stat label="Hold" value={video ? (hold != null ? pct(hold) : "—") : "n/a"} muted={!video} />
+          <Stat label="3s views" value={video ? (views3s > 0 ? fmtCount(views3s) : "—") : "n/a"} muted={!video} />
+        </div>
+
+        {video && (
+          <div className="cs-top-card__chart" title="Share of video plays still watching at each point. Later points cover wider time ranges.">
+            <span>Retention</span>
+            <RetentionCurve values={ad.retentionCurve} />
+          </div>
+        )}
+        <div className="cs-top-card__chart" title="Share of impressions by age band. Meta estimates these values.">
+          <span>Viewer age</span>
+          <AgeBars rows={ad.ageBreakdown} />
         </div>
 
         {(ad.trend || fatigued || showLaunch) && (

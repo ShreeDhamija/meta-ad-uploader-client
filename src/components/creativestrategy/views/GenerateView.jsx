@@ -501,7 +501,7 @@ export default function GenerateView({ ctx }) {
                 </>}
                 <SidebarSelect label="Aspect ratio" value={aspectRatio || "reference"} onChange={(value) => setAspectRatio(value === "reference" ? "" : value)}
                   options={ASPECT.map((option) => option.key === "reference" ? { ...option, label: staticPath !== "template" ? "Match layout reference" : "Square (1:1)" } : option)} />
-                {aspectRatio.includes("+") && <p className="-mt-2 text-xs text-stone-500">Each variation makes a matching pair ({variationCount * 2} images). The portrait copy uses the original's model and quality.</p>}
+                {aspectRatio.includes("+") && <p className="-mt-2 text-xs text-stone-500">Each variation makes a matching pair ({variationCount * 2} images). The portrait copy uses the original’s model and quality.</p>}
                 {generationMode === "strategist" ? (
                   <p className="text-xs text-stone-500"><strong className="font-medium text-[#4f3329]">Production:</strong> the strategist picks UGC or studio per image and mixes them across the batch.</p>
                 ) : <>
