@@ -5683,7 +5683,8 @@ html body #root .creative-strategy button.cs-monthly-filter-button:hover { borde
 .cs-generate-text-card:hover { border-color: rgba(108, 52, 3, 0.45); box-shadow: 0 5px 14px rgba(59, 23, 11, 0.1); }
 .cs-generate-text-card:focus-visible { outline: 2px solid #e8812c; outline-offset: 2px; }
 .cs-generate-text-card__title { color: #30150a; font-size: 15px; font-weight: 650; line-height: 1.3; }
-.cs-generate-text-card__hook { color: #3b2a22; font-size: 13px; font-style: italic; line-height: 1.5; }
+.cs-generate-text-card__hook { color: #3b2a22; font-size: 13px; line-height: 1.5; }
+.cs-generate-text-card__hook strong { color: #6c3403; font-weight: 600; }
 .cs-generate-text-card__summary { display: -webkit-box; overflow: hidden; color: #6d605a; font-size: 12px; line-height: 1.5; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
 .cs-generate-text-card__meta { display: flex; align-items: center; gap: 4px; padding-top: 8px; border-top: 1px solid rgba(108, 52, 3, 0.1); color: #8a746c; font-size: 11px; }
 
@@ -5693,8 +5694,33 @@ html body #root .creative-strategy button.cs-monthly-filter-button:hover { borde
 .cs-ugc-doc ul { padding-left: 20px; list-style: disc; }
 .cs-ugc-doc ol { padding-left: 20px; list-style: decimal; }
 .cs-ugc-doc li + li { margin-top: 4px; }
-.cs-ugc-doc em { color: #6d605a; }
+.cs-ugc-doc em { color: #6d605a; font-style: normal; }
 
 /* Generate → Statics: "What each image is built from" summary. */
 .cs-generate-sources { display: flex; flex-direction: column; gap: 4px; color: #5f524c; font-size: 12px; line-height: 1.45; }
 .cs-generate-sources strong { color: #4f3329; font-weight: 600; }
+
+/* Generate → Statics: Visual inspiration as a text link under Generate Ads;
+   "What each image is built from" as a tooltip trigger. */
+.cs-visual-link { display: block; margin: 2px auto 0; padding: 2px 0; border-bottom: 1px solid currentColor; color: #6c3403; font-size: 12.5px; font-weight: 600; line-height: 1.3; }
+.cs-visual-link:hover:not(:disabled) { color: #30150a; }
+.cs-visual-link:disabled { opacity: 0.5; cursor: not-allowed; }
+.cs-generate-sources-trigger { display: inline-flex; align-items: center; gap: 5px; align-self: flex-start; border-bottom: 1px dashed #9c592c; color: #6c3403; font-size: 12px; font-weight: 600; cursor: help; }
+
+/* Generate → Briefs: compact-card script snippet, per-format pill colors, popup close. */
+.cs-generate-text-card__snippet { display: -webkit-box; overflow: hidden; padding: 8px 10px; border-radius: 10px; color: #5f524c; background: #faf6f2; font-size: 12px; line-height: 1.5; -webkit-box-orient: vertical; -webkit-line-clamp: 4; }
+.cs-format-tag { padding: 2px 8px; border: 1px solid; border-radius: 999px; font-size: 10px; font-weight: 600; }
+.cs-format-tag.is-video { border-color: #bfdbfe; color: #1d4ed8; background: #eff6ff; }
+.cs-format-tag.is-static { border-color: #fde68a; color: #a16207; background: #fefce8; }
+.cs-format-tag.is-ugc { border-color: #e9d5ff; color: #7e22ce; background: #faf5ff; }
+.cs-generate-dialog-close { display: grid; width: 32px; height: 32px; flex-shrink: 0; place-items: center; border: 1px solid rgba(108, 52, 3, 0.18); border-radius: 999px; color: #57534e; background: #fff; }
+.cs-generate-dialog-close:hover { background: #fafaf9; }
+
+/* Generate: same, slightly tighter edge padding on both tabs so cards get more width. */
+.cs-generate-canvas-content,
+.cs-generate-canvas.is-statics .cs-generate-canvas-content { padding: 14px; }
+
+/* Main sidebar: icon-only collapse toggle above the profile row. */
+.cs-sidebar-collapse { display: grid; width: 36px; height: 36px; place-items: center; border: 1px solid #e5e5e5; border-radius: 12px; color: #525252; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08); transition: background 140ms ease, box-shadow 140ms ease; }
+.cs-sidebar-collapse:hover { background: #fafafa; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12); }
+.cs-sidebar-collapse:focus-visible { outline: 2px solid #e8812c; outline-offset: 2px; }

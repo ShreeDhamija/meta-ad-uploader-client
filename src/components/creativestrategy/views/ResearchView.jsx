@@ -66,6 +66,8 @@ const PERSONA_SUMMARY_FIELDS = [
   ["emotions", "Emotions"], ["problems_solutions", "Problems / solutions"], ["angle_outcomes", "Angle → outcomes"],
 ];
 
+const daysSince = (at) => Math.max(0, Math.floor((Date.now() - new Date(at).getTime()) / 86_400_000));
+
 export default function ResearchView({ ctx }) {
   const {
     selectedProduct, selectedProductId, renderHeaderActions,
@@ -109,7 +111,8 @@ export default function ResearchView({ ctx }) {
   }, [load, selectedProductId]);
 
   const { job: researchJob, start: startResearch } = useJobRunner({
-    kind: "research", productId: selectedProductId, onComplete: () => load(selectedProductId),
+    // Reload products too, so the sidebar's "(stale)" label clears.
+    kind: "research", productId: selectedProductId, onComplete: () => { load(selectedProductId); ctx.reloadProducts?.(); },
   });
   const researchActive = isActiveJob(researchJob);
 
@@ -213,6 +216,16 @@ export default function ResearchView({ ctx }) {
 
       {selectedProductId && <RunModelControls models={models} operations={RUN_OPERATIONS.research} disabled={Boolean(researchActive)} />}
       <ErrorBanner message={err} />
+      {selectedProduct?.researchStale && !researchActive && (
+        <div className="flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700 max-md:flex-wrap">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          <span className="min-w-0 flex-1">
+            <strong>This research is {daysSince(selectedProduct.researchAt)} days old.</strong>{" "}
+            Your site, offers, reviews and competitors may have changed since. Re-run it so the language bank, the Library and each Monday&apos;s concepts work from current research.
+          </span>
+          <button type="button" onClick={run} className="cs-primary-button shrink-0">Re-run Research</button>
+        </div>
+      )}
       <PartialResultsNotice active={researchActive} completed={readyCount} total={PROGRESSIVE_RESEARCH_SECTIONS.length + 1} label="research sections" />
 
       {!selectedProductId ? (

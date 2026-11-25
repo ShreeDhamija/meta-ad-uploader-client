@@ -2,7 +2,8 @@
 // retaining their existing API flows.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import PropTypes from "prop-types";
-import { Box, ChevronLeft, ChevronRight, ClipboardList, Download, Flame, Loader2, Sparkles, ThumbsDown, ThumbsUp, Trash2 } from "lucide-react";
+import { Box, ChevronLeft, ChevronRight, ClipboardList, Download, Flame, Info, Loader2, Sparkles, ThumbsDown, ThumbsUp, Trash2, X } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import pLimit from "p-limit";
 import VisualInspiration from "./VisualInspiration";
 import { creativeApi } from "@/lib/creativeApi";
@@ -37,7 +38,7 @@ const PRODUCTION_HELP = {
   studio: "Polished product photography with controlled lighting.",
 };
 const STATIC_MODE_HELP = {
-  manual: "You choose the format and its on-image copy (or Auto-fill it). With Auto format, every variation rebuilds your layout reference below with new copy.",
+  manual: "You can choose the format below and its on-image copy. With Auto format, every variation rebuilds your layout reference with new copy.",
   strategist: "The strategist plans the batch for you: a different format, persona, angle and on-image copy for each variation, from your research, top ads and past 👍/👎.",
 };
 
@@ -432,6 +433,7 @@ export default function GenerateView({ ctx }) {
                 <button type="button" onClick={runStatics} disabled={bulkBusy || !selectedProductId || !visualSelection?.ready || visualSelection.productId !== selectedProductId || generationActive || visualSelection.conceptReferenceIds.length > variationCount} className="cs-primary-button w-full">
                   Generate Ads
                 </button>
+                <VisualInspiration key={selectedProductId || "none"} productId={selectedProductId} clientId={ctx.selectedBrandId} onChange={handleVisualChange} />
               </div>
           )}
           footer={!generationActive && (imageItems.length > 0 || bulkMessage) && <div className="cs-generate-bulk-actions">
@@ -458,16 +460,23 @@ export default function GenerateView({ ctx }) {
                   {[['manual', 'Manual tune'], ['strategist', 'AI Strategist']].map(([value, label]) => <button key={value} type="button" aria-pressed={generationMode === value} className={generationMode === value ? "is-active" : ""} onClick={() => setGenerationMode(value)}>{label}</button>)}
                 </div>
                 <p className="cs-generate-sidebar-description">{STATIC_MODE_HELP[generationMode]}</p>
-                <div className="cs-generate-sidebar__group space-y-2">
-                  <span className="text-xs font-semibold text-[#6c3403]">What each image is built from</span>
-                  <ul className="cs-generate-sources">
-                    <li><strong>Layout:</strong> {layoutSummary(staticPath, visualSelection?.layout, generationMode === "manual" ? selectedFormat : null)}</li>
-                    <li><strong>Look:</strong> {visualSelection?.layout?.exampleCount ? `${visualSelection.layout.exampleCount} brand example${visualSelection.layout.exampleCount === 1 ? "" : "s"} (type, colors, photo style)` : "no brand examples selected"}</li>
-                    <li><strong>Product:</strong> {visualSelection?.layout?.productCount ? `${visualSelection.layout.productCount} product image${visualSelection.layout.productCount === 1 ? "" : "s"}` : "no product images selected"}</li>
-                  </ul>
-                  <VisualInspiration key={selectedProductId || "none"} productId={selectedProductId} clientId={ctx.selectedBrandId} onChange={handleVisualChange} />
-                  <p className="text-xs text-stone-500">Change any of these in Visual inspiration.</p>
-                </div>
+                <TooltipProvider delayDuration={150}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button type="button" className="cs-generate-sources-trigger">
+                        What each image is built from <Info className="h-3.5 w-3.5" aria-hidden="true" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right" align="start" className="max-w-[280px] rounded-xl border border-stone-200 bg-white p-3 text-stone-700 shadow-lg">
+                      <ul className="cs-generate-sources">
+                        <li><strong>Layout:</strong> {layoutSummary(staticPath, visualSelection?.layout, generationMode === "manual" ? selectedFormat : null)}</li>
+                        <li><strong>Look:</strong> {visualSelection?.layout?.exampleCount ? `${visualSelection.layout.exampleCount} brand example${visualSelection.layout.exampleCount === 1 ? "" : "s"} (type, colors, photo style)` : "no brand examples selected"}</li>
+                        <li><strong>Product:</strong> {visualSelection?.layout?.productCount ? `${visualSelection.layout.productCount} product image${visualSelection.layout.productCount === 1 ? "" : "s"}` : "no product images selected"}</li>
+                      </ul>
+                      <p className="mt-2 text-xs text-stone-500">Change any of these in Visual inspiration, under Generate Ads.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
                 {generationMode === "manual" && (formatsLoading ? (
                   <SidebarLoading label="Loading formats…" />
                 ) : (
@@ -551,13 +560,11 @@ export default function GenerateView({ ctx }) {
 // concept-led pipeline (pick a concept, then write it); UGC is a different
 // document: a brief for an outside creator who will film new footage.
 const BRIEF_FORMATS = [
-  { key: "auto", label: "Auto (strategist picks video or static)" },
   { key: "video", label: "Video script" },
   { key: "static", label: "Static brief" },
   { key: "ugc", label: "UGC creator brief" },
 ];
 const BRIEF_FORMAT_HELP = {
-  auto: "Picks a concept from your research and winning ads, then writes it as a video script or a static brief, whichever fits.",
   video: "A concept, three opening hooks and a full spoken script, for an editor working from footage you have.",
   static: "A concept, headlines and on-image copy with visual direction, ready for a designer or Generate → Statics.",
   ugc: "A brief to hand an outside creator who will film new footage: who they're talking to, hook ideas, talking points with shots, your top videos and shoot requirements. Written for one persona.",
@@ -565,7 +572,7 @@ const BRIEF_FORMAT_HELP = {
 
 function BriefPanel({ productId }) {
   const models = useRunModels(productId);
-  const [format, setFormat] = useState("auto");
+  const [format, setFormat] = useState("video");
   const [count, setCount] = useState(1);
   const [persona, setPersona] = useState("");
   const [personas, setPersonas] = useState([]);
@@ -980,24 +987,38 @@ function TextResultsGrid({ entries }) {
   </>;
 }
 
+/** A few plain-text lines of the script or brief for the compact card. */
+function briefSnippet(brief) {
+  const source = brief.script || brief.static_brief || "";
+  const text = String(source).replace(/[*#_`>]+/g, "").replace(/\s+/g, " ").trim();
+  return text ? (text.length > 260 ? `${text.slice(0, 259)}…` : text) : null;
+}
+
+/** Format pill with its own color (video / static / UGC). */
+function FormatTag({ format }) {
+  if (!format) return null;
+  return <span className={`cs-format-tag is-${format}`}>{FORMAT_LABELS[format] || sentenceLabel(format)}</span>;
+}
+
 function TextResultCard({ entry, onOpen }) {
   const { concept, brief } = entry;
   const format = formatOf(entry);
-  const preview = brief.hooks?.[0] || brief.headlines?.[0];
-  const ugcSummary = brief.ugc_markdown ? ugcOverview(brief.ugc_markdown) : null;
+  const lead = brief.hooks?.[0] ? { label: "Hook", text: brief.hooks[0] } : brief.headlines?.[0] ? { label: "Headline", text: brief.headlines[0] } : null;
+  const snippet = brief.ugc_markdown ? ugcOverview(brief.ugc_markdown) : briefSnippet(brief);
   const date = new Date(entry.createdAt);
   return (
     <button type="button" onClick={onOpen} className="cs-generate-text-card">
       <span className="cs-generate-text-card__title">{concept.concept_name || "Untitled concept"}</span>
       <span className="flex flex-wrap gap-1.5">
-        {format && <Tag>{FORMAT_LABELS[format] || sentenceLabel(format)}</Tag>}
+        <FormatTag format={format} />
         {concept.persona_label && <Tag>{concept.persona_label}</Tag>}
         {concept.awareness_stage && <Tag>{sentenceLabel(concept.awareness_stage)}</Tag>}
         {entry.fromWeekly && <Tag>From Weekly Strategy</Tag>}
       </span>
       {concept.angle && <span className="text-xs text-stone-600"><strong className="font-semibold text-stone-700">Angle:</strong> {concept.angle}</span>}
-      {preview && <span className="cs-generate-text-card__hook">“{preview}”</span>}
-      {(ugcSummary || concept.concept_direction || concept.hypothesis) && <span className="cs-generate-text-card__summary">{ugcSummary || concept.concept_direction || concept.hypothesis}</span>}
+      {lead && <span className="cs-generate-text-card__hook"><strong>{lead.label}:</strong> “{lead.text}”</span>}
+      {(concept.concept_direction || concept.hypothesis) && !brief.ugc_markdown && <span className="cs-generate-text-card__summary">{concept.concept_direction || concept.hypothesis}</span>}
+      {snippet && <span className="cs-generate-text-card__snippet">{snippet}</span>}
       <span className="cs-generate-text-card__meta">
         {Number.isNaN(date.getTime()) ? "" : date.toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}
         {entry.createdBy && <>{" "}<RunBy uid={entry.createdBy} /></>}
@@ -1013,17 +1034,22 @@ function TextResultDialog({ entry, onClose }) {
   const format = entry ? formatOf(entry) : null;
   return (
     <Dialog open={Boolean(entry)} onOpenChange={(value) => { if (!value) onClose(); }}>
-      <DialogContent disableSlide aria-describedby={undefined} className="max-w-2xl rounded-[28px] bg-white p-0 sm:rounded-[28px]" overlayClassName="bg-black/40">
+      {/* overflow-hidden clips the scrollbar to the rounded popup; the close
+          button lives in the scrolling header so it never sits over the text. */}
+      <DialogContent hideClose disableSlide aria-describedby={undefined} className="max-w-2xl overflow-hidden rounded-[28px] bg-white p-0 sm:rounded-[28px]" overlayClassName="bg-black/40">
         {entry && <ScrollArea className="max-h-[85dvh]" viewportClassName="max-h-[85dvh]">
           <div className="space-y-4 p-6">
-            <div className="space-y-2 pr-8">
-              <DialogTitle className="text-lg font-semibold text-[#30150a]">{concept.concept_name || "Untitled concept"}</DialogTitle>
-              <div className="flex flex-wrap gap-1.5">
-                {format && <Tag>{FORMAT_LABELS[format] || sentenceLabel(format)}</Tag>}
-                {concept.persona_label && <Tag>{concept.persona_label}</Tag>}
-                {concept.awareness_stage && <Tag>{sentenceLabel(concept.awareness_stage)}</Tag>}
+            <div className="flex items-start gap-3">
+              <div className="min-w-0 flex-1 space-y-2">
+                <DialogTitle className="text-lg font-semibold text-[#30150a]">{concept.concept_name || "Untitled concept"}</DialogTitle>
+                <div className="flex flex-wrap gap-1.5">
+                  <FormatTag format={format} />
+                  {concept.persona_label && <Tag>{concept.persona_label}</Tag>}
+                  {concept.awareness_stage && <Tag>{sentenceLabel(concept.awareness_stage)}</Tag>}
+                </div>
+                {entry.legacyWeekly && <p className="text-xs text-stone-500">{entry.productUnspecified ? "Saved from Weekly Strategy at brand level; the original product and date weren't recorded." : "Saved from Weekly Strategy; the original generation date wasn't recorded."}</p>}
               </div>
-              {entry.legacyWeekly && <p className="text-xs text-stone-500">{entry.productUnspecified ? "Saved from Weekly Strategy at brand level; the original product and date weren't recorded." : "Saved from Weekly Strategy; the original generation date wasn't recorded."}</p>}
+              <button type="button" onClick={onClose} aria-label="Close" className="cs-generate-dialog-close"><X className="h-4 w-4" /></button>
             </div>
             {(concept.hypothesis || concept.angle || concept.concept_direction) && <div className="cs-generate-result space-y-2">
               {concept.angle && <p><strong>Angle:</strong> {concept.angle}</p>}
@@ -1085,6 +1111,7 @@ GeneratedImage.propTypes = { item: PropTypes.object.isRequired, rate: PropTypes.
 ResultSection.propTypes = { title: PropTypes.string.isRequired, children: PropTypes.node.isRequired };
 TextResultsGrid.propTypes = { entries: PropTypes.array.isRequired };
 TextResultCard.propTypes = { entry: PropTypes.object.isRequired, onOpen: PropTypes.func.isRequired };
+FormatTag.propTypes = { format: PropTypes.string };
 TextResultDialog.propTypes = { entry: PropTypes.object, onClose: PropTypes.func.isRequired };
 UgcDocument.propTypes = { markdown: PropTypes.string.isRequired };
 CopyButton.propTypes = { text: PropTypes.string.isRequired };

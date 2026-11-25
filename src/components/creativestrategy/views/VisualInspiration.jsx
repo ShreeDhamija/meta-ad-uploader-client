@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import PropTypes from "prop-types";
-import { ImagePlus, Upload, Loader2, X } from "lucide-react";
+import { Upload, Loader2, X } from "lucide-react";
 import { creativeApi } from "@/lib/creativeApi";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ErrorBanner } from "../ui";
@@ -171,8 +171,8 @@ export default function VisualInspiration({ productId, clientId, onChange }) {
   };
 
   return <>
-    <button type="button" className="cs-visual-trigger" onClick={() => setOpen(true)} disabled={!productId}>
-      <ImagePlus size={16} /> Visual inspiration
+    <button type="button" className="cs-visual-link" onClick={() => setOpen(true)} disabled={!productId}>
+      Visual inspiration
     </button>
     {!loading && !loadError && selected.examples.length + selected.products.length + selected.concepts.length === 0 && <p className="text-xs text-amber-800" role="status">Select or upload at least one image to generate ads.</p>}
     {error && !open && <p className="text-xs text-red-700">{error} Open Visual inspiration to retry.</p>}

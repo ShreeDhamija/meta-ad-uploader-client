@@ -11,7 +11,7 @@ import { creativeApi } from "@/lib/creativeApi";
 import { saveSettings } from "@/lib/saveSettings";
 import useGlobalSettings from "@/lib/useGlobalSettings";
 import { cn } from "@/lib/utils";
-import { BookOpen, Box, CalendarRange, Flame, FlaskConical, Heart, Layers, LogOut, MousePointerClick, SearchCheck, Zap } from "lucide-react";
+import { BookOpen, Box, CalendarRange, Flame, FlaskConical, Heart, Layers, LogOut, MousePointerClick, PanelLeftClose, PanelLeftOpen, SearchCheck, Zap } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Toaster } from "sonner";
 import { createPortal } from "react-dom";
@@ -102,6 +102,14 @@ export default function CreativeStrategyLayout() {
   }, [setHasSeenCreativeStrategyOnboarding]);
 
   const [activeTab, setActiveTab] = useState("brands");
+  // Icon-only sidebar on wide screens (below lg it's always icon-only).
+  const [collapsed, setCollapsed] = useState(() => {
+    try { return localStorage.getItem("cs-sidebar-collapsed") === "1"; } catch { return false; }
+  });
+  const toggleCollapsed = () => setCollapsed((current) => {
+    try { localStorage.setItem("cs-sidebar-collapsed", current ? "0" : "1"); } catch { /* Keep session state. */ }
+    return !current;
+  });
   // Unsaved edits, by source (e.g. brand guidelines). Leaving the tab, switching
   // account/product, navigating away or closing the page asks first.
   const unsavedRef = useRef(new Map());
@@ -395,57 +403,81 @@ export default function CreativeStrategyLayout() {
       <div className="creative-strategy flex min-h-screen">
         {showOnboarding && <CreativeStrategyOnboarding onFinish={finishOnboarding} />}
         {/* Sidebar */}
-        <aside className="relative z-10 flex h-screen w-[290px] flex-col overflow-hidden px-4 py-6 max-lg:w-[80px] max-lg:min-w-[80px] max-lg:px-2">
+        {/* Top padding matches <main>'s py-6 and the launcher button matches the
+            46px selector pills, so the two rows line up at every width. */}
+        <aside className={cn("relative z-10 flex h-screen w-[290px] flex-col overflow-hidden px-4 py-6 transition-[width] duration-200 max-lg:w-[80px] max-lg:min-w-[80px] max-lg:px-2", collapsed && "w-[80px] min-w-[80px] px-2")}>
           <img
             src={doodle}
             alt=""
             aria-hidden="true"
-            className="pointer-events-none absolute -left-[205px] -bottom-[38px] z-0 w-[720px] max-w-none origin-bottom-left rotate-[8deg] opacity-95 max-lg:hidden"
+            className={cn("pointer-events-none absolute -left-[205px] -bottom-[38px] z-0 w-[720px] max-w-none origin-bottom-left rotate-[8deg] opacity-95 max-lg:hidden", collapsed && "hidden")}
           />
-          <div className="relative z-10 flex h-full flex-col rounded-3xl p-4">
+          <div className={cn("relative z-10 flex h-full flex-col rounded-3xl px-4 pb-4 max-lg:px-1", collapsed && "px-1")}>
             <div className="flex flex-1 flex-col">
               <Button
                 onClick={() => navigate("/")}
-                className="flex items-center pl-3 justify-start gap-1 bg-white hover:bg-white border border-neutral-200 shadow-xs hover:shadow-sm rounded-[20px] py-7 font-medium w-full mb-4 text-neutral-700"
+                title="Back to launcher"
+                className={cn("mb-4 flex h-[46px] w-full items-center justify-start gap-1 rounded-[20px] border border-neutral-200 bg-white py-0 pl-3 font-medium text-neutral-700 shadow-xs hover:bg-white hover:shadow-sm max-lg:justify-center max-lg:px-0", collapsed && "justify-center px-0")}
                 variant="ghost"
               >
-                <img src={rocket} alt="Home" className="w-8 h-8 object-contain" />
-                <div className="h-6 w-px bg-neutral-300 mr-2 max-lg:hidden" />
-                <span className="text-neutral-700 font-semibold max-lg:hidden">Back To Launcher</span>
+                <img src={rocket} alt="Home" className="h-8 w-8 object-contain" />
+                <div className={cn("mr-2 h-6 w-px bg-neutral-300 max-lg:hidden", collapsed && "hidden")} />
+                <span className={cn("font-semibold text-neutral-700 max-lg:hidden", collapsed && "hidden")}>Back To Launcher</span>
               </Button>
 
               <nav className="space-y-2">
-                {NAV.map(({ key, label, icon: Icon }) => (
+                {NAV.map(({ key, label, icon: Icon }) => {
+                  // The selected product's research is past its refresh age.
+                  const stale = key === "research" && Boolean(selectedProduct?.researchStale);
+                  return (
                   <button
                     key={key}
                     data-cs-nav={key}
                     onClick={() => switchTab(key)}
+                    title={stale ? "Research is out of date. Open Research to re-run it." : collapsed ? label : undefined}
                     className={cn(
                       "relative flex h-10 w-full items-center justify-start gap-2 rounded-2xl px-4 py-2 transition-all max-lg:justify-center max-lg:px-2",
+                      collapsed && "justify-center px-2",
                       activeTab === key
                         ? "border border-gray-300 bg-white font-semibold text-neutral-900 shadow"
                         : "border border-transparent text-neutral-700 hover:bg-neutral-200",
                     )}
                   >
-                    <Icon className="h-5 w-5 flex-shrink-0 text-neutral-700 transition-all max-lg:h-6 max-lg:w-6" />
-                    <span className="text-sm font-medium max-lg:hidden">{label}</span>
-                    {activeTab === key && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-neutral-500 max-lg:hidden" aria-hidden="true" />}
+                    <span className="relative flex-shrink-0">
+                      <Icon className="h-5 w-5 text-neutral-700 transition-all" />
+                      {stale && <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full border-2 border-white bg-red-500" aria-hidden="true" />}
+                    </span>
+                    <span className={cn("text-sm font-medium max-lg:hidden", collapsed && "hidden")}>
+                      {label}
+                      {stale && <span className="text-red-600"> (stale)</span>}
+                    </span>
+                    {activeTab === key && <span className={cn("ml-auto h-1.5 w-1.5 rounded-full bg-neutral-500 max-lg:hidden", collapsed && "hidden")} aria-hidden="true" />}
                   </button>
-                ))}
+                  );
+                })}
               </nav>
             </div>
 
             {/* Footer profile */}
-            <div className="relative z-10 mt-auto pt-4">
-              <div className="cs-sidebar-profile flex w-full items-center rounded-[20px] border bg-neutral-50 py-2 pl-3 pr-3 max-lg:justify-center max-lg:p-2">
-                <div className="flex items-center gap-2 flex-grow max-lg:hidden">
+            <div className="relative z-10 mt-auto space-y-3 pt-4">
+              <button
+                type="button"
+                onClick={toggleCollapsed}
+                aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+                title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+                className={cn("cs-sidebar-collapse max-lg:hidden", collapsed && "mx-auto")}
+              >
+                {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+              </button>
+              <div className={cn("cs-sidebar-profile flex w-full items-center rounded-[20px] border bg-neutral-50 py-2 pl-3 pr-3 max-lg:justify-center max-lg:p-2", collapsed && "justify-center p-2")}>
+                <div className={cn("flex flex-grow items-center gap-2 max-lg:hidden", collapsed && "hidden")}>
                   <img src={profilePicUrl || "/placeholder.svg"} alt="Profile" className="h-8 w-8 rounded-full object-cover" />
                   <span className="max-w-[120px] truncate text-sm font-medium text-neutral-800">{userName}</span>
                 </div>
                 <div className="flex items-center">
-                  <div className="h-6 w-px bg-neutral-300 max-lg:hidden" />
-                  <button onClick={handleLogout} className="ml-3 rounded-full transition max-lg:ml-0" title="Logout">
-                    <LogOut className="h-4 w-4 text-neutral-700 max-lg:h-5 max-lg:w-5" />
+                  <div className={cn("h-6 w-px bg-neutral-300 max-lg:hidden", collapsed && "hidden")} />
+                  <button onClick={handleLogout} className={cn("ml-3 rounded-full transition max-lg:ml-0", collapsed && "ml-0")} title="Logout">
+                    <LogOut className="h-4 w-4 text-neutral-700" />
                   </button>
                 </div>
               </div>
