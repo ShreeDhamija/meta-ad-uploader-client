@@ -293,6 +293,7 @@ export function jobTitle(job) {
   if (type === "research" && job?.only === "cross_map") return "Persona mapping";
   if (type === "analyze_ads" && job?.only === "winners") return "Analyzing Monthly Review winners";
   if (type === "generate_ad" && (job?.ideaId || job?.meta?.ideaId)) return "Concept static";
+  if (type === "generate_brief" && job?.meta?.label) return job.meta.label;
   return KIND_LABEL[type] || job?.meta?.label || "Background task";
 }
 
@@ -318,7 +319,10 @@ export function describeJob(job) {
       : type === "weekly_strategy" ? `Completed · ${result.ideas_generated ?? 0} concepts`
       : type === "monthly_review" && result.status === "ok" ? `Completed · ${result.concepts ?? 0} concepts`
       : type === "generate_scripts" ? `Completed · ${result.count ?? 0} script${result.count === 1 ? "" : "s"} saved to Scripts`
-      : type === "generate_brief" ? (result.format === "ugc" ? "Completed · UGC creator brief saved to Briefs" : `Completed · ${result.count ?? 1} saved to Briefs`)
+      : type === "generate_brief" ? (result.format === "ugc" ? "Completed · UGC creator brief saved to Briefs"
+        : result.format === "script" ? `Completed · ${result.count ?? 1} video script${result.count === 1 ? "" : "s"} saved to Briefs`
+        : result.reference ? `Completed · built on “${result.reference}”, saved to Briefs`
+        : `Completed · ${result.count ?? 1} saved to Briefs`)
       : type === "weekly_brief" ? "Completed · brief added to the concept card"
       : "Completed";
     const errors = [...(Array.isArray(result.errors) ? result.errors : []), ...partialErrors(job)].join("; ");

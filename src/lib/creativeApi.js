@@ -95,6 +95,7 @@ export const creativeApi = {
   runGenerate: (body) => request("/generate/run", { method: "POST", body }),
   generateVideoScripts: (body) => request("/generate/scripts", { method: "POST", body }),
   generateConceptBrief: (body) => request("/generate/brief", { method: "POST", body }),
+  getReferenceAds: (productId) => request(`/generate/reference-ads?productId=${encodeURIComponent(productId)}`),
   getGenerated: (productId, offset = 0) => request(`/generate?productId=${encodeURIComponent(productId)}&offset=${offset}`),
   getGenerationHistory: (productId, kind, offset = 0) => request(`/generate/history?productId=${encodeURIComponent(productId)}&kind=${encodeURIComponent(kind)}&offset=${offset}`),
   rateGenerated: (id, rating) => request(`/generate/${encodeURIComponent(id)}/feedback`, { method: "POST", body: { rating } }),

@@ -2,7 +2,8 @@
 // creative_strategy_audit aggregates plus per-ad ad_creative_insights evidence.
 import { useCallback, useEffect, useRef, useState } from "react";
 import PropTypes from "prop-types";
-import { AlertTriangle, ChevronDown, ChevronRight, Filter, Loader2, Maximize2, X, Zap } from "lucide-react";
+import { AlertTriangle, ChevronDown, ChevronRight, Filter, Loader2, Maximize2, Sparkles, X, Zap } from "lucide-react";
+import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { matchInsightAds, funnelBuckets } from "../insight-metrics";
 import { creativeApi } from "@/lib/creativeApi";
@@ -14,7 +15,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Badge } from "@/components/ui/badge";
 import { humanize } from "../JsonView";
 import { CsScrollArea, EmptyState, ErrorBanner, PartialResultsNotice, ProgressiveSection } from "../ui";
-import { useJobRunner } from "../JobsContext";
+import { useJobRunner, useJobs } from "../JobsContext";
 import { PerformerCard, SpendCpaChart, TopPerformers } from "./InsightsPerformance";
 import { AdMediaPlayer, AdMediaProvider, AdThumbImg } from "../meta-media";
 import RunBy from "../run-by";
@@ -204,7 +205,14 @@ export default function IntelligenceView({ ctx }) {
       )}
         </div>
       )}
-      <AdDetailDrawer ad={drawerAd} onClose={() => setDrawerAd(null)} averages={accountAverages} />
+      <AdDetailDrawer
+        ad={drawerAd}
+        onClose={() => setDrawerAd(null)}
+        averages={accountAverages}
+        productId={selectedProductId}
+        // Trending and hook cards can be partial copies; actions need the saved ad row.
+        sourceAd={drawerAd ? ads.find((row) => row.adId === drawerAd.adId) || drawerAd : null}
+      />
     </div>
     </AdMediaProvider>
   );
@@ -688,7 +696,7 @@ function computeAccountAverages(ads) {
  * Right-hand drawer, detached from the screen edge, with one ad's full
  * analysis (opened from Top hooks or Top performers).
  */
-function AdDetailDrawer({ ad, onClose, averages = null }) {
+function AdDetailDrawer({ ad, onClose, averages = null, productId = null, sourceAd = null }) {
   return (
     <DialogPrimitive.Root open={Boolean(ad)} onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogPrimitive.Portal>
@@ -708,13 +716,68 @@ function AdDetailDrawer({ ad, onClose, averages = null }) {
             <CsScrollArea className="min-h-0 flex-1" viewportClassName="h-full">
               <div className="cs-ad-drawer__body"><HookDetails hook={ad} variant="drawer" averages={averages} /></div>
             </CsScrollArea>
+            <AdDrawerActions ad={sourceAd || ad} productId={productId} />
           </>}
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>
   );
 }
-AdDetailDrawer.propTypes = { ad: PropTypes.object, onClose: PropTypes.func.isRequired, averages: PropTypes.object };
+AdDetailDrawer.propTypes = { ad: PropTypes.object, onClose: PropTypes.func.isRequired, averages: PropTypes.object, productId: PropTypes.string, sourceAd: PropTypes.object };
+
+/**
+ * "Make something from this ad" at the foot of the drawer. Each button starts a
+ * background job (shown in the job tracker) whose result lands in Generate:
+ *   video ad → a video brief built on it (Generate → Briefs)
+ *   image ad → two statics that use it as the layout reference (Generate → Statics)
+ */
+function AdDrawerActions({ ad, productId }) {
+  const { track } = useJobs();
+  const [busy, setBusy] = useState(null);
+  if (!ad || !productId || !ad.id) return null;
+  const isVideo = ad.mediaType === "video";
+  const isImage = ad.mediaType === "image";
+  // A brief needs the ad's analysis; a static needs the saved image.
+  const canBrief = isVideo && Boolean(ad.transcript || ad.primaryAngle);
+  const canStatic = isImage && Boolean(ad.storagePath);
+  if (!isVideo && !isImage) return null;
+
+  const run = async (kind) => {
+    setBusy(kind);
+    try {
+      if (kind === "brief") {
+        const { jobId } = await creativeApi.generateConceptBrief({ productId, format: "video", count: 1, referenceAdId: ad.id, source: "insights" });
+        track(jobId, { kind: "generate_brief", productId, label: "Video brief from an ad" });
+        toast.success("Writing a video brief from this ad. It'll be in Generate → Briefs.");
+      } else {
+        const { jobId } = await creativeApi.runGenerate({ productId, generationMode: "manual", brandExampleAdIds: [ad.id], variationCount: 2 });
+        track(jobId, { kind: "generate_ad", productId });
+        toast.success("Making 2 statics with this ad as the layout reference. They'll be in Generate → Statics.");
+      }
+    } catch (error) {
+      toast.error(error.message || "Couldn't start that");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return (
+    <footer className="cs-ad-drawer__actions">
+      {isVideo && <button type="button" className="cs-primary-button" disabled={!canBrief || busy != null} onClick={() => run("brief")}>
+        {busy === "brief" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} Video brief from this ad
+      </button>}
+      {isImage && <button type="button" className="cs-primary-button" disabled={!canStatic || busy != null} onClick={() => run("static")}>
+        {busy === "static" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} Statics from this ad
+      </button>}
+      <p className="text-xs text-stone-500">
+        {isVideo
+          ? (canBrief ? "A new concept, 3 hooks and a full script that keep what works here and change the execution." : "Analyze this ad first (Run Insights) to build a brief on it.")
+          : (canStatic ? "Rebuilds this ad's layout with new copy for this product, 2 variations." : "This ad's image wasn't saved, so it can't be used as a layout reference.")}
+      </p>
+    </footer>
+  );
+}
+AdDrawerActions.propTypes = { ad: PropTypes.object, productId: PropTypes.string };
 
 function MessagingThemesSection({ themes, ads, onOpenAd }) {
   if (!Array.isArray(themes) || !themes.length) return null;

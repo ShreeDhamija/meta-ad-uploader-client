@@ -3643,6 +3643,78 @@ html body #root .creative-strategy .cs-research-intel.is-open.is-stuck button.cs
   font-weight: 500;
 }
 
+/* Retention curve / viewer age rows under the stats grid. */
+.cs-top-card__chart {
+  padding-top: 10px;
+  border-top: 1px solid rgba(108, 52, 3, 0.12);
+}
+
+.cs-top-card__chart > span {
+  display: block;
+  margin-bottom: 4px;
+  color: #a08b82;
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.cs-top-card__chart-empty {
+  display: grid;
+  height: 100%;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--cs-cream);
+  color: #b3a097;
+  font-size: 10px;
+}
+
+.cs-top-age {
+  display: flex;
+  height: 100%;
+  align-items: flex-end;
+  gap: 3px;
+}
+
+.cs-top-age__band {
+  display: flex;
+  height: 100%;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+}
+
+.cs-top-age__band b {
+  color: #6b5a52;
+  font-size: 9px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.cs-top-age__band i {
+  width: 100%;
+  border-radius: 3px 3px 0 0;
+  background: rgba(133, 68, 19, 0.7);
+}
+
+.cs-top-age__band:hover i {
+  background: #854413;
+}
+
+.cs-top-age__band em {
+  width: 100%;
+  overflow: hidden;
+  color: #a08b82;
+  font-size: 8.5px;
+  font-style: normal;
+  text-align: center;
+  text-overflow: clip;
+  white-space: nowrap;
+}
+
 .cs-top-card__fatigue {
   display: inline-flex;
   align-items: center;
@@ -5738,3 +5810,47 @@ html body #root .creative-strategy button.cs-monthly-filter-button:hover { borde
 .cs-generate-sidebar-header { flex-shrink: 0; padding: 16px 16px 0; }
 .cs-generate-switcher.is-sidebar { display: flex; width: 100%; gap: 6px; padding: 4px; border-radius: 20px; box-shadow: none; }
 .cs-generate-switcher.is-sidebar .cs-generate-switcher__item { flex: 1; min-width: 0; height: 36px; padding: 0 10px; border-radius: 15px; }
+
+/* Generate → Briefs: raw video script pill, and the reference ad field + picker. */
+.cs-format-tag.is-script { border-color: #a7f3d0; color: #047857; background: #ecfdf5; }
+.creative-strategy .cs-reference-button {
+  display: flex; width: 100%; height: 46px; align-items: center; justify-content: center; gap: 8px;
+  border: 1px dashed #c9c3bf; border-radius: 16px; background: #fff; color: #6c3403; font-size: 13px; font-weight: 500;
+}
+.creative-strategy .cs-reference-button:hover:not(:disabled) { border-color: #6c3403; background: #fffaf6; }
+.creative-strategy .cs-reference-button:disabled { opacity: 0.5; cursor: not-allowed; }
+.cs-reference-chip {
+  display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid #c9c3bf; border-radius: 16px;
+  background: #fff; box-shadow: 0 2px 5px rgba(29, 29, 29, 0.1);
+}
+.cs-reference-chip img, .cs-reference-chip__icon { width: 36px; height: 36px; flex-shrink: 0; border-radius: 10px; object-fit: cover; }
+.cs-reference-chip__icon { display: grid; place-items: center; background: #f5f0eb; color: #a8a29e; }
+.cs-reference-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+.creative-strategy .cs-reference-card, .cs-reference-card {
+  display: flex; gap: 10px; padding: 10px; border: 1px solid #e7e0da; border-radius: 16px; background: #fff; text-align: left;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.cs-reference-card:hover { border-color: #c9a88c; box-shadow: 0 2px 8px rgba(29, 29, 29, 0.08); }
+.cs-reference-card.is-selected { border-color: #6c3403; box-shadow: 0 0 0 1px #6c3403; }
+.cs-reference-card__thumb {
+  position: relative; display: grid; width: 64px; height: 80px; flex-shrink: 0; place-items: center; overflow: hidden;
+  border-radius: 12px; background: #f5f0eb;
+}
+.cs-reference-card__thumb img { width: 100%; height: 100%; object-fit: cover; }
+.cs-reference-card__check {
+  position: absolute; top: 4px; right: 4px; display: grid; width: 20px; height: 20px; place-items: center;
+  border-radius: 999px; background: #6c3403; color: #fff;
+}
+.cs-reference-drop {
+  display: flex; width: 100%; align-items: center; gap: 12px; padding: 14px 16px; border: 1px dashed #c9c3bf; border-radius: 18px;
+  background: #fffaf6; color: #6c3403; text-align: left; font-size: 12px; line-height: 1.45;
+}
+.cs-reference-drop strong { display: block; color: #30150a; font-size: 13px; font-weight: 600; }
+.cs-reference-drop span { color: #78716c; }
+.cs-reference-drop:hover:not(:disabled), .cs-reference-drop.is-dragging { border-color: #6c3403; background: #fff3e8; }
+.cs-reference-drop:disabled { cursor: progress; }
+
+/* Insights ad drawer: "make something from this ad" actions, pinned under the scroll. */
+.cs-ad-drawer__actions { display: flex; flex-shrink: 0; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 14px 22px 18px; border-top: 1px solid rgba(108, 52, 3, 0.18); background: #fff; }
+.cs-ad-drawer__actions .cs-primary-button { display: inline-flex; align-items: center; gap: 6px; }
+.cs-ad-drawer__actions p { flex: 1 1 200px; margin: 0; }
