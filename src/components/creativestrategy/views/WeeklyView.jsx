@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import PropTypes from "prop-types";
 import {
-  CircleCheck, CircleX, ClipboardList, Loader2, MousePointerClick,
+  CircleCheck, CircleX, ClipboardList, ImagePlus, Loader2, MousePointerClick,
 } from "lucide-react";
 import { creativeApi } from "@/lib/creativeApi";
 import RunModelControls from "../RunModelControls";
@@ -38,6 +38,17 @@ const TIERS = [
   { key: "net_new", label: "Net-new" },
 ];
 
+// The board's two halves: concepts that trace back to a running ad, and fresh
+// ones with no ad behind them (the latest analysis's gap ideas land here).
+const CONCEPT_GROUPS = [
+  { key: "ads", title: "Built on your ads", hint: "Iterations, format flips and big swings on ads already running. Each one traces back to a real ad and its results." },
+  { key: "fresh", title: "Fresh concepts to test", hint: "New ideas with no existing ad behind them: gaps found in the latest ad analysis, empty persona × awareness cells and borrowed inspiration. Lower confidence, more upside." },
+];
+const AD_BASED_TIERS = new Set(["iteration", "format_transformation", "big_swing"]);
+const conceptGroupOf = (idea) => (idea.tier ? (AD_BASED_TIERS.has(idea.tier) ? "ads" : "fresh") : idea.conceptType === "iteration" ? "ads" : "fresh");
+/** Fresh concepts developed from an ad-analysis gap idea cite "seed:<name>". */
+const isAnalysisIdea = (idea) => /^seed:/i.test(String(idea.referenceSource ?? ""));
+
 const STATUSES = [
   { key: "pending", label: "Pending" },
   { key: "approved", label: "Approved" },
@@ -60,6 +71,7 @@ export default function WeeklyView({ ctx }) {
   const [status, setStatusFilter] = useState("pending");
   const [filters, setFilters] = useState(ALL_FILTERS);
   const [startingBrief, setStartingBrief] = useState(null);
+  const [startingStatic, setStartingStatic] = useState(null);
   const [loading, setLoading] = useState(false);
   const [updating, setUpdating] = useState(null);
 
@@ -145,9 +157,15 @@ export default function WeeklyView({ ctx }) {
   const briefJobs = Object.values(allJobs).filter((job) => job.meta?.kind === "weekly_brief" && job.meta?.brandId === selectedBrandId);
   const briefing = new Set(briefJobs.filter(isActive).map((job) => job.ideaId || job.meta?.ideaId).filter(Boolean));
   if (startingBrief) briefing.add(startingBrief);
+  // "Generate Static" runs a generate_ad job tied to the concept (job.ideaId),
+  // so the image also lands in Generate → Statics for that product.
+  const staticJobs = Object.values(allJobs).filter((job) => job.meta?.kind === "generate_ad" && job.meta?.brandId === selectedBrandId && (job.ideaId || job.meta?.ideaId));
+  const generatingStatics = new Set(staticJobs.filter(isActive).map((job) => job.ideaId || job.meta?.ideaId));
+  if (startingStatic) generatingStatics.add(startingStatic);
   const watchedBriefs = useRef(new Set());
-  const finishedBriefKey = briefJobs.filter((job) => !isActive(job) && watchedBriefs.current.has(job.id)).map((job) => job.id).join(",");
-  for (const job of briefJobs) if (isActive(job)) watchedBriefs.current.add(job.id);
+  const conceptJobs = [...briefJobs, ...staticJobs];
+  const finishedBriefKey = conceptJobs.filter((job) => !isActive(job) && watchedBriefs.current.has(job.id)).map((job) => job.id).join(",");
+  for (const job of conceptJobs) if (isActive(job)) watchedBriefs.current.add(job.id);
   useEffect(() => {
     if (!finishedBriefKey || !selectedBrandId) return;
     for (const id of finishedBriefKey.split(",")) watchedBriefs.current.delete(id);
@@ -165,6 +183,20 @@ export default function WeeklyView({ ctx }) {
       setErr(error.message);
     } finally {
       setStartingBrief(null);
+    }
+  };
+
+  const makeStatic = async (id) => {
+    setErr(null);
+    setStartingStatic(id);
+    try {
+      const { jobId, productId } = await creativeApi.generateIdeaStatic(id, undefined, models.forRun(RUN_OPERATIONS.weeklyStatic));
+      models.reset(RUN_OPERATIONS.weeklyStatic);
+      track(jobId, { kind: "generate_ad", brandId: selectedBrandId, productId, ideaId: id });
+    } catch (error) {
+      setErr(error.message);
+    } finally {
+      setStartingStatic(null);
     }
   };
 
@@ -198,10 +230,10 @@ export default function WeeklyView({ ctx }) {
     (filters.format === "all" || idea.format === filters.format) &&
     (filters.awareness === "all" || idea.awarenessStage === filters.awareness) &&
     (filters.production === "all" || (filters.production === UGC_FILTER ? isUgcShoot(idea) : productionKey(idea.productionNote) === filters.production)));
-  const conceptColumns = [
-    shown.filter((_, index) => index % 2 === 0),
-    shown.filter((_, index) => index % 2 === 1),
-  ];
+  const conceptGroups = CONCEPT_GROUPS.map((group) => {
+    const items = shown.filter((idea) => conceptGroupOf(idea) === group.key);
+    return { ...group, items, columns: [items.filter((_, index) => index % 2 === 0), items.filter((_, index) => index % 2 === 1)] };
+  }).filter((group) => group.items.length > 0);
   const lastRunAt = run?.startedAt || run?.completedAt;
   const lastRunDate = lastRunAt ? new Date(lastRunAt) : null;
   const lastRunLabel = lastRunDate && !Number.isNaN(lastRunDate.getTime()) ? lastRunDate.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) : "Not run yet";
@@ -233,6 +265,7 @@ export default function WeeklyView({ ctx }) {
 
       {selectedBrandId && <RunModelControls models={models} operations={RUN_OPERATIONS.weekly} disabled={Boolean(jobActive)} />}
       {ideas.length > 0 && <RunModelControls models={models} operations={RUN_OPERATIONS.weeklyBrief} title="Models for the next idea brief" disabled={Boolean(startingBrief)} />}
+      {ideas.some((idea) => idea.format === "static") && <RunModelControls models={models} operations={RUN_OPERATIONS.weeklyStatic} title="Models for the next static" disabled={Boolean(startingStatic)} />}
       <ErrorBanner message={err} />
       <PartialResultsNotice active={Boolean(jobActive)} completed={0} total={1} label="concept board" />
 
@@ -280,26 +313,34 @@ export default function WeeklyView({ ctx }) {
 
               {shown.length === 0 ? (
                 <EmptyState icon={MousePointerClick} title="Nothing here" hint={filtersActive ? "No concepts match these filters." : `No ${status} concepts in this tier.`} />
-              ) : (
-                <div className="cs-weekly-grid">
-                  {conceptColumns.map((column, columnIndex) => (
-                    <div key={columnIndex} className="cs-weekly-grid__column">
-                      {column.map((idea) => (
-                        <ConceptCard
-                          key={idea.id}
-                          idea={idea}
-                          brief={idea.sourceEvidence?.brief_copy}
-                          briefing={briefing}
-                          updating={updating}
-                          approve={approve}
-                          updateStatus={updateStatus}
-                          makeBrief={makeBrief}
-                        />
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              )}
+              ) : conceptGroups.map((group) => (
+                <section key={group.key} className="cs-weekly-group">
+                  <header className="cs-weekly-group__header">
+                    <h2>{group.title} <span>{group.items.length}</span></h2>
+                    <p>{group.hint}</p>
+                  </header>
+                  <div className="cs-weekly-grid">
+                    {group.columns.map((column, columnIndex) => (
+                      <div key={columnIndex} className="cs-weekly-grid__column">
+                        {column.map((idea) => (
+                          <ConceptCard
+                            key={idea.id}
+                            idea={idea}
+                            brief={idea.sourceEvidence?.brief_copy}
+                            briefing={briefing}
+                            generatingStatics={generatingStatics}
+                            updating={updating}
+                            approve={approve}
+                            updateStatus={updateStatus}
+                            makeBrief={makeBrief}
+                            makeStatic={makeStatic}
+                          />
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              ))}
             </div>
           )}
         </>
@@ -320,8 +361,11 @@ function SegmentedFilter({ items, value, onChange, counts, compact = false }) {
   );
 }
 
-function ConceptCard({ idea, brief, briefing, updating, approve, updateStatus, makeBrief }) {
+function ConceptCard({ idea, brief, briefing, generatingStatics, updating, approve, updateStatus, makeBrief, makeStatic }) {
   const writing = briefing.has(idea.id);
+  const isStatic = idea.format === "static";
+  const statics = idea.statics || [];
+  const generatingStatic = generatingStatics.has(idea.id);
   const approved = idea.status === "approved" || idea.status === "sent_to_inspo";
   const rejected = idea.status === "rejected";
   const approving = updating === `${idea.id}:approved`;
@@ -334,6 +378,7 @@ function ConceptCard({ idea, brief, briefing, updating, approve, updateStatus, m
         <h3>{idea.title}</h3>
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <span className={`cs-weekly-pill is-tier tier-${idea.tier}`}>{formatTier(idea.tier)}</span>
+          {isAnalysisIdea(idea) && <span className="cs-weekly-pill" title={`Developed from the ad analysis idea "${String(idea.referenceSource).replace(/^seed:\s*/i, "")}"`}>From ad analysis gap</span>}
           {approved && <span className="cs-weekly-pill is-status is-approved">Approved</span>}
           {rejected && <span className="cs-weekly-pill is-status">Dismissed</span>}
         </div>
@@ -357,6 +402,12 @@ function ConceptCard({ idea, brief, briefing, updating, approve, updateStatus, m
         </div>
 
         <div className="mt-5 flex flex-wrap items-center gap-3">
+          {isStatic && (
+            <button type="button" onClick={() => makeStatic(idea.id)} disabled={generatingStatic} className="cs-weekly-static-button">
+              {generatingStatic ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
+              {generatingStatic ? "Generating…" : statics.length ? "New Static" : "Generate Static"}
+            </button>
+          )}
           <button type="button" onClick={() => makeBrief(idea.id)} disabled={writing} className="cs-weekly-brief-button">
             {writing ? <Loader2 className="h-4 w-4 animate-spin" /> : <ClipboardList className="h-4 w-4" />}
             {writing ? "Writing…" : idea.format === "static" ? (brief ? "Regenerate Brief" : "Generate Brief") : (brief ? "Regenerate Script" : "Generate Script")}
@@ -379,9 +430,32 @@ function ConceptCard({ idea, brief, briefing, updating, approve, updateStatus, m
           )}
         </div>
 
+        {isStatic && (generatingStatic || statics.length > 0) && <ConceptStatics statics={statics} generating={generatingStatic} />}
         {brief && <Brief brief={brief} />}
       </div>
     </article>
+  );
+}
+
+/** Statics made from this concept (newest first). Each is also in Generate → Statics. */
+function ConceptStatics({ statics, generating }) {
+  return (
+    <div>
+      <div className="cs-weekly-statics">
+        {generating && (
+          <div className="cs-weekly-static is-pending" role="status">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            Generating static…
+          </div>
+        )}
+        {statics.map((item) => (
+          <a key={item.id} href={item.imageUrl || undefined} target="_blank" rel="noreferrer" className="cs-weekly-static" title="Open full size">
+            {item.imageUrl ? <img src={item.imageUrl} alt="Static generated from this concept" loading="lazy" /> : <span className="text-[10.5px] text-[#8a746c]">Image unavailable</span>}
+          </a>
+        ))}
+      </div>
+      {statics.length > 0 && <p className="cs-weekly-statics-note">Also saved in Generate → Statics.</p>}
+    </div>
   );
 }
 
@@ -410,10 +484,13 @@ ConceptCard.propTypes = {
   idea: PropTypes.object.isRequired,
   brief: PropTypes.object,
   briefing: PropTypes.instanceOf(Set).isRequired,
+  generatingStatics: PropTypes.instanceOf(Set).isRequired,
   updating: PropTypes.string,
   approve: PropTypes.func.isRequired,
   updateStatus: PropTypes.func.isRequired,
   makeBrief: PropTypes.func.isRequired,
+  makeStatic: PropTypes.func.isRequired,
 };
+ConceptStatics.propTypes = { statics: PropTypes.array.isRequired, generating: PropTypes.bool.isRequired };
 Brief.propTypes = { brief: PropTypes.object.isRequired };
 BriefSection.propTypes = { title: PropTypes.string.isRequired, children: PropTypes.node.isRequired };

@@ -6,7 +6,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import PropTypes from "prop-types";
 import { ScatterChart, Scatter, XAxis, YAxis, ZAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell } from "recharts";
-import { AlertTriangle, ChevronLeft, ChevronRight, Flame, Play, Search, X, Zap } from "lucide-react";
+import { AlertTriangle, ChevronLeft, ChevronRight, Flame, Play, Rocket, Search, X, Zap } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CsScrollArea } from "../ui";
 import { AdThumbImg } from "../meta-media";
@@ -149,6 +149,14 @@ SpendCpaChart.propTypes = { ads: PropTypes.array.isRequired };
 // ── Top performers ───────────────────────────────────────────────────────────
 
 const DEFAULT_LIMIT = 50;
+/** "Recent launches": ads created in the last 14 days. */
+export const RECENT_DAYS = 14;
+const launchedAt = (ad) => (ad.createdTime ? new Date(ad.createdTime).getTime() : NaN);
+const isRecentLaunch = (ad, now = Date.now()) => launchedAt(ad) >= now - RECENT_DAYS * 86400000;
+function launchLabel(ad) {
+  const days = Math.max(0, Math.floor((Date.now() - launchedAt(ad)) / 86400000));
+  return days === 0 ? "Launched today" : days === 1 ? "Launched yesterday" : `Launched ${days}d ago`;
+}
 const SORTS = {
   spend: { label: "Spend", value: (ad) => num(ad.spend) || null },
   cpa: { label: "Lowest CPA", value: (ad) => cpaOf(ad), asc: true },
@@ -158,6 +166,7 @@ const SORTS = {
   // Week-over-week spend growth; ads that only started spending this week
   // ("new") follow the growing ones.
   growth: { label: "Spend growth", value: (ad) => (ad.trend ? (ad.trend.spendDelta ?? 0.0001) : null), trendingOnly: true },
+  newest: { label: "Newest", value: (ad) => (Number.isFinite(launchedAt(ad)) ? launchedAt(ad) : null) },
 };
 
 /** "+45% this week" or "New this week" for a trending ad. */
@@ -203,7 +212,7 @@ function Stat({ label, value, muted = false }) {
 }
 Stat.propTypes = { label: PropTypes.string.isRequired, value: PropTypes.string.isRequired, muted: PropTypes.bool };
 
-function PerformerCard({ ad, rank, avgCpa, root, onOpen, openDetails = false }) {
+export function PerformerCard({ ad, rank, avgCpa, root, onOpen, openDetails = false, showLaunch = false }) {
   const video = isVideoAd(ad);
   const thumb = thumbOf(ad);
   const spend = num(ad.spend); const cpa = cpaOf(ad); const conv = num(ad.purchases);
@@ -251,8 +260,9 @@ function PerformerCard({ ad, rank, avgCpa, root, onOpen, openDetails = false }) 
           <Stat label="Watch" value={video ? (watch > 0 ? `${Math.round(watch)}s` : "—") : "n/a"} muted={!video} />
         </div>
 
-        {(ad.trend || fatigued) && (
+        {(ad.trend || fatigued || showLaunch) && (
           <div className="flex flex-wrap gap-1">
+            {showLaunch && Number.isFinite(launchedAt(ad)) && <span className="cs-top-card__launch"><Rocket className="h-3 w-3" />{launchLabel(ad)}</span>}
             {ad.trend && (
               <span className="cs-top-card__trend" title={`$${Math.round(num(ad.trend.currentSpend)).toLocaleString()} spent in the last 7 days${ad.trend.previousSpend ? `, up from $${Math.round(num(ad.trend.previousSpend)).toLocaleString()} the week before` : ""}`}>
                 <Flame className="h-3 w-3" />{trendLabel(ad.trend)}
@@ -269,7 +279,7 @@ function PerformerCard({ ad, rank, avgCpa, root, onOpen, openDetails = false }) 
     </article>
   );
 }
-PerformerCard.propTypes = { ad: PropTypes.object.isRequired, rank: PropTypes.number.isRequired, avgCpa: PropTypes.number, root: PropTypes.object, onOpen: PropTypes.func.isRequired, openDetails: PropTypes.bool };
+PerformerCard.propTypes = { ad: PropTypes.object.isRequired, rank: PropTypes.number.isRequired, avgCpa: PropTypes.number, root: PropTypes.object, onOpen: PropTypes.func.isRequired, openDetails: PropTypes.bool, showLaunch: PropTypes.bool };
 
 export function TopPerformers({ ads, trending = [], trendingRefreshing = false, onOpenAd, limit = DEFAULT_LIMIT }) {
   const scrollRef = useRef(null);
@@ -282,6 +292,7 @@ export function TopPerformers({ ads, trending = [], trendingRefreshing = false, 
   const [format, setFormat] = useState("all");
   const [fatiguedOnly, setFatiguedOnly] = useState(false);
   const [trendingOnly, setTrendingOnly] = useState(false);
+  const [recentOnly, setRecentOnly] = useState(false);
   const [sortKey, setSortKey] = useState("spend");
 
   const avgCpa = useMemo(() => blendedCpa(ads), [ads]);
@@ -298,9 +309,16 @@ export function TopPerformers({ ads, trending = [], trendingRefreshing = false, 
       costPerPurchase: t.cpa, ctr: t.ctr, avgWatchTime: t.videoAvgWatchTime, createdTime: t.createdTime,
       mediaType: t.videoAvgWatchTime ? "video" : undefined, trend: t,
     }));
-    return [...saved, ...unsaved];
+    // Recent launches join even before they spend, so a launch shows up the day it goes live.
+    const pooled = new Set([...savedIds, ...unsaved.map((ad) => ad.adId)]);
+    const now = Date.now();
+    const unspentLaunches = ads.filter((ad) => !pooled.has(ad.adId) && isRecentLaunch(ad, now));
+    return [...saved, ...unsaved, ...unspentLaunches];
   }, [ads, trending]);
+  // Zero-spend launches only appear under the Recent launches filter.
+  const basePool = useMemo(() => (recentOnly ? pool : pool.filter((ad) => num(ad.spend) > 0 || ad.trend)), [pool, recentOnly]);
   const trendingCount = useMemo(() => pool.filter((ad) => ad.trend).length, [pool]);
+  const recentCount = useMemo(() => { const now = Date.now(); return pool.filter((ad) => isRecentLaunch(ad, now)).length; }, [pool]);
   const toggleTrending = () => {
     const next = !trendingOnly;
     setTrendingOnly(next);
@@ -308,22 +326,31 @@ export function TopPerformers({ ads, trending = [], trendingRefreshing = false, 
     if (next) setSortKey("growth");
     else if (sortKey === "growth") setSortKey("spend");
   };
+  const toggleRecent = () => {
+    const next = !recentOnly;
+    setRecentOnly(next);
+    // Recent launches open newest first; leaving it goes back to spend.
+    if (next) setSortKey("newest");
+    else if (sortKey === "newest") setSortKey("spend");
+  };
   const formatCounts = useMemo(() => ({
-    all: pool.length, video: pool.filter(isVideoAd).length, static: pool.filter((ad) => !isVideoAd(ad)).length,
-  }), [pool]);
-  const fatiguedCount = useMemo(() => pool.filter((ad) => isFatigued(ad, avgCpa)).length, [pool, avgCpa]);
+    all: basePool.length, video: basePool.filter(isVideoAd).length, static: basePool.filter((ad) => !isVideoAd(ad)).length,
+  }), [basePool]);
+  const fatiguedCount = useMemo(() => basePool.filter((ad) => isFatigued(ad, avgCpa)).length, [basePool, avgCpa]);
 
   // Filters run over every ad with spend, then the limit applies — so a search
   // can surface an ad outside the top 50.
   const { displayAds, matchCount } = useMemo(() => {
     const q = query.trim().toLowerCase();
     const { value, asc } = SORTS[sortKey];
-    const matched = pool.filter((ad) => {
+    const now = Date.now();
+    const matched = basePool.filter((ad) => {
       if (q && !String(ad.adName || "").toLowerCase().includes(q)) return false;
       if (format === "video" && !isVideoAd(ad)) return false;
       if (format === "static" && isVideoAd(ad)) return false;
       if (fatiguedOnly && !isFatigued(ad, avgCpa)) return false;
       if (trendingOnly && !ad.trend) return false;
+      if (recentOnly && !isRecentLaunch(ad, now)) return false;
       return true;
     });
     const sorted = [...matched].sort((a, b) => {
@@ -335,11 +362,11 @@ export function TopPerformers({ ads, trending = [], trendingRefreshing = false, 
       return asc ? va - vb : vb - va;
     });
     return { displayAds: sorted.slice(0, limit), matchCount: matched.length };
-  }, [pool, query, format, fatiguedOnly, trendingOnly, sortKey, avgCpa, limit]);
+  }, [basePool, query, format, fatiguedOnly, trendingOnly, recentOnly, sortKey, avgCpa, limit]);
 
-  const filtersActive = query.trim() !== "" || format !== "all" || fatiguedOnly || trendingOnly;
+  const filtersActive = query.trim() !== "" || format !== "all" || fatiguedOnly || trendingOnly || recentOnly;
 
-  useEffect(() => { scrollRef.current?.scrollTo({ left: 0 }); }, [query, format, fatiguedOnly, trendingOnly, sortKey]);
+  useEffect(() => { scrollRef.current?.scrollTo({ left: 0 }); }, [query, format, fatiguedOnly, trendingOnly, recentOnly, sortKey]);
 
   const updateScrollState = useCallback(() => {
     const el = scrollRef.current;
@@ -373,7 +400,7 @@ export function TopPerformers({ ads, trending = [], trendingRefreshing = false, 
 
   return (
     <Section
-      title={trendingOnly ? "Top performers · trending" : "Top performers"}
+      title={recentOnly ? `Top performers · recent launches (last ${RECENT_DAYS} days)` : trendingOnly ? "Top performers · trending" : "Top performers"}
       noDivider
       actions={(
         <div className="flex items-center gap-2">
@@ -407,6 +434,11 @@ export function TopPerformers({ ads, trending = [], trendingRefreshing = false, 
             className={`cs-weekly-switcher__item ${trendingOnly ? "is-active" : ""}`}>
             <Flame className="h-3 w-3" />Trending <span>{trendingCount}</span>
           </button>
+          <button type="button" onClick={toggleRecent} aria-pressed={recentOnly}
+            title={`Ads launched in the last ${RECENT_DAYS} days`}
+            className={`cs-weekly-switcher__item ${recentOnly ? "is-active" : ""}`}>
+            <Rocket className="h-3 w-3" />Recent launches <span>{recentCount}</span>
+          </button>
         </div>
         <Select value={sortKey} onValueChange={setSortKey}>
           <SelectTrigger className="cs-weekly-filter-select cs-top-sort px-3"><SelectValue /></SelectTrigger>
@@ -414,14 +446,19 @@ export function TopPerformers({ ads, trending = [], trendingRefreshing = false, 
             {Object.keys(SORTS).filter((key) => !SORTS[key].trendingOnly || trendingOnly).map((key) => <SelectItem key={key} value={key}>Sort: {SORTS[key].label}</SelectItem>)}
           </SelectContent>
         </Select>
-        {filtersActive && <button type="button" onClick={() => { setQuery(""); setFormat("all"); setFatiguedOnly(false); setTrendingOnly(false); if (sortKey === "growth") setSortKey("spend"); }} className="cs-weekly-clear">Clear filters</button>}
+        {filtersActive && <button type="button" onClick={() => { setQuery(""); setFormat("all"); setFatiguedOnly(false); setTrendingOnly(false); setRecentOnly(false); if (sortKey === "growth" || sortKey === "newest") setSortKey("spend"); }} className="cs-weekly-clear">Clear filters</button>}
       </div>
 
       {trendingOnly && displayAds.length > 0 && <p className="mb-2 text-xs text-neutral-500">Ads whose spend grew week over week, or that started spending in the last 7 days.</p>}
+      {recentOnly && displayAds.length > 0 && <p className="mb-2 text-xs text-neutral-500">
+        Ads launched in the last {RECENT_DAYS} days, with their live metrics.
+      </p>}
       {!displayAds.length && <p className="cs-research-muted py-8 text-center">
         {trendingOnly && trendingCount === 0
           ? (trendingRefreshing ? "Refreshing trending creatives with the analysis…" : "No trending creatives in the last 7 days. Run Analysis to refresh.")
-          : "No ads match these filters."}
+          : recentOnly && recentCount === 0
+            ? `No ads launched in the last ${RECENT_DAYS} days in the saved analysis. Run Analysis to refresh.`
+            : "No ads match these filters."}
       </p>}
 
       <CsScrollArea
@@ -432,7 +469,7 @@ export function TopPerformers({ ads, trending = [], trendingRefreshing = false, 
       >
         <div className="cs-top-strip">
           {displayAds.map((ad, idx) => (
-            <PerformerCard key={ad.adId || idx} ad={ad} rank={idx + 1} avgCpa={avgCpa} root={scrollRoot} onOpen={onOpenAd || setExpanded} openDetails={Boolean(onOpenAd)} />
+            <PerformerCard key={ad.adId || idx} ad={ad} rank={idx + 1} avgCpa={avgCpa} root={scrollRoot} onOpen={onOpenAd || setExpanded} openDetails={Boolean(onOpenAd)} showLaunch={recentOnly} />
           ))}
         </div>
       </CsScrollArea>

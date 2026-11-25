@@ -112,6 +112,8 @@ export const creativeApi = {
   setIdeaStatus: (ideaId, status) => request(`/weekly/ideas/${encodeURIComponent(ideaId)}/status`, { method: "POST", body: { status } }),
   generateBrief: (ideaId, productId, aiSelections) =>
     request(`/weekly/ideas/${encodeURIComponent(ideaId)}/brief`, { method: "POST", body: { productId, aiSelections } }),
+  generateIdeaStatic: (ideaId, productId, aiSelections) =>
+    request(`/weekly/ideas/${encodeURIComponent(ideaId)}/static`, { method: "POST", body: { productId, aiSelections } }),
   getJobHistory: (offset = 0) => request(`/jobs?offset=${offset}`),
   getJob: (id) => request(`/jobs/${id}`),
   cancelJob: (id) => request(`/jobs/${encodeURIComponent(id)}/cancel`, { method: "POST" }),

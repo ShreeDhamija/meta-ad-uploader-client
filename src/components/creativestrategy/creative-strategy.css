@@ -1755,6 +1755,71 @@ html body #root .creative-strategy button.cs-weekly-switcher__item.is-active {
   color: #ef4444;
 }
 
+.cs-weekly-static-button {
+  display: inline-flex;
+  height: 36px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 14px;
+  border: 1px solid #3b170b;
+  border-radius: 13px;
+  color: #3b170b;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(59, 23, 11, 0.12);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.cs-weekly-static-button:hover:not(:disabled) {
+  background: var(--cs-peach);
+}
+
+.cs-weekly-static-button:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.cs-weekly-statics {
+  display: grid;
+  margin-top: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.cs-weekly-static {
+  position: relative;
+  display: flex;
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(108, 52, 3, 0.24);
+  border-radius: 14px;
+  background: var(--cs-peach);
+}
+
+.cs-weekly-static img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #fff;
+}
+
+.cs-weekly-static.is-pending {
+  flex-direction: column;
+  gap: 6px;
+  color: #8a746c;
+  font-size: 10.5px;
+  text-align: center;
+}
+
+.cs-weekly-statics-note {
+  margin-top: 6px;
+  color: #8a746c;
+  font-size: 10.5px;
+}
+
 .cs-weekly-brief-button:disabled,
 .cs-weekly-decision:disabled {
   cursor: wait;
@@ -5553,3 +5618,59 @@ html body #root .creative-strategy button.cs-monthly-filter-button:hover { borde
 }
 /* Winning angles and Take into next month: one box per row. */
 .cs-monthly-summary-boxes { grid-template-columns: minmax(0, 1fr); }
+
+/* ── Insights: proven angle buttons, angle ad popup, drawer scorecards, recent launches ── */
+.cs-intel-angle-pill.is-proven {
+  gap: 8px;
+  min-height: 32px;
+  padding: 4px 6px 4px 12px;
+  border: 1.5px solid #6c3403;
+  color: #30150a;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(59, 23, 11, 0.12);
+  font-size: 11.5px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: background 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+}
+.cs-intel-angle-pill.is-proven:hover { background: var(--cs-peach); box-shadow: 0 4px 10px rgba(59, 23, 11, 0.16); transform: translateY(-1px); }
+.cs-intel-angle-pill.is-proven:focus-visible { outline: 2px solid #e8812c; outline-offset: 2px; }
+.cs-intel-angle-pill__count { padding: 1px 7px; border-radius: 999px; color: #6c3403; background: var(--cs-peach); font-size: 10px; font-weight: 600; }
+.cs-intel-angle-pill__open { display: inline-flex; align-items: center; gap: 3px; padding: 2px 8px; border-radius: 999px; color: #fff; background: #310b00; font-size: 10px; font-weight: 600; }
+.cs-intel-angle-hint { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; color: #6c3403; font-size: 11.5px; font-weight: 550; }
+
+.cs-angle-ads { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }
+.cs-angle-ad { display: flex; flex-direction: column; gap: 8px; }
+.cs-angle-ad .cs-top-card { width: 100%; }
+.cs-angle-ad__why { padding: 9px 11px; border: 1px solid rgba(108, 52, 3, 0.16); border-radius: 13px; color: #51413a; background: #fff; font-size: 12px; line-height: 1.5; }
+.cs-angle-ad__why strong { display: block; margin-bottom: 2px; color: #6c3403; font-size: 10.5px; font-weight: 650; }
+
+.cs-ad-drawer__stats dd small { display: block; margin-top: 2px; font-size: 10.5px; font-weight: 600; }
+.cs-ad-drawer__stats dd small.is-good { color: #15803d; }
+.cs-ad-drawer__stats dd small.is-bad { color: #b91c1c; }
+.cs-ad-drawer__stats dd small.is-flat { color: #8a746c; }
+.cs-ad-drawer__lead { display: flex; flex-direction: column; gap: 14px; }
+.cs-ad-drawer__lead .cs-ad-drawer__hook { font-size: 18px; }
+.cs-ad-drawer__section-label { margin-bottom: 8px; color: #8a746c; font-size: 10.5px; font-weight: 650; letter-spacing: 0.06em; text-transform: uppercase; }
+
+.cs-top-card__launch { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border: 1px solid #bfdbfe; border-radius: 999px; color: #1d4ed8; background: #eff6ff; font-size: 10px; font-weight: 650; }
+
+.cs-intel-evidence-card.is-button { width: 100%; text-align: left; cursor: pointer; transition: background 140ms ease, border-color 140ms ease; }
+.cs-intel-evidence-card.is-button:hover { border-color: rgba(108, 52, 3, 0.35); background: #fff7ef; }
+.cs-intel-evidence-card.is-button:focus-visible { outline: 2px solid #e8812c; outline-offset: 2px; }
+
+/* Ad angles: In research / Untapped angles open a "why" popup. */
+.cs-intel-angle-pill.is-openable { gap: 4px; cursor: pointer; transition: background 140ms ease, border-color 140ms ease; }
+.cs-intel-angle-pill.is-openable:hover { border-color: #6c3403; background: #fff; }
+.cs-intel-angle-pill.is-openable:focus-visible { outline: 2px solid #e8812c; outline-offset: 2px; }
+.cs-angle-detail { display: flex; flex-direction: column; gap: 18px; }
+.cs-angle-detail section { display: flex; flex-direction: column; gap: 8px; }
+.cs-angle-detail__card { padding: 11px 13px; border: 1px solid rgba(108, 52, 3, 0.16); border-radius: 14px; background: #fff; }
+.cs-angle-detail__persona { color: #30150a; font-size: 13.5px; font-weight: 650; }
+
+/* Weekly board: "Built on your ads" vs "Fresh concepts to test". */
+.cs-weekly-group + .cs-weekly-group { margin-top: 28px; }
+.cs-weekly-group__header { margin-bottom: 12px; }
+.cs-weekly-group__header h2 { display: flex; align-items: center; gap: 8px; color: #30150a; font-size: 17px; font-weight: 700; letter-spacing: -0.01em; }
+.cs-weekly-group__header h2 span { padding: 1px 9px; border-radius: 999px; color: #6c3403; background: var(--cs-peach); font-size: 11px; font-weight: 600; }
+.cs-weekly-group__header p { margin-top: 3px; max-width: 760px; color: #7c6f69; font-size: 12px; line-height: 1.5; }

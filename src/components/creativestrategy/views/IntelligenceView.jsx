@@ -2,7 +2,7 @@
 // creative_strategy_audit aggregates plus per-ad ad_creative_insights evidence.
 import { useCallback, useEffect, useRef, useState } from "react";
 import PropTypes from "prop-types";
-import { AlertTriangle, ChevronDown, ChevronRight, Filter, Loader2, X, Zap } from "lucide-react";
+import { AlertTriangle, ChevronDown, ChevronRight, Filter, Loader2, Maximize2, X, Zap } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { matchInsightAds, funnelBuckets } from "../insight-metrics";
 import { creativeApi } from "@/lib/creativeApi";
@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { humanize } from "../JsonView";
 import { CsScrollArea, EmptyState, ErrorBanner, PartialResultsNotice, ProgressiveSection } from "../ui";
 import { useJobRunner } from "../JobsContext";
-import { SpendCpaChart, TopPerformers } from "./InsightsPerformance";
+import { PerformerCard, SpendCpaChart, TopPerformers } from "./InsightsPerformance";
 import { AdMediaPlayer, AdMediaProvider, AdThumbImg } from "../meta-media";
 import RunBy from "../run-by";
 
@@ -100,10 +100,10 @@ export default function IntelligenceView({ ctx }) {
   const topHooks = deriveHooksFromAds(ads, a.top_hooks);
   // A top ad opens with the same hook text Top hooks shows for it.
   const hookTextById = new Map(topHooks.map((hook) => [hook.adId, hook.hookText]));
-  const openAd = (ad) => setDrawerAd({ ...ad, hookText: ad.hookText || hookTextById.get(ad.adId) || ad.firstSpokenSentence || ad.firstOverlayHeadline || ad.headlineText || "" });
-  const recentCutoff = Date.now() - 14 * 24 * 60 * 60 * 1000;
-  const recent = [...ads].filter((x) => x.createdTime && new Date(x.createdTime).getTime() >= recentCutoff)
-    .sort((x, y) => new Date(y.createdTime) - new Date(x.createdTime));
+  // openedFrom "hook" leads the drawer with the copy and why the hook works.
+  const openAd = (ad, openedFrom = "ad") => setDrawerAd({ ...ad, openedFrom, hookText: ad.hookText || hookTextById.get(ad.adId) || ad.firstSpokenSentence || ad.firstOverlayHeadline || ad.headlineText || "" });
+  // Scorecard averages for ads without a saved grade (e.g. recent launches).
+  const accountAverages = computeAccountAverages(ads);
   const fatigued = ads.filter((x) => (x.frequency || 0) >= 3 && (x.spend || 0) > 100).sort((x, y) => (y.frequency || 0) - (x.frequency || 0)).slice(0, 5);
   const failedDownloads = analyzedAds.filter((x) => !x.storagePath);
   const patterns = Array.isArray(a.patterns) ? [...a.patterns].sort((x, y) =>
@@ -112,14 +112,11 @@ export default function IntelligenceView({ ctx }) {
   const analyzePhase = analyzeJob?.progress?.phase;
   const adWorkActive = analyzeActive && !String(analyzePhase || "").startsWith("audit");
   const auditWorkActive = analyzeActive && String(analyzePhase || "").startsWith("audit");
-  const messagingTrendItems = normalizeTrends(a.messaging_trends);
-  const conceptSeeds = a.concept_seed_list || a.concept_seeds || [];
   const hasUntapped = (Array.isArray(a.untapped_angles_by_persona) && a.untapped_angles_by_persona.length > 0)
     || (Array.isArray(a.angles_not_yet_tested || a.untapped_angles || a.prioritized_gaps) && (a.angles_not_yet_tested || a.untapped_angles || a.prioritized_gaps).length > 0);
   const insightReadyCount = [
     ads.length > 0, patterns.length > 0, topHooks.length > 0, Array.isArray(a.messaging_themes) && a.messaging_themes.length > 0,
     Array.isArray(a.persona_ad_mapping) && a.persona_ad_mapping.length > 0, Array.isArray(a.visual_openers) && a.visual_openers.length > 0,
-    messagingTrendItems.length > 0, Array.isArray(conceptSeeds) && conceptSeeds.length > 0,
   ].filter(Boolean).length;
   const angleGroups = angles.reduce((groups, angle) => {
     const key = angle.status || "uncategorized";
@@ -152,7 +149,7 @@ export default function IntelligenceView({ ctx }) {
         <p className="text-xs text-neutral-500">Model choices apply to new analyses and the next audit. Completed ad analyses are reused.</p>
       </>}
       <ErrorBanner message={err} />
-      <PartialResultsNotice active={analyzeActive} completed={insightReadyCount} total={8} label="insight sections" />
+      <PartialResultsNotice active={analyzeActive} completed={insightReadyCount} total={6} label="insight sections" />
 
       {!selectedProductId ? (
         <EmptyState icon={Zap} title="No product selected" hint="Select a product above to run and view ad analysis." />
@@ -173,33 +170,25 @@ export default function IntelligenceView({ ctx }) {
         </div>
       )}
       <FailedDownloadsBanner ads={failedDownloads} total={analyzedAds.length} />
-      {patterns.length > 0 ? <StrategicPatterns patterns={patterns} /> : <ProgressiveSection title="Most common patterns by spend" active={auditWorkActive} />}
+      {patterns.length > 0 ? <StrategicPatterns patterns={patterns} ads={ads} onOpenAd={openAd} /> : <ProgressiveSection title="Most common patterns by spend" active={auditWorkActive} />}
       {topHooks.length > 0 ? <TopHooksSection key={selectedProductId} hooks={topHooks} onOpenAd={openAd} /> : <ProgressiveSection title="Top hooks" active={adWorkActive} cards={2} />}
+      {Array.isArray(a.visual_openers) && a.visual_openers.length > 0
+        ? <VisualOpenersSection openers={a.visual_openers} ads={ads} onOpenAd={openAd} />
+        : <ProgressiveSection title="Visual openers" active={auditWorkActive} cards={2} />}
       {Array.isArray(a.messaging_themes) && a.messaging_themes.length > 0
-        ? <MessagingThemesSection themes={a.messaging_themes} ads={ads} />
+        ? <MessagingThemesSection themes={a.messaging_themes} ads={ads} onOpenAd={openAd} />
         : <ProgressiveSection title="Messaging themes" active={auditWorkActive} cards={2} />}
       {ads.length > 0 ? <FunnelBalanceSection ads={ads} /> : <ProgressiveSection title="Funnel balance" active={adWorkActive} />}
       {ads.length > 0 && <SpendCpaChart ads={ads} />}
       {Array.isArray(a.persona_ad_mapping) && a.persona_ad_mapping.length > 0
-        ? <PersonaPerformanceSection mappings={a.persona_ad_mapping} ads={ads} />
+        ? <PersonaPerformanceSection mappings={a.persona_ad_mapping} ads={ads} onOpenAd={openAd} />
         : <ProgressiveSection title="Customer persona performance" active={auditWorkActive} cards={2} />}
 
-      {/* Trending creatives live in Top performers as a filter, like Fatigued. */}
+      {/* Trending creatives and recent launches live in Top performers as filters, like Fatigued. */}
       {(ads.length > 0 || trendingAds.length > 0) && <TopPerformers key={selectedProductId} ads={ads} trending={trendingAds} trendingRefreshing={analyzeActive} onOpenAd={openAd} />}
-
-      {recent.length > 0 ? <RecentLaunches ads={recent} /> : <Block title="Recent launches · last 14 days" noDivider><p className="text-xs text-neutral-500">{adWorkActive || loading ? "Loading recent launches…" : "No ads launched in the last 14 days in the saved analysis. Run Analysis to refresh."}</p></Block>}
-      {Array.isArray(a.visual_openers) && a.visual_openers.length > 0
-        ? <VisualOpenersSection openers={a.visual_openers} ads={ads} />
-        : <ProgressiveSection title="Visual openers" active={auditWorkActive} cards={2} />}
-      {messagingTrendItems.length > 0
-        ? <MessagingTrendsSection trends={a.messaging_trends} ads={ads} />
-        : <ProgressiveSection title="Messaging trends" active={auditWorkActive} />}
-      {Array.isArray(conceptSeeds) && conceptSeeds.length > 0
-        ? <WhatToTestNext audit={a} />
-        : <ProgressiveSection title="What to test next" active={auditWorkActive} cards={2} />}
       {hasUntapped ? <UntappedAnglesSection audit={a} /> : <ProgressiveSection title="Untapped angles and gaps" active={auditWorkActive} />}
 
-      {angles.length > 0 && <AngleGroups groups={angleGroups} ads={ads} />}
+      {angles.length > 0 && <AngleGroups groups={angleGroups} ads={ads} onOpenAd={openAd} />}
 
 
       {fatigued.length > 0 && (
@@ -215,7 +204,7 @@ export default function IntelligenceView({ ctx }) {
       )}
         </div>
       )}
-      <AdDetailDrawer ad={drawerAd} onClose={() => setDrawerAd(null)} />
+      <AdDetailDrawer ad={drawerAd} onClose={() => setDrawerAd(null)} averages={accountAverages} />
     </div>
     </AdMediaProvider>
   );
@@ -356,26 +345,96 @@ function FailedDownloadsBanner({ ads, total }) {
 }
 FailedDownloadsBanner.propTypes = { ads: PropTypes.array.isRequired, total: PropTypes.number.isRequired };
 
-function StrategicPatterns({ patterns }) {
+/**
+ * Ads behind an audit cluster: ad_ids when the audit saved them, else the
+ * example names (which may carry an "[ad_id=…]" reference from the prompt).
+ */
+function resolveClusterAds(cluster, ads, nameKeys = ["example_ad_names", "ad_names", "examples"]) {
+  const byId = new Map(ads.map((ad) => [ad.adId, ad]));
+  const byName = new Map(ads.map((ad) => [ad.adName, ad]));
+  const found = new Map();
+  const add = (ad) => { if (ad && !found.has(ad.adId)) found.set(ad.adId, ad); };
+  for (const id of [...(Array.isArray(cluster?.ad_ids) ? cluster.ad_ids : []), ...(Array.isArray(cluster?.example_ad_ids) ? cluster.example_ad_ids : [])]) add(byId.get(id));
+  for (const key of nameKeys) {
+    for (const name of Array.isArray(cluster?.[key]) ? cluster[key] : []) {
+      const ref = /\[ad_id=([^\]]+)\]/.exec(String(name));
+      add(ref ? byId.get(ref[1]) : byName.get(name));
+      if (!ref) add(byName.get(String(name).trim()));
+    }
+  }
+  return [...found.values()].sort((x, y) => (y.spend || 0) - (x.spend || 0));
+}
+
+/**
+ * Persona-style expandable rows: a header with title, description, metrics
+ * and spend bar; opening it shows extra detail and every ad, each of which
+ * opens the ad drawer.
+ */
+function ExpandableClusters({ items, onOpenAd }) {
+  const [expanded, setExpanded] = useState(null);
+  return <div className="space-y-2">{items.map((item, index) => {
+    const open = expanded === index;
+    return <div key={`${item.title}-${index}`} className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
+      <button type="button" onClick={() => setExpanded(open ? null : index)} aria-expanded={open} className="flex w-full items-start gap-3 p-3 text-left">
+        {item.thumbAd !== undefined && <CreativeThumbnail ad={item.thumbAd} />}
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2"><strong className="text-[15px] text-neutral-800">{item.title}</strong>{item.badge}</div>
+          {item.description && <p className="mt-1 text-[13px] leading-relaxed text-neutral-600">{item.description}</p>}
+          <MetricPills className="mt-2" items={item.pills} />
+          {item.sharePct != null && <div className="cs-intel-spend-bar mt-3"><div style={{ width: `${Math.max(Math.min(item.sharePct, 100), 2)}%` }} /></div>}
+        </div>
+        {open ? <ChevronDown className="h-4 w-4 shrink-0 text-neutral-400" /> : <ChevronRight className="h-4 w-4 shrink-0 text-neutral-400" />}
+      </button>
+      {open && <div className="cs-intel-expanded-stack">
+        {item.details}
+        <section><h3 className="cs-intel-subsection-title">Ads</h3>
+          {item.ads.length ? <><p className="mt-1 text-xs text-neutral-500">Open an ad for its full analysis.</p>
+            <div className="mt-2 grid gap-2 sm:grid-cols-2">{item.ads.map((ad) => <AdEvidenceCard key={ad.adId} ad={ad} onOpen={onOpenAd} />)}</div></>
+            : <p className="mt-1 text-[13px] text-neutral-500">No saved ads matched. Run Analysis to refresh.</p>}
+        </section>
+      </div>}
+    </div>;
+  })}</div>;
+}
+ExpandableClusters.propTypes = { items: PropTypes.array.isRequired, onOpenAd: PropTypes.func };
+
+const tagPills = (tags) => {
+  const visible = tags.filter(Boolean);
+  return visible.length > 0 && <div className="cs-intel-tag-row">{visible.map((tag, tagIndex) => <span key={tag} className={`cs-intel-attribute-pill is-tone-${tagIndex % 4}`}>{tag}</span>)}</div>;
+};
+
+/** learning_sheet_level: the audit's confidence in a pattern (its own call, not the brand's Learnings list). */
+const CONFIDENCE_HINT = {
+  gospel: "Consistently behind most spend and results; treat as a rule for this account.",
+  tested: "Has worked across several ads with real spend.",
+  suspected: "Early signal from a few ads or little spend; worth testing, not proven.",
+  discredited: "Ads using it are underperforming.",
+};
+
+function StrategicPatterns({ patterns, ads, onOpenAd }) {
   if (!patterns.length) return null;
-  return <InsightSection title="Most common patterns by spend" description="The storytelling moves your ads use most, ranked by how much spend sits behind them. A pattern is how an ad makes its point, not just its topic.">
-    <div className="cs-intel-patterns">{patterns.map((pattern, index) => {
-      const pct = Number(pattern.spend_pct || 0);
-      return <div key={index} className="cs-intel-pattern">
-        <div className="flex gap-3 text-sm"><span className="cs-intel-list-index">{index + 1}</span><div className="min-w-0 flex-1">
-          <p className="text-neutral-700"><strong>{pattern.pattern_name ? `${pattern.pattern_name}: ` : ""}</strong>{pattern.pattern || pattern.insight || ""}</p>
-          <MetricPills className="mt-2" items={[
-            `${pct.toFixed(0)}% of spend`,
-            `${pattern.ad_count || 0} ads`,
-            pattern.learning_sheet_level && humanize(pattern.learning_sheet_level),
-          ]} />
-        </div></div>
-        <div className="cs-intel-spend-bar"><div style={{ width: `${Math.max(Math.min(pct, 100), 2)}%` }} /></div>
-      </div>;
-    })}</div>
+  const items = patterns.map((pattern) => {
+    const pct = Number(pattern.spend_pct || 0);
+    const level = String(pattern.learning_sheet_level || "").toLowerCase();
+    return {
+      title: pattern.pattern_name || "Pattern",
+      description: pattern.pattern || pattern.insight || "",
+      badge: level && <span className="cs-intel-attribute-pill is-tone-1" title={CONFIDENCE_HINT[level] || undefined}>Confidence: {humanize(pattern.learning_sheet_level)}</span>,
+      pills: [`${pct.toFixed(0)}% of spend`, `${pattern.ad_count || 0} ads`, pattern.saturation_risk && `${humanize(pattern.saturation_risk)} saturation risk`],
+      sharePct: pct,
+      ads: resolveClusterAds(pattern, ads),
+      details: <>
+        {Array.isArray(pattern.quotes) && pattern.quotes.length > 0 && <section><h3 className="cs-intel-subsection-title">In the ads</h3><ul className="mt-1 space-y-1">{pattern.quotes.map((quote, quoteIndex) => <li key={quoteIndex} className="text-[13px] italic text-neutral-700">“{quote}”</li>)}</ul></section>}
+        {tagPills([pattern.emotional_driver && `Driver: ${pattern.emotional_driver}`, pattern.awareness_level && `Awareness: ${plainLabel(pattern.awareness_level)}`, pattern.sophistication_stage && `Sophistication stage ${pattern.sophistication_stage}`, pattern.uses_customer_language && "Uses customer language"])}
+      </>,
+    };
+  });
+  return <InsightSection title="Most common patterns by spend" description="The storytelling moves your ads use most, ranked by how much spend sits behind them. A pattern is how an ad makes its point, not just its topic. Confidence is the analysis's read: Gospel (a rule for this account), Tested, Suspected (early signal) or Discredited.">
+    <ExpandableClusters items={items} onOpenAd={onOpenAd} />
   </InsightSection>;
 }
-StrategicPatterns.propTypes = { patterns: PropTypes.array.isRequired };
+StrategicPatterns.propTypes = { patterns: PropTypes.array.isRequired, ads: PropTypes.array.isRequired, onOpenAd: PropTypes.func };
+
 
 // How a top hook opens its details: the right-hand drawer (new) or inline
 // under the row (the original layout). Kept as a per-browser toggle while the
@@ -408,7 +467,7 @@ function TopHooksSection({ hooks, onOpenAd }) {
     <CsScrollArea viewportClassName="max-h-[720px]"><div className="cs-intel-accordion-list pr-3">{visibleHooks.map((hook, index) => {
       const open = view === "inline" && expanded === index;
       return <div key={`${hook.adId}-${index}`} className="cs-intel-accordion-card">
-        <button type="button" onClick={() => (view === "drawer" ? onOpenAd(hook) : setExpanded(open ? null : index))} className="cs-intel-hook-trigger">
+        <button type="button" onClick={() => (view === "drawer" ? onOpenAd(hook, "hook") : setExpanded(open ? null : index))} className="cs-intel-hook-trigger">
           <span className="cs-intel-list-index">{index + 1}</span>
           <p className="cs-intel-hook-title">“{hook.hookText}”</p>
           <MediaTag mediaType={hook.mediaType} />
@@ -439,11 +498,14 @@ const isAnalyzedAd = (ad) => Boolean(ad?.primaryAngle && ad?.mediaDescription);
  * works, building blocks, copy and transcript. `variant="drawer"` leads with a
  * large preview and a stat grid; "inline" is the original Top hooks layout.
  */
-function HookDetails({ hook, variant = "inline" }) {
+function HookDetails({ hook, variant = "inline", averages = null }) {
   const formula = hook.hookFormula || {};
   const primaryCopy = hook.adsManagerCopy || {};
   const transcript = parseTranscript(hook.transcript, hook.firstSpokenSentence);
   const drawer = variant === "drawer";
+  // Opened from Top hooks: the copy and why the hook works lead; ad-level data follows.
+  const copyFirst = drawer && hook.openedFrom === "hook";
+  const isVideo = String(hook.mediaType || "").toLowerCase() === "video";
   const tags = [
     hook.primaryAngle && `Angle: ${hook.primaryAngle}`, hook.hookStyle && `Style: ${hook.hookStyle}`,
     hook.emotionalTrigger && `Emotion: ${hook.emotionalTrigger}`, hook.awarenessStage && `Awareness: ${plainLabel(hook.awarenessStage)}`,
@@ -458,29 +520,101 @@ function HookDetails({ hook, variant = "inline" }) {
     hook.frequency > 0 && `${Number(hook.frequency).toFixed(1)}x frequency`,
     hook.funnelPosition && humanize(hook.funnelPosition),
   ].filter(Boolean);
+  // The grade's "CPA 23.41 vs 30.12; …" comparison goes into the scorecards
+  // (same baseline the grade used); account averages fill in for ungraded ads.
+  const graded = parseGradeComparisons(hook.gradeRationale);
+  const averageFor = (key) => graded[key]?.average ?? averages?.[key] ?? null;
   const drawerStats = [
     ["Spend", money(hook.spend)],
-    ["CPA", hook.costPerPurchase ? money(hook.costPerPurchase) : "—"],
+    ["CPA", hook.costPerPurchase ? money(hook.costPerPurchase) : "—", compareToAverage("cpa", hook.costPerPurchase, averageFor("cpa"))],
     ["Conversions", hook.purchases > 0 ? String(hook.purchases) : "—"],
-    ["CTR", hook.ctr != null ? `${Number(hook.ctr).toFixed(2)}%` : "—"],
-    ["CPM", hook.cpm != null ? money(hook.cpm) : "—"],
+    ["CTR", hook.ctr != null ? `${Number(hook.ctr).toFixed(2)}%` : "—", compareToAverage("ctr", hook.ctr, averageFor("ctr"))],
+    ["CPM", hook.cpm != null ? money(hook.cpm) : "—", compareToAverage("cpm", hook.cpm, averageFor("cpm"))],
     ["Frequency", hook.frequency > 0 ? `${Number(hook.frequency).toFixed(1)}x` : "—"],
-    ...(String(hook.mediaType || "").toLowerCase() === "video" ? [
-      ["Hook rate", hook.hookRate > 0 ? `${(hook.hookRate * 100).toFixed(1)}%` : "—"],
+    ...(isVideo ? [
+      ["Hook rate", hook.hookRate > 0 ? `${(hook.hookRate * 100).toFixed(1)}%` : "—", compareToAverage("hook", hook.hookRate, averageFor("hook"))],
+      ...(hook.holdRate > 0 ? [["Hold rate", `${(hook.holdRate * 100).toFixed(1)}%`, compareToAverage("hold", hook.holdRate, averageFor("hold"))]] : []),
       ["Avg watch", hook.avgWatchTime > 0 ? `${Number(hook.avgWatchTime).toFixed(1)}s` : "—"],
     ] : []),
   ];
+  const tagRow = tags.length > 0 && <div className="cs-intel-tag-row">{tags.map((tag, tagIndex) => <span key={tag} className={`cs-intel-attribute-pill is-tone-${tagIndex % 4}`}>{tag}</span>)}</div>;
+  const scorecards = <dl className="cs-ad-drawer__stats">{drawerStats.map(([label, value, comparison]) => <div key={label}>
+    <dt>{label}</dt>
+    <dd>{value}{comparison && <small className={comparison.tone}>{comparison.label}</small>}</dd>
+  </div>)}</dl>;
+  const hookQuote = hook.hookText && <div><p className="cs-intel-field-label">Hook</p><p className="cs-ad-drawer__hook">“{hook.hookText}”</p></div>;
+
+  const notAnalyzed = drawer && !isAnalyzedAd(hook) && <section className="cs-intel-detail-section">
+    <p className="cs-ad-drawer__note">This ad hasn&apos;t had a full creative analysis yet, so there&apos;s no hook breakdown, angle or transcript. Each Run Analysis reads your top-spending ads.</p>
+  </section>;
+  const formulaSection = (formula.pattern_interrupt || formula.qualifier || formula.gap) && <section className="cs-intel-detail-section">
+    <h3 className="cs-intel-subsection-title">Hook formula</h3>
+    <div className="cs-intel-formula-grid">{[["Pattern interrupt", formula.pattern_interrupt], ["Qualifier", formula.qualifier], ["Gap", formula.gap]].filter(([, value]) => value).map(([label, value]) =>
+      <div key={label} className="cs-intel-formula-card"><small>{label}</small><p>{value}</p></div>)}</div>
+  </section>;
+  const whySection = hook.whyItWorks && <section className="cs-intel-detail-section">
+    <h3 className="cs-intel-subsection-title">Why it works</h3>
+    <p className="cs-hook-why">{hook.whyItWorks}</p>
+  </section>;
+  const blocksSection = (hook.buildingBlocks?.length > 0 || hook.lifeForce8?.length > 0) && <section className="cs-intel-detail-section">
+    {hook.buildingBlocks?.length > 0 && <DetailList label="Building blocks" items={hook.buildingBlocks.map(plainLabel)} />}
+    {hook.lifeForce8?.length > 0 && <DetailList label="Core desires" items={hook.lifeForce8.map(plainLabel)} />}
+  </section>;
+  const copySection = (primaryCopy.primary_text || primaryCopy.headline || hook.headlineText || primaryCopy.cta || hook.ctaType) && <section className="cs-intel-detail-section">
+    <h3 className="cs-intel-subsection-title">Ad copy</h3>
+    <div className="cs-intel-copy-grid">
+      {primaryCopy.primary_text && <LabeledCopy label="Primary text">{primaryCopy.primary_text}</LabeledCopy>}
+      {(primaryCopy.headline || hook.headlineText) && <LabeledCopy label="Headline">{primaryCopy.headline || hook.headlineText}</LabeledCopy>}
+      {(primaryCopy.cta || hook.ctaType) && <LabeledCopy label="Call to action">{plainLabel(primaryCopy.cta || hook.ctaType)}</LabeledCopy>}
+    </div>
+  </section>;
+  const transcriptSection = transcript.full && hook.mediaType === "video" && <section className="cs-intel-detail-section">
+    <div className="cs-hook-transcript-head">
+      <h3 className="cs-intel-subsection-title">Transcript</h3>
+      {transcript.speechQuality && <span className="cs-hook-chip">Speech: {transcript.speechQuality}</span>}
+      {transcript.wordCount && <span className="cs-hook-chip">First sentence: {transcript.wordCount} words</span>}
+    </div>
+    <CsScrollArea className="cs-intel-transcript" viewportClassName={drawer ? "max-h-[360px]" : "max-h-[190px]"}>
+      <p>{transcript.highlight
+        ? <>{transcript.full.slice(0, transcript.highlight[0])}<mark className="cs-hook-mark" title="Opening hook (0–8s)">{transcript.full.slice(transcript.highlight[0], transcript.highlight[1])}</mark>{transcript.full.slice(transcript.highlight[1])}</>
+        : <>{transcript.firstSentence && <><mark className="cs-hook-mark" title="Opening hook (0–8s)">{transcript.firstSentence}</mark>{"\n\n"}</>}{transcript.full}</>}</p>
+    </CsScrollArea>
+  </section>;
+  const media = <div className="cs-ad-drawer__media">
+    <AdMediaPlayer ad={hook} fallback={<div className="cs-ad-drawer__media-empty"><Zap className="h-6 w-6" /></div>} />
+  </div>;
+
+  if (copyFirst) {
+    return <div className="cs-intel-hook-details is-drawer">
+      {hookQuote && <section className="cs-intel-detail-section is-first cs-ad-drawer__lead">{hookQuote}</section>}
+      {whySection}
+      {formulaSection}
+      {copySection}
+      {transcriptSection}
+      {notAnalyzed}
+      <section className="cs-intel-detail-section">
+        <p className="cs-ad-drawer__section-label">Ad performance</p>
+        <div className="cs-ad-drawer__overview">
+          {media}
+          <div className="min-w-0 space-y-3">
+            {scorecards}
+            {hook.funnelPosition && <p className="text-xs text-neutral-500">Funnel: {humanize(hook.funnelPosition)}</p>}
+            {tagRow}
+          </div>
+        </div>
+      </section>
+      {blocksSection}
+    </div>;
+  }
+
   return <div className={`cs-intel-hook-details ${drawer ? "is-drawer" : ""}`}>
     {drawer ? <section className="cs-intel-detail-section is-first cs-ad-drawer__overview">
-      <div className="cs-ad-drawer__media">
-        <AdMediaPlayer ad={hook} fallback={<div className="cs-ad-drawer__media-empty"><Zap className="h-6 w-6" /></div>} />
-      </div>
+      {media}
       <div className="min-w-0 space-y-3">
-        {hook.hookText && <div><p className="cs-intel-field-label">Hook</p><p className="cs-ad-drawer__hook">“{hook.hookText}”</p></div>}
-        <dl className="cs-ad-drawer__stats">{drawerStats.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
+        {hookQuote}
+        {scorecards}
         {hook.funnelPosition && <p className="text-xs text-neutral-500">Funnel: {humanize(hook.funnelPosition)}</p>}
-        {hook.gradeRationale && <p className="cs-hook-overview__read">{hook.gradeRationale}</p>}
-        {tags.length > 0 && <div className="cs-intel-tag-row">{tags.map((tag, tagIndex) => <span key={tag} className={`cs-intel-attribute-pill is-tone-${tagIndex % 4}`}>{tag}</span>)}</div>}
+        {tagRow}
       </div>
     </section> : <section className="cs-intel-detail-section is-first cs-hook-overview">
       <div className="cs-hook-overview__thumb">
@@ -494,51 +628,67 @@ function HookDetails({ hook, variant = "inline" }) {
         <div className="cs-intel-tag-row">{tags.map((tag, tagIndex) => <span key={tag} className={`cs-intel-attribute-pill is-tone-${tagIndex % 4}`}>{tag}</span>)}</div>
       </div>
     </section>}
-    {drawer && !isAnalyzedAd(hook) && <section className="cs-intel-detail-section">
-      <p className="cs-ad-drawer__note">This ad hasn&apos;t had a full creative analysis yet, so there&apos;s no hook breakdown, angle or transcript. Each Run Analysis reads your top-spending ads.</p>
-    </section>}
-    {(formula.pattern_interrupt || formula.qualifier || formula.gap) && <section className="cs-intel-detail-section">
-      <h3 className="cs-intel-subsection-title">Hook formula</h3>
-      <div className="cs-intel-formula-grid">{[["Pattern interrupt", formula.pattern_interrupt], ["Qualifier", formula.qualifier], ["Gap", formula.gap]].filter(([, value]) => value).map(([label, value]) =>
-        <div key={label} className="cs-intel-formula-card"><small>{label}</small><p>{value}</p></div>)}</div>
-    </section>}
-    {hook.whyItWorks && <section className="cs-intel-detail-section">
-      <h3 className="cs-intel-subsection-title">Why it works</h3>
-      <p className="cs-hook-why">{hook.whyItWorks}</p>
-    </section>}
-    {(hook.buildingBlocks?.length > 0 || hook.lifeForce8?.length > 0) && <section className="cs-intel-detail-section">
-      {hook.buildingBlocks?.length > 0 && <DetailList label="Building blocks" items={hook.buildingBlocks.map(plainLabel)} />}
-      {hook.lifeForce8?.length > 0 && <DetailList label="Core desires" items={hook.lifeForce8.map(plainLabel)} />}
-    </section>}
-    {(primaryCopy.primary_text || primaryCopy.headline || hook.headlineText || primaryCopy.cta || hook.ctaType) && <section className="cs-intel-detail-section">
-      <h3 className="cs-intel-subsection-title">Ad copy</h3>
-      <div className="cs-intel-copy-grid">
-        {primaryCopy.primary_text && <LabeledCopy label="Primary text">{primaryCopy.primary_text}</LabeledCopy>}
-        {(primaryCopy.headline || hook.headlineText) && <LabeledCopy label="Headline">{primaryCopy.headline || hook.headlineText}</LabeledCopy>}
-        {(primaryCopy.cta || hook.ctaType) && <LabeledCopy label="Call to action">{plainLabel(primaryCopy.cta || hook.ctaType)}</LabeledCopy>}
-      </div>
-    </section>}
-    {transcript.full && hook.mediaType === "video" && <section className="cs-intel-detail-section">
-      <div className="cs-hook-transcript-head">
-        <h3 className="cs-intel-subsection-title">Transcript</h3>
-        {transcript.speechQuality && <span className="cs-hook-chip">Speech: {transcript.speechQuality}</span>}
-        {transcript.wordCount && <span className="cs-hook-chip">First sentence: {transcript.wordCount} words</span>}
-      </div>
-      <CsScrollArea className="cs-intel-transcript" viewportClassName={drawer ? "max-h-[360px]" : "max-h-[190px]"}>
-        <p>{transcript.highlight
-          ? <>{transcript.full.slice(0, transcript.highlight[0])}<mark className="cs-hook-mark" title="Opening hook (0–8s)">{transcript.full.slice(transcript.highlight[0], transcript.highlight[1])}</mark>{transcript.full.slice(transcript.highlight[1])}</>
-          : <>{transcript.firstSentence && <><mark className="cs-hook-mark" title="Opening hook (0–8s)">{transcript.firstSentence}</mark>{"\n\n"}</>}{transcript.full}</>}</p>
-      </CsScrollArea>
-    </section>}
+    {notAnalyzed}
+    {formulaSection}
+    {whySection}
+    {blocksSection}
+    {copySection}
+    {transcriptSection}
   </div>;
 }
-HookDetails.propTypes = { hook: PropTypes.object.isRequired, variant: PropTypes.oneOf(["inline", "drawer"]) };
+HookDetails.propTypes = { hook: PropTypes.object.isRequired, variant: PropTypes.oneOf(["inline", "drawer"]), averages: PropTypes.object };
+
+/** The grade rationale "CPA 23.41 vs 30.12; CTR 1.20 vs 0.95" → { cpa: { actual, average }, ctr: … }. */
+function parseGradeComparisons(text) {
+  const out = {};
+  for (const match of String(text || "").matchAll(/\b(CPA|CTR|CPM|HOOK|HOLD)\s+(-?\d+(?:\.\d+)?)\s+vs\s+(-?\d+(?:\.\d+)?)/g)) {
+    const average = Number(match[3]);
+    if (Number.isFinite(average) && average > 0) out[match[1].toLowerCase()] = { actual: Number(match[2]), average };
+  }
+  return out;
+}
+
+const LOWER_IS_BETTER = new Set(["cpa", "cpm"]);
+const formatAverage = (key, value) => (key === "cpa" || key === "cpm" ? money(value)
+  : key === "ctr" ? `${Number(value).toFixed(2)}%` : `${(value * 100).toFixed(1)}%`);
+
+/** "22% below $30 avg" with a good/bad tone, or null when there's nothing to compare. */
+function compareToAverage(key, actual, average) {
+  const value = Number(actual);
+  if (!Number.isFinite(value) || value <= 0 || !(average > 0)) return null;
+  const ratio = value / average;
+  const pctOff = Math.round(Math.abs(ratio - 1) * 100);
+  if (pctOff < 5) return { tone: "is-flat", label: `≈ ${formatAverage(key, average)} avg` };
+  const better = LOWER_IS_BETTER.has(key) ? ratio < 1 : ratio > 1;
+  return { tone: better ? "is-good" : "is-bad", label: `${pctOff}% ${ratio < 1 ? "below" : "above"} ${formatAverage(key, average)} avg` };
+}
+
+/** Account averages for scorecards when an ad has no saved grade (impression-weighted). */
+function computeAccountAverages(ads) {
+  let spend = 0, purchases = 0, impressions = 0, ctrWeighted = 0, videoImpressions = 0, hookWeighted = 0, holdImpressions = 0, holdWeighted = 0;
+  for (const ad of ads) {
+    const imps = Number(ad.impressions) || 0;
+    spend += Number(ad.spend) || 0;
+    purchases += Number(ad.purchases) || 0;
+    impressions += imps;
+    if (ad.ctr != null) ctrWeighted += Number(ad.ctr) * imps;
+    if (ad.hookRate > 0) { videoImpressions += imps; hookWeighted += ad.hookRate * imps; }
+    if (ad.holdRate > 0) { holdImpressions += imps; holdWeighted += ad.holdRate * imps; }
+  }
+  return {
+    cpa: purchases > 0 ? spend / purchases : null,
+    cpm: impressions > 0 ? (spend / impressions) * 1000 : null,
+    ctr: impressions > 0 ? ctrWeighted / impressions : null,
+    hook: videoImpressions > 0 ? hookWeighted / videoImpressions : null,
+    hold: holdImpressions > 0 ? holdWeighted / holdImpressions : null,
+  };
+}
 
 /**
  * Right-hand drawer, detached from the screen edge, with one ad's full
  * analysis (opened from Top hooks or Top performers).
  */
-function AdDetailDrawer({ ad, onClose }) {
+function AdDetailDrawer({ ad, onClose, averages = null }) {
   return (
     <DialogPrimitive.Root open={Boolean(ad)} onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogPrimitive.Portal>
@@ -556,7 +706,7 @@ function AdDetailDrawer({ ad, onClose }) {
               <DialogPrimitive.Close className="cs-ad-drawer__close" aria-label="Close"><X className="h-4 w-4" /></DialogPrimitive.Close>
             </header>
             <CsScrollArea className="min-h-0 flex-1" viewportClassName="h-full">
-              <div className="cs-ad-drawer__body"><HookDetails hook={ad} variant="drawer" /></div>
+              <div className="cs-ad-drawer__body"><HookDetails hook={ad} variant="drawer" averages={averages} /></div>
             </CsScrollArea>
           </>}
         </DialogPrimitive.Content>
@@ -564,10 +714,9 @@ function AdDetailDrawer({ ad, onClose }) {
     </DialogPrimitive.Root>
   );
 }
-AdDetailDrawer.propTypes = { ad: PropTypes.object, onClose: PropTypes.func.isRequired };
+AdDetailDrawer.propTypes = { ad: PropTypes.object, onClose: PropTypes.func.isRequired, averages: PropTypes.object };
 
-function MessagingThemesSection({ themes, ads }) {
-  const [expanded, setExpanded] = useState(null);
+function MessagingThemesSection({ themes, ads, onOpenAd }) {
   if (!Array.isArray(themes) || !themes.length) return null;
   const enriched = themes.map((theme) => {
     const matchedAds = matchInsightAds(theme, ads);
@@ -576,27 +725,29 @@ function MessagingThemesSection({ themes, ads }) {
     const repAd = matchedAds.find(ad => ad.adId === theme.representative_ad_id) || matchedAds.find(ad => ad.adName === theme.representative_ad_name) || [...matchedAds].sort((x, y) => (y.spend || 0) - (x.spend || 0))[0];
     return { ...theme, matchedAds, spend, purchases, cpa: purchases > 0 ? spend / purchases : null, repAd };
   }).sort((x, y) => y.spend - x.spend);
+  const totalSpend = enriched.reduce((sum, theme) => sum + theme.spend, 0);
+  const items = enriched.map((theme) => ({
+    title: theme.theme,
+    description: theme.description,
+    thumbAd: theme.repAd ?? null,
+    badge: theme.proven && <Badge variant="secondary" className="text-[9px] text-emerald-700">Proven</Badge>,
+    pills: [`${money(theme.spend)} spend`, `${theme.matchedAds.length} ads`, theme.cpa ? `${money(theme.cpa)} CPA` : null, theme.awareness_level && humanize(theme.awareness_level)],
+    sharePct: totalSpend > 0 ? (theme.spend / totalSpend) * 100 : null,
+    ads: [...theme.matchedAds].sort((x, y) => (y.spend || 0) - (x.spend || 0)),
+    details: <>
+      {tagPills([theme.dominant_driver && `Driver: ${theme.dominant_driver}`, theme.sophistication_stage && `Sophistication stage ${theme.sophistication_stage}`])}
+      {theme.graduation_note && <section><h3 className="cs-intel-subsection-title">To become proven</h3><p className="mt-1 text-[13px] text-neutral-600">{theme.graduation_note}</p></section>}
+    </>,
+  }));
   return <InsightSection
     title="Messaging themes"
     tone="orange"
     description={`The core desire or problem each ad leads with, like "saves you time" or "finally sleep through the night". Every ad is placed in exactly one theme, so you can see where your spend is concentrated and which messages pay off. Proven themes have 3+ ads, a real share of spend and a CPA at or below your average. ${enriched.length} theme${enriched.length === 1 ? "" : "s"} detected.`}
   >
-    <div className="space-y-2">{enriched.map((theme, index) => {
-      const open = expanded === index;
-      return <div key={`${theme.theme}-${index}`} className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
-        <button type="button" onClick={() => setExpanded(open ? null : index)} className="flex w-full items-start gap-3 p-3 text-left">
-          <CreativeThumbnail ad={theme.repAd} />
-          <div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><strong className="text-sm text-neutral-800">{theme.theme}</strong>{theme.proven && <Badge variant="secondary" className="text-[9px] text-emerald-700">Proven</Badge>}</div>
-            <p className="mt-1 text-[13px] leading-relaxed text-neutral-600">{theme.description}</p>
-            <MetricPills className="mt-2" items={[`${money(theme.spend)} spend`, `${theme.matchedAds.length} ads`, theme.cpa ? `${money(theme.cpa)} CPA` : null, theme.awareness_level && humanize(theme.awareness_level)]} />
-          </div>{open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-        </button>
-        {open && <div className="grid gap-2 border-t border-neutral-100 p-3 sm:grid-cols-2">{theme.matchedAds.map((ad) => <AdEvidenceCard key={ad.adId} ad={ad} />)}</div>}
-      </div>;
-    })}</div>
+    <ExpandableClusters items={items} onOpenAd={onOpenAd} />
   </InsightSection>;
 }
-MessagingThemesSection.propTypes = { themes: PropTypes.any, ads: PropTypes.array.isRequired };
+MessagingThemesSection.propTypes = { themes: PropTypes.any, ads: PropTypes.array.isRequired, onOpenAd: PropTypes.func };
 
 function FunnelBalanceSection({ ads }) {
   const buckets = funnelBuckets(ads);
@@ -616,10 +767,33 @@ function FunnelBalanceSection({ ads }) {
 }
 FunnelBalanceSection.propTypes = { ads: PropTypes.array.isRequired };
 
-function PersonaPerformanceSection({ mappings, ads }) {
+/**
+ * One card per persona. A cohort the audit matched to a Research persona uses
+ * that persona's name (matched_persona_name), and cohorts matched to the same
+ * Research persona are merged, so Insights and Research name people the same way.
+ */
+function mergePersonaCohorts(mappings) {
+  const byName = new Map();
+  mappings.forEach((mapping, index) => {
+    const researchName = mapping.matched_persona_name || null;
+    const title = researchName || mapping.persona_short_title || mapping.matched_research_persona || mapping.persona || `Persona ${index + 1}`;
+    const key = researchName ? `research:${researchName.toLowerCase()}` : `cohort:${title.toLowerCase()}:${index}`;
+    const current = byName.get(key);
+    if (!current) { byName.set(key, { ...mapping, title, fromResearch: Boolean(researchName), cohorts: [mapping] }); return; }
+    current.cohorts.push(mapping);
+    // ad_ids stays unset for name-only (pre-ID) audits, so name matching still applies.
+    if (current.ad_ids || mapping.ad_ids) current.ad_ids = [...new Set([...(current.ad_ids || []), ...(mapping.ad_ids || [])])];
+    current.ad_names = [...new Set([...(current.ad_names || []), ...(mapping.ad_names || [])])];
+    current.top_angles_used = [...new Set([...(current.top_angles_used || []), ...(mapping.top_angles_used || [])])];
+    current.angles_not_yet_tested = [...new Set([...(current.angles_not_yet_tested || []), ...(mapping.angles_not_yet_tested || []), ...(mapping.top_unmet_angle ? [mapping.top_unmet_angle] : [])])];
+  });
+  return [...byName.values()];
+}
+
+function PersonaPerformanceSection({ mappings, ads, onOpenAd }) {
   const [expanded, setExpanded] = useState(null);
   if (!Array.isArray(mappings) || !mappings.length) return null;
-  const enriched = mappings.map((mapping) => {
+  const enriched = mergePersonaCohorts(mappings).map((mapping) => {
     const matchedAds = matchInsightAds(mapping, ads);
     const spend = matchedAds.reduce((sum, ad) => sum + (ad.spend || 0), 0);
     const purchases = matchedAds.reduce((sum, ad) => sum + (ad.purchases || 0), 0);
@@ -627,72 +801,44 @@ function PersonaPerformanceSection({ mappings, ads }) {
   }).sort((x, y) => y.spend - x.spend);
   const coveredAds = new Map(enriched.flatMap(item => item.matchedAds.map(ad => [ad.adId, ad])));
   const total = [...coveredAds.values()].reduce((sum, ad) => sum + (ad.spend || 0), 0);
-  return <InsightSection title="Customer personas" tone="dark"><p className="mb-3 text-xs text-neutral-400">Personas are inferred from ad content. Share is of mapped ad spend; ads may support more than one persona, so shares can exceed 100% combined.</p><div className="space-y-2">{enriched.map((persona, index) => {
+  return <InsightSection title="Customer personas" tone="dark"><p className="mb-3 text-xs text-neutral-400">Personas are inferred from ad content and named after the matching Research persona when there is one. Share is of mapped ad spend; ads may support more than one persona, so shares can exceed 100% combined.</p><div className="space-y-2">{enriched.map((persona, index) => {
     const open = expanded === index; const share = total > 0 ? (persona.spend / total) * 100 : 0;
-    const title = persona.persona_short_title || persona.matched_research_persona || persona.persona || `Persona ${index + 1}`;
-    return <div key={`${title}-${index}`} className="overflow-hidden rounded-xl border border-neutral-200 bg-white"><button type="button" onClick={() => setExpanded(open ? null : index)} className="flex w-full gap-3 p-3 text-left">
-      <div className="min-w-0 flex-1"><strong className="text-[15px] text-neutral-800">{title}</strong>{persona.persona && persona.persona !== title && <p className="mt-1 text-[13px] leading-relaxed text-neutral-600">{persona.persona}</p>}
+    const description = persona.cohorts.map((cohort) => cohort.persona).filter((text) => text && text !== persona.title)[0];
+    const anglesNotTested = persona.angles_not_yet_tested?.length ? persona.angles_not_yet_tested : persona.top_unmet_angle ? [persona.top_unmet_angle] : [];
+    return <div key={`${persona.title}-${index}`} className="overflow-hidden rounded-xl border border-neutral-200 bg-white"><button type="button" onClick={() => setExpanded(open ? null : index)} className="flex w-full gap-3 p-3 text-left">
+      <div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><strong className="text-[15px] text-neutral-800">{persona.title}</strong>{persona.fromResearch && <Badge variant="secondary" className="text-[9px] text-emerald-700">Research persona</Badge>}</div>{description && <p className="mt-1 text-[13px] leading-relaxed text-neutral-600">{description}</p>}
         <MetricPills className="mt-2" items={[`${persona.matchedAds.length} ads`, `${money(persona.spend)} spend`, `${Math.round(share)}% share`, persona.cpa ? `${money(persona.cpa)} CPA` : null]} /><div className="cs-intel-spend-bar mt-3"><div style={{ width: `${Math.max(share, 2)}%` }} /></div>
       </div>{open ? <ChevronDown className="h-4 w-4 text-neutral-400" /> : <ChevronRight className="h-4 w-4 text-neutral-400" />}</button>
       {open && <div className="cs-intel-expanded-stack">
         {persona.top_angles_used?.length > 0 && <section><h3 className="cs-intel-subsection-title">Angles currently in use</h3><div className="cs-intel-tag-row mt-2">{persona.top_angles_used.map((angle, angleIndex) => <span key={angle} className={`cs-intel-attribute-pill is-tone-${angleIndex % 4}`}>{angle}</span>)}</div></section>}
-        {(persona.angles_not_yet_tested?.length > 0 || persona.top_unmet_angle) && <section><h3 className="cs-intel-subsection-title">Still untested</h3><p className="mt-1 text-[13px] text-neutral-600">{(persona.angles_not_yet_tested || [persona.top_unmet_angle]).join(", ")}</p></section>}
-        <section><h3 className="cs-intel-subsection-title">Supporting ads</h3><div className="mt-2 grid gap-2 sm:grid-cols-2">{persona.matchedAds.map((ad) => <AdEvidenceCard key={ad.adId} ad={ad} />)}</div></section>
+        {anglesNotTested.length > 0 && <section><h3 className="cs-intel-subsection-title">Still untested</h3><p className="mt-1 text-[13px] text-neutral-600">{anglesNotTested.join(", ")}</p></section>}
+        <section><h3 className="cs-intel-subsection-title">Supporting ads</h3><p className="mt-1 text-xs text-neutral-500">Open an ad for its full analysis.</p><div className="mt-2 grid gap-2 sm:grid-cols-2">{persona.matchedAds.map((ad) => <AdEvidenceCard key={ad.adId} ad={ad} onOpen={onOpenAd} />)}</div></section>
       </div>}
     </div>;
   })}</div></InsightSection>;
 }
-PersonaPerformanceSection.propTypes = { mappings: PropTypes.any, ads: PropTypes.array.isRequired };
+PersonaPerformanceSection.propTypes = { mappings: PropTypes.any, ads: PropTypes.array.isRequired, onOpenAd: PropTypes.func };
 
-function RecentLaunches({ ads }) {
-  if (!ads.length) return null;
-  return <Block title="Recent launches · last 14 days"><CsScrollArea axis="x"><div className="flex gap-3 pb-3">{ads.map((ad) => {
-    const days = Math.max(0, Math.floor((Date.now() - new Date(ad.createdTime).getTime()) / 86400000));
-    const src = ad.imageUrl || ad.thumbnailUrl;
-    return <div key={ad.adId} className="w-[112px] shrink-0 overflow-hidden rounded-xl border border-neutral-200"><div className="relative aspect-[9/16] bg-neutral-100"><AdThumbImg ad={ad} src={src} className="h-full w-full object-cover" fallback={<div className="flex h-full w-full items-center justify-center text-neutral-400"><Zap className="h-5 w-5" /></div>} /><Badge className="absolute left-1.5 top-1.5 px-1.5 text-[9px]">{days === 0 ? "Today" : days === 1 ? "Yesterday" : `${days}d ago`}</Badge><Badge variant="outline" className="absolute bottom-1.5 left-1.5 border-white/30 bg-black/50 px-1.5 text-[9px] text-white">{ad.mediaType === "video" ? "Video" : "Static"}</Badge></div><div className="p-2"><strong className="block truncate text-xs">{ad.adName || "Unnamed"}</strong><p className="mt-1 text-[10px] text-neutral-400">{money(ad.spend)} spend{ad.costPerPurchase ? ` · ${money(ad.costPerPurchase)} CPA` : ""}{ad.purchases > 0 ? ` · ${ad.purchases} purchases` : ""}{ad.hookRate > 0 ? ` · ${(ad.hookRate * 100).toFixed(1)}% HR` : ""}</p></div></div>;
-  })}</div></CsScrollArea></Block>;
-}
-RecentLaunches.propTypes = { ads: PropTypes.array.isRequired };
-
-function VisualOpenersSection({ openers, ads }) {
+function VisualOpenersSection({ openers, ads, onOpenAd }) {
   if (!Array.isArray(openers) || !openers.length) return null;
-  const byName = new Map(ads.map((ad) => [ad.adName, ad]));
-  return <InsightSection title="Visual openers"><p className="mb-3 text-[13px] text-neutral-500">Video ads — what appears in the first 2–5 seconds</p><div className="cs-intel-opener-grid">{openers.map((opener, index) => {
-    const examples = (opener.example_ad_names || []).map((name) => byName.get(name)).filter(Boolean);
-    return <div key={index} className="cs-intel-content-card"><strong className="text-[15px] text-neutral-800">{opener.pattern_name || opener.trend_name}</strong><p className="mt-1 text-[13px] leading-relaxed text-neutral-600">{opener.visual_description || opener.opening_description}</p><MetricPills className="mt-2" items={[`${opener.ad_count || examples.length} ads`, `${Math.round(opener.spend_pct || 0)}% spend`]} /><div className="cs-intel-tag-row mt-2">{[opener.talent_type, opener.camera_style, opener.environment].filter(Boolean).map((tag, tagIndex) => <span key={tag} className={`cs-intel-attribute-pill is-tone-${tagIndex % 4}`}>{tag}</span>)}</div>{examples.length > 0 && <CsScrollArea axis="x" className="mt-[13px]"><div className="cs-intel-opener-thumbnails">{examples.slice(0, 5).map((ad) => <CreativeThumbnail key={ad.adId} ad={ad} variant="opener" />)}</div></CsScrollArea>}</div>;
-  })}</div></InsightSection>;
+  const items = openers.map((opener) => {
+    const matched = resolveClusterAds(opener, ads);
+    const pct = Number(opener.spend_pct || 0);
+    return {
+      title: opener.pattern_name || opener.trend_name || "Opener",
+      description: opener.visual_description || opener.opening_description,
+      thumbAd: matched[0] ?? null,
+      pills: [`${opener.ad_count || matched.length} ads`, `${Math.round(pct)}% spend`, opener.avg_hook_rate > 0 ? `${(opener.avg_hook_rate * 100).toFixed(1)}% avg hook rate` : null],
+      sharePct: pct,
+      ads: matched,
+      details: tagPills([opener.talent_type, opener.camera_style, opener.environment, opener.text_overlay && `Text overlay: ${opener.text_overlay}`]),
+    };
+  });
+  return <InsightSection title="Visual openers" description="Video ads — what appears in the first 2–5 seconds.">
+    <ExpandableClusters items={items} onOpenAd={onOpenAd} />
+  </InsightSection>;
 }
-VisualOpenersSection.propTypes = { openers: PropTypes.any, ads: PropTypes.array.isRequired };
-
-function normalizeTrends(trends) {
-  if (Array.isArray(trends)) return trends.map((trend) => ({ ...trend, trend: trend.trend || trend.trend_name || "", examples: trend.examples || trend.ad_names || [] }));
-  if (!trends || typeof trends !== "object") return [];
-  return ["hooks", "claims", "callouts", "ctas"].flatMap((surface) => Array.isArray(trends[surface]) ? trends[surface].map((trend) => ({ ...trend, trend: trend.trend || trend.trend_name || "", examples: trend.examples || trend.verbatim_examples || [] })) : []);
-}
-
-function MessagingTrendsSection({ trends, ads }) {
-  const normalized = normalizeTrends(trends);
-  if (!normalized.length) return null;
-  const byName = new Map(ads.map((ad) => [ad.adName, ad]));
-  const max = Math.max(...normalized.map((trend) => Number(trend.spend_pct || 0)), 1);
-  return <InsightSection title="Messaging trends" tone="orange"><div className="space-y-3">{normalized.map((trend, index) => {
-    const examples = (trend.examples || []).map((name) => byName.get(name)).filter(Boolean);
-    return <div key={index} className="cs-intel-content-card"><strong className="text-[15px] text-neutral-800">{trend.trend}</strong>{trend.description && <p className="mt-1 text-[13px] leading-relaxed text-neutral-600">{trend.description}</p>}<div className="cs-intel-spend-bar mt-3"><div style={{ width: `${Math.max((Number(trend.spend_pct || 0) / max) * 100, 3)}%` }} /></div><MetricPills className="mt-2" items={[`${trend.ad_count || examples.length} ads`, `${Number(trend.spend_pct || 0).toFixed(1)}% spend`]} />{examples.length > 0 && <CsScrollArea axis="x" className="mt-[13px]"><div className="cs-intel-opener-thumbnails">{examples.slice(0, 4).map((ad) => <CreativeThumbnail key={ad.adId} ad={ad} variant="opener" />)}</div></CsScrollArea>}</div>;
-  })}</div></InsightSection>;
-}
-MessagingTrendsSection.propTypes = { trends: PropTypes.any, ads: PropTypes.array.isRequired };
-
-function WhatToTestNext({ audit }) {
-  const all = audit.concept_seed_list || audit.concept_seeds || [];
-  if (!Array.isArray(all) || !all.length) return null;
-  const priorityNames = new Set((audit.first_test_recommendations || []).map((item) => item.concept_name));
-  const seeds = [...all.filter((seed) => priorityNames.has(seed.concept_name)), ...all.filter((seed) => !priorityNames.has(seed.concept_name))].slice(0, 10);
-  return <InsightSection title="What to test next"><div className="space-y-2">{seeds.map((seed, index) => {
-    const priority = priorityNames.has(seed.concept_name);
-    return <div key={index} className={`cs-intel-test-card ${priority ? "is-priority" : ""}`}><div className="cs-intel-tag-row">{priority && <span className="cs-intel-attribute-pill is-priority">Test first</span>}{(seed.persona_description || seed.persona) && <span className="cs-intel-attribute-pill is-tone-0">{seed.persona_description || seed.persona}</span>}{seed.format && <span className="cs-intel-attribute-pill is-tone-1">{seed.format}</span>}{seed.awareness_stage && <span className="cs-intel-attribute-pill is-tone-2">{humanize(seed.awareness_stage)}</span>}</div><strong className="mt-3 block text-[15px] text-neutral-800">{seed.concept_name || seed.name || `Concept ${index + 1}`}</strong>{seed.hook_verbatim && <p className="mt-1 text-[13px] text-neutral-700">“{seed.hook_verbatim}”</p>}{seed.why_this_now && <div className="mt-3 border-t border-orange-200/70 pt-3"><p className="cs-intel-field-label">Why test this now</p><p className="mt-1 text-[13px] leading-relaxed text-neutral-600">{seed.why_this_now}</p></div>}</div>;
-  })}</div></InsightSection>;
-}
-WhatToTestNext.propTypes = { audit: PropTypes.object.isRequired };
+VisualOpenersSection.propTypes = { openers: PropTypes.any, ads: PropTypes.array.isRequired, onOpenAd: PropTypes.func };
 
 function UntappedAnglesSection({ audit }) {
   const groups = Array.isArray(audit.untapped_angles_by_persona) ? audit.untapped_angles_by_persona : [];
@@ -704,10 +850,12 @@ function UntappedAnglesSection({ audit }) {
 }
 UntappedAnglesSection.propTypes = { audit: PropTypes.object.isRequired };
 
-function AdEvidenceCard({ ad }) {
-  return <div className="cs-intel-evidence-card"><CreativeThumbnail ad={ad} /><div className="min-w-0 flex-1"><strong className="block truncate text-[13px] text-neutral-800">{ad.adName || "Unnamed"}</strong><MetricPills className="mt-1.5" compact items={[`${money(ad.spend)} spend`, ad.costPerPurchase ? `${money(ad.costPerPurchase)} CPA` : null, ad.hookRate > 0 ? `${(ad.hookRate * 100).toFixed(1)}% HR` : null]} /></div><MediaTag mediaType={ad.mediaType} /></div>;
+function AdEvidenceCard({ ad, onOpen }) {
+  const content = <><CreativeThumbnail ad={ad} /><div className="min-w-0 flex-1"><strong className="block truncate text-[13px] text-neutral-800">{ad.adName || "Unnamed"}</strong><MetricPills className="mt-1.5" compact items={[`${money(ad.spend)} spend`, ad.costPerPurchase ? `${money(ad.costPerPurchase)} CPA` : null, ad.hookRate > 0 ? `${(ad.hookRate * 100).toFixed(1)}% HR` : null]} /></div><MediaTag mediaType={ad.mediaType} />{onOpen && <ChevronRight className="h-3.5 w-3.5 shrink-0 text-neutral-400" />}</>;
+  if (!onOpen) return <div className="cs-intel-evidence-card">{content}</div>;
+  return <button type="button" onClick={() => onOpen(ad)} className="cs-intel-evidence-card is-button" aria-label={`Open details for ${ad.adName || "ad"}`}>{content}</button>;
 }
-AdEvidenceCard.propTypes = { ad: PropTypes.object.isRequired };
+AdEvidenceCard.propTypes = { ad: PropTypes.object.isRequired, onOpen: PropTypes.func };
 
 function Block({ title, children, actions, noDivider = false }) {
   return (
@@ -813,9 +961,22 @@ function CreativeThumbnail({ ad, variant = "compact" }) {
 }
 CreativeThumbnail.propTypes = { ad: PropTypes.object, variant: PropTypes.oneOf(["compact", "card", "opener", "performer"]) };
 
-function AngleGroups({ groups, ads }) {
+// How each Ad angles bucket is decided (weekly/angle-inventory.ts).
+const ANGLE_STATUS_HELP = {
+  proven: "The main angle of at least one analyzed ad.",
+  in_research: "Listed as an angle for one of your Research personas, but no analyzed ad leads with it yet. Research suggests it should land; it hasn't been tried. Open an angle to see which persona it's for and why.",
+  untapped: "Flagged as a gap by the ad analysis (an angle a persona responds to that no current ad says), and not in your Research persona lists. Open an angle to see the reasoning and ideas to test it.",
+};
+
+function AngleGroups({ groups, ads, onOpenAd }) {
   const [selectedAngle, setSelectedAngle] = useState(null);
-  const matchingAds = selectedAngle ? ads.filter((ad) => selectedAngle.adIds?.includes(ad.adId)) : [];
+  const [detailAngle, setDetailAngle] = useState(null);
+  const matchingAds = selectedAngle ? ads.filter((ad) => selectedAngle.adIds?.includes(ad.adId)).sort((x, y) => (y.spend || 0) - (x.spend || 0)) : [];
+  const avgCpa = (() => {
+    const spend = ads.reduce((sum, ad) => sum + (ad.spend || 0), 0);
+    const purchases = ads.reduce((sum, ad) => sum + (ad.purchases || 0), 0);
+    return purchases > 0 ? spend / purchases : null;
+  })();
   const order = ["proven", "in_research", "untapped", "uncategorized"];
   const entries = Object.entries(groups).sort(([first], [second]) => {
     const firstIndex = order.indexOf(first);
@@ -832,11 +993,16 @@ function AngleGroups({ groups, ads }) {
               <h3>{humanize(status)}</h3>
               <span>{items.length}</span>
             </div>
-            {status === "proven" && <p className="mb-3 text-xs text-neutral-500">Click on angle to view ads</p>}
+            {ANGLE_STATUS_HELP[status] && <p className="mb-2 text-xs leading-relaxed text-neutral-500">{ANGLE_STATUS_HELP[status]}</p>}
+            {status === "proven" && <p className="cs-intel-angle-hint"><Maximize2 className="h-3.5 w-3.5" />Open an angle to see its ads, results and why each works</p>}
             <div className="cs-intel-angle-group__pills">
               {items.map((angle, index) => (
-                status === "proven" ? <button key={index} type="button" onClick={() => setSelectedAngle(angle)} className="cs-intel-angle-pill inline-flex items-center gap-2" aria-label={`View ads for ${angle.name}`}>
-                  {angle.name}{angle.ad_count ? ` (${angle.ad_count})` : ""}<ChevronRight size={14} />
+                status === "proven" ? <button key={index} type="button" onClick={() => setSelectedAngle(angle)} className="cs-intel-angle-pill is-proven" aria-label={`View ads for ${angle.name}`}>
+                  {angle.name}
+                  {angle.ad_count ? <span className="cs-intel-angle-pill__count">{angle.ad_count} ad{angle.ad_count === 1 ? "" : "s"}</span> : null}
+                  <span className="cs-intel-angle-pill__open">View<ChevronRight className="h-3 w-3" /></span>
+                </button> : angle.evidence ? <button key={index} type="button" onClick={() => setDetailAngle(angle)} className="cs-intel-angle-pill is-openable" aria-label={`Why ${angle.name} is ${humanize(status)}`}>
+                  {angle.name}<ChevronRight className="h-3 w-3" />
                 </button> : <span key={index} className="cs-intel-angle-pill">{angle.name}</span>
               ))}
             </div>
@@ -844,23 +1010,90 @@ function AngleGroups({ groups, ads }) {
         ))}
       </div>
       <Dialog open={Boolean(selectedAngle)} onOpenChange={(open) => { if (!open) setSelectedAngle(null); }}>
-        <DialogContent disableSlide className="max-w-3xl rounded-[28px] sm:rounded-[28px] bg-[#fffaf5]" overlayClassName="bg-black/40">
-          <DialogHeader><DialogTitle>{selectedAngle?.name}</DialogTitle><DialogDescription>Ads using this proven angle</DialogDescription></DialogHeader>
-          <CsScrollArea viewportClassName="max-h-[65vh]"><div className="grid gap-4 pr-3 sm:grid-cols-2">
-            {matchingAds.length ? matchingAds.map((ad) => <article key={ad.adId} className="rounded-2xl border border-orange-100 bg-white p-3">
-              <div className="rounded-xl bg-stone-100 overflow-hidden"><AdThumbImg ad={ad} alt={ad.adName || "Ad preview"} className="h-64 w-full object-contain" loading="lazy" fallback={<div className="grid h-40 place-items-center text-xs text-stone-400">Preview unavailable</div>} /></div>
-              <h3 className="mt-3 text-sm font-semibold text-stone-800">{ad.adName || "Unnamed ad"}</h3>
-              <MetricPills className="mt-2" items={[`${money(ad.spend)} spend`, ad.mediaType === "video" ? "Video" : "Static"]} />
-              {(ad.firstSpokenSentence || ad.firstOverlayHeadline || ad.headlineText) && <p className="mt-3 text-sm text-stone-700">{ad.firstSpokenSentence || ad.firstOverlayHeadline || ad.headlineText}</p>}
-              {ad.whyItWorks && <p className="mt-2 text-xs text-stone-500">{ad.whyItWorks}</p>}
-            </article>) : <p className="text-sm text-stone-500">No saved ads available for this angle. Run Analysis to refresh.</p>}
+        <DialogContent disableSlide className="max-w-5xl rounded-[28px] sm:rounded-[28px] bg-[#fffaf5]" overlayClassName="bg-black/40">
+          <DialogHeader><DialogTitle>{selectedAngle?.name}</DialogTitle><DialogDescription>Ads using this proven angle, highest spend first. Open an ad for its full analysis.</DialogDescription></DialogHeader>
+          <CsScrollArea viewportClassName="max-h-[70vh]"><div className="cs-angle-ads pr-3">
+            {matchingAds.length ? matchingAds.map((ad, index) => {
+              const hookLine = ad.firstSpokenSentence || ad.firstOverlayHeadline || ad.headlineText;
+              return <article key={ad.adId} className="cs-angle-ad">
+                <PerformerCard ad={ad} rank={index + 1} avgCpa={avgCpa} onOpen={(item) => onOpenAd(item)} openDetails />
+                {(ad.whyItWorks || hookLine) && <div className="cs-angle-ad__why">
+                  {hookLine && <p className="mb-1.5 text-stone-700">“{hookLine}”</p>}
+                  {ad.whyItWorks && <><strong>Why it works</strong>{ad.whyItWorks}</>}
+                </div>}
+              </article>;
+            }) : <p className="text-sm text-stone-500">No saved ads available for this angle. Run Analysis to refresh.</p>}
           </div></CsScrollArea>
         </DialogContent>
       </Dialog>
+      <AngleDetailDialog angle={detailAngle} onClose={() => setDetailAngle(null)} />
     </InsightSection>
   );
 }
-AngleGroups.propTypes = { groups: PropTypes.object.isRequired, ads: PropTypes.array.isRequired };
+AngleGroups.propTypes = { groups: PropTypes.object.isRequired, ads: PropTypes.array.isRequired, onOpenAd: PropTypes.func.isRequired };
+
+/**
+ * Why an angle is In research / Untapped, from saved research and the ad
+ * analysis (insights /angles `evidence`), plus ideas for using it.
+ * "Turn into a concept" is a placeholder until it's wired to Weekly Strategy.
+ */
+function AngleDetailDialog({ angle, onClose }) {
+  const [conceptNote, setConceptNote] = useState(false);
+  const evidence = angle?.evidence || { research: [], gaps: [], ideas: [] };
+  const empty = !evidence.research.length && !evidence.gaps.length && !evidence.ideas.length;
+  return (
+    <Dialog open={Boolean(angle)} onOpenChange={(open) => { if (!open) { setConceptNote(false); onClose(); } }}>
+      <DialogContent disableSlide className="max-w-3xl rounded-[28px] sm:rounded-[28px] bg-[#fffaf5]" overlayClassName="bg-black/40">
+        <DialogHeader>
+          <div className="flex flex-wrap items-center gap-2"><DialogTitle>{angle?.name}</DialogTitle>{angle && <span className="cs-intel-angle-pill">{humanize(angle.status)}</span>}</div>
+          <DialogDescription>{angle && ANGLE_STATUS_HELP[angle.status]?.split(". ")[0]}.</DialogDescription>
+        </DialogHeader>
+        <CsScrollArea viewportClassName="max-h-[62vh]"><div className="cs-angle-detail pr-3">
+          {evidence.research.length > 0 && <section>
+            <h3 className="cs-intel-subsection-title">Why research suggests it</h3>
+            {evidence.research.map((item) => <div key={item.persona} className="cs-angle-detail__card">
+              <p className="cs-angle-detail__persona">{item.persona}</p>
+              {item.persona_description && <p className="text-xs text-neutral-500">{item.persona_description}</p>}
+              {item.what_it_looks_like && <><p className="cs-intel-field-label mt-2">What it looks like for them</p><p className="text-[13px] leading-relaxed text-neutral-700">{item.what_it_looks_like}</p></>}
+              {item.angles_in_use?.length > 0 && <p className="mt-2 text-xs text-neutral-500"><strong className="text-neutral-600">Their ads lead with instead:</strong> {item.angles_in_use.join(", ")}</p>}
+            </div>)}
+          </section>}
+          {evidence.gaps.length > 0 && <section>
+            <h3 className="cs-intel-subsection-title">Gap found in your ads</h3>
+            {evidence.gaps.map((item, index) => <div key={`${item.persona}-${index}`} className="cs-angle-detail__card">
+              <p className="cs-angle-detail__persona">{item.persona}{item.ad_count ? <span className="ml-2 text-xs font-normal text-neutral-500">{item.ad_count} ads reach this persona</span> : null}</p>
+              <p className="text-[13px] leading-relaxed text-neutral-700">{item.reason || "The analysis lists this as an angle this persona responds to that none of their current ads use."}</p>
+              {item.angles_in_use?.length > 0 && <p className="mt-2 text-xs text-neutral-500"><strong className="text-neutral-600">Angles their ads use today:</strong> {item.angles_in_use.join(", ")}</p>}
+            </div>)}
+          </section>}
+          {evidence.ideas.length > 0 && <section>
+            <h3 className="cs-intel-subsection-title">How to test it</h3>
+            {evidence.ideas.map((idea) => <div key={idea.concept_name} className="cs-angle-detail__card">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <p className="cs-angle-detail__persona mr-1">{idea.concept_name}</p>
+                {idea.test_first && <span className="cs-intel-attribute-pill is-priority">Test first</span>}
+                {idea.format && <span className="cs-intel-attribute-pill is-tone-1">{idea.format}</span>}
+                {idea.awareness_stage && <span className="cs-intel-attribute-pill is-tone-2">{humanize(idea.awareness_stage)}</span>}
+                {idea.persona && <span className="cs-intel-attribute-pill is-tone-0">{idea.persona}</span>}
+              </div>
+              {idea.hook && <p className="mt-2 text-[13px] italic text-neutral-800">“{idea.hook}”</p>}
+              {idea.why_this_now && <p className="mt-2 text-xs text-neutral-600"><strong>Why now:</strong> {idea.why_this_now}</p>}
+              {idea.hypothesis && <p className="mt-1 text-xs text-neutral-600"><strong>Hypothesis:</strong> {idea.hypothesis}</p>}
+              {idea.proof && <p className="mt-1 text-xs text-neutral-600"><strong>Proof to use:</strong> {idea.proof}</p>}
+              {idea.success_read && <p className="mt-1 text-xs text-neutral-600"><strong>Call it a winner if:</strong> {idea.success_read}</p>}
+            </div>)}
+          </section>}
+          {empty && <p className="text-sm text-stone-500">No saved research or analysis notes mention this angle by name. Run Analysis to refresh.</p>}
+        </div></CsScrollArea>
+        <div className="flex flex-wrap items-center justify-end gap-3 border-t border-orange-100 pt-3">
+          {conceptNote && <span className="text-xs text-neutral-500">Not wired up yet — this will add a card to Weekly Strategy.</span>}
+          <button type="button" onClick={() => setConceptNote(true)} className="cs-weekly-brief-button">Turn into a concept</button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+AngleDetailDialog.propTypes = { angle: PropTypes.object, onClose: PropTypes.func.isRequired };
 
 function isActiveJob(job) {
   return Boolean(job && (job.status == null || job.status === "queued" || job.status === "running"));

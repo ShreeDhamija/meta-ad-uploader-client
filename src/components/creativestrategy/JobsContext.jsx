@@ -292,6 +292,7 @@ export function jobTitle(job) {
   const type = job?.type || job?.meta?.kind;
   if (type === "research" && job?.only === "cross_map") return "Persona mapping";
   if (type === "analyze_ads" && job?.only === "winners") return "Analyzing Monthly Review winners";
+  if (type === "generate_ad" && (job?.ideaId || job?.meta?.ideaId)) return "Concept static";
   return KIND_LABEL[type] || job?.meta?.label || "Background task";
 }
 
@@ -312,6 +313,7 @@ export function describeJob(job) {
   if (job.status === "completed") {
     const result = job.result || {};
     const detail = type === "analyze_ads" ? `Completed · ${result.analyzed ?? 0} ads analyzed${result.reused ? ` · ${result.reused} matched an analyzed ad` : ""}${result.failed ? ` · ${result.failed} couldn't be analyzed` : ""}${result.deferred ? ` · ${result.deferred} left for the next run` : ""}`
+      : type === "generate_ad" && result.ideaId ? "Completed · static added to the concept card and Generate → Statics"
       : type === "generate_ad" ? `Completed · ${result.saved ?? 0} ads saved`
       : type === "weekly_strategy" ? `Completed · ${result.ideas_generated ?? 0} concepts`
       : type === "monthly_review" && result.status === "ok" ? `Completed · ${result.concepts ?? 0} concepts`

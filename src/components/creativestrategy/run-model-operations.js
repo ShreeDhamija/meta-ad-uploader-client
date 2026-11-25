@@ -15,6 +15,8 @@ export const RUN_OPERATIONS = {
   library: [...hooks, "copy.headlines.write", "copy.headlines.review", "copy.headlines.rewrite", "copy.library.primary"],
   inspiration: ["analysis.inspo.image", "analysis.inspo.transcript", "analysis.inspo.video"],
   statics: ["image.generate", "strategy.static.plan", "copy.fields.fill", "image.reference.describe", "image.prompt.rewrite", "image.composition.describe"],
+  // Weekly "Generate Static": the planner writes the copy, so no field fill.
+  weeklyStatic: ["image.generate", "strategy.static.plan", "image.reference.describe", "image.prompt.rewrite", "image.composition.describe"],
   fillCopy: ["copy.fields.fill"],
   scripts: ["strategy.static.plan", ...script],
   brief: ["strategy.static.plan", ...script, ...staticBrief],
