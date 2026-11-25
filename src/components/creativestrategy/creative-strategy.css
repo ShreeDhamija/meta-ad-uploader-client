@@ -5721,6 +5721,15 @@ html body #root .creative-strategy button.cs-monthly-filter-button:hover { borde
 .cs-generate-canvas.is-statics .cs-generate-canvas-content { padding: 14px; }
 
 /* Main sidebar: icon-only collapse toggle above the profile row. */
-.cs-sidebar-collapse { display: grid; width: 36px; height: 36px; place-items: center; border: 1px solid #e5e5e5; border-radius: 12px; color: #525252; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08); transition: background 140ms ease, box-shadow 140ms ease; }
+.cs-sidebar-collapse { border: 1px solid #e5e5e5; color: #525252; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08); transition: background 140ms ease, box-shadow 140ms ease; }
 .cs-sidebar-collapse:hover { background: #fafafa; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12); }
 .cs-sidebar-collapse:focus-visible { outline: 2px solid #e8812c; outline-offset: 2px; }
+
+/* Icon-only sidebar: launcher, nav tabs, collapse toggle and logout share one square. */
+.cs-sidebar-square { display: flex; width: 44px; height: 44px; flex-shrink: 0; align-items: center; justify-content: center; padding: 0; border-radius: 14px; }
+
+/* Brief cards: Angle / Hook / Description / Script read as one labelled list. */
+.cs-generate-text-card__hook strong,
+.cs-generate-text-card__summary strong,
+.cs-generate-text-card__snippet strong { color: #44403c; font-weight: 600; font-style: normal; }
+.cs-generate-text-card__snippet { padding: 0; border-radius: 0; color: #6d605a; background: none; }

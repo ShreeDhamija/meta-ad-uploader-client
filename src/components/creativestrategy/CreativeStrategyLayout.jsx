@@ -5,6 +5,7 @@ import rocket from "@/assets/rocket2.webp";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAppData } from "@/lib/AppContext";
 import { useAuth } from "@/lib/AuthContext";
 import { creativeApi } from "@/lib/creativeApi";
@@ -13,6 +14,7 @@ import useGlobalSettings from "@/lib/useGlobalSettings";
 import { cn } from "@/lib/utils";
 import { BookOpen, Box, CalendarRange, Flame, FlaskConical, Heart, Layers, LogOut, MousePointerClick, PanelLeftClose, PanelLeftOpen, SearchCheck, Zap } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import PropTypes from "prop-types";
 import { Toaster } from "sonner";
 import { createPortal } from "react-dom";
 import { useBlocker, useNavigate } from "react-router-dom";
@@ -73,6 +75,18 @@ const DESCRIPTIONS = {
   weekly: "New ad concepts for this account, built from your latest ad results and research. A fresh set lands every Monday. Approve the ones you like to turn them into briefs.",
 };
 
+/** shadcn tooltip to the right of an icon-only sidebar control; plain child otherwise. */
+function SidebarTip({ label, show, children }) {
+  if (!show) return children;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      <TooltipContent side="right" sideOffset={8} className="rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-xs font-medium text-neutral-800 shadow-md">{label}</TooltipContent>
+    </Tooltip>
+  );
+}
+SidebarTip.propTypes = { label: PropTypes.string.isRequired, show: PropTypes.bool, children: PropTypes.element.isRequired };
+
 export default function CreativeStrategyLayout() {
   const navigate = useNavigate();
   const { isLoggedIn, userId, userName, profilePicUrl, handleLogout } = useAuth();
@@ -110,6 +124,16 @@ export default function CreativeStrategyLayout() {
     try { localStorage.setItem("cs-sidebar-collapsed", current ? "0" : "1"); } catch { /* Keep session state. */ }
     return !current;
   });
+  // Below Tailwind's lg breakpoint the sidebar is always icon-only.
+  const [narrowScreen, setNarrowScreen] = useState(() => typeof window !== "undefined" && window.matchMedia("(max-width: 1023px)").matches);
+  useEffect(() => {
+    const query = window.matchMedia("(max-width: 1023px)");
+    const update = () => setNarrowScreen(query.matches);
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
+  const compactSidebar = collapsed || narrowScreen;
   // Unsaved edits, by source (e.g. brand guidelines). Leaving the tab, switching
   // account/product, navigating away or closing the page asks first.
   const unsavedRef = useRef(new Map());
@@ -402,9 +426,9 @@ export default function CreativeStrategyLayout() {
       <Toaster richColors position="bottom-left" closeButton />
       <div className="creative-strategy flex min-h-screen">
         {showOnboarding && <CreativeStrategyOnboarding onFinish={finishOnboarding} />}
-        {/* Sidebar */}
-        {/* Top padding matches <main>'s py-6 and the launcher button matches the
-            46px selector pills, so the two rows line up at every width. */}
+        {/* Sidebar. Its top padding matches <main>'s py-6 so the launcher button's
+            top lines up with the account/product row. Icon-only ("compact") when
+            collapsed or below lg; then every control is the same square. */}
         <aside className={cn("relative z-10 flex h-screen w-[290px] flex-col overflow-hidden px-4 py-6 transition-[width] duration-200 max-lg:w-[80px] max-lg:min-w-[80px] max-lg:px-2", collapsed && "w-[80px] min-w-[80px] px-2")}>
           <img
             src={doodle}
@@ -412,32 +436,41 @@ export default function CreativeStrategyLayout() {
             aria-hidden="true"
             className={cn("pointer-events-none absolute -left-[205px] -bottom-[38px] z-0 w-[720px] max-w-none origin-bottom-left rotate-[8deg] opacity-95 max-lg:hidden", collapsed && "hidden")}
           />
-          <div className={cn("relative z-10 flex h-full flex-col rounded-3xl px-4 pb-4 max-lg:px-1", collapsed && "px-1")}>
-            <div className="flex flex-1 flex-col">
-              <Button
-                onClick={() => navigate("/")}
-                title="Back to launcher"
-                className={cn("mb-4 flex h-[46px] w-full items-center justify-start gap-1 rounded-[20px] border border-neutral-200 bg-white py-0 pl-3 font-medium text-neutral-700 shadow-xs hover:bg-white hover:shadow-sm max-lg:justify-center max-lg:px-0", collapsed && "justify-center px-0")}
-                variant="ghost"
-              >
-                <img src={rocket} alt="Home" className="h-8 w-8 object-contain" />
-                <div className={cn("mr-2 h-6 w-px bg-neutral-300 max-lg:hidden", collapsed && "hidden")} />
-                <span className={cn("font-semibold text-neutral-700 max-lg:hidden", collapsed && "hidden")}>Back To Launcher</span>
-              </Button>
+          <TooltipProvider delayDuration={100}>
+          <div className={cn("relative z-10 flex h-full flex-col rounded-3xl", compactSidebar ? "items-center px-0 pb-4" : "px-4 pb-4")}>
+            <div className={cn("flex flex-1 flex-col", compactSidebar && "items-center")}>
+              <SidebarTip label="Back to launcher" show={compactSidebar}>
+                <Button
+                  onClick={() => navigate("/")}
+                  aria-label="Back to launcher"
+                  className={cn(
+                    "mb-4 flex items-center gap-1 border border-neutral-200 bg-white font-medium text-neutral-700 shadow-xs hover:bg-white hover:shadow-sm",
+                    compactSidebar ? "cs-sidebar-square h-11 w-11 justify-center rounded-[14px] p-0" : "w-full justify-start rounded-[20px] py-7 pl-3",
+                  )}
+                  variant="ghost"
+                >
+                  <img src={rocket} alt="" className={cn("object-contain", compactSidebar ? "h-6 w-6" : "h-8 w-8")} />
+                  {!compactSidebar && <>
+                    <div className="mr-2 h-6 w-px bg-neutral-300" />
+                    <span className="font-semibold text-neutral-700">Back To Launcher</span>
+                  </>}
+                </Button>
+              </SidebarTip>
 
-              <nav className="space-y-2">
+              <nav className={cn("space-y-2", compactSidebar && "flex flex-col items-center")}>
                 {NAV.map(({ key, label, icon: Icon }) => {
                   // The selected product's research is past its refresh age.
                   const stale = key === "research" && Boolean(selectedProduct?.researchStale);
                   return (
+                  <SidebarTip key={key} label={stale ? `${label} (out of date, re-run it)` : label} show={compactSidebar}>
                   <button
-                    key={key}
                     data-cs-nav={key}
                     onClick={() => switchTab(key)}
-                    title={stale ? "Research is out of date. Open Research to re-run it." : collapsed ? label : undefined}
+                    aria-label={compactSidebar ? label : undefined}
+                    title={!compactSidebar && stale ? "Research is out of date. Open Research to re-run it." : undefined}
                     className={cn(
-                      "relative flex h-10 w-full items-center justify-start gap-2 rounded-2xl px-4 py-2 transition-all max-lg:justify-center max-lg:px-2",
-                      collapsed && "justify-center px-2",
+                      "relative flex items-center gap-2 transition-all",
+                      compactSidebar ? "cs-sidebar-square justify-center" : "h-10 w-full justify-start rounded-2xl px-4 py-2",
                       activeTab === key
                         ? "border border-gray-300 bg-white font-semibold text-neutral-900 shadow"
                         : "border border-transparent text-neutral-700 hover:bg-neutral-200",
@@ -447,42 +480,50 @@ export default function CreativeStrategyLayout() {
                       <Icon className="h-5 w-5 text-neutral-700 transition-all" />
                       {stale && <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full border-2 border-white bg-red-500" aria-hidden="true" />}
                     </span>
-                    <span className={cn("text-sm font-medium max-lg:hidden", collapsed && "hidden")}>
+                    {!compactSidebar && <span className="text-sm font-medium">
                       {label}
                       {stale && <span className="text-red-600"> (stale)</span>}
-                    </span>
-                    {activeTab === key && <span className={cn("ml-auto h-1.5 w-1.5 rounded-full bg-neutral-500 max-lg:hidden", collapsed && "hidden")} aria-hidden="true" />}
+                    </span>}
+                    {!compactSidebar && activeTab === key && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-neutral-500" aria-hidden="true" />}
                   </button>
+                  </SidebarTip>
                   );
                 })}
               </nav>
             </div>
 
-            {/* Footer profile */}
-            <div className="relative z-10 mt-auto space-y-3 pt-4">
-              <button
-                type="button"
-                onClick={toggleCollapsed}
-                aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-                title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-                className={cn("cs-sidebar-collapse max-lg:hidden", collapsed && "mx-auto")}
-              >
-                {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
-              </button>
-              <div className={cn("cs-sidebar-profile flex w-full items-center rounded-[20px] border bg-neutral-50 py-2 pl-3 pr-3 max-lg:justify-center max-lg:p-2", collapsed && "justify-center p-2")}>
-                <div className={cn("flex flex-grow items-center gap-2 max-lg:hidden", collapsed && "hidden")}>
-                  <img src={profilePicUrl || "/placeholder.svg"} alt="Profile" className="h-8 w-8 rounded-full object-cover" />
-                  <span className="max-w-[120px] truncate text-sm font-medium text-neutral-800">{userName}</span>
-                </div>
-                <div className="flex items-center">
-                  <div className={cn("h-6 w-px bg-neutral-300 max-lg:hidden", collapsed && "hidden")} />
-                  <button onClick={handleLogout} className={cn("ml-3 rounded-full transition max-lg:ml-0", collapsed && "ml-0")} title="Logout">
-                    <LogOut className="h-4 w-4 text-neutral-700" />
+            {/* Footer: collapse toggle (wide screens only), then profile / logout. */}
+            <div className={cn("relative z-10 mt-auto space-y-3 pt-4", compactSidebar && "flex flex-col items-center")}>
+              {!narrowScreen && (
+                <SidebarTip label={collapsed ? "Expand sidebar" : "Collapse sidebar"} show>
+                  <button type="button" onClick={toggleCollapsed} aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} className="cs-sidebar-square cs-sidebar-collapse">
+                    {collapsed ? <PanelLeftOpen className="h-5 w-5" /> : <PanelLeftClose className="h-5 w-5" />}
                   </button>
+                </SidebarTip>
+              )}
+              {compactSidebar ? (
+                <SidebarTip label="Log out" show>
+                  <button type="button" onClick={handleLogout} aria-label="Log out" className="cs-sidebar-square cs-sidebar-profile justify-center border bg-neutral-50">
+                    <LogOut className="h-5 w-5 text-neutral-700" />
+                  </button>
+                </SidebarTip>
+              ) : (
+                <div className="cs-sidebar-profile flex w-full items-center rounded-[20px] border bg-neutral-50 py-2 pl-3 pr-3">
+                  <div className="flex flex-grow items-center gap-2">
+                    <img src={profilePicUrl || "/placeholder.svg"} alt="Profile" className="h-8 w-8 rounded-full object-cover" />
+                    <span className="max-w-[120px] truncate text-sm font-medium text-neutral-800">{userName}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="h-6 w-px bg-neutral-300" />
+                    <button onClick={handleLogout} className="ml-3 rounded-full transition" title="Logout">
+                      <LogOut className="h-4 w-4 text-neutral-700" />
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
+          </TooltipProvider>
         </aside>
 
         {/* Main */}

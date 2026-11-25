@@ -1017,8 +1017,8 @@ function TextResultCard({ entry, onOpen }) {
       </span>
       {concept.angle && <span className="text-xs text-stone-600"><strong className="font-semibold text-stone-700">Angle:</strong> {concept.angle}</span>}
       {lead && <span className="cs-generate-text-card__hook"><strong>{lead.label}:</strong> “{lead.text}”</span>}
-      {(concept.concept_direction || concept.hypothesis) && !brief.ugc_markdown && <span className="cs-generate-text-card__summary">{concept.concept_direction || concept.hypothesis}</span>}
-      {snippet && <span className="cs-generate-text-card__snippet">{snippet}</span>}
+      {(concept.concept_direction || concept.hypothesis) && !brief.ugc_markdown && <span className="cs-generate-text-card__summary"><strong>Description:</strong> {concept.concept_direction || concept.hypothesis}</span>}
+      {snippet && <span className="cs-generate-text-card__snippet"><strong>{brief.ugc_markdown ? "Overview" : brief.script ? "Script" : "Brief"}:</strong> {snippet}</span>}
       <span className="cs-generate-text-card__meta">
         {Number.isNaN(date.getTime()) ? "" : date.toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}
         {entry.createdBy && <>{" "}<RunBy uid={entry.createdBy} /></>}
