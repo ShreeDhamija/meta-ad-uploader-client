@@ -1071,46 +1071,39 @@ const normalizeFileGroups = (groups = []) =>
     Array.isArray(group) ? { id: uuidv4(), fileIds: [...group] } : { ...group, id: group.id || uuidv4(), fileIds: [...(group.fileIds || [])] },
   );
 
-const getDisplayFileName = (file) => file?.name || file?.originalName || file?.originalname || file?.title || "Unnamed file";
+// Meta's duplicate-asset error (subcode 1815629) usually means two files in the ad share a name.
+const explainAdError = (message) =>
+  typeof message === "string" && /all ad asset values should be unique|duplicates of ad asset values/i.test(message)
+    ? "Meta treated two files in this ad as duplicates. If two files share the same name, rename one of them and try again."
+    : message;
 
-// Same name plus the same size and modified time means the same file was added twice.
-const mediaFileFingerprint = (file) => {
-  const size = Number(file?.size ?? file?.bytes ?? file?.fileSize);
-  if (!Number.isFinite(size) || size <= 0) return null;
-  return `${size}|${file?.lastModified ?? file?.modifiedTime ?? file?.client_modified ?? ""}`;
-};
+const getDisplayFileName = (file) => file?.name || file?.originalName || file?.originalname || file?.title || "Unnamed file";
 
 const buildMediaFileEntries = ({ files = [], driveFiles = [], dropboxFiles = [], frameioFiles = [], oneDriveFiles = [], importedFiles = [] }) =>
   [
     ...files.map((file) => ({
       id: file.uniqueId || file.name,
       name: getDisplayFileName(file),
-      fingerprint: mediaFileFingerprint(file),
     })),
     ...driveFiles.map((file) => ({
       id: file.id,
       name: getDisplayFileName(file),
-      fingerprint: mediaFileFingerprint(file),
     })),
     ...(dropboxFiles || []).map((file) => ({
       id: file.dropboxId,
       name: getDisplayFileName(file),
-      fingerprint: mediaFileFingerprint(file),
     })),
     ...(frameioFiles || []).map((file) => ({
       id: file.frameioId,
       name: getDisplayFileName(file),
-      fingerprint: mediaFileFingerprint(file),
     })),
     ...(oneDriveFiles || []).map((file) => ({
       id: file.oneDriveId,
       name: getDisplayFileName(file),
-      fingerprint: mediaFileFingerprint(file),
     })),
     ...(importedFiles || []).map((file) => ({
       id: file.type === "image" ? file.hash : file.id,
       name: getDisplayFileName(file),
-      fingerprint: mediaFileFingerprint(file),
     })),
   ].filter((file) => file.id && file.name);
 
@@ -1130,26 +1123,21 @@ const findDuplicateFileNameWarnings = (groups, fileEntriesById) => {
       const existing = filesByName.get(normalizedName);
       if (existing) {
         existing.count += 1;
-        if (file.fingerprint && existing.fingerprints.has(file.fingerprint)) existing.identical = true;
-        if (file.fingerprint) existing.fingerprints.add(file.fingerprint);
       } else {
         filesByName.set(normalizedName, {
           count: 1,
           fileName: file.name,
-          fingerprints: new Set(file.fingerprint ? [file.fingerprint] : []),
-          identical: false,
         });
       }
     });
 
-    filesByName.forEach(({ count, fileName, identical }, normalizedName) => {
+    filesByName.forEach(({ count, fileName }, normalizedName) => {
       if (count < 2) return;
 
       warnings.push({
         key: `${groupIndex + 1}-${normalizedName}`,
         groupNumber: groupIndex + 1,
         fileName,
-        identical,
       });
     });
   });
@@ -6399,8 +6387,7 @@ export default function AdCreationForm({
 
     if (groupsToCheck.length === 0) return [];
 
-    // Carousel cards may repeat an image; placement and flexible ads put every file into one asset feed, where Meta rejects repeats.
-    return findDuplicateFileNameWarnings(groupsToCheck, fileEntriesById).map((warning) => ({ ...warning, blocking: warning.identical && !isCarouselAd }));
+    return findDuplicateFileNameWarnings(groupsToCheck, fileEntriesById);
   }, [adType, isFlexLikeAdType, driveFiles, dropboxFiles, fileGroupsAsArrays, files, frameioFiles, importedFiles, isCarouselAd]);
 
   const handleCreateAd = async (jobData) => {
@@ -9449,7 +9436,7 @@ export default function AdCreationForm({
                 errorMsg =
                   "Connection to Meta dropped, so this ad couldn't be confirmed. It may still have been created — check Ads Manager for your ad count before retrying.";
               } else if (error.response?.data?.error) {
-                errorMsg = error.response.data.error;
+                errorMsg = explainAdError(error.response.data.error);
               } else if (error.response?.data) {
                 errorMsg = error.response.data;
               } else if (error.message) {
@@ -9517,7 +9504,7 @@ export default function AdCreationForm({
           .map(({ response, meta }) => {
             let errorMsg = "Unknown error";
             if (response.reason?.response?.data?.error) {
-              errorMsg = response.reason.response.data.error;
+              errorMsg = explainAdError(response.reason.response.data.error);
             } else if (response.reason?.response?.data) {
               errorMsg = response.reason.response.data;
             } else if (response.reason?.message) {
@@ -9574,7 +9561,7 @@ export default function AdCreationForm({
             const firstError = responses.find((r) => r.status === "rejected");
             let errorMsg = "Unknown error";
             if (firstError?.reason?.response?.data?.error) {
-              errorMsg = firstError.reason.response.data.error;
+              errorMsg = explainAdError(firstError.reason.response.data.error);
             } else if (firstError?.reason?.response?.data) {
               errorMsg = firstError.reason.response.data;
             } else if (firstError?.reason?.message) {
@@ -10092,7 +10079,7 @@ export default function AdCreationForm({
     const snapshot = getVariantState(variant.id);
     return snapshot?.duplicateAdSet && (snapshot.newAdSetName || "").length > 400;
   });
-  const publishDisabled = hasOverlongAdSetName || hasOverlongHeadlines || hasOverlongCarouselHeadlines || hasPublishBlockingIssueBeforePage || isAdSetMissing || isPageMissing || Boolean(adSetTimingIssue) || isFacebookShareLink || duplicateFileNameWarnings.some((warning) => warning.blocking);
+  const publishDisabled = hasOverlongAdSetName || hasOverlongHeadlines || hasOverlongCarouselHeadlines || hasPublishBlockingIssueBeforePage || isAdSetMissing || isPageMissing || Boolean(adSetTimingIssue) || isFacebookShareLink;
 
   const showImportedPostMode = isDuplicationMode && importedPosts.length > 0;
   const importedSafeIndex = showImportedPostMode ? Math.min(activeImportedPostIndex, importedPosts.length - 1) : 0;
@@ -13322,12 +13309,7 @@ export default function AdCreationForm({
               </div>
             )}
 
-            {duplicateFileNameWarnings.map((warning) => warning.blocking ? (
-              <div key={warning.key} className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl mt-2">
-                Group {warning.groupNumber} has the same file {warning.fileName} added twice. Meta rejects ads that use the same image or video twice.
-                Remove the duplicate and regroup to publish.
-              </div>
-            ) : (
+            {duplicateFileNameWarnings.map((warning) => (
               <div key={warning.key} className="flex items-start gap-1 p-2 bg-orange-50 border border-orange-200 rounded-xl mt-2">
                 <AlertTriangle className="w-4 h-4 text-orange-500 shrink-0 mt-0.5" />
                 <span className="text-xs text-orange-700">
