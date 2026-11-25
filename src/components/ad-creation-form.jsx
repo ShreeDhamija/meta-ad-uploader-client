@@ -293,10 +293,30 @@ function getAdSetSetupIssue({ duplicateAdSet, newAdSetSettings } = {}) {
   return null;
 }
 
-function getAdSetTimingIssue({ selectedAdSets = [], duplicateAdSet, adSets = [], adScheduleEndTime, newAdSetSettings }) {
+function getAdSetTimingIssue({ selectedAdSets = [], duplicateAdSet, adSets = [], adScheduleStartTime, adScheduleEndTime, newAdSetSettings }) {
   const setupIssue = getAdSetSetupIssue({ duplicateAdSet, newAdSetSettings });
   if (setupIssue) return setupIssue;
   const selectedIds = duplicateAdSet ? [duplicateAdSet] : selectedAdSets;
+
+  // Meta rejects ads whose schedule starts before the ad set starts (subcode 3858350).
+  const scheduledStartTime = adScheduleStartTime ? new Date(adScheduleStartTime).getTime() : NaN;
+  if (Number.isFinite(scheduledStartTime)) {
+    const adSetStartingAfterAds = selectedIds
+      .map((id) => adSets.find((adSet) => adSet.id === id))
+      .map((adSet) => duplicateAdSet && newAdSetSettings?.sourceAdSetId === duplicateAdSet
+        ? { ...adSet, start_time: newAdSetSettings.changes?.startTime ?? newAdSetSettings.defaults?.startTime ?? adSet?.start_time }
+        : adSet)
+      .map((adSet) => ({ adSet, startTime: adSet?.start_time ? new Date(adSet.start_time).getTime() : NaN }))
+      .filter(({ startTime }) => Number.isFinite(startTime))
+      .sort((a, b) => b.startTime - a.startTime)
+      .find(({ startTime }) => scheduledStartTime < startTime);
+    if (adSetStartingAfterAds) {
+      return {
+        type: "schedule-before-ad-set",
+        message: `The ads start date is before the ad sets start date (${formatAdSetEndTime(adSetStartingAfterAds.adSet.start_time)}). Change the ad schedule to publish ads`,
+      };
+    }
+  }
   const selectedAdSetsWithEndTime = selectedIds
     .map((id) => adSets.find((adSet) => adSet.id === id))
     .map((adSet) => duplicateAdSet && newAdSetSettings?.sourceAdSetId === duplicateAdSet
@@ -1053,31 +1073,44 @@ const normalizeFileGroups = (groups = []) =>
 
 const getDisplayFileName = (file) => file?.name || file?.originalName || file?.originalname || file?.title || "Unnamed file";
 
+// Same name plus the same size and modified time means the same file was added twice.
+const mediaFileFingerprint = (file) => {
+  const size = Number(file?.size ?? file?.bytes ?? file?.fileSize);
+  if (!Number.isFinite(size) || size <= 0) return null;
+  return `${size}|${file?.lastModified ?? file?.modifiedTime ?? file?.client_modified ?? ""}`;
+};
+
 const buildMediaFileEntries = ({ files = [], driveFiles = [], dropboxFiles = [], frameioFiles = [], oneDriveFiles = [], importedFiles = [] }) =>
   [
     ...files.map((file) => ({
       id: file.uniqueId || file.name,
       name: getDisplayFileName(file),
+      fingerprint: mediaFileFingerprint(file),
     })),
     ...driveFiles.map((file) => ({
       id: file.id,
       name: getDisplayFileName(file),
+      fingerprint: mediaFileFingerprint(file),
     })),
     ...(dropboxFiles || []).map((file) => ({
       id: file.dropboxId,
       name: getDisplayFileName(file),
+      fingerprint: mediaFileFingerprint(file),
     })),
     ...(frameioFiles || []).map((file) => ({
       id: file.frameioId,
       name: getDisplayFileName(file),
+      fingerprint: mediaFileFingerprint(file),
     })),
     ...(oneDriveFiles || []).map((file) => ({
       id: file.oneDriveId,
       name: getDisplayFileName(file),
+      fingerprint: mediaFileFingerprint(file),
     })),
     ...(importedFiles || []).map((file) => ({
       id: file.type === "image" ? file.hash : file.id,
       name: getDisplayFileName(file),
+      fingerprint: mediaFileFingerprint(file),
     })),
   ].filter((file) => file.id && file.name);
 
@@ -1097,21 +1130,26 @@ const findDuplicateFileNameWarnings = (groups, fileEntriesById) => {
       const existing = filesByName.get(normalizedName);
       if (existing) {
         existing.count += 1;
+        if (file.fingerprint && existing.fingerprints.has(file.fingerprint)) existing.identical = true;
+        if (file.fingerprint) existing.fingerprints.add(file.fingerprint);
       } else {
         filesByName.set(normalizedName, {
           count: 1,
           fileName: file.name,
+          fingerprints: new Set(file.fingerprint ? [file.fingerprint] : []),
+          identical: false,
         });
       }
     });
 
-    filesByName.forEach(({ count, fileName }, normalizedName) => {
+    filesByName.forEach(({ count, fileName, identical }, normalizedName) => {
       if (count < 2) return;
 
       warnings.push({
         key: `${groupIndex + 1}-${normalizedName}`,
         groupNumber: groupIndex + 1,
         fileName,
+        identical,
       });
     });
   });
@@ -5907,6 +5945,17 @@ export default function AdCreationForm({
   const isDestinationLinkInvalid =
     (requiresDestinationValue || hasWebsiteAndPhoneCallAdSets) && !showPhoneNumberField && destinationType !== "instant_experience" &&
     destinationLinkValue.trim().length > 0 && !isValidDomainLink(destinationLinkValue);
+  // Meta can't resolve Facebook's share redirect links and rejects the ad with "Failed to parse URL".
+  const isFacebookShareLink = !isDestinationLinkInvalid && destinationType !== "instant_experience" && (() => {
+    try {
+      const raw = destinationLinkValue.trim();
+      const { hostname, pathname } = new URL(/^https?:\/\//i.test(raw) ? raw : `https://${raw}`);
+      const host = hostname.toLowerCase().replace(/^(www|m|web)\./, "");
+      return host === "fb.me" || (["facebook.com", "fb.com"].includes(host) && /^\/share\//i.test(pathname));
+    } catch {
+      return false;
+    }
+  })();
   const isMissingDestinationValue =
     (hasWebsiteAndPhoneCallAdSets && (!phoneNumber.trim() || !destinationLinkValue.trim() || isDestinationLinkInvalid)) ||
     requiresDestinationValue &&
@@ -6350,7 +6399,8 @@ export default function AdCreationForm({
 
     if (groupsToCheck.length === 0) return [];
 
-    return findDuplicateFileNameWarnings(groupsToCheck, fileEntriesById);
+    // Carousel cards may repeat an image; placement and flexible ads put every file into one asset feed, where Meta rejects repeats.
+    return findDuplicateFileNameWarnings(groupsToCheck, fileEntriesById).map((warning) => ({ ...warning, blocking: warning.identical && !isCarouselAd }));
   }, [adType, isFlexLikeAdType, driveFiles, dropboxFiles, fileGroupsAsArrays, files, frameioFiles, importedFiles, isCarouselAd]);
 
   const handleCreateAd = async (jobData) => {
@@ -10042,7 +10092,7 @@ export default function AdCreationForm({
     const snapshot = getVariantState(variant.id);
     return snapshot?.duplicateAdSet && (snapshot.newAdSetName || "").length > 400;
   });
-  const publishDisabled = hasOverlongAdSetName || hasOverlongHeadlines || hasOverlongCarouselHeadlines || hasPublishBlockingIssueBeforePage || isAdSetMissing || isPageMissing || Boolean(adSetTimingIssue);
+  const publishDisabled = hasOverlongAdSetName || hasOverlongHeadlines || hasOverlongCarouselHeadlines || hasPublishBlockingIssueBeforePage || isAdSetMissing || isPageMissing || Boolean(adSetTimingIssue) || isFacebookShareLink || duplicateFileNameWarnings.some((warning) => warning.blocking);
 
   const showImportedPostMode = isDuplicationMode && importedPosts.length > 0;
   const importedSafeIndex = showImportedPostMode ? Math.min(activeImportedPostIndex, importedPosts.length - 1) : 0;
@@ -13272,7 +13322,12 @@ export default function AdCreationForm({
               </div>
             )}
 
-            {duplicateFileNameWarnings.map((warning) => (
+            {duplicateFileNameWarnings.map((warning) => warning.blocking ? (
+              <div key={warning.key} className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl mt-2">
+                Group {warning.groupNumber} has the same file {warning.fileName} added twice. Meta rejects ads that use the same image or video twice.
+                Remove the duplicate and regroup to publish.
+              </div>
+            ) : (
               <div key={warning.key} className="flex items-start gap-1 p-2 bg-orange-50 border border-orange-200 rounded-xl mt-2">
                 <AlertTriangle className="w-4 h-4 text-orange-500 shrink-0 mt-0.5" />
                 <span className="text-xs text-orange-700">
@@ -13351,6 +13406,11 @@ export default function AdCreationForm({
             {isDestinationLinkInvalid && delayedInvalidLink === destinationLinkValue && (
               <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
                 {destinationLinkValue} is not a valid URL
+              </div>
+            )}
+            {isFacebookShareLink && (
+              <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                Facebook share links can't be used as the ad link. Open the link and paste the full URL it goes to (for example facebook.com/events/…)
               </div>
             )}
             {enablePlacementCustomization && !isCarouselAd && !isFlexLikeAdType && selectedFiles && selectedFiles.size > 1 && (
