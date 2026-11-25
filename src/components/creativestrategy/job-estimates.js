@@ -20,7 +20,7 @@ export const JOB_ESTIMATE_MINUTES = {
   inspo_analyze: { first: 2, repeat: 2 },
   trending_creative: { first: 2, repeat: 2 },
   cross_account_knowledge: { first: 3, repeat: 3 },
-  generate_brief: { first: 2, repeat: 2 },
+  generate_brief: { first: 2, repeat: 2, perPair: true },
   weekly_brief: { first: 2, repeat: 2 },
   // Per pair of scripts: two are written at a time.
   generate_scripts: { first: 2, repeat: 2, perPair: true },

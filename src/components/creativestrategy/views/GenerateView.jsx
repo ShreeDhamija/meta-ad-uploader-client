@@ -2,7 +2,7 @@
 // retaining their existing API flows.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import PropTypes from "prop-types";
-import { Box, ChevronLeft, ChevronRight, ClipboardList, Download, FileText, Flame, Loader2, Sparkles, ThumbsDown, ThumbsUp, Trash2 } from "lucide-react";
+import { Box, ChevronLeft, ChevronRight, ClipboardList, Download, Flame, Loader2, Sparkles, ThumbsDown, ThumbsUp, Trash2 } from "lucide-react";
 import pLimit from "p-limit";
 import VisualInspiration from "./VisualInspiration";
 import { creativeApi } from "@/lib/creativeApi";
@@ -19,14 +19,36 @@ import { toast } from "sonner";
 import RunBy from "../run-by";
 
 const CREATIVITY = [
-  { key: "inspired", label: "Inspired (fresh concept)" },
-  { key: "remix", label: "Remix (faithful copy)" },
+  { key: "inspired", label: "Inspired (new ad, same look)" },
+  { key: "remix", label: "Remix (same layout, new copy)" },
 ];
+const CREATIVITY_HELP = {
+  inspired: "Keeps the reference's look but changes the headline, layout and main visual, so each image is a different ad.",
+  remix: "Keeps the reference's layout and positions exactly and rewrites only the text for your product.",
+};
 const PRODUCTION = [
   { key: "auto", label: "Auto" },
   { key: "native", label: "Native (UGC)" },
   { key: "studio", label: "Studio" },
 ];
+const PRODUCTION_HELP = {
+  auto: "UGC look when the format or copy reads native (POV, selfie, “I tried…”), otherwise studio.",
+  native: "Shot-on-phone look: handheld, natural light, unpolished.",
+  studio: "Polished product photography with controlled lighting.",
+};
+const STATIC_MODE_HELP = {
+  manual: "You choose the format and its on-image copy (or Auto-fill it). With Auto format, every variation rebuilds your layout reference below with new copy.",
+  strategist: "The strategist plans the batch for you: a different format, persona, angle and on-image copy for each variation, from your research, top ads and past 👍/👎.",
+};
+
+/** One line saying where each image's layout comes from. */
+function layoutSummary(path, layout, format) {
+  if (path === "concept") return `your concept reference “${layout?.concept || "selected image"}”${layout?.conceptCount > 1 ? ` (${layout.conceptCount} rotate across variations)` : ""}.`;
+  if (path === "template") return format ? `the ${format.category} format template, with your copy.` : "each planned format's own template. Brand examples only guide the look.";
+  if (layout?.example) return `rebuilt from ${layout.example.uploaded ? "your uploaded example" : "your top-spending selected ad"} “${layout.example.name}”.`;
+  if (layout?.product) return `rebuilt from your product image “${layout.product}”.`;
+  return "pick images in Visual inspiration.";
+}
 const ASPECT = [
   { key: "reference", label: "Reference ratio" },
   { key: "1:1", label: "1:1" },
@@ -37,7 +59,6 @@ const ASPECT = [
 ];
 const MODES = [
   { key: "statics", label: "Statics" },
-  { key: "scripts", label: "Scripts" },
   { key: "briefs", label: "Briefs" },
 ];
 
@@ -124,6 +145,8 @@ export default function GenerateView({ ctx }) {
   const [mode, setMode] = useState(() => {
     try {
       const saved = localStorage.getItem(`cs-generate-mode:${ctx.userId}`);
+      // "scripts" was its own tab before it merged into Briefs.
+      if (saved === "scripts") return "briefs";
       return MODES.some((item) => item.key === saved) ? saved : "statics";
     } catch { return "statics"; }
   });
@@ -374,6 +397,12 @@ export default function GenerateView({ ctx }) {
   };
 
   const inputFields = selectedFormat?.requiresUserInput || [];
+  const hasFilledInputs = inputFields.some((field) => userInputs[field.key] != null && userInputs[field.key] !== "");
+  // How the backend will build each image (see generate-ad.ts): a concept
+  // reference always wins; Strategist and a manual format with filled copy use
+  // the format's template; otherwise the layout reference is rebuilt.
+  const staticPath = visualSelection?.conceptReferenceIds?.length ? "concept"
+    : generationMode === "strategist" || (formatSlug && hasFilledInputs) ? "template" : "reference";
   const imageItems = items;
   const generationActive = job && (job.status == null || job.status === "queued" || job.status === "running");
 
@@ -428,7 +457,17 @@ export default function GenerateView({ ctx }) {
                 <div className="cs-strategy-toggle" aria-label="Static generation mode">
                   {[['manual', 'Manual tune'], ['strategist', 'AI Strategist']].map(([value, label]) => <button key={value} type="button" aria-pressed={generationMode === value} className={generationMode === value ? "is-active" : ""} onClick={() => setGenerationMode(value)}>{label}</button>)}
                 </div>
-                <p className="cs-generate-sidebar-description">{generationMode === "strategist" ? "AI uses your research and account insights to choose concepts, personas, formats, and copy." : "Choose your format and fine-tune the creative inputs."}</p>
+                <p className="cs-generate-sidebar-description">{STATIC_MODE_HELP[generationMode]}</p>
+                <div className="cs-generate-sidebar__group space-y-2">
+                  <span className="text-xs font-semibold text-[#6c3403]">What each image is built from</span>
+                  <ul className="cs-generate-sources">
+                    <li><strong>Layout:</strong> {layoutSummary(staticPath, visualSelection?.layout, generationMode === "manual" ? selectedFormat : null)}</li>
+                    <li><strong>Look:</strong> {visualSelection?.layout?.exampleCount ? `${visualSelection.layout.exampleCount} brand example${visualSelection.layout.exampleCount === 1 ? "" : "s"} (type, colors, photo style)` : "no brand examples selected"}</li>
+                    <li><strong>Product:</strong> {visualSelection?.layout?.productCount ? `${visualSelection.layout.productCount} product image${visualSelection.layout.productCount === 1 ? "" : "s"}` : "no product images selected"}</li>
+                  </ul>
+                  <VisualInspiration key={selectedProductId || "none"} productId={selectedProductId} clientId={ctx.selectedBrandId} onChange={handleVisualChange} />
+                  <p className="text-xs text-stone-500">Change any of these in Visual inspiration.</p>
+                </div>
                 {generationMode === "manual" && (formatsLoading ? (
                   <SidebarLoading label="Loading formats…" />
                 ) : (
@@ -440,12 +479,20 @@ export default function GenerateView({ ctx }) {
                   />
                 ))}
                 <SidebarNumber label="Variations" value={variationCount} min={1} max={8} onChange={setVariationCount} />
+                {staticPath !== "template" && <>
+                  <SidebarSelect label="Creativity" value={creativityMode} onChange={setCreativityMode} options={CREATIVITY} />
+                  <p className="-mt-2 text-xs text-stone-500">{CREATIVITY_HELP[creativityMode]}</p>
+                </>}
+                <SidebarSelect label="Aspect ratio" value={aspectRatio || "reference"} onChange={(value) => setAspectRatio(value === "reference" ? "" : value)}
+                  options={ASPECT.map((option) => option.key === "reference" ? { ...option, label: staticPath !== "template" ? "Match layout reference" : "Square (1:1)" } : option)} />
+                {aspectRatio.includes("+") && <p className="-mt-2 text-xs text-stone-500">Each variation makes a matching pair ({variationCount * 2} images). The portrait copy uses the original's model and quality.</p>}
+                {generationMode === "strategist" ? (
+                  <p className="text-xs text-stone-500"><strong className="font-medium text-[#4f3329]">Production:</strong> the strategist picks UGC or studio per image and mixes them across the batch.</p>
+                ) : <>
+                  <SidebarSelect label="Production" value={productionStyle} onChange={setProductionStyle} options={PRODUCTION} />
+                  <p className="-mt-2 text-xs text-stone-500">{PRODUCTION_HELP[productionStyle]}</p>
+                </>}
                 <RunModelControls models={models} operations={RUN_OPERATIONS.statics} disabled={Boolean(generationActive || filling)} />
-                <p className="text-xs text-stone-500">Paired portrait images use the original image’s model, quality and resolution.</p>
-                <SidebarSelect label="Creativity" value={creativityMode} onChange={setCreativityMode} options={CREATIVITY} />
-                <SidebarSelect label="Aspect Ratio" value={aspectRatio || "reference"} onChange={(value) => setAspectRatio(value === "reference" ? "" : value)} options={ASPECT} />
-                {aspectRatio.includes("+") && <p className="text-xs text-stone-500">Each variation produces a matching pair ({variationCount * 2} images total).</p>}
-                <SidebarSelect label="Production" value={productionStyle} onChange={setProductionStyle} options={PRODUCTION} />
 
                 {generationMode === "manual" && inputFields.length > 0 && (
                   <div className="cs-generate-sidebar__group space-y-3">
@@ -467,7 +514,6 @@ export default function GenerateView({ ctx }) {
                     ))}
                   </div>
                 )}
-                <VisualInspiration key={selectedProductId || "none"} productId={selectedProductId} clientId={ctx.selectedBrandId} onChange={handleVisualChange} />
               </div>
 
             </>
@@ -496,31 +542,52 @@ export default function GenerateView({ ctx }) {
         </GenerateWorkspace>
       )}
 
-      {mode === "scripts" && <ScriptsPanel key={selectedProductId} productId={selectedProductId} />}
       {mode === "briefs" && <BriefPanel key={selectedProductId} productId={selectedProductId} />}
     </div>
   );
 }
 
-function ScriptsPanel({ productId }) {
+// One tab for everything text-based. Video and static briefs share the
+// concept-led pipeline (pick a concept, then write it); UGC is a different
+// document: a brief for an outside creator who will film new footage.
+const BRIEF_FORMATS = [
+  { key: "auto", label: "Auto (strategist picks video or static)" },
+  { key: "video", label: "Video script" },
+  { key: "static", label: "Static brief" },
+  { key: "ugc", label: "UGC creator brief" },
+];
+const BRIEF_FORMAT_HELP = {
+  auto: "Picks a concept from your research and winning ads, then writes it as a video script or a static brief, whichever fits.",
+  video: "A concept, three opening hooks and a full spoken script, for an editor working from footage you have.",
+  static: "A concept, headlines and on-image copy with visual direction, ready for a designer or Generate → Statics.",
+  ugc: "A brief to hand an outside creator who will film new footage: who they're talking to, hook ideas, talking points with shots, your top videos and shoot requirements. Written for one persona.",
+};
+
+function BriefPanel({ productId }) {
   const models = useRunModels(productId);
+  const [format, setFormat] = useState("auto");
+  const [count, setCount] = useState(1);
+  const [persona, setPersona] = useState("");
   const [personas, setPersonas] = useState([]);
   const [personasLoading, setPersonasLoading] = useState(false);
-  const [avatar, setAvatar] = useState("");
-  const [count, setCount] = useState(3);
   const [notes, setNotes] = useState("");
   const [starting, setStarting] = useState(false);
-  const history = useGenerationHistory(productId, "scripts");
+  const history = useGenerationHistory(productId, "all");
   const { batches } = history;
   const [err, setErr] = useState(null);
-  // Runs as a background job: progress and the result message show in the job
-  // tracker; the saved scripts load into the history when it finishes.
+  // Background job: progress shows in the job tracker; results load into the grid when it finishes.
   const { job, start } = useJobRunner({
+    kind: "generate_brief", productId, enabled: Boolean(productId), restoreFinished: false,
+    onComplete: () => history.refreshLatest(),
+  });
+  // Script jobs started before the tabs merged still refresh the grid.
+  const { job: scriptsJob } = useJobRunner({
     kind: "generate_scripts", productId, enabled: Boolean(productId), restoreFinished: false,
     onComplete: () => history.refreshLatest(),
   });
-  const busy = starting || isJobActive(job);
-  const runningCount = job?.progress?.total || count;
+  const busy = starting || isJobActive(job) || isJobActive(scriptsJob);
+  const isUgc = format === "ugc";
+  const runningCount = job?.progress?.total || (isUgc ? 1 : count);
 
   useEffect(() => {
     if (!productId) { setPersonas([]); setPersonasLoading(false); return; }
@@ -528,138 +595,24 @@ function ScriptsPanel({ productId }) {
     creativeApi.getResearch(productId)
       .then((response) => {
         const found = response.intel?.personas?.personas || (Array.isArray(response.intel?.personas) ? response.intel.personas : []);
-        setPersonas(found.map((persona) => persona.name || persona.label).filter(Boolean));
+        setPersonas(found.map((item) => item.name || item.label).filter(Boolean));
       })
       .catch(() => setPersonas([]))
       .finally(() => setPersonasLoading(false));
   }, [productId]);
 
   const run = async () => {
-    if (!productId) return;
+    if (!productId || (isUgc && !persona)) return;
     setErr(null); setStarting(true);
     try {
-      const { jobId } = await creativeApi.generateVideoScripts({
+      const { jobId } = await creativeApi.generateConceptBrief({
         productId,
-        count,
-        aiSelections: models.forRun(RUN_OPERATIONS.scripts),
-        selectedAvatar: avatar || undefined,
+        format: format === "auto" ? undefined : format,
+        count: isUgc ? 1 : count,
+        persona: persona || undefined,
         notes: notes || undefined,
+        aiSelections: models.forRun(RUN_OPERATIONS.brief),
       });
-      start(jobId);
-      models.reset(RUN_OPERATIONS.scripts);
-    } catch (error) {
-      setErr(error.message);
-    } finally {
-      setStarting(false);
-    }
-  };
-
-  return (
-    <GenerateWorkspace
-      sidebar={(
-        <>
-          <div className="space-y-4">
-            <p className="cs-generate-sidebar-description">Generates the requested number of concept-led Meta video scripts, each with three hook options.</p>
-            <RunModelControls models={models} operations={RUN_OPERATIONS.scripts} disabled={busy} />
-            <SidebarNumber label="Count" value={count} min={1} max={8} onChange={setCount} />
-            {personasLoading ? (
-              <SidebarLoading label="Loading personas…" />
-            ) : (
-              <SidebarSelect
-                label="Persona"
-                value={avatar || "auto"}
-                onChange={(value) => setAvatar(value === "auto" ? "" : value)}
-                options={[{ key: "auto", label: "Auto persona" }, ...personas.map((persona) => ({ key: persona, label: persona }))]}
-              />
-            )}
-            <SidebarInput
-              label="Direction (optional)"
-              type="textarea"
-              value={notes}
-              onChange={setNotes}
-              placeholder="e.g. focus on the bundle offer or a specific persona"
-            />
-          </div>
-          <button type="button" onClick={run} disabled={!productId || busy || personasLoading || history.loading || Boolean(history.error)} className="cs-primary-button mt-auto w-full">
-            {busy ? `Writing ${runningCount} Script${runningCount === 1 ? "" : "s"}…` : `Generate ${count} Video Script${count === 1 ? "" : "s"}`}
-          </button>
-        </>
-      )}
-    >
-      <ErrorBanner message={err} />
-      <HistoryControls history={history} disabled={busy} />
-      {!productId ? (
-        <WorkspaceEmpty icon={Box} title="Select a product" hint="Choose a product above before generating a video script." />
-      ) : history.loading && batches.length === 0 ? (
-        <GenerateLoading label="Loading saved scripts…" />
-      ) : busy && batches.length === 0 ? (
-        <GenerateLoading label={`Writing ${runningCount} video script${runningCount === 1 ? "" : "s"}…`} />
-      ) : batches.length === 0 ? (
-        <WorkspaceEmpty icon={FileText} title="Video script generation" hint="Generate a concept-led video ad script with three opening hooks." />
-      ) : (
-        <div className="space-y-5">
-          {busy && <GeneratingNotice label={`Writing ${runningCount} video script${runningCount === 1 ? "" : "s"}… they will appear at the top.`} />}
-          {batches.map((batch, batchIndex) => (
-            <GenerationBatch key={batch.id} createdAt={batch.createdAt} createdBy={batch.createdBy || null} isLatest={batchIndex === 0} legacyWeekly={batch.legacyWeekly} productUnspecified={batch.productUnspecified}>
-              <div className="space-y-7">
-                {(batch.items || []).map((item, itemIndex) => {
-                  const concept = item.concept;
-                  const brief = item.brief;
-                  return (
-                    <section key={`${concept?.concept_name || "script"}-${itemIndex}`} className="space-y-4">
-                      {(batch.items || []).length > 1 && <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#8a746c]">Video Script {itemIndex + 1}</p>}
-                      {concept && (
-                        <div className="cs-generate-result space-y-2">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="font-semibold">{concept.concept_name}</span>
-                            <Tag>video</Tag>
-                            {concept.persona_label && <Tag>{concept.persona_label}</Tag>}
-                            {concept.awareness_stage && <Tag>{concept.awareness_stage}</Tag>}
-                          </div>
-                          {concept.hypothesis && <p><strong>Hypothesis:</strong> {concept.hypothesis}</p>}
-                          {concept.angle && <p><strong>Angle:</strong> {concept.angle}</p>}
-                          {concept.concept_direction && <p><strong>Direction:</strong> {concept.concept_direction}</p>}
-                        </div>
-                      )}
-                      {brief?.hooks?.length > 0 && <ResultSection title="Hooks"><ul className="list-disc space-y-1 pl-5">{brief.hooks.map((hook, index) => <li key={index}>{hook}</li>)}</ul></ResultSection>}
-                      {brief?.script && <ResultSection title="Video Script"><pre className="whitespace-pre-wrap font-sans">{brief.script}</pre></ResultSection>}
-                    </section>
-                  );
-                })}
-              </div>
-            </GenerationBatch>
-          ))}
-        </div>
-      )}
-    </GenerateWorkspace>
-  );
-}
-
-const BRIEF_FORMATS = [
-  { key: "auto", label: "Auto (picker decides)" },
-  { key: "video", label: "Video script" },
-  { key: "static", label: "Static brief" },
-];
-
-function BriefPanel({ productId }) {
-  const models = useRunModels(productId);
-  const [format, setFormat] = useState("");
-  const [notes, setNotes] = useState("");
-  const [starting, setStarting] = useState(false);
-  const history = useGenerationHistory(productId, "briefs");
-  const { batches } = history;
-  const [err, setErr] = useState(null);
-  const { job, start } = useJobRunner({
-    kind: "generate_brief", productId, enabled: Boolean(productId), restoreFinished: false,
-    onComplete: () => history.refreshLatest(),
-  });
-  const busy = starting || isJobActive(job);
-
-  const run = async () => {
-    if (!productId) return;
-    setErr(null); setStarting(true);
-    try {
-      const { jobId } = await creativeApi.generateConceptBrief({ productId, format: format || undefined, notes: notes || undefined, aiSelections: models.forRun(RUN_OPERATIONS.brief) });
       start(jobId);
       models.reset(RUN_OPERATIONS.brief);
     } catch (error) {
@@ -669,18 +622,35 @@ function BriefPanel({ productId }) {
     }
   };
 
+  const buttonLabel = isUgc ? "Generate UGC Brief"
+    : `Generate ${count} ${format === "video" ? "Video Script" : format === "static" ? "Static Brief" : "Brief"}${count === 1 ? "" : "s"}`;
+
   return (
     <GenerateWorkspace
       sidebar={(
         <>
           <div className="space-y-4">
-            <p className="cs-generate-sidebar-description">Builds a concept-led video script or static creative brief with hooks, headlines, and production direction.</p>
+            <SidebarSelect label="Format" value={format} onChange={setFormat} options={BRIEF_FORMATS} />
+            <p className="cs-generate-sidebar-description">{BRIEF_FORMAT_HELP[format]}</p>
+            {!isUgc && <SidebarNumber label="Count" value={count} min={1} max={8} onChange={setCount} />}
+            {personasLoading ? (
+              <SidebarLoading label="Persona" />
+            ) : (
+              <SidebarSelect
+                label={isUgc ? "Persona (required)" : "Persona"}
+                value={persona || "auto"}
+                onChange={(value) => setPersona(value === "auto" ? "" : value)}
+                options={[{ key: "auto", label: isUgc ? "Choose a persona" : "Auto persona" }, ...personas.map((item) => ({ key: item, label: item }))]}
+              />
+            )}
+            {isUgc && !persona && !personasLoading && <p className="text-xs text-amber-800">{personas.length ? "A UGC brief is written for one person. Pick a persona." : "No personas yet. Run Research for this product first."}</p>}
+            {!isUgc && count > 1 && <p className="text-xs text-stone-500">Each one gets a different concept, and none repeat what this product already has.</p>}
+            <SidebarInput label={isUgc ? "Notes for the creator brief (optional)" : "Direction (optional)"} type="textarea" value={notes} onChange={setNotes}
+              placeholder={isUgc ? "e.g. lean into the travel use case; no gym footage" : "e.g. lean into the new bundle offer"} />
             <RunModelControls models={models} operations={RUN_OPERATIONS.brief} disabled={busy} />
-            <SidebarSelect label="Format" value={format || "auto"} onChange={(value) => setFormat(value === "auto" ? "" : value)} options={BRIEF_FORMATS} />
-            <SidebarInput label="Notes (optional)" type="textarea" value={notes} onChange={setNotes} placeholder="e.g. lean into the new bundle offer" />
           </div>
-          <button type="button" onClick={run} disabled={!productId || busy || history.loading || Boolean(history.error)} className="cs-primary-button mt-auto w-full">
-            {busy ? "Writing Brief…" : "Generate Brief"}
+          <button type="button" onClick={run} disabled={!productId || busy || personasLoading || history.loading || Boolean(history.error) || (isUgc && !persona)} className="cs-primary-button mt-auto w-full">
+            {busy ? (isUgc ? "Writing UGC Brief…" : `Writing ${runningCount}…`) : buttonLabel}
           </button>
         </>
       )}
@@ -688,44 +658,18 @@ function BriefPanel({ productId }) {
       <ErrorBanner message={err} />
       <HistoryControls history={history} disabled={busy} />
       {!productId ? (
-        <WorkspaceEmpty icon={Box} title="Select a product" hint="Choose a product above before generating a brief." />
+        <WorkspaceEmpty icon={Box} title="Select a product" hint="Choose a product above before generating briefs." />
       ) : history.loading && batches.length === 0 ? (
         <GenerateLoading label="Loading saved briefs…" />
       ) : busy && batches.length === 0 ? (
-        <GenerateLoading label={"Building the creative brief…"} />
+        <GenerateLoading label="Writing… it will appear here when it's done." />
       ) : batches.length === 0 ? (
-        <WorkspaceEmpty icon={ClipboardList} title="No brief generated yet" hint="Choose a format and add optional direction in the sidebar." />
+        <WorkspaceEmpty icon={ClipboardList} title="No briefs yet" hint="Pick a format in the sidebar: video script, static brief or a UGC creator brief." />
       ) : (
-        <div className="space-y-5">
-          {busy && <GeneratingNotice label="Building the creative brief… it will appear at the top." />}
-          {batches.map((batch, batchIndex) => {
-            const concept = batch.data?.concept;
-            const brief = batch.data?.brief;
-            return (
-              <GenerationBatch key={batch.id} createdAt={batch.createdAt} createdBy={batch.createdBy || null} isLatest={batchIndex === 0} legacyWeekly={batch.legacyWeekly} productUnspecified={batch.productUnspecified}>
-                <div className="space-y-4">
-                  {concept && (
-                    <div className="cs-generate-result space-y-2">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-semibold">{concept.concept_name}</span>
-                        {brief?.format && <Tag>{brief.format}</Tag>}
-                        {concept.persona_label && <Tag>{concept.persona_label}</Tag>}
-                        {concept.awareness_stage && <Tag>{concept.awareness_stage}</Tag>}
-                      </div>
-                      {concept.hypothesis && <p><strong>Hypothesis:</strong> {concept.hypothesis}</p>}
-                      {concept.angle && <p><strong>Angle:</strong> {concept.angle}</p>}
-                      {concept.concept_direction && <p><strong>Direction:</strong> {concept.concept_direction}</p>}
-                    </div>
-                  )}
-                  {brief?.hooks?.length > 0 && <ResultSection title="Hooks"><ul className="list-disc space-y-1 pl-5">{brief.hooks.map((hook, index) => <li key={index}>{hook}</li>)}</ul></ResultSection>}
-                  {brief?.headlines?.length > 0 && <ResultSection title="Headlines"><ul className="list-disc space-y-1 pl-5">{brief.headlines.map((headline, index) => <li key={index}>{headline}</li>)}</ul></ResultSection>}
-                  {brief?.script && <ResultSection title="Script"><pre className="whitespace-pre-wrap font-sans">{brief.script}</pre></ResultSection>}
-                  {brief?.static_brief && <ResultSection title="Static Brief"><pre className="whitespace-pre-wrap font-sans">{brief.static_brief}</pre></ResultSection>}
-                </div>
-              </GenerationBatch>
-            );
-          })}
-        </div>
+        <>
+          {busy && <GeneratingNotice label="Writing… new briefs will appear at the top." />}
+          <TextResultsGrid entries={toTextEntries(batches)} />
+        </>
       )}
     </GenerateWorkspace>
   );
@@ -897,7 +841,8 @@ function GenerationGrid({ items, rate, selecting, selected, toggle, disabled }) 
 function GeneratedImage({ item, rate, selecting, selected, toggle, disabled, onPreview }) {
   const [loaded, setLoaded] = useState(false);
   return (
-    <article className="cs-generate-image-card group relative aspect-square" style={item.briefMeta?.aspect_ratio ? { aspectRatio: item.briefMeta.aspect_ratio.replace(":", " / ") } : undefined}>
+    <article className="cs-generate-image-card group relative aspect-square" style={item.briefMeta?.aspect_ratio ? { aspectRatio: item.briefMeta.aspect_ratio.replace(":", " / ") }
+      : /^\d+x\d+$/.test(item.briefMeta?.actual_size || "") ? { aspectRatio: item.briefMeta.actual_size.replace("x", " / ") } : undefined}>
       {!loaded && item.imageUrl && <div className="absolute inset-0 grid place-items-center"><Loader2 className="h-5 w-5 animate-spin text-[#6c3403]" /></div>}
       {!item.imageUrl && <div className="absolute inset-0 grid place-items-center text-xs text-stone-500">Preview unavailable</div>}
       {item.imageUrl && <button type="button" className="absolute inset-0 h-full w-full cursor-zoom-in" aria-label="View full image" onClick={() => onPreview(item)} disabled={selecting}><img
@@ -924,7 +869,186 @@ function GeneratedImage({ item, rate, selecting, selected, toggle, disabled, onP
 }
 
 function ResultSection({ title, children }) {
-  return <div className="cs-generate-result"><p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#6c3403]">{title}</p>{children}</div>;
+  return <div className="cs-generate-result"><p className="mb-2 text-xs font-semibold text-[#6c3403]">{title}</p>{children}</div>;
+}
+
+/** "problem_aware" → "Problem aware". */
+const sentenceLabel = (value) => {
+  const text = String(value ?? "").replace(/_/g, " ").trim();
+  return text ? text.charAt(0).toUpperCase() + text.slice(1).toLowerCase() : "";
+};
+
+/**
+ * One entry per script or brief across every saved batch (newest first):
+ * Scripts batches hold `items[]`, Briefs batches hold one `data`.
+ */
+function toTextEntries(batches) {
+  return batches.flatMap((batch) => {
+    const pieces = Array.isArray(batch.items) ? batch.items : batch.data ? [batch.data] : [];
+    return pieces.map((piece, index) => ({
+      key: `${batch.id}:${index}`,
+      concept: piece?.concept || {},
+      brief: piece?.brief || {},
+      createdAt: batch.createdAt,
+      createdBy: batch.createdBy || null,
+      legacyWeekly: Boolean(batch.legacyWeekly),
+      productUnspecified: Boolean(batch.productUnspecified),
+      fromWeekly: batch.source === "weekly_strategy",
+    }));
+  });
+}
+
+const formatOf = (entry) => entry.brief.format || entry.concept.format_type || (entry.brief.script ? "video" : entry.brief.static_brief ? "static" : null);
+const FORMAT_LABELS = { video: "Video script", static: "Static brief", ugc: "UGC creator brief" };
+
+/** Unescape the UGC document's markdown escapes ("\*" → "*"). */
+const unescapeMd = (text) => text.replace(/\\([\\`*_[\]<>#|])/g, "$1");
+
+/** The UGC brief's overview paragraph, for its card. */
+function ugcOverview(markdown) {
+  const section = String(markdown).split(/^## /m).find((part) => /^1\./.test(part));
+  const paragraph = section?.split("\n").slice(1).map((line) => line.trim()).find((line) => line && !line.startsWith("*"));
+  return paragraph ? unescapeMd(paragraph) : null;
+}
+
+/** Inline markdown of the UGC document: **bold**, *italic*, [title](<url>). */
+function renderInline(text, keyPrefix) {
+  const parts = [];
+  const pattern = /\*\*(.+?)\*\*|\*(.+?)\*|\[([^\]]+)\]\(<?([^)>]+)>?\)/g;
+  let last = 0;
+  let match;
+  while ((match = pattern.exec(text))) {
+    if (match.index > last) parts.push(unescapeMd(text.slice(last, match.index)));
+    const key = `${keyPrefix}-${match.index}`;
+    if (match[1]) parts.push(<strong key={key}>{unescapeMd(match[1])}</strong>);
+    else if (match[2]) parts.push(<em key={key}>{unescapeMd(match[2])}</em>);
+    else parts.push(<a key={key} href={match[4]} target="_blank" rel="noreferrer" className="text-[#6c3403] underline underline-offset-2">{unescapeMd(match[3])}</a>);
+    last = pattern.lastIndex;
+  }
+  if (last < text.length) parts.push(unescapeMd(text.slice(last)));
+  return parts;
+}
+
+/** Renders the UGC creator brief (fixed-skeleton markdown from the backend). */
+function UgcDocument({ markdown }) {
+  const blocks = [];
+  let list = null;
+  const flush = () => { if (list) { blocks.push(list); list = null; } };
+  String(markdown).split("\n").forEach((raw, index) => {
+    const line = raw.trimEnd();
+    if (!line.trim()) { flush(); return; }
+    const bullet = /^- (.*)$/.exec(line);
+    const numbered = /^(\d+)\. (.*)$/.exec(line);
+    if (bullet || numbered) {
+      const type = bullet ? "ul" : "ol";
+      if (!list || list.type !== type) { flush(); list = { type, items: [], key: index }; }
+      list.items.push(renderInline((bullet || numbered)[bullet ? 1 : 2], `li-${index}`));
+      return;
+    }
+    flush();
+    if (line.startsWith("## ")) blocks.push({ type: "h3", key: index, content: unescapeMd(line.slice(3)) });
+    else if (line.startsWith("# ")) return; // The title is the popup heading.
+    else blocks.push({ type: "p", key: index, content: renderInline(line, `p-${index}`) });
+  });
+  flush();
+  return <div className="cs-ugc-doc">{blocks.map((block) => block.type === "ul" || block.type === "ol"
+    ? (block.type === "ul" ? <ul key={block.key}>{block.items.map((item, i) => <li key={i}>{item}</li>)}</ul> : <ol key={block.key}>{block.items.map((item, i) => <li key={i}>{item}</li>)}</ol>)
+    : block.type === "h3" ? <h3 key={block.key}>{block.content}</h3> : <p key={block.key}>{block.content}</p>)}</div>;
+}
+
+function CopyButton({ text }) {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(text); setCopied(true); window.setTimeout(() => setCopied(false), 1600); }
+    catch { toast.error("Couldn't copy — select the text instead."); }
+  };
+  return <button type="button" onClick={copy} className="cs-library-action">{copied ? "Copied" : "Copy brief"}</button>;
+}
+
+/** Two-column masonry of script/brief cards; a card opens the full piece. */
+function TextResultsGrid({ entries }) {
+  const [open, setOpen] = useState(null);
+  // Alternate cards between two columns so the newest read left → right.
+  const columns = [entries.filter((_, index) => index % 2 === 0), entries.filter((_, index) => index % 2 === 1)];
+  return <>
+    <div className="cs-generate-text-grid">
+      {columns.map((column, columnIndex) => <div key={columnIndex} className="cs-generate-text-grid__column">
+        {column.map((entry) => <TextResultCard key={entry.key} entry={entry} onOpen={() => setOpen(entry)} />)}
+      </div>)}
+    </div>
+    <TextResultDialog entry={open} onClose={() => setOpen(null)} />
+  </>;
+}
+
+function TextResultCard({ entry, onOpen }) {
+  const { concept, brief } = entry;
+  const format = formatOf(entry);
+  const preview = brief.hooks?.[0] || brief.headlines?.[0];
+  const ugcSummary = brief.ugc_markdown ? ugcOverview(brief.ugc_markdown) : null;
+  const date = new Date(entry.createdAt);
+  return (
+    <button type="button" onClick={onOpen} className="cs-generate-text-card">
+      <span className="cs-generate-text-card__title">{concept.concept_name || "Untitled concept"}</span>
+      <span className="flex flex-wrap gap-1.5">
+        {format && <Tag>{FORMAT_LABELS[format] || sentenceLabel(format)}</Tag>}
+        {concept.persona_label && <Tag>{concept.persona_label}</Tag>}
+        {concept.awareness_stage && <Tag>{sentenceLabel(concept.awareness_stage)}</Tag>}
+        {entry.fromWeekly && <Tag>From Weekly Strategy</Tag>}
+      </span>
+      {concept.angle && <span className="text-xs text-stone-600"><strong className="font-semibold text-stone-700">Angle:</strong> {concept.angle}</span>}
+      {preview && <span className="cs-generate-text-card__hook">“{preview}”</span>}
+      {(ugcSummary || concept.concept_direction || concept.hypothesis) && <span className="cs-generate-text-card__summary">{ugcSummary || concept.concept_direction || concept.hypothesis}</span>}
+      <span className="cs-generate-text-card__meta">
+        {Number.isNaN(date.getTime()) ? "" : date.toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}
+        {entry.createdBy && <>{" "}<RunBy uid={entry.createdBy} /></>}
+        <span className="ml-auto inline-flex items-center gap-0.5 font-medium text-[#6c3403]">View full <ChevronRight className="h-3 w-3" /></span>
+      </span>
+    </button>
+  );
+}
+
+function TextResultDialog({ entry, onClose }) {
+  const concept = entry?.concept || {};
+  const brief = entry?.brief || {};
+  const format = entry ? formatOf(entry) : null;
+  return (
+    <Dialog open={Boolean(entry)} onOpenChange={(value) => { if (!value) onClose(); }}>
+      <DialogContent disableSlide aria-describedby={undefined} className="max-w-2xl rounded-[28px] bg-white p-0 sm:rounded-[28px]" overlayClassName="bg-black/40">
+        {entry && <ScrollArea className="max-h-[85dvh]" viewportClassName="max-h-[85dvh]">
+          <div className="space-y-4 p-6">
+            <div className="space-y-2 pr-8">
+              <DialogTitle className="text-lg font-semibold text-[#30150a]">{concept.concept_name || "Untitled concept"}</DialogTitle>
+              <div className="flex flex-wrap gap-1.5">
+                {format && <Tag>{FORMAT_LABELS[format] || sentenceLabel(format)}</Tag>}
+                {concept.persona_label && <Tag>{concept.persona_label}</Tag>}
+                {concept.awareness_stage && <Tag>{sentenceLabel(concept.awareness_stage)}</Tag>}
+              </div>
+              {entry.legacyWeekly && <p className="text-xs text-stone-500">{entry.productUnspecified ? "Saved from Weekly Strategy at brand level; the original product and date weren't recorded." : "Saved from Weekly Strategy; the original generation date wasn't recorded."}</p>}
+            </div>
+            {(concept.hypothesis || concept.angle || concept.concept_direction) && <div className="cs-generate-result space-y-2">
+              {concept.angle && <p><strong>Angle:</strong> {concept.angle}</p>}
+              {concept.hypothesis && <p><strong>Hypothesis:</strong> {concept.hypothesis}</p>}
+              {concept.concept_direction && <p><strong>Direction:</strong> {concept.concept_direction}</p>}
+            </div>}
+            {brief.hooks?.length > 0 && <ResultSection title="Hooks"><ul className="list-disc space-y-1 pl-5">{brief.hooks.map((hook, index) => <li key={index}>{hook}</li>)}</ul></ResultSection>}
+            {brief.headlines?.length > 0 && <ResultSection title="Headlines"><ul className="list-disc space-y-1 pl-5">{brief.headlines.map((headline, index) => <li key={index}>{headline}</li>)}</ul></ResultSection>}
+            {brief.script && <ResultSection title="Script"><pre className="whitespace-pre-wrap font-sans">{brief.script}</pre></ResultSection>}
+            {brief.static_brief && <ResultSection title="Static brief"><pre className="whitespace-pre-wrap font-sans">{brief.static_brief}</pre></ResultSection>}
+            {brief.ugc_markdown && <>
+              <div className="flex flex-wrap items-center gap-3">
+                <CopyButton text={brief.ugc_plain || brief.ugc_markdown} />
+                <span className="text-xs text-stone-500">
+                  {brief.ugc_meta?.videos_included ? `Video links work until ${new Date(brief.ugc_meta.video_links_expire_at).toLocaleDateString("en-US", { dateStyle: "medium" })}.` : `Top videos left out: fewer than ${brief.ugc_meta?.min_videos ?? 4} saved video ads for this product.`}
+                  {brief.ugc_meta?.generated_hooks > 0 ? " This persona had no hooks yet, so new ones were written." : ""}
+                </span>
+              </div>
+              <UgcDocument markdown={brief.ugc_markdown} />
+            </>}
+          </div>
+        </ScrollArea>}
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 function HistoryControls({ history, disabled }) {
@@ -939,22 +1063,6 @@ function HistoryControls({ history, disabled }) {
         </button>
       )}
     </>
-  );
-}
-
-function GenerationBatch({ createdAt, createdBy, isLatest, legacyWeekly, productUnspecified, children }) {
-  const date = new Date(createdAt);
-  const timestamp = Number.isNaN(date.getTime())
-    ? "Time unavailable"
-    : date.toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" });
-  return (
-    <section className={`cs-generate-history-batch ${isLatest ? "is-latest" : "is-past"}`}>
-      <header className="cs-generate-history-batch__header">
-        <span>{legacyWeekly ? "Saved weekly strategy" : isLatest ? "Latest generation" : "Past generation"}</span>
-        <time dateTime={createdAt}>{legacyWeekly ? "Concept created: " : ""}{timestamp}{" "}<RunBy uid={createdBy} /></time>
-      </header>
-      <div className="cs-generate-history-batch__content">{legacyWeekly && <p className="mb-4 text-xs text-stone-500">{productUnspecified ? "Brand-level weekly history — the original product and generation date were not recorded." : "The original generation date was not recorded."}</p>}{children}</div>
-    </section>
   );
 }
 
@@ -975,8 +1083,11 @@ Field.propTypes = { label: PropTypes.string.isRequired, children: PropTypes.node
 GenerationGrid.propTypes = { items: PropTypes.array.isRequired, rate: PropTypes.func.isRequired, selecting: PropTypes.bool, selected: PropTypes.instanceOf(Set).isRequired, toggle: PropTypes.func.isRequired, disabled: PropTypes.bool };
 GeneratedImage.propTypes = { item: PropTypes.object.isRequired, rate: PropTypes.func.isRequired, selecting: PropTypes.bool, selected: PropTypes.bool, toggle: PropTypes.func.isRequired, disabled: PropTypes.bool, onPreview: PropTypes.func.isRequired };
 ResultSection.propTypes = { title: PropTypes.string.isRequired, children: PropTypes.node.isRequired };
-GenerationBatch.propTypes = { createdBy: PropTypes.string, legacyWeekly: PropTypes.bool, productUnspecified: PropTypes.bool, createdAt: PropTypes.string.isRequired, isLatest: PropTypes.bool.isRequired, children: PropTypes.node.isRequired };
+TextResultsGrid.propTypes = { entries: PropTypes.array.isRequired };
+TextResultCard.propTypes = { entry: PropTypes.object.isRequired, onOpen: PropTypes.func.isRequired };
+TextResultDialog.propTypes = { entry: PropTypes.object, onClose: PropTypes.func.isRequired };
+UgcDocument.propTypes = { markdown: PropTypes.string.isRequired };
+CopyButton.propTypes = { text: PropTypes.string.isRequired };
 HistoryControls.propTypes = { history: PropTypes.object.isRequired, disabled: PropTypes.bool };
 Tag.propTypes = { children: PropTypes.node };
-ScriptsPanel.propTypes = { productId: PropTypes.string };
 BriefPanel.propTypes = { productId: PropTypes.string };

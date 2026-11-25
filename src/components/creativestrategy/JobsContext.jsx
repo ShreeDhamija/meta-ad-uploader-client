@@ -284,7 +284,7 @@ const KIND_LABEL = {
   generate_ad: "Static ad generation", generate_library: "Copy library generation", weekly_strategy: "Weekly strategy",
   ingest_context: "Reading your website", inspo_analyze: "Reference analysis", trending_creative: "Trending creatives",
   monthly_review: "Monthly review", cross_account_knowledge: "Cross-account learnings",
-  generate_scripts: "Video scripts", generate_brief: "Creative brief", weekly_brief: "Concept brief",
+  generate_scripts: "Video scripts", generate_brief: "Briefs", weekly_brief: "Concept brief",
 };
 
 /** Plain-English name of a job kind, e.g. "Ad analysis". */
@@ -318,7 +318,7 @@ export function describeJob(job) {
       : type === "weekly_strategy" ? `Completed · ${result.ideas_generated ?? 0} concepts`
       : type === "monthly_review" && result.status === "ok" ? `Completed · ${result.concepts ?? 0} concepts`
       : type === "generate_scripts" ? `Completed · ${result.count ?? 0} script${result.count === 1 ? "" : "s"} saved to Scripts`
-      : type === "generate_brief" ? "Completed · saved to Briefs"
+      : type === "generate_brief" ? (result.format === "ugc" ? "Completed · UGC creator brief saved to Briefs" : `Completed · ${result.count ?? 1} saved to Briefs`)
       : type === "weekly_brief" ? "Completed · brief added to the concept card"
       : "Completed";
     const errors = [...(Array.isArray(result.errors) ? result.errors : []), ...partialErrors(job)].join("; ");
@@ -342,7 +342,7 @@ export function describeJob(job) {
     return { title, detail: `${PHASE_LABELS[p.phase] || "Generating"}${of} · ${p.saved ?? 0} saved`, pct, eta: timing.label };
   }
   const phaseLabel = PHASE_LABELS[p.phase] || "Working on it";
-  const count = (type === "generate_scripts" && p.total > 1) || (type === "analyze_ads" && p.phase === "analyze" && p.total)
+  const count = ((type === "generate_scripts" || type === "generate_brief") && p.total > 1) || (type === "analyze_ads" && p.phase === "analyze" && p.total)
     ? ` · ${p.done ?? 0} of ${p.total}` : "";
   return { title, detail: `${phaseLabel}${count}`, pct, eta: timing.label };
 }

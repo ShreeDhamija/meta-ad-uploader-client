@@ -5674,3 +5674,27 @@ html body #root .creative-strategy button.cs-monthly-filter-button:hover { borde
 .cs-weekly-group__header h2 { display: flex; align-items: center; gap: 8px; color: #30150a; font-size: 17px; font-weight: 700; letter-spacing: -0.01em; }
 .cs-weekly-group__header h2 span { padding: 1px 9px; border-radius: 999px; color: #6c3403; background: var(--cs-peach); font-size: 11px; font-weight: 600; }
 .cs-weekly-group__header p { margin-top: 3px; max-width: 760px; color: #7c6f69; font-size: 12px; line-height: 1.5; }
+
+/* Generate → Scripts / Briefs: two-column masonry of cards, full piece in a popup. */
+.cs-generate-text-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: start; }
+.cs-generate-text-grid__column { display: flex; min-width: 0; flex-direction: column; gap: 14px; }
+@media (max-width: 760px) { .cs-generate-text-grid { grid-template-columns: minmax(0, 1fr); } }
+.cs-generate-text-card { display: flex; width: 100%; flex-direction: column; gap: 9px; padding: 15px 16px; border: 1px solid rgba(59, 23, 11, 0.22); border-radius: 18px; color: #3d332f; background: #fff; box-shadow: 0 2px 5px rgba(29, 29, 29, 0.06); text-align: left; transition: border-color 140ms ease, box-shadow 140ms ease; }
+.cs-generate-text-card:hover { border-color: rgba(108, 52, 3, 0.45); box-shadow: 0 5px 14px rgba(59, 23, 11, 0.1); }
+.cs-generate-text-card:focus-visible { outline: 2px solid #e8812c; outline-offset: 2px; }
+.cs-generate-text-card__title { color: #30150a; font-size: 15px; font-weight: 650; line-height: 1.3; }
+.cs-generate-text-card__hook { color: #3b2a22; font-size: 13px; font-style: italic; line-height: 1.5; }
+.cs-generate-text-card__summary { display: -webkit-box; overflow: hidden; color: #6d605a; font-size: 12px; line-height: 1.5; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
+.cs-generate-text-card__meta { display: flex; align-items: center; gap: 4px; padding-top: 8px; border-top: 1px solid rgba(108, 52, 3, 0.1); color: #8a746c; font-size: 11px; }
+
+/* Generate → Briefs: the UGC creator brief document in its popup. */
+.cs-ugc-doc { display: flex; flex-direction: column; gap: 10px; color: #3d332f; font-size: 13.5px; line-height: 1.6; }
+.cs-ugc-doc h3 { margin-top: 10px; color: #30150a; font-size: 15px; font-weight: 650; }
+.cs-ugc-doc ul { padding-left: 20px; list-style: disc; }
+.cs-ugc-doc ol { padding-left: 20px; list-style: decimal; }
+.cs-ugc-doc li + li { margin-top: 4px; }
+.cs-ugc-doc em { color: #6d605a; }
+
+/* Generate → Statics: "What each image is built from" summary. */
+.cs-generate-sources { display: flex; flex-direction: column; gap: 4px; color: #5f524c; font-size: 12px; line-height: 1.45; }
+.cs-generate-sources strong { color: #4f3329; font-weight: 600; }

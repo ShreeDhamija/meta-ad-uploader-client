@@ -11,9 +11,9 @@ const TABS = [
   { key: "concepts", label: "Concept reference", limit: 8 },
 ];
 const HELP = {
-  examples: "Past Meta image ads, ranked by spend, plus any examples you upload. Select up to 6 to guide typography, colors, and photography. Only your selections will be used.",
-  products: "Select up to 4 images of your actual product. These guide product appearance, packaging, or UI fidelity.",
-  concepts: "Choose saved inspiration or upload a reference ad. References guide layout and style, never product identity. Multiple references rotate across variations; choose at least as many variations to use each one.",
+  examples: "Your past Meta image ads, ranked by spend, plus any you upload. Up to 6. They teach the look: typography, colors and photography. In Manual tune without a format template, the first one (an upload, else your top spender) is also the layout each image is rebuilt from.",
+  products: "Up to 4 images of your actual product, so packaging, product or UI look right in every image.",
+  concepts: "A saved inspiration or uploaded ad whose layout you want to copy (never its product). Picking one makes it the layout for that variation in both modes; several rotate across variations.",
 };
 const readFile = (file) => new Promise((resolve, reject) => {
   const reader = new FileReader();
@@ -66,8 +66,24 @@ export default function VisualInspiration({ productId, clientId, onChange }) {
 
   useEffect(() => {
     const hasImages = selected.examples.length + selected.products.length + selected.concepts.length > 0;
-    onChange({ productId, ready: !loading && !busy && !loadError && hasImages, brandExampleAdIds: selected.examples, productAssetIds: selected.products, conceptReferenceIds: selected.concepts });
-  }, [productId, selected, loading, busy, loadError, onChange]);
+    // Which image the generator will rebuild as the layout when no format
+    // template applies: a concept reference, else the first brand example
+    // (uploads first, then the highest-spending selected ad), else a product image.
+    const nameOf = (item) => item?.name || item?.description || item?.fileName || "Untitled image";
+    const pickedExamples = sources.examples.filter((item) => selected.examples.includes(item.id));
+    const leadExample = pickedExamples.find((item) => item.uploaded) || [...pickedExamples].sort((a, b) => (b.spend || 0) - (a.spend || 0))[0];
+    const firstConcept = sources.concepts.find((item) => item.id === selected.concepts[0]);
+    const firstProduct = sources.products.find((item) => item.id === selected.products[0]);
+    const layout = {
+      concept: firstConcept ? nameOf(firstConcept) : null,
+      conceptCount: selected.concepts.length,
+      example: leadExample ? { name: nameOf(leadExample), uploaded: Boolean(leadExample.uploaded) } : null,
+      product: firstProduct ? nameOf(firstProduct) : null,
+      exampleCount: selected.examples.length,
+      productCount: selected.products.length,
+    };
+    onChange({ productId, ready: !loading && !busy && !loadError && hasImages, brandExampleAdIds: selected.examples, productAssetIds: selected.products, conceptReferenceIds: selected.concepts, layout });
+  }, [productId, selected, sources, loading, busy, loadError, onChange]);
 
   const toggle = (id) => {
     const limit = TABS.find((item) => item.key === tab).limit;
@@ -158,9 +174,7 @@ export default function VisualInspiration({ productId, clientId, onChange }) {
     <button type="button" className="cs-visual-trigger" onClick={() => setOpen(true)} disabled={!productId}>
       <ImagePlus size={16} /> Visual inspiration
     </button>
-    {!loading && !loadError && <p className="text-xs text-stone-500" role="status">{selected.examples.length + selected.products.length + selected.concepts.length > 0
-      ? `${selected.products.length} product images · ${selected.examples.length} brand examples · ${selected.concepts.length} concept references selected`
-      : "Select or upload at least one image to generate ads."}</p>}
+    {!loading && !loadError && selected.examples.length + selected.products.length + selected.concepts.length === 0 && <p className="text-xs text-amber-800" role="status">Select or upload at least one image to generate ads.</p>}
     {error && !open && <p className="text-xs text-red-700">{error} Open Visual inspiration to retry.</p>}
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent disableSlide className="cs-visual-dialog" overlayClassName="bg-black/40">
