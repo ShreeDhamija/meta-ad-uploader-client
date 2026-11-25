@@ -5732,4 +5732,9 @@ html body #root .creative-strategy button.cs-monthly-filter-button:hover { borde
 .cs-generate-text-card__hook strong,
 .cs-generate-text-card__summary strong,
 .cs-generate-text-card__snippet strong { color: #44403c; font-weight: 600; font-style: normal; }
-.cs-generate-text-card__snippet { padding: 0; border-radius: 0; color: #6d605a; background: none; }
+
+/* Generate: Statics / Briefs switcher pinned at the top of the workspace sidebar
+   (the old row above the workspace is gone, so the canvas gets that height). */
+.cs-generate-sidebar-header { flex-shrink: 0; padding: 16px 16px 0; }
+.cs-generate-switcher.is-sidebar { display: flex; width: 100%; gap: 6px; padding: 4px; border-radius: 20px; box-shadow: none; }
+.cs-generate-switcher.is-sidebar .cs-generate-switcher__item { flex: 1; min-width: 0; height: 36px; padding: 0 10px; border-radius: 15px; }

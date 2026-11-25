@@ -1,6 +1,6 @@
 // Generate workspace — statics, video scripts, and briefs share one shell while
 // retaining their existing API flows.
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import PropTypes from "prop-types";
 import { Box, ChevronLeft, ChevronRight, ClipboardList, Download, Flame, Info, Loader2, Sparkles, ThumbsDown, ThumbsUp, Trash2, X } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -58,6 +58,9 @@ const ASPECT = [
   { key: "1:1+9:16", label: "1:1 + 9:16" },
   { key: "4:5+9:16", label: "4:5 + 9:16" },
 ];
+/** The Statics / Briefs switcher, rendered by GenerateWorkspace at the top of its sidebar. */
+const ModeSwitcherContext = createContext(null);
+
 const MODES = [
   { key: "statics", label: "Statics" },
   { key: "briefs", label: "Briefs" },
@@ -407,23 +410,26 @@ export default function GenerateView({ ctx }) {
   const imageItems = items;
   const generationActive = job && (job.status == null || job.status === "queued" || job.status === "running");
 
+  // The Statics / Briefs switcher sits at the top of each workspace's sidebar.
+  const modeSwitcher = (
+    <div className="cs-generate-switcher is-sidebar" aria-label="Generate mode">
+      {MODES.map((item) => (
+        <button
+          key={item.key}
+          type="button"
+          onClick={() => setMode(item.key)}
+          className={`cs-generate-switcher__item ${mode === item.key ? "is-active" : ""}`}
+          aria-pressed={mode === item.key}
+        >
+          {item.label}
+        </button>
+      ))}
+    </div>
+  );
+
   return (
+    <ModeSwitcherContext.Provider value={modeSwitcher}>
     <div className="cs-generate-view">
-      <div className="cs-generate-tabs-row">
-        <div className="cs-generate-switcher" aria-label="Generate mode">
-          {MODES.map((item) => (
-            <button
-              key={item.key}
-              type="button"
-              onClick={() => setMode(item.key)}
-              className={`cs-generate-switcher__item ${mode === item.key ? "is-active" : ""}`}
-              aria-pressed={mode === item.key}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
-      </div>
 
       {mode === "statics" && (
         <GenerateWorkspace
@@ -553,6 +559,7 @@ export default function GenerateView({ ctx }) {
 
       {mode === "briefs" && <BriefPanel key={selectedProductId} productId={selectedProductId} />}
     </div>
+    </ModeSwitcherContext.Provider>
   );
 }
 
@@ -683,9 +690,11 @@ function BriefPanel({ productId }) {
 }
 
 function GenerateWorkspace({ sidebar, sidebarFooter, children, isStatics = false, footer }) {
+  const modeSwitcher = useContext(ModeSwitcherContext);
   return (
     <div className="cs-generate-layout">
       <aside className="cs-generate-sidebar">
+        {modeSwitcher && <div className="cs-generate-sidebar-header">{modeSwitcher}</div>}
         <ScrollArea className="cs-generate-scroll" viewportClassName="cs-generate-viewport">
           <div className="cs-generate-sidebar-content">{sidebar}</div>
         </ScrollArea>
