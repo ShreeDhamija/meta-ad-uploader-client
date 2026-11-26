@@ -278,7 +278,11 @@ function AgeBars({ rows, height = 72 }) {
 }
 AgeBars.propTypes = { rows: PropTypes.array, height: PropTypes.number };
 
-export function PerformerCard({ ad, rank, avgCpa, root, onOpen, openDetails = false, showLaunch = false }) {
+/**
+ * `compact` keeps only spend and CPA (no stat grid, charts or badges) and
+ * shows `children` at the foot of the same card, e.g. why the ad works.
+ */
+export function PerformerCard({ ad, rank, avgCpa, root, onOpen, openDetails = false, showLaunch = false, compact = false, children = null }) {
   const video = isVideoAd(ad);
   const thumb = thumbOf(ad);
   const spend = num(ad.spend); const cpa = cpaOf(ad); const conv = num(ad.purchases);
@@ -315,6 +319,7 @@ export function PerformerCard({ ad, rank, avgCpa, root, onOpen, openDetails = fa
             <strong>{cpa ? fmt$(cpa) : "—"}</strong>
           </div>
         </div>
+        {compact ? children : <>
         <p className="cs-top-card__sub">
           {conv > 0 ? `${conv.toLocaleString()} conversion${conv === 1 ? "" : "s"}` : "No conversions"}
           {note && <> · <span className={tone}>{note}</span></>}
@@ -357,11 +362,12 @@ export function PerformerCard({ ad, rank, avgCpa, root, onOpen, openDetails = fa
             )}
           </div>
         )}
+        </>}
       </div>
     </article>
   );
 }
-PerformerCard.propTypes = { ad: PropTypes.object.isRequired, rank: PropTypes.number.isRequired, avgCpa: PropTypes.number, root: PropTypes.object, onOpen: PropTypes.func.isRequired, openDetails: PropTypes.bool, showLaunch: PropTypes.bool };
+PerformerCard.propTypes = { ad: PropTypes.object.isRequired, rank: PropTypes.number.isRequired, avgCpa: PropTypes.number, root: PropTypes.object, onOpen: PropTypes.func.isRequired, openDetails: PropTypes.bool, showLaunch: PropTypes.bool, compact: PropTypes.bool, children: PropTypes.node };
 
 export function TopPerformers({ ads, trending = [], trendingRefreshing = false, onOpenAd, limit = DEFAULT_LIMIT }) {
   const scrollRef = useRef(null);

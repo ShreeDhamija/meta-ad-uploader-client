@@ -118,8 +118,14 @@ export function HookDetails({ hook, variant = "inline", averages = null }) {
   </div>;
 
   if (copyFirst) {
+    // The copy still leads, with a small preview beside the hook so you can see the ad.
     return <div className="cs-intel-hook-details is-drawer">
-      {hookQuote && <section className="cs-intel-detail-section is-first cs-ad-drawer__lead">{hookQuote}</section>}
+      <section className="cs-intel-detail-section is-first cs-ad-drawer__lead-row">
+        <div className="cs-ad-drawer__media is-thumb">
+          <AdMediaPlayer ad={hook} fallback={<div className="cs-ad-drawer__media-empty"><Zap className="h-6 w-6" /></div>} />
+        </div>
+        <div className="min-w-0">{hookQuote || <p className="text-[13px] text-neutral-500">No hook text saved for this ad.</p>}</div>
+      </section>
       {whySection}
       {formulaSection}
       {copySection}
@@ -127,13 +133,10 @@ export function HookDetails({ hook, variant = "inline", averages = null }) {
       {notAnalyzed}
       <section className="cs-intel-detail-section">
         <p className="cs-ad-drawer__section-label">Ad performance</p>
-        <div className="cs-ad-drawer__overview">
-          {media}
-          <div className="min-w-0 space-y-3">
-            {scorecards}
-            {hook.funnelPosition && <p className="text-xs text-neutral-500">Funnel: {humanize(hook.funnelPosition)}</p>}
-            {tagRow}
-          </div>
+        <div className="space-y-3">
+          {scorecards}
+          {hook.funnelPosition && <p className="text-xs text-neutral-500">Funnel: {humanize(hook.funnelPosition)}</p>}
+          {tagRow}
         </div>
       </section>
       {blocksSection}
@@ -294,10 +297,10 @@ function AdDrawerActions({ ad, productId }) {
   return (
     <footer className="cs-ad-drawer__actions">
       {isVideo && <button type="button" className="cs-primary-button" disabled={!canBrief || busy != null} onClick={() => run("brief")}>
-        {busy === "brief" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} Video brief from this ad
+        {busy === "brief" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} Generate video brief from this ad
       </button>}
       {isImage && <button type="button" className="cs-primary-button" disabled={!canStatic || busy != null} onClick={() => run("static")}>
-        {busy === "static" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} Statics from this ad
+        {busy === "static" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} Generate statics from this ad
       </button>}
       <p className="text-xs text-stone-500">
         {isVideo

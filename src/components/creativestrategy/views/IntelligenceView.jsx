@@ -2,7 +2,7 @@
 // creative_strategy_audit aggregates plus per-ad ad_creative_insights evidence.
 import { useCallback, useEffect, useRef, useState } from "react";
 import PropTypes from "prop-types";
-import { AlertTriangle, ChevronDown, ChevronRight, Filter, Loader2, Maximize2, X, Zap } from "lucide-react";
+import { AlertTriangle, ChevronDown, ChevronRight, Filter, Loader2, X, Zap } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { matchInsightAds, funnelBuckets } from "../insight-metrics";
 import { creativeApi } from "@/lib/creativeApi";
@@ -21,7 +21,6 @@ import AdDetailDrawer, { CreativeThumbnail, HookDetails, MediaTag, computeAccoun
 
 const money = (n) => `$${Math.round(n || 0).toLocaleString()}`;
 const mean = (arr) => (arr.length ? arr.reduce((s, x) => s + x, 0) / arr.length : null);
-const str = (v) => (typeof v === "string" ? v : v?.theme || v?.name || v?.title || v?.trend || v?.pattern_name || v?.angle || v?.opening_description || v?.description || JSON.stringify(v));
 
 export default function IntelligenceView({ ctx }) {
   const {
@@ -112,8 +111,6 @@ export default function IntelligenceView({ ctx }) {
   const analyzePhase = analyzeJob?.progress?.phase;
   const adWorkActive = analyzeActive && !String(analyzePhase || "").startsWith("audit");
   const auditWorkActive = analyzeActive && String(analyzePhase || "").startsWith("audit");
-  const hasUntapped = (Array.isArray(a.untapped_angles_by_persona) && a.untapped_angles_by_persona.length > 0)
-    || (Array.isArray(a.angles_not_yet_tested || a.untapped_angles || a.prioritized_gaps) && (a.angles_not_yet_tested || a.untapped_angles || a.prioritized_gaps).length > 0);
   const insightReadyCount = [
     ads.length > 0, patterns.length > 0, topHooks.length > 0, Array.isArray(a.messaging_themes) && a.messaging_themes.length > 0,
     Array.isArray(a.persona_ad_mapping) && a.persona_ad_mapping.length > 0, Array.isArray(a.visual_openers) && a.visual_openers.length > 0,
@@ -186,7 +183,7 @@ export default function IntelligenceView({ ctx }) {
 
       {/* Trending creatives and recent launches live in Top performers as filters, like Fatigued. */}
       {(ads.length > 0 || trendingAds.length > 0) && <TopPerformers key={selectedProductId} ads={ads} trending={trendingAds} trendingRefreshing={analyzeActive} onOpenAd={openAd} />}
-      {hasUntapped ? <UntappedAnglesSection audit={a} /> : <ProgressiveSection title="Untapped angles and gaps" active={auditWorkActive} />}
+      {/* The audit's untapped angles and gaps are listed under Ad angles → Untapped. */}
 
       {angles.length > 0 && <AngleGroups groups={angleGroups} ads={ads} onOpenAd={openAd} />}
 
@@ -374,6 +371,15 @@ function resolveClusterAds(cluster, ads, nameKeys = ["example_ad_names", "ad_nam
 }
 
 /**
+ * The "N ads" count. Newer audits list every ad in a pattern / opener
+ * (ad_ids), so the count is the ads we can show. Older audits only saved 2-4
+ * examples next to the model's own count, so that count is kept for them.
+ */
+function clusterAdCount(cluster, matched) {
+  return Array.isArray(cluster?.ad_ids) && cluster.ad_ids.length ? matched.length : (cluster?.ad_count || matched.length);
+}
+
+/**
  * Persona-style expandable rows: a header with title, description, metrics
  * and spend bar; opening it shows extra detail and every ad, each of which
  * opens the ad drawer.
@@ -406,9 +412,10 @@ function ExpandableClusters({ items, onOpenAd }) {
 }
 ExpandableClusters.propTypes = { items: PropTypes.array.isRequired, onOpenAd: PropTypes.func };
 
+// Wrapped in a <section> so it gets the same padding as the persona rows' detail blocks.
 const tagPills = (tags) => {
   const visible = tags.filter(Boolean);
-  return visible.length > 0 && <div className="cs-intel-tag-row">{visible.map((tag, tagIndex) => <span key={tag} className={`cs-intel-attribute-pill is-tone-${tagIndex % 4}`}>{tag}</span>)}</div>;
+  return visible.length > 0 && <section><div className="cs-intel-tag-row">{visible.map((tag, tagIndex) => <span key={tag} className={`cs-intel-attribute-pill is-tone-${tagIndex % 4}`}>{tag}</span>)}</div></section>;
 };
 
 /** learning_sheet_level: the audit's confidence in a pattern (its own call, not the brand's Learnings list). */
@@ -424,13 +431,14 @@ function StrategicPatterns({ patterns, ads, onOpenAd }) {
   const items = patterns.map((pattern) => {
     const pct = Number(pattern.spend_pct || 0);
     const level = String(pattern.learning_sheet_level || "").toLowerCase();
+    const matched = resolveClusterAds(pattern, ads);
     return {
       title: pattern.pattern_name || "Pattern",
       description: pattern.pattern || pattern.insight || "",
       badge: level && <span className="cs-intel-attribute-pill is-tone-1" title={CONFIDENCE_HINT[level] || undefined}>Confidence: {humanize(pattern.learning_sheet_level)}</span>,
-      pills: [`${pct.toFixed(0)}% of spend`, `${pattern.ad_count || 0} ads`, pattern.saturation_risk && `${humanize(pattern.saturation_risk)} saturation risk`],
+      pills: [`${pct.toFixed(0)}% of spend`, `${clusterAdCount(pattern, matched)} ads`, pattern.saturation_risk && `${humanize(pattern.saturation_risk)} saturation risk`],
       sharePct: pct,
-      ads: resolveClusterAds(pattern, ads),
+      ads: matched,
       details: <>
         {Array.isArray(pattern.quotes) && pattern.quotes.length > 0 && <section><h3 className="cs-intel-subsection-title">In the ads</h3><ul className="mt-1 space-y-1">{pattern.quotes.map((quote, quoteIndex) => <li key={quoteIndex} className="text-[13px] italic text-neutral-700">“{quote}”</li>)}</ul></section>}
         {tagPills([pattern.emotional_driver && `Driver: ${pattern.emotional_driver}`, pattern.awareness_level && `Awareness: ${plainLabel(pattern.awareness_level)}`, pattern.sophistication_stage && `Sophistication stage ${pattern.sophistication_stage}`, pattern.uses_customer_language && "Uses customer language"])}
@@ -516,10 +524,6 @@ function MessagingThemesSection({ themes, ads, onOpenAd }) {
     pills: [`${money(theme.spend)} spend`, `${theme.matchedAds.length} ads`, theme.cpa ? `${money(theme.cpa)} CPA` : null, theme.awareness_level && humanize(theme.awareness_level)],
     sharePct: totalSpend > 0 ? (theme.spend / totalSpend) * 100 : null,
     ads: [...theme.matchedAds].sort((x, y) => (y.spend || 0) - (x.spend || 0)),
-    details: <>
-      {tagPills([theme.dominant_driver && `Driver: ${theme.dominant_driver}`, theme.sophistication_stage && `Sophistication stage ${theme.sophistication_stage}`])}
-      {theme.graduation_note && <section><h3 className="cs-intel-subsection-title">To become proven</h3><p className="mt-1 text-[13px] text-neutral-600">{theme.graduation_note}</p></section>}
-    </>,
   }));
   return <InsightSection
     title="Messaging themes"
@@ -610,10 +614,9 @@ function VisualOpenersSection({ openers, ads, onOpenAd }) {
       title: opener.pattern_name || opener.trend_name || "Opener",
       description: opener.visual_description || opener.opening_description,
       thumbAd: matched[0] ?? null,
-      pills: [`${opener.ad_count || matched.length} ads`, `${Math.round(pct)}% spend`, opener.avg_hook_rate > 0 ? `${(opener.avg_hook_rate * 100).toFixed(1)}% avg hook rate` : null],
+      pills: [`${clusterAdCount(opener, matched)} ads`, `${Math.round(pct)}% spend`, opener.avg_hook_rate > 0 ? `${(opener.avg_hook_rate * 100).toFixed(1)}% avg hook rate` : null],
       sharePct: pct,
       ads: matched,
-      details: tagPills([opener.talent_type, opener.camera_style, opener.environment, opener.text_overlay && `Text overlay: ${opener.text_overlay}`]),
     };
   });
   return <InsightSection title="Visual openers" description="Video ads — what appears in the first 2–5 seconds.">
@@ -621,16 +624,6 @@ function VisualOpenersSection({ openers, ads, onOpenAd }) {
   </InsightSection>;
 }
 VisualOpenersSection.propTypes = { openers: PropTypes.any, ads: PropTypes.array.isRequired, onOpenAd: PropTypes.func };
-
-function UntappedAnglesSection({ audit }) {
-  const groups = Array.isArray(audit.untapped_angles_by_persona) ? audit.untapped_angles_by_persona : [];
-  const flat = audit.angles_not_yet_tested || audit.untapped_angles || audit.prioritized_gaps || [];
-  if (!groups.length && !Array.isArray(flat)) return null;
-  if (groups.length) return <InsightSection title="Untapped angles · what current ads aren't saying"><div className="space-y-3">{groups.map((group, index) => <div key={index} className="rounded-xl border border-neutral-200 p-3"><p className="text-xs text-neutral-500"><strong className="text-neutral-700">Persona:</strong> {group.persona_description || "Unnamed persona"}</p><div className="mt-2 space-y-2">{(group.untapped_combinations || []).map((item, itemIndex) => <div key={itemIndex} className="border-l-2 border-orange-300 pl-3"><div className="flex flex-wrap gap-2"><strong className="text-sm">{item.angle}</strong>{item.awareness_stage && <Badge variant="outline" className="text-[9px]">{humanize(item.awareness_stage)}</Badge>}</div>{item.rationale && <p className="mt-1 text-xs text-neutral-500">{item.rationale}</p>}{item.suggested_hook_direction && <p className="mt-1 text-xs italic">“{item.suggested_hook_direction}”</p>}</div>)}</div></div>)}</div></InsightSection>;
-  if (!flat.length) return null;
-  return <InsightSection title="Untapped angles & gaps"><div className="flex flex-wrap gap-2">{flat.map((item, index) => <Pill key={index}>{str(item)}</Pill>)}</div></InsightSection>;
-}
-UntappedAnglesSection.propTypes = { audit: PropTypes.object.isRequired };
 
 function AdEvidenceCard({ ad, onOpen }) {
   const content = <><CreativeThumbnail ad={ad} /><div className="min-w-0 flex-1"><strong className="block truncate text-[13px] text-neutral-800">{ad.adName || "Unnamed"}</strong><MetricPills className="mt-1.5" compact items={[`${money(ad.spend)} spend`, ad.costPerPurchase ? `${money(ad.costPerPurchase)} CPA` : null, ad.hookRate > 0 ? `${(ad.hookRate * 100).toFixed(1)}% HR` : null]} /></div><MediaTag mediaType={ad.mediaType} />{onOpen && <ChevronRight className="h-3.5 w-3.5 shrink-0 text-neutral-400" />}</>;
@@ -684,7 +677,7 @@ MetricPills.propTypes = { items: PropTypes.array.isRequired, className: PropType
 const ANGLE_STATUS_HELP = {
   proven: "The main angle of at least one analyzed ad.",
   in_research: "Listed as an angle for one of your Research personas, but no analyzed ad leads with it yet. Research suggests it should land; it hasn't been tried. Open an angle to see which persona it's for and why.",
-  untapped: "Flagged as a gap by the ad analysis (an angle a persona responds to that no current ad says), and not in your Research persona lists. Open an angle to see the reasoning and ideas to test it.",
+  untapped: "Flagged as a gap by the ad analysis (an angle a persona responds to, or an awareness stage, that no current ad covers), and not in your Research persona lists. Open an angle to see the reasoning and ideas to test it.",
 };
 
 function AngleGroups({ groups, ads, onOpenAd }) {
@@ -706,27 +699,32 @@ function AngleGroups({ groups, ads, onOpenAd }) {
   return (
     <InsightSection title="Ad angles">
       <div className="cs-intel-angle-groups">
-        {entries.map(([status, items]) => (
-          <section key={status} className="cs-intel-angle-group">
+        {entries.map(([status, items]) => {
+          const pills = <div className="cs-intel-angle-group__pills">
+            {items.map((angle, index) => (
+              status === "proven" ? <button key={index} type="button" onClick={() => setSelectedAngle(angle)} className="cs-intel-angle-pill is-proven" aria-label={`View ads for ${angle.name}`}>
+                <span className="min-w-0">{angle.name}</span>
+                {angle.ad_count ? <span className="cs-intel-angle-pill__count">{angle.ad_count} ad{angle.ad_count === 1 ? "" : "s"}</span> : null}
+                <span className="cs-intel-angle-pill__open"><ChevronRight className="h-3 w-3" /></span>
+              </button> : angle.evidence ? <button key={index} type="button" onClick={() => setDetailAngle(angle)} className="cs-intel-angle-pill is-openable" aria-label={`Why ${angle.name} is ${humanize(status)}`}>
+                {angle.name}<ChevronRight className="h-3 w-3 shrink-0" />
+              </button> : <span key={index} className="cs-intel-angle-pill">{angle.name}</span>
+            ))}
+          </div>;
+          // Untapped is usually the longest list: it takes the height of the
+          // tallest other card and scrolls instead of stretching the row.
+          const scrolls = status === "untapped";
+          return <section key={status} className={`cs-intel-angle-group ${scrolls ? "is-scrolling" : ""}`}>
             <div className="cs-intel-angle-group__header">
               <h3>{humanize(status)}</h3>
               <span>{items.length}</span>
             </div>
             {ANGLE_STATUS_HELP[status] && <p className="mb-2 text-xs leading-relaxed text-neutral-500">{ANGLE_STATUS_HELP[status]}</p>}
-            {status === "proven" && <p className="cs-intel-angle-hint"><Maximize2 className="h-3.5 w-3.5" />Open an angle to see its ads, results and why each works</p>}
-            <div className="cs-intel-angle-group__pills">
-              {items.map((angle, index) => (
-                status === "proven" ? <button key={index} type="button" onClick={() => setSelectedAngle(angle)} className="cs-intel-angle-pill is-proven" aria-label={`View ads for ${angle.name}`}>
-                  {angle.name}
-                  {angle.ad_count ? <span className="cs-intel-angle-pill__count">{angle.ad_count} ad{angle.ad_count === 1 ? "" : "s"}</span> : null}
-                  <span className="cs-intel-angle-pill__open">View<ChevronRight className="h-3 w-3" /></span>
-                </button> : angle.evidence ? <button key={index} type="button" onClick={() => setDetailAngle(angle)} className="cs-intel-angle-pill is-openable" aria-label={`Why ${angle.name} is ${humanize(status)}`}>
-                  {angle.name}<ChevronRight className="h-3 w-3" />
-                </button> : <span key={index} className="cs-intel-angle-pill">{angle.name}</span>
-              ))}
-            </div>
-          </section>
-        ))}
+            {scrolls
+              ? <div className="cs-intel-angle-group__scroll"><CsScrollArea className="absolute inset-0" viewportClassName="h-full"><div className="pr-3">{pills}</div></CsScrollArea></div>
+              : pills}
+          </section>;
+        })}
       </div>
       <Dialog open={Boolean(selectedAngle)} onOpenChange={(open) => { if (!open) setSelectedAngle(null); }}>
         <DialogContent disableSlide className="max-w-5xl rounded-[28px] sm:rounded-[28px] bg-[#fffaf5]" overlayClassName="bg-black/40">
@@ -734,12 +732,14 @@ function AngleGroups({ groups, ads, onOpenAd }) {
           <CsScrollArea viewportClassName="max-h-[70vh]"><div className="cs-angle-ads pr-3">
             {matchingAds.length ? matchingAds.map((ad, index) => {
               const hookLine = ad.firstSpokenSentence || ad.firstOverlayHeadline || ad.headlineText;
+              // Spend and CPA, then the hook and why it works, all in one card.
               return <article key={ad.adId} className="cs-angle-ad">
-                <PerformerCard ad={ad} rank={index + 1} avgCpa={avgCpa} onOpen={(item) => onOpenAd(item)} openDetails />
-                {(ad.whyItWorks || hookLine) && <div className="cs-angle-ad__why">
-                  {hookLine && <p className="mb-1.5 text-stone-700">“{hookLine}”</p>}
-                  {ad.whyItWorks && <><strong>Why it works</strong>{ad.whyItWorks}</>}
-                </div>}
+                <PerformerCard ad={ad} rank={index + 1} avgCpa={avgCpa} onOpen={(item) => onOpenAd(item)} openDetails compact>
+                  {(ad.whyItWorks || hookLine) && <div className="cs-angle-ad__why">
+                    {hookLine && <p className="mb-1.5 text-stone-700">“{hookLine}”</p>}
+                    {ad.whyItWorks && <><strong>Why it works</strong>{ad.whyItWorks}</>}
+                  </div>}
+                </PerformerCard>
               </article>;
             }) : <p className="text-sm text-stone-500">No saved ads available for this angle. Run Analysis to refresh.</p>}
           </div></CsScrollArea>
@@ -762,7 +762,7 @@ function AngleDetailDialog({ angle, onClose }) {
   const empty = !evidence.research.length && !evidence.gaps.length && !evidence.ideas.length;
   return (
     <Dialog open={Boolean(angle)} onOpenChange={(open) => { if (!open) { setConceptNote(false); onClose(); } }}>
-      <DialogContent disableSlide className="max-w-3xl rounded-[28px] sm:rounded-[28px] bg-[#fffaf5]" overlayClassName="bg-black/40">
+      <DialogContent disableSlide className="max-w-xl rounded-[28px] sm:rounded-[28px] bg-[#fffaf5]" overlayClassName="bg-black/40">
         <DialogHeader>
           <div className="flex flex-wrap items-center gap-2"><DialogTitle>{angle?.name}</DialogTitle>{angle && <span className="cs-intel-angle-pill">{humanize(angle.status)}</span>}</div>
           <DialogDescription>{angle && ANGLE_STATUS_HELP[angle.status]?.split(". ")[0]}.</DialogDescription>
@@ -804,9 +804,9 @@ function AngleDetailDialog({ angle, onClose }) {
           </section>}
           {empty && <p className="text-sm text-stone-500">No saved research or analysis notes mention this angle by name. Run Analysis to refresh.</p>}
         </div></CsScrollArea>
-        <div className="flex flex-wrap items-center justify-end gap-3 border-t border-orange-100 pt-3">
-          {conceptNote && <span className="text-xs text-neutral-500">Not wired up yet — this will add a card to Weekly Strategy.</span>}
-          <button type="button" onClick={() => setConceptNote(true)} className="cs-weekly-brief-button">Turn into a concept</button>
+        <div className="flex flex-col gap-2">
+          <button type="button" onClick={() => setConceptNote(true)} className="cs-weekly-brief-button w-full">Turn into a concept</button>
+          {conceptNote && <span className="text-center text-xs text-neutral-500">Not wired up yet — this will add a card to Weekly Strategy.</span>}
         </div>
       </DialogContent>
     </Dialog>

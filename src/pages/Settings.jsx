@@ -266,7 +266,7 @@ export default function Settings({ platform = "meta" }) {
                                                 activeTab === tab
                                                     ? "bg-white border border-gray-300 shadow font-semibold text-neutral-900"
                                                     : "border border-transparent text-neutral-700 hover:bg-neutral-200",
-                                                isTikTokConnectionPending && "cursor-wait opacity-60",
+                                                isTikTokConnectionPending && "cursor-default opacity-60",
                                                 "justify-start max-lg:justify-center max-lg:px-2 relative",
                                             )}
                                         >

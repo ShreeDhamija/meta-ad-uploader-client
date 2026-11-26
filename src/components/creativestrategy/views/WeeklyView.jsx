@@ -418,7 +418,6 @@ function ConceptCard({ idea, brief, briefing, generatingStatics, updating, appro
       </header>
 
       <div className="cs-weekly-card__body">
-        <AnchorAdRow idea={idea} onOpen={openAnchor} opening={openingAnchor === idea.anchorAdId} adAccountId={adAccountId} />
         <p className="text-sm font-normal leading-6 text-[#5f524c]">{idea.conceptDescription}</p>
         {idea.suggestedAngle && <p className="mt-4 text-sm text-[#3b2c26]"><strong>Angle:</strong> <span className="underline decoration-[#6c3403]/35 underline-offset-4">{idea.suggestedAngle}</span></p>}
         {idea.hypothesis && <p className="mt-3 text-xs font-normal leading-5 text-[#6d605a]"><strong className="text-[#4f4039]">Hypothesis:</strong> {idea.hypothesis}</p>}
@@ -435,7 +434,10 @@ function ConceptCard({ idea, brief, briefing, generatingStatics, updating, appro
           )}
         </div>
 
-        <div className="mt-5 flex flex-wrap items-center gap-3">
+        {/* The ad this concept builds on sits just above the actions. */}
+        <AnchorAdRow idea={idea} onOpen={openAnchor} opening={openingAnchor === idea.anchorAdId} adAccountId={adAccountId} />
+
+        <div className={`${idea.anchorAdId ? "mt-3" : "mt-5"} flex flex-wrap items-center gap-3`}>
           {isStatic && (
             <button type="button" onClick={() => makeStatic(idea.id)} disabled={generatingStatic} className="cs-weekly-static-button">
               {generatingStatic ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
@@ -447,21 +449,25 @@ function ConceptCard({ idea, brief, briefing, generatingStatics, updating, appro
             {writing ? "Writing…" : idea.format === "static" ? (brief ? "Regenerate Brief" : "Generate Brief") : (brief ? "Regenerate Script" : "Generate Script")}
           </button>
           <span className="flex-1" />
-          {!approved && (
-            <button type="button" onClick={() => approve(idea.id)} disabled={Boolean(updating)} className="cs-weekly-decision is-approve">
-              {approving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CircleCheck className="h-4 w-4" />} Approve
-            </button>
-          )}
-          {!rejected && (
-            <button type="button" onClick={() => updateStatus(idea.id, "rejected")} disabled={Boolean(updating)} className="cs-weekly-decision is-dismiss">
-              {rejecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CircleX className="h-4 w-4" />} Dismiss
-            </button>
-          )}
-          {(approved || rejected) && (
-            <button type="button" onClick={() => updateStatus(idea.id, "pending")} disabled={Boolean(updating)} className="cs-weekly-reset">
-              {resetting ? "Resetting…" : "Reset"}
-            </button>
-          )}
+          {/* Kept together: when they don't fit beside the generate buttons
+              they wrap as a pair to the start of the next row. */}
+          <div className="flex items-center gap-3">
+            {!approved && (
+              <button type="button" onClick={() => approve(idea.id)} disabled={Boolean(updating)} className="cs-weekly-decision is-approve">
+                {approving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CircleCheck className="h-4 w-4" />} Approve
+              </button>
+            )}
+            {!rejected && (
+              <button type="button" onClick={() => updateStatus(idea.id, "rejected")} disabled={Boolean(updating)} className="cs-weekly-decision is-dismiss">
+                {rejecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CircleX className="h-4 w-4" />} Dismiss
+              </button>
+            )}
+            {(approved || rejected) && (
+              <button type="button" onClick={() => updateStatus(idea.id, "pending")} disabled={Boolean(updating)} className="cs-weekly-reset">
+                {resetting ? "Resetting…" : "Reset"}
+              </button>
+            )}
+          </div>
         </div>
 
         {isStatic && (generatingStatic || statics.length > 0) && <ConceptStatics statics={statics} generating={generatingStatic} />}

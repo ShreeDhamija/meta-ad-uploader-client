@@ -603,7 +603,7 @@ textarea.cs-brand-input { resize: vertical; }
 }
 
 .cs-brand-dropzone:hover { border-color: #a3a3a3; background: #fafafa; }
-.cs-brand-dropzone.is-busy { cursor: wait; }
+.cs-brand-dropzone.is-busy { cursor: default; }
 .cs-brand-dropzone strong { color: #262626; font-size: 13.5px; font-weight: 600; }
 .cs-brand-dropzone span { color: #8a8a8a; font-size: 12px; }
 
@@ -1400,7 +1400,7 @@ html body #root .creative-strategy button.cs-generate-switcher__item.is-active {
 }
 
 .cs-library-action:disabled {
-  cursor: wait;
+  cursor: default;
   opacity: 0.55;
 }
 
@@ -1776,7 +1776,7 @@ html body #root .creative-strategy button.cs-weekly-switcher__item.is-active {
 }
 
 .cs-weekly-static-button:disabled {
-  cursor: wait;
+  cursor: default;
   opacity: 0.55;
 }
 
@@ -1822,7 +1822,7 @@ html body #root .creative-strategy button.cs-weekly-switcher__item.is-active {
 
 .cs-weekly-brief-button:disabled,
 .cs-weekly-decision:disabled {
-  cursor: wait;
+  cursor: default;
   opacity: 0.55;
 }
 
@@ -1898,7 +1898,7 @@ html body #root .creative-strategy button.cs-weekly-switcher__item.is-active {
 .cs-research-add-button:disabled,
 .cs-persona-full-button:disabled,
 .cs-research-details-button:disabled {
-  cursor: wait;
+  cursor: default;
   opacity: 0.55;
 }
 
@@ -3928,6 +3928,11 @@ html body #root .creative-strategy .cs-research-intel.is-open.is-stuck button.cs
   color: #594b45;
 }
 
+/* The drawer header already has a divider; don't draw a second one under it. */
+.cs-intel-hook-details.is-drawer {
+  border-top: 0;
+}
+
 .cs-intel-detail-section {
   padding: 16px 15px;
   border-top: 1px solid rgba(108, 52, 3, 0.14);
@@ -4621,6 +4626,25 @@ html body #root .creative-strategy .cs-research-intel.is-open.is-stuck button.cs
   gap: 7px;
 }
 
+/* Untapped: stretches to the row's height (set by Proven / In research) and
+   scrolls its pills. The pills are absolutely placed so they don't add height. */
+.cs-intel-angle-group.is-scrolling {
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+}
+
+.cs-intel-angle-group__scroll {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 160px;
+}
+
+/* Stacked (one card per row): nothing to match, so give the list its own height. */
+@media (max-width: 1100px) {
+  .cs-intel-angle-group__scroll { min-height: 260px; }
+}
+
 .cs-intel-section-title {
   display: flex;
   min-height: 34px;
@@ -5042,7 +5066,7 @@ html body #root .creative-strategy button.cs-intel-ad-card.is-active {
 .cs-visual-panel { overflow-y: auto; min-height: 180px; padding: 3px; display: flex; flex-direction: column; gap: 20px; }
 .cs-visual-upload { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; flex-shrink: 0; min-height: 160px; width: 100%; padding: 28px 20px; border: 1px dashed #c8a58c; border-radius: 24px; background: #fff8f2; color: #8c542d; font-size: 13px; transition: background .15s, border-color .15s; }
 .cs-visual-upload:hover, .cs-visual-upload.is-dragging { background: #ffefe1; border-color: #854413; }
-.cs-visual-upload:disabled { opacity: .5; cursor: wait; }
+.cs-visual-upload:disabled { opacity: .5; cursor: default; }
 .cs-visual-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 12px; }
 .cs-visual-card { position: relative; display: block; border: 2px solid #e9e0d9; border-radius: 16px; background: white; overflow: hidden; text-align: left; cursor: pointer; }
 .cs-visual-card.is-selected { border-color: #a85518; }
@@ -5075,7 +5099,7 @@ html body #root .creative-strategy button.cs-intel-ad-card.is-active {
 .cs-monthly-filter-button { display: inline-flex; height: 36px; align-items: center; gap: 6px; padding: 0 13px; border: 1px solid rgba(108, 52, 3, 0.28); border-radius: 13px; color: #6c4a39; background: var(--cs-cream); font-size: 11.5px; font-weight: 500; }
 .cs-monthly-filter-button strong { color: #3b170b; font-weight: 600; }
 html body #root .creative-strategy button.cs-monthly-filter-button:hover { border-color: rgba(108, 52, 3, 0.62) !important; }
-.cs-monthly-filter-button:disabled { opacity: .55; cursor: wait; }
+.cs-monthly-filter-button:disabled { opacity: .55; cursor: default; }
 .cs-monthly-concept { overflow: hidden; border: 1px solid rgba(108, 52, 3, 0.2); border-radius: 16px; background: #fff; box-shadow: 0 2px 5px rgba(59, 23, 11, 0.04); }
 .cs-monthly-concept__head { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: #fff8f1; border-bottom: 1px solid rgba(108, 52, 3, 0.14); }
 .cs-monthly-concept__thumb { display: flex; width: 44px; height: 58px; flex-shrink: 0; align-items: center; justify-content: center; overflow: hidden; border: 1px solid rgba(108, 52, 3, 0.18); border-radius: 10px; color: #c8a58c; background: #f6f0ea; }
@@ -5702,19 +5726,22 @@ html body #root .creative-strategy button.cs-monthly-filter-button:hover { borde
   box-shadow: 0 2px 6px rgba(59, 23, 11, 0.12);
   font-size: 11.5px;
   font-weight: 650;
+  text-align: left;
   cursor: pointer;
   transition: background 140ms ease, box-shadow 140ms ease, transform 140ms ease;
 }
 .cs-intel-angle-pill.is-proven:hover { background: var(--cs-peach); box-shadow: 0 4px 10px rgba(59, 23, 11, 0.16); transform: translateY(-1px); }
 .cs-intel-angle-pill.is-proven:focus-visible { outline: 2px solid #e8812c; outline-offset: 2px; }
 .cs-intel-angle-pill__count { padding: 1px 7px; border-radius: 999px; color: #6c3403; background: var(--cs-peach); font-size: 10px; font-weight: 600; }
-.cs-intel-angle-pill__open { display: inline-flex; align-items: center; gap: 3px; padding: 2px 8px; border-radius: 999px; color: #fff; background: #310b00; font-size: 10px; font-weight: 600; }
+.cs-intel-angle-pill__open { display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 999px; color: #fff; background: #310b00; }
+.cs-intel-angle-pill.is-openable { text-align: left; }
 .cs-intel-angle-hint { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; color: #6c3403; font-size: 11.5px; font-weight: 550; }
 
 .cs-angle-ads { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }
 .cs-angle-ad { display: flex; flex-direction: column; gap: 8px; }
 .cs-angle-ad .cs-top-card { width: 100%; }
-.cs-angle-ad__why { padding: 9px 11px; border: 1px solid rgba(108, 52, 3, 0.16); border-radius: 13px; color: #51413a; background: #fff; font-size: 12px; line-height: 1.5; }
+/* Inside the proven-angle card, below spend/CPA: a divider, not a second card. */
+.cs-angle-ad__why { padding-top: 10px; border-top: 1px solid rgba(108, 52, 3, 0.12); color: #51413a; font-size: 12px; line-height: 1.5; }
 .cs-angle-ad__why strong { display: block; margin-bottom: 2px; color: #6c3403; font-size: 10.5px; font-weight: 650; }
 
 .cs-ad-drawer__stats dd small { display: block; margin-top: 2px; font-size: 10.5px; font-weight: 600; }
@@ -5723,6 +5750,13 @@ html body #root .creative-strategy button.cs-monthly-filter-button:hover { borde
 .cs-ad-drawer__stats dd small.is-flat { color: #8a746c; }
 .cs-ad-drawer__lead { display: flex; flex-direction: column; gap: 14px; }
 .cs-ad-drawer__lead .cs-ad-drawer__hook { font-size: 18px; }
+/* Top hooks drawer: small preview beside the hook at the top. */
+.cs-ad-drawer__lead-row { display: grid !important; grid-template-columns: 180px minmax(0, 1fr); gap: 18px; align-items: start; }
+@media (max-width: 640px) { .cs-ad-drawer__lead-row { grid-template-columns: minmax(0, 1fr); } }
+.cs-ad-drawer__lead-row .cs-ad-drawer__hook { font-size: 18px; }
+.cs-ad-drawer__media.is-thumb { border-radius: 14px; }
+.cs-ad-drawer__media.is-thumb img, .cs-ad-drawer__media.is-thumb video { max-height: 320px; }
+.cs-ad-drawer__media.is-thumb iframe { height: 320px; }
 .cs-ad-drawer__section-label { margin-bottom: 8px; color: #8a746c; font-size: 10.5px; font-weight: 650; letter-spacing: 0.06em; text-transform: uppercase; }
 
 .cs-top-card__launch { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border: 1px solid #bfdbfe; border-radius: 999px; color: #1d4ed8; background: #eff6ff; font-size: 10px; font-weight: 650; }
@@ -5848,7 +5882,7 @@ html body #root .creative-strategy button.cs-monthly-filter-button:hover { borde
 .cs-reference-drop strong { display: block; color: #30150a; font-size: 13px; font-weight: 600; }
 .cs-reference-drop span { color: #78716c; }
 .cs-reference-drop:hover:not(:disabled), .cs-reference-drop.is-dragging { border-color: #6c3403; background: #fff3e8; }
-.cs-reference-drop:disabled { cursor: progress; }
+.cs-reference-drop:disabled { cursor: default; }
 
 /* Insights ad drawer: "make something from this ad" actions, pinned under the scroll. */
 .cs-ad-drawer__actions { display: flex; flex-shrink: 0; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 14px 22px 18px; border-top: 1px solid rgba(108, 52, 3, 0.18); background: #fff; }
@@ -5857,12 +5891,12 @@ html body #root .creative-strategy button.cs-monthly-filter-button:hover { borde
 
 /* Weekly card: the ad an anchored concept builds on (opens the Insights drawer). */
 .cs-weekly-anchor {
-  display: flex; width: 100%; align-items: center; gap: 10px; margin-bottom: 14px; padding: 8px 10px;
+  display: flex; width: 100%; align-items: center; gap: 10px; margin-top: 18px; padding: 8px 10px;
   border: 1px solid rgba(108, 52, 3, 0.2); border-radius: 16px; color: #3b2c26; background: #fff; text-align: left;
 }
 .cs-weekly-anchor.is-link { cursor: pointer; transition: border-color 0.15s ease, background-color 0.15s ease; }
 .cs-weekly-anchor.is-link:hover { border-color: rgba(108, 52, 3, 0.45); background: #fdf8f4; }
-.cs-weekly-anchor.is-link:disabled { cursor: progress; opacity: 0.8; }
+.cs-weekly-anchor.is-link:disabled { cursor: default; opacity: 0.8; }
 .cs-weekly-anchor__thumb { width: 40px; height: 40px; flex-shrink: 0; border-radius: 10px; object-fit: cover; background: #f5f0eb; }
 .cs-weekly-anchor__thumb.is-empty { display: grid; place-items: center; color: #c8a58c; }
 .cs-weekly-anchor__label { display: block; color: #8a7469; font-size: 11px; font-weight: 500; }

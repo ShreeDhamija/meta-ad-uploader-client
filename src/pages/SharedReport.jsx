@@ -98,7 +98,7 @@ export default function SharedReport() {
               onClick={handleDownloadPdf}
               disabled={preparingPdf}
               title="Choose Save as PDF in the print dialog"
-              className="inline-flex items-center rounded-full border border-neutral-200 bg-white px-4 py-2.5 text-sm font-medium text-neutral-700 shadow-xs hover:shadow-sm disabled:cursor-wait disabled:opacity-45"
+              className="inline-flex items-center rounded-full border border-neutral-200 bg-white px-4 py-2.5 text-sm font-medium text-neutral-700 shadow-xs hover:shadow-sm disabled:cursor-default disabled:opacity-45"
             >
               {preparingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
               {preparingPdf ? "Preparing PDF…" : "Download PDF"}

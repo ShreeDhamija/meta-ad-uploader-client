@@ -151,7 +151,7 @@ export function AdMediaPlayer({ ad, fallback = null }) {
   return <div className="relative">
     {poster || <div className="aspect-[4/5]" />}
     <button type="button" onClick={() => load(false)} disabled={loading} aria-label={loading ? "Loading video" : "Play video"}
-      className="absolute inset-0 grid place-items-center bg-black/10 transition-colors hover:bg-black/25 disabled:cursor-wait">
+      className="absolute inset-0 grid place-items-center bg-black/10 transition-colors hover:bg-black/25 disabled:cursor-default">
       <span className="grid h-14 w-14 place-items-center rounded-full bg-black/60 text-white shadow-lg">
         {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : <Play className="ml-1 h-6 w-6 fill-white" />}
       </span>
