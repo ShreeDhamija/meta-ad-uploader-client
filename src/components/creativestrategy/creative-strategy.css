@@ -5650,6 +5650,187 @@ html body #root .creative-strategy button.cs-monthly-filter-button:hover { borde
 .cs-mc__thumb.is-batch { border: 2px solid #e8812c; }
 .cs-mc__siblings small { margin-right: 2px; color: #8a746c; font-size: 10.5px; font-weight: 600; }
 
+/* ── Monthly Review: Strategy map / Month by month switch ───────────────── */
+.cs-monthly-tabs { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; }
+
+/* ── Monthly Review: Strategy map (StrategyMapView) ─────────────────────── */
+/* Shares the concept-batch classes (cs-mc__*) with the month-by-month cards,
+   so a batch reads the same in both places. */
+.cs-sm { display: grid; gap: 18px; }
+
+/* Verdict colours: one place, used by cells, tiles, pills and the spend bar. */
+.cs-sm [data-verdict="work"] { --sm-bg: #e6f4ea; --sm-line: #15803d; --sm-ink: #14532d; }
+.cs-sm [data-verdict="mixed"] { --sm-bg: #fff3d6; --sm-line: #d99a1c; --sm-ink: #7a4f00; }
+.cs-sm [data-verdict="bad"] { --sm-bg: #fde8df; --sm-line: #c2410c; --sm-ink: #8a2c0a; }
+.cs-sm [data-verdict="thin"] { --sm-bg: #f3efea; --sm-line: rgba(108, 52, 3, 0.26); --sm-ink: #5e4d44; }
+.cs-sm [data-verdict="running"] { --sm-bg: #eff7fd; --sm-line: #9fc0de; --sm-ink: #315d7e; }
+.cs-sm [data-verdict="idea"] { --sm-bg: #fffaf4; --sm-line: #e8812c; --sm-ink: #a04a08; --sm-style: dashed; }
+.cs-sm [data-verdict="none"] { --sm-bg: #fff; --sm-line: rgba(108, 52, 3, 0.34); --sm-ink: #7a655c; --sm-style: dashed; }
+
+/* ── Scorecards ─────────────────────────────────────────────────────────── */
+.cs-sm-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.cs-sm-kpis .cs-intel-kpi small { color: #8a746c; font-size: 10.5px; }
+@media (max-width: 760px) { .cs-sm-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .cs-sm-kpis .cs-intel-kpi:nth-child(3)::before { display: none; } }
+
+/* ── Toolbar ────────────────────────────────────────────────────────────── */
+.cs-sm-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; }
+.cs-sm-toolbar__group { display: flex; min-width: 0; align-items: center; gap: 8px; }
+.cs-sm-toolbar__group > span { flex-shrink: 0; color: #8a746c; font-size: 11px; font-weight: 600; }
+.cs-sm-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; color: #6c5a50; font-size: 11px; }
+.cs-sm-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.cs-sm-legend i { width: 12px; height: 12px; border: 1.5px var(--sm-style, solid) var(--sm-line); border-radius: 4px; background: var(--sm-bg); }
+.cs-sm-notes { display: grid; gap: 6px; color: #6c5a50; font-size: 11.5px; line-height: 1.5; }
+.cs-sm-notes p { display: flex; gap: 7px; }
+.cs-sm-notes svg { flex-shrink: 0; margin-top: 2px; color: #b4560d; }
+
+/* ── Month line ─────────────────────────────────────────────────────────── */
+.cs-sm-month { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 18px; padding: 12px 16px; border: 1px solid rgba(108, 52, 3, 0.2); border-radius: 16px; background: #fff; }
+.cs-sm-month h3 { color: #30150a; font-size: 13.5px; font-weight: 650; }
+.cs-sm-month p { margin-top: 2px; color: #6c5a50; font-size: 12px; line-height: 1.5; }
+.cs-sm-month dl { display: flex; flex-wrap: wrap; gap: 4px 18px; margin-top: 6px; color: #8a746c; font-size: 11px; }
+.cs-sm-month dd { display: inline; margin-left: 4px; color: #3b2a22; font-weight: 600; font-variant-numeric: tabular-nums; }
+.cs-sm-month dt { display: inline; }
+
+/* ── Layout: map + detail panel ─────────────────────────────────────────── */
+.cs-sm-layout { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 16px; align-items: start; }
+@media (max-width: 1180px) { .cs-sm-layout { grid-template-columns: minmax(0, 1fr); } }
+.cs-sm-scroll { min-width: 0; overflow-x: auto; padding: 2px 2px 6px; }
+.cs-sm-grid { display: grid; min-width: var(--sm-min, 720px); gap: 8px; }
+.cs-sm-row { display: grid; grid-template-columns: 196px repeat(var(--sm-cols), minmax(104px, 1fr)); gap: 8px; }
+.cs-sm-colhead { display: grid; align-content: end; gap: 4px; padding: 0 4px 4px; }
+.cs-sm-colhead strong { overflow: hidden; color: #3b170b; font-size: 12px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+.cs-sm-colhead span { color: #8a746c; font-size: 10.5px; font-variant-numeric: tabular-nums; }
+.cs-sm-bar { height: 5px; overflow: hidden; border-radius: 999px; background: rgba(108, 52, 3, 0.1); }
+.cs-sm-bar i { display: block; height: 100%; border-radius: 999px; background: #6c3403; }
+
+.cs-sm-rowhead { display: flex; min-height: 118px; flex-direction: column; gap: 5px; padding: 11px 12px; border: 1px solid rgba(108, 52, 3, 0.2); border-radius: 16px; background: #fff; text-align: left; }
+.cs-sm-rowhead h3 { color: #30150a; font-size: 12.5px; font-weight: 650; line-height: 1.3; }
+.cs-sm-rowhead__stats { margin-top: auto; color: #51413a; font-size: 11px; line-height: 1.45; font-variant-numeric: tabular-nums; }
+.cs-sm-rowhead__toggle { display: inline-flex; align-items: center; gap: 4px; align-self: flex-start; padding: 3px 8px; border: 1px solid rgba(108, 52, 3, 0.22); border-radius: 999px; color: #6c3403; background: #fff7ef; font-size: 10.5px; font-weight: 600; }
+html body #root .creative-strategy button.cs-sm-rowhead__toggle:hover { border-color: rgba(108, 52, 3, 0.62) !important; }
+.cs-sm-source { align-self: flex-start; padding: 1px 7px; border-radius: 999px; font-size: 10px; font-weight: 600; }
+.cs-sm-source.is-research { color: #315d7e; background: #eff7fd; }
+.cs-sm-source.is-ad_derived { color: #75411d; background: #fff3e7; }
+.cs-sm-source.is-custom, .cs-sm-source.is-client { color: #664887; background: #f6f1fb; }
+.cs-sm-source.is-none { color: #8a2c0a; background: #fde8df; }
+
+/* A cell, an angle tile and a board card share one verdict surface. */
+.cs-sm-cell { display: flex; min-width: 0; min-height: 118px; flex-direction: column; gap: 3px; padding: 10px 11px; border: 1.5px var(--sm-style, solid) var(--sm-line); border-radius: 16px; color: var(--sm-ink); background: var(--sm-bg); text-align: left; transition: box-shadow 150ms ease, transform 150ms ease; }
+html body #root .creative-strategy button.cs-sm-cell:hover { border-color: var(--sm-line) !important; box-shadow: 0 4px 10px rgba(59, 23, 11, 0.12); transform: translateY(-1px); }
+html body #root .creative-strategy button.cs-sm-cell.is-selected { border-color: #3b170b !important; box-shadow: 0 0 0 2px #3b170b; }
+.cs-sm-cell__label { font-size: 10px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; }
+.cs-sm-cell__spend { color: #30150a; font-size: 15px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.cs-sm-cell__stat { font-size: 11px; line-height: 1.4; font-variant-numeric: tabular-nums; }
+.cs-sm-cell__name { overflow: hidden; color: #30150a; font-size: 13px; font-weight: 650; line-height: 1.25; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.cs-sm-cell__hint { font-size: 11px; line-height: 1.4; }
+.cs-sm-cell__foot { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin-top: auto; padding-top: 4px; }
+.cs-sm-cell__add { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; }
+.cs-sm-thumbs { display: flex; align-items: center; gap: 3px; }
+.cs-sm-thumbs > span { position: relative; display: flex; width: 22px; height: 28px; flex-shrink: 0; align-items: center; justify-content: center; overflow: hidden; border: 1px solid rgba(108, 52, 3, 0.26); border-radius: 5px; color: #c8a58c; background: #f6f0ea; }
+.cs-sm-thumbs img { width: 100%; height: 100%; object-fit: cover; }
+.cs-sm-thumbs small { margin-left: 2px; font-size: 10.5px; font-weight: 600; }
+.cs-sm-chip { display: inline-flex; align-items: center; gap: 4px; padding: 1px 7px; border: 1px dashed #e8812c; border-radius: 999px; color: #a04a08; background: #fff; font-size: 10px; font-weight: 600; white-space: nowrap; }
+
+/* ── A persona's angle lane (opens under its row) ───────────────────────── */
+.cs-sm-lane { display: grid; gap: 12px; padding: 14px 16px; border: 1px solid rgba(108, 52, 3, 0.2); border-radius: 18px; background: #fffdfb; }
+.cs-sm-lane__group { display: grid; gap: 7px; }
+.cs-sm-lane__group > header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.cs-sm-lane__group > header p { color: #8a746c; font-size: 11px; }
+.cs-sm-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.cs-sm-tiles .cs-sm-cell { min-height: 96px; }
+.cs-sm-note { display: flex; gap: 8px; padding: 9px 12px; border: 1px solid #f0d9c2; border-radius: 12px; color: #6c3403; background: var(--cs-cream, #fffaf4); font-size: 11.5px; line-height: 1.5; }
+.cs-sm-note svg { flex-shrink: 0; margin-top: 2px; }
+
+/* ── Detail panel ───────────────────────────────────────────────────────── */
+.cs-sm-detail { position: sticky; top: 12px; display: grid; gap: 14px; max-height: calc(100vh - 24px); overflow-y: auto; }
+@media (max-width: 1180px) { .cs-sm-detail { position: static; max-height: none; } }
+.cs-sm-detail__eyebrow { color: #8a746c; font-size: 10.5px; font-weight: 600; }
+.cs-sm-detail__title { margin-top: 2px; color: #30150a; font-size: 15px; font-weight: 650; line-height: 1.3; }
+.cs-sm-detail__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 8px; color: #51413a; font-size: 11.5px; font-variant-numeric: tabular-nums; }
+.cs-sm-pill { padding: 2px 9px; border: 1.5px var(--sm-style, solid) var(--sm-line); border-radius: 999px; color: var(--sm-ink); background: var(--sm-bg); font-size: 10px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; }
+.cs-sm-section { display: grid; gap: 8px; }
+.cs-sm-section > p { color: #6c5a50; font-size: 12px; line-height: 1.5; }
+.cs-sm-actions { display: flex; flex-wrap: wrap; gap: 7px; }
+.cs-sm-actions small { flex-basis: 100%; color: #8a746c; font-size: 10.5px; }
+
+/* A creative: thumbnail, name, results, and the batch it won. */
+.cs-sm-ad { overflow: hidden; border: 1px solid rgba(108, 52, 3, 0.18); border-radius: 14px; background: #fff; }
+.cs-sm-ad__main { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; padding: 10px; }
+.cs-sm-ad__thumb { position: relative; display: flex; width: 52px; height: 66px; align-items: center; justify-content: center; overflow: hidden; border: 1px solid rgba(108, 52, 3, 0.18); border-radius: 9px; color: #c8a58c; background: #f6f0ea; }
+.cs-sm-ad__thumb.is-winner { border: 2px solid #e8812c; }
+.cs-sm-ad__thumb img { width: 100%; height: 100%; object-fit: cover; }
+.cs-sm-ad__thumb .cs-mc__play { right: 4px; bottom: 4px; width: 18px; height: 18px; }
+.cs-sm-ad__body { display: grid; min-width: 0; align-content: start; gap: 4px; }
+.cs-sm-ad__name { overflow: hidden; color: #30150a; font-size: 12.5px; font-weight: 650; line-height: 1.3; text-align: left; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+html body #root .creative-strategy button.cs-sm-ad__name:hover { color: #b4560d; text-decoration: underline; }
+.cs-sm-ad__opener { overflow: hidden; color: #6c5a50; font-size: 11.5px; line-height: 1.4; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.cs-sm-ad__stats { display: flex; flex-wrap: wrap; gap: 2px 10px; color: #51413a; font-size: 11px; font-variant-numeric: tabular-nums; }
+.cs-sm-ad__stats .is-good { color: #15803d; font-weight: 600; }
+.cs-sm-ad__stats .is-bad { color: #c2410c; font-weight: 600; }
+.cs-sm-ad__tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.cs-sm-ad__tags span { padding: 1px 7px; border: 1px solid rgba(108, 52, 3, 0.16); border-radius: 999px; color: #6c4a39; background: #fffaf4; font-size: 10px; font-weight: 500; }
+.cs-sm-ad .cs-mc__toggle { justify-content: space-between; padding: 7px 10px; font-size: 11px; }
+.cs-sm-ad .cs-mc__toggle > span { display: inline-flex; align-items: center; gap: 5px; }
+.cs-sm-variants { display: grid; padding: 2px 10px 8px; border-top: 1px solid rgba(108, 52, 3, 0.1); background: #fffdfb; }
+.cs-sm-variants li { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; gap: 9px; align-items: center; padding: 7px 2px; border-bottom: 1px solid rgba(108, 52, 3, 0.08); font-size: 11px; }
+.cs-sm-variants li:last-child { border-bottom: 0; }
+.cs-sm-variants li.is-self { margin: 0 -4px; padding: 7px 6px; border-radius: 9px; background: #fff1e4; }
+.cs-sm-variants__thumb { display: flex; width: 26px; height: 32px; align-items: center; justify-content: center; overflow: hidden; border: 1px solid rgba(108, 52, 3, 0.18); border-radius: 6px; color: #a08c84; background: #f6f0ea; font-size: 10.5px; font-variant-numeric: tabular-nums; }
+.cs-sm-variants__thumb img { width: 100%; height: 100%; object-fit: cover; }
+.cs-sm-variants__name { min-width: 0; }
+.cs-sm-variants__name p { overflow: hidden; color: #3b2a22; text-overflow: ellipsis; white-space: nowrap; }
+.cs-sm-variants li.is-self .cs-sm-variants__name p { font-weight: 600; }
+.cs-sm-variants__name small { display: block; color: #8a746c; font-size: 10.5px; font-variant-numeric: tabular-nums; }
+.cs-sm-variants__num { color: #51413a; text-align: right; font-variant-numeric: tabular-nums; }
+.cs-sm-variants__num small { display: block; color: #8a746c; font-size: 10px; }
+
+.cs-sm-idea { display: grid; gap: 6px; padding: 10px 12px; border: 1px dashed #e8812c; border-radius: 14px; background: #fff; }
+.cs-sm-idea h4 { color: #30150a; font-size: 12.5px; font-weight: 650; line-height: 1.35; }
+.cs-sm-idea p { color: #8a746c; font-size: 11px; text-transform: capitalize; }
+.cs-sm-idea .cs-weekly-brief-button, .cs-sm-idea .cs-weekly-static-button, .cs-sm-actions .cs-weekly-brief-button, .cs-sm-actions .cs-weekly-static-button, .cs-sm-card .cs-weekly-brief-button, .cs-sm-card .cs-weekly-static-button { height: 32px; padding: 0 12px; font-size: 11px; }
+.cs-sm-suggestion { display: grid; gap: 4px; padding: 10px 12px; border: 1px solid rgba(234, 119, 24, 0.45); border-radius: 14px; background: #fff8f1; color: #51413a; font-size: 12px; line-height: 1.5; }
+.cs-sm-suggestion strong { color: #a04a08; font-size: 10.5px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; }
+.cs-sm-more { justify-self: start; color: #6c3403; font-size: 11.5px; font-weight: 600; }
+html body #root .creative-strategy button.cs-sm-more:hover { text-decoration: underline; }
+
+/* ── Action board ───────────────────────────────────────────────────────── */
+.cs-sm-split { display: grid; gap: 8px; padding: 14px 16px; border: 1px solid rgba(108, 52, 3, 0.2); border-radius: 16px; background: #fff; }
+.cs-sm-split h3 { color: #8a746c; font-size: 11px; font-weight: 600; }
+.cs-sm-split__bar { display: flex; height: 14px; overflow: hidden; border-radius: 6px; background: rgba(108, 52, 3, 0.06); }
+.cs-sm-split__bar i { height: 100%; border: 1.5px solid var(--sm-line); background: var(--sm-bg); }
+.cs-sm-split__bar i + i { border-left-width: 0; }
+.cs-sm-split dl { display: flex; flex-wrap: wrap; gap: 4px 18px; color: #51413a; font-size: 11.5px; font-variant-numeric: tabular-nums; }
+.cs-sm-split dl div { display: inline-flex; align-items: center; gap: 6px; }
+.cs-sm-split dl i { width: 10px; height: 10px; border: 1.5px solid var(--sm-line); border-radius: 3px; background: var(--sm-bg); }
+.cs-sm-board { display: grid; min-width: 860px; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; align-items: start; }
+.cs-sm-board__col { display: grid; gap: 9px; }
+.cs-sm-board__col > header { display: grid; gap: 2px; padding: 0 2px; }
+.cs-sm-board__col > header h3 { display: flex; align-items: center; gap: 7px; color: #30150a; font-size: 13.5px; font-weight: 650; }
+.cs-sm-board__col > header h3 i { width: 12px; height: 12px; border: 1.5px var(--sm-style, solid) var(--sm-line); border-radius: 4px; background: var(--sm-bg); }
+.cs-sm-board__col > header h3 span { color: #8a746c; font-size: 11px; font-weight: 500; }
+.cs-sm-board__col > header p { color: #8a746c; font-size: 11px; }
+.cs-sm-board__empty { padding: 14px; border: 1px dashed rgba(108, 52, 3, 0.26); border-radius: 14px; color: #8a746c; font-size: 11.5px; }
+.cs-sm-card { display: grid; gap: 6px; padding: 12px; border: 1.5px var(--sm-style, solid) var(--sm-line, rgba(108, 52, 3, 0.2)); border-radius: 16px; background: #fff; text-align: left; }
+.cs-sm-card.is-selected { box-shadow: 0 0 0 2px #3b170b; }
+.cs-sm-card__eyebrow { color: #8a746c; font-size: 10.5px; font-weight: 600; }
+.cs-sm-card h4 { color: #30150a; font-size: 13.5px; font-weight: 650; line-height: 1.3; }
+.cs-sm-card__stats { display: flex; flex-wrap: wrap; align-items: baseline; gap: 3px 10px; color: #51413a; font-size: 11px; font-variant-numeric: tabular-nums; }
+.cs-sm-card__stats strong { color: #30150a; font-size: 16px; font-weight: 650; }
+.cs-sm-card p { color: #6c5a50; font-size: 11.5px; line-height: 1.5; }
+.cs-sm-early { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }
+.cs-sm-early button { display: grid; gap: 2px; padding: 9px 11px; border: 1px solid rgba(108, 52, 3, 0.16); border-radius: 12px; background: #f6f1ec; text-align: left; }
+.cs-sm-early small { color: #8a746c; font-size: 10.5px; }
+.cs-sm-early strong { color: #30150a; font-size: 12px; font-weight: 650; }
+.cs-sm-early span { color: #51413a; font-size: 11px; font-variant-numeric: tabular-nums; }
+
+/* ── Potential personas ─────────────────────────────────────────────────── */
+.cs-sm-potential { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; }
+.cs-sm-potential article { display: grid; align-content: start; gap: 5px; padding: 12px 14px; border: 1.5px dashed rgba(108, 52, 3, 0.34); border-radius: 16px; background: #fff; }
+.cs-sm-potential h4 { color: #30150a; font-size: 12.5px; font-weight: 650; }
+.cs-sm-potential small { color: #8a746c; font-size: 10.5px; text-transform: capitalize; }
+.cs-sm-potential p { color: #6c5a50; font-size: 11.5px; line-height: 1.5; }
+.cs-sm-potential .cs-weekly-static-button { justify-self: start; height: 32px; margin-top: 4px; padding: 0 12px; font-size: 11px; }
+
 /* ── Insights: ad detail drawer (right side, detached from the edge) ─────── */
 .cs-ad-drawer-overlay { position: fixed; inset: 0; z-index: 50; background: rgba(12, 10, 9, 0.38); backdrop-filter: blur(1px); }
 .cs-ad-drawer-overlay[data-state="open"] { animation: cs-drawer-fade 160ms ease-out; }

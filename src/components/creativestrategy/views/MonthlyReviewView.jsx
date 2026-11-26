@@ -16,6 +16,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { EmptyState, ErrorBanner, ProgressiveSection } from "../ui";
 import { useJobRunner } from "../JobsContext";
 import RunBy from "../run-by";
+import StrategyMapView from "./StrategyMapView";
+
+// The map is the default; the original review (leaderboard + concepts per
+// launch month) stays as its own tab.
+const REVIEW_TABS = [
+  { key: "map", label: "Strategy map", hint: "What exists, what's working, and where the gaps are." },
+  { key: "months", label: "Month by month", hint: "Every concept launched each month and the variant that won it." },
+];
 
 const money = (v) => (v >= 1000 ? `$${(v / 1000).toFixed(1)}K` : `$${Math.round(v || 0)}`);
 const NAME_FILTER_MAX = 100;
@@ -58,6 +66,7 @@ export default function MonthlyReviewView({ ctx }) {
   const [month, setMonth] = useState(null);
   const [dimension, setDimension] = useState("persona");
   const [preview, setPreview] = useState(null);
+  const [tab, setTab] = useState("map");
   const currentProduct = useRef(selectedProductId);
   currentProduct.current = selectedProductId;
 
@@ -126,7 +135,20 @@ export default function MonthlyReviewView({ ctx }) {
       )}
       <ErrorBanner message={err} />
 
-      {!selectedProductId ? (
+      {selectedProductId && (
+        <div className="cs-monthly-tabs">
+          <div className="cs-weekly-switcher" role="tablist" aria-label="Monthly review view">
+            {REVIEW_TABS.map((t) => (
+              <button key={t.key} type="button" role="tab" aria-selected={tab === t.key} onClick={() => setTab(t.key)} className={`cs-weekly-switcher__item ${tab === t.key ? "is-active" : ""}`}>{t.label}</button>
+            ))}
+          </div>
+          <p className="text-[11.5px] text-neutral-500">{REVIEW_TABS.find((t) => t.key === tab).hint}</p>
+        </div>
+      )}
+
+      {tab === "map" && selectedProductId ? (
+        <StrategyMapView ctx={ctx} refreshKey={snapshot?.computedAt ?? null} onOpenMonth={(m) => { setMonth(m); setTab("months"); }} />
+      ) : !selectedProductId ? (
         <EmptyState icon={CalendarRange} title="No product selected" hint="Select a product above to see its monthly creative review." className="min-h-[420px]" />
       ) : loading && !data ? (
         <ProgressiveSection title="Monthly review" description="Loading the stored review…" active cards={4} />

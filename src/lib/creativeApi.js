@@ -75,6 +75,7 @@ export const creativeApi = {
   getAdVideo: (productId, adId, fresh = false) => request("/insights/video", { method: "POST", body: { productId, adId, fresh } }),
   runTrending: (productId) => request("/insights/trending/run", { method: "POST", body: { productId } }),
   getMonthlyReview: (productId) => request(`/monthly-review?productId=${encodeURIComponent(productId)}`),
+  getStrategyMap: (productId) => request(`/monthly-review/map?productId=${encodeURIComponent(productId)}`),
   runMonthlyReview: (productId) => request("/monthly-review/run", { method: "POST", body: { productId } }),
   saveMonthlyReviewNameFilter: (productId, value) => request("/monthly-review/name-filter", { method: "PUT", body: { productId, value } }),
   saveAdNameFilter: (productId, filter) => request("/insights/ad-name-filter", { method: "PATCH", body: { productId, filter } }),
