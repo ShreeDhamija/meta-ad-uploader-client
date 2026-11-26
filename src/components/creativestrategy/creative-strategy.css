@@ -5854,3 +5854,25 @@ html body #root .creative-strategy button.cs-monthly-filter-button:hover { borde
 .cs-ad-drawer__actions { display: flex; flex-shrink: 0; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 14px 22px 18px; border-top: 1px solid rgba(108, 52, 3, 0.18); background: #fff; }
 .cs-ad-drawer__actions .cs-primary-button { display: inline-flex; align-items: center; gap: 6px; }
 .cs-ad-drawer__actions p { flex: 1 1 200px; margin: 0; }
+
+/* Weekly card: the ad an anchored concept builds on (opens the Insights drawer). */
+.cs-weekly-anchor {
+  display: flex; width: 100%; align-items: center; gap: 10px; margin-bottom: 14px; padding: 8px 10px;
+  border: 1px solid rgba(108, 52, 3, 0.2); border-radius: 16px; color: #3b2c26; background: #fff; text-align: left;
+}
+.cs-weekly-anchor.is-link { cursor: pointer; transition: border-color 0.15s ease, background-color 0.15s ease; }
+.cs-weekly-anchor.is-link:hover { border-color: rgba(108, 52, 3, 0.45); background: #fdf8f4; }
+.cs-weekly-anchor.is-link:disabled { cursor: progress; opacity: 0.8; }
+.cs-weekly-anchor__thumb { width: 40px; height: 40px; flex-shrink: 0; border-radius: 10px; object-fit: cover; background: #f5f0eb; }
+.cs-weekly-anchor__thumb.is-empty { display: grid; place-items: center; color: #c8a58c; }
+.cs-weekly-anchor__label { display: block; color: #8a7469; font-size: 11px; font-weight: 500; }
+.cs-weekly-anchor__name { display: block; overflow: hidden; font-size: 13px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.cs-weekly-anchor__meta { display: block; color: #6d605a; font-size: 11px; }
+.cs-weekly-anchor__external { display: grid; width: 30px; height: 30px; flex-shrink: 0; place-items: center; border-radius: 999px; color: #6c3403; }
+.cs-weekly-anchor__external:hover { background: #fdf3ec; }
+
+.cs-ad-drawer__manager-link {
+  display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border: 1px solid rgba(108, 52, 3, 0.25);
+  border-radius: 999px; color: #6c3403; font-size: 11px; font-weight: 500;
+}
+.cs-ad-drawer__manager-link:hover { background: #fdf3ec; }

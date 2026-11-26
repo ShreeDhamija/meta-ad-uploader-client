@@ -3,9 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import PropTypes from "prop-types";
 import {
-  CircleCheck, CircleX, ClipboardList, ImagePlus, Loader2, MousePointerClick,
+  ChevronRight, CircleCheck, CircleX, ClipboardList, ExternalLink, ImagePlus, Loader2, MousePointerClick, Zap,
 } from "lucide-react";
+import { toast } from "sonner";
 import { creativeApi } from "@/lib/creativeApi";
+import { AdMediaProvider, AdThumbImg } from "../meta-media";
+import AdDetailDrawer, { adsManagerAdUrl } from "./AdDetailDrawer";
 import RunModelControls from "../RunModelControls";
 import { useRunModels } from "../useRunModels";
 import { RUN_OPERATIONS } from "../run-model-operations";
@@ -57,8 +60,9 @@ const STATUSES = [
 
 export default function WeeklyView({ ctx }) {
   const {
-    selectedBrandId, renderHeaderActions,
+    selectedBrandId, selectedProductId, selectedBrand, renderHeaderActions,
   } = ctx;
+  const adAccountId = selectedBrand?.metaAdAccountId || null;
   const models = useRunModels(selectedBrandId);
   const currentBrand = useRef(selectedBrandId);
   currentBrand.current = selectedBrandId;
@@ -74,6 +78,23 @@ export default function WeeklyView({ ctx }) {
   const [startingStatic, setStartingStatic] = useState(null);
   const [loading, setLoading] = useState(false);
   const [updating, setUpdating] = useState(null);
+  // The ad a card builds on, opened in the same drawer Insights uses. The card
+  // only carries a summary, so the full analyzed row is loaded on click.
+  const [anchorDrawerAd, setAnchorDrawerAd] = useState(null);
+  const [openingAnchor, setOpeningAnchor] = useState(null);
+
+  const openAnchor = async (adId) => {
+    if (!selectedProductId || !adId || openingAnchor) return;
+    setOpeningAnchor(adId);
+    try {
+      const { ad } = await creativeApi.getInsightAd(selectedProductId, adId);
+      setAnchorDrawerAd(ad);
+    } catch (error) {
+      toast.error(error.message || "Couldn't load that ad");
+    } finally {
+      setOpeningAnchor(null);
+    }
+  };
 
   const load = useCallback(async (brandId, { silent = false } = {}) => {
     const request = ++loadRequest.current;
@@ -246,6 +267,7 @@ export default function WeeklyView({ ctx }) {
 
 
   return (
+    <AdMediaProvider key={selectedProductId || "none"} productId={selectedProductId}>
     <div className="space-y-5">
       {renderHeaderActions(
         <div className="flex flex-wrap items-center gap-3">
@@ -334,6 +356,9 @@ export default function WeeklyView({ ctx }) {
                             updateStatus={updateStatus}
                             makeBrief={makeBrief}
                             makeStatic={makeStatic}
+                            openAnchor={selectedProductId ? openAnchor : null}
+                            openingAnchor={openingAnchor}
+                            adAccountId={adAccountId}
                           />
                         ))}
                       </div>
@@ -345,7 +370,15 @@ export default function WeeklyView({ ctx }) {
           )}
         </>
       )}
+      <AdDetailDrawer
+        ad={anchorDrawerAd}
+        onClose={() => setAnchorDrawerAd(null)}
+        productId={selectedProductId}
+        sourceAd={anchorDrawerAd}
+        adAccountId={adAccountId}
+      />
     </div>
+    </AdMediaProvider>
   );
 }
 
@@ -361,7 +394,7 @@ function SegmentedFilter({ items, value, onChange, counts, compact = false }) {
   );
 }
 
-function ConceptCard({ idea, brief, briefing, generatingStatics, updating, approve, updateStatus, makeBrief, makeStatic }) {
+function ConceptCard({ idea, brief, briefing, generatingStatics, updating, approve, updateStatus, makeBrief, makeStatic, openAnchor = null, openingAnchor = null, adAccountId = null }) {
   const writing = briefing.has(idea.id);
   const isStatic = idea.format === "static";
   const statics = idea.statics || [];
@@ -385,6 +418,7 @@ function ConceptCard({ idea, brief, briefing, generatingStatics, updating, appro
       </header>
 
       <div className="cs-weekly-card__body">
+        <AnchorAdRow idea={idea} onOpen={openAnchor} opening={openingAnchor === idea.anchorAdId} adAccountId={adAccountId} />
         <p className="text-sm font-normal leading-6 text-[#5f524c]">{idea.conceptDescription}</p>
         {idea.suggestedAngle && <p className="mt-4 text-sm text-[#3b2c26]"><strong>Angle:</strong> <span className="underline decoration-[#6c3403]/35 underline-offset-4">{idea.suggestedAngle}</span></p>}
         {idea.hypothesis && <p className="mt-3 text-xs font-normal leading-5 text-[#6d605a]"><strong className="text-[#4f4039]">Hypothesis:</strong> {idea.hypothesis}</p>}
@@ -435,6 +469,46 @@ function ConceptCard({ idea, brief, briefing, generatingStatics, updating, appro
       </div>
     </article>
   );
+}
+
+const ANCHOR_LABELS = { iteration: "Iterates on", format_transformation: "Format flip of", big_swing: "Big swing on" };
+const anchorMoney = (n) => `$${Math.round(Number(n) || 0).toLocaleString()}`;
+
+/**
+ * The ad an anchored concept builds on, by its real Meta ad name. Opens that
+ * ad's full analysis in the Insights drawer; an ad no longer in Insights
+ * keeps its saved name and links to Ads Manager instead.
+ */
+function AnchorAdRow({ idea, onOpen = null, opening = false, adAccountId = null }) {
+  if (!idea.anchorAdId) return null;
+  const ad = idea.anchorAd;
+  const name = ad?.adName || idea.anchorAdName || "Unnamed ad";
+  const label = ANCHOR_LABELS[idea.tier] || "Built on";
+  const managerUrl = adsManagerAdUrl(adAccountId, idea.anchorAdId);
+  const stats = ad ? [
+    Number(ad.spend) > 0 && `${anchorMoney(ad.spend)} spend`,
+    Number(ad.costPerPurchase) > 0 && `${anchorMoney(ad.costPerPurchase)} CPA`,
+  ].filter(Boolean) : [];
+  const thumb = <AdThumbImg ad={ad} className="cs-weekly-anchor__thumb" fallback={<span className="cs-weekly-anchor__thumb is-empty"><Zap className="h-4 w-4" /></span>} />;
+  const text = <span className="min-w-0 flex-1">
+    <span className="cs-weekly-anchor__label">{label}</span>
+    <span className="cs-weekly-anchor__name" title={name}>{name}</span>
+    {ad ? stats.length > 0 && <span className="cs-weekly-anchor__meta">{stats.join(" · ")}</span>
+      : <span className="cs-weekly-anchor__meta">No longer in Insights</span>}
+  </span>;
+
+  if (ad && onOpen) {
+    return <button type="button" className="cs-weekly-anchor is-link" onClick={() => onOpen(idea.anchorAdId)} disabled={opening} title="Open this ad's analysis">
+      {thumb}{text}
+      {opening ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <ChevronRight className="h-4 w-4 shrink-0" />}
+    </button>;
+  }
+  return <div className="cs-weekly-anchor">
+    {ad ? thumb : <span className="cs-weekly-anchor__thumb is-empty"><Zap className="h-4 w-4" /></span>}{text}
+    {managerUrl && <a href={managerUrl} target="_blank" rel="noopener noreferrer" className="cs-weekly-anchor__external" title="Open in Ads Manager">
+      <ExternalLink className="h-4 w-4" />
+    </a>}
+  </div>;
 }
 
 /** Statics made from this concept (newest first). Each is also in Generate → Statics. */
@@ -490,7 +564,11 @@ ConceptCard.propTypes = {
   updateStatus: PropTypes.func.isRequired,
   makeBrief: PropTypes.func.isRequired,
   makeStatic: PropTypes.func.isRequired,
+  openAnchor: PropTypes.func,
+  openingAnchor: PropTypes.string,
+  adAccountId: PropTypes.string,
 };
+AnchorAdRow.propTypes = { idea: PropTypes.object.isRequired, onOpen: PropTypes.func, opening: PropTypes.bool, adAccountId: PropTypes.string };
 ConceptStatics.propTypes = { statics: PropTypes.array.isRequired, generating: PropTypes.bool.isRequired };
 Brief.propTypes = { brief: PropTypes.object.isRequired };
 BriefSection.propTypes = { title: PropTypes.string.isRequired, children: PropTypes.node.isRequired };
