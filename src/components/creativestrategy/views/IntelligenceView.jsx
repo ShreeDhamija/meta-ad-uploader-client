@@ -17,7 +17,7 @@ import { useJobRunner } from "../JobsContext";
 import { PerformerCard, SpendCpaChart, TopPerformers } from "./InsightsPerformance";
 import { AdMediaProvider } from "../meta-media";
 import RunBy from "../run-by";
-import AdDetailDrawer, { CreativeThumbnail, HookDetails, MediaTag, computeAccountAverages, plainLabel } from "./AdDetailDrawer";
+import AdDetailDrawer, { CreativeThumbnail, HookDetails, MediaTag, computeAccountAverages } from "./AdDetailDrawer";
 
 const money = (n) => `$${Math.round(n || 0).toLocaleString()}`;
 const mean = (arr) => (arr.length ? arr.reduce((s, x) => s + x, 0) / arr.length : null);
@@ -412,11 +412,6 @@ function ExpandableClusters({ items, onOpenAd }) {
 }
 ExpandableClusters.propTypes = { items: PropTypes.array.isRequired, onOpenAd: PropTypes.func };
 
-// Wrapped in a <section> so it gets the same padding as the persona rows' detail blocks.
-const tagPills = (tags) => {
-  const visible = tags.filter(Boolean);
-  return visible.length > 0 && <section><div className="cs-intel-tag-row">{visible.map((tag, tagIndex) => <span key={tag} className={`cs-intel-attribute-pill is-tone-${tagIndex % 4}`}>{tag}</span>)}</div></section>;
-};
 
 /** learning_sheet_level: the audit's confidence in a pattern (its own call, not the brand's Learnings list). */
 const CONFIDENCE_HINT = {
@@ -436,13 +431,9 @@ function StrategicPatterns({ patterns, ads, onOpenAd }) {
       title: pattern.pattern_name || "Pattern",
       description: pattern.pattern || pattern.insight || "",
       badge: level && <span className="cs-intel-attribute-pill is-tone-1" title={CONFIDENCE_HINT[level] || undefined}>Confidence: {humanize(pattern.learning_sheet_level)}</span>,
-      pills: [`${pct.toFixed(0)}% of spend`, `${clusterAdCount(pattern, matched)} ads`, pattern.saturation_risk && `${humanize(pattern.saturation_risk)} saturation risk`],
+      pills: [`${pct.toFixed(0)}% of spend`, pattern.emotional_driver && `Driver: ${pattern.emotional_driver}`, `${clusterAdCount(pattern, matched)} ads`, pattern.saturation_risk && `${humanize(pattern.saturation_risk)} saturation risk`],
       sharePct: pct,
       ads: matched,
-      details: <>
-        {Array.isArray(pattern.quotes) && pattern.quotes.length > 0 && <section><h3 className="cs-intel-subsection-title">In the ads</h3><ul className="mt-1 space-y-1">{pattern.quotes.map((quote, quoteIndex) => <li key={quoteIndex} className="text-[13px] italic text-neutral-700">“{quote}”</li>)}</ul></section>}
-        {tagPills([pattern.emotional_driver && `Driver: ${pattern.emotional_driver}`, pattern.awareness_level && `Awareness: ${plainLabel(pattern.awareness_level)}`, pattern.sophistication_stage && `Sophistication stage ${pattern.sophistication_stage}`, pattern.uses_customer_language && "Uses customer language"])}
-      </>,
     };
   });
   return <InsightSection title="Most common patterns by spend" description="The storytelling moves your ads use most, ranked by how much spend sits behind them. A pattern is how an ad makes its point, not just its topic. Confidence is the analysis's read: Gospel (a rule for this account), Tested, Suspected (early signal) or Discredited.">
@@ -676,7 +667,7 @@ MetricPills.propTypes = { items: PropTypes.array.isRequired, className: PropType
 // How each Ad angles bucket is decided (weekly/angle-inventory.ts).
 const ANGLE_STATUS_HELP = {
   proven: "The main angle of at least one analyzed ad.",
-  in_research: "Listed as an angle for one of your Research personas, but no analyzed ad leads with it yet. Research suggests it should land; it hasn't been tried. Open an angle to see which persona it's for and why.",
+  in_research: "Listed as an angle for one of your Research personas, but no analyzed ad leads with it yet. Research suggests it should land.",
   untapped: "Flagged as a gap by the ad analysis (an angle a persona responds to, or an awareness stage, that no current ad covers), and not in your Research persona lists. Open an angle to see the reasoning and ideas to test it.",
 };
 
@@ -721,7 +712,9 @@ function AngleGroups({ groups, ads, onOpenAd }) {
             </div>
             {ANGLE_STATUS_HELP[status] && <p className="mb-2 text-xs leading-relaxed text-neutral-500">{ANGLE_STATUS_HELP[status]}</p>}
             {scrolls
-              ? <div className="cs-intel-angle-group__scroll"><CsScrollArea className="absolute inset-0" viewportClassName="h-full"><div className="pr-3">{pills}</div></CsScrollArea></div>
+              // Radix sets an inline position: relative on the scroll root, so the
+              // absolute positioning lives on a wrapper div.
+              ? <div className="cs-intel-angle-group__scroll"><div className="cs-intel-angle-group__scroll-fill"><CsScrollArea className="h-full" viewportClassName="h-full"><div className="pr-3">{pills}</div></CsScrollArea></div></div>
               : pills}
           </section>;
         })}

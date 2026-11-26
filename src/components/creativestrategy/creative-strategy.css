@@ -4640,6 +4640,11 @@ html body #root .creative-strategy .cs-research-intel.is-open.is-stuck button.cs
   min-height: 160px;
 }
 
+.cs-intel-angle-group__scroll-fill {
+  position: absolute;
+  inset: 0;
+}
+
 /* Stacked (one card per row): nothing to match, so give the list its own height. */
 @media (max-width: 1100px) {
   .cs-intel-angle-group__scroll { min-height: 260px; }
