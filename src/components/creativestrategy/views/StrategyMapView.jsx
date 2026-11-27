@@ -331,6 +331,8 @@ function Grid({ grid, axis, media, activeId, onSelect }) {
           const rowIdeas = axis === "stage" || axis === "angle" ? 0 : row.ideas.length;
           return (
             <div key={row.persona.key} className="cs-sm-row">
+              {/* The pinned column: a plain white backing, so nothing shows around the card's corners. */}
+              <div className="cs-sm-pin">
               <div className="cs-sm-rowhead" title={row.persona.description || undefined}>
                 <span className={`cs-sm-source is-${row.persona.source}`}>{SOURCE_LABEL[row.persona.source] || "Research"}</span>
                 <h3>{row.persona.name}</h3>
@@ -338,6 +340,7 @@ function Grid({ grid, axis, media, activeId, onSelect }) {
                   {row.stats.count ? <>{money(row.stats.spend)} · {statLine(row.stats, grid.rules.baseline)}</> : "No ads yet"}
                   {rowIdeas > 0 && <><br />{plural(rowIdeas, "idea")} queued</>}
                 </div>
+              </div>
               </div>
               {row.cells.map((cell) => (
                 <button
