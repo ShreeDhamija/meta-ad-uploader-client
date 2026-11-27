@@ -17,7 +17,6 @@ import { EmptyState, ErrorBanner, ProgressiveSection } from "../ui";
 import { useJobRunner } from "../JobsContext";
 import RunBy from "../run-by";
 import StrategyMapView from "./StrategyMapView";
-import { MAP_LAYOUTS } from "../strategy-map";
 
 // The map is the default; the original review (leaderboard + concepts per
 // launch month) stays as its own tab.
@@ -139,27 +138,20 @@ export default function MonthlyReviewView({ ctx }) {
       )}
       <ErrorBanner message={err} />
 
+      {/* Hidden for now: the Strategy map / Month by month switch. The month-by-month
+          view below is untouched; bring this back to reach it again.
       {selectedProductId && (
         <div className="cs-monthly-tabs">
           <div className="cs-weekly-switchers-row">
-            {/* Hidden for now: the Strategy map / Month by month switch. The month-by-month
-                view below is untouched; bring this back to reach it again.
             <div className="cs-weekly-switcher" role="tablist" aria-label="Monthly review view">
               {REVIEW_TABS.map((t) => (
                 <button key={t.key} type="button" role="tab" aria-selected={tab === t.key} onClick={() => setTab(t.key)} className={`cs-weekly-switcher__item ${tab === t.key ? "is-active" : ""}`}>{t.label}</button>
               ))}
             </div>
-            */}
-            {tab === "map" && (
-              <div className="cs-weekly-switcher" role="tablist" aria-label="Map layout">
-                {MAP_LAYOUTS.map((l) => (
-                  <button key={l.key} type="button" role="tab" aria-selected={mapLayout === l.key} onClick={() => setMapLayout(l.key)} className={`cs-weekly-switcher__item ${mapLayout === l.key ? "is-active" : ""}`}>{l.label}</button>
-                ))}
-              </div>
-            )}
           </div>
         </div>
       )}
+      */}
 
       {tab === "map" && selectedProductId ? (
         <StrategyMapView ctx={ctx} view={mapLayout} onViewChange={setMapLayout} refreshKey={snapshot?.computedAt ?? null} /* While the switch is hidden there is nowhere to send "see every concept": onOpenMonth={(m) => { setMonth(m); setTab("months"); }} */ />

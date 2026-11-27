@@ -5675,7 +5675,11 @@ html body #root .creative-strategy button.cs-sm-alert:hover, html body #root .cr
 .cs-sm-alert__content { display: grid; max-width: 380px; gap: 8px; padding: 12px 14px; border-radius: 12px; color: #fff; background: #310b00; font-size: 11.5px; line-height: 1.5; }
 
 /* ── Toolbar ────────────────────────────────────────────────────────────── */
-.cs-sm-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; }
+.cs-sm-toolbar { display: flex; align-items: center; gap: 10px 12px; }
+.cs-sm-toolbar > .cs-weekly-switcher { flex-shrink: 0; }
+.cs-sm-summary { white-space: nowrap; }
+.creative-strategy .cs-sm-toolbar button.cs-weekly-filter-select { width: auto; min-width: 216px; flex-shrink: 0; }
+@media (max-width: 1100px) { .cs-sm-toolbar { flex-wrap: wrap; } }
 .cs-sm-toolbar__group { display: flex; min-width: 0; align-items: center; gap: 8px; }
 .cs-sm-toolbar__group > span { flex-shrink: 0; color: #8a746c; font-size: 11px; font-weight: 600; }
 .cs-sm-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; color: #6c5a50; font-size: 11px; }
@@ -5696,9 +5700,10 @@ html body #root .creative-strategy button.cs-sm-alert:hover, html body #root .cr
 @media (max-width: 1180px) { .cs-sm-layout.has-detail { grid-template-columns: minmax(0, 1fr); } }
 .cs-sm-scroll { min-width: 0; }
 .cs-sm-scroll [data-radix-scroll-area-viewport] { padding: 3px 3px 14px; }
-.cs-sm-grid { display: grid; min-width: calc(196px + var(--sm-cols) * 123px); gap: 8px; }
+.cs-sm-grid { position: relative; display: grid; min-width: calc(196px + var(--sm-cols) * 123px); gap: 8px; }
 /* The persona column stays put while the columns scroll under it. */
-.cs-sm-row > :first-child { position: sticky; left: 0; z-index: 1; box-shadow: -4px 0 0 var(--cs-surface, #fff); }
+.cs-sm-row > :first-child { position: sticky; left: 0; z-index: 1; box-shadow: -4px 0 0 var(--cs-surface, #fff); transition: box-shadow 150ms ease; }
+.cs-sm-grid.is-scrolled .cs-sm-row > :first-child { box-shadow: -4px 0 0 var(--cs-surface, #fff), 8px 0 12px -6px rgba(59, 23, 11, 0.22); }
 .cs-sm-row > .cs-sm-colhead:first-child { background: var(--cs-surface, #fff); }
 .cs-sm-row { display: grid; grid-template-columns: 196px repeat(var(--sm-cols), minmax(115px, 1fr)); gap: 8px; }
 .cs-sm-colhead { display: grid; align-content: end; gap: 4px; padding: 0 4px 4px; }
@@ -5723,9 +5728,10 @@ html body #root .creative-strategy button.cs-sm-cell:hover { border-color: var(-
    !important, so a clicked cell keeps its own border and ring the same way. */
 html body #root .creative-strategy button.cs-sm-cell:focus, html body #root .creative-strategy button.cs-sm-card:focus { border-color: var(--sm-line) !important; }
 html body #root .creative-strategy button.cs-sm-cell.is-selected, html body #root .creative-strategy .cs-sm-card.is-selected { border-color: #3b170b !important; box-shadow: 0 0 0 2px #3b170b !important; }
-/* The first never-run column sits after a divider. */
-.cs-sm-row > .is-unused-start { position: relative; margin-left: 14px; }
-.cs-sm-row > .is-unused-start::before { position: absolute; top: -4px; bottom: -4px; left: -12px; width: 2px; border-radius: 2px; background: rgba(108, 52, 3, 0.3); content: ""; }
+/* One line down the gap before the first never-run column (--sm-split). The
+   columns are equal, so its place follows from the column count. */
+.cs-sm-divider { position: absolute; top: 0; bottom: 0; width: 1px; background: rgba(108, 52, 3, 0.38); pointer-events: none;
+  left: calc(196px + 4px + var(--sm-split) * ((100% - 196px - var(--sm-cols) * 8px) / var(--sm-cols) + 8px)); }
 .cs-sm-suggested { margin-left: 6px; padding: 1px 7px; border-radius: 999px; color: #fff; background: #c2410c; font-size: 9.5px; letter-spacing: 0.02em; }
 .cs-sm-cell__label { font-size: 10px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; }
 .cs-sm-cell__spend { color: #30150a; font-size: 15px; font-weight: 650; font-variant-numeric: tabular-nums; }

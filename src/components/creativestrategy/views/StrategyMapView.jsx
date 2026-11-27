@@ -16,7 +16,7 @@ import { CsScrollArea, EmptyState, ErrorBanner, ProgressiveSection } from "../ui
 import { useJobs } from "../JobsContext";
 import { AdMediaProvider, AdThumbImg } from "../meta-media";
 import AdDetailDrawer from "./AdDetailDrawer";
-import { COLUMN_AXES, DEFAULT_AXIS, STAGE_LABELS, SUGGESTED, VERDICTS, briefNotes, buildBoard, buildGrid, cpaDelta, money, monthOptions } from "../strategy-map";
+import { COLUMN_AXES, DEFAULT_AXIS, MAP_LAYOUTS, STAGE_LABELS, SUGGESTED, VERDICTS, briefNotes, buildBoard, buildGrid, cpaDelta, money, monthOptions } from "../strategy-map";
 
 const LEGEND = ["work", "mixed", "bad", "thin", "idea", "none"];
 const ADS_SHOWN = 4;
@@ -189,6 +189,11 @@ export default function StrategyMapView({ ctx, view = "grid", onViewChange = () 
         <ErrorBanner message={err} />
 
         <div className="cs-sm-toolbar">
+          <div className="cs-weekly-switcher" role="tablist" aria-label="Map layout">
+            {MAP_LAYOUTS.map((l) => (
+              <button key={l.key} type="button" role="tab" aria-selected={view === l.key} onClick={() => onViewChange(l.key)} className={`cs-weekly-switcher__item ${view === l.key ? "is-active" : ""}`}>{l.label}</button>
+            ))}
+          </div>
           {view === "grid" && (
             <div className="cs-weekly-switcher" role="tablist" aria-label="Columns">
               {COLUMN_AXES.map((a) => (
@@ -299,14 +304,18 @@ const IdeaChip = ({ count }) => (count > 0 ? <span className="cs-sm-chip">{plura
 IdeaChip.propTypes = { count: PropTypes.number.isRequired };
 
 function Grid({ grid, axis, media, activeId, onSelect }) {
-  const style = { "--sm-cols": grid.columns.length };
+  // Scrolled sideways: the pinned persona column casts a shadow on what passes under it.
+  const [scrolled, setScrolled] = useState(false);
+  const split = grid.columns.findIndex((col) => col.startsUnused);
+  const style = { "--sm-cols": grid.columns.length, "--sm-split": split };
   return (
-    <CsScrollArea axis="x" className="cs-sm-scroll">
-      <div className="cs-sm-grid" style={style}>
+    <CsScrollArea axis="x" className="cs-sm-scroll" viewportProps={{ onScroll: (event) => setScrolled(event.currentTarget.scrollLeft > 0) }}>
+      <div className={`cs-sm-grid ${scrolled ? "is-scrolled" : ""}`} style={style}>
+        {split > 0 && <i className="cs-sm-divider" aria-hidden="true" />}
         <div className="cs-sm-row" aria-hidden="true">
           <div className="cs-sm-colhead"><span>Persona</span></div>
           {grid.columns.map((col) => (
-            <div key={col.key} className={`cs-sm-colhead ${col.startsUnused ? "is-unused-start" : ""}`} title={col.label}>
+            <div key={col.key} className="cs-sm-colhead" title={col.label}>
               <strong>{col.label}</strong>
               {col.isSuggested ? <span>Not matched to the ad angles</span> : col.isUnused ? <span>Not used yet</span> : (
                 <>
@@ -333,7 +342,7 @@ function Grid({ grid, axis, media, activeId, onSelect }) {
               {row.cells.map((cell) => (
                 <button
                   key={cell.id} type="button" data-verdict={cell.verdict} onClick={() => onSelect(cell.id)}
-                  className={`cs-sm-cell ${activeId === cell.id ? "is-selected" : ""} ${cell.startsUnused ? "is-unused-start" : ""}`}
+                  className={`cs-sm-cell ${activeId === cell.id ? "is-selected" : ""}`}
                   aria-label={`${row.persona.name}, ${cell.colLabel}: ${VERDICTS[cell.verdict].label}`} aria-pressed={activeId === cell.id}
                 >
                   {cell.isSuggested ? (
