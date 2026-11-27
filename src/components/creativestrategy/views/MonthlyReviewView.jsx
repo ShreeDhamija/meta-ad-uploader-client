@@ -21,6 +21,7 @@ import { MAP_LAYOUTS } from "../strategy-map";
 
 // The map is the default; the original review (leaderboard + concepts per
 // launch month) stays as its own tab.
+// eslint-disable-next-line no-unused-vars -- kept for the hidden tab switch below
 const REVIEW_TABS = [
   { key: "map", label: "Strategy map", hint: "What exists, what's working, and where the gaps are." },
   { key: "months", label: "Month by month", hint: "Every concept launched each month and the variant that won it." },
@@ -67,6 +68,7 @@ export default function MonthlyReviewView({ ctx }) {
   const [month, setMonth] = useState(null);
   const [dimension, setDimension] = useState("persona");
   const [preview, setPreview] = useState(null);
+  // eslint-disable-next-line no-unused-vars -- setTab is used by the hidden tab switch below
   const [tab, setTab] = useState("map");
   const [mapLayout, setMapLayout] = useState("grid");
   const currentProduct = useRef(selectedProductId);
@@ -140,11 +142,14 @@ export default function MonthlyReviewView({ ctx }) {
       {selectedProductId && (
         <div className="cs-monthly-tabs">
           <div className="cs-weekly-switchers-row">
+            {/* Hidden for now: the Strategy map / Month by month switch. The month-by-month
+                view below is untouched; bring this back to reach it again.
             <div className="cs-weekly-switcher" role="tablist" aria-label="Monthly review view">
               {REVIEW_TABS.map((t) => (
                 <button key={t.key} type="button" role="tab" aria-selected={tab === t.key} onClick={() => setTab(t.key)} className={`cs-weekly-switcher__item ${tab === t.key ? "is-active" : ""}`}>{t.label}</button>
               ))}
             </div>
+            */}
             {tab === "map" && (
               <div className="cs-weekly-switcher" role="tablist" aria-label="Map layout">
                 {MAP_LAYOUTS.map((l) => (
@@ -153,12 +158,11 @@ export default function MonthlyReviewView({ ctx }) {
               </div>
             )}
           </div>
-          <p className="text-[11.5px] text-neutral-500">{REVIEW_TABS.find((t) => t.key === tab).hint}</p>
         </div>
       )}
 
       {tab === "map" && selectedProductId ? (
-        <StrategyMapView ctx={ctx} view={mapLayout} onViewChange={setMapLayout} refreshKey={snapshot?.computedAt ?? null} onOpenMonth={(m) => { setMonth(m); setTab("months"); }} />
+        <StrategyMapView ctx={ctx} view={mapLayout} onViewChange={setMapLayout} refreshKey={snapshot?.computedAt ?? null} /* While the switch is hidden there is nowhere to send "see every concept": onOpenMonth={(m) => { setMonth(m); setTab("months"); }} */ />
       ) : !selectedProductId ? (
         <EmptyState icon={CalendarRange} title="No product selected" hint="Select a product above to see its monthly creative review." className="min-h-[420px]" />
       ) : loading && !data ? (

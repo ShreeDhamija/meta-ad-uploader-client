@@ -92,7 +92,8 @@ function columnsFor(map, creatives, axis) {
     const spend = creatives.filter((c) => columnValue(c, axis) === key).reduce((s, c) => s + c.spend, 0);
     return { key, label, spend, share: total > 0 ? spend / total : 0 };
   };
-  const untagged = axis === "hook" ? "No spoken hook" : axis === "format" ? "No format" : axis === "angle" ? "No angle" : "No stage";
+  // Only video ads get a hook style, so the ads without one are the statics.
+  const untagged = axis === "hook" ? "Statics" : axis === "format" ? "No format" : axis === "angle" ? "No angle" : "No stage";
   if (axis === "stage") {
     const cols = map.stages.map((s) => column(s, STAGE_LABELS[s] || s));
     return creatives.some((c) => !c.stage) ? [...cols, column(NO_VALUE, untagged)] : cols;
@@ -100,11 +101,13 @@ function columnsFor(map, creatives, axis) {
   // Hook style, angle and format have no fixed list: the values in use, biggest first.
   const keys = [...new Set(creatives.map((c) => columnValue(c, axis)))];
   const cols = keys.map((k) => column(k, k === NO_VALUE ? untagged : k.charAt(0).toUpperCase() + k.slice(1))).sort((a, b) => (a.key === NO_VALUE) - (b.key === NO_VALUE) || b.spend - a.spend);
-  // Format comes from a preset list, so the ones this account has never run
-  // close the row as open columns.
-  if (axis === "format") {
+  // Format and hook style come from preset lists, so the ones this account
+  // has never run close the row as open columns, after a divider.
+  if (axis === "format" || axis === "hook") {
     const used = new Set(keys.map((k) => k.toLowerCase()));
-    return [...cols, ...(map.formats || []).filter((f) => !used.has(f.toLowerCase())).map((f) => ({ key: f, label: f, spend: 0, share: 0, isUnused: true }))];
+    const unused = ((axis === "format" ? map.formats : map.hookStyles) || []).filter((f) => !used.has(f.toLowerCase()))
+      .map((f, i) => ({ key: f, label: f.charAt(0).toUpperCase() + f.slice(1), spend: 0, share: 0, isUnused: true, startsUnused: i === 0 }));
+    return [...cols, ...unused];
   }
   // Ad angles and Research angles are named independently, so Research gets
   // its own closing column instead of being matched into the running ones.
@@ -140,7 +143,7 @@ export function buildGrid(map, { axis = DEFAULT_AXIS, month = null } = {}) {
       const gap = onStage && persona.isPersona ? map.gaps.find((g) => g.personaKey === persona.key && g.stage === col.key) || null : null;
       const stats = summarize(list);
       const verdict = stats.count ? verdictOf(stats, rules) : cellIdeas.length ? "idea" : "none";
-      return { id: `${persona.key}|${col.key}`, personaKey: persona.key, colKey: col.key, colLabel: col.label, creatives: list, ideas: cellIdeas, gap, stats, verdict };
+      return { id: `${persona.key}|${col.key}`, personaKey: persona.key, colKey: col.key, colLabel: col.label, startsUnused: Boolean(col.startsUnused), creatives: list, ideas: cellIdeas, gap, stats, verdict };
     });
     const stats = summarize(mine);
     return { persona, cells, stats, verdict: verdictOf(stats, rules), ideas };
@@ -246,11 +249,12 @@ export function monthOptions(map) {
 }
 
 /** Everything a one-click brief needs to know about where it was started from. */
-export function briefNotes({ stage, angle, format, direction, why }) {
+export function briefNotes({ stage, angle, format, hookStyle, direction, why }) {
   return [
     stage && `Awareness stage: ${STAGE_LABELS[stage] || stage}.`,
     angle && `Angle: ${angle}.`,
     format && `Creative format: ${format}.`,
+    hookStyle && `Hook style: ${hookStyle}.`,
     direction && `Direction from the creative strategy audit: ${direction}`,
     why && `Why this matters: ${why}`,
   ].filter(Boolean).join("\n");

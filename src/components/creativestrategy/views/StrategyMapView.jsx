@@ -10,6 +10,7 @@ import PropTypes from "prop-types";
 import { AlertCircle, ChevronDown, Info, Loader2, Play, Plus, Trophy, X, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { creativeApi } from "@/lib/creativeApi";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { CsScrollArea, EmptyState, ErrorBanner, ProgressiveSection } from "../ui";
 import { useJobs } from "../JobsContext";
@@ -89,10 +90,11 @@ export default function StrategyMapView({ ctx, view = "grid", onViewChange = () 
       const stage = axis === "stage" && STAGE_LABELS[cell.colKey] ? cell.colKey : null;
       const angle = axis === "angle" && cell.colKey !== "__none" ? cell.colKey : null;
       const format = axis === "format" && cell.colKey !== "__none" ? cell.colKey : null;
+      const hookStyle = axis === "hook" && cell.colKey !== "__none" ? cell.colKey : null;
       out.set(cell.id, {
         eyebrow: `Persona × ${axisLabel}`, title: `${row.persona.name} × ${cell.colLabel}`, verdict: cell.verdict, stats: cell.stats,
         creatives: cell.creatives, ideas: cell.ideas, gap: cell.gap,
-        create: row.persona.isPersona ? { persona: row.persona.name, stage, angle, format, direction: cell.gap?.direction, why: cell.gap?.why } : null,
+        create: row.persona.isPersona ? { persona: row.persona.name, stage, angle, format, hookStyle, direction: cell.gap?.direction, why: cell.gap?.why } : null,
       });
     }
     for (const card of [...board.scale, ...board.fix, ...board.stop, ...board.early]) out.set(`card|${card.id}`, {
@@ -133,7 +135,6 @@ export default function StrategyMapView({ ctx, view = "grid", onViewChange = () 
   const newBrief = (create, format, key) => run(key, async () => {
     const { jobId } = await creativeApi.generateConceptBrief({ productId: selectedProductId, format, count: 1, persona: create.persona, notes: briefNotes(create) || undefined });
     track(jobId, { kind: "generate_brief", brandId: selectedBrandId, productId: selectedProductId, label: `${format === "video" ? "Video" : "Static"} brief · ${create.persona}` });
-    toast.success(`${format === "video" ? "Video" : "Static"} brief started`, { description: "It will be in Generate, under Briefs, when it finishes.", action: { label: "Open Generate", onClick: () => goTo("generate") } });
   });
   const ideaBrief = (idea) => run(`brief|${idea.id}`, async () => {
     const { jobId } = await creativeApi.generateBrief(idea.id, selectedProductId);
@@ -196,17 +197,13 @@ export default function StrategyMapView({ ctx, view = "grid", onViewChange = () 
             </div>
           )}
           {months.length > 0 && (
-            <div className="cs-sm-toolbar__group">
-              <span>Launched</span>
-              <div className="cs-weekly-switcher" role="tablist" aria-label="Launch month">
-                <button type="button" role="tab" aria-selected={!month} onClick={() => setMonth(null)} className={`cs-weekly-switcher__item ${!month ? "is-active" : ""}`}>All months <span>{map.creatives.length}</span></button>
-                {months.map((m) => (
-                  <button key={m.month} type="button" role="tab" aria-selected={month === m.month} onClick={() => setMonth(m.month)} className={`cs-weekly-switcher__item ${month === m.month ? "is-active" : ""}`} title={`${m.label}: ${plural(m.concepts, "concept")} launched, ${m.mapped} on the map`}>
-                    {m.label.split(" ")[0]} <span>{m.mapped}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
+            <Select value={month || "all"} onValueChange={(value) => setMonth(value === "all" ? null : value)}>
+              <SelectTrigger className="cs-weekly-filter-select cs-panel-select" aria-label="Launch month"><SelectValue /></SelectTrigger>
+              <SelectContent className="cs-select-content bg-white">
+                <SelectItem value="all">Launched: all months ({map.creatives.length})</SelectItem>
+                {months.map((m) => <SelectItem key={m.month} value={m.month}>Launched: {m.label} ({m.mapped})</SelectItem>)}
+              </SelectContent>
+            </Select>
           )}
           <div className="cs-sm-summary">
             {view === "grid" && topColumn && <span>Most spend: <strong>{Math.round(topColumn.share * 100)}% {topColumn.label}</strong></span>}
@@ -309,7 +306,7 @@ function Grid({ grid, axis, media, activeId, onSelect }) {
         <div className="cs-sm-row" aria-hidden="true">
           <div className="cs-sm-colhead"><span>Persona</span></div>
           {grid.columns.map((col) => (
-            <div key={col.key} className="cs-sm-colhead" title={col.label}>
+            <div key={col.key} className={`cs-sm-colhead ${col.startsUnused ? "is-unused-start" : ""}`} title={col.label}>
               <strong>{col.label}</strong>
               {col.isSuggested ? <span>Not matched to the ad angles</span> : col.isUnused ? <span>Not used yet</span> : (
                 <>
@@ -336,7 +333,7 @@ function Grid({ grid, axis, media, activeId, onSelect }) {
               {row.cells.map((cell) => (
                 <button
                   key={cell.id} type="button" data-verdict={cell.verdict} onClick={() => onSelect(cell.id)}
-                  className={`cs-sm-cell ${activeId === cell.id ? "is-selected" : ""}`}
+                  className={`cs-sm-cell ${activeId === cell.id ? "is-selected" : ""} ${cell.startsUnused ? "is-unused-start" : ""}`}
                   aria-label={`${row.persona.name}, ${cell.colLabel}: ${VERDICTS[cell.verdict].label}`} aria-pressed={activeId === cell.id}
                 >
                   {cell.isSuggested ? (
@@ -522,7 +519,7 @@ IdeaCard.propTypes = { idea: PropTypes.object.isRequired, actions: actionsShape.
 function DetailPanel({ detail, baseline, media, actions, onOpenAd, openingAd, onClose }) {
   const [showAll, setShowAll] = useState(false);
   const creatives = showAll ? detail.creatives : detail.creatives.slice(0, ADS_SHOWN);
-  const filled = [detail.create?.persona && "persona", detail.create?.stage && "awareness stage", detail.create?.angle && "angle", detail.create?.format && "format", detail.create?.direction && "the audit's direction"].filter(Boolean);
+  const filled = [detail.create?.persona && "persona", detail.create?.stage && "awareness stage", detail.create?.angle && "angle", detail.create?.format && "format", detail.create?.hookStyle && "hook style", detail.create?.direction && "the audit's direction"].filter(Boolean);
   // On the Research column the ideas are listed under their angle; the rest follow below.
   const listed = new Set((detail.suggested || []).flatMap((s) => s.ideas.map((i) => i.id)));
   const ideas = detail.ideas.filter((i) => !listed.has(i.id));
