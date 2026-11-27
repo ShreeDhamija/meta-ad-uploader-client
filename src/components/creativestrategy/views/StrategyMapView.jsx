@@ -1,22 +1,22 @@
 // Strategy map (Monthly Review). One surface for what Insights, Research and
 // Weekly Strategy each know about a product: every analyzed ad laid out by
-// persona (grid), a persona's angles (lane, opened under its row), or what to
-// do next (action board). Ads keep their Monthly Review batch, so a winner
-// opens into the variants it beat, and any ad opens the Insights drawer.
+// persona (coverage grid, with a choice of columns) or by what to do next
+// (action board). Ads keep their Monthly Review batch, so a winner opens into
+// the variants it beat, and any ad opens the Insights drawer.
 // Data: GET /monthly-review/map. Grouping and verdict rules: ../strategy-map.js.
 // Styles: the "Monthly Review: Strategy map" block in creative-strategy.css.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import PropTypes from "prop-types";
-import { ChevronDown, Info, Loader2, Play, Plus, Trophy, Zap } from "lucide-react";
+import { AlertCircle, ChevronDown, Info, Loader2, Play, Plus, Trophy, X, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { creativeApi } from "@/lib/creativeApi";
-import { EmptyState, ErrorBanner, ProgressiveSection } from "../ui";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { CsScrollArea, EmptyState, ErrorBanner, ProgressiveSection } from "../ui";
 import { useJobs } from "../JobsContext";
 import { AdMediaProvider, AdThumbImg } from "../meta-media";
 import AdDetailDrawer from "./AdDetailDrawer";
-import { COLUMN_AXES, STAGE_LABELS, VERDICTS, briefNotes, buildBoard, buildGrid, buildLane, cpaDelta, money, monthOptions } from "../strategy-map";
+import { COLUMN_AXES, DEFAULT_AXIS, STAGE_LABELS, SUGGESTED, VERDICTS, briefNotes, buildBoard, buildGrid, cpaDelta, money, monthOptions } from "../strategy-map";
 
-const VIEWS = [{ key: "grid", label: "Coverage grid" }, { key: "board", label: "Action board" }];
 const LEGEND = ["work", "mixed", "bad", "thin", "idea", "none"];
 const ADS_SHOWN = 4;
 const SOURCE_LABEL = { research: "Research", ad_derived: "From ads", custom: "Added by you", client: "From the client", none: "Needs grouping" };
@@ -29,16 +29,14 @@ function statLine(stats, baseline) {
   return [plural(stats.count, "ad"), stats.cpa != null ? `CPA ${money(stats.cpa)}` : stats.count ? "no conversions" : null, delta].filter(Boolean).join(" · ");
 }
 
-export default function StrategyMapView({ ctx, refreshKey = null, onOpenMonth = null }) {
+export default function StrategyMapView({ ctx, view = "grid", onViewChange = () => {}, refreshKey = null, onOpenMonth = null }) {
   const { selectedProductId, selectedBrandId, selectedBrand, goTo } = ctx;
   const { track } = useJobs();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState(null);
-  const [view, setView] = useState("grid");
-  const [axis, setAxis] = useState("stage");
+  const [axis, setAxis] = useState(DEFAULT_AXIS);
   const [month, setMonth] = useState(null);
-  const [openLanes, setOpenLanes] = useState(() => new Set());
   const [selectedId, setSelectedId] = useState(null);
   const [busy, setBusy] = useState(null);
   const [drawerAd, setDrawerAd] = useState(null);
@@ -61,7 +59,7 @@ export default function StrategyMapView({ ctx, refreshKey = null, onOpenMonth = 
   }, []);
 
   useEffect(() => {
-    setData(null); setMonth(null); setSelectedId(null); setOpenLanes(new Set()); setErr(null); setDrawerAd(null);
+    setData(null); setMonth(null); setSelectedId(null); setErr(null); setDrawerAd(null);
     if (selectedProductId) load(selectedProductId);
   }, [load, selectedProductId]);
   // The review was rebuilt (or its winners analyzed): read the map again.
@@ -70,9 +68,7 @@ export default function StrategyMapView({ ctx, refreshKey = null, onOpenMonth = 
   const map = data?.map || null;
   const media = data?.media || {};
   const months = useMemo(() => (map ? monthOptions(map) : []), [map]);
-  const stageGrid = useMemo(() => (map ? buildGrid(map, { axis: "stage", month }) : null), [map, month]);
-  const grid = useMemo(() => (map ? (axis === "stage" ? stageGrid : buildGrid(map, { axis, month })) : null), [map, axis, month, stageGrid]);
-  const lanes = useMemo(() => (map ? new Map(map.personas.map((p) => [p.key, buildLane(map, p.key, { month })])) : new Map()), [map, month]);
+  const grid = useMemo(() => (map ? buildGrid(map, { axis, month }) : null), [map, axis, month]);
   const board = useMemo(() => (map ? buildBoard(map, { month }) : null), [map, month]);
   const baseline = grid?.rules.baseline ?? null;
 
@@ -82,22 +78,21 @@ export default function StrategyMapView({ ctx, refreshKey = null, onOpenMonth = 
     if (!map || !grid || !board) return out;
     const axisLabel = COLUMN_AXES.find((a) => a.key === axis)?.label.toLowerCase();
     for (const row of grid.rows) for (const cell of row.cells) {
+      if (cell.isSuggested) {
+        out.set(cell.id, {
+          eyebrow: "Suggested by Research", title: `${row.persona.name} · angles to build on`, verdict: cell.verdict,
+          creatives: [], ideas: cell.ideas, suggested: cell.suggested, persona: row.persona.name,
+          note: "Research proposed these angles for this persona. They are not matched to the ad angles in the other columns, so one of them may already be running under a different name. Check the columns to the left before treating it as untested.",
+        });
+        continue;
+      }
       const stage = axis === "stage" && STAGE_LABELS[cell.colKey] ? cell.colKey : null;
+      const angle = axis === "angle" && cell.colKey !== "__none" ? cell.colKey : null;
+      const format = axis === "format" && cell.colKey !== "__none" ? cell.colKey : null;
       out.set(cell.id, {
         eyebrow: `Persona × ${axisLabel}`, title: `${row.persona.name} × ${cell.colLabel}`, verdict: cell.verdict, stats: cell.stats,
         creatives: cell.creatives, ideas: cell.ideas, gap: cell.gap,
-        create: row.persona.isPersona ? { persona: row.persona.name, stage, direction: cell.gap?.direction, why: cell.gap?.why } : null,
-      });
-    }
-    for (const [key, lane] of lanes) {
-      for (const tile of lane.running) out.set(`run|${key}|${tile.angle}`, {
-        eyebrow: "Running in your ads", title: `${lane.persona.name} · ${tile.angle}`, verdict: tile.verdict, stats: tile.stats,
-        creatives: tile.creatives, ideas: tile.ideas, create: { persona: lane.persona.name, angle: tile.angle },
-      });
-      for (const tile of lane.suggested) out.set(`sug|${key}|${tile.angle}`, {
-        eyebrow: "Suggested by Research", title: `${lane.persona.name} · ${tile.angle}`, verdict: tile.ideas.length ? "idea" : "none",
-        creatives: [], ideas: tile.ideas, create: { persona: lane.persona.name, angle: tile.angle },
-        note: "Research suggested this angle for this persona. Ad angles are named separately, so check the running list first: it may already be live under another name.",
+        create: row.persona.isPersona ? { persona: row.persona.name, stage, angle, format, direction: cell.gap?.direction, why: cell.gap?.why } : null,
       });
     }
     for (const card of [...board.scale, ...board.fix, ...board.stop, ...board.early]) out.set(`card|${card.id}`, {
@@ -110,19 +105,12 @@ export default function StrategyMapView({ ctx, refreshKey = null, onOpenMonth = 
       create: { persona: item.personaName, stage: item.stage, direction: item.title, why: item.note },
     });
     return out;
-  }, [map, grid, board, lanes, axis]);
+  }, [map, grid, board, axis]);
 
-  // Nothing picked yet (or the pick left with a filter): the biggest cell.
-  const fallbackId = useMemo(() => {
-    if (!grid || !board) return null;
-    if (view === "board") { const first = board.scale[0] || board.stop[0] || board.fix[0] || board.early[0]; return first ? `card|${first.id}` : null; }
-    const cells = grid.rows.flatMap((r) => r.cells).filter((c) => c.stats.count > 0).sort((a, b) => b.stats.spend - a.stats.spend);
-    return cells[0]?.id ?? null;
-  }, [grid, board, view]);
-  const activeId = selectedId && details.has(selectedId) ? selectedId : fallbackId;
+  // Nothing is open until something is picked, and a pick that a filter removed closes.
+  const activeId = selectedId && details.has(selectedId) ? selectedId : null;
   const detail = activeId ? details.get(activeId) : null;
-
-  const toggleLane = (key) => setOpenLanes((current) => { const next = new Set(current); if (next.has(key)) next.delete(key); else next.add(key); return next; });
+  const select = (id) => setSelectedId((current) => (current === id ? null : id));
 
   const openAd = async (adId) => {
     if (!selectedProductId || !adId || openingAd) return;
@@ -183,37 +171,28 @@ export default function StrategyMapView({ ctx, refreshKey = null, onOpenMonth = 
     );
   }
 
-  const kpis = stageGrid.kpis;
+  const topColumn = grid.kpis.topColumn;
   const activeMonth = month ? map.months.find((m) => m.month === month) : null;
-  const sixMonth = map.creatives.filter((c) => c.window === "6mo").length;
-  const recentOnly = map.creatives.length - sixMonth;
+  const recentOnly = map.creatives.filter((c) => c.window !== "6mo").length;
+  // What the map covers and leaves out: behind the alert icon, not on the page.
+  const notes = [
+    `${plural(map.totals.creatives, "creative")} from ${plural(map.totals.ads, "analyzed ad")}${data.adNameFilter ? ` with "${data.adNameFilter}" in the name` : ""}. Spend and CPA are for the last six months${recentOnly > 0 ? `; ${plural(recentOnly, "ad")} the review doesn't hold ${recentOnly === 1 ? "uses its" : "use their"} last 30 days instead` : ""}.`,
+    baseline ? `Verdicts compare CPA with the map's ${money(baseline)} average and need at least ${money(grid.rules.floor)} of spend.` : "No conversions are tracked here, so nothing gets a verdict.",
+    map.untaggedWinners > 0 && `${plural(map.untaggedWinners, "winning variant")} from the last six months ${map.untaggedWinners === 1 ? "hasn't" : "haven't"} been analyzed, so ${map.untaggedWinners === 1 ? "it isn't" : "they aren't"} on the map. Refresh Review analyzes them.`,
+    map.stalePersonas.length > 0 && `Left out: ${map.stalePersonas.join(", ")}. ${map.stalePersonas.length === 1 ? "This persona was" : "These personas were"} found in ads that are no longer in this product's scope${map.ideasOutsideProduct > 0 ? `, and ${plural(map.ideasOutsideProduct, "queued idea")} written for them ${map.ideasOutsideProduct === 1 ? "is" : "are"} hidden too` : ""}.`,
+  ].filter(Boolean);
 
   return (
     <AdMediaProvider productId={selectedProductId} key={selectedProductId}>
       <div className="cs-sm">
         <ErrorBanner message={err} />
 
-        <div className="cs-intel-kpis cs-sm-kpis">
-          <div className="cs-intel-kpi"><span>Persona × stage cells with ads</span><strong>{kpis.inUse} of {kpis.cells}</strong></div>
-          <div className="cs-intel-kpi"><span>Most spend sits in</span><strong>{kpis.topColumn ? `${Math.round(kpis.topColumn.share * 100)}% ${kpis.topColumn.label}` : "—"}</strong></div>
-          <div className="cs-intel-kpi"><span>Cells never touched</span><strong>{kpis.untouched}</strong>{kpis.ideaOnly > 0 && <small>{kpis.ideaOnly} more hold only an idea</small>}</div>
-          <div className="cs-intel-kpi"><span>Ideas queued from Weekly Strategy</span><strong>{kpis.ideas}</strong></div>
-        </div>
-
         <div className="cs-sm-toolbar">
-          <div className="cs-weekly-switcher" role="tablist" aria-label="Layout">
-            {VIEWS.map((v) => (
-              <button key={v.key} type="button" role="tab" aria-selected={view === v.key} onClick={() => setView(v.key)} className={`cs-weekly-switcher__item ${view === v.key ? "is-active" : ""}`}>{v.label}</button>
-            ))}
-          </div>
           {view === "grid" && (
-            <div className="cs-sm-toolbar__group">
-              <span>Columns</span>
-              <div className="cs-weekly-switcher" role="tablist" aria-label="Columns">
-                {COLUMN_AXES.map((a) => (
-                  <button key={a.key} type="button" role="tab" aria-selected={axis === a.key} onClick={() => setAxis(a.key)} className={`cs-weekly-switcher__item ${axis === a.key ? "is-active" : ""}`}>{a.label}</button>
-                ))}
-              </div>
+            <div className="cs-weekly-switcher" role="tablist" aria-label="Columns">
+              {COLUMN_AXES.map((a) => (
+                <button key={a.key} type="button" role="tab" aria-selected={axis === a.key} onClick={() => setAxis(a.key)} className={`cs-weekly-switcher__item ${axis === a.key ? "is-active" : ""}`}>{a.label}</button>
+              ))}
             </div>
           )}
           {months.length > 0 && (
@@ -229,6 +208,19 @@ export default function StrategyMapView({ ctx, refreshKey = null, onOpenMonth = 
               </div>
             </div>
           )}
+          <div className="cs-sm-summary">
+            {view === "grid" && topColumn && <span>Most spend: <strong>{Math.round(topColumn.share * 100)}% {topColumn.label}</strong></span>}
+            <TooltipProvider delayDuration={100}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button type="button" className="cs-sm-alert" aria-label="What this map covers and leaves out"><AlertCircle className="h-4 w-4" /></button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" align="end" className="cs-sm-alert__content">
+                  {notes.map((note) => <p key={note}>{note}</p>)}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
         </div>
 
         {activeMonth && (
@@ -248,26 +240,17 @@ export default function StrategyMapView({ ctx, refreshKey = null, onOpenMonth = 
           </div>
         )}
 
-        <div className="cs-sm-notes">
-          <p><Info className="h-3.5 w-3.5" /><span>
-            {plural(map.totals.creatives, "creative")} from {plural(map.totals.ads, "analyzed ad")}{data.adNameFilter ? ` with "${data.adNameFilter}" in the name` : ""}. Spend and CPA are for the last six months{recentOnly > 0 ? `; ${plural(recentOnly, "ad")} the review doesn't hold ${recentOnly === 1 ? "uses its" : "use their"} last 30 days instead` : ""}.
-            {baseline ? ` Verdicts compare CPA with the map's ${money(baseline)} average and need at least ${money(grid.rules.floor)} of spend.` : " No conversions are tracked here, so nothing gets a verdict."}
-          </span></p>
-          {map.untaggedWinners > 0 && <p><Info className="h-3.5 w-3.5" /><span>{plural(map.untaggedWinners, "winning variant")} from the last six months {map.untaggedWinners === 1 ? "hasn't" : "haven't"} been analyzed, so {map.untaggedWinners === 1 ? "it isn't" : "they aren't"} on the map. Refresh Review analyzes them.</span></p>}
-          {map.stalePersonas.length > 0 && <p><Info className="h-3.5 w-3.5" /><span>Left out: {map.stalePersonas.join(", ")}. {map.stalePersonas.length === 1 ? "This persona was" : "These personas were"} found in ads that are no longer in this product&apos;s scope{map.ideasOutsideProduct > 0 ? `, and ${plural(map.ideasOutsideProduct, "queued idea")} written for them ${map.ideasOutsideProduct === 1 ? "is" : "are"} hidden too` : ""}.</span></p>}
-        </div>
-
         <div className="cs-sm-legend" aria-label="Legend">
           {LEGEND.map((v) => <span key={v} data-verdict={v} title={VERDICTS[v].hint}><i />{VERDICTS[v].label}</span>)}
         </div>
 
-        <div className="cs-sm-layout">
+        <div className={`cs-sm-layout ${detail ? "has-detail" : ""}`}>
           <div className="min-w-0">
             {view === "grid"
-              ? <Grid grid={grid} lanes={lanes} axis={axis} media={media} openLanes={openLanes} toggleLane={toggleLane} activeId={activeId} onSelect={setSelectedId} />
-              : <Board board={board} activeId={activeId} onSelect={setSelectedId} actions={actions} onSeeAngles={(key) => { setView("grid"); setOpenLanes((current) => new Set(current).add(key)); }} />}
+              ? <Grid key={axis} grid={grid} axis={axis} media={media} activeId={activeId} onSelect={select} />
+              : <Board board={board} activeId={activeId} onSelect={select} actions={actions} onSeeAngles={(key) => { onViewChange("grid"); setAxis("angle"); setSelectedId(`${key}|${SUGGESTED}`); }} />}
           </div>
-          <DetailPanel detail={detail} baseline={baseline} media={media} actions={actions} onOpenAd={openAd} openingAd={openingAd} key={activeId || "none"} />
+          {detail && <DetailPanel detail={detail} baseline={baseline} media={media} actions={actions} onOpenAd={openAd} openingAd={openingAd} onClose={() => setSelectedId(null)} key={activeId} />}
         </div>
 
         {view === "grid" && map.potentialPersonas.length > 0 && (
@@ -290,7 +273,7 @@ export default function StrategyMapView({ ctx, refreshKey = null, onOpenMonth = 
     </AdMediaProvider>
   );
 }
-StrategyMapView.propTypes = { ctx: PropTypes.object.isRequired, refreshKey: PropTypes.string, onOpenMonth: PropTypes.func };
+StrategyMapView.propTypes = { ctx: PropTypes.object.isRequired, view: PropTypes.oneOf(["grid", "board"]), onViewChange: PropTypes.func, refreshKey: PropTypes.string, onOpenMonth: PropTypes.func };
 
 const actionsShape = PropTypes.shape({ busy: PropTypes.string, newBrief: PropTypes.func, ideaBrief: PropTypes.func, ideaStatic: PropTypes.func, buildPersona: PropTypes.func });
 
@@ -318,131 +301,79 @@ Thumbs.propTypes = { creatives: PropTypes.array.isRequired, media: PropTypes.obj
 const IdeaChip = ({ count }) => (count > 0 ? <span className="cs-sm-chip">{plural(count, "idea")} queued</span> : null);
 IdeaChip.propTypes = { count: PropTypes.number.isRequired };
 
-function Grid({ grid, lanes, axis, media, openLanes, toggleLane, activeId, onSelect }) {
-  const style = { "--sm-cols": grid.columns.length, "--sm-min": `${196 + grid.columns.length * 112}px` };
+function Grid({ grid, axis, media, activeId, onSelect }) {
+  const style = { "--sm-cols": grid.columns.length };
   return (
-    <div className="cs-sm-scroll">
+    <CsScrollArea axis="x" className="cs-sm-scroll">
       <div className="cs-sm-grid" style={style}>
         <div className="cs-sm-row" aria-hidden="true">
           <div className="cs-sm-colhead"><span>Persona</span></div>
           {grid.columns.map((col) => (
             <div key={col.key} className="cs-sm-colhead" title={col.label}>
               <strong>{col.label}</strong>
-              <div className="cs-sm-bar"><i style={{ width: `${Math.round(col.share * 100)}%` }} /></div>
-              <span>{money(col.spend)} · {Math.round(col.share * 100)}%</span>
+              {col.isSuggested ? <span>Not matched to the ad angles</span> : col.isUnused ? <span>Not used yet</span> : (
+                <>
+                  <div className="cs-sm-bar"><i style={{ width: `${Math.round(col.share * 100)}%` }} /></div>
+                  <span>{money(col.spend)} · {Math.round(col.share * 100)}%</span>
+                </>
+              )}
             </div>
           ))}
         </div>
         {grid.rows.map((row) => {
-          const lane = row.persona.isPersona ? lanes.get(row.persona.key) : null;
-          const open = lane && openLanes.has(row.persona.key);
-          const rowIdeas = axis === "stage" ? 0 : row.ideas.length;
+          // Ideas sit in cells on the stage and angle columns; elsewhere the row carries the count.
+          const rowIdeas = axis === "stage" || axis === "angle" ? 0 : row.ideas.length;
           return (
-            <div key={row.persona.key} className="grid gap-2">
-              <div className="cs-sm-row">
-                <div className="cs-sm-rowhead" title={row.persona.description || undefined}>
-                  <span className={`cs-sm-source is-${row.persona.source}`}>{SOURCE_LABEL[row.persona.source] || "Research"}</span>
-                  <h3>{row.persona.name}</h3>
-                  <div className="cs-sm-rowhead__stats">
-                    {row.stats.count ? <>{money(row.stats.spend)} · {statLine(row.stats, grid.rules.baseline)}</> : "No ads yet"}
-                    {rowIdeas > 0 && <><br />{plural(rowIdeas, "idea")} queued</>}
-                  </div>
-                  {lane && (
-                    <button type="button" className="cs-sm-rowhead__toggle" aria-expanded={Boolean(open)} onClick={() => toggleLane(row.persona.key)}>
-                      Angles <ChevronDown className={`h-3 w-3 transition-transform ${open ? "rotate-180" : ""}`} />
-                    </button>
-                  )}
+            <div key={row.persona.key} className="cs-sm-row">
+              <div className="cs-sm-rowhead" title={row.persona.description || undefined}>
+                <span className={`cs-sm-source is-${row.persona.source}`}>{SOURCE_LABEL[row.persona.source] || "Research"}</span>
+                <h3>{row.persona.name}</h3>
+                <div className="cs-sm-rowhead__stats">
+                  {row.stats.count ? <>{money(row.stats.spend)} · {statLine(row.stats, grid.rules.baseline)}</> : "No ads yet"}
+                  {rowIdeas > 0 && <><br />{plural(rowIdeas, "idea")} queued</>}
                 </div>
-                {row.cells.map((cell) => (
-                  <button
-                    key={cell.id} type="button" data-verdict={cell.verdict} onClick={() => onSelect(cell.id)}
-                    className={`cs-sm-cell ${activeId === cell.id ? "is-selected" : ""}`}
-                    aria-label={`${row.persona.name}, ${cell.colLabel}: ${VERDICTS[cell.verdict].label}`} aria-pressed={activeId === cell.id}
-                  >
-                    <span className="cs-sm-cell__label">{cell.gap && !cell.stats.count ? "Priority gap" : VERDICTS[cell.verdict].label}</span>
-                    {cell.stats.count > 0 ? (
-                      <>
-                        <span className="cs-sm-cell__spend">{money(cell.stats.spend)}</span>
-                        <span className="cs-sm-cell__stat">{plural(cell.stats.count, "ad")}{cell.stats.cpa != null ? ` · CPA ${money(cell.stats.cpa)}` : ""}</span>
-                      </>
-                    ) : (
-                      <span className="cs-sm-cell__hint">{cell.gap ? "The audit suggests a concept here" : cell.ideas.length ? "No ads yet" : ""}</span>
-                    )}
-                    <span className="cs-sm-cell__foot">
-                      {cell.stats.count > 0 ? <Thumbs creatives={cell.creatives} media={media} /> : row.persona.isPersona && <span className="cs-sm-cell__add"><Plus className="h-3 w-3" />Add here</span>}
-                      <IdeaChip count={cell.ideas.length} />
-                    </span>
-                  </button>
-                ))}
               </div>
-              {open && <Lane lane={lane} personaKey={row.persona.key} baseline={grid.rules.baseline} media={media} activeId={activeId} onSelect={onSelect} />}
+              {row.cells.map((cell) => (
+                <button
+                  key={cell.id} type="button" data-verdict={cell.verdict} onClick={() => onSelect(cell.id)}
+                  className={`cs-sm-cell ${activeId === cell.id ? "is-selected" : ""}`}
+                  aria-label={`${row.persona.name}, ${cell.colLabel}: ${VERDICTS[cell.verdict].label}`} aria-pressed={activeId === cell.id}
+                >
+                  {cell.isSuggested ? (
+                    <>
+                      <span className="cs-sm-cell__label">{plural(cell.suggested.length, "angle")}</span>
+                      <span className="cs-sm-cell__hint">{cell.suggested.slice(0, 3).map((s) => s.angle).join(", ")}{cell.suggested.length > 3 ? ` +${cell.suggested.length - 3}` : ""}</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="cs-sm-cell__label">
+                        {VERDICTS[cell.verdict].label}
+                        {cell.gap && <span className="cs-sm-suggested">Suggested</span>}
+                      </span>
+                      {cell.stats.count > 0 ? (
+                        <>
+                          <span className="cs-sm-cell__spend">{money(cell.stats.spend)}</span>
+                          <span className="cs-sm-cell__stat">{plural(cell.stats.count, "ad")}{cell.stats.cpa != null ? ` · CPA ${money(cell.stats.cpa)}` : ""}</span>
+                        </>
+                      ) : (
+                        <span className="cs-sm-cell__hint">{cell.gap ? "The audit flags this as a priority gap" : cell.ideas.length ? "No ads yet" : ""}</span>
+                      )}
+                    </>
+                  )}
+                  <span className="cs-sm-cell__foot">
+                    {cell.stats.count > 0 ? <Thumbs creatives={cell.creatives} media={media} /> : row.persona.isPersona && <span className="cs-sm-cell__add"><Plus className="h-3 w-3" />{cell.isSuggested ? "Build on one" : "Add here"}</span>}
+                    <IdeaChip count={cell.ideas.length} />
+                  </span>
+                </button>
+              ))}
             </div>
           );
         })}
       </div>
-    </div>
+    </CsScrollArea>
   );
 }
-Grid.propTypes = {
-  grid: PropTypes.object.isRequired, lanes: PropTypes.instanceOf(Map).isRequired, axis: PropTypes.string.isRequired, media: PropTypes.object.isRequired,
-  openLanes: PropTypes.instanceOf(Set).isRequired, toggleLane: PropTypes.func.isRequired, activeId: PropTypes.string, onSelect: PropTypes.func.isRequired,
-};
-
-function Lane({ lane, personaKey, baseline, media, activeId, onSelect }) {
-  return (
-    <div className="cs-sm-lane">
-      <div className="cs-sm-lane__group">
-        <header>
-          <h4 className="cs-intel-subsection-title">Running in your ads</h4>
-          <p>Angles as Insights tagged them on the ads themselves.</p>
-        </header>
-        {lane.running.length === 0 ? <p className="text-xs text-neutral-500">No ads for this persona in this view.</p> : (
-          <div className="cs-sm-tiles">
-            {lane.running.map((tile) => {
-              const id = `run|${personaKey}|${tile.angle}`;
-              return (
-                <button key={id} type="button" data-verdict={tile.verdict} onClick={() => onSelect(id)} className={`cs-sm-cell ${activeId === id ? "is-selected" : ""}`} aria-pressed={activeId === id}>
-                  <span className="cs-sm-cell__label">{VERDICTS[tile.verdict].label}</span>
-                  <span className="cs-sm-cell__name">{tile.angle}</span>
-                  <span className="cs-sm-cell__stat">{money(tile.stats.spend)} · {statLine(tile.stats, baseline)}</span>
-                  <span className="cs-sm-cell__foot"><Thumbs creatives={tile.creatives} media={media} /><IdeaChip count={tile.ideas.length} /></span>
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </div>
-      <div className="cs-sm-lane__group">
-        <header>
-          <h4 className="cs-intel-subsection-title">Suggested by Research</h4>
-          <p>Angles Research proposed for this persona. Build on any of them.</p>
-        </header>
-        <p className="cs-sm-note">
-          <Info className="h-3.5 w-3.5" />
-          <span>These two lists are named independently and are not matched to each other. A suggested angle can already be running above under a different name, so compare them before you treat one as untested.</span>
-        </p>
-        {lane.suggested.length === 0 ? <p className="text-xs text-neutral-500">Research hasn&apos;t listed angles for this persona.</p> : (
-          <div className="cs-sm-tiles">
-            {lane.suggested.map((tile) => {
-              const id = `sug|${personaKey}|${tile.angle}`;
-              const verdict = tile.ideas.length ? "idea" : "none";
-              return (
-                <button key={id} type="button" data-verdict={verdict} onClick={() => onSelect(id)} className={`cs-sm-cell ${activeId === id ? "is-selected" : ""}`} aria-pressed={activeId === id}>
-                  <span className="cs-sm-cell__label">{tile.ideas.length ? "Idea queued" : "Suggested"}</span>
-                  <span className="cs-sm-cell__name">{tile.angle}</span>
-                  {tile.ideas[0] && <span className="cs-sm-cell__hint">{tile.ideas[0].title}</span>}
-                  <span className="cs-sm-cell__foot"><span className="cs-sm-cell__add"><Plus className="h-3 w-3" />{tile.ideas.length ? "Write brief" : "Build on it"}</span></span>
-                </button>
-              );
-            })}
-          </div>
-        )}
-        {lane.otherIdeas.length > 0 && <p className="text-[11px] text-neutral-500">{plural(lane.otherIdeas.length, "more queued idea")} for this persona {lane.otherIdeas.length === 1 ? "uses an angle" : "use angles"} on neither list: {lane.otherIdeas.map((i) => i.angle || i.title).join(", ")}.</p>}
-      </div>
-    </div>
-  );
-}
-Lane.propTypes = { lane: PropTypes.object.isRequired, personaKey: PropTypes.string.isRequired, baseline: PropTypes.number, media: PropTypes.object.isRequired, activeId: PropTypes.string, onSelect: PropTypes.func.isRequired };
+Grid.propTypes = { grid: PropTypes.object.isRequired, axis: PropTypes.string.isRequired, media: PropTypes.object.isRequired, activeId: PropTypes.string, onSelect: PropTypes.func.isRequired };
 
 const BOARD_COLUMNS = [
   { key: "scale", verdict: "work", title: "Scale", rule: "CPA at or below the map's average" },
@@ -464,7 +395,7 @@ function Board({ board, activeId, onSelect, actions, onSeeAngles }) {
         </dl>
       </div>
 
-      <div className="cs-sm-scroll">
+      <CsScrollArea axis="x" className="cs-sm-scroll">
         <div className="cs-sm-board">
           {BOARD_COLUMNS.map((col) => (
             <div key={col.key} className="cs-sm-board__col">
@@ -497,7 +428,7 @@ function Board({ board, activeId, onSelect, actions, onSeeAngles }) {
             {board.open.map((item) => <OpenCard key={item.id} item={item} activeId={activeId} onSelect={onSelect} actions={actions} onSeeAngles={onSeeAngles} />)}
           </div>
         </div>
-      </div>
+      </CsScrollArea>
 
       {board.early.length > 0 && (
         <section className="cs-sm-split">
@@ -558,86 +489,111 @@ function BusyButton({ busy, children, ...props }) {
 }
 BusyButton.propTypes = { busy: PropTypes.bool, children: PropTypes.node };
 
-function CreateButtons({ create, actions, idPrefix }) {
+function CreateButtons({ create, actions, idPrefix, compact = false }) {
   return (
     <div className="cs-sm-actions">
       {["video", "static"].map((format) => {
         const key = `new|${idPrefix}|${format}`;
         return (
           <BusyButton key={format} className={format === "video" ? "cs-weekly-brief-button" : "cs-weekly-static-button"} busy={actions.busy === key} disabled={Boolean(actions.busy)} onClick={() => actions.newBrief(create, format, key)}>
-            {format === "video" ? "New video brief" : "New static brief"}
+            {compact ? (format === "video" ? "Video brief" : "Static brief") : format === "video" ? "New video brief" : "New static brief"}
           </BusyButton>
         );
       })}
     </div>
   );
 }
-CreateButtons.propTypes = { create: PropTypes.object.isRequired, actions: actionsShape.isRequired, idPrefix: PropTypes.string.isRequired };
+CreateButtons.propTypes = { create: PropTypes.object.isRequired, actions: actionsShape.isRequired, idPrefix: PropTypes.string.isRequired, compact: PropTypes.bool };
 
-function DetailPanel({ detail, baseline, media, actions, onOpenAd, openingAd }) {
+function IdeaCard({ idea, actions }) {
+  return (
+    <div className="cs-sm-idea">
+      <h4>{idea.title}</h4>
+      <p>{[tierLabel(idea), idea.angle].filter(Boolean).join(" · ")}</p>
+      <div className="cs-sm-actions">
+        <BusyButton className="cs-weekly-brief-button" busy={actions.busy === `brief|${idea.id}`} disabled={Boolean(actions.busy)} onClick={() => actions.ideaBrief(idea)}>Write brief</BusyButton>
+        {idea.format === "static" && <BusyButton className="cs-weekly-static-button" busy={actions.busy === `static|${idea.id}`} disabled={Boolean(actions.busy)} onClick={() => actions.ideaStatic(idea)}>Make static</BusyButton>}
+      </div>
+    </div>
+  );
+}
+IdeaCard.propTypes = { idea: PropTypes.object.isRequired, actions: actionsShape.isRequired };
+
+function DetailPanel({ detail, baseline, media, actions, onOpenAd, openingAd, onClose }) {
   const [showAll, setShowAll] = useState(false);
-  if (!detail) {
-    return <aside className="cs-intel-panel cs-sm-detail"><p className="text-xs text-neutral-500">Pick a cell or a card to see its ads, queued ideas and what to make next.</p></aside>;
-  }
   const creatives = showAll ? detail.creatives : detail.creatives.slice(0, ADS_SHOWN);
-  const filled = [detail.create?.persona && "persona", detail.create?.stage && "awareness stage", detail.create?.angle && "angle", detail.create?.direction && "the audit's direction"].filter(Boolean);
+  const filled = [detail.create?.persona && "persona", detail.create?.stage && "awareness stage", detail.create?.angle && "angle", detail.create?.format && "format", detail.create?.direction && "the audit's direction"].filter(Boolean);
+  // On the Research column the ideas are listed under their angle; the rest follow below.
+  const listed = new Set((detail.suggested || []).flatMap((s) => s.ideas.map((i) => i.id)));
+  const ideas = detail.ideas.filter((i) => !listed.has(i.id));
   return (
     <aside className="cs-intel-panel cs-sm-detail" aria-live="polite">
-      <header>
-        <p className="cs-sm-detail__eyebrow">{detail.eyebrow}</p>
-        <h2 className="cs-sm-detail__title">{detail.title}</h2>
-        <div className="cs-sm-detail__meta">
-          <span className="cs-sm-pill" data-verdict={detail.verdict} title={VERDICTS[detail.verdict].hint}>{VERDICTS[detail.verdict].label}</span>
-          {detail.stats?.count > 0 && <span>{money(detail.stats.spend)} · {statLine(detail.stats, baseline)}</span>}
-        </div>
-      </header>
-
-      {detail.gap?.direction && (
-        <div className="cs-sm-suggestion">
-          <strong>Suggested by the audit</strong>
-          <span>{detail.gap.direction}</span>
-          {detail.gap.why && <span className="text-[11.5px] text-neutral-500">{detail.gap.why}</span>}
-        </div>
-      )}
-      {detail.note && <p className="cs-sm-note"><Info className="h-3.5 w-3.5" /><span>{detail.note}</span></p>}
-
-      {detail.creatives.length > 0 && (
-        <section className="cs-sm-section">
-          <h3 className="cs-intel-subsection-title">Ads here</h3>
-          {creatives.map((c) => <CreativeCard key={c.id} creative={c} baseline={baseline} media={media} onOpenAd={onOpenAd} opening={openingAd === c.adId} />)}
-          {detail.creatives.length > ADS_SHOWN && (
-            <button type="button" className="cs-sm-more" onClick={() => setShowAll((s) => !s)}>{showAll ? "Show fewer" : `Show ${detail.creatives.length - ADS_SHOWN} more`}</button>
-          )}
-        </section>
-      )}
-
-      {detail.ideas.length > 0 && (
-        <section className="cs-sm-section">
-          <h3 className="cs-intel-subsection-title">Queued from Weekly Strategy</h3>
-          {detail.ideas.map((idea) => (
-            <div key={idea.id} className="cs-sm-idea">
-              <h4>{idea.title}</h4>
-              <p>{[tierLabel(idea), idea.angle].filter(Boolean).join(" · ")}</p>
-              <div className="cs-sm-actions">
-                <BusyButton className="cs-weekly-brief-button" busy={actions.busy === `brief|${idea.id}`} disabled={Boolean(actions.busy)} onClick={() => actions.ideaBrief(idea)}>Write brief</BusyButton>
-                {idea.format === "static" && <BusyButton className="cs-weekly-static-button" busy={actions.busy === `static|${idea.id}`} disabled={Boolean(actions.busy)} onClick={() => actions.ideaStatic(idea)}>Make static</BusyButton>}
+      <CsScrollArea viewportClassName="cs-sm-detail__viewport">
+        <div className="cs-sm-detail__body">
+          <header className="cs-sm-detail__head">
+            <div className="min-w-0">
+              <p className="cs-sm-detail__eyebrow">{detail.eyebrow}</p>
+              <h2 className="cs-sm-detail__title">{detail.title}</h2>
+              <div className="cs-sm-detail__meta">
+                <span className="cs-sm-pill" data-verdict={detail.verdict} title={VERDICTS[detail.verdict].hint}>{VERDICTS[detail.verdict].label}</span>
+                {detail.stats?.count > 0 && <span>{money(detail.stats.spend)} · {statLine(detail.stats, baseline)}</span>}
               </div>
             </div>
-          ))}
-        </section>
-      )}
+            <button type="button" className="cs-sm-detail__close" onClick={onClose} aria-label="Close"><X className="h-4 w-4" /></button>
+          </header>
 
-      {detail.create && (
-        <section className="cs-sm-section">
-          <h3 className="cs-intel-subsection-title">Add something new here</h3>
-          <CreateButtons create={detail.create} actions={actions} idPrefix="detail" />
-          <p className="!text-[10.5px] !text-neutral-500">One click starts a brief with the {filled.join(", ")} filled in. It lands in Generate, under Briefs.</p>
-        </section>
-      )}
+          {detail.gap?.direction && (
+            <div className="cs-sm-suggestion">
+              <strong>Suggested by the audit</strong>
+              <span>{detail.gap.direction}</span>
+              {detail.gap.why && <span className="text-[11.5px] text-neutral-500">{detail.gap.why}</span>}
+            </div>
+          )}
+          {detail.note && <p className="cs-sm-note"><Info className="h-3.5 w-3.5" /><span>{detail.note}</span></p>}
+
+          {detail.suggested?.length > 0 && (
+            <section className="cs-sm-section">
+              <h3 className="cs-intel-subsection-title">Angles to build on</h3>
+              {detail.suggested.map((s) => (
+                <div key={s.angle} className="cs-sm-angle">
+                  <h4>{s.angle}</h4>
+                  {s.ideas.map((idea) => <IdeaCard key={idea.id} idea={idea} actions={actions} />)}
+                  <CreateButtons create={{ persona: detail.persona, angle: s.angle }} actions={actions} idPrefix={`angle|${s.angle}`} compact />
+                </div>
+              ))}
+            </section>
+          )}
+
+          {detail.creatives.length > 0 && (
+            <section className="cs-sm-section">
+              <h3 className="cs-intel-subsection-title">Ads here</h3>
+              {creatives.map((c) => <CreativeCard key={c.id} creative={c} baseline={baseline} media={media} onOpenAd={onOpenAd} opening={openingAd === c.adId} />)}
+              {detail.creatives.length > ADS_SHOWN && (
+                <button type="button" className="cs-sm-more" onClick={() => setShowAll((s) => !s)}>{showAll ? "Show fewer" : `Show ${detail.creatives.length - ADS_SHOWN} more`}</button>
+              )}
+            </section>
+          )}
+
+          {ideas.length > 0 && (
+            <section className="cs-sm-section">
+              <h3 className="cs-intel-subsection-title">{detail.suggested ? "Queued on other angles" : "Queued from Weekly Strategy"}</h3>
+              {ideas.map((idea) => <IdeaCard key={idea.id} idea={idea} actions={actions} />)}
+            </section>
+          )}
+
+          {detail.create && (
+            <section className="cs-sm-section">
+              <h3 className="cs-intel-subsection-title">Add something new here</h3>
+              <CreateButtons create={detail.create} actions={actions} idPrefix="detail" />
+              <p className="!text-[10.5px] !text-neutral-500">One click starts a brief with the {filled.join(", ")} filled in. It lands in Generate, under Briefs.</p>
+            </section>
+          )}
+        </div>
+      </CsScrollArea>
     </aside>
   );
 }
-DetailPanel.propTypes = { detail: PropTypes.object, baseline: PropTypes.number, media: PropTypes.object.isRequired, actions: actionsShape.isRequired, onOpenAd: PropTypes.func.isRequired, openingAd: PropTypes.string };
+DetailPanel.propTypes = { detail: PropTypes.object.isRequired, baseline: PropTypes.number, media: PropTypes.object.isRequired, actions: actionsShape.isRequired, onOpenAd: PropTypes.func.isRequired, openingAd: PropTypes.string, onClose: PropTypes.func.isRequired };
 
 /** One creative: thumbnail and name open the Insights drawer; a winner opens into the batch it beat. */
 function CreativeCard({ creative, baseline, media, onOpenAd, opening }) {

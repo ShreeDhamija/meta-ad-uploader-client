@@ -11,10 +11,13 @@ export const STAGE_LABELS = {
 };
 
 export const COLUMN_AXES = [
-  { key: "stage", label: "Awareness stage" },
   { key: "hook", label: "Hook style" },
+  { key: "angle", label: "Angle" },
   { key: "format", label: "Format" },
+  { key: "stage", label: "Awareness stage" },
 ];
+export const DEFAULT_AXIS = "hook";
+export const MAP_LAYOUTS = [{ key: "grid", label: "Coverage grid" }, { key: "board", label: "Action board" }];
 
 export const VERDICTS = {
   work: { label: "Working", hint: "CPA at or below the map's average" },
@@ -34,6 +37,8 @@ export const FLOOR_MIN_SPEND = 300;
 
 const NO_PERSONA = "__none";
 const NO_VALUE = "__none";
+/** The Angle axis ends with one column of what Research suggests for each persona. */
+export const SUGGESTED = "__suggested";
 
 export const money = (v) => (v >= 10000 ? `$${Math.round(v / 1000)}K` : v >= 1000 ? `$${(v / 1000).toFixed(1)}K` : `$${Math.round(v || 0)}`);
 
@@ -77,6 +82,7 @@ const inMonth = (map, month) => (month ? map.creatives.filter((c) => c.month ===
 function columnValue(creative, axis) {
   if (axis === "stage") return creative.stage || NO_VALUE;
   if (axis === "hook") return creative.hookStyle || NO_VALUE;
+  if (axis === "angle") return creative.angle || NO_VALUE;
   return creative.format || NO_VALUE;
 }
 
@@ -86,22 +92,32 @@ function columnsFor(map, creatives, axis) {
     const spend = creatives.filter((c) => columnValue(c, axis) === key).reduce((s, c) => s + c.spend, 0);
     return { key, label, spend, share: total > 0 ? spend / total : 0 };
   };
-  const untagged = axis === "hook" ? "No spoken hook" : axis === "format" ? "No format" : "No stage";
+  const untagged = axis === "hook" ? "No spoken hook" : axis === "format" ? "No format" : axis === "angle" ? "No angle" : "No stage";
   if (axis === "stage") {
     const cols = map.stages.map((s) => column(s, STAGE_LABELS[s] || s));
     return creatives.some((c) => !c.stage) ? [...cols, column(NO_VALUE, untagged)] : cols;
   }
-  // Hook style and format have no fixed list: the values in use, biggest first.
+  // Hook style, angle and format have no fixed list: the values in use, biggest first.
   const keys = [...new Set(creatives.map((c) => columnValue(c, axis)))];
-  return keys.map((k) => column(k, k === NO_VALUE ? untagged : k.charAt(0).toUpperCase() + k.slice(1))).sort((a, b) => (a.key === NO_VALUE) - (b.key === NO_VALUE) || b.spend - a.spend);
+  const cols = keys.map((k) => column(k, k === NO_VALUE ? untagged : k.charAt(0).toUpperCase() + k.slice(1))).sort((a, b) => (a.key === NO_VALUE) - (b.key === NO_VALUE) || b.spend - a.spend);
+  // Format comes from a preset list, so the ones this account has never run
+  // close the row as open columns.
+  if (axis === "format") {
+    const used = new Set(keys.map((k) => k.toLowerCase()));
+    return [...cols, ...(map.formats || []).filter((f) => !used.has(f.toLowerCase())).map((f) => ({ key: f, label: f, spend: 0, share: 0, isUnused: true }))];
+  }
+  // Ad angles and Research angles are named independently, so Research gets
+  // its own closing column instead of being matched into the running ones.
+  return axis === "angle" && map.personas.some((p) => p.angles.length > 0) ? [...cols, { key: SUGGESTED, label: "Suggested by Research", spend: 0, share: 0, isSuggested: true }] : cols;
 }
 
 /**
  * The coverage grid: one row per persona, one column per value of `axis`.
- * Ideas and the audit's gaps carry a persona and an awareness stage, so they
- * sit in cells only on the stage axis; on the others they stay on the row.
+ * The audit's gaps carry a persona and an awareness stage, so they sit in
+ * cells only on the stage axis. Queued ideas sit in cells on the stage axis
+ * (by stage) and the angle axis (by angle name); elsewhere they stay on the row.
  */
-export function buildGrid(map, { axis = "stage", month = null } = {}) {
+export function buildGrid(map, { axis = DEFAULT_AXIS, month = null } = {}) {
   const creatives = inMonth(map, month);
   const rules = verdictRules(map.totals);
   const columns = columnsFor(map, creatives, axis);
@@ -112,9 +128,15 @@ export function buildGrid(map, { axis = "stage", month = null } = {}) {
   const rows = rowDefs.map((persona) => {
     const mine = creatives.filter((c) => (c.personaKey || NO_PERSONA) === persona.key);
     const ideas = persona.isPersona ? map.ideas.filter((i) => i.personaKey === persona.key) : [];
+    const lane = axis === "angle" && persona.isPersona ? buildLane(map, persona.key, { month }) : null;
     const cells = columns.map((col) => {
+      if (col.isSuggested) {
+        const suggested = lane?.suggested || [];
+        const waiting = lane ? [...suggested.flatMap((s) => s.ideas), ...lane.otherIdeas] : [];
+        return { id: `${persona.key}|${col.key}`, personaKey: persona.key, colKey: col.key, colLabel: col.label, isSuggested: true, suggested, creatives: [], ideas: waiting, gap: null, stats: summarize([]), verdict: waiting.length ? "idea" : "none" };
+      }
       const list = mine.filter((c) => columnValue(c, axis) === col.key);
-      const cellIdeas = onStage ? ideas.filter((i) => i.stage === col.key) : [];
+      const cellIdeas = onStage ? ideas.filter((i) => i.stage === col.key) : lane ? lane.running.find((r) => r.angle === col.key)?.ideas || [] : [];
       const gap = onStage && persona.isPersona ? map.gaps.find((g) => g.personaKey === persona.key && g.stage === col.key) || null : null;
       const stats = summarize(list);
       const verdict = stats.count ? verdictOf(stats, rules) : cellIdeas.length ? "idea" : "none";
@@ -124,7 +146,7 @@ export function buildGrid(map, { axis = "stage", month = null } = {}) {
     return { persona, cells, stats, verdict: verdictOf(stats, rules), ideas };
   });
 
-  const personaCells = rows.filter((r) => r.persona.isPersona).flatMap((r) => r.cells).filter((c) => c.colKey !== NO_VALUE);
+  const personaCells = rows.filter((r) => r.persona.isPersona).flatMap((r) => r.cells).filter((c) => c.colKey !== NO_VALUE && !c.isSuggested);
   const top = [...columns].sort((a, b) => b.spend - a.spend)[0] || null;
   return {
     rules, columns, rows,
@@ -224,10 +246,11 @@ export function monthOptions(map) {
 }
 
 /** Everything a one-click brief needs to know about where it was started from. */
-export function briefNotes({ stage, angle, direction, why }) {
+export function briefNotes({ stage, angle, format, direction, why }) {
   return [
     stage && `Awareness stage: ${STAGE_LABELS[stage] || stage}.`,
     angle && `Angle: ${angle}.`,
+    format && `Creative format: ${format}.`,
     direction && `Direction from the creative strategy audit: ${direction}`,
     why && `Why this matters: ${why}`,
   ].filter(Boolean).join("\n");

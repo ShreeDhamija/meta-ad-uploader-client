@@ -5668,9 +5668,11 @@ html body #root .creative-strategy button.cs-monthly-filter-button:hover { borde
 .cs-sm [data-verdict="none"] { --sm-bg: #fff; --sm-line: rgba(108, 52, 3, 0.34); --sm-ink: #7a655c; --sm-style: dashed; }
 
 /* ── Scorecards ─────────────────────────────────────────────────────────── */
-.cs-sm-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-.cs-sm-kpis .cs-intel-kpi small { color: #8a746c; font-size: 10.5px; }
-@media (max-width: 760px) { .cs-sm-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .cs-sm-kpis .cs-intel-kpi:nth-child(3)::before { display: none; } }
+.cs-sm-summary { display: flex; align-items: center; gap: 8px; margin-left: auto; color: #6c5a50; font-size: 11.5px; }
+.cs-sm-summary strong { color: #3b170b; font-weight: 650; }
+.cs-sm-alert { display: inline-flex; width: 28px; height: 28px; align-items: center; justify-content: center; border: 1px solid rgba(180, 86, 13, 0.4); border-radius: 999px; color: #b4560d; background: #fff8f1; }
+html body #root .creative-strategy button.cs-sm-alert:hover, html body #root .creative-strategy button.cs-sm-alert:focus { border-color: #b4560d !important; }
+.cs-sm-alert__content { display: grid; max-width: 380px; gap: 8px; padding: 12px 14px; border-radius: 12px; color: #fff; background: #310b00; font-size: 11.5px; line-height: 1.5; }
 
 /* ── Toolbar ────────────────────────────────────────────────────────────── */
 .cs-sm-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; }
@@ -5679,9 +5681,6 @@ html body #root .creative-strategy button.cs-monthly-filter-button:hover { borde
 .cs-sm-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; color: #6c5a50; font-size: 11px; }
 .cs-sm-legend span { display: inline-flex; align-items: center; gap: 6px; }
 .cs-sm-legend i { width: 12px; height: 12px; border: 1.5px var(--sm-style, solid) var(--sm-line); border-radius: 4px; background: var(--sm-bg); }
-.cs-sm-notes { display: grid; gap: 6px; color: #6c5a50; font-size: 11.5px; line-height: 1.5; }
-.cs-sm-notes p { display: flex; gap: 7px; }
-.cs-sm-notes svg { flex-shrink: 0; margin-top: 2px; color: #b4560d; }
 
 /* ── Month line ─────────────────────────────────────────────────────────── */
 .cs-sm-month { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 18px; padding: 12px 16px; border: 1px solid rgba(108, 52, 3, 0.2); border-radius: 16px; background: #fff; }
@@ -5692,11 +5691,16 @@ html body #root .creative-strategy button.cs-monthly-filter-button:hover { borde
 .cs-sm-month dt { display: inline; }
 
 /* ── Layout: map + detail panel ─────────────────────────────────────────── */
-.cs-sm-layout { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 16px; align-items: start; }
-@media (max-width: 1180px) { .cs-sm-layout { grid-template-columns: minmax(0, 1fr); } }
-.cs-sm-scroll { min-width: 0; overflow-x: auto; padding: 2px 2px 6px; }
-.cs-sm-grid { display: grid; min-width: var(--sm-min, 720px); gap: 8px; }
-.cs-sm-row { display: grid; grid-template-columns: 196px repeat(var(--sm-cols), minmax(104px, 1fr)); gap: 8px; }
+.cs-sm-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
+.cs-sm-layout.has-detail { grid-template-columns: minmax(0, 1fr) 360px; }
+@media (max-width: 1180px) { .cs-sm-layout.has-detail { grid-template-columns: minmax(0, 1fr); } }
+.cs-sm-scroll { min-width: 0; }
+.cs-sm-scroll [data-radix-scroll-area-viewport] { padding: 3px 3px 14px; }
+.cs-sm-grid { display: grid; min-width: calc(196px + var(--sm-cols) * 123px); gap: 8px; }
+/* The persona column stays put while the columns scroll under it. */
+.cs-sm-row > :first-child { position: sticky; left: 0; z-index: 1; box-shadow: -4px 0 0 var(--cs-surface, #fff); }
+.cs-sm-row > .cs-sm-colhead:first-child { background: var(--cs-surface, #fff); }
+.cs-sm-row { display: grid; grid-template-columns: 196px repeat(var(--sm-cols), minmax(115px, 1fr)); gap: 8px; }
 .cs-sm-colhead { display: grid; align-content: end; gap: 4px; padding: 0 4px 4px; }
 .cs-sm-colhead strong { overflow: hidden; color: #3b170b; font-size: 12px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
 .cs-sm-colhead span { color: #8a746c; font-size: 10.5px; font-variant-numeric: tabular-nums; }
@@ -5706,8 +5710,6 @@ html body #root .creative-strategy button.cs-monthly-filter-button:hover { borde
 .cs-sm-rowhead { display: flex; min-height: 118px; flex-direction: column; gap: 5px; padding: 11px 12px; border: 1px solid rgba(108, 52, 3, 0.2); border-radius: 16px; background: #fff; text-align: left; }
 .cs-sm-rowhead h3 { color: #30150a; font-size: 12.5px; font-weight: 650; line-height: 1.3; }
 .cs-sm-rowhead__stats { margin-top: auto; color: #51413a; font-size: 11px; line-height: 1.45; font-variant-numeric: tabular-nums; }
-.cs-sm-rowhead__toggle { display: inline-flex; align-items: center; gap: 4px; align-self: flex-start; padding: 3px 8px; border: 1px solid rgba(108, 52, 3, 0.22); border-radius: 999px; color: #6c3403; background: #fff7ef; font-size: 10.5px; font-weight: 600; }
-html body #root .creative-strategy button.cs-sm-rowhead__toggle:hover { border-color: rgba(108, 52, 3, 0.62) !important; }
 .cs-sm-source { align-self: flex-start; padding: 1px 7px; border-radius: 999px; font-size: 10px; font-weight: 600; }
 .cs-sm-source.is-research { color: #315d7e; background: #eff7fd; }
 .cs-sm-source.is-ad_derived { color: #75411d; background: #fff3e7; }
@@ -5717,7 +5719,11 @@ html body #root .creative-strategy button.cs-sm-rowhead__toggle:hover { border-c
 /* A cell, an angle tile and a board card share one verdict surface. */
 .cs-sm-cell { display: flex; min-width: 0; min-height: 118px; flex-direction: column; gap: 3px; padding: 10px 11px; border: 1.5px var(--sm-style, solid) var(--sm-line); border-radius: 16px; color: var(--sm-ink); background: var(--sm-bg); text-align: left; transition: box-shadow 150ms ease, transform 150ms ease; }
 html body #root .creative-strategy button.cs-sm-cell:hover { border-color: var(--sm-line) !important; box-shadow: 0 4px 10px rgba(59, 23, 11, 0.12); transform: translateY(-1px); }
-html body #root .creative-strategy button.cs-sm-cell.is-selected { border-color: #3b170b !important; box-shadow: 0 0 0 2px #3b170b; }
+/* The app-wide button:focus rule greys the border and drops the shadow with
+   !important, so a clicked cell keeps its own border and ring the same way. */
+html body #root .creative-strategy button.cs-sm-cell:focus, html body #root .creative-strategy button.cs-sm-card:focus { border-color: var(--sm-line) !important; }
+html body #root .creative-strategy button.cs-sm-cell.is-selected, html body #root .creative-strategy .cs-sm-card.is-selected { border-color: #3b170b !important; box-shadow: 0 0 0 2px #3b170b !important; }
+.cs-sm-suggested { margin-left: 6px; padding: 1px 7px; border-radius: 999px; color: #fff; background: #c2410c; font-size: 9.5px; letter-spacing: 0.02em; }
 .cs-sm-cell__label { font-size: 10px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; }
 .cs-sm-cell__spend { color: #30150a; font-size: 15px; font-weight: 650; font-variant-numeric: tabular-nums; }
 .cs-sm-cell__stat { font-size: 11px; line-height: 1.4; font-variant-numeric: tabular-nums; }
@@ -5731,19 +5737,23 @@ html body #root .creative-strategy button.cs-sm-cell.is-selected { border-color:
 .cs-sm-thumbs small { margin-left: 2px; font-size: 10.5px; font-weight: 600; }
 .cs-sm-chip { display: inline-flex; align-items: center; gap: 4px; padding: 1px 7px; border: 1px dashed #e8812c; border-radius: 999px; color: #a04a08; background: #fff; font-size: 10px; font-weight: 600; white-space: nowrap; }
 
-/* ── A persona's angle lane (opens under its row) ───────────────────────── */
-.cs-sm-lane { display: grid; gap: 12px; padding: 14px 16px; border: 1px solid rgba(108, 52, 3, 0.2); border-radius: 18px; background: #fffdfb; }
 .cs-sm-lane__group { display: grid; gap: 7px; }
 .cs-sm-lane__group > header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
 .cs-sm-lane__group > header p { color: #8a746c; font-size: 11px; }
-.cs-sm-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
-.cs-sm-tiles .cs-sm-cell { min-height: 96px; }
 .cs-sm-note { display: flex; gap: 8px; padding: 9px 12px; border: 1px solid #f0d9c2; border-radius: 12px; color: #6c3403; background: var(--cs-cream, #fffaf4); font-size: 11.5px; line-height: 1.5; }
 .cs-sm-note svg { flex-shrink: 0; margin-top: 2px; }
 
 /* ── Detail panel ───────────────────────────────────────────────────────── */
-.cs-sm-detail { position: sticky; top: 12px; display: grid; gap: 14px; max-height: calc(100vh - 24px); overflow-y: auto; }
-@media (max-width: 1180px) { .cs-sm-detail { position: static; max-height: none; } }
+.cs-sm-detail { position: sticky; top: 12px; padding: 0; overflow: hidden; }
+.cs-sm-detail__viewport { max-height: calc(100vh - 150px); }
+.cs-sm-detail__body { display: grid; gap: 14px; padding: 16px 18px 18px; }
+.cs-sm-detail__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.cs-sm-detail__close { display: inline-flex; width: 28px; height: 28px; flex-shrink: 0; align-items: center; justify-content: center; border: 1px solid rgba(108, 52, 3, 0.22); border-radius: 999px; color: #6c3403; background: #fff; }
+html body #root .creative-strategy button.cs-sm-detail__close:hover { border-color: rgba(108, 52, 3, 0.62) !important; }
+.cs-sm-angle { display: grid; gap: 7px; padding: 10px 12px; border: 1px dashed rgba(108, 52, 3, 0.34); border-radius: 14px; background: #fff; }
+.cs-sm-angle h4 { color: #30150a; font-size: 12.5px; font-weight: 650; }
+.cs-sm-angle .cs-weekly-brief-button, .cs-sm-angle .cs-weekly-static-button { height: 30px; padding: 0 11px; font-size: 10.5px; }
+@media (max-width: 1180px) { .cs-sm-detail { position: static; } .cs-sm-detail__viewport { max-height: none; } }
 .cs-sm-detail__eyebrow { color: #8a746c; font-size: 10.5px; font-weight: 600; }
 .cs-sm-detail__title { margin-top: 2px; color: #30150a; font-size: 15px; font-weight: 650; line-height: 1.3; }
 .cs-sm-detail__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 8px; color: #51413a; font-size: 11.5px; font-variant-numeric: tabular-nums; }
@@ -5802,7 +5812,7 @@ html body #root .creative-strategy button.cs-sm-more:hover { text-decoration: un
 .cs-sm-split dl { display: flex; flex-wrap: wrap; gap: 4px 18px; color: #51413a; font-size: 11.5px; font-variant-numeric: tabular-nums; }
 .cs-sm-split dl div { display: inline-flex; align-items: center; gap: 6px; }
 .cs-sm-split dl i { width: 10px; height: 10px; border: 1.5px solid var(--sm-line); border-radius: 3px; background: var(--sm-bg); }
-.cs-sm-board { display: grid; min-width: 860px; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; align-items: start; }
+.cs-sm-board { display: grid; min-width: 946px; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; align-items: start; }
 .cs-sm-board__col { display: grid; gap: 9px; }
 .cs-sm-board__col > header { display: grid; gap: 2px; padding: 0 2px; }
 .cs-sm-board__col > header h3 { display: flex; align-items: center; gap: 7px; color: #30150a; font-size: 13.5px; font-weight: 650; }
@@ -5811,7 +5821,6 @@ html body #root .creative-strategy button.cs-sm-more:hover { text-decoration: un
 .cs-sm-board__col > header p { color: #8a746c; font-size: 11px; }
 .cs-sm-board__empty { padding: 14px; border: 1px dashed rgba(108, 52, 3, 0.26); border-radius: 14px; color: #8a746c; font-size: 11.5px; }
 .cs-sm-card { display: grid; gap: 6px; padding: 12px; border: 1.5px var(--sm-style, solid) var(--sm-line, rgba(108, 52, 3, 0.2)); border-radius: 16px; background: #fff; text-align: left; }
-.cs-sm-card.is-selected { box-shadow: 0 0 0 2px #3b170b; }
 .cs-sm-card__eyebrow { color: #8a746c; font-size: 10.5px; font-weight: 600; }
 .cs-sm-card h4 { color: #30150a; font-size: 13.5px; font-weight: 650; line-height: 1.3; }
 .cs-sm-card__stats { display: flex; flex-wrap: wrap; align-items: baseline; gap: 3px 10px; color: #51413a; font-size: 11px; font-variant-numeric: tabular-nums; }

@@ -17,6 +17,7 @@ import { EmptyState, ErrorBanner, ProgressiveSection } from "../ui";
 import { useJobRunner } from "../JobsContext";
 import RunBy from "../run-by";
 import StrategyMapView from "./StrategyMapView";
+import { MAP_LAYOUTS } from "../strategy-map";
 
 // The map is the default; the original review (leaderboard + concepts per
 // launch month) stays as its own tab.
@@ -67,6 +68,7 @@ export default function MonthlyReviewView({ ctx }) {
   const [dimension, setDimension] = useState("persona");
   const [preview, setPreview] = useState(null);
   const [tab, setTab] = useState("map");
+  const [mapLayout, setMapLayout] = useState("grid");
   const currentProduct = useRef(selectedProductId);
   currentProduct.current = selectedProductId;
 
@@ -137,17 +139,26 @@ export default function MonthlyReviewView({ ctx }) {
 
       {selectedProductId && (
         <div className="cs-monthly-tabs">
-          <div className="cs-weekly-switcher" role="tablist" aria-label="Monthly review view">
-            {REVIEW_TABS.map((t) => (
-              <button key={t.key} type="button" role="tab" aria-selected={tab === t.key} onClick={() => setTab(t.key)} className={`cs-weekly-switcher__item ${tab === t.key ? "is-active" : ""}`}>{t.label}</button>
-            ))}
+          <div className="cs-weekly-switchers-row">
+            <div className="cs-weekly-switcher" role="tablist" aria-label="Monthly review view">
+              {REVIEW_TABS.map((t) => (
+                <button key={t.key} type="button" role="tab" aria-selected={tab === t.key} onClick={() => setTab(t.key)} className={`cs-weekly-switcher__item ${tab === t.key ? "is-active" : ""}`}>{t.label}</button>
+              ))}
+            </div>
+            {tab === "map" && (
+              <div className="cs-weekly-switcher" role="tablist" aria-label="Map layout">
+                {MAP_LAYOUTS.map((l) => (
+                  <button key={l.key} type="button" role="tab" aria-selected={mapLayout === l.key} onClick={() => setMapLayout(l.key)} className={`cs-weekly-switcher__item ${mapLayout === l.key ? "is-active" : ""}`}>{l.label}</button>
+                ))}
+              </div>
+            )}
           </div>
           <p className="text-[11.5px] text-neutral-500">{REVIEW_TABS.find((t) => t.key === tab).hint}</p>
         </div>
       )}
 
       {tab === "map" && selectedProductId ? (
-        <StrategyMapView ctx={ctx} refreshKey={snapshot?.computedAt ?? null} onOpenMonth={(m) => { setMonth(m); setTab("months"); }} />
+        <StrategyMapView ctx={ctx} view={mapLayout} onViewChange={setMapLayout} refreshKey={snapshot?.computedAt ?? null} onOpenMonth={(m) => { setMonth(m); setTab("months"); }} />
       ) : !selectedProductId ? (
         <EmptyState icon={CalendarRange} title="No product selected" hint="Select a product above to see its monthly creative review." className="min-h-[420px]" />
       ) : loading && !data ? (
